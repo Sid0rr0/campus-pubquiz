@@ -192,6 +192,13 @@ describe('getNextGameState', () => {
     );
   });
 
+  it('rejects ending a quiz that has already ended', () => {
+    const ended: GameProgress = { status: 'ended', roundIndex: 1, questionIndex: 1, isLeaderboardVisible: false };
+    expect(() => getNextGameState(ended, 'END_QUIZ', twoRoundsWithBreakAfterSecond)).toThrow(
+      IllegalGameTransitionError,
+    );
+  });
+
   it('rejects advancing once the quiz has ended', () => {
     const ended: GameProgress = { status: 'ended', roundIndex: 1, questionIndex: 1, isLeaderboardVisible: false };
     expect(() => getNextGameState(ended, 'ADVANCE', twoRoundsWithBreakAfterSecond)).toThrow(
