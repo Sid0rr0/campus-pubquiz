@@ -94,4 +94,86 @@ describe('useGameSocket', () => {
     unmount();
     expect(fakeSocket.disconnect).toHaveBeenCalled();
   });
+
+  it('joinTeam emits a JOIN_PLAYERS event with the team name and token', () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+
+    act(() => {
+      result.current.joinTeam('The Quizzards', 'existing-token');
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_PLAYERS, {
+      teamName: 'The Quizzards',
+      teamToken: 'existing-token',
+    });
+  });
+
+  it('adopts the joined team identity on JOIN_ACCEPTED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.team).toEqual({
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+      }),
+    );
+  });
+
+  it('submitAnswer emits a SUBMIT_ANSWER event with questionId, teamId, and value', () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+
+    act(() => {
+      result.current.submitAnswer('r1q1', 'team-1', 'Banana');
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.SUBMIT_ANSWER, {
+      questionId: 'r1q1',
+      teamId: 'team-1',
+      value: 'Banana',
+    });
+  });
+
+  it('adopts the live answers list on ANSWERS_UPDATED', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const payload = {
+      questionId: 'r1q1',
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: null,
+        },
+      ],
+    };
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, payload);
+    });
+
+    await waitFor(() => expect(result.current.liveAnswers).toEqual(payload));
+  });
+
+  it('gradeAnswer emits a GRADE_ANSWER event with answerId and pointsAwarded', () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+
+    act(() => {
+      result.current.gradeAnswer('answer-1', 2);
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.GRADE_ANSWER, {
+      answerId: 'answer-1',
+      pointsAwarded: 2,
+    });
+  });
 });
