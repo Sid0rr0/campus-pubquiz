@@ -11,7 +11,7 @@ apps/
   frontend/    Next.js 16, React 19, Tailwind 4 — three routes in one app
   backend/     NestJS 11, Socket.IO — game logic + REST API
 shared/
-  types/       (to be created) shared TS types, socket event names, DTOs
+  types/       shared TS types, socket event names, DTOs
 ```
 
 Run both with `pnpm dev`. Frontend on port 8888, backend on port 3000.
@@ -28,8 +28,10 @@ Run both with `pnpm dev`. Frontend on port 8888, backend on port 3000.
 
 ### Real-time: Socket.IO gateway (NestJS)
 
-The backend owns authoritative game state as a simple state machine:
-`lobby → question_open → locked → grading → reveal → leaderboard → next`
+The backend owns authoritative game state as a round-aware state machine:
+`lobby → question_open → locked → break → reveal → ended`
+
+Grading happens inside `break` (no separate grading status). Rounds carry a `breakAfter` flag, so "grade after every N rounds" is data, not a hardcoded loop — `break`/`reveal` only fire once a round with `breakAfter: true` finishes. The leaderboard is **not** a state — it's a separate `isLeaderboardVisible` flag the admin can toggle from any status, so hiding it always resumes exactly where things were.
 
 Only admin actions advance the state. Clients in three rooms (`display`, `admin`, `players`) receive broadcasts. On reconnect, any client receives the full current state snapshot — reconnection is a **core feature**, not a nice-to-have (phones sleep, networks drop).
 
@@ -92,6 +94,19 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 4. Three bare-bones routes with a hardcoded quiz (no DB yet)
 
 Sheets import, media support, and grading UI come after the live loop works end-to-end.
+
+## Git Commit Convention
+
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope) with a **scope** naming the workspace touched:
+
+```text
+<type>(<scope>): <description>
+```
+
+- Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`, `perf`, `ci` (matches the global git-workflow convention)
+- Scopes: `shared-types`, `backend`, `frontend`, `repo` (root-level/tooling changes not scoped to one workspace)
+
+Examples: `feat(backend): implement GameGateway`, `test(shared-types): add reproducer for game state machine`, `docs(repo): update CLAUDE.md`.
 
 ## Useful Commands
 
