@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { AnswerView } from '@campus-pubquiz/types';
+import type { AnswerView, LeaderboardEntry } from '@campus-pubquiz/types';
 import { DRIZZLE } from '@/db/db.constants';
 import * as schema from '@/db/schema';
 
@@ -10,6 +10,10 @@ export interface SubmittedAnswer {
   teamId: string;
   teamName: string;
   value: string;
+}
+
+export interface GradedAnswer {
+  questionId: string;
 }
 
 @Injectable()
@@ -71,5 +75,37 @@ export class AnswerService {
         ),
       )
       .orderBy(asc(schema.teams.name));
+  }
+
+  async grade(answerId: string, pointsAwarded: number): Promise<GradedAnswer> {
+    const [answer] = await this.db
+      .update(schema.answers)
+      .set({ pointsAwarded, gradedAt: new Date() })
+      .where(eq(schema.answers.id, answerId))
+      .returning();
+
+    return { questionId: answer.questionId };
+  }
+
+  async computeLeaderboard(gameSessionId: string): Promise<LeaderboardEntry[]> {
+    const totalPoints = sql<number>`coalesce(sum(${schema.answers.pointsAwarded}), 0)`;
+
+    const rows = await this.db
+      .select({
+        teamId: schema.teams.id,
+        teamName: schema.teams.name,
+        totalPoints,
+      })
+      .from(schema.teams)
+      .leftJoin(schema.answers, eq(schema.answers.teamId, schema.teams.id))
+      .where(eq(schema.teams.gameSessionId, gameSessionId))
+      .groupBy(schema.teams.id, schema.teams.name)
+      .orderBy(desc(totalPoints), asc(schema.teams.name));
+
+    return rows.map((row) => ({
+      teamId: row.teamId,
+      teamName: row.teamName,
+      totalPoints: Number(row.totalPoints),
+    }));
   }
 }
