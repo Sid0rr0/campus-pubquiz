@@ -171,4 +171,18 @@ describe('GameStateService', () => {
       IllegalGameTransitionError,
     );
   });
+
+  it('starts with an empty leaderboard', () => {
+    expect(service.getSnapshot().leaderboard).toEqual([]);
+  });
+
+  it('reflects a leaderboard set via setLeaderboard in the snapshot', () => {
+    service.setLeaderboard([
+      { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+    ]);
+
+    expect(service.getSnapshot().leaderboard).toEqual([
+      { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+    ]);
+  });
 });
