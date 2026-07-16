@@ -5,6 +5,7 @@ import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
 import type { AnswerService } from '@/answer/answer.service';
+import type { GameProgressRepository } from '@/game/game-progress.repository';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 
@@ -27,6 +28,23 @@ function createFakeSeedService(): SeedService {
   return {
     seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
   } as unknown as SeedService;
+}
+
+function createFakeGameProgressRepository() {
+  return {
+    save: jest.fn().mockResolvedValue(undefined),
+    load: jest.fn().mockResolvedValue(null),
+  };
+}
+
+type MockGameProgressRepository = ReturnType<
+  typeof createFakeGameProgressRepository
+>;
+
+function asGameProgressRepository(
+  mock: MockGameProgressRepository,
+): GameProgressRepository {
+  return mock as unknown as GameProgressRepository;
 }
 
 function createFakeTeamService() {
@@ -124,7 +142,10 @@ describe('GameGateway', () => {
   });
 
   beforeEach(async () => {
-    const gameStateService = new GameStateService(createFakeSeedService());
+    const gameStateService = new GameStateService(
+      createFakeSeedService(),
+      asGameProgressRepository(createFakeGameProgressRepository()),
+    );
     await gameStateService.onModuleInit();
     teamService = createFakeTeamService();
     answerService = createFakeAnswerService();
@@ -201,7 +222,7 @@ describe('GameGateway', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
 
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
@@ -219,9 +240,9 @@ describe('GameGateway', () => {
     const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
     await gateway.handleConnection(asSocket(display));
 
-    expect(() =>
+    await expect(
       gateway.handleAdminAction(asSocket(display), { action: 'START_QUIZ' }),
-    ).toThrow(WsException);
+    ).rejects.toThrow(WsException);
     expect(server.emit).not.toHaveBeenCalled();
   });
 
@@ -232,9 +253,9 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(admin));
 
     // LOCK_ANSWERS is illegal from lobby - quiz hasn't started yet
-    expect(() =>
+    await expect(
       gateway.handleAdminAction(asSocket(admin), { action: 'LOCK_ANSWERS' }),
-    ).toThrow(WsException);
+    ).rejects.toThrow(WsException);
     expect(server.emit).not.toHaveBeenCalled();
   });
 
