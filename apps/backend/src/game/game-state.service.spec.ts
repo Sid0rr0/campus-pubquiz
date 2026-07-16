@@ -101,6 +101,8 @@ describe('GameStateService', () => {
   });
 
   it('propagates an illegal-transition error for out-of-order actions', () => {
-    expect(() => service.applyAction('LOCK_ANSWERS')).toThrow(IllegalGameTransitionError);
+    expect(() => service.applyAction('LOCK_ANSWERS')).toThrow(
+      IllegalGameTransitionError,
+    );
   });
 });

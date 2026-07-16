@@ -1,10 +1,21 @@
 import { relations } from 'drizzle-orm';
-import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const quizzes = pgTable('quizzes', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const rounds = pgTable(
@@ -18,7 +29,12 @@ export const rounds = pgTable(
     orderIndex: integer('order_index').notNull(),
     breakAfter: boolean('break_after').notNull().default(false),
   },
-  (table) => [uniqueIndex('rounds_quiz_id_order_index_idx').on(table.quizId, table.orderIndex)],
+  (table) => [
+    uniqueIndex('rounds_quiz_id_order_index_idx').on(
+      table.quizId,
+      table.orderIndex,
+    ),
+  ],
 );
 
 export const questions = pgTable(
@@ -34,7 +50,12 @@ export const questions = pgTable(
     payload: jsonb('payload').notNull().default({}),
     points: integer('points').notNull().default(1),
   },
-  (table) => [uniqueIndex('questions_round_id_order_index_idx').on(table.roundId, table.orderIndex)],
+  (table) => [
+    uniqueIndex('questions_round_id_order_index_idx').on(
+      table.roundId,
+      table.orderIndex,
+    ),
+  ],
 );
 
 export const gameSessions = pgTable('game_sessions', {
@@ -46,8 +67,12 @@ export const gameSessions = pgTable('game_sessions', {
   status: text('status').notNull().default('lobby'),
   currentRoundIndex: integer('current_round_index').notNull().default(0),
   currentQuestionIndex: integer('current_question_index').notNull().default(0),
-  isLeaderboardVisible: boolean('is_leaderboard_visible').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  isLeaderboardVisible: boolean('is_leaderboard_visible')
+    .notNull()
+    .default(false),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const teams = pgTable(
@@ -59,9 +84,16 @@ export const teams = pgTable(
       .references(() => gameSessions.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     token: text('token').notNull().unique(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [uniqueIndex('teams_game_session_id_name_idx').on(table.gameSessionId, table.name)],
+  (table) => [
+    uniqueIndex('teams_game_session_id_name_idx').on(
+      table.gameSessionId,
+      table.name,
+    ),
+  ],
 );
 
 export const answers = pgTable(
@@ -80,11 +112,19 @@ export const answers = pgTable(
     value: text('value').notNull(),
     pointsAwarded: integer('points_awarded'),
     gradedAt: timestamp('graded_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
-    uniqueIndex('answers_session_question_team_idx').on(table.gameSessionId, table.questionId, table.teamId),
+    uniqueIndex('answers_session_question_team_idx').on(
+      table.gameSessionId,
+      table.questionId,
+      table.teamId,
+    ),
   ],
 );
 
@@ -103,19 +143,34 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
   answers: many(answers),
 }));
 
-export const gameSessionsRelations = relations(gameSessions, ({ one, many }) => ({
-  quiz: one(quizzes, { fields: [gameSessions.quizId], references: [quizzes.id] }),
-  teams: many(teams),
-  answers: many(answers),
-}));
+export const gameSessionsRelations = relations(
+  gameSessions,
+  ({ one, many }) => ({
+    quiz: one(quizzes, {
+      fields: [gameSessions.quizId],
+      references: [quizzes.id],
+    }),
+    teams: many(teams),
+    answers: many(answers),
+  }),
+);
 
 export const teamsRelations = relations(teams, ({ one, many }) => ({
-  gameSession: one(gameSessions, { fields: [teams.gameSessionId], references: [gameSessions.id] }),
+  gameSession: one(gameSessions, {
+    fields: [teams.gameSessionId],
+    references: [gameSessions.id],
+  }),
   answers: many(answers),
 }));
 
 export const answersRelations = relations(answers, ({ one }) => ({
-  gameSession: one(gameSessions, { fields: [answers.gameSessionId], references: [gameSessions.id] }),
-  question: one(questions, { fields: [answers.questionId], references: [questions.id] }),
+  gameSession: one(gameSessions, {
+    fields: [answers.gameSessionId],
+    references: [gameSessions.id],
+  }),
+  question: one(questions, {
+    fields: [answers.questionId],
+    references: [questions.id],
+  }),
   team: one(teams, { fields: [answers.teamId], references: [teams.id] }),
 }));
