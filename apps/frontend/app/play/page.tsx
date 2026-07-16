@@ -11,6 +11,10 @@ export default function PlayPage() {
   const { snapshot } = useGameSocket('players');
 
   useEffect(() => {
+    // localStorage is unavailable during SSR, so the stored team name can only
+    // be read after mount - this is the "synchronize with an external system"
+    // case React's own docs carve out as a legitimate effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamName(window.localStorage.getItem(TEAM_NAME_STORAGE_KEY));
   }, []);
 

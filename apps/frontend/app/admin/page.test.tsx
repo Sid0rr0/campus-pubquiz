@@ -92,4 +92,46 @@ describe('AdminPage', () => {
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
+
+  it('sends LOCK_ANSWERS when the Lock Answers button is clicked', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'question_open' }), currentQuestion: null },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /lock answers/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('LOCK_ANSWERS');
+  });
+
+  it('sends FINISH_GRADING when the Finish Grading button is clicked', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'break' }), currentQuestion: null },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /finish grading/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('FINISH_GRADING');
+  });
+
+  it('sends END_QUIZ when the End Quiz button is clicked', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'question_open' }), currentQuestion: null },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('END_QUIZ');
+  });
 });

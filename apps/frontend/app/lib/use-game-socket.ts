@@ -1,0 +1,64 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { io, type Socket } from 'socket.io-client';
+import {
+  SOCKET_EVENTS,
+  type AdminActionPayload,
+  type GameAction,
+  type StateSnapshotPayload,
+} from '@campus-pubquiz/types';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
+
+export type GameSocketRole = 'display' | 'admin' | 'players';
+
+export interface UseGameSocketResult {
+  snapshot: StateSnapshotPayload | null;
+  connectionError: string | null;
+  sendAction: (action: GameAction) => void;
+}
+
+function getExceptionMessage(payload: unknown): string {
+  if (typeof payload === 'string') return payload;
+  if (payload && typeof payload === 'object' && 'message' in payload) {
+    const message = (payload as { message: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  return 'Unknown error';
+}
+
+export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
+  const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    const socket = io(BACKEND_URL, { query: { role } });
+    socketRef.current = socket;
+
+    socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateSnapshotPayload) => {
+      setSnapshot(payload);
+      setConnectionError(null);
+    });
+
+    socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateSnapshotPayload) => {
+      setSnapshot(payload);
+    });
+
+    socket.on('exception', (payload: unknown) => {
+      setConnectionError(getExceptionMessage(payload));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [role]);
+
+  const sendAction = useCallback((action: GameAction) => {
+    const payload: AdminActionPayload = { action };
+    socketRef.current?.emit(SOCKET_EVENTS.ADMIN_ACTION, payload);
+  }, []);
+
+  return { snapshot, connectionError, sendAction };
+}
