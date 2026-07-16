@@ -7,9 +7,12 @@ describe('SOCKET_EVENTS', () => {
       STATE_SYNC: 'game:state_sync',
       STATE_UPDATED: 'game:state_updated',
       ANSWER_RECEIVED: 'game:answer_received',
+      JOIN_ACCEPTED: 'game:join_accepted',
+      ANSWERS_UPDATED: 'game:answers_updated',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',
+      GRADE_ANSWER: 'game:grade_answer',
     });
   });
 });
