@@ -62,6 +62,12 @@ function createFakeAnswerService() {
         pointsAwarded: null,
       },
     ]),
+    grade: jest.fn().mockResolvedValue({ questionId: 'r1q1' }),
+    computeLeaderboard: jest
+      .fn()
+      .mockResolvedValue([
+        { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 2 },
+      ]),
   };
 }
 
@@ -340,5 +346,69 @@ describe('GameGateway', () => {
       }),
     ).rejects.toThrow(WsException);
     expect(answerService.submit).not.toHaveBeenCalled();
+  });
+
+  it('grades an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: 'answer-1',
+      pointsAwarded: 2,
+    });
+
+    expect(answerService.grade).toHaveBeenCalledWith('answer-1', 2);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
+      questionId: 'r1q1',
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: null,
+        },
+      ],
+    });
+  });
+
+  it('refreshes the leaderboard and broadcasts STATE_UPDATED to all three rooms after grading', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: 'answer-1',
+      pointsAwarded: 2,
+    });
+
+    expect(answerService.computeLeaderboard).toHaveBeenCalledWith('session-1');
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.objectContaining({
+        leaderboard: [
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 2 },
+        ],
+      }),
+    );
+  });
+
+  it('rejects GRADE_ANSWER from a non-admin client', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await expect(
+      gateway.handleGradeAnswer(asSocket(player), {
+        answerId: 'answer-1',
+        pointsAwarded: 2,
+      }),
+    ).rejects.toThrow(WsException);
+    expect(answerService.grade).not.toHaveBeenCalled();
   });
 });
