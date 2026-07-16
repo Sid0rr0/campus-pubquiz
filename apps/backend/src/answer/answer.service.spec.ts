@@ -15,6 +15,7 @@ describe('AnswerService (Postgres integration)', () => {
   let answerService: AnswerService;
   let sessionId: string;
   let questionId: string;
+  let roundId: string;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -55,6 +56,7 @@ describe('AnswerService (Postgres integration)', () => {
       .returning();
     questionId = question.id;
     sessionId = session.id;
+    roundId = round.id;
   });
 
   afterEach(async () => {
@@ -116,5 +118,77 @@ describe('AnswerService (Postgres integration)', () => {
 
     const [answer] = await answerService.listForQuestion(sessionId, questionId);
     expect(answer.pointsAwarded).toBeNull();
+  });
+
+  it('grades an answer, returning the questionId it belongs to', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await answerService.submit(
+      sessionId,
+      questionId,
+      team.id,
+      'Banana',
+    );
+
+    const graded = await answerService.grade(submitted.answerId, 2);
+    expect(graded.questionId).toBe(questionId);
+
+    const [answer] = await answerService.listForQuestion(sessionId, questionId);
+    expect(answer.pointsAwarded).toBe(2);
+  });
+
+  it('computes a leaderboard summing graded points per team, sorted descending', async () => {
+    const [question2] = await db
+      .insert(schema.questions)
+      .values({
+        roundId,
+        orderIndex: 1,
+        type: 'free_text',
+        prompt: 'Name a vegetable',
+        points: 1,
+      })
+      .returning();
+
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+
+    const answerA1 = await answerService.submit(
+      sessionId,
+      questionId,
+      teamA.id,
+      'Banana',
+    );
+    const answerA2 = await answerService.submit(
+      sessionId,
+      question2.id,
+      teamA.id,
+      'Carrot',
+    );
+    const answerB1 = await answerService.submit(
+      sessionId,
+      questionId,
+      teamB.id,
+      'Mango',
+    );
+
+    await answerService.grade(answerA1.answerId, 2);
+    await answerService.grade(answerA2.answerId, 1);
+    await answerService.grade(answerB1.answerId, 1);
+
+    const leaderboard = await answerService.computeLeaderboard(sessionId);
+
+    expect(leaderboard).toEqual([
+      { teamId: teamA.id, teamName: 'Team A', totalPoints: 3 },
+      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1 },
+    ]);
+  });
+
+  it('treats ungraded answers as zero points in the leaderboard', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    await answerService.submit(sessionId, questionId, team.id, 'Banana');
+
+    const leaderboard = await answerService.computeLeaderboard(sessionId);
+    expect(leaderboard).toEqual([
+      { teamId: team.id, teamName: 'The Quizzards', totalPoints: 0 },
+    ]);
   });
 });
