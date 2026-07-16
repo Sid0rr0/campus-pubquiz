@@ -27,6 +27,10 @@ export class GameStateService implements OnModuleInit {
     this.seededGame = await this.seedService.seed();
   }
 
+  getGameSessionId(): string {
+    return this.getSeededGame().gameSessionId;
+  }
+
   getSnapshot(): StateSnapshotPayload {
     return {
       progress: this.progress,
