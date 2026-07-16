@@ -29,6 +29,8 @@ export class GameStateService {
     return {
       progress: this.progress,
       currentQuestion: this.getCurrentQuestion(),
+      // Populated by AnswerService once grading exists (Milestone 2 Phase 5).
+      leaderboard: [],
     };
   }
 
