@@ -65,7 +65,9 @@ describe('GameStateService', () => {
 
   it('throws if used before onModuleInit resolves the seeded game', () => {
     const uninitialized = new GameStateService(createFakeSeedService());
-    expect(() => uninitialized.getSnapshot()).toThrow(/before initialization/i);
+    expect(() => uninitialized.applyAction('START_QUIZ')).toThrow(
+      /before initialization/i,
+    );
   });
 
   it('starts in the lobby with no current question', () => {

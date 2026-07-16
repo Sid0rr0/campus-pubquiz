@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   getNextGameState,
   type GameAction,
@@ -7,10 +7,11 @@ import {
   type QuestionView,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { HARDCODED_QUIZ } from './hardcoded-quiz.fixture';
+import { SeedService } from '../db/seed.service';
+import type { SeededGame } from '../db/seed.types';
 
 @Injectable()
-export class GameStateService {
+export class GameStateService implements OnModuleInit {
   private progress: GameProgress = {
     status: 'lobby',
     roundIndex: 0,
@@ -18,12 +19,13 @@ export class GameStateService {
     isLeaderboardVisible: false,
   };
 
-  private readonly context: GameContext = {
-    rounds: HARDCODED_QUIZ.rounds.map((round) => ({
-      questionCount: round.questions.length,
-      breakAfter: round.breakAfter,
-    })),
-  };
+  private seededGame: SeededGame | null = null;
+
+  constructor(private readonly seedService: SeedService) {}
+
+  async onModuleInit(): Promise<void> {
+    this.seededGame = await this.seedService.seed();
+  }
 
   getSnapshot(): StateSnapshotPayload {
     return {
@@ -35,8 +37,26 @@ export class GameStateService {
   }
 
   applyAction(action: GameAction): StateSnapshotPayload {
-    this.progress = getNextGameState(this.progress, action, this.context);
+    this.progress = getNextGameState(this.progress, action, this.getContext());
     return this.getSnapshot();
+  }
+
+  private getSeededGame(): SeededGame {
+    if (!this.seededGame) {
+      throw new Error(
+        'GameStateService used before initialization (onModuleInit has not resolved yet)',
+      );
+    }
+    return this.seededGame;
+  }
+
+  private getContext(): GameContext {
+    return {
+      rounds: this.getSeededGame().rounds.map((round) => ({
+        questionCount: round.questions.length,
+        breakAfter: round.breakAfter,
+      })),
+    };
   }
 
   private getCurrentQuestion(): QuestionView | null {
@@ -47,7 +67,7 @@ export class GameStateService {
       return null;
     }
     return (
-      HARDCODED_QUIZ.rounds[this.progress.roundIndex]?.questions[
+      this.getSeededGame().rounds[this.progress.roundIndex]?.questions[
         this.progress.questionIndex
       ] ?? null
     );

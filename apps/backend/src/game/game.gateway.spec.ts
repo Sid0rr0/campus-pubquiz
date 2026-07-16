@@ -1,8 +1,29 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import type { SeedService } from '../db/seed.service';
+import type { SeededGame } from '../db/seed.types';
 import { GameGateway } from './game.gateway';
 import { GameStateService } from './game-state.service';
+
+const FIXTURE_SEEDED_GAME: SeededGame = {
+  quizId: 'quiz-1',
+  gameSessionId: 'session-1',
+  joinCode: 'ABCDEF',
+  rounds: [
+    {
+      id: 'round-1',
+      breakAfter: false,
+      questions: [{ id: 'r1q1', type: 'free_text', prompt: 'Q1', points: 1 }],
+    },
+  ],
+};
+
+function createFakeSeedService(): SeedService {
+  return {
+    seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
+  } as unknown as SeedService;
+}
 
 function createMockSocket(role?: string) {
   const rooms = new Set<string>();
@@ -39,8 +60,10 @@ describe('GameGateway', () => {
   let gateway: GameGateway;
   let server: MockServer;
 
-  beforeEach(() => {
-    gateway = new GameGateway(new GameStateService());
+  beforeEach(async () => {
+    const gameStateService = new GameStateService(createFakeSeedService());
+    await gameStateService.onModuleInit();
+    gateway = new GameGateway(gameStateService);
     server = createMockServer();
     gateway.server = asServer(server);
   });
