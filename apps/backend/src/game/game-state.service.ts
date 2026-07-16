@@ -4,6 +4,7 @@ import {
   type GameAction,
   type GameContext,
   type GameProgress,
+  type LeaderboardEntry,
   type QuestionView,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
@@ -20,6 +21,7 @@ export class GameStateService implements OnModuleInit {
   };
 
   private seededGame: SeededGame | null = null;
+  private leaderboard: LeaderboardEntry[] = [];
 
   constructor(private readonly seedService: SeedService) {}
 
@@ -31,12 +33,15 @@ export class GameStateService implements OnModuleInit {
     return this.getSeededGame().gameSessionId;
   }
 
+  setLeaderboard(leaderboard: LeaderboardEntry[]): void {
+    this.leaderboard = leaderboard;
+  }
+
   getSnapshot(): StateSnapshotPayload {
     return {
       progress: this.progress,
       currentQuestion: this.getCurrentQuestion(),
-      // Populated by AnswerService once grading exists (Milestone 2 Phase 5).
-      leaderboard: [],
+      leaderboard: this.leaderboard,
     };
   }
 
