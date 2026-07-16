@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress } from '@campus-pubquiz/types';
-import PlayPage from './page';
+import PlayPage from '@/app/play/page';
 
 const { mockUseGameSocket } = vi.hoisted(() => ({ mockUseGameSocket: vi.fn() }));
 

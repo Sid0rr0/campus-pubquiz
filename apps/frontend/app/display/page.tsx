@@ -1,6 +1,6 @@
 'use client';
 
-import { useGameSocket } from '../lib/use-game-socket';
+import { useGameSocket } from '@/app/lib/use-game-socket';
 
 export default function DisplayPage() {
   const { snapshot } = useGameSocket('display');

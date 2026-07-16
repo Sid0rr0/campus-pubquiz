@@ -5,8 +5,13 @@ import { io, type Socket } from 'socket.io-client';
 import {
   SOCKET_EVENTS,
   type AdminActionPayload,
+  type AnswersUpdatedPayload,
   type GameAction,
+  type GradeAnswerPayload,
+  type JoinAcceptedPayload,
+  type JoinPlayersPayload,
   type StateSnapshotPayload,
+  type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
@@ -17,6 +22,11 @@ export interface UseGameSocketResult {
   snapshot: StateSnapshotPayload | null;
   connectionError: string | null;
   sendAction: (action: GameAction) => void;
+  team: JoinAcceptedPayload | null;
+  joinTeam: (teamName: string, teamToken?: string) => void;
+  submitAnswer: (questionId: string, teamId: string, value: string) => void;
+  liveAnswers: AnswersUpdatedPayload | null;
+  gradeAnswer: (answerId: string, pointsAwarded: number) => void;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -31,6 +41,8 @@ function getExceptionMessage(payload: unknown): string {
 export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
   const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
+  const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -44,6 +56,14 @@ export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
 
     socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateSnapshotPayload) => {
       setSnapshot(payload);
+    });
+
+    socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
+      setTeam(payload);
+    });
+
+    socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload: AnswersUpdatedPayload) => {
+      setLiveAnswers(payload);
     });
 
     socket.on('exception', (payload: unknown) => {
@@ -60,5 +80,32 @@ export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
     socketRef.current?.emit(SOCKET_EVENTS.ADMIN_ACTION, payload);
   }, []);
 
-  return { snapshot, connectionError, sendAction };
+  const joinTeam = useCallback((teamName: string, teamToken?: string) => {
+    const payload: JoinPlayersPayload = { teamName, teamToken };
+    socketRef.current?.emit(SOCKET_EVENTS.JOIN_PLAYERS, payload);
+  }, []);
+
+  const submitAnswer = useCallback(
+    (questionId: string, teamId: string, value: string) => {
+      const payload: SubmitAnswerPayload = { questionId, teamId, value };
+      socketRef.current?.emit(SOCKET_EVENTS.SUBMIT_ANSWER, payload);
+    },
+    [],
+  );
+
+  const gradeAnswer = useCallback((answerId: string, pointsAwarded: number) => {
+    const payload: GradeAnswerPayload = { answerId, pointsAwarded };
+    socketRef.current?.emit(SOCKET_EVENTS.GRADE_ANSWER, payload);
+  }, []);
+
+  return {
+    snapshot,
+    connectionError,
+    sendAction,
+    team,
+    joinTeam,
+    submitAnswer,
+    liveAnswers,
+    gradeAnswer,
+  };
 }

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { GameProgress, QuestionView } from '@campus-pubquiz/types';
-import DisplayPage from './page';
+import DisplayPage from '@/app/display/page';
 
 const { mockUseGameSocket } = vi.hoisted(() => ({ mockUseGameSocket: vi.fn() }));
 

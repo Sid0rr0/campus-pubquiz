@@ -1,7 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { SOCKET_EVENTS } from '@campus-pubquiz/types';
-import { useGameSocket } from './use-game-socket';
+import { useGameSocket } from '@/app/lib/use-game-socket';
 
 type Handler = (...args: unknown[]) => void;
 

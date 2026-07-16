@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useGameSocket } from '../lib/use-game-socket';
+import { useGameSocket } from '@/app/lib/use-game-socket';
 
 const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
 

@@ -99,6 +99,10 @@ Sheets import, media support, and grading UI come after the live loop works end-
 
 Backend (`apps/backend`) source and test files import via the `@/*` path alias (mapped to `src/*` in `tsconfig.json`), never relative `./`/`../` paths.
 
+## Frontend Import Convention
+
+Frontend (`apps/frontend`) source and test files import via the `@/*` path alias (mapped to the workspace root in `tsconfig.json`, e.g. `@/app/lib/use-game-socket`), never relative `./`/`../` paths. Vitest resolves the same alias via a manual `resolve.alias` entry in `vitest.config.ts`.
+
 ## Git Commit Convention
 
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope) with a **scope** naming the workspace touched:
