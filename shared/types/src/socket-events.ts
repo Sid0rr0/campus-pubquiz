@@ -5,10 +5,13 @@ export const SOCKET_EVENTS = {
   STATE_SYNC: 'game:state_sync',
   STATE_UPDATED: 'game:state_updated',
   ANSWER_RECEIVED: 'game:answer_received',
+  JOIN_ACCEPTED: 'game:join_accepted',
+  ANSWERS_UPDATED: 'game:answers_updated',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',
   SUBMIT_ANSWER: 'game:submit_answer',
   JOIN_PLAYERS: 'game:join_players',
+  GRADE_ANSWER: 'game:grade_answer',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -28,9 +31,16 @@ export interface QuestionView {
   points: number;
 }
 
+export interface LeaderboardEntry {
+  teamId: string;
+  teamName: string;
+  totalPoints: number;
+}
+
 export interface StateSnapshotPayload {
   progress: GameProgress;
   currentQuestion: QuestionView | null;
+  leaderboard: LeaderboardEntry[];
 }
 
 export interface AdminActionPayload {
@@ -53,4 +63,28 @@ export interface AnswerReceivedPayload {
 export interface JoinPlayersPayload {
   teamName: string;
   teamToken?: string;
+}
+
+export interface JoinAcceptedPayload {
+  teamId: string;
+  teamToken: string;
+  teamName: string;
+}
+
+export interface AnswerView {
+  answerId: string;
+  teamId: string;
+  teamName: string;
+  value: string;
+  pointsAwarded: number | null;
+}
+
+export interface AnswersUpdatedPayload {
+  questionId: string;
+  answers: AnswerView[];
+}
+
+export interface GradeAnswerPayload {
+  answerId: string;
+  pointsAwarded: number;
 }
