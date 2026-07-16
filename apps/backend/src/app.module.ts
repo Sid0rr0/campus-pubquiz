@@ -6,6 +6,7 @@ import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 import { TeamService } from '@/team/team.service';
+import { AnswerService } from '@/answer/answer.service';
 
 @Module({
   imports: [DbModule],
@@ -14,6 +15,7 @@ import { TeamService } from '@/team/team.service';
     AppService,
     SeedService,
     TeamService,
+    AnswerService,
     GameStateService,
     GameGateway,
   ],

@@ -14,8 +14,10 @@ import {
   type AdminActionPayload,
   type JoinPlayersPayload,
   type StateSnapshotPayload,
+  type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
 import { TeamService } from '@/team/team.service';
+import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/game-state.service';
 
 const VALID_ROOMS: string[] = [
@@ -34,6 +36,7 @@ export class GameGateway implements OnGatewayConnection {
   constructor(
     private readonly gameState: GameStateService,
     private readonly teamService: TeamService,
+    private readonly answerService: AnswerService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -102,6 +105,39 @@ export class GameGateway implements OnGatewayConnection {
       const message = error instanceof Error ? error.message : 'Unable to join';
       throw new WsException(message);
     }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.SUBMIT_ANSWER)
+  async handleSubmitAnswer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SubmitAnswerPayload,
+  ): Promise<void> {
+    if (!client.rooms.has(SOCKET_ROOMS.PLAYERS)) {
+      throw new WsException('Only player clients may submit answers');
+    }
+
+    const submitted = await this.answerService.submit(
+      this.gameState.getGameSessionId(),
+      payload.questionId,
+      payload.teamId,
+      payload.value,
+    );
+
+    client.emit(SOCKET_EVENTS.ANSWER_RECEIVED, {
+      questionId: payload.questionId,
+      teamId: submitted.teamId,
+      teamName: submitted.teamName,
+      value: submitted.value,
+    });
+
+    const answers = await this.answerService.listForQuestion(
+      this.gameState.getGameSessionId(),
+      payload.questionId,
+    );
+    this.server.to(SOCKET_ROOMS.ADMIN).emit(SOCKET_EVENTS.ANSWERS_UPDATED, {
+      questionId: payload.questionId,
+      answers,
+    });
   }
 
   private isValidAdminPassword(client: Socket): boolean {
