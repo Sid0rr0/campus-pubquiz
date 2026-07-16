@@ -1,11 +1,71 @@
 import { IllegalGameTransitionError } from '@campus-pubquiz/types';
+import type { SeedService } from '../db/seed.service';
+import type { SeededGame } from '../db/seed.types';
 import { GameStateService } from './game-state.service';
+
+const FIXTURE_SEEDED_GAME: SeededGame = {
+  quizId: 'quiz-1',
+  gameSessionId: 'session-1',
+  joinCode: 'ABCDEF',
+  rounds: [
+    {
+      id: 'round-1',
+      breakAfter: false,
+      questions: [
+        {
+          id: 'r1q1',
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London', 'Berlin', 'Rome'],
+          points: 2,
+        },
+        {
+          id: 'r1q2',
+          type: 'free_text',
+          prompt: 'Name the largest planet in the solar system.',
+          points: 2,
+        },
+      ],
+    },
+    {
+      id: 'round-2',
+      breakAfter: true,
+      questions: [
+        {
+          id: 'r2q1',
+          type: 'picture',
+          prompt: 'Which landmark is shown?',
+          mediaUrl: 'https://example.com/landmark.jpg',
+          points: 3,
+        },
+        {
+          id: 'r2q2',
+          type: 'free_text',
+          prompt: 'Name this flag.',
+          points: 3,
+        },
+      ],
+    },
+  ],
+};
+
+function createFakeSeedService(): SeedService {
+  return {
+    seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
+  } as unknown as SeedService;
+}
 
 describe('GameStateService', () => {
   let service: GameStateService;
 
-  beforeEach(() => {
-    service = new GameStateService();
+  beforeEach(async () => {
+    service = new GameStateService(createFakeSeedService());
+    await service.onModuleInit();
+  });
+
+  it('throws if used before onModuleInit resolves the seeded game', () => {
+    const uninitialized = new GameStateService(createFakeSeedService());
+    expect(() => uninitialized.getSnapshot()).toThrow(/before initialization/i);
   });
 
   it('starts in the lobby with no current question', () => {
