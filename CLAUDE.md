@@ -86,14 +86,27 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 - Picture / media rounds (image or audio URL shown on display screen)
 - Grouped into named rounds with per-round scoring
 
-## First Milestone
+## First Milestone (done)
 
 1. `shared/types` — game state machine types + socket event names
 2. Drizzle schema — `Quiz/Round/Question` + `GameSession/Team/Answer`
 3. NestJS gateway — state machine + room broadcasts
 4. Three bare-bones routes with a hardcoded quiz (no DB yet)
 
-Sheets import, media support, and grading UI come after the live loop works end-to-end.
+Evidence: `.claude/tdd/milestone-1.tdd.md`.
+
+## Second Milestone (done) — Playable Quiz
+
+1. Idempotent startup seed from the hardcoded quiz into real Postgres rows
+2. Team join (`JOIN_PLAYERS`) with token-based reconnect, admin handshake password guard
+3. Answer submission (`SUBMIT_ANSWER`, last-write-wins) with live admin-only answer broadcasts
+4. Grading (`GRADE_ANSWER`) and a real leaderboard computed from graded points
+5. Restart resilience — `GameProgress` persisted to `game_sessions` on every transition and rehydrated on boot
+6. Full frontend wiring: `PlayPage` join + answer submission, `AdminPage` grading panel + leaderboard preview, `DisplayPage` real leaderboard
+
+Evidence: `.claude/tdd/milestone-2.tdd.md`.
+
+Sheets import and media rounds beyond a plain `mediaUrl` are still open.
 
 ## Backend Import Convention
 
