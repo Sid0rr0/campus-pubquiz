@@ -6,7 +6,7 @@ import AdminPage from '@/app/admin/page';
 
 const { mockUseGameSocket } = vi.hoisted(() => ({ mockUseGameSocket: vi.fn() }));
 
-vi.mock('../lib/use-game-socket', () => ({
+vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
 }));
 
