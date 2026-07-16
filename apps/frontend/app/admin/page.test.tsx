@@ -134,4 +134,116 @@ describe('AdminPage', () => {
 
     expect(sendAction).toHaveBeenCalledWith('END_QUIZ');
   });
+
+  it('shows live answers for the current question with team name and value', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'locked' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: null,
+          },
+        ],
+      },
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByText('The Quizzards')).toBeInTheDocument();
+    expect(screen.getByText('Banana')).toBeInTheDocument();
+  });
+
+  it('grades an ungraded answer with the entered points', async () => {
+    const gradeAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: null,
+          },
+        ],
+      },
+      gradeAnswer,
+    });
+    render(<AdminPage />);
+
+    await userEvent.type(screen.getByRole('spinbutton', { name: /points for the quizzards/i }), '2');
+    await userEvent.click(screen.getByRole('button', { name: /grade the quizzards/i }));
+
+    expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 2);
+  });
+
+  it('shows the awarded points instead of a grade control for an already-graded answer', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: 2,
+          },
+        ],
+      },
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByText(/2 points/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /grade the quizzards/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a leaderboard preview from the snapshot', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        currentQuestion: null,
+        leaderboard: [
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByText('The Quizzards')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('Second Place')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
 });
