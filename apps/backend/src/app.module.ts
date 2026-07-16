@@ -5,10 +5,17 @@ import { DbModule } from './db/db.module';
 import { SeedService } from './db/seed.service';
 import { GameGateway } from './game/game.gateway';
 import { GameStateService } from './game/game-state.service';
+import { TeamService } from './team/team.service';
 
 @Module({
   imports: [DbModule],
   controllers: [AppController],
-  providers: [AppService, SeedService, GameStateService, GameGateway],
+  providers: [
+    AppService,
+    SeedService,
+    TeamService,
+    GameStateService,
+    GameGateway,
+  ],
 })
 export class AppModule {}

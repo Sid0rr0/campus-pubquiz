@@ -28,14 +28,20 @@ function createFakeSeedService(): SeedService {
   } as unknown as SeedService;
 }
 
-function createFakeTeamService(): TeamService {
+function createFakeTeamService() {
   return {
     join: jest.fn().mockResolvedValue({
       id: 'team-1',
       name: 'The Quizzards',
       token: 'team-token-1',
     }),
-  } as unknown as TeamService;
+  };
+}
+
+type MockTeamService = ReturnType<typeof createFakeTeamService>;
+
+function asTeamService(mock: MockTeamService): TeamService {
+  return mock as unknown as TeamService;
 }
 
 function createMockSocket(role?: string, auth: Record<string, string> = {}) {
@@ -72,7 +78,7 @@ function asServer(mock: MockServer): Server {
 describe('GameGateway', () => {
   let gateway: GameGateway;
   let server: MockServer;
-  let teamService: TeamService;
+  let teamService: MockTeamService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
   beforeAll(() => {
@@ -87,7 +93,7 @@ describe('GameGateway', () => {
     const gameStateService = new GameStateService(createFakeSeedService());
     await gameStateService.onModuleInit();
     teamService = createFakeTeamService();
-    gateway = new GameGateway(gameStateService, teamService);
+    gateway = new GameGateway(gameStateService, asTeamService(teamService));
     server = createMockServer();
     gateway.server = asServer(server);
   });
@@ -225,7 +231,7 @@ describe('GameGateway', () => {
   });
 
   it('surfaces a team-join error (e.g. name taken) as a WsException', async () => {
-    (teamService.join as jest.Mock).mockRejectedValueOnce(
+    teamService.join.mockRejectedValueOnce(
       new Error('Team name "The Quizzards" is already taken in this session'),
     );
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
