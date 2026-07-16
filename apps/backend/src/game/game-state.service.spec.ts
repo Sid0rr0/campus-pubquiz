@@ -70,6 +70,10 @@ describe('GameStateService', () => {
     );
   });
 
+  it('exposes the seeded game session id', () => {
+    expect(service.getGameSessionId()).toBe('session-1');
+  });
+
   it('starts in the lobby with no current question', () => {
     const snapshot = service.getSnapshot();
     expect(snapshot.progress.status).toBe('lobby');
