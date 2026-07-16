@@ -98,4 +98,26 @@ describe('DisplayPage', () => {
     render(<DisplayPage />);
     expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
   });
+
+  it('renders leaderboard entries in ranked order when visible', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+        leaderboard: [
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const entries = screen.getAllByRole('listitem');
+    expect(entries[0]).toHaveTextContent('The Quizzards');
+    expect(entries[0]).toHaveTextContent('5');
+    expect(entries[1]).toHaveTextContent('Second Place');
+    expect(entries[1]).toHaveTextContent('3');
+  });
 });
