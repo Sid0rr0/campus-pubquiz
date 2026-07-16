@@ -3,8 +3,11 @@ import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { SeedService } from '../db/seed.service';
 import type { SeededGame } from '../db/seed.types';
+import type { TeamService } from '../team/team.service';
 import { GameGateway } from './game.gateway';
 import { GameStateService } from './game-state.service';
+
+const ADMIN_PASSWORD = 'test-admin-password';
 
 const FIXTURE_SEEDED_GAME: SeededGame = {
   quizId: 'quiz-1',
@@ -25,11 +28,21 @@ function createFakeSeedService(): SeedService {
   } as unknown as SeedService;
 }
 
-function createMockSocket(role?: string) {
+function createFakeTeamService(): TeamService {
+  return {
+    join: jest.fn().mockResolvedValue({
+      id: 'team-1',
+      name: 'The Quizzards',
+      token: 'team-token-1',
+    }),
+  } as unknown as TeamService;
+}
+
+function createMockSocket(role?: string, auth: Record<string, string> = {}) {
   const rooms = new Set<string>();
   return {
     id: 'socket-1',
-    handshake: { query: role === undefined ? {} : { role } },
+    handshake: { query: role === undefined ? {} : { role }, auth },
     join: jest.fn((room: string) => rooms.add(room)),
     rooms,
     emit: jest.fn(),
@@ -59,11 +72,22 @@ function asServer(mock: MockServer): Server {
 describe('GameGateway', () => {
   let gateway: GameGateway;
   let server: MockServer;
+  let teamService: TeamService;
+  const originalAdminPassword = process.env.ADMIN_PASSWORD;
+
+  beforeAll(() => {
+    process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
+  });
+
+  afterAll(() => {
+    process.env.ADMIN_PASSWORD = originalAdminPassword;
+  });
 
   beforeEach(async () => {
     const gameStateService = new GameStateService(createFakeSeedService());
     await gameStateService.onModuleInit();
-    gateway = new GameGateway(gameStateService);
+    teamService = createFakeTeamService();
+    gateway = new GameGateway(gameStateService, teamService);
     server = createMockServer();
     gateway.server = asServer(server);
   });
@@ -98,8 +122,38 @@ describe('GameGateway', () => {
     expect(client.disconnect).toHaveBeenCalled();
   });
 
-  it('applies an admin action and broadcasts the updated snapshot to all three rooms', async () => {
+  it('joins an admin client that presents the correct password', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    expect(admin.join).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(admin.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('disconnects an admin client with the wrong password', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: 'wrong-password',
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    expect(admin.join).not.toHaveBeenCalled();
+    expect(admin.disconnect).toHaveBeenCalled();
+  });
+
+  it('disconnects an admin client with no password at all', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN);
+    await gateway.handleConnection(asSocket(admin));
+
+    expect(admin.join).not.toHaveBeenCalled();
+    expect(admin.disconnect).toHaveBeenCalled();
+  });
+
+  it('applies an admin action and broadcasts the updated snapshot to all three rooms', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
     await gateway.handleConnection(asSocket(admin));
 
     gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
@@ -127,7 +181,9 @@ describe('GameGateway', () => {
   });
 
   it('propagates an illegal-transition error for an out-of-order admin action without broadcasting', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN);
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
     await gateway.handleConnection(asSocket(admin));
 
     // LOCK_ANSWERS is illegal from lobby - quiz hasn't started yet
@@ -135,5 +191,50 @@ describe('GameGateway', () => {
       gateway.handleAdminAction(asSocket(admin), { action: 'LOCK_ANSWERS' }),
     ).toThrow(WsException);
     expect(server.emit).not.toHaveBeenCalled();
+  });
+
+  it('joins a team and emits JOIN_ACCEPTED for a players-room client', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
+
+    expect(teamService.join).toHaveBeenCalledWith(
+      'session-1',
+      'The Quizzards',
+      undefined,
+    );
+    expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_ACCEPTED, {
+      teamId: 'team-1',
+      teamName: 'The Quizzards',
+      teamToken: 'team-token-1',
+    });
+  });
+
+  it('rejects JOIN_PLAYERS from a non-players client', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await expect(
+      gateway.handleJoinPlayers(asSocket(admin), { teamName: 'The Quizzards' }),
+    ).rejects.toThrow(WsException);
+  });
+
+  it('surfaces a team-join error (e.g. name taken) as a WsException', async () => {
+    (teamService.join as jest.Mock).mockRejectedValueOnce(
+      new Error('Team name "The Quizzards" is already taken in this session'),
+    );
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await expect(
+      gateway.handleJoinPlayers(asSocket(player), {
+        teamName: 'The Quizzards',
+      }),
+    ).rejects.toThrow(WsException);
   });
 });
