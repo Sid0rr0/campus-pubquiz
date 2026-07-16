@@ -1,4 +1,7 @@
-import { IllegalGameTransitionError, type GameProgress } from '@campus-pubquiz/types';
+import {
+  IllegalGameTransitionError,
+  type GameProgress,
+} from '@campus-pubquiz/types';
 import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
@@ -86,12 +89,12 @@ describe('GameStateService', () => {
     await service.onModuleInit();
   });
 
-  it('throws if used before onModuleInit resolves the seeded game', () => {
+  it('throws if used before onModuleInit resolves the seeded game', async () => {
     const uninitialized = new GameStateService(
       createFakeSeedService(),
       asGameProgressRepository(createFakeGameProgressRepository()),
     );
-    expect(() => uninitialized.applyAction('START_QUIZ')).toThrow(
+    await expect(uninitialized.applyAction('START_QUIZ')).rejects.toThrow(
       /before initialization/i,
     );
   });
@@ -192,8 +195,8 @@ describe('GameStateService', () => {
     expect(withLeaderboard.currentQuestion?.id).toBe('r1q1');
   });
 
-  it('propagates an illegal-transition error for out-of-order actions', () => {
-    expect(() => service.applyAction('LOCK_ANSWERS')).toThrow(
+  it('propagates an illegal-transition error for out-of-order actions', async () => {
+    await expect(service.applyAction('LOCK_ANSWERS')).rejects.toThrow(
       IllegalGameTransitionError,
     );
   });

@@ -10,6 +10,7 @@ import {
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
+import { GameProgressRepository } from '@/game/game-progress.repository';
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -23,10 +24,19 @@ export class GameStateService implements OnModuleInit {
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
 
-  constructor(private readonly seedService: SeedService) {}
+  constructor(
+    private readonly seedService: SeedService,
+    private readonly progressRepository: GameProgressRepository,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     this.seededGame = await this.seedService.seed();
+    const savedProgress = await this.progressRepository.load(
+      this.seededGame.gameSessionId,
+    );
+    if (savedProgress) {
+      this.progress = savedProgress;
+    }
   }
 
   getGameSessionId(): string {
@@ -45,8 +55,9 @@ export class GameStateService implements OnModuleInit {
     };
   }
 
-  applyAction(action: GameAction): StateSnapshotPayload {
+  async applyAction(action: GameAction): Promise<StateSnapshotPayload> {
     this.progress = getNextGameState(this.progress, action, this.getContext());
+    await this.progressRepository.save(this.getGameSessionId(), this.progress);
     return this.getSnapshot();
   }
 

@@ -58,17 +58,17 @@ export class GameGateway implements OnGatewayConnection {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.ADMIN_ACTION)
-  handleAdminAction(
+  async handleAdminAction(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: AdminActionPayload,
-  ): void {
+  ): Promise<void> {
     if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
       throw new WsException('Only admin clients may perform game actions');
     }
 
     let snapshot: StateSnapshotPayload;
     try {
-      snapshot = this.gameState.applyAction(payload.action);
+      snapshot = await this.gameState.applyAction(payload.action);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Invalid game action';

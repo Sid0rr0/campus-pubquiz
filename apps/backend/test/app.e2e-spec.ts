@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '@/app.module';
 import { SeedService } from '@/db/seed.service';
+import { GameProgressRepository } from '@/game/game-progress.repository';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -21,6 +22,11 @@ describe('AppController (e2e)', () => {
             joinCode: 'ABCDEF',
             rounds: [],
           }),
+      })
+      .overrideProvider(GameProgressRepository)
+      .useValue({
+        load: () => Promise.resolve(null),
+        save: () => Promise.resolve(undefined),
       })
       .compile();
 
