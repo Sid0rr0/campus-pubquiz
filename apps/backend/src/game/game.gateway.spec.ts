@@ -4,6 +4,7 @@ import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
+import type { AnswerService } from '@/answer/answer.service';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 
@@ -44,6 +45,32 @@ function asTeamService(mock: MockTeamService): TeamService {
   return mock as unknown as TeamService;
 }
 
+function createFakeAnswerService() {
+  return {
+    submit: jest.fn().mockResolvedValue({
+      answerId: 'answer-1',
+      teamId: 'team-1',
+      teamName: 'The Quizzards',
+      value: 'Banana',
+    }),
+    listForQuestion: jest.fn().mockResolvedValue([
+      {
+        answerId: 'answer-1',
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        value: 'Banana',
+        pointsAwarded: null,
+      },
+    ]),
+  };
+}
+
+type MockAnswerService = ReturnType<typeof createFakeAnswerService>;
+
+function asAnswerService(mock: MockAnswerService): AnswerService {
+  return mock as unknown as AnswerService;
+}
+
 function createMockSocket(role?: string, auth: Record<string, string> = {}) {
   const rooms = new Set<string>();
   return {
@@ -79,6 +106,7 @@ describe('GameGateway', () => {
   let gateway: GameGateway;
   let server: MockServer;
   let teamService: MockTeamService;
+  let answerService: MockAnswerService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
   beforeAll(() => {
@@ -93,7 +121,12 @@ describe('GameGateway', () => {
     const gameStateService = new GameStateService(createFakeSeedService());
     await gameStateService.onModuleInit();
     teamService = createFakeTeamService();
-    gateway = new GameGateway(gameStateService, asTeamService(teamService));
+    answerService = createFakeAnswerService();
+    gateway = new GameGateway(
+      gameStateService,
+      asTeamService(teamService),
+      asAnswerService(answerService),
+    );
     server = createMockServer();
     gateway.server = asServer(server);
   });
@@ -242,5 +275,70 @@ describe('GameGateway', () => {
         teamName: 'The Quizzards',
       }),
     ).rejects.toThrow(WsException);
+  });
+
+  it('submits an answer and broadcasts ANSWERS_UPDATED to the admin room only', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await gateway.handleSubmitAnswer(asSocket(player), {
+      questionId: 'r1q1',
+      teamId: 'team-1',
+      value: 'Banana',
+    });
+
+    expect(answerService.submit).toHaveBeenCalledWith(
+      'session-1',
+      'r1q1',
+      'team-1',
+      'Banana',
+    );
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
+      questionId: 'r1q1',
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: null,
+        },
+      ],
+    });
+  });
+
+  it('acknowledges the submitting player with ANSWER_RECEIVED', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await gateway.handleSubmitAnswer(asSocket(player), {
+      questionId: 'r1q1',
+      teamId: 'team-1',
+      value: 'Banana',
+    });
+
+    expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWER_RECEIVED, {
+      questionId: 'r1q1',
+      teamId: 'team-1',
+      teamName: 'The Quizzards',
+      value: 'Banana',
+    });
+  });
+
+  it('rejects SUBMIT_ANSWER from a non-players client', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await expect(
+      gateway.handleSubmitAnswer(asSocket(admin), {
+        questionId: 'r1q1',
+        teamId: 'team-1',
+        value: 'Banana',
+      }),
+    ).rejects.toThrow(WsException);
+    expect(answerService.submit).not.toHaveBeenCalled();
   });
 });
