@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { AnswerView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { Leaderboard } from '@/app/components/leaderboard';
 
 interface GradeRowProps {
   answer: AnswerView;
@@ -78,14 +79,7 @@ export default function AdminPage() {
       {leaderboard.length > 0 && (
         <section>
           <h2>Leaderboard</h2>
-          <ol>
-            {leaderboard.map((entry) => (
-              <li key={entry.teamId}>
-                <span>{entry.teamName}</span>
-                <span>{entry.totalPoints}</span>
-              </li>
-            ))}
-          </ol>
+          <Leaderboard entries={leaderboard} />
         </section>
       )}
     </main>

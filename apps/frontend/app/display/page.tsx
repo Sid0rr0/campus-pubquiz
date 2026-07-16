@@ -1,6 +1,7 @@
 'use client';
 
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { Leaderboard } from '@/app/components/leaderboard';
 
 export default function DisplayPage() {
   const { snapshot } = useGameSocket('display');
@@ -13,11 +14,16 @@ export default function DisplayPage() {
     );
   }
 
-  const { progress, currentQuestion } = snapshot;
+  const { progress, currentQuestion, leaderboard = [] } = snapshot;
 
   return (
     <main>
-      {progress.isLeaderboardVisible && <h1>Leaderboard</h1>}
+      {progress.isLeaderboardVisible && (
+        <>
+          <h1>Leaderboard</h1>
+          <Leaderboard entries={leaderboard} />
+        </>
+      )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
         <h1>Waiting for the quiz to start…</h1>
       )}
