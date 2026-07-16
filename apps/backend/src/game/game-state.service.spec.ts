@@ -1,7 +1,7 @@
 import { IllegalGameTransitionError } from '@campus-pubquiz/types';
-import type { SeedService } from '../db/seed.service';
-import type { SeededGame } from '../db/seed.types';
-import { GameStateService } from './game-state.service';
+import type { SeedService } from '@/db/seed.service';
+import type { SeededGame } from '@/db/seed.types';
+import { GameStateService } from '@/game/game-state.service';
 
 const FIXTURE_SEEDED_GAME: SeededGame = {
   quizId: 'quiz-1',

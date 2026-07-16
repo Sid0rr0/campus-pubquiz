@@ -1,4 +1,4 @@
-import { generateJoinCode } from './join-code.util';
+import { generateJoinCode } from '@/db/join-code.util';
 
 describe('generateJoinCode', () => {
   it('generates a 6-character code from the unambiguous alphabet', () => {

@@ -95,6 +95,10 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 
 Sheets import, media support, and grading UI come after the live loop works end-to-end.
 
+## Backend Import Convention
+
+Backend (`apps/backend`) source and test files import via the `@/*` path alias (mapped to `src/*` in `tsconfig.json`), never relative `./`/`../` paths.
+
 ## Git Commit Convention
 
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope) with a **scope** naming the workspace touched:

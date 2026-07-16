@@ -7,8 +7,8 @@ import {
   type QuestionView,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { SeedService } from '../db/seed.service';
-import type { SeededGame } from '../db/seed.types';
+import { SeedService } from '@/db/seed.service';
+import type { SeededGame } from '@/db/seed.types';
 
 @Injectable()
 export class GameStateService implements OnModuleInit {

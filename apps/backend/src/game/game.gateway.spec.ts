@@ -1,11 +1,11 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
-import type { SeedService } from '../db/seed.service';
-import type { SeededGame } from '../db/seed.types';
-import type { TeamService } from '../team/team.service';
-import { GameGateway } from './game.gateway';
-import { GameStateService } from './game-state.service';
+import type { SeedService } from '@/db/seed.service';
+import type { SeededGame } from '@/db/seed.types';
+import type { TeamService } from '@/team/team.service';
+import { GameGateway } from '@/game/game.gateway';
+import { GameStateService } from '@/game/game-state.service';
 
 const ADMIN_PASSWORD = 'test-admin-password';
 

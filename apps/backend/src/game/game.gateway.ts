@@ -15,8 +15,8 @@ import {
   type JoinPlayersPayload,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { TeamService } from '../team/team.service';
-import { GameStateService } from './game-state.service';
+import { TeamService } from '@/team/team.service';
+import { GameStateService } from '@/game/game-state.service';
 
 const VALID_ROOMS: string[] = [
   SOCKET_ROOMS.DISPLAY,

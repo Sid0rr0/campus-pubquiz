@@ -5,8 +5,8 @@ import {
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client } from 'pg';
-import * as schema from '../db/schema';
-import { TeamNameTakenError, TeamService } from './team.service';
+import * as schema from '@/db/schema';
+import { TeamNameTakenError, TeamService } from '@/team/team.service';
 
 describe('TeamService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;

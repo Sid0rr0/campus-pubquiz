@@ -5,9 +5,9 @@ import {
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client } from 'pg';
-import { HARDCODED_QUIZ } from '../game/hardcoded-quiz.fixture';
-import * as schema from './schema';
-import { SeedService } from './seed.service';
+import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
+import * as schema from '@/db/schema';
+import { SeedService } from '@/db/seed.service';
 
 describe('SeedService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;

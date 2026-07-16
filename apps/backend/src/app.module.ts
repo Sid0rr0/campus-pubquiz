@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { DbModule } from './db/db.module';
-import { SeedService } from './db/seed.service';
-import { GameGateway } from './game/game.gateway';
-import { GameStateService } from './game/game-state.service';
-import { TeamService } from './team/team.service';
+import { AppController } from '@/app.controller';
+import { AppService } from '@/app.service';
+import { DbModule } from '@/db/db.module';
+import { SeedService } from '@/db/seed.service';
+import { GameGateway } from '@/game/game.gateway';
+import { GameStateService } from '@/game/game-state.service';
+import { TeamService } from '@/team/team.service';
 
 @Module({
   imports: [DbModule],

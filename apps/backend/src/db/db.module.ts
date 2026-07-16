@@ -1,8 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { DRIZZLE } from './db.constants';
-import * as schema from './schema';
+import { DRIZZLE } from '@/db/db.constants';
+import * as schema from '@/db/schema';
 
 @Global()
 @Module({

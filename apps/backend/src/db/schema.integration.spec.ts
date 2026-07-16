@@ -6,7 +6,7 @@ import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { eq } from 'drizzle-orm';
 import { Client } from 'pg';
-import * as schema from './schema';
+import * as schema from '@/db/schema';
 
 describe('Drizzle schema (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;

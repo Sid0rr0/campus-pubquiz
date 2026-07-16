@@ -2,11 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { QuestionType } from '@campus-pubquiz/types';
-import { DRIZZLE } from './db.constants';
-import { generateJoinCode } from './join-code.util';
-import { HARDCODED_QUIZ } from '../game/hardcoded-quiz.fixture';
-import * as schema from './schema';
-import type { SeededGame, SeededRound } from './seed.types';
+import { DRIZZLE } from '@/db/db.constants';
+import { generateJoinCode } from '@/db/join-code.util';
+import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
+import * as schema from '@/db/schema';
+import type { SeededGame, SeededRound } from '@/db/seed.types';
 
 interface QuestionPayload {
   options?: string[];

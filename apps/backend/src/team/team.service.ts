@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { DRIZZLE } from '../db/db.constants';
-import * as schema from '../db/schema';
+import { DRIZZLE } from '@/db/db.constants';
+import * as schema from '@/db/schema';
 
 const UNIQUE_VIOLATION_CODE = '23505';
 
