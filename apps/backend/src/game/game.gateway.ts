@@ -12,6 +12,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type AdminActionPayload,
+  type GradeAnswerPayload,
   type JoinPlayersPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
@@ -138,6 +139,42 @@ export class GameGateway implements OnGatewayConnection {
       questionId: payload.questionId,
       answers,
     });
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.GRADE_ANSWER)
+  async handleGradeAnswer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: GradeAnswerPayload,
+  ): Promise<void> {
+    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+      throw new WsException('Only admin clients may grade answers');
+    }
+
+    const { questionId } = await this.answerService.grade(
+      payload.answerId,
+      payload.pointsAwarded,
+    );
+
+    const gameSessionId = this.gameState.getGameSessionId();
+
+    const answers = await this.answerService.listForQuestion(
+      gameSessionId,
+      questionId,
+    );
+    this.server.to(SOCKET_ROOMS.ADMIN).emit(SOCKET_EVENTS.ANSWERS_UPDATED, {
+      questionId,
+      answers,
+    });
+
+    const leaderboard =
+      await this.answerService.computeLeaderboard(gameSessionId);
+    this.gameState.setLeaderboard(leaderboard);
+
+    this.server
+      .to(SOCKET_ROOMS.DISPLAY)
+      .to(SOCKET_ROOMS.ADMIN)
+      .to(SOCKET_ROOMS.PLAYERS)
+      .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
   }
 
   private isValidAdminPassword(client: Socket): boolean {
