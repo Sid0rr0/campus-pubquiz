@@ -101,6 +101,9 @@ function createFakeTeamService() {
       name: 'The Quizzards',
       token: 'team-token-1',
     }),
+    listForSession: jest
+      .fn()
+      .mockResolvedValue([{ teamId: 'team-1', teamName: 'The Quizzards' }]),
   };
 }
 
@@ -348,6 +351,27 @@ describe('GameGateway', () => {
       teamName: 'The Quizzards',
       teamToken: 'team-token-1',
     });
+  });
+
+  it('broadcasts the updated connected-team list to all rooms after a join', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+      joinCode: 'ABCDEF',
+    });
+
+    expect(teamService.listForSession).toHaveBeenCalledWith('session-1');
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.objectContaining({
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      }),
+    );
   });
 
   it('rejects JOIN_PLAYERS from a non-players client', async () => {

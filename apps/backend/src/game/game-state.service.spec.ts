@@ -139,6 +139,26 @@ describe('GameStateService', () => {
     expect(service.getSnapshot().joinCode).toBe('ABCDEF');
   });
 
+  it('starts with no connected teams in the snapshot', () => {
+    expect(service.getSnapshot().teams).toEqual([]);
+  });
+
+  it('reflects teams set via setTeams in the snapshot', () => {
+    service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
+
+    expect(service.getSnapshot().teams).toEqual([
+      { teamId: 'team-1', teamName: 'The Quizzards' },
+    ]);
+  });
+
+  it('clears the connected teams when a new quiz session is selected', async () => {
+    service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
+
+    const snapshot = await service.selectQuiz('quiz-2');
+
+    expect(snapshot.teams).toEqual([]);
+  });
+
   it('starts in the lobby with no current question', () => {
     const snapshot = service.getSnapshot();
     expect(snapshot.progress.status).toBe('lobby');

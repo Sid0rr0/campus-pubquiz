@@ -151,6 +151,26 @@ describe('TeamService (Postgres integration)', () => {
     ).rejects.toThrow(InvalidJoinCodeError);
   });
 
+  it('lists only the teams of the given session in join order', async () => {
+    const session2Id = await createSecondSession('GHIJKL');
+    const first = await teamService.join(sessionId, 'First Team', {
+      joinCode: 'ABCDEF',
+    });
+    const second = await teamService.join(sessionId, 'Second Team', {
+      joinCode: 'ABCDEF',
+    });
+    await teamService.join(session2Id, 'Other Session Team', {
+      joinCode: 'GHIJKL',
+    });
+
+    const teams = await teamService.listForSession(sessionId);
+
+    expect(teams).toEqual([
+      { teamId: first.id, teamName: 'First Team' },
+      { teamId: second.id, teamName: 'Second Team' },
+    ]);
+  });
+
   it('allows the same team name in two different sessions', async () => {
     const session2Id = await createSecondSession('GHIJKL');
 
