@@ -7,11 +7,14 @@ export const SOCKET_EVENTS = {
   ANSWER_RECEIVED: 'game:answer_received',
   JOIN_ACCEPTED: 'game:join_accepted',
   ANSWERS_UPDATED: 'game:answers_updated',
+  QUIZZES_LISTED: 'game:quizzes_listed',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',
   SUBMIT_ANSWER: 'game:submit_answer',
   JOIN_PLAYERS: 'game:join_players',
   GRADE_ANSWER: 'game:grade_answer',
+  LIST_QUIZZES: 'game:list_quizzes',
+  SELECT_QUIZ: 'game:select_quiz',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -87,4 +90,18 @@ export interface AnswersUpdatedPayload {
 export interface GradeAnswerPayload {
   answerId: string;
   pointsAwarded: number;
+}
+
+export interface QuizSummary {
+  id: string;
+  title: string;
+}
+
+export interface QuizzesListedPayload {
+  activeQuizId: string;
+  quizzes: QuizSummary[];
+}
+
+export interface SelectQuizPayload {
+  quizId: string;
 }
