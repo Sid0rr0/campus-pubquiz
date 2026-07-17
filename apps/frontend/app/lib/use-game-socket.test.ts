@@ -270,6 +270,51 @@ describe('useGameSocket', () => {
     });
   });
 
+  it('listAnswers emits a LIST_ANSWERS event with the question id', () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.listAnswers('r1q1');
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.LIST_ANSWERS, {
+      questionId: 'r1q1',
+    });
+  });
+
+  it('seeds the team saved answers from JOIN_ACCEPTED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+        answers: [{ questionId: 'r1q1', value: 'Banana' }],
+      });
+    });
+
+    await waitFor(() => expect(result.current.myAnswers).toEqual({ r1q1: 'Banana' }));
+  });
+
+  it('records the acknowledged answer on ANSWER_RECEIVED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWER_RECEIVED, {
+        questionId: 'r1q2',
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        value: 'Carrot',
+      });
+    });
+
+    await waitFor(() => expect(result.current.myAnswers).toEqual({ r1q2: 'Carrot' }));
+  });
+
   it('adopts the quiz list on QUIZZES_LISTED', async () => {
     const { result } = renderHook(() => useGameSocket('admin'));
     const fakeSocket = getFakeSocket();

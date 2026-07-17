@@ -167,14 +167,23 @@ describe('DisplayPage', () => {
     expect(screen.getByText('London')).toBeInTheDocument();
   });
 
-  it('shows a locked indicator once answers are locked', () => {
+  it('shows how many teams have answered the open question', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'locked' }), currentQuestion: question },
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: question,
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+        answeredTeamIds: ['team-1'],
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
-    expect(screen.getByText(/locked/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/1 of 2 teams answered/i)).toBeInTheDocument();
   });
 
   it('shows a grading message during a break', () => {

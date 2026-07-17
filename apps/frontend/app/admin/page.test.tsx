@@ -139,7 +139,7 @@ describe('AdminPage', () => {
   it('sends ADVANCE when the Advance button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'locked' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'question_open' }), currentQuestion: null },
       connectionError: null,
       sendAction,
     });
@@ -164,18 +164,37 @@ describe('AdminPage', () => {
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
 
-  it('sends LOCK_ANSWERS when the Lock Answers button is clicked', async () => {
-    const sendAction = vi.fn();
+  it('does not offer a per-question lock control (locking is block-based)', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'question_open' }), currentQuestion: null },
       connectionError: null,
-      sendAction,
+      sendAction: vi.fn(),
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /lock answers/i }));
+    expect(screen.queryByRole('button', { name: /lock answers/i })).not.toBeInTheDocument();
+  });
 
-    expect(sendAction).toHaveBeenCalledWith('LOCK_ANSWERS');
+  it('marks the teams that have answered the current question in the sidebar', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+        answeredTeamIds: ['team-1'],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByRole('listitem', { name: /the quizzards has answered/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('listitem', { name: /beer necessities has not answered yet/i }),
+    ).toBeInTheDocument();
   });
 
   it('sends FINISH_GRADING when the Finish Grading button is clicked', async () => {
@@ -209,7 +228,7 @@ describe('AdminPage', () => {
   it('shows live answers for the current question with team name and value', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'locked' }),
+        progress: progress({ status: 'question_open' }),
         currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
       },
       connectionError: null,
@@ -239,10 +258,14 @@ describe('AdminPage', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        ],
       },
       connectionError: null,
       sendAction: vi.fn(),
+      listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         answers: [
@@ -269,10 +292,14 @@ describe('AdminPage', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        ],
       },
       connectionError: null,
       sendAction: vi.fn(),
+      listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         answers: [
@@ -298,10 +325,14 @@ describe('AdminPage', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        ],
       },
       connectionError: null,
       sendAction: vi.fn(),
+      listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         answers: [
@@ -323,6 +354,54 @@ describe('AdminPage', () => {
     expect(fullPointsButton).toBeDisabled();
     expect(screen.getByRole('button', { name: /grade the quizzards 0 points/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /grade the quizzards half points/i })).toBeDisabled();
+  });
+
+  it('requests and shows the first block question answers during the grading break', () => {
+    const listAnswers = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break', questionIndex: 1 }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      listAnswers,
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(listAnswers).toHaveBeenCalledWith('r1q1');
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+  });
+
+  it('browses to the next block question during the grading break', async () => {
+    const listAnswers = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break', questionIndex: 1 }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      listAnswers,
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /next question/i }));
+
+    expect(listAnswers).toHaveBeenCalledWith('r1q2');
+    expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
 
   it('requests the quiz list while the game is in the lobby or ended', () => {

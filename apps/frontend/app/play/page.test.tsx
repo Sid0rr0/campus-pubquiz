@@ -37,6 +37,7 @@ function socketResult(overrides: Record<string, unknown> = {}) {
     submitAnswer: vi.fn(),
     liveAnswers: null,
     gradeAnswer: vi.fn(),
+    myAnswers: {},
     ...overrides,
   };
 }
@@ -246,13 +247,69 @@ describe('PlayPage', () => {
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
   });
 
-  it('does not show an answer form while answers are locked', () => {
+  it('shows a navigator for revealed block questions with answered questions marked', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = { id: 'r1q1', type: 'free_text' as const, prompt: 'Name a fruit', points: 1 };
+    const q2 = { id: 'r1q2', type: 'free_text' as const, prompt: 'Name a planet', points: 1 };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open', questionIndex: 1 }),
+          currentQuestion: q2,
+          blockQuestions: [q1, q2],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        myAnswers: { r1q1: 'Banana' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByRole('button', { name: /question 1 \(answered\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^question 2$/i })).toBeInTheDocument();
+    expect(screen.getByText('Name a planet')).toBeInTheDocument();
+  });
+
+  it('lets the team browse back to an earlier open question and revise its answer', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    const q1 = { id: 'r1q1', type: 'free_text' as const, prompt: 'Name a fruit', points: 1 };
+    const q2 = { id: 'r1q2', type: 'free_text' as const, prompt: 'Name a planet', points: 1 };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open', questionIndex: 1 }),
+          currentQuestion: q2,
+          blockQuestions: [q1, q2],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        submitAnswer,
+        myAnswers: { r1q1: 'Banana' },
+      }),
+    );
+    render(<PlayPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /question 1 \(answered\)/i }));
+
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /your answer/i })).toHaveValue('Banana');
+
+    await userEvent.clear(screen.getByRole('textbox', { name: /your answer/i }));
+    await userEvent.type(screen.getByRole('textbox', { name: /your answer/i }), 'Apple');
+    await userEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Apple');
+  });
+
+  it('tells the team answers are locked during the grading break', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(
       socketResult({
         snapshot: {
-          progress: progress({ status: 'locked' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          progress: progress({ status: 'break' }),
+          currentQuestion: null,
+          blockQuestions: [
+            { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          ],
         },
         team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
       }),
@@ -260,7 +317,7 @@ describe('PlayPage', () => {
     render(<PlayPage />);
 
     expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/answers locked/i)).toBeInTheDocument();
+    expect(screen.getByText(/answers are locked/i)).toBeInTheDocument();
   });
 
   it('does not show an answer form before the team identity has been confirmed', () => {
