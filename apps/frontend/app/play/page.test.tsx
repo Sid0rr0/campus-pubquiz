@@ -247,6 +247,30 @@ describe('PlayPage', () => {
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
   });
 
+  it('indicates which option the team chose on a multiple-choice question', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'multiple_choice',
+            prompt: 'Capital of France?',
+            options: ['Paris', 'London', 'Berlin', 'Rome'],
+            points: 2,
+          },
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        myAnswers: { r1q1: 'Paris' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByRole('button', { name: 'Paris' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'London' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('shows a navigator for revealed block questions with answered questions marked', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = { id: 'r1q1', type: 'free_text' as const, prompt: 'Name a fruit', points: 1 };
