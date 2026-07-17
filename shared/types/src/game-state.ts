@@ -1,8 +1,7 @@
-export type GameStatus = 'lobby' | 'question_open' | 'locked' | 'break' | 'reveal' | 'ended';
+export type GameStatus = 'lobby' | 'question_open' | 'break' | 'reveal' | 'ended';
 
 export type GameAction =
   | 'START_QUIZ'
-  | 'LOCK_ANSWERS'
   | 'ADVANCE'
   | 'FINISH_GRADING'
   | 'END_QUIZ'
@@ -10,7 +9,11 @@ export type GameAction =
 
 export interface RoundConfig {
   questionCount: number;
-  /** Whether a grading break follows this round once its last question is locked. */
+  /**
+   * Whether a grading break follows this round. Questions stay open for
+   * (re-)answering until the block ends: advancing past the last question of a
+   * breakAfter round locks every question since the previous breakAfter round.
+   */
   breakAfter: boolean;
 }
 
@@ -46,7 +49,21 @@ function illegal(status: GameStatus, action: GameAction): never {
   throw new IllegalGameTransitionError(status, action);
 }
 
-function advanceFromLocked(progress: GameProgress, context: GameContext): GameProgress {
+/**
+ * First round of the block containing `roundIndex`: the round after the
+ * nearest earlier breakAfter round, or round 0. A breakAfter round closes its
+ * own block, so it belongs to the block that starts after the previous break.
+ */
+export function getBlockStartRoundIndex(roundIndex: number, context: GameContext): number {
+  for (let index = roundIndex - 1; index >= 0; index -= 1) {
+    if (context.rounds[index].breakAfter) {
+      return index + 1;
+    }
+  }
+  return 0;
+}
+
+function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): GameProgress {
   const round = context.rounds[progress.roundIndex];
   const isLastQuestionInRound = progress.questionIndex + 1 >= round.questionCount;
 
@@ -99,12 +116,8 @@ export function getNextGameState(
       if (progress.status !== 'lobby') illegal(progress.status, action);
       return { ...progress, status: 'question_open', roundIndex: 0, questionIndex: 0 };
 
-    case 'LOCK_ANSWERS':
-      if (progress.status !== 'question_open') illegal(progress.status, action);
-      return { ...progress, status: 'locked' };
-
     case 'ADVANCE':
-      if (progress.status === 'locked') return advanceFromLocked(progress, context);
+      if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
       if (progress.status === 'reveal') return advanceFromReveal(progress, context);
       return illegal(progress.status, action);
 

@@ -15,6 +15,7 @@ export const SOCKET_EVENTS = {
   GRADE_ANSWER: 'game:grade_answer',
   LIST_QUIZZES: 'game:list_quizzes',
   SELECT_QUIZ: 'game:select_quiz',
+  LIST_ANSWERS: 'game:list_answers',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -48,6 +49,14 @@ export interface TeamView {
 export interface StateSnapshotPayload {
   progress: GameProgress;
   currentQuestion: QuestionView | null;
+  /**
+   * Questions open for (re-)answering: everything revealed so far in the
+   * current block while a question is open, or the whole just-locked block
+   * during break/reveal (for grading). Empty otherwise.
+   */
+  blockQuestions: QuestionView[];
+  /** Teams that have answered the current question. Empty when none is open. */
+  answeredTeamIds: string[];
   leaderboard: LeaderboardEntry[];
   joinCode: string;
   teams: TeamView[];
@@ -76,10 +85,17 @@ export interface JoinPlayersPayload {
   joinCode?: string;
 }
 
+export interface TeamAnswerView {
+  questionId: string;
+  value: string;
+}
+
 export interface JoinAcceptedPayload {
   teamId: string;
   teamToken: string;
   teamName: string;
+  /** The team's saved answers in this session, so reconnects restore them. */
+  answers: TeamAnswerView[];
 }
 
 export interface AnswerView {
@@ -112,4 +128,8 @@ export interface QuizzesListedPayload {
 
 export interface SelectQuizPayload {
   quizId: string;
+}
+
+export interface ListAnswersPayload {
+  questionId: string;
 }
