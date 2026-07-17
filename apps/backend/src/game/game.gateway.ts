@@ -124,6 +124,16 @@ export class GameGateway implements OnGatewayConnection {
         teamName: team.name,
         teamToken: team.token,
       });
+
+      const teams = await this.teamService.listForSession(
+        this.gameState.getGameSessionId(),
+      );
+      this.gameState.setTeams(teams);
+      this.server
+        .to(SOCKET_ROOMS.DISPLAY)
+        .to(SOCKET_ROOMS.ADMIN)
+        .to(SOCKET_ROOMS.PLAYERS)
+        .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to join';
       throw new WsException(message);

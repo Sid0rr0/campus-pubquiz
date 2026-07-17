@@ -7,6 +7,7 @@ import {
   type LeaderboardEntry,
   type QuestionView,
   type StateSnapshotPayload,
+  type TeamView,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
@@ -25,6 +26,7 @@ export class GameStateService implements OnModuleInit {
 
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
+  private teams: TeamView[] = [];
 
   constructor(
     private readonly seedService: SeedService,
@@ -66,11 +68,16 @@ export class GameStateService implements OnModuleInit {
     // no progress to persist here.
     this.progress = { ...LOBBY_PROGRESS };
     this.leaderboard = [];
+    this.teams = [];
     return this.getSnapshot();
   }
 
   setLeaderboard(leaderboard: LeaderboardEntry[]): void {
     this.leaderboard = leaderboard;
+  }
+
+  setTeams(teams: TeamView[]): void {
+    this.teams = teams;
   }
 
   getSnapshot(): StateSnapshotPayload {
@@ -79,6 +86,7 @@ export class GameStateService implements OnModuleInit {
       currentQuestion: this.getCurrentQuestion(),
       leaderboard: this.leaderboard,
       joinCode: this.getSeededGame().joinCode,
+      teams: this.teams,
     };
   }
 

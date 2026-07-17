@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { TeamView } from '@campus-pubquiz/types';
 import { DRIZZLE } from '@/db/db.constants';
 import * as schema from '@/db/schema';
 
@@ -69,6 +70,15 @@ export class TeamService {
       }
       throw error;
     }
+  }
+
+  async listForSession(gameSessionId: string): Promise<TeamView[]> {
+    const rows = await this.db
+      .select({ id: schema.teams.id, name: schema.teams.name })
+      .from(schema.teams)
+      .where(eq(schema.teams.gameSessionId, gameSessionId))
+      .orderBy(schema.teams.createdAt);
+    return rows.map((row) => ({ teamId: row.id, teamName: row.name }));
   }
 
   private async assertJoinCodeMatches(
