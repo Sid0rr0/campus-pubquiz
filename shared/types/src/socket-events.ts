@@ -44,6 +44,7 @@ export interface StateSnapshotPayload {
   progress: GameProgress;
   currentQuestion: QuestionView | null;
   leaderboard: LeaderboardEntry[];
+  joinCode: string;
 }
 
 export interface AdminActionPayload {
@@ -66,6 +67,7 @@ export interface AnswerReceivedPayload {
 export interface JoinPlayersPayload {
   teamName: string;
   teamToken?: string;
+  joinCode?: string;
 }
 
 export interface JoinAcceptedPayload {
