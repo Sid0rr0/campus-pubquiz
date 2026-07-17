@@ -22,12 +22,7 @@ const LOBBY_PROGRESS: GameProgress = {
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
-  private progress: GameProgress = {
-    status: 'lobby',
-    roundIndex: 0,
-    questionIndex: 0,
-    isLeaderboardVisible: false,
-  };
+  private progress: GameProgress = { ...LOBBY_PROGRESS };
 
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
