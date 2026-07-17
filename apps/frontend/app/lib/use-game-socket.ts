@@ -10,6 +10,8 @@ import {
   type GradeAnswerPayload,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
+  type QuizzesListedPayload,
+  type SelectQuizPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
@@ -27,6 +29,9 @@ export interface UseGameSocketResult {
   submitAnswer: (questionId: string, teamId: string, value: string) => void;
   liveAnswers: AnswersUpdatedPayload | null;
   gradeAnswer: (answerId: string, pointsAwarded: number) => void;
+  quizzes: QuizzesListedPayload | null;
+  requestQuizzes: () => void;
+  selectQuiz: (quizId: string) => void;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -47,6 +52,7 @@ export function useGameSocket(
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
+  const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -75,6 +81,10 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload: AnswersUpdatedPayload) => {
       setLiveAnswers(payload);
+    });
+
+    socket.on(SOCKET_EVENTS.QUIZZES_LISTED, (payload: QuizzesListedPayload) => {
+      setQuizzes(payload);
     });
 
     socket.on('connect_error', (payload: unknown) => {
@@ -119,6 +129,15 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.GRADE_ANSWER, payload);
   }, []);
 
+  const requestQuizzes = useCallback(() => {
+    socketRef.current?.emit(SOCKET_EVENTS.LIST_QUIZZES);
+  }, []);
+
+  const selectQuiz = useCallback((quizId: string) => {
+    const payload: SelectQuizPayload = { quizId };
+    socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
+  }, []);
+
   return {
     snapshot,
     connectionError,
@@ -128,5 +147,8 @@ export function useGameSocket(
     submitAnswer,
     liveAnswers,
     gradeAnswer,
+    quizzes,
+    requestQuizzes,
+    selectQuiz,
   };
 }

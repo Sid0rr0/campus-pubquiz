@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { AnswerView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
+
+const NOOP = () => {};
 
 interface GradeRowProps {
   answer: AnswerView;
@@ -66,11 +68,23 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
   const [submittedPassword, setSubmittedPassword] = useState('');
-  const { snapshot, connectionError, sendAction, liveAnswers, gradeAnswer } = useGameSocket(
-    'admin',
-    submittedPassword,
-    hasSubmittedPassword,
-  );
+  const {
+    snapshot,
+    connectionError,
+    sendAction,
+    liveAnswers,
+    gradeAnswer,
+    quizzes = null,
+    requestQuizzes = NOOP,
+    selectQuiz = NOOP,
+  } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
+
+  const gameStatus = snapshot?.progress.status;
+  useEffect(() => {
+    if (gameStatus === 'lobby') {
+      requestQuizzes();
+    }
+  }, [gameStatus, requestQuizzes]);
 
   function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -170,6 +184,34 @@ export default function AdminPage() {
         </div>
       </aside>
       <div className="flex flex-1 flex-col gap-6 p-7">
+        {progress.status === 'lobby' && quizzes && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-display text-xl">Choose Quiz</h2>
+            <ul className="flex flex-col gap-2">
+              {quizzes.quizzes.map((quiz) => {
+                const isActive = quiz.id === quizzes.activeQuizId;
+                return (
+                  <li key={quiz.id}>
+                    <button
+                      type="button"
+                      disabled={isActive}
+                      aria-label={isActive ? `${quiz.title} (active)` : `Select quiz ${quiz.title}`}
+                      onClick={() => selectQuiz(quiz.id)}
+                      className={
+                        isActive
+                          ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-cyan bg-white px-4 font-extrabold'
+                          : 'flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold'
+                      }
+                    >
+                      <span>{quiz.title}</span>
+                      {isActive && <span className="text-sm text-cyan">active</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
         {showGrading && (
           <section className="flex flex-col gap-3">
             <h2 className="font-display text-xl">Answers</h2>
