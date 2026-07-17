@@ -117,7 +117,7 @@ export class GameGateway implements OnGatewayConnection {
       const team = await this.teamService.join(
         this.gameState.getGameSessionId(),
         payload.teamName,
-        payload.teamToken,
+        { teamToken: payload.teamToken, joinCode: payload.joinCode },
       );
       client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
         teamId: team.id,

@@ -14,10 +14,22 @@ export class TeamNameTakenError extends Error {
   }
 }
 
+export class InvalidJoinCodeError extends Error {
+  constructor() {
+    super('Invalid game code — check the code on the screen and try again');
+    this.name = 'InvalidJoinCodeError';
+  }
+}
+
 export interface TeamIdentity {
   id: string;
   name: string;
   token: string;
+}
+
+export interface JoinOptions {
+  teamToken?: string;
+  joinCode?: string;
 }
 
 @Injectable()
@@ -29,19 +41,21 @@ export class TeamService {
   async join(
     gameSessionId: string,
     teamName: string,
-    existingToken?: string,
+    options: JoinOptions = {},
   ): Promise<TeamIdentity> {
-    if (existingToken) {
+    if (options.teamToken) {
       const [existing] = await this.db
         .select()
         .from(schema.teams)
-        .where(eq(schema.teams.token, existingToken));
+        .where(eq(schema.teams.token, options.teamToken));
       // A token from another (older) session must not resurrect that team
       // here; fall through and register a fresh team in this session.
       if (existing && existing.gameSessionId === gameSessionId) {
         return { id: existing.id, name: existing.name, token: existing.token };
       }
     }
+
+    await this.assertJoinCodeMatches(gameSessionId, options.joinCode);
 
     try {
       const [team] = await this.db
@@ -54,6 +68,23 @@ export class TeamService {
         throw new TeamNameTakenError(teamName);
       }
       throw error;
+    }
+  }
+
+  private async assertJoinCodeMatches(
+    gameSessionId: string,
+    joinCode: string | undefined,
+  ): Promise<void> {
+    const normalized = joinCode?.trim().toUpperCase();
+    if (!normalized) {
+      throw new InvalidJoinCodeError();
+    }
+    const [session] = await this.db
+      .select({ joinCode: schema.gameSessions.joinCode })
+      .from(schema.gameSessions)
+      .where(eq(schema.gameSessions.id, gameSessionId));
+    if (!session || session.joinCode !== normalized) {
+      throw new InvalidJoinCodeError();
     }
   }
 

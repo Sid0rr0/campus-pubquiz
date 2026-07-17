@@ -78,6 +78,7 @@ export class GameStateService implements OnModuleInit {
       progress: this.progress,
       currentQuestion: this.getCurrentQuestion(),
       leaderboard: this.leaderboard,
+      joinCode: this.getSeededGame().joinCode,
     };
   }
 
