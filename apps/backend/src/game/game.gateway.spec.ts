@@ -224,6 +224,16 @@ describe('GameGateway', () => {
     );
   });
 
+  it('includes the session join code in the snapshot sent on connection', async () => {
+    const client = createMockSocket(SOCKET_ROOMS.DISPLAY);
+    await gateway.handleConnection(asSocket(client));
+
+    expect(client.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_SYNC,
+      expect.objectContaining({ joinCode: 'ABCDEF' }),
+    );
+  });
+
   it('disconnects a client that connects without a recognized role', async () => {
     const client = createMockSocket('not-a-real-room');
     await gateway.handleConnection(asSocket(client));
@@ -325,12 +335,13 @@ describe('GameGateway', () => {
 
     await gateway.handleJoinPlayers(asSocket(player), {
       teamName: 'The Quizzards',
+      joinCode: 'ABCDEF',
     });
 
     expect(teamService.join).toHaveBeenCalledWith(
       'session-1',
       'The Quizzards',
-      undefined,
+      { teamToken: undefined, joinCode: 'ABCDEF' },
     );
     expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_ACCEPTED, {
       teamId: 'team-1',

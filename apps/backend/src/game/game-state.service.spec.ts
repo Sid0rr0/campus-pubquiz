@@ -135,6 +135,10 @@ describe('GameStateService', () => {
     expect(service.getGameSessionId()).toBe('session-1');
   });
 
+  it('includes the session join code in the snapshot', () => {
+    expect(service.getSnapshot().joinCode).toBe('ABCDEF');
+  });
+
   it('starts in the lobby with no current question', () => {
     const snapshot = service.getSnapshot();
     expect(snapshot.progress.status).toBe('lobby');
@@ -353,5 +357,11 @@ describe('GameStateService', () => {
 
     const started = await service.applyAction('START_QUIZ');
     expect(started.currentQuestion?.id).toBe('iq1');
+  });
+
+  it('exposes the new session join code in the snapshot after selecting a quiz', async () => {
+    const snapshot = await service.selectQuiz('quiz-2');
+
+    expect(snapshot.joinCode).toBe('GHIJKL');
   });
 });
