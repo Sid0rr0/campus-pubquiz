@@ -21,10 +21,43 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
 }
 
 describe('AdminPage', () => {
-  it('shows a connecting message before the first snapshot arrives', () => {
+  it('shows the admin password form before connecting', () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
     render(<AdminPage />);
-    expect(screen.getByText(/connecting/i)).toBeInTheDocument();
+
+    expect(screen.getByLabelText(/admin password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /connect/i })).toBeInTheDocument();
+  });
+
+  it('shows an admin password field before connecting', () => {
+    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    render(<AdminPage />);
+
+    expect(screen.getByLabelText(/admin password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /connect/i })).toBeInTheDocument();
+  });
+
+  it('submits the typed password into the socket hook when connect is clicked', async () => {
+    const user = userEvent.setup();
+    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    render(<AdminPage />);
+
+    await user.type(screen.getByLabelText(/admin password/i), 'secret-pass');
+    await user.click(screen.getByRole('button', { name: /connect/i }));
+
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', 'secret-pass', true);
+  });
+
+  it('surfaces a connection error before the first snapshot arrives', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: 'Invalid admin password',
+      sendAction: vi.fn(),
+    });
+
+    render(<AdminPage />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/invalid admin password/i);
   });
 
   it('shows the current status and question once connected', () => {

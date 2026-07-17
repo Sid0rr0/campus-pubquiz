@@ -49,6 +49,7 @@ export class GameGateway implements OnGatewayConnection {
     }
 
     if (role === SOCKET_ROOMS.ADMIN && !this.isValidAdminPassword(client)) {
+      client.emit('exception', 'Invalid admin password');
       client.disconnect();
       return;
     }

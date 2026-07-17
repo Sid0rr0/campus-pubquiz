@@ -205,6 +205,10 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).not.toHaveBeenCalled();
+    expect(admin.emit).toHaveBeenCalledWith(
+      'exception',
+      'Invalid admin password',
+    );
     expect(admin.disconnect).toHaveBeenCalled();
   });
 
@@ -213,6 +217,10 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).not.toHaveBeenCalled();
+    expect(admin.emit).toHaveBeenCalledWith(
+      'exception',
+      'Invalid admin password',
+    );
     expect(admin.disconnect).toHaveBeenCalled();
   });
 

@@ -23,17 +23,30 @@ function createFakeSocket() {
   };
 }
 
-const fakeSocket = createFakeSocket();
+const { mockIo } = vi.hoisted(() => ({
+  mockIo: vi.fn(() => createFakeSocket()),
+}));
 
 vi.mock('socket.io-client', () => ({
-  io: vi.fn(() => fakeSocket),
+  io: mockIo,
 }));
+
+function getFakeSocket() {
+  return mockIo.mock.results[mockIo.mock.results.length - 1]?.value as ReturnType<typeof createFakeSocket>;
+}
 
 describe('useGameSocket', () => {
   beforeEach(() => {
-    fakeSocket.on.mockClear();
-    fakeSocket.emit.mockClear();
-    fakeSocket.disconnect.mockClear();
+    mockIo.mockClear();
+  });
+
+  it('passes the admin password through socket auth when provided', () => {
+    renderHook(() => useGameSocket('admin', 'secret-pass'));
+
+    expect(mockIo).toHaveBeenCalledWith('http://localhost:3000', {
+      query: { role: 'admin' },
+      auth: { password: 'secret-pass' },
+    });
   });
 
   it('starts with no snapshot and no error', () => {
@@ -42,8 +55,15 @@ describe('useGameSocket', () => {
     expect(result.current.connectionError).toBeNull();
   });
 
+  it('does not open a socket until enabled for admin connections', () => {
+    renderHook(() => useGameSocket('admin', 'secret-pass', false));
+
+    expect(mockIo).not.toHaveBeenCalled();
+  });
+
   it('adopts the snapshot sent on STATE_SYNC', async () => {
     const { result } = renderHook(() => useGameSocket('display'));
+    const fakeSocket = getFakeSocket();
     const snapshot = { progress: { status: 'lobby', roundIndex: 0, questionIndex: 0, isLeaderboardVisible: false }, currentQuestion: null };
 
     act(() => {
@@ -55,6 +75,7 @@ describe('useGameSocket', () => {
 
   it('adopts the snapshot sent on STATE_UPDATED', async () => {
     const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
     const snapshot = {
       progress: { status: 'question_open', roundIndex: 0, questionIndex: 0, isLeaderboardVisible: false },
       currentQuestion: { id: 'r1q1', type: 'free_text' as const, prompt: 'Q?', points: 1 },
@@ -69,6 +90,7 @@ describe('useGameSocket', () => {
 
   it('surfaces a server exception as a connection error', async () => {
     const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
 
     act(() => {
       fakeSocket.trigger('exception', { message: 'Only admin clients may perform game actions' });
@@ -79,8 +101,45 @@ describe('useGameSocket', () => {
     );
   });
 
+  it('surfaces a socket connect_error as a connection error', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger('connect_error', { message: 'Invalid admin password' });
+    });
+
+    await waitFor(() => expect(result.current.connectionError).toBe('Invalid admin password'));
+  });
+
+  it('surfaces a server disconnect as a connection error', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger('disconnect', 'io server disconnect');
+    });
+
+    await waitFor(() =>
+      expect(result.current.connectionError).toBe('Disconnected: io server disconnect'),
+    );
+  });
+
+  it('keeps the first error when a disconnect follows an exception', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger('exception', { message: 'Invalid admin password' });
+      fakeSocket.trigger('disconnect', 'io server disconnect');
+    });
+
+    await waitFor(() => expect(result.current.connectionError).toBe('Invalid admin password'));
+  });
+
   it('sendAction emits an ADMIN_ACTION event with the action payload', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
 
     act(() => {
       result.current.sendAction('START_QUIZ');
@@ -91,12 +150,14 @@ describe('useGameSocket', () => {
 
   it('disconnects the socket on unmount', () => {
     const { unmount } = renderHook(() => useGameSocket('display'));
+    const fakeSocket = getFakeSocket();
     unmount();
     expect(fakeSocket.disconnect).toHaveBeenCalled();
   });
 
   it('joinTeam emits a JOIN_PLAYERS event with the team name and token', () => {
     const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
 
     act(() => {
       result.current.joinTeam('The Quizzards', 'existing-token');
@@ -110,6 +171,7 @@ describe('useGameSocket', () => {
 
   it('adopts the joined team identity on JOIN_ACCEPTED', async () => {
     const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
 
     act(() => {
       fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
@@ -130,6 +192,7 @@ describe('useGameSocket', () => {
 
   it('submitAnswer emits a SUBMIT_ANSWER event with questionId, teamId, and value', () => {
     const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
 
     act(() => {
       result.current.submitAnswer('r1q1', 'team-1', 'Banana');
@@ -144,6 +207,7 @@ describe('useGameSocket', () => {
 
   it('adopts the live answers list on ANSWERS_UPDATED', async () => {
     const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
     const payload = {
       questionId: 'r1q1',
       answers: [
@@ -166,6 +230,7 @@ describe('useGameSocket', () => {
 
   it('gradeAnswer emits a GRADE_ANSWER event with answerId and pointsAwarded', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
 
     act(() => {
       result.current.gradeAnswer('answer-1', 2);

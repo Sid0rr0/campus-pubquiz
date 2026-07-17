@@ -38,7 +38,11 @@ function getExceptionMessage(payload: unknown): string {
   return 'Unknown error';
 }
 
-export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
+export function useGameSocket(
+  role: GameSocketRole,
+  password?: string,
+  enabled = true,
+): UseGameSocketResult {
   const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
@@ -46,7 +50,14 @@ export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = io(BACKEND_URL, { query: { role } });
+    if (!enabled) {
+      return;
+    }
+
+    const socket = io(BACKEND_URL, {
+      query: { role },
+      auth: password ? { password } : undefined,
+    });
     socketRef.current = socket;
 
     socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateSnapshotPayload) => {
@@ -66,6 +77,16 @@ export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
       setLiveAnswers(payload);
     });
 
+    socket.on('connect_error', (payload: unknown) => {
+      setConnectionError(getExceptionMessage(payload));
+    });
+
+    socket.on('disconnect', (reason: string) => {
+      if (reason !== 'io client disconnect') {
+        setConnectionError((currentError) => currentError ?? `Disconnected: ${reason}`);
+      }
+    });
+
     socket.on('exception', (payload: unknown) => {
       setConnectionError(getExceptionMessage(payload));
     });
@@ -73,7 +94,7 @@ export function useGameSocket(role: GameSocketRole): UseGameSocketResult {
     return () => {
       socket.disconnect();
     };
-  }, [role]);
+  }, [enabled, password, role]);
 
   const sendAction = useCallback((action: GameAction) => {
     const payload: AdminActionPayload = { action };

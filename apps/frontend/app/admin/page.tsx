@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { AnswerView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
@@ -36,11 +36,42 @@ function GradeRow({ answer, onGrade }: GradeRowProps) {
 }
 
 export default function AdminPage() {
-  const { snapshot, connectionError, sendAction, liveAnswers, gradeAnswer } = useGameSocket('admin');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
+  const [submittedPassword, setSubmittedPassword] = useState('');
+  const { snapshot, connectionError, sendAction, liveAnswers, gradeAnswer } = useGameSocket(
+    'admin',
+    submittedPassword,
+    hasSubmittedPassword,
+  );
+
+  function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    setHasSubmittedPassword(true);
+    setSubmittedPassword(passwordInput);
+  }
+
+  if (!hasSubmittedPassword && !snapshot && !connectionError) {
+    return (
+      <main>
+        <form onSubmit={handleSubmitPassword}>
+          <label htmlFor="admin-password">Admin password</label>
+          <input
+            id="admin-password"
+            type="password"
+            value={passwordInput}
+            onChange={(event) => setPasswordInput(event.target.value)}
+          />
+          <button type="submit">Connect</button>
+        </form>
+      </main>
+    );
+  }
 
   if (!snapshot) {
     return (
       <main>
+        {connectionError && <p role="alert">{connectionError}</p>}
         <p>Connecting…</p>
       </main>
     );
