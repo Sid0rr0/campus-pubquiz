@@ -82,6 +82,36 @@ describe('SeedService (Postgres integration)', () => {
     expect(sessionsInDb).toHaveLength(1);
   });
 
+  it('creates a fresh game session with a new join code for a quiz', async () => {
+    const first = await seedService.seed();
+
+    const session = await seedService.createSession(first.quizId);
+
+    expect(session.gameSessionId).not.toBe(first.gameSessionId);
+    expect(session.joinCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
+    expect(session.joinCode).not.toBe(first.joinCode);
+
+    const sessionsInDb = await db.select().from(schema.gameSessions);
+    expect(sessionsInDb).toHaveLength(2);
+  });
+
+  it('resumes the most recently created game session on seed after a restart', async () => {
+    const first = await seedService.seed();
+    const [newerSession] = await db
+      .insert(schema.gameSessions)
+      .values({
+        quizId: first.quizId,
+        joinCode: 'ZZZZZZ',
+        createdAt: new Date(Date.now() + 60_000),
+      })
+      .returning();
+
+    const resumed = await new SeedService(db).seed();
+
+    expect(resumed.gameSessionId).toBe(newerSession.id);
+    expect(resumed.joinCode).toBe('ZZZZZZ');
+  });
+
   it('preserves question content (prompt, type, options, points) from the fixture', async () => {
     const result = await seedService.seed();
     const firstQuestion = result.rounds[0].questions[0];

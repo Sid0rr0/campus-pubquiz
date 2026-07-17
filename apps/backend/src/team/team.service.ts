@@ -36,7 +36,9 @@ export class TeamService {
         .select()
         .from(schema.teams)
         .where(eq(schema.teams.token, existingToken));
-      if (existing) {
+      // A token from another (older) session must not resurrect that team
+      // here; fall through and register a fresh team in this session.
+      if (existing && existing.gameSessionId === gameSessionId) {
         return { id: existing.id, name: existing.name, token: existing.token };
       }
     }

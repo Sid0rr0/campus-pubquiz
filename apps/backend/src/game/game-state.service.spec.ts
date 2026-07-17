@@ -5,7 +5,6 @@ import {
 import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
-import type { QuizService } from '@/quiz/quiz.service';
 import { GameStateService } from '@/game/game-state.service';
 
 const FIXTURE_SEEDED_GAME: SeededGame = {
@@ -56,8 +55,8 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
 
 const IMPORTED_QUIZ_GAME: SeededGame = {
   quizId: 'quiz-2',
-  gameSessionId: 'session-1',
-  joinCode: 'ABCDEF',
+  gameSessionId: 'session-2',
+  joinCode: 'GHIJKL',
   rounds: [
     {
       id: 'round-imported',
@@ -78,6 +77,9 @@ function createFakeSeedService() {
   return {
     seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
     loadGame: jest.fn().mockResolvedValue(IMPORTED_QUIZ_GAME),
+    createSession: jest
+      .fn()
+      .mockResolvedValue({ gameSessionId: 'session-2', joinCode: 'GHIJKL' }),
   };
 }
 
@@ -85,22 +87,6 @@ type MockSeedService = ReturnType<typeof createFakeSeedService>;
 
 function asSeedService(mock: MockSeedService): SeedService {
   return mock as unknown as SeedService;
-}
-
-function createFakeQuizService() {
-  return {
-    list: jest.fn().mockResolvedValue([
-      { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-      { id: 'quiz-2', title: 'Imported Quiz' },
-    ]),
-    assignToSession: jest.fn().mockResolvedValue(undefined),
-  };
-}
-
-type MockQuizService = ReturnType<typeof createFakeQuizService>;
-
-function asQuizService(mock: MockQuizService): QuizService {
-  return mock as unknown as QuizService;
 }
 
 function createFakeGameProgressRepository(initial: GameProgress | null = null) {
@@ -124,16 +110,13 @@ describe('GameStateService', () => {
   let service: GameStateService;
   let progressRepository: MockGameProgressRepository;
   let seedService: MockSeedService;
-  let quizService: MockQuizService;
 
   beforeEach(async () => {
     progressRepository = createFakeGameProgressRepository();
     seedService = createFakeSeedService();
-    quizService = createFakeQuizService();
     service = new GameStateService(
       asSeedService(seedService),
       asGameProgressRepository(progressRepository),
-      asQuizService(quizService),
     );
     await service.onModuleInit();
   });
@@ -142,7 +125,6 @@ describe('GameStateService', () => {
     const uninitialized = new GameStateService(
       asSeedService(createFakeSeedService()),
       asGameProgressRepository(createFakeGameProgressRepository()),
-      asQuizService(createFakeQuizService()),
     );
     await expect(uninitialized.applyAction('START_QUIZ')).rejects.toThrow(
       /before initialization/i,
@@ -286,7 +268,6 @@ describe('GameStateService', () => {
     const rehydratedService = new GameStateService(
       asSeedService(createFakeSeedService()),
       asGameProgressRepository(rehydratingRepository),
-      asQuizService(createFakeQuizService()),
     );
     await rehydratedService.onModuleInit();
 
@@ -308,7 +289,7 @@ describe('GameStateService', () => {
     await service.applyAction('START_QUIZ');
 
     await expect(service.selectQuiz('quiz-2')).rejects.toThrow(/lobby/i);
-    expect(quizService.assignToSession).not.toHaveBeenCalled();
+    expect(seedService.createSession).not.toHaveBeenCalled();
   });
 
   it('selects a quiz after the game has ended and resets back to the lobby', async () => {
@@ -322,32 +303,26 @@ describe('GameStateService', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
     });
-    expect(quizService.assignToSession).toHaveBeenCalledWith(
-      'session-1',
-      'quiz-2',
-    );
+    expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
     expect(seedService.loadGame).toHaveBeenCalledWith(
       'quiz-2',
-      'session-1',
-      'ABCDEF',
+      'session-2',
+      'GHIJKL',
     );
   });
 
-  it('selects a quiz in the lobby: assigns it, reloads rounds, resets state, persists', async () => {
+  it('selects a quiz in the lobby: creates a new session, reloads rounds, resets state', async () => {
     service.setLeaderboard([
       { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
     ]);
 
     const snapshot = await service.selectQuiz('quiz-2');
 
-    expect(quizService.assignToSession).toHaveBeenCalledWith(
-      'session-1',
-      'quiz-2',
-    );
+    expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
     expect(seedService.loadGame).toHaveBeenCalledWith(
       'quiz-2',
-      'session-1',
-      'ABCDEF',
+      'session-2',
+      'GHIJKL',
     );
     expect(snapshot.progress).toEqual({
       status: 'lobby',
@@ -357,8 +332,16 @@ describe('GameStateService', () => {
     });
     expect(snapshot.leaderboard).toEqual([]);
     expect(service.getActiveQuizId()).toBe('quiz-2');
-    expect(progressRepository.save).toHaveBeenCalledWith('session-1', {
-      status: 'lobby',
+    expect(service.getGameSessionId()).toBe('session-2');
+  });
+
+  it('persists later actions under the newly created session id', async () => {
+    await service.selectQuiz('quiz-2');
+
+    await service.applyAction('START_QUIZ');
+
+    expect(progressRepository.save).toHaveBeenCalledWith('session-2', {
+      status: 'question_open',
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,

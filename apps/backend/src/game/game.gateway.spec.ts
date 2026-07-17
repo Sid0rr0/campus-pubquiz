@@ -27,8 +27,8 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
 
 const IMPORTED_QUIZ_GAME: SeededGame = {
   quizId: 'quiz-2',
-  gameSessionId: 'session-1',
-  joinCode: 'ABCDEF',
+  gameSessionId: 'session-2',
+  joinCode: 'GHIJKL',
   rounds: [
     {
       id: 'round-imported',
@@ -45,11 +45,20 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
   ],
 };
 
-function createFakeSeedService(): SeedService {
+function createFakeSeedService() {
   return {
     seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
     loadGame: jest.fn().mockResolvedValue(IMPORTED_QUIZ_GAME),
-  } as unknown as SeedService;
+    createSession: jest
+      .fn()
+      .mockResolvedValue({ gameSessionId: 'session-2', joinCode: 'GHIJKL' }),
+  };
+}
+
+type MockSeedService = ReturnType<typeof createFakeSeedService>;
+
+function asSeedService(mock: MockSeedService): SeedService {
+  return mock as unknown as SeedService;
 }
 
 function createFakeQuizService() {
@@ -58,7 +67,6 @@ function createFakeQuizService() {
       { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
       { id: 'quiz-2', title: 'Imported Quiz' },
     ]),
-    assignToSession: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -170,6 +178,7 @@ describe('GameGateway', () => {
   let teamService: MockTeamService;
   let answerService: MockAnswerService;
   let quizService: MockQuizService;
+  let seedService: MockSeedService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
   beforeAll(() => {
@@ -182,10 +191,10 @@ describe('GameGateway', () => {
 
   beforeEach(async () => {
     quizService = createFakeQuizService();
+    seedService = createFakeSeedService();
     const gameStateService = new GameStateService(
-      createFakeSeedService(),
+      asSeedService(seedService),
       asGameProgressRepository(createFakeGameProgressRepository()),
-      asQuizService(quizService),
     );
     await gameStateService.onModuleInit();
     teamService = createFakeTeamService();
@@ -518,10 +527,7 @@ describe('GameGateway', () => {
 
     await gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' });
 
-    expect(quizService.assignToSession).toHaveBeenCalledWith(
-      'session-1',
-      'quiz-2',
-    );
+    expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
@@ -541,7 +547,7 @@ describe('GameGateway', () => {
     await expect(
       gateway.handleSelectQuiz(asSocket(player), { quizId: 'quiz-2' }),
     ).rejects.toThrow(WsException);
-    expect(quizService.assignToSession).not.toHaveBeenCalled();
+    expect(seedService.createSession).not.toHaveBeenCalled();
   });
 
   it('surfaces a mid-game quiz selection as a WsException', async () => {
@@ -554,6 +560,6 @@ describe('GameGateway', () => {
     await expect(
       gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' }),
     ).rejects.toThrow(WsException);
-    expect(quizService.assignToSession).not.toHaveBeenCalled();
+    expect(seedService.createSession).not.toHaveBeenCalled();
   });
 });

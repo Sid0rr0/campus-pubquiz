@@ -1,12 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { QuestionType } from '@campus-pubquiz/types';
 import { DRIZZLE } from '@/db/db.constants';
 import { generateJoinCode } from '@/db/join-code.util';
 import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
 import * as schema from '@/db/schema';
-import type { SeededGame, SeededRound } from '@/db/seed.types';
+import type {
+  CreatedGameSession,
+  SeededGame,
+  SeededRound,
+} from '@/db/seed.types';
 
 interface QuestionPayload {
   options?: string[];
@@ -23,6 +27,7 @@ export class SeedService {
     const [existingSession] = await this.db
       .select()
       .from(schema.gameSessions)
+      .orderBy(desc(schema.gameSessions.createdAt))
       .limit(1);
     if (existingSession) {
       return this.loadGame(
@@ -32,6 +37,14 @@ export class SeedService {
       );
     }
     return this.createSeededGame();
+  }
+
+  async createSession(quizId: string): Promise<CreatedGameSession> {
+    const [session] = await this.db
+      .insert(schema.gameSessions)
+      .values({ quizId, joinCode: generateJoinCode() })
+      .returning();
+    return { gameSessionId: session.id, joinCode: session.joinCode };
   }
 
   async loadGame(
@@ -117,14 +130,11 @@ export class SeedService {
       });
     }
 
-    const [session] = await this.db
-      .insert(schema.gameSessions)
-      .values({ quizId: quiz.id, joinCode: generateJoinCode() })
-      .returning();
+    const session = await this.createSession(quiz.id);
 
     return {
       quizId: quiz.id,
-      gameSessionId: session.id,
+      gameSessionId: session.gameSessionId,
       joinCode: session.joinCode,
       rounds,
     };

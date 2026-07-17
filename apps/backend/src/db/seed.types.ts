@@ -12,3 +12,8 @@ export interface SeededGame {
   joinCode: string;
   rounds: SeededRound[];
 }
+
+export interface CreatedGameSession {
+  gameSessionId: string;
+  joinCode: string;
+}

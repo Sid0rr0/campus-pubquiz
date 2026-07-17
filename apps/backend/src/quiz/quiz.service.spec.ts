@@ -4,7 +4,6 @@ import {
 } from '@testcontainers/postgresql';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { eq } from 'drizzle-orm';
 import { Client } from 'pg';
 import * as schema from '@/db/schema';
 import { QuizService } from '@/quiz/quiz.service';
@@ -63,22 +62,5 @@ describe('QuizService (Postgres integration)', () => {
 
   it('returns an empty list when no quizzes exist', async () => {
     await expect(quizService.list()).resolves.toEqual([]);
-  });
-
-  it('assigns a different quiz to an existing game session', async () => {
-    const quizA = await insertQuiz('Original Quiz');
-    const quizB = await insertQuiz('New Quiz');
-    const [session] = await db
-      .insert(schema.gameSessions)
-      .values({ quizId: quizA.id, joinCode: 'ABCDEF' })
-      .returning();
-
-    await quizService.assignToSession(session.id, quizB.id);
-
-    const [row] = await db
-      .select()
-      .from(schema.gameSessions)
-      .where(eq(schema.gameSessions.id, session.id));
-    expect(row.quizId).toBe(quizB.id);
   });
 });

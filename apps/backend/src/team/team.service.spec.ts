@@ -78,6 +78,30 @@ describe('TeamService (Postgres integration)', () => {
     );
   });
 
+  it('creates a fresh team when the token belongs to a different session', async () => {
+    const original = await teamService.join(sessionId, 'The Quizzards');
+    const [quiz2] = await db
+      .insert(schema.quizzes)
+      .values({ title: 'Second Quiz' })
+      .returning();
+    const [session2] = await db
+      .insert(schema.gameSessions)
+      .values({ quizId: quiz2.id, joinCode: 'GHIJKL' })
+      .returning();
+
+    const rejoined = await teamService.join(
+      session2.id,
+      'The Quizzards',
+      original.token,
+    );
+
+    expect(rejoined.id).not.toBe(original.id);
+    expect(rejoined.token).not.toBe(original.token);
+
+    const rows = await db.select().from(schema.teams);
+    expect(rows).toHaveLength(2);
+  });
+
   it('allows the same team name in two different sessions', async () => {
     const [quiz2] = await db
       .insert(schema.quizzes)

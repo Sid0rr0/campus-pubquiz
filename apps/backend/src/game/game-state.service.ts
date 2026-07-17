@@ -11,7 +11,6 @@ import {
 import { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import { GameProgressRepository } from '@/game/game-progress.repository';
-import { QuizService } from '@/quiz/quiz.service';
 
 const LOBBY_PROGRESS: GameProgress = {
   status: 'lobby',
@@ -30,7 +29,6 @@ export class GameStateService implements OnModuleInit {
   constructor(
     private readonly seedService: SeedService,
     private readonly progressRepository: GameProgressRepository,
-    private readonly quizService: QuizService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -58,16 +56,16 @@ export class GameStateService implements OnModuleInit {
       );
     }
 
-    const { gameSessionId, joinCode } = this.getSeededGame();
-    await this.quizService.assignToSession(gameSessionId, quizId);
+    const session = await this.seedService.createSession(quizId);
     this.seededGame = await this.seedService.loadGame(
       quizId,
-      gameSessionId,
-      joinCode,
+      session.gameSessionId,
+      session.joinCode,
     );
+    // The fresh game_sessions row already starts in lobby state, so there is
+    // no progress to persist here.
     this.progress = { ...LOBBY_PROGRESS };
     this.leaderboard = [];
-    await this.progressRepository.save(gameSessionId, this.progress);
     return this.getSnapshot();
   }
 
