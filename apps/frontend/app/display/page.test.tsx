@@ -1,12 +1,25 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress, QuestionView } from '@campus-pubquiz/types';
 import DisplayPage from '@/app/display/page';
 
-const { mockUseGameSocket } = vi.hoisted(() => ({ mockUseGameSocket: vi.fn() }));
+const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGameSocket: vi.fn(),
+  searchParamsRef: { current: new URLSearchParams() },
+}));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => searchParamsRef.current,
+}));
+
+vi.mock('qrcode.react', () => ({
+  QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
+    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+  ),
 }));
 
 function progress(overrides: Partial<GameProgress> = {}): GameProgress {
@@ -28,6 +41,10 @@ const question: QuestionView = {
 };
 
 describe('DisplayPage', () => {
+  beforeEach(() => {
+    searchParamsRef.current = new URLSearchParams();
+  });
+
   it('shows a connecting message before the first snapshot arrives', () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
     render(<DisplayPage />);
@@ -42,6 +59,60 @@ describe('DisplayPage', () => {
     });
     render(<DisplayPage />);
     expect(screen.getByText(/waiting/i)).toBeInTheDocument();
+  });
+
+  it('shows a join QR code and the join code in the lobby', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'ABCDEF',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('qr-code')).toHaveAttribute(
+      'data-value',
+      `${window.location.origin}/play?code=ABCDEF`,
+    );
+    expect(screen.getByText('ABCDEF')).toBeInTheDocument();
+  });
+
+  it('prefers the join code from the ?code= query parameter over the snapshot', () => {
+    searchParamsRef.current = new URLSearchParams('code=GHIJKL');
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'ABCDEF',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('qr-code')).toHaveAttribute(
+      'data-value',
+      `${window.location.origin}/play?code=GHIJKL`,
+    );
+    expect(screen.getByText('GHIJKL')).toBeInTheDocument();
+  });
+
+  it('does not show the join QR code outside the lobby', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: question,
+        joinCode: 'ABCDEF',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 
   it('shows the current question and its options while open', () => {

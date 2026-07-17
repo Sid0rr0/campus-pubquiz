@@ -4,10 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 
-const { mockUseGameSocket } = vi.hoisted(() => ({ mockUseGameSocket: vi.fn() }));
+const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGameSocket: vi.fn(),
+  searchParamsRef: { current: new URLSearchParams() },
+}));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => searchParamsRef.current,
 }));
 
 function progress(overrides: Partial<GameProgress> = {}): GameProgress {
@@ -20,54 +27,73 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
   };
 }
 
+function socketResult(overrides: Record<string, unknown> = {}) {
+  return {
+    snapshot: null,
+    connectionError: null,
+    sendAction: vi.fn(),
+    team: null,
+    joinTeam: vi.fn(),
+    submitAnswer: vi.fn(),
+    liveAnswers: null,
+    gradeAnswer: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe('PlayPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    mockUseGameSocket.mockReturnValue({
-      snapshot: null,
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: null,
-      joinTeam: vi.fn(),
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    searchParamsRef.current = new URLSearchParams();
+    mockUseGameSocket.mockReturnValue(socketResult());
   });
 
-  it('shows a join form when no team name is stored', () => {
+  it('shows a join form asking for a team name and a game code', () => {
     render(<PlayPage />);
     expect(screen.getByRole('textbox', { name: /team name/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /game code/i })).toBeInTheDocument();
   });
 
-  it('stores the team name and switches to the game view after joining', async () => {
+  it('stores the team name and game code and switches to the game view after joining', async () => {
+    render(<PlayPage />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
+    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'ABCDEF');
+    await userEvent.click(screen.getByRole('button', { name: /join/i }));
+
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('The Quizzards');
+    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBe('ABCDEF');
+    expect(screen.getByText(/playing as the quizzards/i)).toBeInTheDocument();
+  });
+
+  it('calls joinTeam with the trimmed name and normalized game code when submitting', async () => {
+    const joinTeam = vi.fn();
+    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    render(<PlayPage />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), '  The Quizzards  ');
+    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), ' abcdef ');
+    await userEvent.click(screen.getByRole('button', { name: /join/i }));
+
+    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', { joinCode: 'ABCDEF' });
+  });
+
+  it('does not join when the game code is empty', async () => {
+    const joinTeam = vi.fn();
+    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     render(<PlayPage />);
 
     await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('The Quizzards');
-    expect(screen.getByText(/playing as the quizzards/i)).toBeInTheDocument();
+    expect(joinTeam).not.toHaveBeenCalled();
   });
 
-  it('calls joinTeam with the trimmed name when submitting the join form', async () => {
-    const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue({
-      snapshot: null,
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: null,
-      joinTeam,
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+  it('prefills the game code from the ?code= query parameter (QR scan)', () => {
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), '  The Quizzards  ');
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-
-    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', undefined);
+    expect(screen.getByRole('textbox', { name: /game code/i })).toHaveValue('ABCDEF');
   });
 
   it('skips the join form when a team name is already stored (reconnect)', () => {
@@ -78,73 +104,79 @@ describe('PlayPage', () => {
     expect(screen.getByText(/playing as returning team/i)).toBeInTheDocument();
   });
 
-  it('calls joinTeam with the stored name and token on reconnect', () => {
+  it('calls joinTeam with the stored name, token and join code on reconnect', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
     const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue({
-      snapshot: null,
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: null,
-      joinTeam,
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
 
     render(<PlayPage />);
 
-    expect(joinTeam).toHaveBeenCalledWith('Returning Team', 'stored-token');
+    expect(joinTeam).toHaveBeenCalledWith('Returning Team', {
+      teamToken: 'stored-token',
+      joinCode: 'ABCDEF',
+    });
   });
 
-  it('re-joins with the stored name and token when the game returns to the lobby', () => {
+  it('re-joins with the stored name, token and join code when the game returns to the lobby', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
     const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'stored-token' },
-      joinTeam,
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    const joinedTeam = { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'stored-token' };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+        team: joinedTeam,
+        joinTeam,
+      }),
+    );
     const { rerender } = render(<PlayPage />);
     joinTeam.mockClear();
 
-    mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'stored-token' },
-      joinTeam,
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+        team: joinedTeam,
+        joinTeam,
+      }),
+    );
     rerender(<PlayPage />);
 
-    expect(joinTeam).toHaveBeenCalledWith('Returning Team', 'stored-token');
+    expect(joinTeam).toHaveBeenCalledWith('Returning Team', {
+      teamToken: 'stored-token',
+      joinCode: 'ABCDEF',
+    });
+  });
+
+  it('shows the join error and returns to the join form on "start over"', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'STALE1');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ connectionError: 'Invalid join code' }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText(/invalid join code/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /start over/i }));
+
+    expect(screen.getByRole('textbox', { name: /team name/i })).toBeInTheDocument();
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
+    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
   });
 
   it('shows the current question once joined and connected', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: null,
-      joinTeam: vi.fn(),
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        },
+      }),
+    );
     render(<PlayPage />);
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
@@ -152,19 +184,15 @@ describe('PlayPage', () => {
 
   it('shows a free-text answer form once the team has joined and a question is open', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
-      joinTeam: vi.fn(),
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
     render(<PlayPage />);
 
     expect(screen.getByRole('textbox', { name: /your answer/i })).toBeInTheDocument();
@@ -174,19 +202,16 @@ describe('PlayPage', () => {
   it('submits the typed free-text answer with the question and team id', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
-      joinTeam: vi.fn(),
-      submitAnswer,
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        submitAnswer,
+      }),
+    );
     render(<PlayPage />);
 
     await userEvent.type(screen.getByRole('textbox', { name: /your answer/i }), 'Banana');
@@ -198,25 +223,22 @@ describe('PlayPage', () => {
   it('shows multiple-choice options and submits the chosen option immediately', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          options: ['Paris', 'London', 'Berlin', 'Rome'],
-          points: 2,
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'multiple_choice',
+            prompt: 'Capital of France?',
+            options: ['Paris', 'London', 'Berlin', 'Rome'],
+            points: 2,
+          },
         },
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
-      joinTeam: vi.fn(),
-      submitAnswer,
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        submitAnswer,
+      }),
+    );
     render(<PlayPage />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
@@ -226,19 +248,15 @@ describe('PlayPage', () => {
 
   it('does not show an answer form while answers are locked', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'locked' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
-      joinTeam: vi.fn(),
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'locked' }),
+          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
     render(<PlayPage />);
 
     expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
@@ -247,19 +265,14 @@ describe('PlayPage', () => {
 
   it('does not show an answer form before the team identity has been confirmed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: null,
-      joinTeam: vi.fn(),
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        },
+      }),
+    );
     render(<PlayPage />);
 
     expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
@@ -267,16 +280,11 @@ describe('PlayPage', () => {
 
   it('shows the leaderboard overlay whenever isLeaderboardVisible is true', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ isLeaderboardVisible: true }), currentQuestion: null },
-      connectionError: null,
-      sendAction: vi.fn(),
-      team: null,
-      joinTeam: vi.fn(),
-      submitAnswer: vi.fn(),
-      liveAnswers: null,
-      gradeAnswer: vi.fn(),
-    });
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: { progress: progress({ isLeaderboardVisible: true }), currentQuestion: null },
+      }),
+    );
     render(<PlayPage />);
 
     expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();

@@ -155,17 +155,21 @@ describe('useGameSocket', () => {
     expect(fakeSocket.disconnect).toHaveBeenCalled();
   });
 
-  it('joinTeam emits a JOIN_PLAYERS event with the team name and token', () => {
+  it('joinTeam emits a JOIN_PLAYERS event with the team name, token and join code', () => {
     const { result } = renderHook(() => useGameSocket('players'));
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      result.current.joinTeam('The Quizzards', 'existing-token');
+      result.current.joinTeam('The Quizzards', {
+        teamToken: 'existing-token',
+        joinCode: 'ABCDEF',
+      });
     });
 
     expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_PLAYERS, {
       teamName: 'The Quizzards',
       teamToken: 'existing-token',
+      joinCode: 'ABCDEF',
     });
   });
 
