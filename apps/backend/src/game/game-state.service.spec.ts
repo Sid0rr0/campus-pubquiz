@@ -176,16 +176,8 @@ describe('GameStateService', () => {
     expect(snapshot.currentQuestion?.id).toBe('r1q1');
   });
 
-  it('keeps the current question visible while locked', async () => {
-    await service.applyAction('START_QUIZ');
-    const snapshot = await service.applyAction('LOCK_ANSWERS');
-    expect(snapshot.progress.status).toBe('locked');
-    expect(snapshot.currentQuestion?.id).toBe('r1q1');
-  });
-
   it('advances to the next question within round 1', async () => {
     await service.applyAction('START_QUIZ');
-    await service.applyAction('LOCK_ANSWERS');
     const snapshot = await service.applyAction('ADVANCE');
     expect(snapshot.progress).toEqual({
       status: 'question_open',
@@ -198,9 +190,7 @@ describe('GameStateService', () => {
 
   it('moves into round 2 after round 1 finishes (no break configured)', async () => {
     await service.applyAction('START_QUIZ');
-    await service.applyAction('LOCK_ANSWERS');
     await service.applyAction('ADVANCE'); // -> r1q2
-    await service.applyAction('LOCK_ANSWERS');
     const snapshot = await service.applyAction('ADVANCE'); // round 1 done, no break -> round 2 q0
     expect(snapshot.progress).toEqual({
       status: 'question_open',
@@ -213,13 +203,9 @@ describe('GameStateService', () => {
 
   it('enters a break once round 2 (breakAfter: true) finishes, hiding the question', async () => {
     await service.applyAction('START_QUIZ');
-    await service.applyAction('LOCK_ANSWERS');
-    await service.applyAction('ADVANCE');
-    await service.applyAction('LOCK_ANSWERS');
+    await service.applyAction('ADVANCE'); // -> r1q2
     await service.applyAction('ADVANCE'); // -> r2q1
-    await service.applyAction('LOCK_ANSWERS');
     await service.applyAction('ADVANCE'); // -> r2q2
-    await service.applyAction('LOCK_ANSWERS');
     const snapshot = await service.applyAction('ADVANCE'); // round 2 done, breakAfter -> break
     expect(snapshot.progress.status).toBe('break');
     expect(snapshot.currentQuestion).toBeNull();
@@ -227,13 +213,9 @@ describe('GameStateService', () => {
 
   it('goes from break to reveal to ended for the final round group', async () => {
     await service.applyAction('START_QUIZ');
-    await service.applyAction('LOCK_ANSWERS');
     await service.applyAction('ADVANCE');
-    await service.applyAction('LOCK_ANSWERS');
     await service.applyAction('ADVANCE');
-    await service.applyAction('LOCK_ANSWERS');
     await service.applyAction('ADVANCE');
-    await service.applyAction('LOCK_ANSWERS');
     await service.applyAction('ADVANCE'); // -> break
 
     const revealSnapshot = await service.applyAction('FINISH_GRADING');
@@ -252,7 +234,8 @@ describe('GameStateService', () => {
   });
 
   it('propagates an illegal-transition error for out-of-order actions', async () => {
-    await expect(service.applyAction('LOCK_ANSWERS')).rejects.toThrow(
+    // ADVANCE is illegal from the lobby - the quiz has not started yet
+    await expect(service.applyAction('ADVANCE')).rejects.toThrow(
       IllegalGameTransitionError,
     );
   });
@@ -383,5 +366,99 @@ describe('GameStateService', () => {
     const snapshot = await service.selectQuiz('quiz-2');
 
     expect(snapshot.joinCode).toBe('GHIJKL');
+  });
+
+  describe('block questions and response indicators', () => {
+    it('exposes no block questions in the lobby', () => {
+      expect(service.getSnapshot().blockQuestions).toEqual([]);
+    });
+
+    it('reveals block questions cumulatively as the admin advances', async () => {
+      await service.applyAction('START_QUIZ');
+      expect(service.getSnapshot().blockQuestions.map((q) => q.id)).toEqual([
+        'r1q1',
+      ]);
+
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> r2q1 (same block: round 1 has no break)
+      expect(service.getSnapshot().blockQuestions.map((q) => q.id)).toEqual([
+        'r1q1',
+        'r1q2',
+        'r2q1',
+      ]);
+    });
+
+    it('keeps the whole locked block browsable during the grading break', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      const snapshot = await service.applyAction('ADVANCE'); // -> break
+
+      expect(snapshot.progress.status).toBe('break');
+      expect(snapshot.blockQuestions.map((q) => q.id)).toEqual([
+        'r1q1',
+        'r1q2',
+        'r2q1',
+        'r2q2',
+      ]);
+    });
+
+    it('treats every revealed block question as open for answering', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> r1q2
+
+      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(true);
+      expect(service.isQuestionOpenForAnswering('r1q2')).toBe(true);
+    });
+
+    it('treats unrevealed and unknown questions as closed for answering', async () => {
+      await service.applyAction('START_QUIZ');
+
+      expect(service.isQuestionOpenForAnswering('r2q1')).toBe(false);
+      expect(service.isQuestionOpenForAnswering('no-such-question')).toBe(false);
+    });
+
+    it('closes the whole block for answering once the break starts', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE'); // -> break
+
+      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(false);
+      expect(service.isQuestionOpenForAnswering('r2q2')).toBe(false);
+    });
+
+    it('closes answering while still in the lobby', () => {
+      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(false);
+    });
+
+    it('starts with no answered team ids', () => {
+      expect(service.getSnapshot().answeredTeamIds).toEqual([]);
+    });
+
+    it('reflects answered team ids for the current question only', async () => {
+      await service.applyAction('START_QUIZ');
+      service.setAnsweredTeamIds('r1q1', ['team-1']);
+
+      expect(service.getSnapshot().answeredTeamIds).toEqual(['team-1']);
+
+      await service.applyAction('ADVANCE'); // -> r1q2, nobody answered it yet
+      expect(service.getSnapshot().answeredTeamIds).toEqual([]);
+    });
+
+    it('clears answered team ids when a new quiz session is selected', async () => {
+      await service.applyAction('START_QUIZ');
+      // Same question id as the imported quiz's first question, so stale
+      // indicators would leak into the new session if selectQuiz kept them.
+      service.setAnsweredTeamIds('iq1', ['team-1']);
+      await service.applyAction('END_QUIZ');
+
+      await service.selectQuiz('quiz-2');
+      await service.applyAction('START_QUIZ'); // current question: iq1
+
+      expect(service.getSnapshot().answeredTeamIds).toEqual([]);
+    });
   });
 });

@@ -112,6 +112,43 @@ describe('AnswerService (Postgres integration)', () => {
     expect(answers.find((a) => a.teamId === teamB.id)?.value).toBe('Mango');
   });
 
+  it('lists a team own answers keyed by question so a reconnect can restore them', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const other = await insertTeam('Team B', 'token-b');
+    const [question2] = await db
+      .insert(schema.questions)
+      .values({
+        roundId,
+        orderIndex: 1,
+        type: 'free_text',
+        prompt: 'Name a vegetable',
+        points: 1,
+      })
+      .returning();
+
+    await answerService.submit(sessionId, questionId, team.id, 'Banana');
+    await answerService.submit(sessionId, question2.id, team.id, 'Carrot');
+    await answerService.submit(sessionId, questionId, other.id, 'Apple');
+
+    const answers = await answerService.listForTeam(sessionId, team.id);
+
+    expect(answers).toHaveLength(2);
+    expect(answers).toEqual(
+      expect.arrayContaining([
+        { questionId, value: 'Banana' },
+        { questionId: question2.id, value: 'Carrot' },
+      ]),
+    );
+  });
+
+  it('returns an empty list for a team that has not answered anything', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    const answers = await answerService.listForTeam(sessionId, team.id);
+
+    expect(answers).toEqual([]);
+  });
+
   it('lists answers with a null pointsAwarded before grading', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     await answerService.submit(sessionId, questionId, team.id, 'Banana');

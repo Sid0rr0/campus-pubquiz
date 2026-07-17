@@ -2,6 +2,7 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
+import { eq } from 'drizzle-orm';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client } from 'pg';
@@ -72,6 +73,23 @@ describe('GameProgressRepository (Postgres integration)', () => {
       roundIndex: 1,
       questionIndex: 2,
       isLeaderboardVisible: true,
+    });
+  });
+
+  it('normalizes a legacy locked status to question_open on load', async () => {
+    // Sessions persisted before block-based locking may still carry 'locked'.
+    await db
+      .update(schema.gameSessions)
+      .set({ status: 'locked', currentRoundIndex: 0, currentQuestionIndex: 1 })
+      .where(eq(schema.gameSessions.id, sessionId));
+
+    const progress = await repository.load(sessionId);
+
+    expect(progress).toEqual({
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
     });
   });
 

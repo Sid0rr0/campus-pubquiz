@@ -130,6 +130,9 @@ function createFakeAnswerService() {
         pointsAwarded: null,
       },
     ]),
+    listForTeam: jest
+      .fn()
+      .mockResolvedValue([{ questionId: 'r1q1', value: 'Banana' }]),
     grade: jest.fn().mockResolvedValue({ questionId: 'r1q1' }),
     computeLeaderboard: jest
       .fn()
@@ -184,6 +187,17 @@ describe('GameGateway', () => {
   let quizService: MockQuizService;
   let seedService: MockSeedService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
+
+  /** Opens r1q1 via an admin START_QUIZ, then clears broadcast bookkeeping. */
+  async function openFirstQuestion() {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+    server.to.mockClear();
+    server.emit.mockClear();
+  }
 
   beforeAll(() => {
     process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
@@ -325,9 +339,9 @@ describe('GameGateway', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    // LOCK_ANSWERS is illegal from lobby - quiz hasn't started yet
+    // ADVANCE is illegal from lobby - quiz hasn't started yet
     await expect(
-      gateway.handleAdminAction(asSocket(admin), { action: 'LOCK_ANSWERS' }),
+      gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }),
     ).rejects.toThrow(WsException);
     expect(server.emit).not.toHaveBeenCalled();
   });
@@ -350,7 +364,12 @@ describe('GameGateway', () => {
       teamId: 'team-1',
       teamName: 'The Quizzards',
       teamToken: 'team-token-1',
+      answers: [{ questionId: 'r1q1', value: 'Banana' }],
     });
+    expect(answerService.listForTeam).toHaveBeenCalledWith(
+      'session-1',
+      'team-1',
+    );
   });
 
   it('broadcasts the updated connected-team list to all rooms after a join', async () => {
@@ -399,7 +418,8 @@ describe('GameGateway', () => {
     ).rejects.toThrow(WsException);
   });
 
-  it('submits an answer and broadcasts ANSWERS_UPDATED to the admin room only', async () => {
+  it('submits an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
+    await openFirstQuestion();
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
 
@@ -431,6 +451,7 @@ describe('GameGateway', () => {
   });
 
   it('acknowledges the submitting player with ANSWER_RECEIVED', async () => {
+    await openFirstQuestion();
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
 
@@ -446,6 +467,40 @@ describe('GameGateway', () => {
       teamName: 'The Quizzards',
       value: 'Banana',
     });
+  });
+
+  it('broadcasts STATE_UPDATED with the answered team ids after a submit', async () => {
+    await openFirstQuestion();
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await gateway.handleSubmitAnswer(asSocket(player), {
+      questionId: 'r1q1',
+      teamId: 'team-1',
+      value: 'Banana',
+    });
+
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.objectContaining({ answeredTeamIds: ['team-1'] }),
+    );
+  });
+
+  it('rejects SUBMIT_ANSWER while the question is not open for answering', async () => {
+    // Still in the lobby - no question has been revealed yet.
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await expect(
+      gateway.handleSubmitAnswer(asSocket(player), {
+        questionId: 'r1q1',
+        teamId: 'team-1',
+        value: 'Banana',
+      }),
+    ).rejects.toThrow(WsException);
+    expect(answerService.submit).not.toHaveBeenCalled();
   });
 
   it('rejects SUBMIT_ANSWER from a non-players client', async () => {
@@ -576,6 +631,42 @@ describe('GameGateway', () => {
     );
   });
 
+  it('lists answers for a requested block question to the requesting admin only', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleListAnswers(asSocket(admin), { questionId: 'r1q1' });
+
+    expect(answerService.listForQuestion).toHaveBeenCalledWith(
+      'session-1',
+      'r1q1',
+    );
+    expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
+      questionId: 'r1q1',
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: null,
+        },
+      ],
+    });
+  });
+
+  it('rejects LIST_ANSWERS from a non-admin client', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await expect(
+      gateway.handleListAnswers(asSocket(player), { questionId: 'r1q1' }),
+    ).rejects.toThrow(WsException);
+    expect(answerService.listForQuestion).not.toHaveBeenCalled();
+  });
+
   it('rejects SELECT_QUIZ from a non-admin client', async () => {
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
@@ -668,6 +759,7 @@ describe('GameGateway', () => {
     });
 
     it('logs a SUBMIT_ANSWER event with the question and team ids', async () => {
+      await openFirstQuestion();
       const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
       await gateway.handleConnection(asSocket(player));
 
