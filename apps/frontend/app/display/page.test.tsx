@@ -100,6 +100,46 @@ describe('DisplayPage', () => {
     expect(screen.getByText('GHIJKL')).toBeInTheDocument();
   });
 
+  it('shows the connected team names scattered across the lobby screen', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'ABCDEF',
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const first = screen.getByText('The Quizzards');
+    expect(first).toBeInTheDocument();
+    expect(screen.getByText('Beer Necessities')).toBeInTheDocument();
+    // scattered = absolutely positioned with per-team inline coordinates
+    expect(first.style.left).toMatch(/%$/);
+    expect(first.style.top).toMatch(/%$/);
+  });
+
+  it('does not show the connected team names outside the lobby', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: question,
+        joinCode: 'ABCDEF',
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.queryByText('The Quizzards')).not.toBeInTheDocument();
+  });
+
   it('does not show the join QR code outside the lobby', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {

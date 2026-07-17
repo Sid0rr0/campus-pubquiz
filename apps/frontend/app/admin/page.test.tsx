@@ -101,6 +101,27 @@ describe('AdminPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/only admin clients/i);
   });
 
+  it('lists the connected team names in the sidebar', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    const sidebar = screen.getByRole('complementary');
+    expect(sidebar).toHaveTextContent(/teams \(2\)/i);
+    expect(sidebar).toHaveTextContent('The Quizzards');
+    expect(sidebar).toHaveTextContent('Beer Necessities');
+  });
+
   it('sends START_QUIZ when the Start Quiz button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
