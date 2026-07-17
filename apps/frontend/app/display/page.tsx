@@ -3,10 +3,51 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
+import type { TeamView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 
 const QR_SIZE_PX = 220;
+
+const SCATTER_TEXT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
+// Keep scattered names inside the visible lobby area (percent of container).
+const SCATTER_LEFT_RANGE = { min: 4, span: 70 };
+const SCATTER_TOP_RANGE = { min: 8, span: 76 };
+const SCATTER_TILT_MAX_DEG = 8;
+
+// Deterministic pseudo-random in [0, 1) so each team keeps its spot across
+// re-renders and reconnects instead of jumping around the screen.
+function hashToUnit(seed: string, salt: number): number {
+  let hash = 2166136261 ^ salt;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619);
+  }
+  return (hash >>> 0) / 4294967296;
+}
+
+interface ScatteredTeamNamesProps {
+  teams: TeamView[];
+}
+
+function ScatteredTeamNames({ teams }: ScatteredTeamNamesProps) {
+  return (
+    <div aria-label="Connected teams" className="pointer-events-none absolute inset-0">
+      {teams.map((team, index) => (
+        <span
+          key={team.teamId}
+          style={{
+            left: `${SCATTER_LEFT_RANGE.min + hashToUnit(team.teamId, 1) * SCATTER_LEFT_RANGE.span}%`,
+            top: `${SCATTER_TOP_RANGE.min + hashToUnit(team.teamId, 2) * SCATTER_TOP_RANGE.span}%`,
+            transform: `rotate(${(hashToUnit(team.teamId, 3) * 2 - 1) * SCATTER_TILT_MAX_DEG}deg)`,
+          }}
+          className={`absolute font-display text-2xl ${SCATTER_TEXT_CLASSES[index % SCATTER_TEXT_CLASSES.length]}`}
+        >
+          {team.teamName}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 const OPTION_ACCENT_CLASSES = [
   'border-cyan text-cyan',
@@ -31,7 +72,7 @@ function DisplayPageContent() {
     );
   }
 
-  const { progress, currentQuestion, leaderboard = [] } = snapshot;
+  const { progress, currentQuestion, leaderboard = [], teams = [] } = snapshot;
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -47,7 +88,8 @@ function DisplayPageContent() {
         </div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
+        <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
+          <ScatteredTeamNames teams={teams} />
           <h1 className="font-display text-4xl">Waiting for the quiz to start…</h1>
           {joinCode && (
             <div className="flex flex-col items-center gap-4">

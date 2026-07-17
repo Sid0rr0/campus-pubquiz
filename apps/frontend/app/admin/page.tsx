@@ -141,7 +141,7 @@ export default function AdminPage() {
     );
   }
 
-  const { progress, currentQuestion, leaderboard = [] } = snapshot;
+  const { progress, currentQuestion, leaderboard = [], teams = [] } = snapshot;
   const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
 
   return (
@@ -193,6 +193,20 @@ export default function AdminPage() {
             End Quiz
           </button>
         </div>
+        {teams.length > 0 && (
+          <section className="mt-auto flex flex-col gap-2 border-t border-background/20 pt-4">
+            <h2 className="text-xs font-extrabold tracking-wide text-background/60">
+              Teams ({teams.length})
+            </h2>
+            <ul className="flex flex-col gap-1">
+              {teams.map((team) => (
+                <li key={team.teamId} className="text-sm font-bold">
+                  {team.teamName}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </aside>
       <div className="flex flex-1 flex-col gap-6 p-7">
         {canChooseQuiz && quizzes && (
