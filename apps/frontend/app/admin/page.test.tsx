@@ -196,12 +196,12 @@ describe('AdminPage', () => {
     expect(screen.getByText('Banana')).toBeInTheDocument();
   });
 
-  it('grades an ungraded answer with the entered points', async () => {
+  it('grades an ungraded answer with the full-points quick button', async () => {
     const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -221,17 +221,46 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.type(screen.getByRole('spinbutton', { name: /points for the quizzards/i }), '2');
-    await userEvent.click(screen.getByRole('button', { name: /grade the quizzards/i }));
+    await userEvent.click(screen.getByRole('button', { name: /grade the quizzards full points/i }));
 
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 2);
   });
 
-  it('shows the awarded points instead of a grade control for an already-graded answer', () => {
+  it('grades an ungraded answer with the half-points quick button', async () => {
+    const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: null,
+          },
+        ],
+      },
+      gradeAnswer,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /grade the quizzards half points/i }));
+
+    expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 1);
+  });
+
+  it('shows the awarded grade as a disabled, checked quick button for an already-graded answer', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -251,10 +280,11 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    expect(screen.getByText(/2 points/i)).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /grade the quizzards/i }),
-    ).not.toBeInTheDocument();
+    const fullPointsButton = screen.getByRole('button', { name: /grade the quizzards full points/i });
+    expect(fullPointsButton).toHaveTextContent('✓ 2');
+    expect(fullPointsButton).toBeDisabled();
+    expect(screen.getByRole('button', { name: /grade the quizzards 0 points/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /grade the quizzards half points/i })).toBeDisabled();
   });
 
   it('shows a leaderboard preview from the snapshot', () => {

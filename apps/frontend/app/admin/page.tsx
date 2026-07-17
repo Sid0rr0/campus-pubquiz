@@ -7,30 +7,57 @@ import { Leaderboard } from '@/app/components/leaderboard';
 
 interface GradeRowProps {
   answer: AnswerView;
+  maxPoints: number;
   onGrade: (points: number) => void;
 }
 
-function GradeRow({ answer, onGrade }: GradeRowProps) {
-  const [points, setPoints] = useState('');
+interface GradeOption {
+  display: string;
+  ariaSuffix: string;
+  value: number;
+}
+
+function gradeOptions(maxPoints: number): GradeOption[] {
+  return [
+    { display: '0', ariaSuffix: '0 points', value: 0 },
+    { display: '½', ariaSuffix: 'half points', value: maxPoints / 2 },
+    { display: String(maxPoints), ariaSuffix: 'full points', value: maxPoints },
+  ];
+}
+
+function GradeRow({ answer, maxPoints, onGrade }: GradeRowProps) {
+  const isGraded = answer.pointsAwarded !== null;
+  const options = gradeOptions(maxPoints);
+  const matchesAGradeOption = options.some((option) => option.value === answer.pointsAwarded);
 
   return (
-    <li>
-      <span>{answer.teamName}</span>
-      <span>{answer.value}</span>
-      {answer.pointsAwarded === null ? (
-        <>
-          <label htmlFor={`points-${answer.answerId}`}>Points for {answer.teamName}</label>
-          <input
-            id={`points-${answer.answerId}`}
-            type="number"
-            value={points}
-            onChange={(event) => setPoints(event.target.value)}
-          />
-          <button onClick={() => onGrade(Number(points))}>Grade {answer.teamName}</button>
-        </>
-      ) : (
-        <span>{answer.pointsAwarded} points</span>
+    <li className="flex items-center gap-3.5 rounded-xl border border-foreground/15 bg-white px-4 py-3">
+      <span className="w-40 shrink-0 font-extrabold">{answer.teamName}</span>
+      <span className="flex-1 text-[15px]">{answer.value}</span>
+      {isGraded && !matchesAGradeOption && (
+        <span className="sr-only">Awarded {answer.pointsAwarded} points</span>
       )}
+      <div className="flex gap-1.5">
+        {options.map(({ display, ariaSuffix, value }) => {
+          const isSelected = isGraded && answer.pointsAwarded === value;
+          return (
+            <button
+              key={display}
+              type="button"
+              disabled={isGraded}
+              aria-label={`Grade ${answer.teamName} ${ariaSuffix}`}
+              onClick={() => onGrade(value)}
+              className={
+                isSelected
+                  ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green font-extrabold text-white'
+                  : 'flex h-9 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40'
+              }
+            >
+              {isSelected ? `✓ ${value}` : display}
+            </button>
+          );
+        })}
+      </div>
     </li>
   );
 }
@@ -53,16 +80,24 @@ export default function AdminPage() {
 
   if (!hasSubmittedPassword && !snapshot && !connectionError) {
     return (
-      <main>
-        <form onSubmit={handleSubmitPassword}>
-          <label htmlFor="admin-password">Admin password</label>
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <form onSubmit={handleSubmitPassword} className="flex w-72 flex-col gap-2">
+          <label htmlFor="admin-password" className="text-xs font-extrabold tracking-wide text-foreground/55">
+            Admin password
+          </label>
           <input
             id="admin-password"
             type="password"
             value={passwordInput}
             onChange={(event) => setPasswordInput(event.target.value)}
+            className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
           />
-          <button type="submit">Connect</button>
+          <button
+            type="submit"
+            className="mt-2 min-h-12 rounded-xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
+          >
+            Connect
+          </button>
         </form>
       </main>
     );
@@ -70,49 +105,93 @@ export default function AdminPage() {
 
   if (!snapshot) {
     return (
-      <main>
-        {connectionError && <p role="alert">{connectionError}</p>}
-        <p>Connecting…</p>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
+        {connectionError && (
+          <p role="alert" className="font-extrabold text-magenta">
+            {connectionError}
+          </p>
+        )}
+        <p className="font-display text-xl">Connecting…</p>
       </main>
     );
   }
 
   const { progress, currentQuestion, leaderboard = [] } = snapshot;
+  const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
 
   return (
-    <main>
-      <h1>Admin</h1>
-      {connectionError && <p role="alert">{connectionError}</p>}
-      <p>Status: {progress.status}</p>
-      {currentQuestion && <p>Current question: {currentQuestion.prompt}</p>}
-      <div>
-        <button onClick={() => sendAction('START_QUIZ')}>Start Quiz</button>
-        <button onClick={() => sendAction('LOCK_ANSWERS')}>Lock Answers</button>
-        <button onClick={() => sendAction('ADVANCE')}>Advance</button>
-        <button onClick={() => sendAction('FINISH_GRADING')}>Finish Grading</button>
-        <button onClick={() => sendAction('TOGGLE_LEADERBOARD')}>Toggle Leaderboard</button>
-        <button onClick={() => sendAction('END_QUIZ')}>End Quiz</button>
+    <main className="flex min-h-screen bg-background text-foreground">
+      <aside className="flex w-72 shrink-0 flex-col gap-5 bg-foreground p-5 text-background">
+        <h1 className="font-display text-lg">Quiz Master</h1>
+        {connectionError && (
+          <p role="alert" className="font-extrabold text-magenta">
+            {connectionError}
+          </p>
+        )}
+        <p className="text-sm font-bold">Status: {progress.status}</p>
+        {currentQuestion && <p className="text-sm">Current question: {currentQuestion.prompt}</p>}
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => sendAction('START_QUIZ')}
+            className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+          >
+            Start Quiz
+          </button>
+          <button
+            onClick={() => sendAction('LOCK_ANSWERS')}
+            className="min-h-11 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/70"
+          >
+            Lock Answers
+          </button>
+          <button
+            onClick={() => sendAction('ADVANCE')}
+            className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+          >
+            Advance
+          </button>
+          <button
+            onClick={() => sendAction('FINISH_GRADING')}
+            className="min-h-12 rounded-lg bg-magenta text-sm font-extrabold text-white"
+          >
+            Finish Grading
+          </button>
+          <button
+            onClick={() => sendAction('TOGGLE_LEADERBOARD')}
+            className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+          >
+            Toggle Leaderboard
+          </button>
+          <button
+            onClick={() => sendAction('END_QUIZ')}
+            className="min-h-11 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/60"
+          >
+            End Quiz
+          </button>
+        </div>
+      </aside>
+      <div className="flex flex-1 flex-col gap-6 p-7">
+        {showGrading && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-display text-xl">Answers</h2>
+            <ul className="flex flex-col gap-2">
+              {liveAnswers.answers.map((answer) => (
+                <GradeRow
+                  key={answer.answerId}
+                  answer={answer}
+                  maxPoints={currentQuestion.points}
+                  onGrade={(points) => gradeAnswer(answer.answerId, points)}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
+        {leaderboard.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-display text-xl">Leaderboard</h2>
+            <Leaderboard entries={leaderboard} />
+          </section>
+        )}
       </div>
-      {liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id && (
-        <section>
-          <h2>Answers</h2>
-          <ul>
-            {liveAnswers.answers.map((answer) => (
-              <GradeRow
-                key={answer.answerId}
-                answer={answer}
-                onGrade={(points) => gradeAnswer(answer.answerId, points)}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-      {leaderboard.length > 0 && (
-        <section>
-          <h2>Leaderboard</h2>
-          <Leaderboard entries={leaderboard} />
-        </section>
-      )}
     </main>
   );
 }
