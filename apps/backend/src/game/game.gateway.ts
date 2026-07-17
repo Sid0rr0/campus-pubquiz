@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -36,6 +37,8 @@ export class GameGateway implements OnGatewayConnection {
   @WebSocketServer()
   server!: Server;
 
+  private readonly logger = new Logger(GameGateway.name);
+
   constructor(
     private readonly gameState: GameStateService,
     private readonly teamService: TeamService,
@@ -47,17 +50,24 @@ export class GameGateway implements OnGatewayConnection {
     const role = client.handshake.query.role;
 
     if (typeof role !== 'string' || !VALID_ROOMS.includes(role)) {
+      this.logger.warn(
+        `Rejected connection ${client.id}: unrecognized role "${String(role)}"`,
+      );
       client.disconnect();
       return;
     }
 
     if (role === SOCKET_ROOMS.ADMIN && !this.isValidAdminPassword(client)) {
+      this.logger.warn(
+        `Rejected connection ${client.id}: invalid admin password`,
+      );
       client.emit('exception', 'Invalid admin password');
       client.disconnect();
       return;
     }
 
     await client.join(role);
+    this.logger.log(`Client ${client.id} connected as ${role}`);
     client.emit(SOCKET_EVENTS.STATE_SYNC, this.gameState.getSnapshot());
   }
 
@@ -69,6 +79,10 @@ export class GameGateway implements OnGatewayConnection {
     if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
       throw new WsException('Only admin clients may perform game actions');
     }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
+    );
 
     let snapshot: StateSnapshotPayload;
     try {
@@ -95,6 +109,10 @@ export class GameGateway implements OnGatewayConnection {
       throw new WsException('Only player clients may join a team');
     }
 
+    this.logger.log(
+      `${SOCKET_EVENTS.JOIN_PLAYERS} from ${client.id}: teamName=${payload.teamName}`,
+    );
+
     try {
       const team = await this.teamService.join(
         this.gameState.getGameSessionId(),
@@ -120,6 +138,10 @@ export class GameGateway implements OnGatewayConnection {
     if (!client.rooms.has(SOCKET_ROOMS.PLAYERS)) {
       throw new WsException('Only player clients may submit answers');
     }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.SUBMIT_ANSWER} from ${client.id}: questionId=${payload.questionId} teamId=${payload.teamId}`,
+    );
 
     const submitted = await this.answerService.submit(
       this.gameState.getGameSessionId(),
@@ -154,6 +176,10 @@ export class GameGateway implements OnGatewayConnection {
       throw new WsException('Only admin clients may grade answers');
     }
 
+    this.logger.log(
+      `${SOCKET_EVENTS.GRADE_ANSWER} from ${client.id}: answerId=${payload.answerId} pointsAwarded=${payload.pointsAwarded}`,
+    );
+
     const { questionId } = await this.answerService.grade(
       payload.answerId,
       payload.pointsAwarded,
@@ -187,6 +213,8 @@ export class GameGateway implements OnGatewayConnection {
       throw new WsException('Only admin clients may list quizzes');
     }
 
+    this.logger.log(`${SOCKET_EVENTS.LIST_QUIZZES} from ${client.id}`);
+
     const quizzes = await this.quizService.list();
     client.emit(SOCKET_EVENTS.QUIZZES_LISTED, {
       activeQuizId: this.gameState.getActiveQuizId(),
@@ -202,6 +230,10 @@ export class GameGateway implements OnGatewayConnection {
     if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
       throw new WsException('Only admin clients may select a quiz');
     }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.SELECT_QUIZ} from ${client.id}: quizId=${payload.quizId}`,
+    );
 
     let snapshot: StateSnapshotPayload;
     try {
