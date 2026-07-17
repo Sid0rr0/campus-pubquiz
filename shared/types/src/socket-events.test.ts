@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  type JoinAcceptedPayload,
+  type ListAnswersPayload,
   type QuizzesListedPayload,
   type SelectQuizPayload,
+  type StateSnapshotPayload,
 } from './socket-events';
 
 describe('SOCKET_EVENTS', () => {
@@ -21,7 +24,47 @@ describe('SOCKET_EVENTS', () => {
       GRADE_ANSWER: 'game:grade_answer',
       LIST_QUIZZES: 'game:list_quizzes',
       SELECT_QUIZ: 'game:select_quiz',
+      LIST_ANSWERS: 'game:list_answers',
     });
+  });
+});
+
+describe('block answering payloads', () => {
+  it('carries revealed block questions and answered team ids so clients can browse and indicate responses', () => {
+    const snapshot: StateSnapshotPayload = {
+      progress: {
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+      },
+      currentQuestion: { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10 },
+      blockQuestions: [
+        { id: 'q-1', type: 'free_text', prompt: 'First?', points: 10 },
+        { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10 },
+      ],
+      answeredTeamIds: ['team-1'],
+      leaderboard: [],
+      joinCode: 'ABC234',
+      teams: [{ teamId: 'team-1', teamName: 'Quizzards' }],
+    };
+    const listAnswers: ListAnswersPayload = { questionId: 'q-1' };
+
+    expect(snapshot.blockQuestions.map((question) => question.id)).toContain(
+      listAnswers.questionId,
+    );
+    expect(snapshot.answeredTeamIds).toContain(snapshot.teams[0].teamId);
+  });
+
+  it('returns the team saved answers on join so a reconnecting phone restores its checkmarks', () => {
+    const joined: JoinAcceptedPayload = {
+      teamId: 'team-1',
+      teamToken: 'token-1',
+      teamName: 'Quizzards',
+      answers: [{ questionId: 'q-1', value: '42' }],
+    };
+
+    expect(joined.answers).toEqual([{ questionId: 'q-1', value: '42' }]);
   });
 });
 

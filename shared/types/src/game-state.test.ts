@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBlockStartRoundIndex,
   getNextGameState,
   IllegalGameTransitionError,
   InvalidQuizConfigError,
@@ -32,20 +33,14 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('locks answers for the open question', () => {
-    const open: GameProgress = { ...lobby, status: 'question_open' };
-    const next = getNextGameState(open, 'LOCK_ANSWERS', twoRoundsWithBreakAfterSecond);
-    expect(next.status).toBe('locked');
-  });
-
-  it('advances to the next question within the same round', () => {
-    const locked: GameProgress = {
-      status: 'locked',
+  it('advances to the next question within the same round while answers stay open', () => {
+    const open: GameProgress = {
+      status: 'question_open',
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
     };
-    const next = getNextGameState(locked, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
       status: 'question_open',
       roundIndex: 0,
@@ -54,14 +49,14 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('moves to the next round when the finished round has no break', () => {
-    const locked: GameProgress = {
-      status: 'locked',
+  it('moves to the next round without a break when the finished round has breakAfter: false', () => {
+    const open: GameProgress = {
+      status: 'question_open',
       roundIndex: 0,
       questionIndex: 1, // last question of round 0 (questionCount: 2)
       isLeaderboardVisible: false,
     };
-    const next = getNextGameState(locked, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
       status: 'question_open',
       roundIndex: 1,
@@ -70,14 +65,14 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('enters a break when the finished round requires one', () => {
-    const locked: GameProgress = {
-      status: 'locked',
+  it('locks the whole block by entering a break when the finished round has breakAfter: true', () => {
+    const open: GameProgress = {
+      status: 'question_open',
       roundIndex: 1,
       questionIndex: 1, // last question of round 1 (breakAfter: true)
       isLeaderboardVisible: false,
     };
-    const next = getNextGameState(locked, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('break');
     expect(next.roundIndex).toBe(1);
   });
@@ -128,25 +123,25 @@ describe('getNextGameState', () => {
   });
 
   it('toggles the leaderboard on without changing the underlying status', () => {
-    const locked: GameProgress = {
-      status: 'locked',
+    const open: GameProgress = {
+      status: 'question_open',
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
     };
-    const next = getNextGameState(locked, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
-    expect(next).toEqual({ ...locked, isLeaderboardVisible: true });
+    const next = getNextGameState(open, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...open, isLeaderboardVisible: true });
   });
 
   it('toggles the leaderboard back off, resuming the prior status untouched', () => {
-    const lockedWithLeaderboard: GameProgress = {
-      status: 'locked',
+    const openWithLeaderboard: GameProgress = {
+      status: 'question_open',
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: true,
     };
-    const next = getNextGameState(lockedWithLeaderboard, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
-    expect(next).toEqual({ ...lockedWithLeaderboard, isLeaderboardVisible: false });
+    const next = getNextGameState(openWithLeaderboard, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...openWithLeaderboard, isLeaderboardVisible: false });
   });
 
   it('allows toggling the leaderboard even after the quiz has ended', () => {
@@ -172,8 +167,8 @@ describe('getNextGameState', () => {
     expect(next.status).toBe('ended');
   });
 
-  it('rejects locking answers when no question is open', () => {
-    expect(() => getNextGameState(lobby, 'LOCK_ANSWERS', twoRoundsWithBreakAfterSecond)).toThrow(
+  it('rejects advancing from the lobby', () => {
+    expect(() => getNextGameState(lobby, 'ADVANCE', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
   });
@@ -210,7 +205,36 @@ describe('getNextGameState', () => {
     const badContext: GameContext = {
       rounds: [{ questionCount: 1, breakAfter: false }],
     };
-    const locked: GameProgress = { status: 'locked', roundIndex: 0, questionIndex: 0, isLeaderboardVisible: false };
-    expect(() => getNextGameState(locked, 'ADVANCE', badContext)).toThrow(InvalidQuizConfigError);
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    };
+    expect(() => getNextGameState(open, 'ADVANCE', badContext)).toThrow(InvalidQuizConfigError);
+  });
+});
+
+describe('getBlockStartRoundIndex', () => {
+  const fourRounds: GameContext = {
+    rounds: [
+      { questionCount: 2, breakAfter: false },
+      { questionCount: 2, breakAfter: true },
+      { questionCount: 1, breakAfter: false },
+      { questionCount: 1, breakAfter: true },
+    ],
+  };
+
+  it('returns round 0 for any round in the first block', () => {
+    expect(getBlockStartRoundIndex(0, fourRounds)).toBe(0);
+  });
+
+  it('includes the breakAfter round itself at the end of its own block', () => {
+    expect(getBlockStartRoundIndex(1, fourRounds)).toBe(0);
+  });
+
+  it('starts a new block on the round following a breakAfter round', () => {
+    expect(getBlockStartRoundIndex(2, fourRounds)).toBe(2);
+    expect(getBlockStartRoundIndex(3, fourRounds)).toBe(2);
   });
 });
