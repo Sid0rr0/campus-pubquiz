@@ -241,4 +241,46 @@ describe('useGameSocket', () => {
       pointsAwarded: 2,
     });
   });
+
+  it('requestQuizzes emits a LIST_QUIZZES event', () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.requestQuizzes();
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.LIST_QUIZZES);
+  });
+
+  it('selectQuiz emits a SELECT_QUIZ event with the quiz id', () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.selectQuiz('quiz-2');
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.SELECT_QUIZ, {
+      quizId: 'quiz-2',
+    });
+  });
+
+  it('adopts the quiz list on QUIZZES_LISTED', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+    const payload = {
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+        { id: 'quiz-2', title: 'Imported Quiz' },
+      ],
+    };
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.QUIZZES_LISTED, payload);
+    });
+
+    await waitFor(() => expect(result.current.quizzes).toEqual(payload));
+  });
 });

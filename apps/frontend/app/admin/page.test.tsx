@@ -287,6 +287,90 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: /grade the quizzards half points/i })).toBeDisabled();
   });
 
+  it('requests the quiz list while the game is in the lobby', () => {
+    const requestQuizzes = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes,
+      selectQuiz: vi.fn(),
+      quizzes: null,
+    });
+    render(<AdminPage />);
+
+    expect(requestQuizzes).toHaveBeenCalled();
+  });
+
+  it('lists available quizzes in the lobby with the active quiz marked', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+          { id: 'quiz-2', title: 'Imported Quiz' },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByText('Campus Pub Quiz Night')).toBeInTheDocument();
+    expect(screen.getByText('Imported Quiz')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /campus pub quiz night.*active/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /select quiz imported quiz/i })).toBeEnabled();
+  });
+
+  it('selects a different quiz when its button is clicked', async () => {
+    const selectQuiz = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz,
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+          { id: 'quiz-2', title: 'Imported Quiz' },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+
+    expect(selectQuiz).toHaveBeenCalledWith('quiz-2');
+  });
+
+  it('hides the quiz picker once the game has left the lobby', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+          { id: 'quiz-2', title: 'Imported Quiz' },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    expect(screen.queryByRole('button', { name: /select quiz/i })).not.toBeInTheDocument();
+  });
+
   it('shows a leaderboard preview from the snapshot', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
