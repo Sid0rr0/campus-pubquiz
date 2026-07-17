@@ -11,6 +11,14 @@ import {
 import { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import { GameProgressRepository } from '@/game/game-progress.repository';
+import { QuizService } from '@/quiz/quiz.service';
+
+const LOBBY_PROGRESS: GameProgress = {
+  status: 'lobby',
+  roundIndex: 0,
+  questionIndex: 0,
+  isLeaderboardVisible: false,
+};
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -27,6 +35,7 @@ export class GameStateService implements OnModuleInit {
   constructor(
     private readonly seedService: SeedService,
     private readonly progressRepository: GameProgressRepository,
+    private readonly quizService: QuizService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -41,6 +50,30 @@ export class GameStateService implements OnModuleInit {
 
   getGameSessionId(): string {
     return this.getSeededGame().gameSessionId;
+  }
+
+  getActiveQuizId(): string {
+    return this.getSeededGame().quizId;
+  }
+
+  async selectQuiz(quizId: string): Promise<StateSnapshotPayload> {
+    if (this.progress.status !== 'lobby') {
+      throw new Error(
+        'A quiz can only be selected while the game is in the lobby',
+      );
+    }
+
+    const { gameSessionId, joinCode } = this.getSeededGame();
+    await this.quizService.assignToSession(gameSessionId, quizId);
+    this.seededGame = await this.seedService.loadGame(
+      quizId,
+      gameSessionId,
+      joinCode,
+    );
+    this.progress = { ...LOBBY_PROGRESS };
+    this.leaderboard = [];
+    await this.progressRepository.save(gameSessionId, this.progress);
+    return this.getSnapshot();
   }
 
   setLeaderboard(leaderboard: LeaderboardEntry[]): void {

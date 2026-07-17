@@ -63,7 +63,12 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
       id: 'round-imported',
       breakAfter: true,
       questions: [
-        { id: 'iq1', type: 'free_text', prompt: 'Imported question', points: 1 },
+        {
+          id: 'iq1',
+          type: 'free_text',
+          prompt: 'Imported question',
+          points: 1,
+        },
       ],
     },
   ],

@@ -34,7 +34,12 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
       id: 'round-imported',
       breakAfter: true,
       questions: [
-        { id: 'iq1', type: 'free_text', prompt: 'Imported question', points: 1 },
+        {
+          id: 'iq1',
+          type: 'free_text',
+          prompt: 'Imported question',
+          points: 1,
+        },
       ],
     },
   ],
@@ -499,9 +504,9 @@ describe('GameGateway', () => {
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
 
-    await expect(
-      gateway.handleListQuizzes(asSocket(player)),
-    ).rejects.toThrow(WsException);
+    await expect(gateway.handleListQuizzes(asSocket(player))).rejects.toThrow(
+      WsException,
+    );
     expect(quizService.list).not.toHaveBeenCalled();
   });
 

@@ -8,6 +8,7 @@ import { GameProgressRepository } from '@/game/game-progress.repository';
 import { GameStateService } from '@/game/game-state.service';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
+import { QuizService } from '@/quiz/quiz.service';
 
 @Module({
   imports: [DbModule],
@@ -17,6 +18,7 @@ import { AnswerService } from '@/answer/answer.service';
     SeedService,
     TeamService,
     AnswerService,
+    QuizService,
     GameProgressRepository,
     GameStateService,
     GameGateway,

@@ -14,12 +14,14 @@ import {
   type AdminActionPayload,
   type GradeAnswerPayload,
   type JoinPlayersPayload,
+  type SelectQuizPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/game-state.service';
+import { QuizService } from '@/quiz/quiz.service';
 
 const VALID_ROOMS: string[] = [
   SOCKET_ROOMS.DISPLAY,
@@ -38,6 +40,7 @@ export class GameGateway implements OnGatewayConnection {
     private readonly gameState: GameStateService,
     private readonly teamService: TeamService,
     private readonly answerService: AnswerService,
+    private readonly quizService: QuizService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -176,6 +179,44 @@ export class GameGateway implements OnGatewayConnection {
       .to(SOCKET_ROOMS.ADMIN)
       .to(SOCKET_ROOMS.PLAYERS)
       .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.LIST_QUIZZES)
+  async handleListQuizzes(@ConnectedSocket() client: Socket): Promise<void> {
+    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+      throw new WsException('Only admin clients may list quizzes');
+    }
+
+    const quizzes = await this.quizService.list();
+    client.emit(SOCKET_EVENTS.QUIZZES_LISTED, {
+      activeQuizId: this.gameState.getActiveQuizId(),
+      quizzes,
+    });
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.SELECT_QUIZ)
+  async handleSelectQuiz(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SelectQuizPayload,
+  ): Promise<void> {
+    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+      throw new WsException('Only admin clients may select a quiz');
+    }
+
+    let snapshot: StateSnapshotPayload;
+    try {
+      snapshot = await this.gameState.selectQuiz(payload.quizId);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to select quiz';
+      throw new WsException(message);
+    }
+
+    this.server
+      .to(SOCKET_ROOMS.DISPLAY)
+      .to(SOCKET_ROOMS.ADMIN)
+      .to(SOCKET_ROOMS.PLAYERS)
+      .emit(SOCKET_EVENTS.STATE_UPDATED, snapshot);
   }
 
   private isValidAdminPassword(client: Socket): boolean {

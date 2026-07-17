@@ -25,7 +25,7 @@ export class SeedService {
       .from(schema.gameSessions)
       .limit(1);
     if (existingSession) {
-      return this.loadSeededGame(
+      return this.loadGame(
         existingSession.quizId,
         existingSession.id,
         existingSession.joinCode,
@@ -34,7 +34,7 @@ export class SeedService {
     return this.createSeededGame();
   }
 
-  private async loadSeededGame(
+  async loadGame(
     quizId: string,
     gameSessionId: string,
     joinCode: string,
