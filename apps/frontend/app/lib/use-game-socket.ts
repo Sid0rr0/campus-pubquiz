@@ -20,12 +20,17 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:300
 
 export type GameSocketRole = 'display' | 'admin' | 'players';
 
+export interface JoinTeamOptions {
+  teamToken?: string;
+  joinCode?: string;
+}
+
 export interface UseGameSocketResult {
   snapshot: StateSnapshotPayload | null;
   connectionError: string | null;
   sendAction: (action: GameAction) => void;
   team: JoinAcceptedPayload | null;
-  joinTeam: (teamName: string, teamToken?: string) => void;
+  joinTeam: (teamName: string, options?: JoinTeamOptions) => void;
   submitAnswer: (questionId: string, teamId: string, value: string) => void;
   liveAnswers: AnswersUpdatedPayload | null;
   gradeAnswer: (answerId: string, pointsAwarded: number) => void;
@@ -111,8 +116,12 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.ADMIN_ACTION, payload);
   }, []);
 
-  const joinTeam = useCallback((teamName: string, teamToken?: string) => {
-    const payload: JoinPlayersPayload = { teamName, teamToken };
+  const joinTeam = useCallback((teamName: string, options: JoinTeamOptions = {}) => {
+    const payload: JoinPlayersPayload = {
+      teamName,
+      teamToken: options.teamToken,
+      joinCode: options.joinCode,
+    };
     socketRef.current?.emit(SOCKET_EVENTS.JOIN_PLAYERS, payload);
   }, []);
 

@@ -1,7 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
+
+const QR_SIZE_PX = 220;
 
 const OPTION_ACCENT_CLASSES = [
   'border-cyan text-cyan',
@@ -11,8 +16,12 @@ const OPTION_ACCENT_CLASSES = [
 ];
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
-export default function DisplayPage() {
+function DisplayPageContent() {
+  const searchParams = useSearchParams();
   const { snapshot } = useGameSocket('display');
+  // The query parameter pins the display to a specific game session's code
+  // (e.g. a pre-printed URL); otherwise the live snapshot provides it.
+  const joinCode = searchParams.get('code') ?? snapshot?.joinCode;
 
   if (!snapshot) {
     return (
@@ -38,8 +47,23 @@ export default function DisplayPage() {
         </div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
-        <div className="flex flex-1 items-center justify-center px-16 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
           <h1 className="font-display text-4xl">Waiting for the quiz to start…</h1>
+          {joinCode && (
+            <div className="flex flex-col items-center gap-4">
+              <div className="rounded-2xl border-2 border-foreground/30 bg-white p-5">
+                <QRCodeSVG
+                  value={`${window.location.origin}/play?code=${joinCode}`}
+                  title="Join QR code"
+                  size={QR_SIZE_PX}
+                />
+              </div>
+              <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+                SCAN TO JOIN — OR GO TO /PLAY AND ENTER THE CODE
+              </p>
+              <p className="font-display text-4xl tracking-[0.3em] text-magenta">{joinCode}</p>
+            </div>
+          )}
         </div>
       )}
       {!progress.isLeaderboardVisible &&
@@ -96,5 +120,14 @@ export default function DisplayPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function DisplayPage() {
+  // useSearchParams requires a Suspense boundary during static prerendering.
+  return (
+    <Suspense fallback={null}>
+      <DisplayPageContent />
+    </Suspense>
   );
 }

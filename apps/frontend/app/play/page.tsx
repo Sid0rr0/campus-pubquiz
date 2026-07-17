@@ -1,14 +1,27 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { QuestionView } from '@campus-pubquiz/types';
-import { useGameSocket } from '@/app/lib/use-game-socket';
+import { useGameSocket, type JoinTeamOptions } from '@/app/lib/use-game-socket';
 
 const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
 const TEAM_TOKEN_STORAGE_KEY = 'campus-pubquiz-team-token';
+const JOIN_CODE_STORAGE_KEY = 'campus-pubquiz-join-code';
 
 const OPTION_ACCENT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
+
+function normalizeJoinCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+function storedJoinOptions(): JoinTeamOptions {
+  return {
+    teamToken: window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY) ?? undefined,
+    joinCode: window.localStorage.getItem(JOIN_CODE_STORAGE_KEY) ?? undefined,
+  };
+}
 
 interface AnswerFormProps {
   question: QuestionView;
@@ -65,10 +78,35 @@ function AnswerForm({ question, onSubmit }: AnswerFormProps) {
   );
 }
 
-export default function PlayPage() {
+interface JoinErrorProps {
+  message: string;
+  onStartOver: () => void;
+}
+
+function JoinError({ message, onStartOver }: JoinErrorProps) {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <p role="alert" className="text-center font-extrabold text-magenta">
+        {message}
+      </p>
+      <button
+        type="button"
+        onClick={onStartOver}
+        className="min-h-12 rounded-2xl border-2 border-foreground/35 bg-white px-6 font-display"
+      >
+        Start over
+      </button>
+    </div>
+  );
+}
+
+function PlayPageContent() {
+  const searchParams = useSearchParams();
+  const codeFromUrl = searchParams.get('code') ?? '';
   const [teamName, setTeamName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
-  const { snapshot, team, joinTeam, submitAnswer } = useGameSocket('players');
+  const [codeInput, setCodeInput] = useState(codeFromUrl);
+  const { snapshot, team, connectionError, joinTeam, submitAnswer } = useGameSocket('players');
   const gameStatus = snapshot?.progress.status;
 
   useEffect(() => {
@@ -79,8 +117,7 @@ export default function PlayPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamName(storedName);
     if (storedName) {
-      const storedToken = window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY);
-      joinTeam(storedName, storedToken ?? undefined);
+      joinTeam(storedName, storedJoinOptions());
     }
   }, [joinTeam]);
 
@@ -95,17 +132,27 @@ export default function PlayPage() {
     // which invalidates the team registration. Re-joining is idempotent for
     // the same session and re-registers the team under a new one.
     if (gameStatus !== 'lobby' || !teamName) return;
-    const storedToken = window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY);
-    joinTeam(teamName, storedToken ?? undefined);
+    joinTeam(teamName, storedJoinOptions());
   }, [gameStatus, teamName, joinTeam]);
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = nameInput.trim();
-    if (!trimmed) return;
-    window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, trimmed);
-    setTeamName(trimmed);
-    joinTeam(trimmed, undefined);
+    const trimmedName = nameInput.trim();
+    const normalizedCode = normalizeJoinCode(codeInput);
+    if (!trimmedName || !normalizedCode) return;
+    window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, trimmedName);
+    window.localStorage.setItem(JOIN_CODE_STORAGE_KEY, normalizedCode);
+    setTeamName(trimmedName);
+    joinTeam(trimmedName, { joinCode: normalizedCode });
+  }
+
+  function handleStartOver() {
+    window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
+    window.localStorage.removeItem(TEAM_TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem(JOIN_CODE_STORAGE_KEY);
+    setTeamName(null);
+    setNameInput('');
+    setCodeInput(codeFromUrl);
   }
 
   if (!teamName) {
@@ -123,6 +170,19 @@ export default function PlayPage() {
             onChange={(event) => setNameInput(event.target.value)}
             className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
           />
+          <label htmlFor="game-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
+            Game code
+          </label>
+          <input
+            id="game-code"
+            value={codeInput}
+            onChange={(event) => setCodeInput(event.target.value)}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="e.g. ABC234"
+            className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
+          />
           <button
             type="submit"
             className="mt-2 min-h-14 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
@@ -138,7 +198,11 @@ export default function PlayPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background text-foreground">
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
-        <p className="font-display text-xl">Connecting…</p>
+        {connectionError && !team ? (
+          <JoinError message={connectionError} onStartOver={handleStartOver} />
+        ) : (
+          <p className="font-display text-xl">Connecting…</p>
+        )}
       </main>
     );
   }
@@ -148,6 +212,11 @@ export default function PlayPage() {
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
       <p className="mb-4 text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+      {connectionError && !team && (
+        <div className="mb-4">
+          <JoinError message={connectionError} onStartOver={handleStartOver} />
+        </div>
+      )}
       {progress.isLeaderboardVisible && (
         <h1 className="text-center font-display text-3xl text-magenta">Leaderboard</h1>
       )}
@@ -179,5 +248,14 @@ export default function PlayPage() {
         <h1 className="mt-16 text-center font-display text-2xl">Quiz complete!</h1>
       )}
     </main>
+  );
+}
+
+export default function PlayPage() {
+  // useSearchParams requires a Suspense boundary during static prerendering.
+  return (
+    <Suspense fallback={null}>
+      <PlayPageContent />
+    </Suspense>
   );
 }
