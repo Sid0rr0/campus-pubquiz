@@ -69,6 +69,7 @@ export default function PlayPage() {
   const [teamName, setTeamName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
   const { snapshot, team, joinTeam, submitAnswer } = useGameSocket('players');
+  const gameStatus = snapshot?.progress.status;
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -88,6 +89,15 @@ export default function PlayPage() {
       window.localStorage.setItem(TEAM_TOKEN_STORAGE_KEY, team.teamToken);
     }
   }, [team]);
+
+  useEffect(() => {
+    // Back in the lobby means the admin may have started a fresh game session,
+    // which invalidates the team registration. Re-joining is idempotent for
+    // the same session and re-registers the team under a new one.
+    if (gameStatus !== 'lobby' || !teamName) return;
+    const storedToken = window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY);
+    joinTeam(teamName, storedToken ?? undefined);
+  }, [gameStatus, teamName, joinTeam]);
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

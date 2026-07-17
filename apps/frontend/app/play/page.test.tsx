@@ -98,6 +98,38 @@ describe('PlayPage', () => {
     expect(joinTeam).toHaveBeenCalledWith('Returning Team', 'stored-token');
   });
 
+  it('re-joins with the stored name and token when the game returns to the lobby', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    const joinTeam = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'stored-token' },
+      joinTeam,
+      submitAnswer: vi.fn(),
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+    });
+    const { rerender } = render(<PlayPage />);
+    joinTeam.mockClear();
+
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'stored-token' },
+      joinTeam,
+      submitAnswer: vi.fn(),
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+    });
+    rerender(<PlayPage />);
+
+    expect(joinTeam).toHaveBeenCalledWith('Returning Team', 'stored-token');
+  });
+
   it('shows the current question once joined and connected', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue({
