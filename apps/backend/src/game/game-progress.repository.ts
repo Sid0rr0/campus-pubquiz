@@ -34,7 +34,12 @@ export class GameProgressRepository {
     }
 
     return {
-      status: session.status as GameStatus,
+      // Sessions persisted before block-based locking may still carry the
+      // retired 'locked' status; treat them as an open question.
+      status:
+        session.status === 'locked'
+          ? 'question_open'
+          : (session.status as GameStatus),
       roundIndex: session.currentRoundIndex,
       questionIndex: session.currentQuestionIndex,
       isLeaderboardVisible: session.isLeaderboardVisible,

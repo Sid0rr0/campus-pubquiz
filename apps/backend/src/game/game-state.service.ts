@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
+  getBlockStartRoundIndex,
   getNextGameState,
   type GameAction,
   type GameContext,
@@ -27,6 +28,7 @@ export class GameStateService implements OnModuleInit {
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
   private teams: TeamView[] = [];
+  private answeredTeamIdsByQuestion: Record<string, string[]> = {};
 
   constructor(
     private readonly seedService: SeedService,
@@ -69,6 +71,7 @@ export class GameStateService implements OnModuleInit {
     this.progress = { ...LOBBY_PROGRESS };
     this.leaderboard = [];
     this.teams = [];
+    this.answeredTeamIdsByQuestion = {};
     return this.getSnapshot();
   }
 
@@ -80,10 +83,26 @@ export class GameStateService implements OnModuleInit {
     this.teams = teams;
   }
 
+  setAnsweredTeamIds(questionId: string, teamIds: string[]): void {
+    this.answeredTeamIdsByQuestion = {
+      ...this.answeredTeamIdsByQuestion,
+      [questionId]: teamIds,
+    };
+  }
+
+  isQuestionOpenForAnswering(questionId: string): boolean {
+    return (
+      this.progress.status === 'question_open' &&
+      this.getBlockQuestions().some((question) => question.id === questionId)
+    );
+  }
+
   getSnapshot(): StateSnapshotPayload {
     return {
       progress: this.progress,
       currentQuestion: this.getCurrentQuestion(),
+      blockQuestions: this.getBlockQuestions(),
+      answeredTeamIds: this.getAnsweredTeamIds(),
       leaderboard: this.leaderboard,
       joinCode: this.getSeededGame().joinCode,
       teams: this.teams,
@@ -115,10 +134,7 @@ export class GameStateService implements OnModuleInit {
   }
 
   private getCurrentQuestion(): QuestionView | null {
-    if (
-      this.progress.status !== 'question_open' &&
-      this.progress.status !== 'locked'
-    ) {
+    if (this.progress.status !== 'question_open') {
       return null;
     }
     return (
@@ -126,5 +142,40 @@ export class GameStateService implements OnModuleInit {
         this.progress.questionIndex
       ] ?? null
     );
+  }
+
+  /**
+   * Questions open for (re-)answering while a question is open (everything
+   * revealed so far in the current block), or the whole just-locked block
+   * during break/reveal so the admin can browse answers while grading.
+   */
+  private getBlockQuestions(): QuestionView[] {
+    const { status, roundIndex, questionIndex } = this.progress;
+    if (
+      status !== 'question_open' &&
+      status !== 'break' &&
+      status !== 'reveal'
+    ) {
+      return [];
+    }
+
+    const rounds = this.getSeededGame().rounds;
+    const blockStart = getBlockStartRoundIndex(roundIndex, this.getContext());
+
+    return rounds.slice(blockStart, roundIndex + 1).flatMap((round, offset) => {
+      const isCurrentRound = blockStart + offset === roundIndex;
+      const isPartiallyRevealed = status === 'question_open' && isCurrentRound;
+      return isPartiallyRevealed
+        ? round.questions.slice(0, questionIndex + 1)
+        : round.questions;
+    });
+  }
+
+  private getAnsweredTeamIds(): string[] {
+    const currentQuestion = this.getCurrentQuestion();
+    if (!currentQuestion) {
+      return [];
+    }
+    return this.answeredTeamIdsByQuestion[currentQuestion.id] ?? [];
   }
 }

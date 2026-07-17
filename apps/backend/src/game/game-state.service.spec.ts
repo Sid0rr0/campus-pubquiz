@@ -416,7 +416,9 @@ describe('GameStateService', () => {
       await service.applyAction('START_QUIZ');
 
       expect(service.isQuestionOpenForAnswering('r2q1')).toBe(false);
-      expect(service.isQuestionOpenForAnswering('no-such-question')).toBe(false);
+      expect(service.isQuestionOpenForAnswering('no-such-question')).toBe(
+        false,
+      );
     });
 
     it('closes the whole block for answering once the break starts', async () => {

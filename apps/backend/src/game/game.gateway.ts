@@ -15,6 +15,7 @@ import {
   type AdminActionPayload,
   type GradeAnswerPayload,
   type JoinPlayersPayload,
+  type ListAnswersPayload,
   type SelectQuizPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
@@ -119,10 +120,15 @@ export class GameGateway implements OnGatewayConnection {
         payload.teamName,
         { teamToken: payload.teamToken, joinCode: payload.joinCode },
       );
+      const savedAnswers = await this.answerService.listForTeam(
+        this.gameState.getGameSessionId(),
+        team.id,
+      );
       client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
         teamId: team.id,
         teamName: team.name,
         teamToken: team.token,
+        answers: savedAnswers,
       });
 
       const teams = await this.teamService.listForSession(
@@ -153,6 +159,10 @@ export class GameGateway implements OnGatewayConnection {
       `${SOCKET_EVENTS.SUBMIT_ANSWER} from ${client.id}: questionId=${payload.questionId} teamId=${payload.teamId}`,
     );
 
+    if (!this.gameState.isQuestionOpenForAnswering(payload.questionId)) {
+      throw new WsException('Answers are locked for this question');
+    }
+
     const submitted = await this.answerService.submit(
       this.gameState.getGameSessionId(),
       payload.questionId,
@@ -175,6 +185,16 @@ export class GameGateway implements OnGatewayConnection {
       questionId: payload.questionId,
       answers,
     });
+
+    this.gameState.setAnsweredTeamIds(
+      payload.questionId,
+      answers.map((answer) => answer.teamId),
+    );
+    this.server
+      .to(SOCKET_ROOMS.DISPLAY)
+      .to(SOCKET_ROOMS.ADMIN)
+      .to(SOCKET_ROOMS.PLAYERS)
+      .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
   }
 
   @SubscribeMessage(SOCKET_EVENTS.GRADE_ANSWER)
@@ -259,6 +279,29 @@ export class GameGateway implements OnGatewayConnection {
       .to(SOCKET_ROOMS.ADMIN)
       .to(SOCKET_ROOMS.PLAYERS)
       .emit(SOCKET_EVENTS.STATE_UPDATED, snapshot);
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.LIST_ANSWERS)
+  async handleListAnswers(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: ListAnswersPayload,
+  ): Promise<void> {
+    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+      throw new WsException('Only admin clients may list answers');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.LIST_ANSWERS} from ${client.id}: questionId=${payload.questionId}`,
+    );
+
+    const answers = await this.answerService.listForQuestion(
+      this.gameState.getGameSessionId(),
+      payload.questionId,
+    );
+    client.emit(SOCKET_EVENTS.ANSWERS_UPDATED, {
+      questionId: payload.questionId,
+      answers,
+    });
   }
 
   private isValidAdminPassword(client: Socket): boolean {

@@ -1,7 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { AnswerView, LeaderboardEntry } from '@campus-pubquiz/types';
+import type {
+  AnswerView,
+  LeaderboardEntry,
+  TeamAnswerView,
+} from '@campus-pubquiz/types';
 import { DRIZZLE } from '@/db/db.constants';
 import * as schema from '@/db/schema';
 
@@ -75,6 +79,24 @@ export class AnswerService {
         ),
       )
       .orderBy(asc(schema.teams.name));
+  }
+
+  async listForTeam(
+    gameSessionId: string,
+    teamId: string,
+  ): Promise<TeamAnswerView[]> {
+    return this.db
+      .select({
+        questionId: schema.answers.questionId,
+        value: schema.answers.value,
+      })
+      .from(schema.answers)
+      .where(
+        and(
+          eq(schema.answers.gameSessionId, gameSessionId),
+          eq(schema.answers.teamId, teamId),
+        ),
+      );
   }
 
   async grade(answerId: string, pointsAwarded: number): Promise<GradedAnswer> {
