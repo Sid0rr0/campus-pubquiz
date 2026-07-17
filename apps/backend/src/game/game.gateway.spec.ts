@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
@@ -548,6 +549,149 @@ describe('GameGateway', () => {
       gateway.handleSelectQuiz(asSocket(player), { quizId: 'quiz-2' }),
     ).rejects.toThrow(WsException);
     expect(seedService.createSession).not.toHaveBeenCalled();
+  });
+
+  describe('socket event logging', () => {
+    let logSpy: jest.SpyInstance;
+    let warnSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      logSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+      warnSpy = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it('logs a successful connection with the socket id and role', async () => {
+      const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
+      await gateway.handleConnection(asSocket(display));
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('socket-1'));
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_ROOMS.DISPLAY),
+      );
+    });
+
+    it('warns when a connection is rejected for an unrecognized role', async () => {
+      const client = createMockSocket('not-a-real-room');
+      await gateway.handleConnection(asSocket(client));
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not-a-real-room'),
+      );
+    });
+
+    it('warns when an admin connection is rejected for a bad password', async () => {
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: 'wrong-password',
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('password'));
+    });
+
+    it('logs an ADMIN_ACTION event with the action name', async () => {
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      await gateway.handleAdminAction(asSocket(admin), {
+        action: 'START_QUIZ',
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_EVENTS.ADMIN_ACTION),
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('START_QUIZ'),
+      );
+    });
+
+    it('logs a JOIN_PLAYERS event with the team name', async () => {
+      const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+      await gateway.handleConnection(asSocket(player));
+
+      await gateway.handleJoinPlayers(asSocket(player), {
+        teamName: 'The Quizzards',
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_EVENTS.JOIN_PLAYERS),
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('The Quizzards'),
+      );
+    });
+
+    it('logs a SUBMIT_ANSWER event with the question and team ids', async () => {
+      const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+      await gateway.handleConnection(asSocket(player));
+
+      await gateway.handleSubmitAnswer(asSocket(player), {
+        questionId: 'r1q1',
+        teamId: 'team-1',
+        value: 'Banana',
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_EVENTS.SUBMIT_ANSWER),
+      );
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('r1q1'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('team-1'));
+    });
+
+    it('logs a GRADE_ANSWER event with the answer id and points', async () => {
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      await gateway.handleGradeAnswer(asSocket(admin), {
+        answerId: 'answer-1',
+        pointsAwarded: 2,
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_EVENTS.GRADE_ANSWER),
+      );
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('answer-1'));
+    });
+
+    it('logs a LIST_QUIZZES event', async () => {
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      await gateway.handleListQuizzes(asSocket(admin));
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_EVENTS.LIST_QUIZZES),
+      );
+    });
+
+    it('logs a SELECT_QUIZ event with the quiz id', async () => {
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      await gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(SOCKET_EVENTS.SELECT_QUIZ),
+      );
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('quiz-2'));
+    });
   });
 
   it('surfaces a mid-game quiz selection as a WsException', async () => {
