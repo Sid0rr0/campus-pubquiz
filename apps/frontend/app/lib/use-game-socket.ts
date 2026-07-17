@@ -5,11 +5,13 @@ import { io, type Socket } from 'socket.io-client';
 import {
   SOCKET_EVENTS,
   type AdminActionPayload,
+  type AnswerReceivedPayload,
   type AnswersUpdatedPayload,
   type GameAction,
   type GradeAnswerPayload,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
+  type ListAnswersPayload,
   type QuizzesListedPayload,
   type SelectQuizPayload,
   type StateSnapshotPayload,
@@ -37,6 +39,9 @@ export interface UseGameSocketResult {
   quizzes: QuizzesListedPayload | null;
   requestQuizzes: () => void;
   selectQuiz: (quizId: string) => void;
+  /** The team's own saved answers by question id (players only). */
+  myAnswers: Record<string, string>;
+  listAnswers: (questionId: string) => void;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -58,6 +63,7 @@ export function useGameSocket(
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
+  const [myAnswers, setMyAnswers] = useState<Record<string, string>>({});
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -82,6 +88,15 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
       setTeam(payload);
+      setMyAnswers(
+        Object.fromEntries(
+          (payload.answers ?? []).map((answer) => [answer.questionId, answer.value]),
+        ),
+      );
+    });
+
+    socket.on(SOCKET_EVENTS.ANSWER_RECEIVED, (payload: AnswerReceivedPayload) => {
+      setMyAnswers((current) => ({ ...current, [payload.questionId]: payload.value }));
     });
 
     socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload: AnswersUpdatedPayload) => {
@@ -147,6 +162,11 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
   }, []);
 
+  const listAnswers = useCallback((questionId: string) => {
+    const payload: ListAnswersPayload = { questionId };
+    socketRef.current?.emit(SOCKET_EVENTS.LIST_ANSWERS, payload);
+  }, []);
+
   return {
     snapshot,
     connectionError,
@@ -159,5 +179,7 @@ export function useGameSocket(
     quizzes,
     requestQuizzes,
     selectQuiz,
+    myAnswers,
+    listAnswers,
   };
 }

@@ -72,7 +72,7 @@ function DisplayPageContent() {
     );
   }
 
-  const { progress, currentQuestion, leaderboard = [], teams = [] } = snapshot;
+  const { progress, currentQuestion, leaderboard = [], teams = [], answeredTeamIds = [] } = snapshot;
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -109,7 +109,7 @@ function DisplayPageContent() {
         </div>
       )}
       {!progress.isLeaderboardVisible &&
-        (progress.status === 'question_open' || progress.status === 'locked') &&
+        progress.status === 'question_open' &&
         currentQuestion && (
           <>
             <div className="flex items-center justify-between border-b-2 border-dashed border-foreground/30 px-8 py-4">
@@ -140,8 +140,10 @@ function DisplayPageContent() {
                   ))}
                 </ul>
               )}
-              {progress.status === 'locked' && (
-                <p className="font-extrabold tracking-wide text-magenta">Answers locked</p>
+              {teams.length > 0 && (
+                <p className="font-extrabold tracking-wide text-foreground/55">
+                  {answeredTeamIds.length} OF {teams.length} TEAMS ANSWERED
+                </p>
               )}
             </div>
           </>

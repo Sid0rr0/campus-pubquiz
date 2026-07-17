@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import type { AnswerView } from '@campus-pubquiz/types';
+import type { AnswerView, QuestionView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
+const EMPTY_QUESTIONS: QuestionView[] = [];
 
 function getStoredAdminPassword(): string {
   if (typeof window === 'undefined') {
@@ -76,6 +77,7 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState(() => getStoredAdminPassword());
   const [hasSubmittedPassword, setHasSubmittedPassword] = useState(() => Boolean(getStoredAdminPassword()));
   const [submittedPassword, setSubmittedPassword] = useState(() => getStoredAdminPassword());
+  const [gradingIndex, setGradingIndex] = useState(0);
   const {
     snapshot,
     connectionError,
@@ -85,16 +87,36 @@ export default function AdminPage() {
     quizzes = null,
     requestQuizzes = () => {},
     selectQuiz = () => {},
+    listAnswers = () => {},
   } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
 
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
+
+  const gradingQuestions = snapshot?.blockQuestions ?? EMPTY_QUESTIONS;
+  const safeGradingIndex = Math.min(gradingIndex, Math.max(gradingQuestions.length - 1, 0));
+  const gradingQuestion = gameStatus === 'break' ? gradingQuestions[safeGradingIndex] : undefined;
+  const gradingQuestionId = gradingQuestion?.id;
 
   useEffect(() => {
     if (gameStatus === 'lobby' || gameStatus === 'ended') {
       requestQuizzes();
     }
   }, [gameStatus, requestQuizzes]);
+
+  useEffect(() => {
+    // Each grading break starts back at the first question of the block.
+    if (gameStatus !== 'break') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGradingIndex(0);
+    }
+  }, [gameStatus]);
+
+  useEffect(() => {
+    if (gradingQuestionId) {
+      listAnswers(gradingQuestionId);
+    }
+  }, [gradingQuestionId, listAnswers]);
 
   function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -141,8 +163,9 @@ export default function AdminPage() {
     );
   }
 
-  const { progress, currentQuestion, leaderboard = [], teams = [] } = snapshot;
+  const { progress, currentQuestion, leaderboard = [], teams = [], answeredTeamIds = [] } = snapshot;
   const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
+  const showAnswerStatus = progress.status === 'question_open';
 
   return (
     <main className="flex min-h-screen bg-background text-foreground">
@@ -161,12 +184,6 @@ export default function AdminPage() {
             className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
           >
             Start Quiz
-          </button>
-          <button
-            onClick={() => sendAction('LOCK_ANSWERS')}
-            className="min-h-11 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/70"
-          >
-            Lock Answers
           </button>
           <button
             onClick={() => sendAction('ADVANCE')}
@@ -199,11 +216,27 @@ export default function AdminPage() {
               Teams ({teams.length})
             </h2>
             <ul className="flex flex-col gap-1">
-              {teams.map((team) => (
-                <li key={team.teamId} className="text-sm font-bold">
-                  {team.teamName}
-                </li>
-              ))}
+              {teams.map((team) => {
+                const hasAnswered = showAnswerStatus && answeredTeamIds.includes(team.teamId);
+                return (
+                  <li
+                    key={team.teamId}
+                    aria-label={
+                      showAnswerStatus
+                        ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
+                        : undefined
+                    }
+                    className="text-sm font-bold"
+                  >
+                    {team.teamName}
+                    {hasAnswered && (
+                      <span aria-hidden="true" className="ml-1 text-cyan">
+                        ✓
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
@@ -236,6 +269,48 @@ export default function AdminPage() {
                 );
               })}
             </ul>
+          </section>
+        )}
+        {progress.status === 'break' && gradingQuestion && (
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl">
+                Grading question {safeGradingIndex + 1} of {gradingQuestions.length}
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous question"
+                  disabled={safeGradingIndex === 0}
+                  onClick={() => setGradingIndex(safeGradingIndex - 1)}
+                  className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next question"
+                  disabled={safeGradingIndex >= gradingQuestions.length - 1}
+                  onClick={() => setGradingIndex(safeGradingIndex + 1)}
+                  className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+            <p className="text-[15px] font-bold">{gradingQuestion.prompt}</p>
+            {liveAnswers && liveAnswers.questionId === gradingQuestion.id && (
+              <ul className="flex flex-col gap-2">
+                {liveAnswers.answers.map((answer) => (
+                  <GradeRow
+                    key={answer.answerId}
+                    answer={answer}
+                    maxPoints={gradingQuestion.points}
+                    onGrade={(points) => gradeAnswer(answer.answerId, points)}
+                  />
+                ))}
+              </ul>
+            )}
           </section>
         )}
         {showGrading && (

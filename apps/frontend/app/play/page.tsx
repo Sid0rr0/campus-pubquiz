@@ -25,28 +25,42 @@ function storedJoinOptions(): JoinTeamOptions {
 
 interface AnswerFormProps {
   question: QuestionView;
+  initialValue?: string;
   onSubmit: (value: string) => void;
 }
 
-function AnswerForm({ question, onSubmit }: AnswerFormProps) {
-  const [value, setValue] = useState('');
+function AnswerForm({ question, initialValue = '', onSubmit }: AnswerFormProps) {
+  const [value, setValue] = useState(initialValue);
 
   if (question.type === 'multiple_choice' && question.options) {
     return (
       <div className="flex flex-col gap-2.5">
-        {question.options.map((option, index) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onSubmit(option)}
-            className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold"
-          >
-            <span aria-hidden="true" className={`font-display ${OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]}`}>
-              {OPTION_LETTERS[index % OPTION_LETTERS.length]}
-            </span>
-            {option}
-          </button>
-        ))}
+        {question.options.map((option, index) => {
+          const isChosen = option === initialValue;
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={isChosen}
+              onClick={() => onSubmit(option)}
+              className={
+                isChosen
+                  ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-magenta bg-white px-4 text-lg font-bold'
+                  : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold'
+              }
+            >
+              <span aria-hidden="true" className={`font-display ${OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]}`}>
+                {OPTION_LETTERS[index % OPTION_LETTERS.length]}
+              </span>
+              {option}
+              {isChosen && (
+                <span aria-hidden="true" className="ml-auto font-display text-magenta">
+                  ✓
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -106,8 +120,24 @@ function PlayPageContent() {
   const [teamName, setTeamName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [codeInput, setCodeInput] = useState(codeFromUrl);
-  const { snapshot, team, connectionError, joinTeam, submitAnswer } = useGameSocket('players');
+  // null = follow the question currently shown on the big screen.
+  const [browsedQuestionId, setBrowsedQuestionId] = useState<string | null>(null);
+  const {
+    snapshot,
+    team,
+    connectionError,
+    joinTeam,
+    submitAnswer,
+    myAnswers = {},
+  } = useGameSocket('players');
   const gameStatus = snapshot?.progress.status;
+  const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
+
+  useEffect(() => {
+    // Snap back to the newest question whenever the quiz master reveals one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBrowsedQuestionId(null);
+  }, [currentQuestionId]);
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -207,7 +237,9 @@ function PlayPageContent() {
     );
   }
 
-  const { progress, currentQuestion } = snapshot;
+  const { progress, currentQuestion, blockQuestions = [] } = snapshot;
+  const selectedQuestion =
+    blockQuestions.find((question) => question.id === browsedQuestionId) ?? currentQuestion;
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
@@ -223,23 +255,47 @@ function PlayPageContent() {
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
         <h1 className="mt-16 text-center font-display text-2xl">Waiting for the quiz to start…</h1>
       )}
-      {!progress.isLeaderboardVisible &&
-        (progress.status === 'question_open' || progress.status === 'locked') &&
-        currentQuestion && (
-          <div className="flex flex-col gap-6">
-            <h1 className="text-balance font-display text-2xl leading-tight">{currentQuestion.prompt}</h1>
-            {progress.status === 'locked' && <p className="font-extrabold text-magenta">Answers locked</p>}
-            {progress.status === 'question_open' && team && (
-              <AnswerForm
-                key={currentQuestion.id}
-                question={currentQuestion}
-                onSubmit={(value) => submitAnswer(currentQuestion.id, team.teamId, value)}
-              />
-            )}
-          </div>
-        )}
+      {!progress.isLeaderboardVisible && progress.status === 'question_open' && selectedQuestion && (
+        <div className="flex flex-col gap-6">
+          {blockQuestions.length > 1 && (
+            <nav aria-label="Open questions" className="flex flex-wrap gap-2">
+              {blockQuestions.map((question, index) => {
+                const isAnswered = question.id in myAnswers;
+                const isSelected = question.id === selectedQuestion.id;
+                return (
+                  <button
+                    key={question.id}
+                    type="button"
+                    aria-label={`Question ${index + 1}${isAnswered ? ' (answered)' : ''}`}
+                    onClick={() => setBrowsedQuestionId(question.id)}
+                    className={
+                      isSelected
+                        ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-magenta bg-white font-extrabold text-magenta'
+                        : 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground/30 bg-white font-extrabold'
+                    }
+                  >
+                    {index + 1}
+                    {isAnswered && <span aria-hidden="true" className="ml-1 text-green">✓</span>}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+          <h1 className="text-balance font-display text-2xl leading-tight">{selectedQuestion.prompt}</h1>
+          {team && (
+            <AnswerForm
+              key={selectedQuestion.id}
+              question={selectedQuestion}
+              initialValue={myAnswers[selectedQuestion.id] ?? ''}
+              onSubmit={(value) => submitAnswer(selectedQuestion.id, team.teamId, value)}
+            />
+          )}
+        </div>
+      )}
       {!progress.isLeaderboardVisible && progress.status === 'break' && (
-        <h1 className="mt-16 text-center font-display text-2xl">Grading in progress…</h1>
+        <h1 className="mt-16 text-center font-display text-2xl">
+          Answers are locked — grading in progress…
+        </h1>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'reveal' && (
         <h1 className="mt-16 text-center font-display text-2xl">Revealing answers…</h1>
