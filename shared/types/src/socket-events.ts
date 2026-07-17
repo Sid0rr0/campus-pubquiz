@@ -40,11 +40,17 @@ export interface LeaderboardEntry {
   totalPoints: number;
 }
 
+export interface TeamView {
+  teamId: string;
+  teamName: string;
+}
+
 export interface StateSnapshotPayload {
   progress: GameProgress;
   currentQuestion: QuestionView | null;
   leaderboard: LeaderboardEntry[];
   joinCode: string;
+  teams: TeamView[];
 }
 
 export interface AdminActionPayload {
