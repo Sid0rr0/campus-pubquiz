@@ -6,6 +6,7 @@ import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
 import type { AnswerService } from '@/answer/answer.service';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
+import type { QuizService } from '@/quiz/quiz.service';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 
@@ -24,10 +25,42 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
   ],
 };
 
+const IMPORTED_QUIZ_GAME: SeededGame = {
+  quizId: 'quiz-2',
+  gameSessionId: 'session-1',
+  joinCode: 'ABCDEF',
+  rounds: [
+    {
+      id: 'round-imported',
+      breakAfter: true,
+      questions: [
+        { id: 'iq1', type: 'free_text', prompt: 'Imported question', points: 1 },
+      ],
+    },
+  ],
+};
+
 function createFakeSeedService(): SeedService {
   return {
     seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
+    loadGame: jest.fn().mockResolvedValue(IMPORTED_QUIZ_GAME),
   } as unknown as SeedService;
+}
+
+function createFakeQuizService() {
+  return {
+    list: jest.fn().mockResolvedValue([
+      { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+      { id: 'quiz-2', title: 'Imported Quiz' },
+    ]),
+    assignToSession: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+type MockQuizService = ReturnType<typeof createFakeQuizService>;
+
+function asQuizService(mock: MockQuizService): QuizService {
+  return mock as unknown as QuizService;
 }
 
 function createFakeGameProgressRepository() {
@@ -131,6 +164,7 @@ describe('GameGateway', () => {
   let server: MockServer;
   let teamService: MockTeamService;
   let answerService: MockAnswerService;
+  let quizService: MockQuizService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
   beforeAll(() => {
@@ -142,9 +176,11 @@ describe('GameGateway', () => {
   });
 
   beforeEach(async () => {
+    quizService = createFakeQuizService();
     const gameStateService = new GameStateService(
       createFakeSeedService(),
       asGameProgressRepository(createFakeGameProgressRepository()),
+      asQuizService(quizService),
     );
     await gameStateService.onModuleInit();
     teamService = createFakeTeamService();
@@ -153,6 +189,7 @@ describe('GameGateway', () => {
       gameStateService,
       asTeamService(teamService),
       asAnswerService(answerService),
+      asQuizService(quizService),
     );
     server = createMockServer();
     gateway.server = asServer(server);
@@ -439,5 +476,79 @@ describe('GameGateway', () => {
       }),
     ).rejects.toThrow(WsException);
     expect(answerService.grade).not.toHaveBeenCalled();
+  });
+
+  it('lists quizzes with the active quiz id for an admin client', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleListQuizzes(asSocket(admin));
+
+    expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.QUIZZES_LISTED, {
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+        { id: 'quiz-2', title: 'Imported Quiz' },
+      ],
+    });
+  });
+
+  it('rejects LIST_QUIZZES from a non-admin client', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await expect(
+      gateway.handleListQuizzes(asSocket(player)),
+    ).rejects.toThrow(WsException);
+    expect(quizService.list).not.toHaveBeenCalled();
+  });
+
+  it('selects a quiz and broadcasts the reset snapshot to all three rooms', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' });
+
+    expect(quizService.assignToSession).toHaveBeenCalledWith(
+      'session-1',
+      'quiz-2',
+    );
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
+        progress: expect.objectContaining({ status: 'lobby' }),
+      }),
+    );
+  });
+
+  it('rejects SELECT_QUIZ from a non-admin client', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await expect(
+      gateway.handleSelectQuiz(asSocket(player), { quizId: 'quiz-2' }),
+    ).rejects.toThrow(WsException);
+    expect(quizService.assignToSession).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a mid-game quiz selection as a WsException', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+
+    await expect(
+      gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' }),
+    ).rejects.toThrow(WsException);
+    expect(quizService.assignToSession).not.toHaveBeenCalled();
   });
 });

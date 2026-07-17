@@ -5,6 +5,7 @@ import {
 import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
+import type { QuizService } from '@/quiz/quiz.service';
 import { GameStateService } from '@/game/game-state.service';
 
 const FIXTURE_SEEDED_GAME: SeededGame = {
@@ -53,10 +54,48 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
   ],
 };
 
-function createFakeSeedService(): SeedService {
+const IMPORTED_QUIZ_GAME: SeededGame = {
+  quizId: 'quiz-2',
+  gameSessionId: 'session-1',
+  joinCode: 'ABCDEF',
+  rounds: [
+    {
+      id: 'round-imported',
+      breakAfter: true,
+      questions: [
+        { id: 'iq1', type: 'free_text', prompt: 'Imported question', points: 1 },
+      ],
+    },
+  ],
+};
+
+function createFakeSeedService() {
   return {
     seed: jest.fn().mockResolvedValue(FIXTURE_SEEDED_GAME),
-  } as unknown as SeedService;
+    loadGame: jest.fn().mockResolvedValue(IMPORTED_QUIZ_GAME),
+  };
+}
+
+type MockSeedService = ReturnType<typeof createFakeSeedService>;
+
+function asSeedService(mock: MockSeedService): SeedService {
+  return mock as unknown as SeedService;
+}
+
+function createFakeQuizService() {
+  return {
+    list: jest.fn().mockResolvedValue([
+      { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+      { id: 'quiz-2', title: 'Imported Quiz' },
+    ]),
+    assignToSession: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+type MockQuizService = ReturnType<typeof createFakeQuizService>;
+
+function asQuizService(mock: MockQuizService): QuizService {
+  return mock as unknown as QuizService;
 }
 
 function createFakeGameProgressRepository(initial: GameProgress | null = null) {
@@ -79,20 +118,26 @@ function asGameProgressRepository(
 describe('GameStateService', () => {
   let service: GameStateService;
   let progressRepository: MockGameProgressRepository;
+  let seedService: MockSeedService;
+  let quizService: MockQuizService;
 
   beforeEach(async () => {
     progressRepository = createFakeGameProgressRepository();
+    seedService = createFakeSeedService();
+    quizService = createFakeQuizService();
     service = new GameStateService(
-      createFakeSeedService(),
+      asSeedService(seedService),
       asGameProgressRepository(progressRepository),
+      asQuizService(quizService),
     );
     await service.onModuleInit();
   });
 
   it('throws if used before onModuleInit resolves the seeded game', async () => {
     const uninitialized = new GameStateService(
-      createFakeSeedService(),
+      asSeedService(createFakeSeedService()),
       asGameProgressRepository(createFakeGameProgressRepository()),
+      asQuizService(createFakeQuizService()),
     );
     await expect(uninitialized.applyAction('START_QUIZ')).rejects.toThrow(
       /before initialization/i,
@@ -234,8 +279,9 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
     });
     const rehydratedService = new GameStateService(
-      createFakeSeedService(),
+      asSeedService(createFakeSeedService()),
       asGameProgressRepository(rehydratingRepository),
+      asQuizService(createFakeQuizService()),
     );
     await rehydratedService.onModuleInit();
 
@@ -247,5 +293,55 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
     });
     expect(snapshot.currentQuestion?.id).toBe('r1q2');
+  });
+
+  it('exposes the active quiz id', () => {
+    expect(service.getActiveQuizId()).toBe('quiz-1');
+  });
+
+  it('rejects selecting a quiz once the game has left the lobby', async () => {
+    await service.applyAction('START_QUIZ');
+
+    await expect(service.selectQuiz('quiz-2')).rejects.toThrow(/lobby/i);
+    expect(quizService.assignToSession).not.toHaveBeenCalled();
+  });
+
+  it('selects a quiz in the lobby: assigns it, reloads rounds, resets state, persists', async () => {
+    service.setLeaderboard([
+      { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+    ]);
+
+    const snapshot = await service.selectQuiz('quiz-2');
+
+    expect(quizService.assignToSession).toHaveBeenCalledWith(
+      'session-1',
+      'quiz-2',
+    );
+    expect(seedService.loadGame).toHaveBeenCalledWith(
+      'quiz-2',
+      'session-1',
+      'ABCDEF',
+    );
+    expect(snapshot.progress).toEqual({
+      status: 'lobby',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    });
+    expect(snapshot.leaderboard).toEqual([]);
+    expect(service.getActiveQuizId()).toBe('quiz-2');
+    expect(progressRepository.save).toHaveBeenCalledWith('session-1', {
+      status: 'lobby',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    });
+  });
+
+  it('drives the game with the newly selected quiz rounds after selection', async () => {
+    await service.selectQuiz('quiz-2');
+
+    const started = await service.applyAction('START_QUIZ');
+    expect(started.currentQuestion?.id).toBe('iq1');
   });
 });
