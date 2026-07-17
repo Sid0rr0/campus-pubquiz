@@ -304,11 +304,33 @@ describe('GameStateService', () => {
     expect(service.getActiveQuizId()).toBe('quiz-1');
   });
 
-  it('rejects selecting a quiz once the game has left the lobby', async () => {
+  it('rejects selecting a quiz while a quiz is in progress', async () => {
     await service.applyAction('START_QUIZ');
 
     await expect(service.selectQuiz('quiz-2')).rejects.toThrow(/lobby/i);
     expect(quizService.assignToSession).not.toHaveBeenCalled();
+  });
+
+  it('selects a quiz after the game has ended and resets back to the lobby', async () => {
+    await service.applyAction('END_QUIZ');
+
+    const snapshot = await service.selectQuiz('quiz-2');
+
+    expect(snapshot.progress).toEqual({
+      status: 'lobby',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    });
+    expect(quizService.assignToSession).toHaveBeenCalledWith(
+      'session-1',
+      'quiz-2',
+    );
+    expect(seedService.loadGame).toHaveBeenCalledWith(
+      'quiz-2',
+      'session-1',
+      'ABCDEF',
+    );
   });
 
   it('selects a quiz in the lobby: assigns it, reloads rounds, resets state, persists', async () => {

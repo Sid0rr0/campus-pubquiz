@@ -52,9 +52,9 @@ export class GameStateService implements OnModuleInit {
   }
 
   async selectQuiz(quizId: string): Promise<StateSnapshotPayload> {
-    if (this.progress.status !== 'lobby') {
+    if (this.progress.status !== 'lobby' && this.progress.status !== 'ended') {
       throw new Error(
-        'A quiz can only be selected while the game is in the lobby',
+        'A quiz can only be selected while the game is in the lobby or after the quiz has ended',
       );
     }
 

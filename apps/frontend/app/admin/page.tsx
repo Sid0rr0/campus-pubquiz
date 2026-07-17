@@ -88,9 +88,10 @@ export default function AdminPage() {
   } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
 
   const gameStatus = snapshot?.progress.status;
+  const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
 
   useEffect(() => {
-    if (gameStatus === 'lobby') {
+    if (gameStatus === 'lobby' || gameStatus === 'ended') {
       requestQuizzes();
     }
   }, [gameStatus, requestQuizzes]);
@@ -194,9 +195,11 @@ export default function AdminPage() {
         </div>
       </aside>
       <div className="flex flex-1 flex-col gap-6 p-7">
-        {progress.status === 'lobby' && quizzes && (
+        {canChooseQuiz && quizzes && (
           <section className="flex flex-col gap-3">
-            <h2 className="font-display text-xl">Choose Quiz</h2>
+            <h2 className="font-display text-xl">
+              {progress.status === 'ended' ? 'Choose New Quiz' : 'Choose Quiz'}
+            </h2>
             <ul className="flex flex-col gap-2">
               {quizzes.quizzes.map((quiz) => {
                 const isActive = quiz.id === quizzes.activeQuizId;
@@ -204,8 +207,7 @@ export default function AdminPage() {
                   <li key={quiz.id}>
                     <button
                       type="button"
-                      disabled={isActive}
-                      aria-label={isActive ? `${quiz.title} (active)` : `Select quiz ${quiz.title}`}
+                      aria-label={isActive ? `Restart quiz ${quiz.title}` : `Select quiz ${quiz.title}`}
                       onClick={() => selectQuiz(quiz.id)}
                       className={
                         isActive

@@ -304,10 +304,10 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: /grade the quizzards half points/i })).toBeDisabled();
   });
 
-  it('requests the quiz list while the game is in the lobby', () => {
+  it('requests the quiz list while the game is in the lobby or ended', () => {
     const requestQuizzes = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
       requestQuizzes,
@@ -317,6 +317,51 @@ describe('AdminPage', () => {
     render(<AdminPage />);
 
     expect(requestQuizzes).toHaveBeenCalled();
+  });
+
+  it('refreshes the quiz list when the admin returns from ended to lobby', () => {
+    const requestQuizzes = vi.fn();
+    let status: GameProgress['status'] = 'ended';
+
+    mockUseGameSocket.mockImplementation(() => ({
+      snapshot: { progress: progress({ status }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes,
+      selectQuiz: vi.fn(),
+      quizzes: null,
+    }));
+
+    const { rerender } = render(<AdminPage />);
+    expect(requestQuizzes).toHaveBeenCalledTimes(1);
+
+    status = 'lobby';
+    rerender(<AdminPage />);
+
+    expect(requestQuizzes).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows quiz selection after the game has ended', () => {
+    const selectQuiz = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz,
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Spring Quiz' },
+          { id: 'quiz-2', title: 'Summer Quiz' },
+        ],
+      },
+    });
+
+    render(<AdminPage />);
+
+    expect(screen.getByRole('heading', { name: /choose new quiz/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /select quiz summer quiz/i })).toBeInTheDocument();
   });
 
   it('lists available quizzes in the lobby with the active quiz marked', () => {
@@ -338,8 +383,32 @@ describe('AdminPage', () => {
 
     expect(screen.getByText('Campus Pub Quiz Night')).toBeInTheDocument();
     expect(screen.getByText('Imported Quiz')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /campus pub quiz night.*active/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /restart quiz campus pub quiz night/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /select quiz imported quiz/i })).toBeEnabled();
+  });
+
+  it('restarts the current quiz when the active quiz is clicked', async () => {
+    const selectQuiz = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz,
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
+          { id: 'quiz-2', title: 'Imported Quiz' },
+        ],
+      },
+    });
+
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /restart quiz campus pub quiz night/i }));
+
+    expect(selectQuiz).toHaveBeenCalledWith('quiz-1');
   });
 
   it('selects a different quiz when its button is clicked', async () => {
