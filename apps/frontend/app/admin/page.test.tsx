@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress } from '@campus-pubquiz/types';
 import AdminPage from '@/app/admin/page';
 
@@ -21,6 +21,11 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
 }
 
 describe('AdminPage', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    mockUseGameSocket.mockReset();
+  });
+
   it('shows the admin password form before connecting', () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
     render(<AdminPage />);
@@ -45,6 +50,18 @@ describe('AdminPage', () => {
     await user.type(screen.getByLabelText(/admin password/i), 'secret-pass');
     await user.click(screen.getByRole('button', { name: /connect/i }));
 
+    expect(window.localStorage.getItem('campus-pubquiz-admin-password')).toBe('secret-pass');
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', 'secret-pass', true);
+  });
+
+  it('restores the stored admin password after a refresh and reconnects automatically', async () => {
+    window.localStorage.setItem('campus-pubquiz-admin-password', 'secret-pass');
+    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+
+    render(<AdminPage />);
+
+    expect(screen.queryByLabelText(/admin password/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/connecting…/i)).toBeInTheDocument();
     expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', 'secret-pass', true);
   });
 

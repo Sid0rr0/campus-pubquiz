@@ -5,7 +5,15 @@ import type { AnswerView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 
-const NOOP = () => {};
+const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
+
+function getStoredAdminPassword(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) ?? '';
+}
 
 interface GradeRowProps {
   answer: AnswerView;
@@ -65,9 +73,9 @@ function GradeRow({ answer, maxPoints, onGrade }: GradeRowProps) {
 }
 
 export default function AdminPage() {
-  const [passwordInput, setPasswordInput] = useState('');
-  const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
-  const [submittedPassword, setSubmittedPassword] = useState('');
+  const [passwordInput, setPasswordInput] = useState(() => getStoredAdminPassword());
+  const [hasSubmittedPassword, setHasSubmittedPassword] = useState(() => Boolean(getStoredAdminPassword()));
+  const [submittedPassword, setSubmittedPassword] = useState(() => getStoredAdminPassword());
   const {
     snapshot,
     connectionError,
@@ -75,11 +83,12 @@ export default function AdminPage() {
     liveAnswers,
     gradeAnswer,
     quizzes = null,
-    requestQuizzes = NOOP,
-    selectQuiz = NOOP,
+    requestQuizzes = () => {},
+    selectQuiz = () => {},
   } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
 
   const gameStatus = snapshot?.progress.status;
+
   useEffect(() => {
     if (gameStatus === 'lobby') {
       requestQuizzes();
@@ -88,6 +97,7 @@ export default function AdminPage() {
 
   function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
+    window.localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, passwordInput);
     setHasSubmittedPassword(true);
     setSubmittedPassword(passwordInput);
   }
