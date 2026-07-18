@@ -1,0 +1,75 @@
+import type { QuestionType } from './socket-events';
+
+/**
+ * One data row of the imported sheet, raw cell strings as exported by the
+ * Google Sheets CSV endpoint. `rowNumber` is 1-based and counts the header,
+ * so the first data row is row 2 — matching what authors see in Sheets.
+ */
+export interface SheetRow {
+  rowNumber: number;
+  round: string;
+  type: string;
+  question: string;
+  options: string;
+  answer: string;
+  points: string;
+  mediaUrl: string;
+  notes: string;
+}
+
+export interface ImportRowIssue {
+  rowNumber: number;
+  field: string;
+  message: string;
+}
+
+export interface ImportQuestionPreview {
+  type: QuestionType;
+  prompt: string;
+  answer: string;
+  points: number;
+  options?: string[];
+  mediaUrl?: string;
+}
+
+export interface ImportRoundPreview {
+  title: string;
+  breakAfter: boolean;
+  questions: ImportQuestionPreview[];
+}
+
+export interface ImportPreview {
+  quizTitle: string;
+  rounds: ImportRoundPreview[];
+  issues: ImportRowIssue[];
+  isImportable: boolean;
+}
+
+/** Request body shared by POST /import/preview and POST /import/confirm. */
+export interface ImportRequest {
+  sheetUrl: string;
+  quizTitle?: string;
+}
+
+export interface ImportConfirmResult {
+  quizId: string;
+  roundCount: number;
+  questionCount: number;
+}
+
+export function createImportPreview(
+  quizTitle: string,
+  rounds: ImportRoundPreview[],
+  issues: ImportRowIssue[],
+): ImportPreview {
+  const questionCount = rounds.reduce(
+    (total, round) => total + round.questions.length,
+    0,
+  );
+  return {
+    quizTitle,
+    rounds,
+    issues,
+    isImportable: issues.length === 0 && questionCount > 0,
+  };
+}
