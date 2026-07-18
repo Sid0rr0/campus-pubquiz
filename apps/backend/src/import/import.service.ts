@@ -53,9 +53,11 @@ export class ImportService {
         error instanceof SheetFormatError
           ? error.message
           : 'Could not read the CSV file';
-      return createImportPreview(title, [], [
-        { rowNumber: 1, field: 'file', message },
-      ]);
+      return createImportPreview(
+        title,
+        [],
+        [{ rowNumber: 1, field: 'file', message }],
+      );
     }
   }
 

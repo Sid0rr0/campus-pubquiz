@@ -9,10 +9,12 @@ import { GameStateService } from '@/game/game-state.service';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
 import { QuizService } from '@/quiz/quiz.service';
+import { ImportController } from '@/import/import.controller';
+import { ImportService } from '@/import/import.service';
 
 @Module({
   imports: [DbModule],
-  controllers: [AppController],
+  controllers: [AppController, ImportController],
   providers: [
     AppService,
     SeedService,
@@ -22,6 +24,7 @@ import { QuizService } from '@/quiz/quiz.service';
     GameProgressRepository,
     GameStateService,
     GameGateway,
+    ImportService,
   ],
 })
 export class AppModule {}
