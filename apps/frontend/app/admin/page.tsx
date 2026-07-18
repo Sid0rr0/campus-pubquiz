@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { AnswerView, QuestionView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
+import { ImportPanel } from '@/app/admin/import-panel';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
 const EMPTY_QUESTIONS: QuestionView[] = [];
@@ -242,6 +243,9 @@ export default function AdminPage() {
         )}
       </aside>
       <div className="flex flex-1 flex-col gap-6 p-7">
+        {canChooseQuiz && (
+          <ImportPanel adminPassword={submittedPassword} onImported={requestQuizzes} />
+        )}
         {canChooseQuiz && quizzes && (
           <section className="flex flex-col gap-3">
             <h2 className="font-display text-xl">

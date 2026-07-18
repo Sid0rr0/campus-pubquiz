@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { confirmImport, ImportApiError, previewImport } from '@/app/lib/import-api';
 
 const originalFetch = global.fetch;
@@ -6,11 +6,6 @@ const originalFetch = global.fetch;
 describe('import-api', () => {
   afterEach(() => {
     global.fetch = originalFetch;
-    vi.unstubAllEnvs();
-  });
-
-  beforeEach(() => {
-    vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', 'http://backend.test');
   });
 
   describe('previewImport', () => {
@@ -26,7 +21,7 @@ describe('import-api', () => {
 
       expect(result).toEqual(preview);
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://backend.test/import/preview',
+        'http://localhost:3000/import/preview',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
