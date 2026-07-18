@@ -94,9 +94,10 @@ describe('parseSheetCsv', () => {
   });
 
   it('throws SheetFormatError when a required column is missing', () => {
-    const csv = ['round,question,answer', 'Round 1,Largest planet?,Jupiter'].join(
-      '\n',
-    );
+    const csv = [
+      'round,question,answer',
+      'Round 1,Largest planet?,Jupiter',
+    ].join('\n');
 
     expect(() => parseSheetCsv(csv)).toThrow(SheetFormatError);
     expect(() => parseSheetCsv(csv)).toThrow(/type/);
