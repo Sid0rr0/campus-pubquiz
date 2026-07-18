@@ -45,6 +45,13 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           prompt: 'Name this flag.',
           points: 3,
         },
+        {
+          id: 'r2q3',
+          type: 'audio',
+          prompt: 'Name this song.',
+          mediaUrl: 'https://example.com/song.mp3',
+          points: 3,
+        },
       ],
     },
   ],

@@ -45,6 +45,52 @@ describe('DisplayPage', () => {
     searchParamsRef.current = new URLSearchParams();
   });
 
+  it('renders a picture question as an image', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r2q1',
+          type: 'picture',
+          prompt: 'Which landmark is shown?',
+          mediaUrl: 'https://example.com/landmark.jpg',
+          points: 3,
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const image = screen.getByRole('img');
+    expect(image).toHaveAttribute('src', 'https://example.com/landmark.jpg');
+    expect(screen.queryByTestId('question-audio')).not.toBeInTheDocument();
+  });
+
+  it('renders an audio question as an autoplaying audio player, not an image', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r2q2',
+          type: 'audio',
+          prompt: 'Name this song.',
+          mediaUrl: 'https://example.com/song.mp3',
+          points: 3,
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const audio = screen.getByTestId('question-audio');
+    expect(audio).toHaveAttribute('src', 'https://example.com/song.mp3');
+    expect(audio).toHaveAttribute('autoplay');
+    expect(audio).toHaveAttribute('controls');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
   it('shows a connecting message before the first snapshot arrives', () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
     render(<DisplayPage />);
