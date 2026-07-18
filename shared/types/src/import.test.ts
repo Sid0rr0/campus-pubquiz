@@ -85,9 +85,9 @@ describe('import payload contracts', () => {
     expect(issue.rowNumber).toBe(row.rowNumber);
   });
 
-  it('carries the sheet url and optional quiz title through the REST DTOs', () => {
+  it('carries the uploaded csv text and optional quiz title through the REST DTOs', () => {
     const request: ImportRequest = {
-      sheetUrl: 'https://docs.google.com/spreadsheets/d/abc123/edit',
+      csvText: 'round,type,question,options,answer,points,media_url,notes\n',
       quizTitle: 'Trivia Night #4',
     };
     const result: ImportConfirmResult = {
@@ -96,7 +96,7 @@ describe('import payload contracts', () => {
       questionCount: 10,
     };
 
-    expect(request.sheetUrl).toContain('docs.google.com');
+    expect(request.csvText).toContain('round,type,question');
     expect(result.questionCount).toBeGreaterThan(0);
   });
 });

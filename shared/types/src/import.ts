@@ -45,9 +45,13 @@ export interface ImportPreview {
   isImportable: boolean;
 }
 
-/** Request body shared by POST /import/preview and POST /import/confirm. */
+/**
+ * Request body shared by POST /import/preview and POST /import/confirm.
+ * `csvText` is the content of an uploaded CSV file (e.g. a Google Sheets
+ * "File → Download → CSV" export), read client-side and sent as text.
+ */
 export interface ImportRequest {
-  sheetUrl: string;
+  csvText: string;
   quizTitle?: string;
 }
 
