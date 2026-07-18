@@ -106,7 +106,26 @@ Evidence: `.claude/tdd/milestone-1.tdd.md`.
 
 Evidence: `.claude/tdd/milestone-2.tdd.md`.
 
-Sheets import and media rounds beyond a plain `mediaUrl` are still open.
+## Third Milestone (done) — CSV Import + Media Rounds
+
+1. Shared `SheetRow`/`ImportPreview`/`ImportRequest` (`csvText`, not a sheet URL) contract in `shared/types`
+2. Backend CSV parsing (`sheet-csv.parser.ts`, BOM/header-tolerant) + per-type Zod validation (`question-row.schema.ts`)
+3. `ImportService`: pure `preview()`, idempotent `confirm()` upserting on `(quiz/round, orderIndex)` unique indexes, lobby/ended-only locking, active-quiz reload on re-import
+4. `POST /import/preview` and `POST /import/confirm`, guarded by `AdminPasswordGuard` (mirrors the socket handshake password check)
+5. Admin `ImportPanel`: upload a CSV file → preview table with per-row issues → confirm gated on `isImportable`, wired into the lobby/ended quiz picker
+6. Display renders `picture` questions as `<img>` and `audio` questions as an autoplaying `<audio controls>`; PlayPage shows a "Look at the screen" hint for both
+
+Evidence: `.claude/tdd/milestone-3.tdd.md`.
+
+**Note on the import flow:** the plan originally called for pasting a Google
+Sheets share URL (server-fetched, SSRF-guarded via a `docs.google.com`
+allowlist). Mid-implementation this was changed to uploading an exported CSV
+file instead — the browser reads the file and POSTs its text, so there is no
+server-side fetch of a user-supplied URL and no SSRF surface. The "Answer key
+leakage" risk from the original plan is mitigated the same way either
+approach would: the CSV is only ever sent to `/import/preview`/`/import/confirm`
+behind the admin password guard, and `SeedService` strips the stored answer
+from every player-facing `QuestionView`.
 
 ## Backend Import Convention
 
