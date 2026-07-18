@@ -75,6 +75,20 @@ export class GameStateService implements OnModuleInit {
     return this.getSnapshot();
   }
 
+  /**
+   * Re-reads the active quiz's rounds from the database, keeping the current
+   * session, join code and progress — used after a re-import updates the
+   * active quiz's questions in place.
+   */
+  async reloadActiveQuiz(): Promise<void> {
+    const { quizId, gameSessionId, joinCode } = this.getSeededGame();
+    this.seededGame = await this.seedService.loadGame(
+      quizId,
+      gameSessionId,
+      joinCode,
+    );
+  }
+
   setLeaderboard(leaderboard: LeaderboardEntry[]): void {
     this.leaderboard = leaderboard;
   }

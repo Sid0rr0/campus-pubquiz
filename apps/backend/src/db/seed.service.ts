@@ -17,6 +17,17 @@ interface QuestionPayload {
   mediaUrl?: string;
 }
 
+// Picks only the player-safe payload fields: imported questions also carry
+// the correct answer in their payload, which must never reach a QuestionView
+// (snapshots go to every connected phone and the big screen).
+function toViewPayload(payload: unknown): QuestionPayload {
+  const { options, mediaUrl } = payload as QuestionPayload;
+  return {
+    ...(options !== undefined ? { options } : {}),
+    ...(mediaUrl !== undefined ? { mediaUrl } : {}),
+  };
+}
+
 @Injectable()
 export class SeedService {
   constructor(
@@ -74,7 +85,7 @@ export class SeedService {
           type: row.type as QuestionType,
           prompt: row.prompt,
           points: row.points,
-          ...(row.payload as QuestionPayload),
+          ...toViewPayload(row.payload),
         })),
       });
     }
@@ -119,7 +130,7 @@ export class SeedService {
           type: questionRow.type as QuestionType,
           prompt: questionRow.prompt,
           points: questionRow.points,
-          ...(questionRow.payload as QuestionPayload),
+          ...toViewPayload(questionRow.payload),
         });
       }
 
