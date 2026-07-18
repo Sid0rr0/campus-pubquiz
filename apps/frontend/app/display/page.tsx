@@ -123,9 +123,22 @@ function DisplayPageContent() {
             </div>
             <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
               <h1 className="text-balance font-display text-4xl leading-snug">{currentQuestion.prompt}</h1>
-              {currentQuestion.mediaUrl && (
+              {currentQuestion.mediaUrl && currentQuestion.type === 'picture' && (
                 // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-                <img src={currentQuestion.mediaUrl} alt="" className="max-h-64 rounded-xl" />
+                <img
+                  data-testid="question-image"
+                  src={currentQuestion.mediaUrl}
+                  alt=""
+                  className="max-h-64 rounded-xl"
+                />
+              )}
+              {currentQuestion.mediaUrl && currentQuestion.type === 'audio' && (
+                <audio
+                  data-testid="question-audio"
+                  src={currentQuestion.mediaUrl}
+                  controls
+                  autoPlay
+                />
               )}
               {currentQuestion.options && (
                 <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">

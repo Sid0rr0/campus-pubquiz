@@ -282,6 +282,11 @@ function PlayPageContent() {
             </nav>
           )}
           <h1 className="text-balance font-display text-2xl leading-tight">{selectedQuestion.prompt}</h1>
+          {(selectedQuestion.type === 'picture' || selectedQuestion.type === 'audio') && (
+            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+          )}
           {team && (
             <AnswerForm
               key={selectedQuestion.id}

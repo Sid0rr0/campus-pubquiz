@@ -62,7 +62,7 @@ describe('DisplayPage', () => {
     });
     render(<DisplayPage />);
 
-    const image = screen.getByRole('img');
+    const image = screen.getByTestId('question-image');
     expect(image).toHaveAttribute('src', 'https://example.com/landmark.jpg');
     expect(screen.queryByTestId('question-audio')).not.toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe('DisplayPage', () => {
     expect(audio).toHaveAttribute('src', 'https://example.com/song.mp3');
     expect(audio).toHaveAttribute('autoplay');
     expect(audio).toHaveAttribute('controls');
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
 
   it('shows a connecting message before the first snapshot arrives', () => {
