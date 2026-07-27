@@ -201,6 +201,26 @@ describe('GameStateService', () => {
     expect(snapshot.currentQuestion?.id).toBe('r2q1');
   });
 
+  it('moves back to the previous question with PREVIOUS', async () => {
+    await service.applyAction('START_QUIZ');
+    await service.applyAction('ADVANCE'); // -> r1q2
+    const snapshot = await service.applyAction('PREVIOUS');
+    expect(snapshot.progress).toEqual({
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    });
+    expect(snapshot.currentQuestion?.id).toBe('r1q1');
+  });
+
+  it('rejects PREVIOUS at the very first question of the quiz', async () => {
+    await service.applyAction('START_QUIZ');
+    await expect(service.applyAction('PREVIOUS')).rejects.toThrow(
+      'Cannot apply action "PREVIOUS" from state "question_open"',
+    );
+  });
+
   it('enters a break once round 2 (breakAfter: true) finishes, hiding the question', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> r1q2
