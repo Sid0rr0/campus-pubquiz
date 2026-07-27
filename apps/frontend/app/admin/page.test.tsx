@@ -150,6 +150,60 @@ describe('AdminPage', () => {
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
+  it('hides the Previous button on the very first question of the quiz', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        blockQuestions: [{ id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+  });
+
+  it('sends PREVIOUS when the Previous button is clicked after the first question of the open block', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open', questionIndex: 1 }),
+        currentQuestion: { id: 'r1q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r1q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
+  it('hides the Previous button outside of question_open', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r1q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+  });
+
   it('sends TOGGLE_LEADERBOARD when the Toggle Leaderboard button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
