@@ -167,6 +167,10 @@ export default function AdminPage() {
   const { progress, currentQuestion, leaderboard = [], teams = [], answeredTeamIds = [] } = snapshot;
   const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
   const showAnswerStatus = progress.status === 'question_open';
+  const canStartQuiz = progress.status === 'lobby';
+  const canAdvance = progress.status === 'question_open' || progress.status === 'reveal';
+  const canFinishGrading = progress.status === 'break';
+  const canEndQuiz = progress.status !== 'ended';
 
   return (
     <main className="flex min-h-screen bg-background text-foreground">
@@ -177,39 +181,47 @@ export default function AdminPage() {
             {connectionError}
           </p>
         )}
-        <p className="text-sm font-bold">Status: {progress.status}</p>
+        <p className="text-sm font-bold">Status: {progress.status} ({snapshot?.joinCode})</p>
         {currentQuestion && <p className="text-sm">Current question: {currentQuestion.prompt}</p>}
         <div className="flex flex-col gap-2">
-          <button
-            onClick={() => sendAction('START_QUIZ')}
-            className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
-          >
-            Start Quiz
-          </button>
-          <button
-            onClick={() => sendAction('ADVANCE')}
-            className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
-          >
-            Advance
-          </button>
-          <button
-            onClick={() => sendAction('FINISH_GRADING')}
-            className="min-h-12 rounded-lg bg-magenta text-sm font-extrabold text-white"
-          >
-            Finish Grading
-          </button>
+          {canStartQuiz && (
+            <button
+              onClick={() => sendAction('START_QUIZ')}
+              className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+            >
+              Start Quiz
+            </button>
+          )}
+          {canAdvance && (
+            <button
+              onClick={() => sendAction('ADVANCE')}
+              className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+            >
+              Advance
+            </button>
+          )}
+          {canFinishGrading && (
+            <button
+              onClick={() => sendAction('FINISH_GRADING')}
+              className="min-h-12 rounded-lg bg-magenta text-sm font-extrabold text-white"
+            >
+              Finish Grading
+            </button>
+          )}
           <button
             onClick={() => sendAction('TOGGLE_LEADERBOARD')}
             className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
           >
             Toggle Leaderboard
           </button>
-          <button
-            onClick={() => sendAction('END_QUIZ')}
-            className="min-h-11 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/60"
-          >
-            End Quiz
-          </button>
+          {canEndQuiz && (
+            <button
+              onClick={() => sendAction('END_QUIZ')}
+              className="min-h-11 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/60"
+            >
+              End Quiz
+            </button>
+          )}
         </div>
         {teams.length > 0 && (
           <section className="mt-auto flex flex-col gap-2 border-t border-background/20 pt-4">
