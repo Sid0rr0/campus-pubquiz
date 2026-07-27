@@ -3,6 +3,7 @@ export type GameStatus = 'lobby' | 'question_open' | 'break' | 'reveal' | 'ended
 export type GameAction =
   | 'START_QUIZ'
   | 'ADVANCE'
+  | 'PREVIOUS'
   | 'FINISH_GRADING'
   | 'END_QUIZ'
   | 'TOGGLE_LEADERBOARD';
@@ -85,6 +86,29 @@ function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): 
   return { ...progress, status: 'question_open', roundIndex: progress.roundIndex + 1, questionIndex: 0 };
 }
 
+/**
+ * Only steps backward within the current open block — the previous round's
+ * questions are already locked once a breakAfter round has run its break, so
+ * crossing that boundary would re-open answers that were already graded.
+ */
+function previousFromQuestionOpen(progress: GameProgress, context: GameContext): GameProgress {
+  if (progress.questionIndex > 0) {
+    return { ...progress, questionIndex: progress.questionIndex - 1 };
+  }
+
+  const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
+  if (progress.roundIndex === blockStart) {
+    illegal(progress.status, 'PREVIOUS');
+  }
+
+  const previousRoundIndex = progress.roundIndex - 1;
+  return {
+    ...progress,
+    roundIndex: previousRoundIndex,
+    questionIndex: context.rounds[previousRoundIndex].questionCount - 1,
+  };
+}
+
 function advanceFromReveal(progress: GameProgress, context: GameContext): GameProgress {
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
 
@@ -120,6 +144,10 @@ export function getNextGameState(
       if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
       if (progress.status === 'reveal') return advanceFromReveal(progress, context);
       return illegal(progress.status, action);
+
+    case 'PREVIOUS':
+      if (progress.status !== 'question_open') illegal(progress.status, action);
+      return previousFromQuestionOpen(progress, context);
 
     case 'FINISH_GRADING':
       if (progress.status !== 'break') illegal(progress.status, action);

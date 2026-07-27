@@ -213,6 +213,80 @@ describe('getNextGameState', () => {
     };
     expect(() => getNextGameState(open, 'ADVANCE', badContext)).toThrow(InvalidQuizConfigError);
   });
+
+  it('moves back to the previous question within the same round', () => {
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+    };
+    const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    });
+  });
+
+  it('moves back to the last question of the previous round within the same open block', () => {
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 1,
+      questionIndex: 0, // first question of round 1, still the same open block as round 0
+      isLeaderboardVisible: false,
+    };
+    const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 1, // last question of round 0 (questionCount: 2)
+      isLeaderboardVisible: false,
+    });
+  });
+
+  it('rejects moving back past the start of the first block', () => {
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+    };
+    expect(() => getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
+      IllegalGameTransitionError,
+    );
+  });
+
+  it('rejects moving back into a previous block that already locked and started grading', () => {
+    const breakFirstThenTwo: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 2, breakAfter: true },
+      ],
+    };
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 1,
+      questionIndex: 0, // first question of round 1, a new block after round 0's break
+      isLeaderboardVisible: false,
+    };
+    expect(() => getNextGameState(open, 'PREVIOUS', breakFirstThenTwo)).toThrow(
+      IllegalGameTransitionError,
+    );
+  });
+
+  it('rejects moving back outside of question_open', () => {
+    const grading: GameProgress = {
+      status: 'break',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+    };
+    expect(() => getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
+      IllegalGameTransitionError,
+    );
+  });
 });
 
 describe('getBlockStartRoundIndex', () => {
