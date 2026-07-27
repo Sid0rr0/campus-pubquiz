@@ -75,10 +75,23 @@ function GradeRow({ answer, maxPoints, onGrade }: GradeRowProps) {
 }
 
 export default function AdminPage() {
-  const [passwordInput, setPasswordInput] = useState(() => getStoredAdminPassword());
-  const [hasSubmittedPassword, setHasSubmittedPassword] = useState(() => Boolean(getStoredAdminPassword()));
-  const [submittedPassword, setSubmittedPassword] = useState(() => getStoredAdminPassword());
+  const [passwordInput, setPasswordInput] = useState('');
+  const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
+  const [submittedPassword, setSubmittedPassword] = useState('');
   const [gradingIndex, setGradingIndex] = useState(0);
+
+  useEffect(() => {
+    // Deferred to an effect (not a useState initializer) so the server-rendered
+    // HTML always starts from the signed-out state — localStorage only exists
+    // on the client and would otherwise mismatch during hydration.
+    const storedPassword = getStoredAdminPassword();
+    if (storedPassword) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPasswordInput(storedPassword);
+      setSubmittedPassword(storedPassword);
+      setHasSubmittedPassword(true);
+    }
+  }, []);
   const {
     snapshot,
     connectionError,
