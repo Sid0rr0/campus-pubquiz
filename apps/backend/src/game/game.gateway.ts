@@ -24,6 +24,7 @@ import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/game-state.service';
 import { QuizService } from '@/quiz/quiz.service';
+import { getCorsOrigins } from '@/config/cors.config';
 
 const VALID_ROOMS: string[] = [
   SOCKET_ROOMS.DISPLAY,
@@ -32,7 +33,7 @@ const VALID_ROOMS: string[] = [
 ];
 
 @WebSocketGateway({
-  cors: { origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:8888' },
+  cors: { origin: getCorsOrigins() },
 })
 export class GameGateway implements OnGatewayConnection {
   @WebSocketServer()
