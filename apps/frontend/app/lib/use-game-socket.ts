@@ -17,8 +17,7 @@ import {
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
+import { getBackendUrl } from '@/app/lib/backend-url';
 
 export type GameSocketRole = 'display' | 'admin' | 'players';
 
@@ -71,7 +70,7 @@ export function useGameSocket(
       return;
     }
 
-    const socket = io(BACKEND_URL, {
+    const socket = io(getBackendUrl(), {
       query: { role },
       auth: password ? { password } : undefined,
     });

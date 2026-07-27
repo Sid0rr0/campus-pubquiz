@@ -3,8 +3,7 @@ import type {
   ImportPreview,
   ImportRowIssue,
 } from '@campus-pubquiz/types';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
+import { getBackendUrl } from '@/app/lib/backend-url';
 
 export class ImportApiError extends Error {
   constructor(
@@ -28,7 +27,7 @@ async function postImport<T>(
   quizTitle: string | undefined,
   adminPassword: string,
 ): Promise<T> {
-  const response = await fetch(`${BACKEND_URL}/import/${path}`, {
+  const response = await fetch(`${getBackendUrl()}/import/${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
