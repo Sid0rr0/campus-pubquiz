@@ -61,6 +61,27 @@ describe('ImportPanel', () => {
     expect(screen.getByText('Largest planet?')).toBeInTheDocument();
   });
 
+  it('shows a break-after indicator only for rounds with breakAfter true', async () => {
+    const user = userEvent.setup();
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'Imported Quiz',
+      rounds: [
+        { title: 'History', breakAfter: false, questions: [] },
+        { title: 'Music', breakAfter: true, questions: [] },
+      ],
+      issues: [],
+      isImportable: true,
+    });
+
+    render(<ImportPanel adminPassword="secret" />);
+    await uploadCsv(user);
+
+    const historyItem = (await screen.findByText('History')).closest('li');
+    const musicItem = screen.getByText('Music').closest('li');
+    expect(historyItem).not.toHaveTextContent(/break after this round/i);
+    expect(musicItem).toHaveTextContent(/break after this round/i);
+  });
+
   it('lists per-row issues and disables confirm when the sheet is not importable', async () => {
     const user = userEvent.setup();
     mockPreviewImport.mockResolvedValue({

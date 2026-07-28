@@ -86,6 +86,11 @@ export function ImportPanel({ adminPassword, onImported }: ImportPanelProps) {
                   <li key={question.prompt}>{question.prompt}</li>
                 ))}
               </ul>
+              {round.breakAfter && (
+                <p className="mt-2 text-xs font-extrabold tracking-wide text-magenta">
+                  Break after this round
+                </p>
+              )}
             </li>
           ))}
         </ul>
