@@ -75,6 +75,7 @@ describe('import payload contracts', () => {
       points: '2',
       mediaUrl: '',
       notes: '',
+      breakAfter: '',
     };
     const issue: ImportRowIssue = {
       rowNumber: row.rowNumber,

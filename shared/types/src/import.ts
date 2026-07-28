@@ -15,6 +15,7 @@ export interface SheetRow {
   points: string;
   mediaUrl: string;
   notes: string;
+  breakAfter: string;
 }
 
 export interface ImportRowIssue {
