@@ -79,6 +79,8 @@ export default function AdminPage() {
   const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
   const [submittedPassword, setSubmittedPassword] = useState('');
   const [gradingIndex, setGradingIndex] = useState(0);
+  const [pendingQuizId, setPendingQuizId] = useState<string | null>(null);
+  const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<string | null>(null);
 
   useEffect(() => {
     // Deferred to an effect (not a useState initializer) so the server-rendered
@@ -119,6 +121,20 @@ export default function AdminPage() {
   }, [gameStatus, requestQuizzes]);
 
   useEffect(() => {
+    if (!canChooseQuiz) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingQuizId(null);
+    }
+  }, [canChooseQuiz]);
+
+  useEffect(() => {
+    // A fresh quiz list from the server is authoritative; drop the optimistic
+    // override so future renders trust `quizzes.activeQuizId` again.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveQuizIdOverride(null);
+  }, [quizzes]);
+
+  useEffect(() => {
     // Each grading break starts back at the first question of the block.
     if (gameStatus !== 'break') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -137,6 +153,24 @@ export default function AdminPage() {
     window.localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, passwordInput);
     setHasSubmittedPassword(true);
     setSubmittedPassword(passwordInput);
+  }
+
+  const displayedActiveQuizId = activeQuizIdOverride ?? quizzes?.activeQuizId ?? null;
+  const activeQuizTitle =
+    quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.title ?? null;
+  const pendingQuizTitle = quizzes?.quizzes.find((quiz) => quiz.id === pendingQuizId)?.title ?? null;
+
+  function handleConfirmQuizSelection(): void {
+    if (!pendingQuizId) {
+      return;
+    }
+    selectQuiz(pendingQuizId);
+    setActiveQuizIdOverride(pendingQuizId);
+    setPendingQuizId(null);
+  }
+
+  function handleCancelQuizSelection(): void {
+    setPendingQuizId(null);
   }
 
   if (!hasSubmittedPassword && !snapshot && !connectionError) {
@@ -195,6 +229,7 @@ export default function AdminPage() {
             {connectionError}
           </p>
         )}
+        {activeQuizTitle && <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>}
         <p className="text-sm font-bold">Status: {progress.status} ({snapshot?.joinCode})</p>
         {currentQuestion && <p className="text-sm">Current question: {currentQuestion.prompt}</p>}
         <div className="flex flex-col gap-2">
@@ -287,26 +322,62 @@ export default function AdminPage() {
             </h2>
             <ul className="flex flex-col gap-2">
               {quizzes.quizzes.map((quiz) => {
-                const isActive = quiz.id === quizzes.activeQuizId;
+                const isActive = quiz.id === displayedActiveQuizId;
+                const isPending = quiz.id === pendingQuizId;
                 return (
                   <li key={quiz.id}>
                     <button
                       type="button"
-                      aria-label={isActive ? `Restart quiz ${quiz.title}` : `Select quiz ${quiz.title}`}
-                      onClick={() => selectQuiz(quiz.id)}
+                      aria-pressed={isPending}
+                      aria-label={
+                        isPending
+                          ? `${quiz.title} selected, awaiting confirmation`
+                          : isActive
+                            ? `Restart quiz ${quiz.title}`
+                            : `Select quiz ${quiz.title}`
+                      }
+                      onClick={() => setPendingQuizId(quiz.id)}
                       className={
-                        isActive
-                          ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-cyan bg-white px-4 font-extrabold'
-                          : 'flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold'
+                        isPending
+                          ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-magenta bg-white px-4 font-extrabold'
+                          : isActive
+                            ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-cyan bg-white px-4 font-extrabold'
+                            : 'flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold'
                       }
                     >
                       <span>{quiz.title}</span>
-                      {isActive && <span className="text-sm text-cyan">active</span>}
+                      {isPending && <span className="text-sm text-magenta">selected</span>}
+                      {!isPending && isActive && <span className="text-sm text-cyan">active</span>}
                     </button>
                   </li>
                 );
               })}
             </ul>
+            {pendingQuizId && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-magenta bg-white px-4 py-3">
+                <p className="text-sm font-bold">
+                  {pendingQuizId === displayedActiveQuizId
+                    ? `Restart "${pendingQuizTitle}"? This clears teams and answers.`
+                    : `Start "${pendingQuizTitle}"? This replaces the current game session.`}
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelQuizSelection}
+                    className="min-h-10 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmQuizSelection}
+                    className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         )}
         {progress.status === 'break' && gradingQuestion && (
