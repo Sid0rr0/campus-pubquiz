@@ -120,7 +120,11 @@ export class SeedService {
             orderIndex: questionIndex,
             type: question.type,
             prompt: question.prompt,
-            payload: { options: question.options, mediaUrl: question.mediaUrl },
+            payload: {
+              options: question.options,
+              mediaUrl: question.mediaUrl,
+              answer: question.answer,
+            },
             points: question.points,
           })
           .returning();

@@ -116,9 +116,23 @@ export interface GradeAnswerPayload {
   pointsAwarded: number;
 }
 
+export interface QuizSummaryQuestion {
+  id: string;
+  prompt: string;
+  options?: string[];
+  answer: string;
+}
+
+export interface QuizSummaryRound {
+  title: string;
+  breakAfter: boolean;
+  questions: QuizSummaryQuestion[];
+}
+
 export interface QuizSummary {
   id: string;
   title: string;
+  rounds: QuizSummaryRound[];
 }
 
 export interface QuizzesListedPayload {

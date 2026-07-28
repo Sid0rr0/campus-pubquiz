@@ -1,9 +1,16 @@
 import type { QuestionView } from '@campus-pubquiz/types';
 
+// Extends the player-safe QuestionView with the correct answer, which the
+// seed inserts into the DB payload for the admin-only quiz summary — never
+// sent to players (see SeedService.toViewPayload).
+export interface FixtureQuestion extends QuestionView {
+  answer: string;
+}
+
 export interface FixtureRound {
   title: string;
   breakAfter: boolean;
-  questions: QuestionView[];
+  questions: FixtureQuestion[];
 }
 
 export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
@@ -18,12 +25,14 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           type: 'multiple_choice',
           prompt: 'Capital of France?',
           options: ['Paris', 'London', 'Berlin', 'Rome'],
+          answer: 'Paris',
           points: 2,
         },
         {
           id: 'r1q2',
           type: 'free_text',
           prompt: 'Name the largest planet in the solar system.',
+          answer: 'Jupiter',
           points: 2,
         },
       ],
@@ -37,12 +46,14 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           type: 'picture',
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
+          answer: 'Eiffel Tower',
           points: 3,
         },
         {
           id: 'r2q2',
           type: 'free_text',
           prompt: 'Name this flag.',
+          answer: 'France',
           points: 3,
         },
         {
@@ -50,6 +61,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           type: 'audio',
           prompt: 'Name this song.',
           mediaUrl: 'https://example.com/song.mp3',
+          answer: 'Bohemian Rhapsody',
           points: 3,
         },
       ],

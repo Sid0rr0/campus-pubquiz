@@ -65,8 +65,8 @@ function asSeedService(mock: MockSeedService): SeedService {
 function createFakeQuizService() {
   return {
     list: jest.fn().mockResolvedValue([
-      { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-      { id: 'quiz-2', title: 'Imported Quiz' },
+      { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+      { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
     ]),
   };
 }
@@ -594,8 +594,8 @@ describe('GameGateway', () => {
     expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.QUIZZES_LISTED, {
       activeQuizId: 'quiz-1',
       quizzes: [
-        { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-        { id: 'quiz-2', title: 'Imported Quiz' },
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
       ],
     });
   });

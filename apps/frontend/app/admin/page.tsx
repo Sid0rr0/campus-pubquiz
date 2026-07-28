@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import * as Collapsible from '@radix-ui/react-collapsible';
 import type { AnswerView, QuestionView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
+import { RoundsList } from '@/app/components/rounds-list';
 import { ImportPanel } from '@/app/admin/import-panel';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
@@ -326,29 +328,37 @@ export default function AdminPage() {
                 const isPending = quiz.id === pendingQuizId;
                 return (
                   <li key={quiz.id}>
-                    <button
-                      type="button"
-                      aria-pressed={isPending}
-                      aria-label={
-                        isPending
-                          ? `${quiz.title} selected, awaiting confirmation`
-                          : isActive
-                            ? `Restart quiz ${quiz.title}`
-                            : `Select quiz ${quiz.title}`
-                      }
-                      onClick={() => setPendingQuizId(quiz.id)}
-                      className={
-                        isPending
-                          ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-magenta bg-white px-4 font-extrabold'
-                          : isActive
-                            ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-cyan bg-white px-4 font-extrabold'
-                            : 'flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold'
-                      }
+                    <Collapsible.Root
+                      open={isPending}
+                      onOpenChange={(open) => setPendingQuizId(open ? quiz.id : null)}
                     >
-                      <span>{quiz.title}</span>
-                      {isPending && <span className="text-sm text-magenta">selected</span>}
-                      {!isPending && isActive && <span className="text-sm text-cyan">active</span>}
-                    </button>
+                      <Collapsible.Trigger asChild>
+                        <button
+                          type="button"
+                          aria-label={
+                            isPending
+                              ? `${quiz.title} selected, awaiting confirmation`
+                              : isActive
+                                ? `Restart quiz ${quiz.title}`
+                                : `Select quiz ${quiz.title}`
+                          }
+                          className={
+                            isPending
+                              ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-magenta bg-white px-4 font-extrabold'
+                              : isActive
+                                ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-cyan bg-white px-4 font-extrabold'
+                                : 'flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold'
+                          }
+                        >
+                          <span>{quiz.title}</span>
+                          {isPending && <span className="text-sm text-magenta">selected</span>}
+                          {!isPending && isActive && <span className="text-sm text-cyan">active</span>}
+                        </button>
+                      </Collapsible.Trigger>
+                      <Collapsible.Content className="mt-2">
+                        <RoundsList rounds={quiz.rounds} />
+                      </Collapsible.Content>
+                    </Collapsible.Root>
                   </li>
                 );
               })}

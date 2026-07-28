@@ -73,8 +73,18 @@ describe('quiz selection payloads', () => {
     const listed: QuizzesListedPayload = {
       activeQuizId: 'quiz-1',
       quizzes: [
-        { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-        { id: 'quiz-2', title: 'Imported Quiz' },
+        {
+          id: 'quiz-1',
+          title: 'Campus Pub Quiz Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: false,
+              questions: [{ id: 'q-1', prompt: 'Name a fruit', answer: 'Banana' }],
+            },
+          ],
+        },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
       ],
     };
     const select: SelectQuizPayload = { quizId: 'quiz-2' };

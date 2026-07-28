@@ -59,6 +59,37 @@ describe('ImportPanel', () => {
     ));
     expect(await screen.findByText('History')).toBeInTheDocument();
     expect(screen.getByText('Largest planet?')).toBeInTheDocument();
+    expect(screen.getByText(/answer: jupiter/i)).toBeInTheDocument();
+  });
+
+  it('shows the options for a multiple choice question in the preview', async () => {
+    const user = userEvent.setup();
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'Imported Quiz',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: false,
+          questions: [
+            {
+              type: 'multiple_choice',
+              prompt: 'Capital of France?',
+              options: ['Paris', 'London', 'Berlin'],
+              answer: 'Paris',
+              points: 2,
+            },
+          ],
+        },
+      ],
+      issues: [],
+      isImportable: true,
+    });
+
+    render(<ImportPanel adminPassword="secret" />);
+    await uploadCsv(user);
+
+    expect(await screen.findByText(/options: paris, london, berlin/i)).toBeInTheDocument();
+    expect(screen.getByText(/answer: paris/i)).toBeInTheDocument();
   });
 
   it('shows a break-after indicator only for rounds with breakAfter true', async () => {

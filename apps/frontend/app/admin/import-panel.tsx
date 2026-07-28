@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent } from 'react';
 import type { ImportConfirmResult, ImportPreview } from '@campus-pubquiz/types';
 import { confirmImport, previewImport } from '@/app/lib/import-api';
+import { RoundsList } from '@/app/components/rounds-list';
 
 interface ImportPanelProps {
   adminPassword: string;
@@ -76,25 +77,7 @@ export function ImportPanel({ adminPassword, onImported }: ImportPanelProps) {
         onChange={(event) => void handleFileChange(event)}
         className="text-sm"
       />
-      {preview && preview.rounds.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {preview.rounds.map((round) => (
-            <li key={round.title} className="rounded-lg border border-foreground/15 p-3">
-              <p className="font-extrabold">{round.title}</p>
-              <ul className="ml-4 list-disc text-sm">
-                {round.questions.map((question) => (
-                  <li key={question.prompt}>{question.prompt}</li>
-                ))}
-              </ul>
-              {round.breakAfter && (
-                <p className="mt-2 text-xs font-extrabold tracking-wide text-magenta">
-                  Break after this round
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {preview && <RoundsList rounds={preview.rounds} />}
       {preview && preview.issues.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-lg border border-magenta/40 bg-magenta/5 p-3 text-sm">
           {preview.issues.map((issue, index) => (

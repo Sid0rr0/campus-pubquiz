@@ -506,8 +506,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Spring Quiz' },
-          { id: 'quiz-2', title: 'Summer Quiz' },
+          { id: 'quiz-1', title: 'Spring Quiz', rounds: [] },
+          { id: 'quiz-2', title: 'Summer Quiz', rounds: [] },
         ],
       },
     });
@@ -528,8 +528,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -552,8 +552,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -575,8 +575,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -586,7 +586,82 @@ describe('AdminPage', () => {
 
     expect(
       screen.getByRole('button', { name: /imported quiz selected, awaiting confirmation/i }),
-    ).toHaveAttribute('aria-pressed', 'true');
+    ).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('shows the rounds and questions for the quiz selected in the picker', async () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          {
+            id: 'quiz-2',
+            title: 'Imported Quiz',
+            rounds: [
+              {
+                title: 'Round 1',
+                breakAfter: false,
+                questions: [{ id: 'q-1', prompt: 'Name a fruit', answer: 'Banana' }],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    expect(screen.queryByText('Name a fruit')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+
+    expect(screen.getByText('Round 1')).toBeInTheDocument();
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+  });
+
+  it('shows a question\'s options and correct answer once its quiz is selected', async () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      connectionError: null,
+      sendAction: vi.fn(),
+      requestQuizzes: vi.fn(),
+      selectQuiz: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          {
+            id: 'quiz-2',
+            title: 'Imported Quiz',
+            rounds: [
+              {
+                title: 'Round 1',
+                breakAfter: false,
+                questions: [
+                  {
+                    id: 'q-1',
+                    prompt: 'Capital of France?',
+                    options: ['Paris', 'London', 'Berlin'],
+                    answer: 'Paris',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+
+    expect(screen.getByText(/options: paris, london, berlin/i)).toBeInTheDocument();
+    expect(screen.getByText(/answer: paris/i)).toBeInTheDocument();
   });
 
   it('restarts the current quiz once restarting it is confirmed', async () => {
@@ -600,8 +675,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -625,8 +700,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -649,8 +724,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -673,8 +748,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
@@ -697,8 +772,8 @@ describe('AdminPage', () => {
       quizzes: {
         activeQuizId: 'quiz-1',
         quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night' },
-          { id: 'quiz-2', title: 'Imported Quiz' },
+          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
         ],
       },
     });
