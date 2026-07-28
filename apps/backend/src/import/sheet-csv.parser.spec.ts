@@ -1,14 +1,15 @@
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
 
-const HEADER = 'round,type,question,options,answer,points,media_url,notes';
+const HEADER =
+  'round,type,question,options,answer,points,media_url,notes,break_after';
 
 describe('parseSheetCsv', () => {
   it('parses one row per question with 1-based row numbers counting the header', () => {
     // Arrange
     const csv = [
       HEADER,
-      'Round 1,free_text,Largest planet?,,Jupiter,2,,',
-      'Round 1,multiple_choice,Capital of France?,Paris|London,Paris,2,,',
+      'Round 1,free_text,Largest planet?,,Jupiter,2,,,1',
+      'Round 1,multiple_choice,Capital of France?,Paris|London,Paris,2,,,',
     ].join('\n');
 
     // Act
@@ -26,6 +27,7 @@ describe('parseSheetCsv', () => {
         points: '2',
         mediaUrl: '',
         notes: '',
+        breakAfter: '1',
       },
       {
         rowNumber: 3,
@@ -37,6 +39,7 @@ describe('parseSheetCsv', () => {
         points: '2',
         mediaUrl: '',
         notes: '',
+        breakAfter: '',
       },
     ]);
   });
@@ -44,7 +47,7 @@ describe('parseSheetCsv', () => {
   it('handles quoted fields with embedded commas and newlines', () => {
     const csv = [
       HEADER,
-      'Round 1,free_text,"Which song contains ""Hello, world""\nand a second line?",,Hello,1,,',
+      'Round 1,free_text,"Which song contains ""Hello, world""\nand a second line?",,Hello,1,,,',
     ].join('\n');
 
     const [row] = parseSheetCsv(csv);
@@ -66,6 +69,24 @@ describe('parseSheetCsv', () => {
     expect(row.notes).toBe('hi');
   });
 
+  it('parses the break_after column as a raw cell, defaulting to empty when absent', () => {
+    const withColumn = parseSheetCsv(
+      [
+        HEADER,
+        'Round 1,free_text,Largest planet?,,Jupiter,2,,,1',
+      ].join('\n'),
+    );
+    expect(withColumn[0].breakAfter).toBe('1');
+
+    const withoutColumn = parseSheetCsv(
+      [
+        'round,type,question,answer',
+        'Round 1,free_text,Largest planet?,Jupiter',
+      ].join('\n'),
+    );
+    expect(withoutColumn[0].breakAfter).toBe('');
+  });
+
   it('treats columns missing from the sheet as empty strings', () => {
     const csv = [
       'round,type,question,answer',
@@ -83,9 +104,9 @@ describe('parseSheetCsv', () => {
   it('skips fully empty rows but keeps sheet row numbering intact', () => {
     const csv = [
       HEADER,
-      'Round 1,free_text,Largest planet?,,Jupiter,2,,',
-      ',,,,,,,',
-      'Round 1,free_text,Name this flag.,,Czechia,2,,',
+      'Round 1,free_text,Largest planet?,,Jupiter,2,,,',
+      ',,,,,,,,',
+      'Round 1,free_text,Name this flag.,,Czechia,2,,,',
     ].join('\n');
 
     const rows = parseSheetCsv(csv);

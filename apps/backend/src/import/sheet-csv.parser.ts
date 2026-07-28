@@ -21,6 +21,7 @@ const HEADER_ALIASES: Record<string, SheetColumn> = {
   media_url: 'mediaUrl',
   mediaurl: 'mediaUrl',
   notes: 'notes',
+  break_after: 'breakAfter',
 };
 
 const REQUIRED_COLUMNS: SheetColumn[] = ['round', 'type', 'question', 'answer'];
@@ -49,6 +50,8 @@ function parseRecords(csvText: string): string[][] {
  * Parses a sheet CSV export into raw rows. Row numbers are 1-based CSV
  * records counting the header, matching the row numbers authors see in
  * Google Sheets. Fully empty rows are skipped but keep numbering intact.
+ * `break_after` is an optional column; missing or blank cells default to
+ * "no break" and are resolved downstream in question-row.schema.ts.
  */
 export function parseSheetCsv(csvText: string): SheetRow[] {
   const records = parseRecords(csvText);
@@ -67,7 +70,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
   if (missingColumns.length > 0) {
     throw new SheetFormatError(
       `Missing required column(s): ${missingColumns.join(', ')}. ` +
-        'Expected headers: round, type, question, options, answer, points, media_url, notes.',
+        'Expected headers: round, type, question, options, answer, points, media_url, notes, break_after.',
     );
   }
 
@@ -90,6 +93,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
         points: cellFor('points'),
         mediaUrl: cellFor('mediaUrl'),
         notes: cellFor('notes'),
+        breakAfter: cellFor('breakAfter'),
       },
     ];
   });

@@ -15,21 +15,22 @@ import {
   ImportService,
 } from '@/import/import.service';
 
-const HEADER = 'round,type,question,options,answer,points,media_url,notes';
+const HEADER =
+  'round,type,question,options,answer,points,media_url,notes,break_after';
 
 const VALID_CSV = [
   HEADER,
-  'History,free_text,Largest planet?,,Jupiter,2,,',
-  'History,multiple_choice,Capital of France?,Paris|London,Paris,3,,',
-  'Music,audio,Name this song.,,Bohemian Rhapsody,2,https://example.com/song.mp3,',
+  'History,free_text,Largest planet?,,Jupiter,2,,,0',
+  'History,multiple_choice,Capital of France?,Paris|London,Paris,3,,,0',
+  'Music,audio,Name this song.,,Bohemian Rhapsody,2,https://example.com/song.mp3,,1',
 ].join('\n');
 
 const EDITED_CSV = [
   HEADER,
-  'History,free_text,Largest planet in our solar system?,,Jupiter,2,,',
+  'History,free_text,Largest planet in our solar system?,,Jupiter,2,,,1',
 ].join('\n');
 
-const BROKEN_CSV = [HEADER, 'History,karaoke,Sing it!,,,,,'].join('\n');
+const BROKEN_CSV = [HEADER, 'History,karaoke,Sing it!,,,,,,0'].join('\n');
 
 interface GameStateStub {
   status: string;
@@ -143,7 +144,12 @@ describe('ImportService (Postgres integration)', () => {
         'History',
         'Music',
       ]);
-      expect(roundRows.every((round) => round.breakAfter)).toBe(true);
+      expect(roundRows.find((round) => round.title === 'History')?.breakAfter).toBe(
+        false,
+      );
+      expect(roundRows.find((round) => round.title === 'Music')?.breakAfter).toBe(
+        true,
+      );
 
       const questionRows = await db
         .select()

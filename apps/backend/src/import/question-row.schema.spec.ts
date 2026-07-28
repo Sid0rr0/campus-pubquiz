@@ -15,6 +15,7 @@ function makeRow(overrides: Partial<SheetRow> = {}): SheetRow {
     points: '2',
     mediaUrl: '',
     notes: '',
+    breakAfter: '',
     ...overrides,
   };
 }
@@ -36,6 +37,7 @@ describe('parseQuestionRow', () => {
     expect(result).toEqual({
       ok: true,
       roundTitle: 'Round 1',
+      roundBreakAfter: false,
       question: {
         type: 'multiple_choice',
         prompt: 'Capital of France?',
@@ -172,6 +174,31 @@ describe('parseQuestionRow', () => {
     }
   });
 
+  it('resolves break_after "1" to roundBreakAfter true, and "0"/blank to false', () => {
+    for (const [breakAfter, expected] of [
+      ['1', true],
+      ['0', false],
+      ['', false],
+    ] as const) {
+      const result = parseQuestionRow(makeRow({ breakAfter }));
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.roundBreakAfter).toBe(expected);
+      }
+    }
+  });
+
+  it('rejects an invalid break_after value', () => {
+    const result = parseQuestionRow(makeRow({ breakAfter: 'yes' }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({ field: 'break_after' }),
+      );
+    }
+  });
+
   it('rejects a row with an empty round name', () => {
     const result = parseQuestionRow(makeRow({ round: '' }));
 
@@ -200,12 +227,22 @@ describe('parseQuestionRow', () => {
 });
 
 describe('assembleImportPreview', () => {
-  it('groups questions into rounds by first appearance and grades after every round', () => {
+  it('groups questions into rounds by first appearance and resolves break_after per round', () => {
     // Arrange
     const rows: SheetRow[] = [
-      makeRow({ rowNumber: 2, round: 'History' }),
-      makeRow({ rowNumber: 3, round: 'Music', question: 'Name this song.' }),
-      makeRow({ rowNumber: 4, round: 'History', question: 'Name this flag.' }),
+      makeRow({ rowNumber: 2, round: 'History', breakAfter: '0' }),
+      makeRow({
+        rowNumber: 3,
+        round: 'Music',
+        question: 'Name this song.',
+        breakAfter: '0',
+      }),
+      makeRow({
+        rowNumber: 4,
+        round: 'History',
+        question: 'Name this flag.',
+        breakAfter: '0',
+      }),
     ];
 
     // Act
@@ -219,12 +256,53 @@ describe('assembleImportPreview', () => {
       'Music',
     ]);
     expect(preview.rounds[0].questions).toHaveLength(2);
-    expect(preview.rounds.every((round) => round.breakAfter)).toBe(true);
+    expect(preview.rounds[0].breakAfter).toBe(false);
+    expect(preview.rounds[1].breakAfter).toBe(true);
+  });
+
+  it('marks a non-final round as breaking if any of its rows has break_after "1"', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History', breakAfter: '' }),
+      makeRow({
+        rowNumber: 3,
+        round: 'History',
+        question: 'Name this flag.',
+        breakAfter: '1',
+      }),
+      makeRow({
+        rowNumber: 4,
+        round: 'Music',
+        question: 'Name this song.',
+        breakAfter: '',
+      }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.rounds[0].breakAfter).toBe(true);
+  });
+
+  it('always forces the last round to break, even when every one of its rows is blank/0', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History', breakAfter: '1' }),
+      makeRow({
+        rowNumber: 3,
+        round: 'Music',
+        question: 'Name this song.',
+        breakAfter: '0',
+      }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.rounds[1].title).toBe('Music');
+    expect(preview.rounds[1].breakAfter).toBe(true);
   });
 
   it('reports issues from every broken row and blocks the import', () => {
     const rows: SheetRow[] = [
-      makeRow({ rowNumber: 2 }),
+      makeRow({ rowNumber: 2, breakAfter: '1' }),
       makeRow({ rowNumber: 3, answer: '' }),
       makeRow({ rowNumber: 4, type: 'karaoke' }),
     ];

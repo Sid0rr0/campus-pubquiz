@@ -32,6 +32,9 @@ const baseFields = {
     .number('Points must be a positive whole number')
     .int('Points must be a positive whole number')
     .positive('Points must be a positive whole number'),
+  break_after: z.enum(['', '0', '1'], {
+    error: 'break_after must be "1", "0", or blank',
+  }),
 };
 
 const questionRowSchema = z.discriminatedUnion('type', [
@@ -66,7 +69,12 @@ const questionRowSchema = z.discriminatedUnion('type', [
 ]);
 
 export type ParsedQuestionRow =
-  | { ok: true; roundTitle: string; question: ImportQuestionPreview }
+  | {
+      ok: true;
+      roundTitle: string;
+      roundBreakAfter: boolean;
+      question: ImportQuestionPreview;
+    }
   | { ok: false; issues: ImportRowIssue[] };
 
 function normalizeType(rawType: string): string {
@@ -94,6 +102,7 @@ function toCandidate(row: SheetRow, type: QuestionType): unknown {
     points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
     options: splitOptions(row.options),
     media_url: row.mediaUrl.trim() === '' ? undefined : row.mediaUrl.trim(),
+    break_after: row.breakAfter.trim(),
   };
 }
 
@@ -130,10 +139,11 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     };
   }
 
-  const { round, question, answer, points } = parsed.data;
+  const { round, question, answer, points, break_after } = parsed.data;
   return {
     ok: true,
     roundTitle: round,
+    roundBreakAfter: break_after === '1',
     question: {
       type: parsed.data.type,
       prompt: question,
@@ -149,9 +159,11 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
 
 /**
  * Groups validated rows into rounds by round name in order of first
- * appearance. Every imported round grades after itself (breakAfter: true) —
- * the classic pub-quiz rhythm — which also satisfies the state machine
- * invariant that the final round must end in a grading break.
+ * appearance. A round breaks after itself if any of its rows has
+ * break_after = "1"; blank/"0" rows don't grade a break on their own. The
+ * state machine requires the final round to end in a grading break, so the
+ * last round's break is always forced on regardless of its break_after
+ * cells — authors don't need to remember to mark it.
  */
 export function assembleImportPreview(
   quizTitle: string,
@@ -159,6 +171,7 @@ export function assembleImportPreview(
 ): ImportPreview {
   const issues: ImportRowIssue[] = [];
   const questionsByRound = new Map<string, ImportQuestionPreview[]>();
+  const breakAfterByRound = new Map<string, boolean>();
 
   for (const row of rows) {
     const result = parseQuestionRow(row);
@@ -168,12 +181,22 @@ export function assembleImportPreview(
     }
     const questions = questionsByRound.get(result.roundTitle) ?? [];
     questionsByRound.set(result.roundTitle, [...questions, result.question]);
+    breakAfterByRound.set(
+      result.roundTitle,
+      (breakAfterByRound.get(result.roundTitle) ?? false) ||
+        result.roundBreakAfter,
+    );
   }
 
-  const rounds = [...questionsByRound.entries()].map(([title, questions]) => ({
+  const roundTitles = [...questionsByRound.keys()];
+  const rounds = roundTitles.map((title, index) => ({
     title,
-    breakAfter: true,
-    questions,
+    breakAfter:
+      index === roundTitles.length - 1
+        ? true
+        : (breakAfterByRound.get(title) ?? false),
+    questions: questionsByRound.get(title) ?? [],
   }));
+
   return createImportPreview(quizTitle, rounds, issues);
 }
