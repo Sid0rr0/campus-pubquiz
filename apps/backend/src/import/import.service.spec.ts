@@ -144,12 +144,12 @@ describe('ImportService (Postgres integration)', () => {
         'History',
         'Music',
       ]);
-      expect(roundRows.find((round) => round.title === 'History')?.breakAfter).toBe(
-        false,
-      );
-      expect(roundRows.find((round) => round.title === 'Music')?.breakAfter).toBe(
-        true,
-      );
+      expect(
+        roundRows.find((round) => round.title === 'History')?.breakAfter,
+      ).toBe(false);
+      expect(
+        roundRows.find((round) => round.title === 'Music')?.breakAfter,
+      ).toBe(true);
 
       const questionRows = await db
         .select()

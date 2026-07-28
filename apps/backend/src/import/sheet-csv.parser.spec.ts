@@ -71,10 +71,7 @@ describe('parseSheetCsv', () => {
 
   it('parses the break_after column as a raw cell, defaulting to empty when absent', () => {
     const withColumn = parseSheetCsv(
-      [
-        HEADER,
-        'Round 1,free_text,Largest planet?,,Jupiter,2,,,1',
-      ].join('\n'),
+      [HEADER, 'Round 1,free_text,Largest planet?,,Jupiter,2,,,1'].join('\n'),
     );
     expect(withColumn[0].breakAfter).toBe('1');
 
