@@ -47,6 +47,8 @@ export const questions = pgTable(
     orderIndex: integer('order_index').notNull(),
     type: text('type').notNull(),
     prompt: text('prompt').notNull(),
+    answer: text('answer').notNull(),
+    notes: text('notes'),
     payload: jsonb('payload').notNull().default({}),
     points: integer('points').notNull().default(1),
   },

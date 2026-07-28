@@ -28,6 +28,7 @@ export interface ImportQuestionPreview {
   type: QuestionType;
   prompt: string;
   answer: string;
+  notes?: string;
   points: number;
   options?: string[];
   mediaUrl?: string;

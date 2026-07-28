@@ -28,6 +28,7 @@ const baseFields = {
   round: z.string().min(1, 'Missing round name'),
   question: z.string().min(1, 'Missing question text'),
   answer: z.string().min(1, 'Missing answer'),
+  notes: z.string().optional(),
   points: z
     .number('Points must be a positive whole number')
     .int('Points must be a positive whole number')
@@ -94,11 +95,13 @@ function splitOptions(rawOptions: string): string[] | undefined {
 
 function toCandidate(row: SheetRow, type: QuestionType): unknown {
   const trimmedPoints = row.points.trim();
+  const trimmedNotes = row.notes.trim();
   return {
     type,
     round: row.round.trim(),
     question: row.question.trim(),
     answer: row.answer.trim(),
+    notes: trimmedNotes === '' ? undefined : trimmedNotes,
     points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
     options: splitOptions(row.options),
     media_url: row.mediaUrl.trim() === '' ? undefined : row.mediaUrl.trim(),
@@ -139,7 +142,7 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     };
   }
 
-  const { round, question, answer, points, break_after } = parsed.data;
+  const { round, question, answer, notes, points, break_after } = parsed.data;
   return {
     ok: true,
     roundTitle: round,
@@ -148,6 +151,7 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
       type: parsed.data.type,
       prompt: question,
       answer,
+      ...(notes ? { notes } : {}),
       points,
       ...(parsed.data.type === 'multiple_choice'
         ? { options: parsed.data.options }

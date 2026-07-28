@@ -64,6 +64,7 @@ describe('QuizService (Postgres integration)', () => {
     orderIndex: number,
     payload: { options?: string[]; answer?: string } = {},
   ) {
+    const { answer, ...restPayload } = payload;
     const [question] = await db
       .insert(schema.questions)
       .values({
@@ -71,7 +72,8 @@ describe('QuizService (Postgres integration)', () => {
         orderIndex,
         type: payload.options ? 'multiple_choice' : 'free_text',
         prompt,
-        payload,
+        answer: answer || 'unknown',
+        payload: restPayload,
         points: 1,
       })
       .returning();

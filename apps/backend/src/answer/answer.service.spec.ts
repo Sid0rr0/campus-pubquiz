@@ -47,6 +47,7 @@ describe('AnswerService (Postgres integration)', () => {
         orderIndex: 0,
         type: 'free_text',
         prompt: 'Name a fruit',
+        answer: 'Apple',
         points: 1,
       })
       .returning();
@@ -122,6 +123,7 @@ describe('AnswerService (Postgres integration)', () => {
         orderIndex: 1,
         type: 'free_text',
         prompt: 'Name a vegetable',
+        answer: 'Carrot',
         points: 1,
       })
       .returning();
@@ -181,6 +183,7 @@ describe('AnswerService (Postgres integration)', () => {
         orderIndex: 1,
         type: 'free_text',
         prompt: 'Name a vegetable',
+        answer: 'Carrot',
         points: 1,
       })
       .returning();

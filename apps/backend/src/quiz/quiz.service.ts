@@ -6,14 +6,12 @@ import * as schema from '@/db/schema';
 
 interface QuestionPayload {
   options?: string[];
-  answer: string;
 }
 
 function toSummaryPayload(payload: unknown): QuestionPayload {
-  const { options, answer } = payload as QuestionPayload;
+  const { options } = payload as QuestionPayload;
   return {
     ...(options !== undefined ? { options } : {}),
-    answer,
   };
 }
 
@@ -48,6 +46,7 @@ export class QuizService {
         questions: round.questions.map((question) => ({
           id: question.id,
           prompt: question.prompt,
+          answer: question.answer,
           ...toSummaryPayload(question.payload),
         })),
       })),

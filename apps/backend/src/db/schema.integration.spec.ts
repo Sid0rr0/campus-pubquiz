@@ -54,18 +54,18 @@ describe('Drizzle schema (Postgres integration)', () => {
         orderIndex: 0,
         type: 'multiple_choice',
         prompt: 'Capital of France?',
+        answer: 'Paris',
         payload: {
           options: ['Paris', 'London', 'Berlin', 'Rome'],
-          answer: 'Paris',
         },
         points: 2,
       })
       .returning();
 
     expect(round.breakAfter).toBe(true);
+    expect(question.answer).toBe('Paris');
     expect(question.payload).toEqual({
       options: ['Paris', 'London', 'Berlin', 'Rome'],
-      answer: 'Paris',
     });
   });
 
@@ -90,6 +90,7 @@ describe('Drizzle schema (Postgres integration)', () => {
         orderIndex: 0,
         type: 'free_text',
         prompt: 'Name a fruit',
+        answer: 'Apple',
         points: 1,
       })
       .returning();
@@ -144,6 +145,7 @@ describe('Drizzle schema (Postgres integration)', () => {
         orderIndex: 0,
         type: 'free_text',
         prompt: 'Q',
+        answer: 'A',
         points: 1,
       })
       .returning();
@@ -183,6 +185,7 @@ describe('Drizzle schema (Postgres integration)', () => {
         orderIndex: 0,
         type: 'free_text',
         prompt: 'Q',
+        answer: 'A',
         points: 1,
       })
       .returning();

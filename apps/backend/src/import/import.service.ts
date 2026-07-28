@@ -137,7 +137,6 @@ export class ImportService {
         const payload = {
           ...(question.options ? { options: question.options } : {}),
           ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
-          answer: question.answer,
         };
         await this.db
           .insert(schema.questions)
@@ -146,6 +145,8 @@ export class ImportService {
             orderIndex: questionIndex,
             type: question.type,
             prompt: question.prompt,
+            answer: question.answer,
+            notes: question.notes,
             payload,
             points: question.points,
           })
@@ -154,6 +155,8 @@ export class ImportService {
             set: {
               type: question.type,
               prompt: question.prompt,
+              answer: question.answer,
+              notes: question.notes,
               payload,
               points: question.points,
             },

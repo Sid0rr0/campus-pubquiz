@@ -158,9 +158,9 @@ describe('ImportService (Postgres integration)', () => {
       expect(questionRows).toHaveLength(1);
       expect(questionRows[0].type).toBe('audio');
       expect(questionRows[0].points).toBe(2);
+      expect(questionRows[0].answer).toBe('Bohemian Rhapsody');
       expect(questionRows[0].payload).toEqual({
         mediaUrl: 'https://example.com/song.mp3',
-        answer: 'Bohemian Rhapsody',
       });
     });
 

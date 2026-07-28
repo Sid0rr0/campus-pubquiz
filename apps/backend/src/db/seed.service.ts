@@ -120,10 +120,10 @@ export class SeedService {
             orderIndex: questionIndex,
             type: question.type,
             prompt: question.prompt,
+            answer: question.answer,
             payload: {
               options: question.options,
               mediaUrl: question.mediaUrl,
-              answer: question.answer,
             },
             points: question.points,
           })
