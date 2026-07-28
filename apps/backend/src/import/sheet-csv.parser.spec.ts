@@ -56,6 +56,17 @@ describe('parseSheetCsv', () => {
     expect(row.question).toContain('a second line');
   });
 
+  it('handles a Google Sheets export with a quote inside the question text', () => {
+    const csv = [
+      HEADER,
+      'Music,free_text,"Which band released the album ""Abbey Road""?",,The Beatles,1,,,',
+    ].join('\n');
+
+    const [row] = parseSheetCsv(csv);
+
+    expect(row.question).toBe('Which band released the album "Abbey Road"?');
+  });
+
   it('strips the BOM and tolerates header casing, spacing, and naming variants', () => {
     const csv = [
       '﻿Round, Type ,QUESTION,Options,Answer,Points,Media URL,Notes',
@@ -121,9 +132,12 @@ describe('parseSheetCsv', () => {
     expect(() => parseSheetCsv(csv)).toThrow(/type/);
   });
 
-  it('throws SheetFormatError on malformed CSV instead of crashing', () => {
+  it('throws SheetFormatError on malformed CSV instead of crashing, with a quoting hint', () => {
     const csv = [HEADER, '"unterminated quote,free_text,Q?,,A,1,,'].join('\n');
 
     expect(() => parseSheetCsv(csv)).toThrow(SheetFormatError);
+    expect(() => parseSheetCsv(csv)).toThrow(
+      /escape internal quotes by doubling/,
+    );
   });
 });

@@ -42,7 +42,12 @@ function parseRecords(csvText: string): string[][] {
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new SheetFormatError(`Could not parse the CSV file: ${detail}`);
+    throw new SheetFormatError(
+      `Could not parse the CSV file: ${detail}. ` +
+        'If a field contains a comma, quote, or line break, wrap the whole ' +
+        'field in double quotes and escape internal quotes by doubling ' +
+        'them (e.g. "Which band released the album ""Abbey Road""?").',
+    );
   }
 }
 
