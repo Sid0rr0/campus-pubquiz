@@ -27,6 +27,12 @@ export interface GameProgress {
   roundIndex: number;
   questionIndex: number;
   isLeaderboardVisible: boolean;
+  /**
+   * Position within the just-finished block's flattened question list,
+   * shown one at a time (same layout as question_open) during reveal.
+   * Meaningless outside 'reveal'.
+   */
+  revealIndex: number;
 }
 
 export class IllegalGameTransitionError extends Error {
@@ -109,14 +115,42 @@ function previousFromQuestionOpen(progress: GameProgress, context: GameContext):
   };
 }
 
-function advanceFromReveal(progress: GameProgress, context: GameContext): GameProgress {
-  const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
+/** Total questions across the block containing `roundIndex` (all rounds since the last break, inclusive). */
+function getBlockQuestionCount(roundIndex: number, context: GameContext): number {
+  const blockStart = getBlockStartRoundIndex(roundIndex, context);
+  let count = 0;
+  for (let index = blockStart; index <= roundIndex; index += 1) {
+    count += context.rounds[index].questionCount;
+  }
+  return count;
+}
 
-  if (isLastRound) {
-    return { ...progress, status: 'ended' };
+function advanceFromReveal(progress: GameProgress, context: GameContext): GameProgress {
+  const blockQuestionCount = getBlockQuestionCount(progress.roundIndex, context);
+  if (progress.revealIndex + 1 < blockQuestionCount) {
+    return { ...progress, revealIndex: progress.revealIndex + 1 };
   }
 
-  return { ...progress, status: 'question_open', roundIndex: progress.roundIndex + 1, questionIndex: 0 };
+  const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
+  if (isLastRound) {
+    return { ...progress, status: 'ended', revealIndex: 0 };
+  }
+
+  return {
+    ...progress,
+    status: 'question_open',
+    roundIndex: progress.roundIndex + 1,
+    questionIndex: 0,
+    revealIndex: 0,
+  };
+}
+
+/** Only steps backward within the reveal block currently on screen. */
+function previousFromReveal(progress: GameProgress): GameProgress {
+  if (progress.revealIndex === 0) {
+    illegal(progress.status, 'PREVIOUS');
+  }
+  return { ...progress, revealIndex: progress.revealIndex - 1 };
 }
 
 export function getNextGameState(
@@ -138,7 +172,7 @@ export function getNextGameState(
   switch (action) {
     case 'START_QUIZ':
       if (progress.status !== 'lobby') illegal(progress.status, action);
-      return { ...progress, status: 'question_open', roundIndex: 0, questionIndex: 0 };
+      return { ...progress, status: 'question_open', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
 
     case 'ADVANCE':
       if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
@@ -146,11 +180,12 @@ export function getNextGameState(
       return illegal(progress.status, action);
 
     case 'PREVIOUS':
-      if (progress.status !== 'question_open') illegal(progress.status, action);
-      return previousFromQuestionOpen(progress, context);
+      if (progress.status === 'question_open') return previousFromQuestionOpen(progress, context);
+      if (progress.status === 'reveal') return previousFromReveal(progress);
+      return illegal(progress.status, action);
 
     case 'FINISH_GRADING':
       if (progress.status !== 'break') illegal(progress.status, action);
-      return { ...progress, status: 'reveal' };
+      return { ...progress, status: 'reveal', revealIndex: 0 };
   }
 }

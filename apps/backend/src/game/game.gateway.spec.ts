@@ -21,7 +21,15 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
     {
       id: 'round-1',
       breakAfter: false,
-      questions: [{ id: 'r1q1', type: 'free_text', prompt: 'Q1', points: 1 }],
+      questions: [
+        {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Q1',
+          points: 1,
+          answer: 'A1',
+        },
+      ],
     },
   ],
 };
@@ -40,6 +48,7 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
           type: 'free_text',
           prompt: 'Imported question',
           points: 1,
+          answer: 'Imported answer',
         },
       ],
     },

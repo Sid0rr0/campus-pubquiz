@@ -20,6 +20,7 @@ const lobby: GameProgress = {
   roundIndex: 0,
   questionIndex: 0,
   isLeaderboardVisible: false,
+  revealIndex: 0,
 };
 
 describe('getNextGameState', () => {
@@ -30,6 +31,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -39,6 +41,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -46,6 +49,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -55,6 +59,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 1, // last question of round 0 (questionCount: 2)
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -62,6 +67,7 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -71,35 +77,58 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 1, // last question of round 1 (breakAfter: true)
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('break');
     expect(next.roundIndex).toBe(1);
   });
 
-  it('moves from break to reveal once grading is finished', () => {
+  it('moves from break to reveal once grading is finished, starting at the first reveal question', () => {
     const grading: GameProgress = {
       status: 'break',
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(grading, 'FINISH_GRADING', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('reveal');
+    expect(next.revealIndex).toBe(0);
   });
 
-  it('ends the quiz from reveal when the finished round was the last one', () => {
+  it('steps to the next question within reveal before leaving the block (same block spans 2 rounds, 4 questions)', () => {
     const revealing: GameProgress = {
       status: 'reveal',
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 1,
+    });
+  });
+
+  it('ends the quiz from reveal once the last question of the last block has been shown', () => {
+    const revealing: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3, // last of 4 questions in the 2-round block
     };
     const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('ended');
+    expect(next.revealIndex).toBe(0);
   });
 
-  it('continues to the next round from reveal when more rounds remain', () => {
+  it('continues to the next round from reveal once the last question of the finished block has been shown', () => {
     const threeRounds: GameContext = {
       rounds: [
         { questionCount: 1, breakAfter: true },
@@ -112,6 +141,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0, // round 0 alone is a 1-question block
     };
     const next = getNextGameState(revealing, 'ADVANCE', threeRounds);
     expect(next).toEqual({
@@ -119,7 +149,33 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
+  });
+
+  it('moves back to the previous reveal question', () => {
+    const revealing: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 2,
+    };
+    const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...revealing, revealIndex: 1 });
+  });
+
+  it('rejects moving back past the first reveal question', () => {
+    const revealing: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    expect(() => getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
+      IllegalGameTransitionError,
+    );
   });
 
   it('toggles the leaderboard on without changing the underlying status', () => {
@@ -128,6 +184,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(open, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...open, isLeaderboardVisible: true });
@@ -139,6 +196,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: true,
+      revealIndex: 0,
     };
     const next = getNextGameState(openWithLeaderboard, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...openWithLeaderboard, isLeaderboardVisible: false });
@@ -150,6 +208,7 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(ended, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
     expect(next.isLeaderboardVisible).toBe(true);
@@ -162,6 +221,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(grading, 'END_QUIZ', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('ended');
@@ -188,14 +248,26 @@ describe('getNextGameState', () => {
   });
 
   it('rejects ending a quiz that has already ended', () => {
-    const ended: GameProgress = { status: 'ended', roundIndex: 1, questionIndex: 1, isLeaderboardVisible: false };
+    const ended: GameProgress = {
+      status: 'ended',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
     expect(() => getNextGameState(ended, 'END_QUIZ', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
   });
 
   it('rejects advancing once the quiz has ended', () => {
-    const ended: GameProgress = { status: 'ended', roundIndex: 1, questionIndex: 1, isLeaderboardVisible: false };
+    const ended: GameProgress = {
+      status: 'ended',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
     expect(() => getNextGameState(ended, 'ADVANCE', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
@@ -210,6 +282,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     expect(() => getNextGameState(open, 'ADVANCE', badContext)).toThrow(InvalidQuizConfigError);
   });
@@ -220,6 +293,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -227,6 +301,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -236,6 +311,7 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 0, // first question of round 1, still the same open block as round 0
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -243,6 +319,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 1, // last question of round 0 (questionCount: 2)
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -252,6 +329,7 @@ describe('getNextGameState', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     expect(() => getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
@@ -270,18 +348,20 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 0, // first question of round 1, a new block after round 0's break
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     expect(() => getNextGameState(open, 'PREVIOUS', breakFirstThenTwo)).toThrow(
       IllegalGameTransitionError,
     );
   });
 
-  it('rejects moving back outside of question_open', () => {
+  it('rejects moving back outside of question_open or reveal', () => {
     const grading: GameProgress = {
       status: 'break',
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     };
     expect(() => getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,

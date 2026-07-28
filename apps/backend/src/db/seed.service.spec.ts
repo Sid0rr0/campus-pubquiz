@@ -122,4 +122,17 @@ describe('SeedService (Postgres integration)', () => {
     expect(firstQuestion.options).toEqual(fixtureQuestion.options);
     expect(firstQuestion.points).toBe(fixtureQuestion.points);
   });
+
+  it('carries the correct answer on every seeded question, including on a reload from the database', async () => {
+    const seeded = await seedService.seed();
+    const fixtureQuestion = HARDCODED_QUIZ.rounds[0].questions[0];
+    expect(seeded.rounds[0].questions[0].answer).toBe(fixtureQuestion.answer);
+
+    const reloaded = await seedService.loadGame(
+      seeded.quizId,
+      seeded.gameSessionId,
+      seeded.joinCode,
+    );
+    expect(reloaded.rounds[0].questions[0].answer).toBe(fixtureQuestion.answer);
+  });
 });

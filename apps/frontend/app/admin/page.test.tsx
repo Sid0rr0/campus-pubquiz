@@ -16,6 +16,7 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
     roundIndex: 0,
     questionIndex: 0,
     isLeaderboardVisible: false,
+    revealIndex: 0,
     ...overrides,
   };
 }
@@ -202,6 +203,54 @@ describe('AdminPage', () => {
     render(<AdminPage />);
 
     expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+  });
+
+  it('hides the Previous button on the first reveal question', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+  });
+
+  it('sends PREVIOUS from a later reveal question', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 1 }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
+  it('sends ADVANCE to step through reveal questions', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /^advance$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
   it('sends TOGGLE_LEADERBOARD when the Toggle Leaderboard button is clicked', async () => {

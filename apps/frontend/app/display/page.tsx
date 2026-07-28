@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
-import type { TeamView } from '@campus-pubquiz/types';
+import type { QuestionType, TeamView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 
@@ -57,6 +57,76 @@ const OPTION_ACCENT_CLASSES = [
 ];
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
+interface QuestionDisplayProps {
+  prompt: string;
+  type: QuestionType;
+  mediaUrl?: string;
+  options?: string[];
+  /** When set (reveal only), highlights the matching option and shows an answer line. */
+  correctAnswer?: string;
+  mediaTestIdPrefix: string;
+}
+
+// Shared by question_open and reveal so the big screen shows each question
+// the same way it was originally asked, just with the answer added back in.
+function QuestionDisplay({
+  prompt,
+  type,
+  mediaUrl,
+  options,
+  correctAnswer,
+  mediaTestIdPrefix,
+}: QuestionDisplayProps) {
+  return (
+    <>
+      <h1 className="text-balance font-display text-4xl leading-snug">{prompt}</h1>
+      {mediaUrl && type === 'picture' && (
+        // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+        <img
+          data-testid={`${mediaTestIdPrefix}-image`}
+          src={mediaUrl}
+          alt=""
+          className="max-h-64 rounded-xl"
+        />
+      )}
+      {mediaUrl && type === 'audio' && (
+        <audio data-testid={`${mediaTestIdPrefix}-audio`} src={mediaUrl} controls autoPlay />
+      )}
+      {options && (
+        <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
+          {options.map((option, index) => {
+            const isCorrect = correctAnswer !== undefined && option === correctAnswer;
+            return (
+              <li
+                key={option}
+                className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-xl font-bold ${
+                  isCorrect
+                    ? 'border-green text-green'
+                    : OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]
+                }`}
+              >
+                <span className="font-display">{OPTION_LETTERS[index % OPTION_LETTERS.length]}</span>
+                <span className="text-foreground">{option}</span>
+                {isCorrect && (
+                  <span aria-hidden="true" className="ml-auto text-green">
+                    ✓
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {correctAnswer !== undefined && (
+        <p className="font-display text-lg text-green">
+          <span className="font-body text-sm font-extrabold text-foreground/55">ANSWER </span>
+          {correctAnswer}
+        </p>
+      )}
+    </>
+  );
+}
+
 function DisplayPageContent() {
   const searchParams = useSearchParams();
   const { snapshot } = useGameSocket('display');
@@ -72,7 +142,14 @@ function DisplayPageContent() {
     );
   }
 
-  const { progress, currentQuestion, leaderboard = [], teams = [], answeredTeamIds = [] } = snapshot;
+  const {
+    progress,
+    currentQuestion,
+    leaderboard = [],
+    teams = [],
+    answeredTeamIds = [],
+    revealQuestions = [],
+  } = snapshot;
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -122,37 +199,13 @@ function DisplayPageContent() {
               </div>
             </div>
             <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-              <h1 className="text-balance font-display text-4xl leading-snug">{currentQuestion.prompt}</h1>
-              {currentQuestion.mediaUrl && currentQuestion.type === 'picture' && (
-                // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-                <img
-                  data-testid="question-image"
-                  src={currentQuestion.mediaUrl}
-                  alt=""
-                  className="max-h-64 rounded-xl"
-                />
-              )}
-              {currentQuestion.mediaUrl && currentQuestion.type === 'audio' && (
-                <audio
-                  data-testid="question-audio"
-                  src={currentQuestion.mediaUrl}
-                  controls
-                  autoPlay
-                />
-              )}
-              {currentQuestion.options && (
-                <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
-                  {currentQuestion.options.map((option, index) => (
-                    <li
-                      key={option}
-                      className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-xl font-bold ${OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]}`}
-                    >
-                      <span className="font-display">{OPTION_LETTERS[index % OPTION_LETTERS.length]}</span>
-                      <span className="text-foreground">{option}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <QuestionDisplay
+                prompt={currentQuestion.prompt}
+                type={currentQuestion.type}
+                mediaUrl={currentQuestion.mediaUrl}
+                options={currentQuestion.options}
+                mediaTestIdPrefix="question"
+              />
               {teams.length > 0 && (
                 <p className="font-extrabold tracking-wide text-foreground/55">
                   {answeredTeamIds.length} OF {teams.length} TEAMS ANSWERED
@@ -166,11 +219,31 @@ function DisplayPageContent() {
           <h1 className="font-display text-4xl">Grading in progress…</h1>
         </div>
       )}
-      {!progress.isLeaderboardVisible && progress.status === 'reveal' && (
-        <div className="flex flex-1 items-center justify-center px-16 text-center">
-          <h1 className="font-display text-4xl">Revealing answers…</h1>
-        </div>
-      )}
+      {!progress.isLeaderboardVisible &&
+        progress.status === 'reveal' &&
+        revealQuestions[progress.revealIndex] && (
+          <>
+            <div className="flex items-center justify-between border-b-2 border-dashed border-foreground/30 px-8 py-4">
+              <div className="font-display text-lg text-magenta">🍺 Trivia Night</div>
+              <div className="flex items-center gap-3 text-sm font-extrabold tracking-wide">
+                <span className="text-foreground/55">REVEALING ANSWERS</span>
+                <span className="rounded-lg bg-foreground px-3 py-1 text-background">
+                  QUESTION {progress.revealIndex + 1} OF {revealQuestions.length}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+              <QuestionDisplay
+                prompt={revealQuestions[progress.revealIndex].prompt}
+                type={revealQuestions[progress.revealIndex].type}
+                mediaUrl={revealQuestions[progress.revealIndex].mediaUrl}
+                options={revealQuestions[progress.revealIndex].options}
+                correctAnswer={revealQuestions[progress.revealIndex].answer}
+                mediaTestIdPrefix="reveal"
+              />
+            </div>
+          </>
+        )}
       {!progress.isLeaderboardVisible && progress.status === 'ended' && (
         <div className="flex flex-1 items-center justify-center px-16 text-center">
           <h1 className="font-display text-4xl">Quiz complete!</h1>

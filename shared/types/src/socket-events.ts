@@ -35,6 +35,10 @@ export interface QuestionView {
   points: number;
 }
 
+export interface RevealQuestionView extends QuestionView {
+  answer: string;
+}
+
 export interface LeaderboardEntry {
   teamId: string;
   teamName: string;
@@ -55,6 +59,8 @@ export interface StateSnapshotPayload {
    * during break/reveal (for grading). Empty otherwise.
    */
   blockQuestions: QuestionView[];
+  /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
+  revealQuestions: RevealQuestionView[];
   /** Teams that have answered the current question. Empty when none is open. */
   answeredTeamIds: string[];
   leaderboard: LeaderboardEntry[];

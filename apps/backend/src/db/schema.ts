@@ -69,6 +69,7 @@ export const gameSessions = pgTable('game_sessions', {
   status: text('status').notNull().default('lobby'),
   currentRoundIndex: integer('current_round_index').notNull().default(0),
   currentQuestionIndex: integer('current_question_index').notNull().default(0),
+  revealIndex: integer('reveal_index').notNull().default(0),
   isLeaderboardVisible: boolean('is_leaderboard_visible')
     .notNull()
     .default(false),

@@ -23,6 +23,7 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
     roundIndex: 0,
     questionIndex: 0,
     isLeaderboardVisible: false,
+    revealIndex: 0,
     ...overrides,
   };
 }

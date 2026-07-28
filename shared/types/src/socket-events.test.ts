@@ -43,6 +43,7 @@ describe('block answering payloads', () => {
         { id: 'q-1', type: 'free_text', prompt: 'First?', points: 10 },
         { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10 },
       ],
+      revealQuestions: [],
       answeredTeamIds: ['team-1'],
       leaderboard: [],
       joinCode: 'ABC234',
@@ -54,6 +55,32 @@ describe('block answering payloads', () => {
       listAnswers.questionId,
     );
     expect(snapshot.answeredTeamIds).toContain(snapshot.teams[0].teamId);
+  });
+
+  it('carries the correct answer alongside each reveal question', () => {
+    const snapshot: StateSnapshotPayload = {
+      progress: {
+        status: 'reveal',
+        roundIndex: 0,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+      },
+      currentQuestion: null,
+      blockQuestions: [],
+      revealQuestions: [
+        { id: 'q-1', type: 'free_text', prompt: 'First?', points: 10, answer: 'One' },
+        { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10, answer: 'Two' },
+      ],
+      answeredTeamIds: [],
+      leaderboard: [],
+      joinCode: 'ABC234',
+      teams: [],
+    };
+
+    expect(snapshot.revealQuestions.map((question) => question.answer)).toEqual([
+      'One',
+      'Two',
+    ]);
   });
 
   it('returns the team saved answers on join so a reconnecting phone restores its checkmarks', () => {

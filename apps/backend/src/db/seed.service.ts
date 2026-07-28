@@ -85,6 +85,7 @@ export class SeedService {
           type: row.type as QuestionType,
           prompt: row.prompt,
           points: row.points,
+          answer: row.answer,
           ...toViewPayload(row.payload),
         })),
       });
@@ -134,6 +135,7 @@ export class SeedService {
           type: questionRow.type as QuestionType,
           prompt: questionRow.prompt,
           points: questionRow.points,
+          answer: questionRow.answer,
           ...toViewPayload(questionRow.payload),
         });
       }

@@ -7,6 +7,7 @@ import {
   type GameProgress,
   type LeaderboardEntry,
   type QuestionView,
+  type RevealQuestionView,
   type StateSnapshotPayload,
   type TeamView,
 } from '@campus-pubquiz/types';
@@ -19,7 +20,21 @@ const LOBBY_PROGRESS: GameProgress = {
   roundIndex: 0,
   questionIndex: 0,
   isLeaderboardVisible: false,
+  revealIndex: 0,
 };
+
+// Strips the correct answer: this projection is what leaves the process via
+// currentQuestion/blockQuestions, broadcast to every phone and the big screen.
+function toQuestionView(question: RevealQuestionView): QuestionView {
+  return {
+    id: question.id,
+    type: question.type,
+    prompt: question.prompt,
+    points: question.points,
+    ...(question.options !== undefined ? { options: question.options } : {}),
+    ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),
+  };
+}
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -116,6 +131,7 @@ export class GameStateService implements OnModuleInit {
       progress: this.progress,
       currentQuestion: this.getCurrentQuestion(),
       blockQuestions: this.getBlockQuestions(),
+      revealQuestions: this.getRevealQuestions(),
       answeredTeamIds: this.getAnsweredTeamIds(),
       leaderboard: this.leaderboard,
       joinCode: this.getSeededGame().joinCode,
@@ -159,11 +175,11 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Questions open for (re-)answering while a question is open (everything
-   * revealed so far in the current block), or the whole just-locked block
-   * during break/reveal so the admin can browse answers while grading.
+   * The block's questions (with their correct answers) revealed so far:
+   * everything up to the current question while one is open, or the whole
+   * just-locked block during break/reveal. Empty outside those statuses.
    */
-  private getBlockQuestions(): QuestionView[] {
+  private getBlockSeededQuestions(): RevealQuestionView[] {
     const { status, roundIndex, questionIndex } = this.progress;
     if (
       status !== 'question_open' &&
@@ -183,6 +199,27 @@ export class GameStateService implements OnModuleInit {
         ? round.questions.slice(0, questionIndex + 1)
         : round.questions;
     });
+  }
+
+  /**
+   * Questions open for (re-)answering while a question is open, or the whole
+   * just-locked block during break/reveal so the admin can browse answers
+   * while grading. Answer-free: this is broadcast to every connected phone
+   * and the big screen.
+   */
+  private getBlockQuestions(): QuestionView[] {
+    return this.getBlockSeededQuestions().map(toQuestionView);
+  }
+
+  /**
+   * The just-finished block's questions with correct answers, shown once
+   * grading is done. Only populated during reveal.
+   */
+  private getRevealQuestions(): RevealQuestionView[] {
+    if (this.progress.status !== 'reveal') {
+      return [];
+    }
+    return this.getBlockSeededQuestions();
   }
 
   private getAnsweredTeamIds(): string[] {

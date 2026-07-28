@@ -18,6 +18,7 @@ export class GameProgressRepository {
         status: progress.status,
         currentRoundIndex: progress.roundIndex,
         currentQuestionIndex: progress.questionIndex,
+        revealIndex: progress.revealIndex,
         isLeaderboardVisible: progress.isLeaderboardVisible,
       })
       .where(eq(schema.gameSessions.id, gameSessionId));
@@ -42,6 +43,7 @@ export class GameProgressRepository {
           : (session.status as GameStatus),
       roundIndex: session.currentRoundIndex,
       questionIndex: session.currentQuestionIndex,
+      revealIndex: session.revealIndex,
       isLeaderboardVisible: session.isLeaderboardVisible,
     };
   }

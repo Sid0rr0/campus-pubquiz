@@ -218,7 +218,9 @@ export default function AdminPage() {
   const showAnswerStatus = progress.status === 'question_open';
   const canStartQuiz = progress.status === 'lobby';
   const canAdvance = progress.status === 'question_open' || progress.status === 'reveal';
-  const canGoToPreviousQuestion = progress.status === 'question_open' && gradingQuestions.length > 1;
+  const canGoToPreviousQuestion =
+    (progress.status === 'question_open' && gradingQuestions.length > 1) ||
+    (progress.status === 'reveal' && progress.revealIndex > 0);
   const canFinishGrading = progress.status === 'break';
   const canEndQuiz = progress.status !== 'ended';
 

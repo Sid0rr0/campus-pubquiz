@@ -28,6 +28,7 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
     roundIndex: 0,
     questionIndex: 0,
     isLeaderboardVisible: false,
+    revealIndex: 0,
     ...overrides,
   };
 }
@@ -240,6 +241,88 @@ describe('DisplayPage', () => {
     });
     render(<DisplayPage />);
     expect(screen.getByText(/grading/i)).toBeInTheDocument();
+  });
+
+  const revealQuestions = [
+    {
+      id: 'r1q1',
+      type: 'multiple_choice' as const,
+      prompt: 'Capital of France?',
+      options: ['Paris', 'London'],
+      points: 2,
+      answer: 'Paris',
+    },
+    {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Largest planet?',
+      points: 2,
+      answer: 'Jupiter',
+    },
+  ];
+
+  it('shows the current reveal question with its correct answer, same layout as when it was asked', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Capital of France?')).toBeInTheDocument();
+    expect(screen.getAllByText('Paris').length).toBeGreaterThan(0);
+    expect(screen.getByText('London')).toBeInTheDocument();
+    expect(screen.getByText('✓')).toBeInTheDocument();
+    expect(screen.queryByText('Largest planet?')).not.toBeInTheDocument();
+  });
+
+  it('shows the second reveal question when revealIndex advances', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 1 }),
+        currentQuestion: null,
+        revealQuestions,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Largest planet?')).toBeInTheDocument();
+    expect(screen.getByText('Jupiter')).toBeInTheDocument();
+    expect(screen.getByText(/question 2 of 2/i)).toBeInTheDocument();
+    expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
+  });
+
+  it('shows media for picture and audio reveal questions', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r2q1',
+            type: 'picture',
+            prompt: 'Which landmark?',
+            mediaUrl: 'https://example.com/landmark.jpg',
+            points: 3,
+            answer: 'Eiffel Tower',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('reveal-image')).toHaveAttribute(
+      'src',
+      'https://example.com/landmark.jpg',
+    );
   });
 
   it('shows a completion message once the quiz has ended', () => {

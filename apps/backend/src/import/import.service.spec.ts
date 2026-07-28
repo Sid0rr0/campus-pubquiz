@@ -261,7 +261,11 @@ describe('ImportService (Postgres integration)', () => {
       expect(stub.reloadActiveQuiz).toHaveBeenCalledTimes(1);
     });
 
-    it('does not leak the stored answer into the loaded game questions', async () => {
+    it("carries each question's correct answer through the loaded game, alongside its safe payload fields", async () => {
+      // SeedService is the internal layer that must know the answer (so
+      // GameStateService can reveal it after grading); the answer-free
+      // projection sent to clients is GameStateService's responsibility,
+      // covered separately in game-state.service.spec.ts.
       const { importService } = makeService();
       const result = await importService.confirm(VALID_CSV, 'Trivia Night');
       const seedService = new SeedService(db);
@@ -278,9 +282,9 @@ describe('ImportService (Postgres integration)', () => {
 
       const questions = game.rounds.flatMap((round) => round.questions);
       expect(questions).toHaveLength(3);
-      for (const question of questions) {
-        expect(question).not.toHaveProperty('answer');
-      }
+      expect(questions.map((question) => question.answer)).toEqual(
+        expect.arrayContaining(['Jupiter', 'Paris', 'Bohemian Rhapsody']),
+      );
       const audioQuestion = questions.find(
         (question) => question.type === 'audio',
       );

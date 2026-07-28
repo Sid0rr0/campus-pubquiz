@@ -56,6 +56,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -65,6 +66,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       roundIndex: 1,
       questionIndex: 2,
       isLeaderboardVisible: true,
+      revealIndex: 0,
     });
 
     const reloaded = await repository.load(sessionId);
@@ -73,7 +75,21 @@ describe('GameProgressRepository (Postgres integration)', () => {
       roundIndex: 1,
       questionIndex: 2,
       isLeaderboardVisible: true,
+      revealIndex: 0,
     });
+  });
+
+  it('persists and reloads the reveal paging position', async () => {
+    await repository.save(sessionId, {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 2,
+      isLeaderboardVisible: false,
+      revealIndex: 3,
+    });
+
+    const reloaded = await repository.load(sessionId);
+    expect(reloaded?.revealIndex).toBe(3);
   });
 
   it('normalizes a legacy locked status to question_open on load', async () => {
@@ -90,6 +106,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 

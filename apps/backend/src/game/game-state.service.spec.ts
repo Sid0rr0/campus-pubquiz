@@ -22,12 +22,14 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
           prompt: 'Capital of France?',
           options: ['Paris', 'London', 'Berlin', 'Rome'],
           points: 2,
+          answer: 'Paris',
         },
         {
           id: 'r1q2',
           type: 'free_text',
           prompt: 'Name the largest planet in the solar system.',
           points: 2,
+          answer: 'Jupiter',
         },
       ],
     },
@@ -41,12 +43,14 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
           points: 3,
+          answer: 'Eiffel Tower',
         },
         {
           id: 'r2q2',
           type: 'free_text',
           prompt: 'Name this flag.',
           points: 3,
+          answer: 'France',
         },
       ],
     },
@@ -67,6 +71,7 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
           type: 'free_text',
           prompt: 'Imported question',
           points: 1,
+          answer: 'Imported answer',
         },
       ],
     },
@@ -172,6 +177,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe('r1q1');
   });
@@ -184,6 +190,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe('r1q2');
   });
@@ -197,6 +204,7 @@ describe('GameStateService', () => {
       roundIndex: 1,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe('r2q1');
   });
@@ -210,6 +218,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe('r1q1');
   });
@@ -240,8 +249,14 @@ describe('GameStateService', () => {
 
     const revealSnapshot = await service.applyAction('FINISH_GRADING');
     expect(revealSnapshot.progress.status).toBe('reveal');
+    expect(revealSnapshot.progress.revealIndex).toBe(0);
 
-    const endedSnapshot = await service.applyAction('ADVANCE');
+    // The block has 4 questions (r1q1, r1q2, r2q1, r2q2): ADVANCE steps
+    // through each one before finally leaving reveal.
+    await service.applyAction('ADVANCE'); // -> revealIndex 1
+    await service.applyAction('ADVANCE'); // -> revealIndex 2
+    await service.applyAction('ADVANCE'); // -> revealIndex 3 (last)
+    const endedSnapshot = await service.applyAction('ADVANCE'); // -> ended
     expect(endedSnapshot.progress.status).toBe('ended');
   });
 
@@ -282,6 +297,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -291,6 +307,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     const rehydratedService = new GameStateService(
       asSeedService(createFakeSeedService()),
@@ -304,6 +321,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe('r1q2');
   });
@@ -329,6 +347,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
     expect(seedService.loadGame).toHaveBeenCalledWith(
@@ -356,6 +375,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
     expect(snapshot.leaderboard).toEqual([]);
     expect(service.getActiveQuizId()).toBe('quiz-2');
@@ -372,6 +392,7 @@ describe('GameStateService', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      revealIndex: 0,
     });
   });
 
@@ -422,6 +443,100 @@ describe('GameStateService', () => {
         'r2q1',
         'r2q2',
       ]);
+    });
+
+    it('never leaks the correct answer through blockQuestions, even during break', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      const snapshot = await service.applyAction('ADVANCE'); // -> break
+
+      snapshot.blockQuestions.forEach((question) => {
+        expect(question).not.toHaveProperty('answer');
+      });
+    });
+
+    it('exposes no reveal questions outside reveal', async () => {
+      await service.applyAction('START_QUIZ');
+      expect(service.getSnapshot().revealQuestions).toEqual([]);
+
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      const breakSnapshot = await service.applyAction('ADVANCE'); // -> break
+      expect(breakSnapshot.revealQuestions).toEqual([]);
+    });
+
+    it('shows the just-finished block with correct answers once revealed', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE'); // -> break
+      const revealed = await service.applyAction('FINISH_GRADING'); // -> reveal
+
+      expect(revealed.progress.status).toBe('reveal');
+      expect(revealed.revealQuestions.map((q) => [q.id, q.answer])).toEqual([
+        ['r1q1', 'Paris'],
+        ['r1q2', 'Jupiter'],
+        ['r2q1', 'Eiffel Tower'],
+        ['r2q2', 'France'],
+      ]);
+    });
+
+    it('pages through the reveal block one question at a time via ADVANCE and PREVIOUS', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE'); // -> break
+      const first = await service.applyAction('FINISH_GRADING'); // -> reveal
+      expect(first.progress.revealIndex).toBe(0);
+      expect(first.progress.status).toBe('reveal');
+
+      const second = await service.applyAction('ADVANCE');
+      expect(second.progress).toMatchObject({
+        status: 'reveal',
+        revealIndex: 1,
+      });
+
+      const third = await service.applyAction('ADVANCE');
+      expect(third.progress).toMatchObject({
+        status: 'reveal',
+        revealIndex: 2,
+      });
+
+      const back = await service.applyAction('PREVIOUS');
+      expect(back.progress).toMatchObject({ status: 'reveal', revealIndex: 1 });
+    });
+
+    it('rejects PREVIOUS at the very first reveal question', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE'); // -> break
+      await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
+
+      await expect(service.applyAction('PREVIOUS')).rejects.toThrow(
+        IllegalGameTransitionError,
+      );
+    });
+
+    it('clears reveal questions once the admin advances past reveal', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE');
+      await service.applyAction('ADVANCE'); // -> break
+      await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
+      await service.applyAction('ADVANCE'); // -> revealIndex 1
+      await service.applyAction('ADVANCE'); // -> revealIndex 2
+      await service.applyAction('ADVANCE'); // -> revealIndex 3 (last)
+      const ended = await service.applyAction('ADVANCE'); // -> ended (round-2 is last)
+
+      expect(ended.progress.status).toBe('ended');
+      expect(ended.revealQuestions).toEqual([]);
     });
 
     it('treats every revealed block question as open for answering', async () => {
