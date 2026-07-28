@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getBlockStartRoundIndex,
   getNextGameState,
+  getQuizStructureSummary,
   IllegalGameTransitionError,
   InvalidQuizConfigError,
   type GameContext,
@@ -24,8 +25,20 @@ const lobby: GameProgress = {
 };
 
 describe('getNextGameState', () => {
-  it('starts the quiz at round 0, question 0', () => {
+  it('starts the quiz into the rules screen before any question opens', () => {
     const next = getNextGameState(lobby, 'START_QUIZ', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({
+      status: 'rules',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    });
+  });
+
+  it('opens the first question of round 0 when advancing past the rules screen', () => {
+    const rules: GameProgress = { ...lobby, status: 'rules' };
+    const next = getNextGameState(rules, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
       status: 'question_open',
       roundIndex: 0,
@@ -33,6 +46,13 @@ describe('getNextGameState', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
+  });
+
+  it('rejects moving back from the rules screen', () => {
+    const rules: GameProgress = { ...lobby, status: 'rules' };
+    expect(() => getNextGameState(rules, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
+      IllegalGameTransitionError,
+    );
   });
 
   it('advances to the next question within the same round while answers stay open', () => {
@@ -390,5 +410,58 @@ describe('getBlockStartRoundIndex', () => {
   it('starts a new block on the round following a breakAfter round', () => {
     expect(getBlockStartRoundIndex(2, fourRounds)).toBe(2);
     expect(getBlockStartRoundIndex(3, fourRounds)).toBe(2);
+  });
+});
+
+describe('getQuizStructureSummary', () => {
+  it('counts one block and its topic count for a single-block quiz', () => {
+    expect(getQuizStructureSummary(twoRoundsWithBreakAfterSecond)).toEqual({
+      blockCount: 1,
+      topicsPerBlock: 2,
+    });
+  });
+
+  it('counts multiple blocks when every block has the same number of topics', () => {
+    const threeBlocksOfTwo: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+      ],
+    };
+    expect(getQuizStructureSummary(threeBlocksOfTwo)).toEqual({
+      blockCount: 3,
+      topicsPerBlock: 2,
+    });
+  });
+
+  it('reports topicsPerBlock as null when blocks have differing topic counts', () => {
+    const unevenBlocks: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+      ],
+    };
+    expect(getQuizStructureSummary(unevenBlocks)).toEqual({
+      blockCount: 2,
+      topicsPerBlock: null,
+    });
+  });
+
+  it('counts a trailing block that has not been closed by a breakAfter round yet', () => {
+    const trailingOpenBlock: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: false },
+      ],
+    };
+    expect(getQuizStructureSummary(trailingOpenBlock)).toEqual({
+      blockCount: 2,
+      topicsPerBlock: 1,
+    });
   });
 });

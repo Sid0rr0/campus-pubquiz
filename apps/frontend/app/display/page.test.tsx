@@ -233,6 +233,22 @@ describe('DisplayPage', () => {
     expect(screen.getByText(/1 of 2 teams answered/i)).toBeInTheDocument();
   });
 
+  it('shows the rules screen after the lobby, before the first question opens', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'rules' }),
+        currentQuestion: null,
+        quizStructure: { blockCount: 2, topicsPerBlock: 3 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText(/2 rounds of 3 topics/i)).toBeInTheDocument();
+    expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
+  });
+
   it('shows a grading message during a break', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'break' }), currentQuestion: null },

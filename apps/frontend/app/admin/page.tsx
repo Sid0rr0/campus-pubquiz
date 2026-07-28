@@ -217,7 +217,8 @@ export default function AdminPage() {
   const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
   const showAnswerStatus = progress.status === 'question_open';
   const canStartQuiz = progress.status === 'lobby';
-  const canAdvance = progress.status === 'question_open' || progress.status === 'reveal';
+  const canAdvance =
+    progress.status === 'rules' || progress.status === 'question_open' || progress.status === 'reveal';
   const canGoToPreviousQuestion =
     (progress.status === 'question_open' && gradingQuestions.length > 1) ||
     (progress.status === 'reveal' && progress.revealIndex > 0);
@@ -258,7 +259,7 @@ export default function AdminPage() {
               onClick={() => sendAction('ADVANCE')}
               className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
             >
-              Advance
+              {progress.status === 'rules' ? 'Begin Quiz' : 'Advance'}
             </button>
           )}
           {canFinishGrading && (

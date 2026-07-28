@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { QuestionView } from '@campus-pubquiz/types';
 import { useGameSocket, type JoinTeamOptions } from '@/app/lib/use-game-socket';
+import { RulesContent } from '@/app/components/rules-content';
 
 const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
 const TEAM_TOKEN_STORAGE_KEY = 'campus-pubquiz-team-token';
@@ -237,7 +238,12 @@ function PlayPageContent() {
     );
   }
 
-  const { progress, currentQuestion, blockQuestions = [] } = snapshot;
+  const {
+    progress,
+    currentQuestion,
+    blockQuestions = [],
+    quizStructure = { blockCount: 0, topicsPerBlock: null },
+  } = snapshot;
   const selectedQuestion =
     blockQuestions.find((question) => question.id === browsedQuestionId) ?? currentQuestion;
 
@@ -253,7 +259,17 @@ function PlayPageContent() {
         <h1 className="text-center font-display text-3xl text-magenta">Leaderboard</h1>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
-        <h1 className="mt-16 text-center font-display text-2xl">Waiting for the quiz to start…</h1>
+        <div className="mt-16 flex flex-col items-center gap-3">
+          <h1 className="text-center font-display text-2xl">Waiting for the quiz to start…</h1>
+          <a href="/rules" className="text-sm font-extrabold text-cyan underline">
+            Read the rules
+          </a>
+        </div>
+      )}
+      {!progress.isLeaderboardVisible && progress.status === 'rules' && (
+        <div className="mt-6">
+          <RulesContent quizStructure={quizStructure} />
+        </div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'question_open' && selectedQuestion && (
         <div className="flex flex-col gap-6">

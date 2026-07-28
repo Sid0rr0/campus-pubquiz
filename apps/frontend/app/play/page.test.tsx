@@ -152,6 +152,40 @@ describe('PlayPage', () => {
     });
   });
 
+  it('shows the rules screen after the lobby, before the first question opens', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'rules' }),
+          currentQuestion: null,
+          quizStructure: { blockCount: 2, topicsPerBlock: 3 },
+        },
+        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText(/2 rounds of 3 topics/i)).toBeInTheDocument();
+    expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
+  });
+
+  it('shows a link to the rules page while waiting in the lobby', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByRole('link', { name: /read the rules/i })).toHaveAttribute(
+      'href',
+      '/rules',
+    );
+  });
+
   it('shows the join error and returns to the join form on "start over"', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-join-code', 'STALE1');

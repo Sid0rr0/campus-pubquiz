@@ -23,15 +23,18 @@ Run both with `pnpm dev`. Frontend on port 8888, backend on port 3000.
 | `/display` | Big screen (TV/projector) | Current question, media, countdown, leaderboard between rounds |
 | `/admin` | Quiz master's laptop | Advance questions, watch live answers, grade free-text, award points |
 | `/play` | Team phones | Join via QR + team name, see question, submit answers |
+| `/rules` | Anyone, any time | Standalone rules page (round/topic/break structure + house rules), also shown in-game during the `rules` status |
 
 ## Architecture Decisions
 
 ### Real-time: Socket.IO gateway (NestJS)
 
 The backend owns authoritative game state as a round-aware state machine:
-`lobby → question_open → locked → break → reveal → ended`
+`lobby → rules → question_open → locked → break → reveal → ended`
 
 Grading happens inside `break` (no separate grading status). Rounds carry a `breakAfter` flag, so "grade after every N rounds" is data, not a hardcoded loop — `break`/`reveal` only fire once a round with `breakAfter: true` finishes. The leaderboard is **not** a state — it's a separate `isLeaderboardVisible` flag the admin can toggle from any status, so hiding it always resumes exactly where things were.
+
+`rules` is a one-time screen shown once per quiz, right after `START_QUIZ`, before any question opens — the admin dismisses it with `ADVANCE` (same action that later steps through questions). Its round/topic/break sentence is computed from the active quiz's rounds via `getQuizStructureSummary` (rounds grouped into "blocks" by `breakAfter`, same grouping the reveal/grading flow already uses), not hardcoded.
 
 Only admin actions advance the state. Clients in three rooms (`display`, `admin`, `players`) receive broadcasts. On reconnect, any client receives the full current state snapshot — reconnection is a **core feature**, not a nice-to-have (phones sleep, networks drop).
 

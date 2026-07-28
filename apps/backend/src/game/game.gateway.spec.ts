@@ -197,13 +197,14 @@ describe('GameGateway', () => {
   let seedService: MockSeedService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
-  /** Opens r1q1 via an admin START_QUIZ, then clears broadcast bookkeeping. */
+  /** Opens r1q1 via an admin START_QUIZ + ADVANCE past the rules screen, then clears broadcast bookkeeping. */
   async function openFirstQuestion() {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
       password: ADMIN_PASSWORD,
     });
     await gateway.handleConnection(asSocket(admin));
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+    await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' });
     server.to.mockClear();
     server.emit.mockClear();
   }
@@ -327,7 +328,7 @@ describe('GameGateway', () => {
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
-        progress: expect.objectContaining({ status: 'question_open' }),
+        progress: expect.objectContaining({ status: 'rules' }),
       }),
     );
   });

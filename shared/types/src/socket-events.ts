@@ -1,4 +1,4 @@
-import type { GameAction, GameProgress } from './game-state';
+import type { GameAction, GameProgress, QuizStructureSummary } from './game-state';
 
 export const SOCKET_EVENTS = {
   // server -> client
@@ -52,6 +52,7 @@ export interface TeamView {
 
 export interface StateSnapshotPayload {
   progress: GameProgress;
+  quizStructure: QuizStructureSummary;
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the

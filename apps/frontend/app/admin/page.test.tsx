@@ -151,6 +151,21 @@ describe('AdminPage', () => {
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
+  it('shows a "Begin Quiz" button that sends ADVANCE while showing the rules screen', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'rules' }), currentQuestion: null },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    const button = screen.getByRole('button', { name: /begin quiz/i });
+    await userEvent.click(button);
+
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
   it('hides the Previous button on the very first question of the quiz', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {

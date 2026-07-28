@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import type { QuestionType, TeamView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
+import { RulesContent } from '@/app/components/rules-content';
 
 const QR_SIZE_PX = 220;
 
@@ -145,6 +146,7 @@ function DisplayPageContent() {
   const {
     progress,
     currentQuestion,
+    quizStructure = { blockCount: 0, topicsPerBlock: null },
     leaderboard = [],
     teams = [],
     answeredTeamIds = [],
@@ -183,6 +185,11 @@ function DisplayPageContent() {
               <p className="font-display text-4xl tracking-[0.3em] text-magenta">{joinCode}</p>
             </div>
           )}
+        </div>
+      )}
+      {!progress.isLeaderboardVisible && progress.status === 'rules' && (
+        <div className="flex flex-1 items-center justify-center px-16 py-10">
+          <RulesContent quizStructure={quizStructure} />
         </div>
       )}
       {!progress.isLeaderboardVisible &&

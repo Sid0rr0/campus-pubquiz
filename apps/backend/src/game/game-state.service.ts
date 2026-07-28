@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit } from '@nestjs/common';
 import {
   getBlockStartRoundIndex,
   getNextGameState,
+  getQuizStructureSummary,
   type GameAction,
   type GameContext,
   type GameProgress,
@@ -129,6 +130,7 @@ export class GameStateService implements OnModuleInit {
   getSnapshot(): StateSnapshotPayload {
     return {
       progress: this.progress,
+      quizStructure: getQuizStructureSummary(this.getContext()),
       currentQuestion: this.getCurrentQuestion(),
       blockQuestions: this.getBlockQuestions(),
       revealQuestions: this.getRevealQuestions(),

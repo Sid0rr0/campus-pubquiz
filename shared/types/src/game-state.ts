@@ -1,4 +1,4 @@
-export type GameStatus = 'lobby' | 'question_open' | 'break' | 'reveal' | 'ended';
+export type GameStatus = 'lobby' | 'rules' | 'question_open' | 'break' | 'reveal' | 'ended';
 
 export type GameAction =
   | 'START_QUIZ'
@@ -20,6 +20,40 @@ export interface RoundConfig {
 
 export interface GameContext {
   rounds: RoundConfig[];
+}
+
+export interface QuizStructureSummary {
+  /** Number of grading breaks — each block of rounds between breaks, inclusive of the final one. */
+  blockCount: number;
+  /** Rounds ("topics") per block, or null when blocks don't all have the same count. */
+  topicsPerBlock: number | null;
+}
+
+/** Sizes (round counts) of every block, in order — a block ends at each breakAfter round. */
+function getBlockSizes(context: GameContext): number[] {
+  const sizes: number[] = [];
+  let currentSize = 0;
+  for (const round of context.rounds) {
+    currentSize += 1;
+    if (round.breakAfter) {
+      sizes.push(currentSize);
+      currentSize = 0;
+    }
+  }
+  if (currentSize > 0) {
+    sizes.push(currentSize);
+  }
+  return sizes;
+}
+
+/** Summarizes a quiz's round/break shape for display on the rules screen. */
+export function getQuizStructureSummary(context: GameContext): QuizStructureSummary {
+  const blockSizes = getBlockSizes(context);
+  const isUniform = blockSizes.every((size) => size === blockSizes[0]);
+  return {
+    blockCount: blockSizes.length,
+    topicsPerBlock: isUniform ? (blockSizes[0] ?? null) : null,
+  };
 }
 
 export interface GameProgress {
@@ -172,9 +206,12 @@ export function getNextGameState(
   switch (action) {
     case 'START_QUIZ':
       if (progress.status !== 'lobby') illegal(progress.status, action);
-      return { ...progress, status: 'question_open', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
+      return { ...progress, status: 'rules', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
 
     case 'ADVANCE':
+      if (progress.status === 'rules') {
+        return { ...progress, status: 'question_open', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
+      }
       if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
       if (progress.status === 'reveal') return advanceFromReveal(progress, context);
       return illegal(progress.status, action);
