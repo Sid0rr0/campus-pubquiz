@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm';
 import {
   boolean,
+  doublePrecision,
   integer,
   jsonb,
   pgTable,
@@ -113,7 +114,7 @@ export const answers = pgTable(
       .notNull()
       .references(() => teams.id, { onDelete: 'cascade' }),
     value: text('value').notNull(),
-    pointsAwarded: integer('points_awarded'),
+    pointsAwarded: doublePrecision('points_awarded'),
     gradedAt: timestamp('graded_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

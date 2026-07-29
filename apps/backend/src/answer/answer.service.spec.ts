@@ -175,6 +175,21 @@ describe('AnswerService (Postgres integration)', () => {
     expect(answer.pointsAwarded).toBe(2);
   });
 
+  it('grades an answer with half points', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await answerService.submit(
+      sessionId,
+      questionId,
+      team.id,
+      'Banana',
+    );
+
+    await answerService.grade(submitted.answerId, 0.5);
+
+    const [answer] = await answerService.listForQuestion(sessionId, questionId);
+    expect(answer.pointsAwarded).toBe(0.5);
+  });
+
   it('computes a leaderboard summing graded points per team, sorted descending', async () => {
     const [question2] = await db
       .insert(schema.questions)
@@ -211,13 +226,13 @@ describe('AnswerService (Postgres integration)', () => {
     );
 
     await answerService.grade(answerA1.answerId, 2);
-    await answerService.grade(answerA2.answerId, 1);
+    await answerService.grade(answerA2.answerId, 0.5);
     await answerService.grade(answerB1.answerId, 1);
 
     const leaderboard = await answerService.computeLeaderboard(sessionId);
 
     expect(leaderboard).toEqual([
-      { teamId: teamA.id, teamName: 'Team A', totalPoints: 3 },
+      { teamId: teamA.id, teamName: 'Team A', totalPoints: 2.5 },
       { teamId: teamB.id, teamName: 'Team B', totalPoints: 1 },
     ]);
   });
