@@ -689,7 +689,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
-  it('browses to the next block question during the grading break', async () => {
+  it('browses to another question via the round number picker', async () => {
     const listAnswers = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
@@ -705,13 +705,77 @@ describe('AdminPage', () => {
       listAnswers,
       liveAnswers: null,
       gradeAnswer: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          {
+            id: 'quiz-1',
+            title: 'Campus Pub Quiz Night',
+            rounds: [
+              {
+                title: 'Round 1',
+                breakAfter: true,
+                questions: [
+                  { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
+                  { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /next question/i }));
+    await userEvent.click(screen.getByRole('button', { name: /grade question 2 of round 1/i }));
 
     expect(listAnswers).toHaveBeenCalledWith('r1q2');
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
+  });
+
+  it('lets the admin grade any question at any game status, not just during a break', async () => {
+    const listAnswers = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      listAnswers,
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          {
+            id: 'quiz-1',
+            title: 'Campus Pub Quiz Night',
+            rounds: [
+              {
+                title: 'Round 1',
+                breakAfter: true,
+                questions: [
+                  { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
+                  { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+                ],
+              },
+              {
+                title: 'Round 2',
+                breakAfter: true,
+                questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /grade question 1 of round 2/i }));
+
+    expect(listAnswers).toHaveBeenCalledWith('r2q1');
+    expect(screen.getByText('Name this song.')).toBeInTheDocument();
   });
 
   it('requests the quiz list while the game is in the lobby or ended', () => {

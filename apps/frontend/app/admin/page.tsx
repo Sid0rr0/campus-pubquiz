@@ -2,15 +2,15 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import type { QuestionView } from '@campus-pubquiz/types';
+import { getBlockStartRoundIndex, type QuizSummaryRound } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RoundsList } from '@/app/components/rounds-list';
 import { ImportPanel } from '@/app/admin/import-panel';
-import { AnswersPanel } from '@/app/admin/answers-panel';
+import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
-const EMPTY_QUESTIONS: QuestionView[] = [];
+const EMPTY_ROUNDS: QuizSummaryRound[] = [];
 
 function getStoredAdminPassword(): string {
   if (typeof window === 'undefined') {
@@ -24,7 +24,7 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
   const [submittedPassword, setSubmittedPassword] = useState('');
-  const [gradingIndex, setGradingIndex] = useState(0);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
   const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
 
@@ -56,16 +56,14 @@ export default function AdminPage() {
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
 
-  const gradingQuestions = snapshot?.blockQuestions ?? EMPTY_QUESTIONS;
-  const safeGradingIndex = Math.min(gradingIndex, Math.max(gradingQuestions.length - 1, 0));
-  const gradingQuestion = gameStatus === 'break' ? gradingQuestions[safeGradingIndex] : undefined;
-  const gradingQuestionId = gradingQuestion?.id;
-
   useEffect(() => {
-    if (gameStatus === 'lobby' || gameStatus === 'ended') {
+    // Fetch once on connect (any status) so the question browser has data
+    // immediately, then keep refreshing on every lobby/ended visit to pick
+    // up re-imports.
+    if (gameStatus === 'lobby' || gameStatus === 'ended' || (gameStatus && quizzes === null)) {
       requestQuizzes();
     }
-  }, [gameStatus, requestQuizzes]);
+  }, [gameStatus, quizzes, requestQuizzes]);
 
   useEffect(() => {
     if (!canChooseQuiz) {
@@ -82,21 +80,25 @@ export default function AdminPage() {
   }, [quizzes]);
 
   useEffect(() => {
-    // Each grading break starts back at the first question of the block.
-    if (gameStatus !== 'break') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setGradingIndex(0);
-    }
-  }, [gameStatus]);
+    // A newly selected/restarted quiz invalidates any question id picked
+    // under the previous session.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedQuestionId(null);
+  }, [snapshot?.joinCode]);
 
-  const currentQuestionId = gameStatus === 'question_open' ? snapshot?.currentQuestion?.id : undefined;
-  const answersToTrackId = gameStatus === 'break' ? gradingQuestionId : currentQuestionId;
+  // Grading is independent of game status: default to whatever question is
+  // currently open, or the just-locked block's first question during a
+  // break, but a manual pick from the browser sticks regardless of how the
+  // state machine moves afterward.
+  const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
+  const defaultBlockQuestionId = snapshot?.blockQuestions?.[0]?.id ?? null;
+  const effectiveQuestionId = selectedQuestionId ?? currentQuestionId ?? defaultBlockQuestionId;
 
   useEffect(() => {
-    if (answersToTrackId) {
-      listAnswers(answersToTrackId);
+    if (effectiveQuestionId !== null) {
+      listAnswers(effectiveQuestionId);
     }
-  }, [answersToTrackId, listAnswers]);
+  }, [effectiveQuestionId, listAnswers]);
 
   function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -109,6 +111,8 @@ export default function AdminPage() {
   const activeQuizTitle =
     quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.title ?? null;
   const pendingQuizTitle = quizzes?.quizzes.find((quiz) => quiz.id === pendingQuizId)?.title ?? null;
+  const activeQuizRounds =
+    quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.rounds ?? EMPTY_ROUNDS;
 
   function handleConfirmQuizSelection(): void {
     if (!pendingQuizId) {
@@ -161,8 +165,27 @@ export default function AdminPage() {
     );
   }
 
-  const { progress, currentQuestion, leaderboard = [], teams = [], answeredTeamIds = [] } = snapshot;
-  const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
+  const {
+    progress,
+    currentQuestion,
+    blockQuestions = [],
+    leaderboard = [],
+    teams = [],
+    answeredTeamIds = [],
+  } = snapshot;
+  const fallbackQuestions = currentQuestion ? [currentQuestion, ...blockQuestions] : blockQuestions;
+  // Rounds before the active block are already locked and graded; guard on
+  // rounds.length so a stale/incomplete quiz list can never index past its
+  // own array inside getBlockStartRoundIndex.
+  const activeBlockStartIndex =
+    activeQuizRounds.length > progress.roundIndex
+      ? getBlockStartRoundIndex(progress.roundIndex, {
+          rounds: activeQuizRounds.map((round) => ({
+            questionCount: round.questions.length,
+            breakAfter: round.breakAfter,
+          })),
+        })
+      : 0;
   const showAnswerStatus =
     progress.status === 'question_open' || progress.status === 'locking';
   const canStartQuiz = progress.status === 'lobby';
@@ -366,55 +389,17 @@ export default function AdminPage() {
             )}
           </section>
         )}
-        {progress.status === 'break' && gradingQuestion && (
-          <>
-            {liveAnswers && liveAnswers.questionId === gradingQuestion.id ? (
-              <AnswersPanel
-                liveAnswers={liveAnswers}
-                teams={teams}
-                onGrade={gradeAnswer}
-                nav={{
-                  index: safeGradingIndex,
-                  total: gradingQuestions.length,
-                  onPrevious: () => setGradingIndex(safeGradingIndex - 1),
-                  onNext: () => setGradingIndex(safeGradingIndex + 1),
-                }}
-              />
-            ) : (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display text-xl">
-                    Grading question {safeGradingIndex + 1} of {gradingQuestions.length}
-                  </h2>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      aria-label="Previous question"
-                      disabled={safeGradingIndex === 0}
-                      onClick={() => setGradingIndex(safeGradingIndex - 1)}
-                      className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
-                    >
-                      ←
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Next question"
-                      disabled={safeGradingIndex >= gradingQuestions.length - 1}
-                      onClick={() => setGradingIndex(safeGradingIndex + 1)}
-                      className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
-                    >
-                      →
-                    </button>
-                  </div>
-                </div>
-                <p className="text-[15px] font-bold">{gradingQuestion.prompt}</p>
-              </section>
-            )}
-          </>
-        )}
-        {showGrading && (
-          <AnswersPanel liveAnswers={liveAnswers} teams={teams} onGrade={gradeAnswer} />
-        )}
+        <QuestionBrowserPanel
+          rounds={activeQuizRounds}
+          currentRoundIndex={progress.roundIndex}
+          activeBlockStartIndex={activeBlockStartIndex}
+          selectedQuestionId={effectiveQuestionId}
+          onSelectQuestion={setSelectedQuestionId}
+          liveAnswers={liveAnswers}
+          teams={teams}
+          onGrade={gradeAnswer}
+          fallbackQuestions={fallbackQuestions}
+        />
         {leaderboard.length > 0 && (
           <section className="flex flex-col gap-3">
             <h2 className="font-display text-xl">Leaderboard</h2>
