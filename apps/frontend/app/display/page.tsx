@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
-import type { QuestionType, TeamView } from '@campus-pubquiz/types';
+import type { TeamView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
@@ -53,9 +53,9 @@ function ScatteredTeamNames({ teams }: ScatteredTeamNamesProps) {
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 
-// answer_media_url isn't tied to the question's own `type` the way question
-// media is (a free_text question can reveal a photo), so image vs. audio is
-// inferred from the URL's file extension instead.
+// Neither media_url nor answer_media_url is tied to the question's `type`
+// (e.g. a free_text question can carry a photo or reveal one), so image vs.
+// audio is inferred from the URL's file extension instead.
 function isAudioUrl(url: string): boolean {
   return AUDIO_EXTENSION_PATTERN.test(url);
 }
@@ -70,7 +70,6 @@ const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
 interface QuestionDisplayProps {
   prompt: string;
-  type: QuestionType;
   mediaUrl?: string;
   options?: string[];
   /** When set (reveal only), highlights the matching option and shows an answer line. */
@@ -84,27 +83,37 @@ interface QuestionDisplayProps {
 // the same way it was originally asked, just with the answer added back in.
 function QuestionDisplay({
   prompt,
-  type,
   mediaUrl,
   options,
   correctAnswer,
   answerMediaUrl,
   mediaTestIdPrefix,
 }: QuestionDisplayProps) {
+  // On reveal, answer_media_url (when set) replaces the question's own
+  // media_url rather than showing both — e.g. a picture round's image gives
+  // way to whatever the answer_media_url shows instead.
+  const isRevealing = correctAnswer !== undefined;
+  const questionMediaUrl = isRevealing && answerMediaUrl ? undefined : mediaUrl;
+
   return (
     <>
       <h1 className="text-balance font-display text-4xl leading-snug">{prompt}</h1>
-      {mediaUrl && type === 'picture' && (
+      {questionMediaUrl && !isAudioUrl(questionMediaUrl) && (
         // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
         <img
           data-testid={`${mediaTestIdPrefix}-image`}
-          src={mediaUrl}
+          src={questionMediaUrl}
           alt=""
           className="max-h-64 rounded-xl"
         />
       )}
-      {mediaUrl && type === 'audio' && (
-        <audio data-testid={`${mediaTestIdPrefix}-audio`} src={mediaUrl} controls autoPlay />
+      {questionMediaUrl && isAudioUrl(questionMediaUrl) && (
+        <audio
+          data-testid={`${mediaTestIdPrefix}-audio`}
+          src={questionMediaUrl}
+          controls
+          autoPlay
+        />
       )}
       {options && (
         <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
@@ -131,13 +140,13 @@ function QuestionDisplay({
           })}
         </ul>
       )}
-      {correctAnswer !== undefined && (
+      {isRevealing && (
         <p className="font-display text-lg text-green">
           <span className="font-body text-sm font-extrabold text-foreground/55">ANSWER </span>
           {correctAnswer}
         </p>
       )}
-      {correctAnswer !== undefined && answerMediaUrl && !isAudioUrl(answerMediaUrl) && (
+      {isRevealing && answerMediaUrl && !isAudioUrl(answerMediaUrl) && (
         // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
         <img
           data-testid={`${mediaTestIdPrefix}-answer-image`}
@@ -146,7 +155,7 @@ function QuestionDisplay({
           className="max-h-64 rounded-xl"
         />
       )}
-      {correctAnswer !== undefined && answerMediaUrl && isAudioUrl(answerMediaUrl) && (
+      {isRevealing && answerMediaUrl && isAudioUrl(answerMediaUrl) && (
         <audio
           data-testid={`${mediaTestIdPrefix}-answer-audio`}
           src={answerMediaUrl}
@@ -309,7 +318,6 @@ function DisplayPageContent() {
             <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
               <QuestionDisplay
                 prompt={currentQuestion.prompt}
-                type={currentQuestion.type}
                 mediaUrl={currentQuestion.mediaUrl}
                 options={currentQuestion.options}
                 mediaTestIdPrefix="question"
@@ -349,7 +357,6 @@ function DisplayPageContent() {
             <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
               <QuestionDisplay
                 prompt={revealQuestions[progress.revealIndex].prompt}
-                type={revealQuestions[progress.revealIndex].type}
                 mediaUrl={revealQuestions[progress.revealIndex].mediaUrl}
                 options={revealQuestions[progress.revealIndex].options}
                 correctAnswer={revealQuestions[progress.revealIndex].answer}

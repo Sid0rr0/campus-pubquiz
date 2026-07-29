@@ -92,6 +92,30 @@ describe('DisplayPage', () => {
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
 
+  it('renders media_url on a multiple_choice/free_text question too, not just picture/audio', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r3q1',
+          type: 'multiple_choice',
+          prompt: 'Which flag is this?',
+          mediaUrl: 'https://example.com/flag.jpg',
+          options: ['France', 'Italy'],
+          points: 2,
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('question-image')).toHaveAttribute(
+      'src',
+      'https://example.com/flag.jpg',
+    );
+  });
+
   it('shows a connecting message before the first snapshot arrives', () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
     render(<DisplayPage />);
@@ -415,6 +439,35 @@ describe('DisplayPage', () => {
       'src',
       'https://example.com/landmark.jpg',
     );
+  });
+
+  it('shows only answer_media_url on reveal when a question has both it and its own media_url', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r2q1',
+            type: 'picture',
+            prompt: 'Which landmark?',
+            mediaUrl: 'https://example.com/landmark.jpg',
+            points: 3,
+            answer: 'Eiffel Tower',
+            answerMediaUrl: 'https://example.com/eiffel-plaque.jpg',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('reveal-answer-image')).toHaveAttribute(
+      'src',
+      'https://example.com/eiffel-plaque.jpg',
+    );
+    expect(screen.queryByTestId('reveal-image')).not.toBeInTheDocument();
   });
 
   it('shows an answer_media_url image on reveal for a free_text question, independent of type', () => {
