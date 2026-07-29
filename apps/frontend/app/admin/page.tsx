@@ -166,9 +166,13 @@ export default function AdminPage() {
   const showAnswerStatus = progress.status === 'question_open';
   const canStartQuiz = progress.status === 'lobby';
   const canAdvance =
-    progress.status === 'rules' || progress.status === 'question_open' || progress.status === 'reveal';
+    progress.status === 'rules' ||
+    progress.status === 'round_intro' ||
+    progress.status === 'question_open' ||
+    progress.status === 'reveal';
   const canGoToPreviousQuestion =
-    (progress.status === 'question_open' && gradingQuestions.length > 1) ||
+    progress.status === 'round_intro' ||
+    progress.status === 'question_open' ||
     (progress.status === 'reveal' && progress.revealIndex > 0);
   const canFinishGrading = progress.status === 'break';
   const canEndQuiz = progress.status !== 'ended';
@@ -206,7 +210,11 @@ export default function AdminPage() {
               onClick={() => sendAction('ADVANCE')}
               className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
             >
-              {progress.status === 'rules' ? 'Begin Quiz' : 'Advance'}
+              {progress.status === 'rules'
+                ? 'Begin Quiz'
+                : progress.status === 'round_intro'
+                  ? 'Start Round'
+                  : 'Advance'}
             </button>
           )}
           {canFinishGrading && (

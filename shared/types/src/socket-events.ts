@@ -55,6 +55,8 @@ export interface TeamView {
 export interface StateSnapshotPayload {
   progress: GameProgress;
   quizStructure: QuizStructureSummary;
+  /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
+  roundTitle: string;
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the

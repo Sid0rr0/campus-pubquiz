@@ -151,6 +151,7 @@ function DisplayPageContent() {
     teams = [],
     answeredTeamIds = [],
     revealQuestions = [],
+    roundTitle = '',
   } = snapshot;
 
   return (
@@ -190,6 +191,14 @@ function DisplayPageContent() {
       {!progress.isLeaderboardVisible && progress.status === 'rules' && (
         <div className="flex flex-1 items-center justify-center px-16 py-10">
           <RulesContent quizStructure={quizStructure} />
+        </div>
+      )}
+      {!progress.isLeaderboardVisible && progress.status === 'round_intro' && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
+          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+            ROUND {progress.roundIndex + 1}
+          </p>
+          <h1 className="text-balance font-display text-6xl text-magenta">{roundTitle}</h1>
         </div>
       )}
       {!progress.isLeaderboardVisible &&

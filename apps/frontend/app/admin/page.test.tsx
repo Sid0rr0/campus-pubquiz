@@ -182,7 +182,8 @@ describe('AdminPage', () => {
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
-  it('hides the Previous button on the very first question of the quiz', () => {
+  it('sends PREVIOUS to step back to the round intro card from the very first question of the quiz', async () => {
+    const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
@@ -190,11 +191,49 @@ describe('AdminPage', () => {
         blockQuestions: [{ id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 }],
       },
       connectionError: null,
-      sendAction: vi.fn(),
+      sendAction,
     });
     render(<AdminPage />);
 
-    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
+  it('shows a "Start Round" button that sends ADVANCE on the round intro card', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'round_intro' }),
+        currentQuestion: null,
+        roundTitle: 'Picture Round',
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /start round/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it('sends PREVIOUS from the round intro card', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'round_intro' }),
+        currentQuestion: null,
+        roundTitle: 'Picture Round',
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
   it('sends PREVIOUS when the Previous button is clicked after the first question of the open block', async () => {

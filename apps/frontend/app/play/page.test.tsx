@@ -176,6 +176,24 @@ describe('PlayPage', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
+  it('shows the round name and a "look at the screen" hint on the round intro card', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'round_intro' }),
+          currentQuestion: null,
+          roundTitle: 'Picture Round',
+        },
+        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('Picture Round')).toBeInTheDocument();
+    expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
+  });
+
   it('shows a link to the rules page while waiting in the lobby', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseGameSocket.mockReturnValue(

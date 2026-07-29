@@ -168,6 +168,7 @@ export class GameStateService implements OnModuleInit {
     return {
       progress: this.progress,
       quizStructure: getQuizStructureSummary(this.getContext()),
+      roundTitle: this.getCurrentRoundTitle(),
       currentQuestion: this.getCurrentQuestion(),
       blockQuestions: this.getBlockQuestions(),
       revealQuestions: this.getRevealQuestions(),
@@ -205,6 +206,10 @@ export class GameStateService implements OnModuleInit {
         breakAfter: round.breakAfter,
       })),
     };
+  }
+
+  private getCurrentRoundTitle(): string {
+    return this.getSeededGame().rounds[this.progress.roundIndex]?.title ?? '';
   }
 
   private getCurrentQuestion(): QuestionView | null {

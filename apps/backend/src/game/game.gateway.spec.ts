@@ -239,14 +239,15 @@ describe('GameGateway', () => {
   let seedService: MockSeedService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
-  /** Opens r1q1 via an admin START_QUIZ + ADVANCE past the rules screen, then clears broadcast bookkeeping. */
+  /** Opens r1q1 via an admin START_QUIZ + ADVANCE past the rules screen and round intro card, then clears broadcast bookkeeping. */
   async function openFirstQuestion() {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
       password: ADMIN_PASSWORD,
     });
     await gateway.handleConnection(asSocket(admin));
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
-    await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' });
+    await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> round_intro(0)
+    await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> r1q1
     server.to.mockClear();
     server.emit.mockClear();
   }

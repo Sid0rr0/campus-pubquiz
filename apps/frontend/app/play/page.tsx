@@ -265,6 +265,7 @@ function PlayPageContent() {
     currentQuestion,
     blockQuestions = [],
     quizStructure = { blockCount: 0, topicsPerBlock: null },
+    roundTitle = '',
   } = snapshot;
   const selectedQuestion =
     blockQuestions.find((question) => question.id === browsedQuestionId) ?? currentQuestion;
@@ -296,6 +297,14 @@ function PlayPageContent() {
       {!progress.isLeaderboardVisible && progress.status === 'rules' && (
         <div className="mt-6">
           <RulesContent quizStructure={quizStructure} />
+        </div>
+      )}
+      {!progress.isLeaderboardVisible && progress.status === 'round_intro' && (
+        <div className="mt-16 flex flex-col items-center gap-2 text-center">
+          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+            👀 Look at the screen
+          </p>
+          <h1 className="font-display text-2xl">{roundTitle}</h1>
         </div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'question_open' && selectedQuestion && (

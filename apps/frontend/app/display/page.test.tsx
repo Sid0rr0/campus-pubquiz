@@ -249,6 +249,22 @@ describe('DisplayPage', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
+  it('shows the round name in big text on the round intro screen, before any question opens', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'round_intro', roundIndex: 1 }),
+        currentQuestion: null,
+        roundTitle: 'Picture Round',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Picture Round')).toBeInTheDocument();
+    expect(screen.getByText(/round 2/i)).toBeInTheDocument();
+  });
+
   it('shows a grading message during a break', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'break' }), currentQuestion: null },
