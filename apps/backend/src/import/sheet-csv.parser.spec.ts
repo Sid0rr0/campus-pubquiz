@@ -26,6 +26,7 @@ describe('parseSheetCsv', () => {
         answer: 'Jupiter',
         points: '2',
         mediaUrl: '',
+        answerMediaUrl: '',
         notes: '',
         breakAfter: '1',
       },
@@ -38,6 +39,7 @@ describe('parseSheetCsv', () => {
         answer: 'Paris',
         points: '2',
         mediaUrl: '',
+        answerMediaUrl: '',
         notes: '',
         breakAfter: '',
       },
@@ -80,6 +82,17 @@ describe('parseSheetCsv', () => {
     expect(row.notes).toBe('hi');
   });
 
+  it('parses the answer_media_url column', () => {
+    const csv = [
+      'round,type,question,answer,answer_media_url',
+      'Round 1,free_text,Largest planet?,Jupiter,https://example.com/answer.jpg',
+    ].join('\n');
+
+    const [row] = parseSheetCsv(csv);
+
+    expect(row.answerMediaUrl).toBe('https://example.com/answer.jpg');
+  });
+
   it('parses the break_after column as a raw cell, defaulting to empty when absent', () => {
     const withColumn = parseSheetCsv(
       [HEADER, 'Round 1,free_text,Largest planet?,,Jupiter,2,,,1'].join('\n'),
@@ -106,6 +119,7 @@ describe('parseSheetCsv', () => {
     expect(row.options).toBe('');
     expect(row.points).toBe('');
     expect(row.mediaUrl).toBe('');
+    expect(row.answerMediaUrl).toBe('');
     expect(row.notes).toBe('');
   });
 

@@ -14,6 +14,7 @@ export interface SheetRow {
   answer: string;
   points: string;
   mediaUrl: string;
+  answerMediaUrl: string;
   notes: string;
   breakAfter: string;
 }
@@ -32,6 +33,8 @@ export interface ImportQuestionPreview {
   points: number;
   options?: string[];
   mediaUrl?: string;
+  /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
+  answerMediaUrl?: string;
 }
 
 export interface ImportRoundPreview {

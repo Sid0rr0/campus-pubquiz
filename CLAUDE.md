@@ -62,10 +62,12 @@ Sheets are shared "anyone with link can view" — import parses the CSV export U
 Sheet format (one row per question):
 
 ```cvs
-round | type | question | options | answer | points | media_url | notes | break_after
+round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
 ```
 
 `options` is pipe-separated for multiple choice (e.g. `Paris|London|Berlin|Rome`).
+
+`answer_media_url` is optional and shown alongside the correct answer during reveal, independent of the question's own `media_url` and `type` — e.g. a `free_text` question can reveal a photo. Display infers image vs. audio from the URL's file extension rather than a separate type column.
 
 `break_after` is optional and per-row; a round grades after itself once any of its rows has `break_after` = `1` (blank/`0` = no break). The last round always breaks regardless of its `break_after` cells — the state machine has no way to reveal answers otherwise, so import forces it on rather than requiring authors to remember it.
 

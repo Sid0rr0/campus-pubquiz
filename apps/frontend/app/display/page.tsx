@@ -51,6 +51,15 @@ function ScatteredTeamNames({ teams }: ScatteredTeamNamesProps) {
   );
 }
 
+const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
+
+// answer_media_url isn't tied to the question's own `type` the way question
+// media is (a free_text question can reveal a photo), so image vs. audio is
+// inferred from the URL's file extension instead.
+function isAudioUrl(url: string): boolean {
+  return AUDIO_EXTENSION_PATTERN.test(url);
+}
+
 const OPTION_ACCENT_CLASSES = [
   'border-cyan text-cyan',
   'border-magenta text-magenta',
@@ -66,6 +75,8 @@ interface QuestionDisplayProps {
   options?: string[];
   /** When set (reveal only), highlights the matching option and shows an answer line. */
   correctAnswer?: string;
+  /** Shown alongside the answer during reveal only — independent of the question's own media. */
+  answerMediaUrl?: string;
   mediaTestIdPrefix: string;
 }
 
@@ -77,6 +88,7 @@ function QuestionDisplay({
   mediaUrl,
   options,
   correctAnswer,
+  answerMediaUrl,
   mediaTestIdPrefix,
 }: QuestionDisplayProps) {
   return (
@@ -124,6 +136,23 @@ function QuestionDisplay({
           <span className="font-body text-sm font-extrabold text-foreground/55">ANSWER </span>
           {correctAnswer}
         </p>
+      )}
+      {correctAnswer !== undefined && answerMediaUrl && !isAudioUrl(answerMediaUrl) && (
+        // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+        <img
+          data-testid={`${mediaTestIdPrefix}-answer-image`}
+          src={answerMediaUrl}
+          alt=""
+          className="max-h-64 rounded-xl"
+        />
+      )}
+      {correctAnswer !== undefined && answerMediaUrl && isAudioUrl(answerMediaUrl) && (
+        <audio
+          data-testid={`${mediaTestIdPrefix}-answer-audio`}
+          src={answerMediaUrl}
+          controls
+          autoPlay
+        />
       )}
     </>
   );
@@ -324,6 +353,7 @@ function DisplayPageContent() {
                 mediaUrl={revealQuestions[progress.revealIndex].mediaUrl}
                 options={revealQuestions[progress.revealIndex].options}
                 correctAnswer={revealQuestions[progress.revealIndex].answer}
+                answerMediaUrl={revealQuestions[progress.revealIndex].answerMediaUrl}
                 mediaTestIdPrefix="reveal"
               />
             </div>

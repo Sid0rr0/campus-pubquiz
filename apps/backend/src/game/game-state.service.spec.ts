@@ -63,6 +63,7 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
           prompt: 'Name this flag.',
           points: 3,
           answer: 'France',
+          answerMediaUrl: 'https://example.com/france-flag.jpg',
         },
       ],
     },
@@ -629,6 +630,7 @@ describe('GameStateService', () => {
 
       snapshot.blockQuestions.forEach((question) => {
         expect(question).not.toHaveProperty('answer');
+        expect(question).not.toHaveProperty('answerMediaUrl');
       });
     });
 
@@ -666,6 +668,12 @@ describe('GameStateService', () => {
         [23, 'Eiffel Tower'],
         [24, 'France'],
       ]);
+      expect(
+        revealed.revealQuestions.find((q) => q.id === 24)?.answerMediaUrl,
+      ).toBe('https://example.com/france-flag.jpg');
+      expect(
+        revealed.revealQuestions.find((q) => q.id === 23)?.answerMediaUrl,
+      ).toBeUndefined();
     });
 
     it('pages through the reveal block one question at a time via ADVANCE and PREVIOUS', async () => {

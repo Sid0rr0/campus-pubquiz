@@ -74,6 +74,7 @@ describe('import payload contracts', () => {
       answer: 'Paris',
       points: '2',
       mediaUrl: '',
+      answerMediaUrl: '',
       notes: '',
       breakAfter: '',
     };

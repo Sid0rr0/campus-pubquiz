@@ -38,6 +38,8 @@ export interface QuestionView {
 
 export interface RevealQuestionView extends QuestionView {
   answer: string;
+  /** Shown alongside the answer during reveal only — never sent before the question is revealed. */
+  answerMediaUrl?: string;
 }
 
 export interface LeaderboardEntry {

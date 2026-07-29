@@ -43,6 +43,7 @@ const questionRowSchema = z.discriminatedUnion('type', [
     type: z.literal('free_text'),
     ...baseFields,
     media_url: httpUrl.optional(),
+    answer_media_url: httpUrl.optional(),
   }),
   z
     .object({
@@ -52,6 +53,7 @@ const questionRowSchema = z.discriminatedUnion('type', [
         .array(z.string(), 'Provide at least two pipe-separated options')
         .min(2, 'Provide at least two pipe-separated options'),
       media_url: httpUrl.optional(),
+      answer_media_url: httpUrl.optional(),
     })
     .refine((row) => row.answer === '' || row.options.includes(row.answer), {
       path: ['answer'],
@@ -61,11 +63,13 @@ const questionRowSchema = z.discriminatedUnion('type', [
     type: z.literal('picture'),
     ...baseFields,
     media_url: httpUrl,
+    answer_media_url: httpUrl.optional(),
   }),
   z.object({
     type: z.literal('audio'),
     ...baseFields,
     media_url: httpUrl,
+    answer_media_url: httpUrl.optional(),
   }),
 ]);
 
@@ -105,6 +109,8 @@ function toCandidate(row: SheetRow, type: QuestionType): unknown {
     points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
     options: splitOptions(row.options),
     media_url: row.mediaUrl.trim() === '' ? undefined : row.mediaUrl.trim(),
+    answer_media_url:
+      row.answerMediaUrl.trim() === '' ? undefined : row.answerMediaUrl.trim(),
     break_after: row.breakAfter.trim(),
   };
 }
@@ -157,6 +163,9 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
         ? { options: parsed.data.options }
         : {}),
       ...(parsed.data.media_url ? { mediaUrl: parsed.data.media_url } : {}),
+      ...(parsed.data.answer_media_url
+        ? { answerMediaUrl: parsed.data.answer_media_url }
+        : {}),
     },
   };
 }

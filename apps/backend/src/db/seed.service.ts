@@ -19,16 +19,18 @@ import type {
 interface QuestionPayload {
   options?: string[];
   mediaUrl?: string;
+  answerMediaUrl?: string;
 }
 
 // Picks only the player-safe payload fields: imported questions also carry
 // the correct answer in their payload, which must never reach a QuestionView
 // (snapshots go to every connected phone and the big screen).
 function toViewPayload(payload: unknown): QuestionPayload {
-  const { options, mediaUrl } = payload as QuestionPayload;
+  const { options, mediaUrl, answerMediaUrl } = payload as QuestionPayload;
   return {
     ...(options !== undefined ? { options } : {}),
     ...(mediaUrl !== undefined ? { mediaUrl } : {}),
+    ...(answerMediaUrl !== undefined ? { answerMediaUrl } : {}),
   };
 }
 
@@ -127,6 +129,7 @@ export class SeedService {
           payload: {
             options: question.options,
             mediaUrl: question.mediaUrl,
+            answerMediaUrl: question.answerMediaUrl,
           },
           points: question.points,
         });

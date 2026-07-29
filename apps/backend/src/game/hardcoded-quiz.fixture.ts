@@ -5,6 +5,8 @@ import type { QuestionView } from '@campus-pubquiz/types';
 // sent to players (see SeedService.toViewPayload).
 export interface FixtureQuestion extends QuestionView {
   answer: string;
+  /** Shown alongside the answer during reveal only — independent of the question's own media_url. */
+  answerMediaUrl?: string;
 }
 
 export interface FixtureRound {
@@ -54,6 +56,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           type: 'free_text',
           prompt: 'Name this flag.',
           answer: 'France',
+          answerMediaUrl: 'https://example.com/france-flag.jpg',
           points: 3,
         },
         {

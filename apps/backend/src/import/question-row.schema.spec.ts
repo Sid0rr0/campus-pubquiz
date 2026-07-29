@@ -14,6 +14,7 @@ function makeRow(overrides: Partial<SheetRow> = {}): SheetRow {
     answer: 'Jupiter',
     points: '2',
     mediaUrl: '',
+    answerMediaUrl: '',
     notes: '',
     breakAfter: '',
     ...overrides,
@@ -158,6 +159,38 @@ describe('parseQuestionRow', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.question.mediaUrl).toBe('https://example.com/song.mp3');
+    }
+  });
+
+  it('accepts an optional answer_media_url on any question type, independent of media_url', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'free_text',
+        question: 'Name this flag.',
+        answer: 'France',
+        answerMediaUrl: 'https://example.com/france-flag.jpg',
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.question.answerMediaUrl).toBe(
+        'https://example.com/france-flag.jpg',
+      );
+      expect(result.question.mediaUrl).toBeUndefined();
+    }
+  });
+
+  it('rejects an invalid answer_media_url', () => {
+    const result = parseQuestionRow(
+      makeRow({ answerMediaUrl: 'ftp://example.com/x.jpg' }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({ field: 'answer_media_url' }),
+      );
     }
   });
 

@@ -142,6 +142,9 @@ export class ImportService {
         const payload = {
           ...(question.options ? { options: question.options } : {}),
           ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
+          ...(question.answerMediaUrl
+            ? { answerMediaUrl: question.answerMediaUrl }
+            : {}),
         };
         const questionNow = new Date();
         await this.questions.upsert(

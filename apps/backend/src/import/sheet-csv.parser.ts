@@ -20,6 +20,8 @@ const HEADER_ALIASES: Record<string, SheetColumn> = {
   points: 'points',
   media_url: 'mediaUrl',
   mediaurl: 'mediaUrl',
+  answer_media_url: 'answerMediaUrl',
+  answermediaurl: 'answerMediaUrl',
   notes: 'notes',
   break_after: 'breakAfter',
 };
@@ -75,7 +77,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
   if (missingColumns.length > 0) {
     throw new SheetFormatError(
       `Missing required column(s): ${missingColumns.join(', ')}. ` +
-        'Expected headers: round, type, question, options, answer, points, media_url, notes, break_after.',
+        'Expected headers: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after.',
     );
   }
 
@@ -97,6 +99,7 @@ export function parseSheetCsv(csvText: string): SheetRow[] {
         answer: cellFor('answer'),
         points: cellFor('points'),
         mediaUrl: cellFor('mediaUrl'),
+        answerMediaUrl: cellFor('answerMediaUrl'),
         notes: cellFor('notes'),
         breakAfter: cellFor('breakAfter'),
       },

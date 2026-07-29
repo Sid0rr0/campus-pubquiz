@@ -417,6 +417,61 @@ describe('DisplayPage', () => {
     );
   });
 
+  it('shows an answer_media_url image on reveal for a free_text question, independent of type', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r1q2',
+            type: 'free_text',
+            prompt: 'Name this flag.',
+            points: 3,
+            answer: 'France',
+            answerMediaUrl: 'https://example.com/france-flag.jpg',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('reveal-answer-image')).toHaveAttribute(
+      'src',
+      'https://example.com/france-flag.jpg',
+    );
+  });
+
+  it('renders an answer_media_url ending in an audio extension as audio, not an image', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r1q2',
+            type: 'free_text',
+            prompt: 'Name this flag.',
+            points: 3,
+            answer: 'France',
+            answerMediaUrl: 'https://example.com/anthem.mp3',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('reveal-answer-audio')).toHaveAttribute(
+      'src',
+      'https://example.com/anthem.mp3',
+    );
+    expect(screen.queryByTestId('reveal-answer-image')).not.toBeInTheDocument();
+  });
+
   it('shows a completion message once the quiz has ended', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
