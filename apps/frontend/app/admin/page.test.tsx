@@ -86,10 +86,26 @@ describe('AdminPage', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
+      listAnswers: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [],
+      },
+      gradeAnswer: vi.fn(),
     });
     render(<AdminPage />);
     expect(screen.getByText(/question_open/i)).toBeInTheDocument();
-    expect(screen.getByText(/name a fruit/i)).toBeInTheDocument();
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
   it('surfaces a connection error as an alert', () => {
@@ -348,11 +364,23 @@ describe('AdminPage', () => {
       snapshot: {
         progress: progress({ status: 'question_open' }),
         currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
       },
       connectionError: null,
       sendAction: vi.fn(),
+      listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
         answers: [
           {
             answerId: 'answer-1',
@@ -368,8 +396,60 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    expect(screen.getByText('The Quizzards')).toBeInTheDocument();
+    expect(screen.getAllByText('The Quizzards').length).toBeGreaterThan(0);
     expect(screen.getByText('Banana')).toBeInTheDocument();
+  });
+
+  it('shows every team even if it has not answered yet, and the round, question number and correct answer', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      listAnswers: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+          correctAnswer: 'Banana',
+          roundTitle: 'Fruit & Veg',
+          roundNumber: 2,
+          questionNumberInRound: 3,
+          totalQuestionsInRound: 4,
+        },
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: 0,
+            gradedAt: null,
+          },
+        ],
+      },
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByText(/round 2 \(fruit & veg\)/i)).toHaveTextContent('Q3 of 4');
+    expect(screen.getByText(/correct answer: banana/i)).toBeInTheDocument();
+    expect(screen.getByText('No answer yet')).toBeInTheDocument();
+
+    const unansweredRow = screen.getByText('No answer yet').closest('li');
+    expect(unansweredRow).toHaveClass('opacity-40');
+    expect(unansweredRow).toHaveTextContent('Beer Necessities');
+    expect(
+      screen.getByRole('button', { name: /grade beer necessities full points/i }),
+    ).toBeDisabled();
   });
 
   it('grades an ungraded answer with the full-points quick button', async () => {
@@ -381,12 +461,23 @@ describe('AdminPage', () => {
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
       },
       connectionError: null,
       sendAction: vi.fn(),
       listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 2,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
         answers: [
           {
             answerId: 'answer-1',
@@ -416,12 +507,23 @@ describe('AdminPage', () => {
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
       },
       connectionError: null,
       sendAction: vi.fn(),
       listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 2,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
         answers: [
           {
             answerId: 'answer-1',
@@ -450,12 +552,23 @@ describe('AdminPage', () => {
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
       },
       connectionError: null,
       sendAction: vi.fn(),
       listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 2,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
         answers: [
           {
             answerId: 'answer-1',

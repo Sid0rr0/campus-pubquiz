@@ -24,6 +24,7 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
   rounds: [
     {
       id: 11,
+      title: 'General Knowledge',
       breakAfter: false,
       questions: [
         {
@@ -45,6 +46,7 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
     },
     {
       id: 12,
+      title: 'Landmarks & Flags',
       breakAfter: true,
       questions: [
         {
@@ -74,6 +76,7 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
   rounds: [
     {
       id: 13,
+      title: 'Imported Round',
       breakAfter: true,
       questions: [
         {
@@ -707,6 +710,34 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // current question: iq1
 
       expect(service.getSnapshot().answeredTeamIds).toEqual([]);
+    });
+  });
+
+  describe('getAdminQuestionContext', () => {
+    it('returns the correct answer and round position for a question', () => {
+      expect(service.getAdminQuestionContext(23)).toEqual({
+        type: 'picture',
+        prompt: 'Which landmark is shown?',
+        mediaUrl: 'https://example.com/landmark.jpg',
+        points: 3,
+        correctAnswer: 'Eiffel Tower',
+        roundTitle: 'Landmarks & Flags',
+        roundNumber: 2,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 2,
+      });
+    });
+
+    it('numbers a question within its own round, not the whole quiz', () => {
+      expect(service.getAdminQuestionContext(22)).toMatchObject({
+        roundNumber: 1,
+        questionNumberInRound: 2,
+        totalQuestionsInRound: 2,
+      });
+    });
+
+    it('returns null for an unknown question id', () => {
+      expect(service.getAdminQuestionContext(999999)).toBeNull();
     });
   });
 });

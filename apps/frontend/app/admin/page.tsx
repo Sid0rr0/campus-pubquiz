@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import type { AnswerView, QuestionView } from '@campus-pubquiz/types';
+import type { QuestionView } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RoundsList } from '@/app/components/rounds-list';
 import { ImportPanel } from '@/app/admin/import-panel';
+import { AnswersPanel } from '@/app/admin/answers-panel';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
 const EMPTY_QUESTIONS: QuestionView[] = [];
@@ -17,63 +18,6 @@ function getStoredAdminPassword(): string {
   }
 
   return window.localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) ?? '';
-}
-
-interface GradeRowProps {
-  answer: AnswerView;
-  maxPoints: number;
-  onGrade: (points: number) => void;
-}
-
-interface GradeOption {
-  display: string;
-  ariaSuffix: string;
-  value: number;
-}
-
-function gradeOptions(maxPoints: number): GradeOption[] {
-  return [
-    { display: '0', ariaSuffix: '0 points', value: 0 },
-    { display: '½', ariaSuffix: 'half points', value: maxPoints / 2 },
-    { display: String(maxPoints), ariaSuffix: 'full points', value: maxPoints },
-  ];
-}
-
-function GradeRow({ answer, maxPoints, onGrade }: GradeRowProps) {
-  const isGraded = answer.gradedAt !== null;
-  const options = gradeOptions(maxPoints);
-  const matchesAGradeOption = options.some((option) => option.value === answer.pointsAwarded);
-
-  return (
-    <li className="flex items-center gap-3.5 rounded-xl border border-foreground/15 bg-white px-4 py-3">
-      <span className="w-40 shrink-0 font-extrabold">{answer.teamName}</span>
-      <span className="flex-1 text-[15px]">{answer.value}</span>
-      {isGraded && !matchesAGradeOption && (
-        <span className="sr-only">Awarded {answer.pointsAwarded} points</span>
-      )}
-      <div className="flex gap-1.5">
-        {options.map(({ display, ariaSuffix, value }) => {
-          const isSelected = isGraded && answer.pointsAwarded === value;
-          return (
-            <button
-              key={display}
-              type="button"
-              disabled={isGraded}
-              aria-label={`Grade ${answer.teamName} ${ariaSuffix}`}
-              onClick={() => onGrade(value)}
-              className={
-                isSelected
-                  ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green font-extrabold text-white'
-                  : 'flex h-9 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40'
-              }
-            >
-              {isSelected ? `✓ ${value}` : display}
-            </button>
-          );
-        })}
-      </div>
-    </li>
-  );
 }
 
 export default function AdminPage() {
@@ -145,11 +89,14 @@ export default function AdminPage() {
     }
   }, [gameStatus]);
 
+  const currentQuestionId = gameStatus === 'question_open' ? snapshot?.currentQuestion?.id : undefined;
+  const answersToTrackId = gameStatus === 'break' ? gradingQuestionId : currentQuestionId;
+
   useEffect(() => {
-    if (gradingQuestionId) {
-      listAnswers(gradingQuestionId);
+    if (answersToTrackId) {
+      listAnswers(answersToTrackId);
     }
-  }, [gradingQuestionId, listAnswers]);
+  }, [answersToTrackId, listAnswers]);
 
   function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -237,7 +184,6 @@ export default function AdminPage() {
         )}
         {activeQuizTitle && <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>}
         <p className="text-sm font-bold">Status: {progress.status} ({snapshot?.joinCode})</p>
-        {currentQuestion && <p className="text-sm">Current question: {currentQuestion.prompt}</p>}
         <div className="flex flex-col gap-2">
           {canStartQuiz && (
             <button
@@ -410,61 +356,53 @@ export default function AdminPage() {
           </section>
         )}
         {progress.status === 'break' && gradingQuestion && (
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl">
-                Grading question {safeGradingIndex + 1} of {gradingQuestions.length}
-              </h2>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  aria-label="Previous question"
-                  disabled={safeGradingIndex === 0}
-                  onClick={() => setGradingIndex(safeGradingIndex - 1)}
-                  className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next question"
-                  disabled={safeGradingIndex >= gradingQuestions.length - 1}
-                  onClick={() => setGradingIndex(safeGradingIndex + 1)}
-                  className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-            <p className="text-[15px] font-bold">{gradingQuestion.prompt}</p>
-            {liveAnswers && liveAnswers.questionId === gradingQuestion.id && (
-              <ul className="flex flex-col gap-2">
-                {liveAnswers.answers.map((answer) => (
-                  <GradeRow
-                    key={answer.answerId}
-                    answer={answer}
-                    maxPoints={gradingQuestion.points}
-                    onGrade={(points) => gradeAnswer(answer.answerId, points)}
-                  />
-                ))}
-              </ul>
+          <>
+            {liveAnswers && liveAnswers.questionId === gradingQuestion.id ? (
+              <AnswersPanel
+                liveAnswers={liveAnswers}
+                teams={teams}
+                onGrade={gradeAnswer}
+                nav={{
+                  index: safeGradingIndex,
+                  total: gradingQuestions.length,
+                  onPrevious: () => setGradingIndex(safeGradingIndex - 1),
+                  onNext: () => setGradingIndex(safeGradingIndex + 1),
+                }}
+              />
+            ) : (
+              <section className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-xl">
+                    Grading question {safeGradingIndex + 1} of {gradingQuestions.length}
+                  </h2>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      aria-label="Previous question"
+                      disabled={safeGradingIndex === 0}
+                      onClick={() => setGradingIndex(safeGradingIndex - 1)}
+                      className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Next question"
+                      disabled={safeGradingIndex >= gradingQuestions.length - 1}
+                      onClick={() => setGradingIndex(safeGradingIndex + 1)}
+                      className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[15px] font-bold">{gradingQuestion.prompt}</p>
+              </section>
             )}
-          </section>
+          </>
         )}
         {showGrading && (
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-xl">Answers</h2>
-            <ul className="flex flex-col gap-2">
-              {liveAnswers.answers.map((answer) => (
-                <GradeRow
-                  key={answer.answerId}
-                  answer={answer}
-                  maxPoints={currentQuestion.points}
-                  onGrade={(points) => gradeAnswer(answer.answerId, points)}
-                />
-              ))}
-            </ul>
-          </section>
+          <AnswersPanel liveAnswers={liveAnswers} teams={teams} onGrade={gradeAnswer} />
         )}
         {leaderboard.length > 0 && (
           <section className="flex flex-col gap-3">

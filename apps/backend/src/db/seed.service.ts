@@ -86,6 +86,7 @@ export class SeedService {
 
       rounds.push({
         id: roundRow.id,
+        title: roundRow.title,
         breakAfter: roundRow.breakAfter,
         questions: questionRows.map((row) => ({
           id: row.id,
@@ -143,6 +144,7 @@ export class SeedService {
 
       rounds.push({
         id: roundRow.id,
+        title: roundRow.title,
         breakAfter: roundRow.breakAfter,
         questions,
       });

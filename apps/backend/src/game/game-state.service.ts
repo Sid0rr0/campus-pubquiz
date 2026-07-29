@@ -4,6 +4,7 @@ import {
   getBlockStartRoundIndex,
   getNextGameState,
   getQuizStructureSummary,
+  type AdminQuestionContext,
   type GameAction,
   type GameContext,
   type GameProgress,
@@ -263,6 +264,40 @@ export class GameStateService implements OnModuleInit {
       return [];
     }
     return this.getBlockSeededQuestions();
+  }
+
+  /**
+   * Correct answer + round position for a question, for the admin grading
+   * view alone. Callers MUST only forward this over an admin-room-only
+   * channel (ANSWERS_UPDATED) — never through the broadcast snapshot.
+   */
+  getAdminQuestionContext(questionId: number): AdminQuestionContext | null {
+    const rounds = this.getSeededGame().rounds;
+    for (const [roundOffset, round] of rounds.entries()) {
+      const questionOffset = round.questions.findIndex(
+        (question) => question.id === questionId,
+      );
+      if (questionOffset === -1) continue;
+
+      const question = round.questions[questionOffset];
+      return {
+        type: question.type,
+        prompt: question.prompt,
+        ...(question.options !== undefined
+          ? { options: question.options }
+          : {}),
+        ...(question.mediaUrl !== undefined
+          ? { mediaUrl: question.mediaUrl }
+          : {}),
+        points: question.points,
+        correctAnswer: question.answer,
+        roundTitle: round.title,
+        roundNumber: roundOffset + 1,
+        questionNumberInRound: questionOffset + 1,
+        totalQuestionsInRound: round.questions.length,
+      };
+    }
+    return null;
   }
 
   private getAnsweredTeamIds(): number[] {

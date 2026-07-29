@@ -119,8 +119,29 @@ export interface AnswerView {
   gradedAt: string | null;
 }
 
+/**
+ * Question context for the admin grading view — includes the correct answer
+ * and round position. Only ever sent over ANSWERS_UPDATED, which is emitted
+ * to the admin room alone; players and the display must never receive it.
+ */
+export interface AdminQuestionContext {
+  type: QuestionType;
+  prompt: string;
+  options?: string[];
+  mediaUrl?: string;
+  points: number;
+  correctAnswer: string;
+  roundTitle: string;
+  /** 1-based position of this question's round within the quiz. */
+  roundNumber: number;
+  /** 1-based position of this question within its round. */
+  questionNumberInRound: number;
+  totalQuestionsInRound: number;
+}
+
 export interface AnswersUpdatedPayload {
   questionId: number;
+  question: AdminQuestionContext;
   answers: AnswerView[];
 }
 

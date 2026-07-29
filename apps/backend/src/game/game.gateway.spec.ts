@@ -31,6 +31,7 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
   rounds: [
     {
       id: 11,
+      title: 'Round 1',
       breakAfter: false,
       questions: [
         {
@@ -52,6 +53,7 @@ const IMPORTED_QUIZ_GAME: SeededGame = {
   rounds: [
     {
       id: 13,
+      title: 'Imported Round',
       breakAfter: true,
       questions: [
         {
@@ -500,6 +502,16 @@ describe('GameGateway', () => {
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
       questionId: 21,
+      question: {
+        type: 'free_text',
+        prompt: 'Q1',
+        points: 1,
+        correctAnswer: 'A1',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
       answers: [
         {
           answerId: 41,
@@ -597,6 +609,16 @@ describe('GameGateway', () => {
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
       questionId: 21,
+      question: {
+        type: 'free_text',
+        prompt: 'Q1',
+        points: 1,
+        correctAnswer: 'A1',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
       answers: [
         {
           answerId: 41,
@@ -706,6 +728,16 @@ describe('GameGateway', () => {
     expect(answerService.listForQuestion).toHaveBeenCalledWith(101, 21);
     expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
       questionId: 21,
+      question: {
+        type: 'free_text',
+        prompt: 'Q1',
+        points: 1,
+        correctAnswer: 'A1',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
       answers: [
         {
           answerId: 41,

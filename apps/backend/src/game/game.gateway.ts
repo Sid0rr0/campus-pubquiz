@@ -15,6 +15,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type AdminActionPayload,
+  type AnswersUpdatedPayload,
   type GradeAnswerPayload,
   type JoinPlayersPayload,
   type KickTeamPayload,
@@ -221,10 +222,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gameState.getGameSessionId(),
       payload.questionId,
     );
-    this.server.to(SOCKET_ROOMS.ADMIN).emit(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: payload.questionId,
-      answers,
-    });
+    this.server
+      .to(SOCKET_ROOMS.ADMIN)
+      .emit(
+        SOCKET_EVENTS.ANSWERS_UPDATED,
+        this.buildAnswersUpdatedPayload(payload.questionId, answers),
+      );
 
     this.gameState.setAnsweredTeamIds(
       payload.questionId,
@@ -262,10 +265,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       gameSessionId,
       questionId,
     );
-    this.server.to(SOCKET_ROOMS.ADMIN).emit(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId,
-      answers,
-    });
+    this.server
+      .to(SOCKET_ROOMS.ADMIN)
+      .emit(
+        SOCKET_EVENTS.ANSWERS_UPDATED,
+        this.buildAnswersUpdatedPayload(questionId, answers),
+      );
 
     const leaderboard =
       await this.answerService.computeLeaderboard(gameSessionId);
@@ -342,10 +347,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gameState.getGameSessionId(),
       payload.questionId,
     );
-    client.emit(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: payload.questionId,
-      answers,
-    });
+    client.emit(
+      SOCKET_EVENTS.ANSWERS_UPDATED,
+      this.buildAnswersUpdatedPayload(payload.questionId, answers),
+    );
   }
 
   @SubscribeMessage(SOCKET_EVENTS.KICK_TEAM)
@@ -372,6 +377,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       'You were removed from this team by the quiz master',
     );
     targetSocket.disconnect(true);
+  }
+
+  private buildAnswersUpdatedPayload(
+    questionId: number,
+    answers: AnswersUpdatedPayload['answers'],
+  ): AnswersUpdatedPayload {
+    const question = this.gameState.getAdminQuestionContext(questionId);
+    if (!question) {
+      throw new WsException(`Unknown question ${questionId}`);
+    }
+    return { questionId, question, answers };
   }
 
   private isValidAdminPassword(client: Socket): boolean {
