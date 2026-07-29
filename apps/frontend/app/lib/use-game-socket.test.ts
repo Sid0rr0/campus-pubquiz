@@ -199,12 +199,12 @@ describe('useGameSocket', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      result.current.submitAnswer('r1q1', 'team-1', 'Banana');
+      result.current.submitAnswer(1, 1, 'Banana');
     });
 
     expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.SUBMIT_ANSWER, {
-      questionId: 'r1q1',
-      teamId: 'team-1',
+      questionId: 1,
+      teamId: 1,
       value: 'Banana',
     });
   });
@@ -238,11 +238,11 @@ describe('useGameSocket', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      result.current.gradeAnswer('answer-1', 2);
+      result.current.gradeAnswer(1, 2);
     });
 
     expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.GRADE_ANSWER, {
-      answerId: 'answer-1',
+      answerId: 1,
       pointsAwarded: 2,
     });
   });
@@ -263,11 +263,11 @@ describe('useGameSocket', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      result.current.selectQuiz('quiz-2');
+      result.current.selectQuiz(2);
     });
 
     expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.SELECT_QUIZ, {
-      quizId: 'quiz-2',
+      quizId: 2,
     });
   });
 
@@ -276,11 +276,11 @@ describe('useGameSocket', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      result.current.listAnswers('r1q1');
+      result.current.listAnswers(1);
     });
 
     expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.LIST_ANSWERS, {
-      questionId: 'r1q1',
+      questionId: 1,
     });
   });
 

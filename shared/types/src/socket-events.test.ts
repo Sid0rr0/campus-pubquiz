@@ -25,6 +25,7 @@ describe('SOCKET_EVENTS', () => {
       LIST_QUIZZES: 'game:list_quizzes',
       SELECT_QUIZ: 'game:select_quiz',
       LIST_ANSWERS: 'game:list_answers',
+      KICK_TEAM: 'game:kick_team',
     });
   });
 });
@@ -37,19 +38,22 @@ describe('block answering payloads', () => {
         roundIndex: 0,
         questionIndex: 1,
         isLeaderboardVisible: false,
+        revealIndex: 0,
       },
-      currentQuestion: { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10 },
+      quizStructure: { blockCount: 1, topicsPerBlock: 1 },
+      roundTitle: 'Round 1',
+      currentQuestion: { id: 2, type: 'free_text', prompt: 'Second?', points: 10 },
       blockQuestions: [
-        { id: 'q-1', type: 'free_text', prompt: 'First?', points: 10 },
-        { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10 },
+        { id: 1, type: 'free_text', prompt: 'First?', points: 10 },
+        { id: 2, type: 'free_text', prompt: 'Second?', points: 10 },
       ],
       revealQuestions: [],
-      answeredTeamIds: ['team-1'],
+      answeredTeamIds: [1],
       leaderboard: [],
       joinCode: 'ABC234',
-      teams: [{ teamId: 'team-1', teamName: 'Quizzards' }],
+      teams: [{ teamId: 1, teamName: 'Quizzards', isConnected: true }],
     };
-    const listAnswers: ListAnswersPayload = { questionId: 'q-1' };
+    const listAnswers: ListAnswersPayload = { questionId: 1 };
 
     expect(snapshot.blockQuestions.map((question) => question.id)).toContain(
       listAnswers.questionId,
@@ -64,12 +68,15 @@ describe('block answering payloads', () => {
         roundIndex: 0,
         questionIndex: 1,
         isLeaderboardVisible: false,
+        revealIndex: 0,
       },
+      quizStructure: { blockCount: 1, topicsPerBlock: 1 },
+      roundTitle: 'Round 1',
       currentQuestion: null,
       blockQuestions: [],
       revealQuestions: [
-        { id: 'q-1', type: 'free_text', prompt: 'First?', points: 10, answer: 'One' },
-        { id: 'q-2', type: 'free_text', prompt: 'Second?', points: 10, answer: 'Two' },
+        { id: 1, type: 'free_text', prompt: 'First?', points: 10, answer: 'One' },
+        { id: 2, type: 'free_text', prompt: 'Second?', points: 10, answer: 'Two' },
       ],
       answeredTeamIds: [],
       leaderboard: [],
@@ -85,36 +92,37 @@ describe('block answering payloads', () => {
 
   it('returns the team saved answers on join so a reconnecting phone restores its checkmarks', () => {
     const joined: JoinAcceptedPayload = {
-      teamId: 'team-1',
+      teamId: 1,
       teamToken: 'token-1',
+      teamCode: 'ABC234',
       teamName: 'Quizzards',
-      answers: [{ questionId: 'q-1', value: '42' }],
+      answers: [{ questionId: 1, value: '42' }],
     };
 
-    expect(joined.answers).toEqual([{ questionId: 'q-1', value: '42' }]);
+    expect(joined.answers).toEqual([{ questionId: 1, value: '42' }]);
   });
 });
 
 describe('quiz selection payloads', () => {
   it('carries quiz summaries and the active quiz id so the admin can pick a quiz', () => {
     const listed: QuizzesListedPayload = {
-      activeQuizId: 'quiz-1',
+      activeQuizId: 1,
       quizzes: [
         {
-          id: 'quiz-1',
+          id: 1,
           title: 'Campus Pub Quiz Night',
           rounds: [
             {
               title: 'Round 1',
               breakAfter: false,
-              questions: [{ id: 'q-1', prompt: 'Name a fruit', answer: 'Banana' }],
+              questions: [{ id: 1, prompt: 'Name a fruit', answer: 'Banana' }],
             },
           ],
         },
-        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+        { id: 2, title: 'Imported Quiz', rounds: [] },
       ],
     };
-    const select: SelectQuizPayload = { quizId: 'quiz-2' };
+    const select: SelectQuizPayload = { quizId: 2 };
 
     expect(listed.quizzes.map((quiz) => quiz.id)).toContain(select.quizId);
   });

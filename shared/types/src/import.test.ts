@@ -92,7 +92,7 @@ describe('import payload contracts', () => {
       quizTitle: 'Trivia Night #4',
     };
     const result: ImportConfirmResult = {
-      quizId: 'quiz-1',
+      quizId: 1,
       roundCount: 2,
       questionCount: 10,
     };
