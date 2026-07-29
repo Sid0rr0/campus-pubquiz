@@ -21,7 +21,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
       breakAfter: false,
       questions: [
         {
-          id: 'r1q1',
+          id: 1,
           type: 'multiple_choice',
           prompt: 'Capital of France?',
           options: ['Paris', 'London', 'Berlin', 'Rome'],
@@ -29,7 +29,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           points: 2,
         },
         {
-          id: 'r1q2',
+          id: 2,
           type: 'free_text',
           prompt: 'Name the largest planet in the solar system.',
           answer: 'Jupiter',
@@ -42,7 +42,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
       breakAfter: true,
       questions: [
         {
-          id: 'r2q1',
+          id: 3,
           type: 'picture',
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
@@ -50,14 +50,14 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           points: 3,
         },
         {
-          id: 'r2q2',
+          id: 4,
           type: 'free_text',
           prompt: 'Name this flag.',
           answer: 'France',
           points: 3,
         },
         {
-          id: 'r2q3',
+          id: 5,
           type: 'audio',
           prompt: 'Name this song.',
           mediaUrl: 'https://example.com/song.mp3',

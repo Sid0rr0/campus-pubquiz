@@ -2,10 +2,14 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Client } from 'pg';
-import * as schema from '@/db/schema';
+import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Team } from '@/db/entities/team.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { TeamRepository } from '@/db/repositories/team.repository';
 import {
   InvalidJoinCodeError,
   TeamCodeRequiredError,
@@ -14,52 +18,57 @@ import {
 
 describe('TeamService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;
-  let client: Client;
-  let db: NodePgDatabase<typeof schema>;
+  let orm: MikroORM;
+  let em: EntityManager;
   let teamService: TeamService;
-  let sessionId: string;
+  let sessionId: number;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    client = new Client({ connectionString: container.getConnectionUri() });
-    await client.connect();
-    db = drizzle(client, { schema });
-    await migrate(db, { migrationsFolder: './drizzle' });
+    orm = await MikroORM.init({
+      clientUrl: container.getConnectionUri(),
+      entities: ['./dist/db/entities/*.entity.js'],
+      entitiesTs: ['./src/db/entities/*.entity.ts'],
+      migrations: {
+        path: './dist/db/migrations',
+        pathTs: './src/db/migrations',
+      },
+    });
+    await orm.getMigrator().up();
   }, 60_000);
 
   afterAll(async () => {
-    await client.end();
+    await orm.close(true);
     await container.stop();
   });
 
   beforeEach(async () => {
-    teamService = new TeamService(db);
-    const [quiz] = await db
-      .insert(schema.quizzes)
-      .values({ title: 'Team Test Quiz' })
-      .returning();
-    const [session] = await db
-      .insert(schema.gameSessions)
-      .values({ quizId: quiz.id, joinCode: 'ABCDEF' })
-      .returning();
+    em = orm.em.fork();
+    teamService = new TeamService(
+      em.getRepository<Team, TeamRepository>(Team),
+      em.getRepository<GameSession, GameSessionRepository>(GameSession),
+      em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
+        GameSessionTeam,
+      ),
+    );
+    const quiz = em.create(Quiz, { title: 'Team Test Quiz' });
+    const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });
+    await em.flush();
     sessionId = session.id;
   });
 
   afterEach(async () => {
-    await client.query(
-      'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
-    );
+    await em
+      .getConnection()
+      .execute(
+        'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      );
   });
 
-  async function createSecondSession(joinCode: string): Promise<string> {
-    const [quiz] = await db
-      .insert(schema.quizzes)
-      .values({ title: 'Second Quiz' })
-      .returning();
-    const [session] = await db
-      .insert(schema.gameSessions)
-      .values({ quizId: quiz.id, joinCode })
-      .returning();
+  async function createSecondSession(joinCode: string): Promise<number> {
+    const quiz = em.create(Quiz, { title: 'Second Quiz' });
+    const session = em.create(GameSession, { quiz, joinCode });
+    await em.flush();
     return session.id;
   }
 
@@ -87,7 +96,7 @@ describe('TeamService (Postgres integration)', () => {
       teamService.join(sessionId, 'The Quizzards', { joinCode: 'WRONG1' }),
     ).rejects.toThrow(InvalidJoinCodeError);
 
-    const rows = await db.select().from(schema.teams);
+    const rows = await em.find(Team, {});
     expect(rows).toHaveLength(0);
   });
 
@@ -108,7 +117,7 @@ describe('TeamService (Postgres integration)', () => {
     expect(rejoined.id).toBe(created.id);
     expect(rejoined.name).toBe('The Quizzards');
 
-    const rows = await db.select().from(schema.teams);
+    const rows = await em.find(Team, {});
     expect(rows).toHaveLength(1);
   });
 
@@ -119,7 +128,7 @@ describe('TeamService (Postgres integration)', () => {
       teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' }),
     ).rejects.toThrow(TeamCodeRequiredError);
 
-    const rows = await db.select().from(schema.teams);
+    const rows = await em.find(Team, {});
     expect(rows).toHaveLength(1);
   });
 
@@ -136,7 +145,7 @@ describe('TeamService (Postgres integration)', () => {
     expect(secondDevice.id).toBe(created.id);
     expect(secondDevice.token).toBe(created.token);
 
-    const rows = await db.select().from(schema.gameSessionTeams);
+    const rows = await em.find(GameSessionTeam, {});
     expect(rows).toHaveLength(1);
   });
 
@@ -154,10 +163,10 @@ describe('TeamService (Postgres integration)', () => {
     expect(rejoined.id).toBe(original.id);
     expect(rejoined.token).toBe(original.token);
 
-    const rows = await db.select().from(schema.teams);
+    const rows = await em.find(Team, {});
     expect(rows).toHaveLength(1);
 
-    const roster = await db.select().from(schema.gameSessionTeams);
+    const roster = await em.find(GameSessionTeam, {});
     expect(roster).toHaveLength(2);
   });
 
@@ -174,7 +183,7 @@ describe('TeamService (Postgres integration)', () => {
 
     expect(rejoined.id).toBe(original.id);
 
-    const rows = await db.select().from(schema.teams);
+    const rows = await em.find(Team, {});
     expect(rows).toHaveLength(1);
   });
 
@@ -201,7 +210,7 @@ describe('TeamService (Postgres integration)', () => {
       teamService.join(session2Id, 'The Quizzards', { joinCode: 'GHIJKL' }),
     ).rejects.toThrow(TeamCodeRequiredError);
 
-    const rows = await db.select().from(schema.teams);
+    const rows = await em.find(Team, {});
     expect(rows).toHaveLength(1);
   });
 

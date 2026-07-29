@@ -1,54 +1,69 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
   LeaderboardEntry,
   TeamAnswerView,
 } from '@campus-pubquiz/types';
-import { DRIZZLE } from '@/db/db.constants';
-import * as schema from '@/db/schema';
+import { Answer } from '@/db/entities/answer.entity';
+import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Team } from '@/db/entities/team.entity';
+import { AnswerRepository } from '@/db/repositories/answer.repository';
+import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { TeamRepository } from '@/db/repositories/team.repository';
 
 export interface SubmittedAnswer {
-  answerId: string;
-  teamId: string;
+  answerId: number;
+  teamId: number;
   teamName: string;
   value: string;
 }
 
 export interface GradedAnswer {
-  questionId: string;
+  questionId: number;
+}
+
+interface LeaderboardRow {
+  teamId: number;
+  teamName: string;
+  totalPoints: string | number;
 }
 
 @Injectable()
 export class AnswerService {
   constructor(
-    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+    @InjectRepository(Answer) private readonly answers: AnswerRepository,
+    @InjectRepository(Team) private readonly teams: TeamRepository,
+    @InjectRepository(GameSessionTeam)
+    private readonly gameSessionTeams: GameSessionTeamRepository,
   ) {}
 
   async submit(
-    gameSessionId: string,
-    questionId: string,
-    teamId: string,
+    gameSessionId: number,
+    questionId: number,
+    teamId: number,
     value: string,
   ): Promise<SubmittedAnswer> {
-    const [answer] = await this.db
-      .insert(schema.answers)
-      .values({ gameSessionId, questionId, teamId, value })
-      .onConflictDoUpdate({
-        target: [
-          schema.answers.gameSessionId,
-          schema.answers.questionId,
-          schema.answers.teamId,
-        ],
-        set: { value, updatedAt: new Date() },
-      })
-      .returning();
+    // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
+    // timestamps explicitly (see TeamService.addToRoster for the same fix).
+    const now = new Date();
+    const answer = await this.answers.upsert(
+      {
+        gameSession: gameSessionId,
+        question: questionId,
+        team: teamId,
+        value,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        onConflictFields: ['gameSession', 'question', 'team'],
+        onConflictAction: 'merge',
+        onConflictMergeFields: ['value', 'updatedAt'],
+      },
+    );
 
-    const [team] = await this.db
-      .select({ name: schema.teams.name })
-      .from(schema.teams)
-      .where(eq(schema.teams.id, teamId));
+    const team = await this.teams.findOneOrFail(teamId, { fields: ['name'] });
 
     return {
       answerId: answer.id,
@@ -59,80 +74,64 @@ export class AnswerService {
   }
 
   async listForQuestion(
-    gameSessionId: string,
-    questionId: string,
+    gameSessionId: number,
+    questionId: number,
   ): Promise<AnswerView[]> {
-    return this.db
-      .select({
-        answerId: schema.answers.id,
-        teamId: schema.answers.teamId,
-        teamName: schema.teams.name,
-        value: schema.answers.value,
-        pointsAwarded: schema.answers.pointsAwarded,
-      })
-      .from(schema.answers)
-      .innerJoin(schema.teams, eq(schema.answers.teamId, schema.teams.id))
-      .where(
-        and(
-          eq(schema.answers.gameSessionId, gameSessionId),
-          eq(schema.answers.questionId, questionId),
-        ),
-      )
-      .orderBy(asc(schema.teams.name));
+    const rows = await this.answers.find(
+      { gameSession: gameSessionId, question: questionId },
+      { populate: ['team'], orderBy: { team: { name: 'asc' } } },
+    );
+    return rows.map((row) => ({
+      answerId: row.id,
+      teamId: row.team.id,
+      teamName: row.team.name,
+      value: row.value,
+      pointsAwarded: row.pointsAwarded,
+      gradedAt: row.gradedAt?.toISOString() ?? null,
+    }));
   }
 
   async listForTeam(
-    gameSessionId: string,
-    teamId: string,
+    gameSessionId: number,
+    teamId: number,
   ): Promise<TeamAnswerView[]> {
-    return this.db
-      .select({
-        questionId: schema.answers.questionId,
-        value: schema.answers.value,
-      })
-      .from(schema.answers)
-      .where(
-        and(
-          eq(schema.answers.gameSessionId, gameSessionId),
-          eq(schema.answers.teamId, teamId),
-        ),
-      );
+    const rows = await this.answers.find({
+      gameSession: gameSessionId,
+      team: teamId,
+    });
+    return rows.map((row) => ({
+      questionId: row.question.id,
+      value: row.value,
+    }));
   }
 
-  async grade(answerId: string, pointsAwarded: number): Promise<GradedAnswer> {
-    const [answer] = await this.db
-      .update(schema.answers)
-      .set({ pointsAwarded, gradedAt: new Date() })
-      .where(eq(schema.answers.id, answerId))
-      .returning();
-
-    return { questionId: answer.questionId };
+  async grade(answerId: number, pointsAwarded: number): Promise<GradedAnswer> {
+    const answer = await this.answers.findOneOrFail(answerId);
+    answer.pointsAwarded = pointsAwarded;
+    answer.gradedAt = new Date();
+    await this.answers.getEntityManager().flush();
+    return { questionId: answer.question.id };
   }
 
-  async computeLeaderboard(gameSessionId: string): Promise<LeaderboardEntry[]> {
-    const totalPoints = sql<number>`coalesce(sum(${schema.answers.pointsAwarded}), 0)`;
-
-    const rows = await this.db
-      .select({
-        teamId: schema.teams.id,
-        teamName: schema.teams.name,
-        totalPoints,
+  async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {
+    const knex = this.gameSessionTeams.getKnex();
+    const rows = (await knex('game_session_teams as gst')
+      .join('teams as t', 't.id', 'gst.team_id')
+      .leftJoin('answers as a', function join() {
+        this.on('a.team_id', '=', 't.id').andOn(
+          'a.game_session_id',
+          '=',
+          knex.raw('?', [gameSessionId]),
+        );
       })
-      .from(schema.gameSessionTeams)
-      .innerJoin(
-        schema.teams,
-        eq(schema.gameSessionTeams.teamId, schema.teams.id),
-      )
-      .leftJoin(
-        schema.answers,
-        and(
-          eq(schema.answers.teamId, schema.teams.id),
-          eq(schema.answers.gameSessionId, gameSessionId),
-        ),
-      )
-      .where(eq(schema.gameSessionTeams.gameSessionId, gameSessionId))
-      .groupBy(schema.teams.id, schema.teams.name)
-      .orderBy(desc(totalPoints), asc(schema.teams.name));
+      .where('gst.game_session_id', gameSessionId)
+      .groupBy('t.id', 't.name')
+      .select('t.id as teamId', 't.name as teamName')
+      .select(knex.raw('coalesce(sum(a.points_awarded), 0) as "totalPoints"'))
+      .orderBy([
+        { column: 'totalPoints', order: 'desc' },
+        { column: 't.name', order: 'asc' },
+      ])) as LeaderboardRow[];
 
     return rows.map((row) => ({
       teamId: row.teamId,

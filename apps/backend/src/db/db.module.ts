@@ -1,24 +1,28 @@
 import { Global, Module } from '@nestjs/common';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import { DRIZZLE } from '@/db/db.constants';
-import * as schema from '@/db/schema';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { Answer } from '@/db/entities/answer.entity';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Question } from '@/db/entities/question.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
+import { Team } from '@/db/entities/team.entity';
+import config from '@/mikro-orm.config';
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: DRIZZLE,
-      useFactory: () => {
-        const pool = new Pool({
-          connectionString:
-            process.env.DATABASE_URL ??
-            'postgres://postgres:postgres@localhost:5432/campus_pubquiz',
-        });
-        return drizzle(pool, { schema });
-      },
-    },
+  imports: [
+    MikroOrmModule.forRoot(config),
+    MikroOrmModule.forFeature([
+      Quiz,
+      Round,
+      Question,
+      GameSession,
+      Team,
+      GameSessionTeam,
+      Answer,
+    ]),
   ],
-  exports: [DRIZZLE],
+  exports: [MikroOrmModule],
 })
 export class DbModule {}

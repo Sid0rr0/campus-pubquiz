@@ -1,1 +1,0 @@
-ALTER TABLE "game_sessions" ADD COLUMN "reveal_index" integer DEFAULT 0 NOT NULL;

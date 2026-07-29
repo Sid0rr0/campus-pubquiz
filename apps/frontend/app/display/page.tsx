@@ -37,9 +37,9 @@ function ScatteredTeamNames({ teams }: ScatteredTeamNamesProps) {
         <span
           key={team.teamId}
           style={{
-            left: `${SCATTER_LEFT_RANGE.min + hashToUnit(team.teamId, 1) * SCATTER_LEFT_RANGE.span}%`,
-            top: `${SCATTER_TOP_RANGE.min + hashToUnit(team.teamId, 2) * SCATTER_TOP_RANGE.span}%`,
-            transform: `rotate(${(hashToUnit(team.teamId, 3) * 2 - 1) * SCATTER_TILT_MAX_DEG}deg)`,
+            left: `${SCATTER_LEFT_RANGE.min + hashToUnit(String(team.teamId), 1) * SCATTER_LEFT_RANGE.span}%`,
+            top: `${SCATTER_TOP_RANGE.min + hashToUnit(String(team.teamId), 2) * SCATTER_TOP_RANGE.span}%`,
+            transform: `rotate(${(hashToUnit(String(team.teamId), 3) * 2 - 1) * SCATTER_TILT_MAX_DEG}deg)`,
           }}
           className={`absolute font-display text-2xl ${SCATTER_TEXT_CLASSES[index % SCATTER_TEXT_CLASSES.length]}`}
         >

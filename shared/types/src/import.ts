@@ -58,7 +58,7 @@ export interface ImportRequest {
 }
 
 export interface ImportConfirmResult {
-  quizId: string;
+  quizId: number;
   roundCount: number;
   questionCount: number;
 }

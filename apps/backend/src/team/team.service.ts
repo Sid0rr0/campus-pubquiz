@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { DRIZZLE } from '@/db/db.constants';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { UniqueConstraintViolationException } from '@mikro-orm/core';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Team } from '@/db/entities/team.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { TeamRepository } from '@/db/repositories/team.repository';
 import { generateJoinCode } from '@/db/join-code.util';
-import * as schema from '@/db/schema';
-
-const UNIQUE_VIOLATION_CODE = '23505';
 
 export class TeamNameTakenError extends Error {
   constructor(teamName: string) {
@@ -32,7 +34,7 @@ export class InvalidJoinCodeError extends Error {
 }
 
 export interface TeamIdentity {
-  id: string;
+  id: number;
   name: string;
   token: string;
   code: string;
@@ -46,28 +48,29 @@ export interface JoinOptions {
 
 /** DB-only roster shape — live connection state is layered on by GameStateService. */
 export interface TeamRosterEntry {
-  teamId: string;
+  teamId: number;
   teamName: string;
 }
 
 @Injectable()
 export class TeamService {
   constructor(
-    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+    @InjectRepository(Team) private readonly teams: TeamRepository,
+    @InjectRepository(GameSession)
+    private readonly gameSessions: GameSessionRepository,
+    @InjectRepository(GameSessionTeam)
+    private readonly gameSessionTeams: GameSessionTeamRepository,
   ) {}
 
   async join(
-    gameSessionId: string,
+    gameSessionId: number,
     teamName: string,
     options: JoinOptions = {},
   ): Promise<TeamIdentity> {
     const trimmedName = teamName.trim();
 
     if (options.teamToken) {
-      const [existing] = await this.db
-        .select()
-        .from(schema.teams)
-        .where(eq(schema.teams.token, options.teamToken));
+      const existing = await this.teams.findOne({ token: options.teamToken });
       if (existing) {
         if (await this.isOnRoster(gameSessionId, existing.id)) {
           return this.toIdentity(existing);
@@ -82,10 +85,7 @@ export class TeamService {
 
     await this.assertJoinCodeMatches(gameSessionId, options.joinCode);
 
-    const [existingByName] = await this.db
-      .select()
-      .from(schema.teams)
-      .where(eq(schema.teams.name, trimmedName));
+    const existingByName = await this.teams.findOne({ name: trimmedName });
 
     if (existingByName) {
       const normalizedCode = options.teamCode?.trim().toUpperCase();
@@ -97,14 +97,12 @@ export class TeamService {
     }
 
     try {
-      const [team] = await this.db
-        .insert(schema.teams)
-        .values({
-          name: trimmedName,
-          token: randomUUID(),
-          code: generateJoinCode(),
-        })
-        .returning();
+      const team = this.teams.create({
+        name: trimmedName,
+        token: randomUUID(),
+        code: generateJoinCode(),
+      });
+      await this.teams.getEntityManager().persistAndFlush(team);
       await this.addToRoster(gameSessionId, team.id);
       return this.toIdentity(team);
     } catch (error) {
@@ -115,85 +113,68 @@ export class TeamService {
     }
   }
 
-  async listForSession(gameSessionId: string): Promise<TeamRosterEntry[]> {
-    const rows = await this.db
-      .select({ id: schema.teams.id, name: schema.teams.name })
-      .from(schema.gameSessionTeams)
-      .innerJoin(
-        schema.teams,
-        eq(schema.gameSessionTeams.teamId, schema.teams.id),
-      )
-      .where(eq(schema.gameSessionTeams.gameSessionId, gameSessionId))
-      .orderBy(schema.gameSessionTeams.joinedAt);
-    return rows.map((row) => ({ teamId: row.id, teamName: row.name }));
+  async listForSession(gameSessionId: number): Promise<TeamRosterEntry[]> {
+    const rows = await this.gameSessionTeams.find(
+      { gameSession: gameSessionId },
+      { populate: ['team'], orderBy: { createdAt: 'asc' } },
+    );
+    return rows.map((row) => ({
+      teamId: row.team.id,
+      teamName: row.team.name,
+    }));
   }
 
   private async isOnRoster(
-    gameSessionId: string,
-    teamId: string,
+    gameSessionId: number,
+    teamId: number,
   ): Promise<boolean> {
-    const [row] = await this.db
-      .select({ teamId: schema.gameSessionTeams.teamId })
-      .from(schema.gameSessionTeams)
-      .where(
-        and(
-          eq(schema.gameSessionTeams.gameSessionId, gameSessionId),
-          eq(schema.gameSessionTeams.teamId, teamId),
-        ),
-      );
+    const row = await this.gameSessionTeams.findOne({
+      gameSession: gameSessionId,
+      team: teamId,
+    });
     return Boolean(row);
   }
 
   private async addToRoster(
-    gameSessionId: string,
-    teamId: string,
+    gameSessionId: number,
+    teamId: number,
   ): Promise<void> {
-    await this.db
-      .insert(schema.gameSessionTeams)
-      .values({ gameSessionId, teamId })
-      .onConflictDoNothing({
-        target: [
-          schema.gameSessionTeams.gameSessionId,
-          schema.gameSessionTeams.teamId,
-        ],
-      });
+    // upsert() issues a raw INSERT ... ON CONFLICT, bypassing the
+    // @Property({ onCreate/onUpdate }) hooks on TimestampedEntity — set the
+    // timestamps explicitly or the not-null columns get sent as null.
+    const now = new Date();
+    await this.gameSessionTeams.upsert(
+      {
+        gameSession: gameSessionId,
+        team: teamId,
+        createdAt: now,
+        updatedAt: now,
+      },
+      { onConflictFields: ['gameSession', 'team'], onConflictAction: 'ignore' },
+    );
   }
 
-  private toIdentity(team: typeof schema.teams.$inferSelect): TeamIdentity {
+  private toIdentity(team: Team): TeamIdentity {
     return { id: team.id, name: team.name, token: team.token, code: team.code };
   }
 
   private async assertJoinCodeMatches(
-    gameSessionId: string,
+    gameSessionId: number,
     joinCode: string | undefined,
   ): Promise<void> {
     const normalized = joinCode?.trim().toUpperCase();
     if (!normalized) {
       throw new InvalidJoinCodeError();
     }
-    const [session] = await this.db
-      .select({ joinCode: schema.gameSessions.joinCode })
-      .from(schema.gameSessions)
-      .where(eq(schema.gameSessions.id, gameSessionId));
+    const session = await this.gameSessions.findOne(gameSessionId, {
+      fields: ['joinCode'],
+    });
     if (!session || session.joinCode !== normalized) {
       throw new InvalidJoinCodeError();
     }
   }
 
   private isUniqueViolation(error: unknown): boolean {
-    return this.getPgErrorCode(error) === UNIQUE_VIOLATION_CODE;
-  }
-
-  private getPgErrorCode(error: unknown): string | undefined {
-    if (typeof error !== 'object' || error === null) {
-      return undefined;
-    }
-    if ('code' in error && typeof error.code === 'string') {
-      return error.code;
-    }
-    if ('cause' in error) {
-      return this.getPgErrorCode(error.cause);
-    }
-    return undefined;
+    return error instanceof UniqueConstraintViolationException;
   }
 }

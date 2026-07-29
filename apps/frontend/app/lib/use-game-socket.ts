@@ -34,16 +34,16 @@ export interface UseGameSocketResult {
   sendAction: (action: GameAction) => void;
   team: JoinAcceptedPayload | null;
   joinTeam: (teamName: string, options?: JoinTeamOptions) => void;
-  submitAnswer: (questionId: string, teamId: string, value: string) => void;
+  submitAnswer: (questionId: number, teamId: number, value: string) => void;
   liveAnswers: AnswersUpdatedPayload | null;
-  gradeAnswer: (answerId: string, pointsAwarded: number) => void;
-  kickTeam: (teamId: string) => void;
+  gradeAnswer: (answerId: number, pointsAwarded: number) => void;
+  kickTeam: (teamId: number) => void;
   quizzes: QuizzesListedPayload | null;
   requestQuizzes: () => void;
-  selectQuiz: (quizId: string) => void;
+  selectQuiz: (quizId: number) => void;
   /** The team's own saved answers by question id (players only). */
-  myAnswers: Record<string, string>;
-  listAnswers: (questionId: string) => void;
+  myAnswers: Record<number, string>;
+  listAnswers: (questionId: number) => void;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -65,7 +65,7 @@ export function useGameSocket(
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
-  const [myAnswers, setMyAnswers] = useState<Record<string, string>>({});
+  const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -144,19 +144,19 @@ export function useGameSocket(
   }, []);
 
   const submitAnswer = useCallback(
-    (questionId: string, teamId: string, value: string) => {
+    (questionId: number, teamId: number, value: string) => {
       const payload: SubmitAnswerPayload = { questionId, teamId, value };
       socketRef.current?.emit(SOCKET_EVENTS.SUBMIT_ANSWER, payload);
     },
     [],
   );
 
-  const gradeAnswer = useCallback((answerId: string, pointsAwarded: number) => {
+  const gradeAnswer = useCallback((answerId: number, pointsAwarded: number) => {
     const payload: GradeAnswerPayload = { answerId, pointsAwarded };
     socketRef.current?.emit(SOCKET_EVENTS.GRADE_ANSWER, payload);
   }, []);
 
-  const kickTeam = useCallback((teamId: string) => {
+  const kickTeam = useCallback((teamId: number) => {
     const payload: KickTeamPayload = { teamId };
     socketRef.current?.emit(SOCKET_EVENTS.KICK_TEAM, payload);
   }, []);
@@ -165,12 +165,12 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.LIST_QUIZZES);
   }, []);
 
-  const selectQuiz = useCallback((quizId: string) => {
+  const selectQuiz = useCallback((quizId: number) => {
     const payload: SelectQuizPayload = { quizId };
     socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
   }, []);
 
-  const listAnswers = useCallback((questionId: string) => {
+  const listAnswers = useCallback((questionId: number) => {
     const payload: ListAnswersPayload = { questionId };
     socketRef.current?.emit(SOCKET_EVENTS.LIST_ANSWERS, payload);
   }, []);

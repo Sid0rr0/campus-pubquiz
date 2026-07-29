@@ -1,4 +1,5 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   getBlockStartRoundIndex,
   getNextGameState,
@@ -45,15 +46,20 @@ export class GameStateService implements OnModuleInit {
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
   private teams: TeamRosterEntry[] = [];
-  private answeredTeamIdsByQuestion: Record<string, string[]> = {};
+  private answeredTeamIdsByQuestion: Record<number, number[]> = {};
   /** teamId -> socket.id of the one device currently connected as that team. */
-  private connectedTeamSockets: Record<string, string> = {};
+  private connectedTeamSockets: Record<number, string> = {};
 
   constructor(
     private readonly seedService: SeedService,
     private readonly progressRepository: GameProgressRepository,
+    private readonly orm: MikroORM,
   ) {}
 
+  // onModuleInit runs at bootstrap, before any HTTP/socket request has
+  // entered the app, so there is no per-request MikroORM context yet for
+  // the injected repositories to use — @CreateRequestContext() forks one.
+  @CreateRequestContext()
   async onModuleInit(): Promise<void> {
     this.seededGame = await this.seedService.seed();
     const savedProgress = await this.progressRepository.load(
@@ -64,15 +70,15 @@ export class GameStateService implements OnModuleInit {
     }
   }
 
-  getGameSessionId(): string {
+  getGameSessionId(): number {
     return this.getSeededGame().gameSessionId;
   }
 
-  getActiveQuizId(): string {
+  getActiveQuizId(): number {
     return this.getSeededGame().quizId;
   }
 
-  async selectQuiz(quizId: string): Promise<StateSnapshotPayload> {
+  async selectQuiz(quizId: number): Promise<StateSnapshotPayload> {
     if (this.progress.status !== 'lobby' && this.progress.status !== 'ended') {
       throw new Error(
         'A quiz can only be selected while the game is in the lobby or after the quiz has ended',
@@ -117,11 +123,11 @@ export class GameStateService implements OnModuleInit {
     this.teams = teams;
   }
 
-  getConnectedSocketId(teamId: string): string | undefined {
+  getConnectedSocketId(teamId: number): string | undefined {
     return this.connectedTeamSockets[teamId];
   }
 
-  setTeamConnected(teamId: string, socketId: string): void {
+  setTeamConnected(teamId: number, socketId: string): void {
     this.connectedTeamSockets = {
       ...this.connectedTeamSockets,
       [teamId]: socketId,
@@ -129,7 +135,7 @@ export class GameStateService implements OnModuleInit {
   }
 
   /** Called on socket disconnect; returns the teamId that was cleared, if any. */
-  clearTeamConnectionBySocketId(socketId: string): string | null {
+  clearTeamConnectionBySocketId(socketId: string): number | null {
     const entry = Object.entries(this.connectedTeamSockets).find(
       ([, sid]) => sid === socketId,
     );
@@ -140,17 +146,17 @@ export class GameStateService implements OnModuleInit {
         ([teamId]) => teamId !== clearedTeamId,
       ),
     );
-    return clearedTeamId;
+    return Number(clearedTeamId);
   }
 
-  setAnsweredTeamIds(questionId: string, teamIds: string[]): void {
+  setAnsweredTeamIds(questionId: number, teamIds: number[]): void {
     this.answeredTeamIdsByQuestion = {
       ...this.answeredTeamIdsByQuestion,
       [questionId]: teamIds,
     };
   }
 
-  isQuestionOpenForAnswering(questionId: string): boolean {
+  isQuestionOpenForAnswering(questionId: number): boolean {
     return (
       this.progress.status === 'question_open' &&
       this.getBlockQuestions().some((question) => question.id === questionId)
@@ -259,7 +265,7 @@ export class GameStateService implements OnModuleInit {
     return this.getBlockSeededQuestions();
   }
 
-  private getAnsweredTeamIds(): string[] {
+  private getAnsweredTeamIds(): number[] {
     const currentQuestion = this.getCurrentQuestion();
     if (!currentQuestion) {
       return [];

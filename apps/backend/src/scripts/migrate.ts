@@ -1,19 +1,13 @@
 import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool } from 'pg';
+import { MikroORM } from '@mikro-orm/postgresql';
+import config from '@/mikro-orm.config';
 
 async function runMigrations(): Promise<void> {
-  const pool = new Pool({
-    connectionString:
-      process.env.DATABASE_URL ??
-      'postgres://postgres:postgres@localhost:5432/campus_pubquiz',
-  });
-
+  const orm = await MikroORM.init(config);
   try {
-    await migrate(drizzle(pool), { migrationsFolder: './drizzle' });
+    await orm.migrator.up();
   } finally {
-    await pool.end();
+    await orm.close(true);
   }
 }
 

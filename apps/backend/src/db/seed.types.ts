@@ -1,7 +1,7 @@
 import type { RevealQuestionView } from '@campus-pubquiz/types';
 
 export interface SeededRound {
-  id: string;
+  id: number;
   breakAfter: boolean;
   // Carries the correct answer internally so reveal can show it; only
   // GameStateService's answer-free QuestionView projections leave the process.
@@ -9,13 +9,13 @@ export interface SeededRound {
 }
 
 export interface SeededGame {
-  quizId: string;
-  gameSessionId: string;
+  quizId: number;
+  gameSessionId: number;
   joinCode: string;
   rounds: SeededRound[];
 }
 
 export interface CreatedGameSession {
-  gameSessionId: string;
+  gameSessionId: number;
   joinCode: string;
 }

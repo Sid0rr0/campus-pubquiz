@@ -220,7 +220,8 @@ describe('useGameSocket', () => {
           teamId: 'team-1',
           teamName: 'The Quizzards',
           value: 'Banana',
-          pointsAwarded: null,
+          pointsAwarded: 0,
+          gradedAt: null,
         },
       ],
     };

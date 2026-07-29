@@ -125,7 +125,7 @@ function PlayPageContent() {
   const [codeInput, setCodeInput] = useState(codeFromUrl);
   const [teamCodeInput, setTeamCodeInput] = useState('');
   // null = follow the question currently shown on the big screen.
-  const [browsedQuestionId, setBrowsedQuestionId] = useState<string | null>(null);
+  const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(null);
   const {
     snapshot,
     team,

@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   ConnectedSocket,
   MessageBody,
@@ -48,6 +49,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly teamService: TeamService,
     private readonly answerService: AnswerService,
     private readonly quizService: QuizService,
+    private readonly orm: MikroORM,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -87,7 +89,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
   }
 
+  // Socket.IO events aren't covered by @mikro-orm/nestjs's HTTP-only
+  // auto request-context middleware — @CreateRequestContext() forks one.
   @SubscribeMessage(SOCKET_EVENTS.ADMIN_ACTION)
+  @CreateRequestContext()
   async handleAdminAction(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: AdminActionPayload,
@@ -117,6 +122,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.JOIN_PLAYERS)
+  @CreateRequestContext()
   async handleJoinPlayers(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: JoinPlayersPayload,
@@ -180,6 +186,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SUBMIT_ANSWER)
+  @CreateRequestContext()
   async handleSubmitAnswer(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SubmitAnswerPayload,
@@ -231,6 +238,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.GRADE_ANSWER)
+  @CreateRequestContext()
   async handleGradeAnswer(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GradeAnswerPayload,
@@ -271,6 +279,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.LIST_QUIZZES)
+  @CreateRequestContext()
   async handleListQuizzes(@ConnectedSocket() client: Socket): Promise<void> {
     if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
       throw new WsException('Only admin clients may list quizzes');
@@ -286,6 +295,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SELECT_QUIZ)
+  @CreateRequestContext()
   async handleSelectQuiz(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SelectQuizPayload,
@@ -315,6 +325,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage(SOCKET_EVENTS.LIST_ANSWERS)
+  @CreateRequestContext()
   async handleListAnswers(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: ListAnswersPayload,

@@ -2,12 +2,16 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { eq } from 'drizzle-orm';
-import { Client } from 'pg';
-import * as schema from '@/db/schema';
+import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
 import { SeedService } from '@/db/seed.service';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { Question } from '@/db/entities/question.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { QuestionRepository } from '@/db/repositories/question.repository';
+import { QuizRepository } from '@/db/repositories/quiz.repository';
+import { RoundRepository } from '@/db/repositories/round.repository';
 import type { GameStateService } from '@/game/game-state.service';
 import {
   ImportBlockedError,
@@ -34,7 +38,7 @@ const BROKEN_CSV = [HEADER, 'History,karaoke,Sing it!,,,,,,0'].join('\n');
 
 interface GameStateStub {
   status: string;
-  activeQuizId: string;
+  activeQuizId: number;
   reloadActiveQuiz: jest.Mock;
 }
 
@@ -44,7 +48,7 @@ function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
 } {
   const stub: GameStateStub = {
     status: 'lobby',
-    activeQuizId: 'unrelated-quiz-id',
+    activeQuizId: -1,
     reloadActiveQuiz: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -58,31 +62,49 @@ function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
 
 describe('ImportService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;
-  let client: Client;
-  let db: NodePgDatabase<typeof schema>;
+  let orm: MikroORM;
+  let em: EntityManager;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    client = new Client({ connectionString: container.getConnectionUri() });
-    await client.connect();
-    db = drizzle(client, { schema });
-    await migrate(db, { migrationsFolder: './drizzle' });
+    orm = await MikroORM.init({
+      clientUrl: container.getConnectionUri(),
+      entities: ['./dist/db/entities/*.entity.js'],
+      entitiesTs: ['./src/db/entities/*.entity.ts'],
+      migrations: {
+        path: './dist/db/migrations',
+        pathTs: './src/db/migrations',
+      },
+    });
+    await orm.getMigrator().up();
   }, 60_000);
 
   afterAll(async () => {
-    await client.end();
+    await orm.close(true);
     await container.stop();
   });
 
+  beforeEach(() => {
+    em = orm.em.fork();
+  });
+
   afterEach(async () => {
-    await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
-    );
+    await em
+      .getConnection()
+      .execute(
+        'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      );
   });
 
   function makeService(overrides: Partial<GameStateStub> = {}) {
     const { stub, asService } = makeGameStateStub(overrides);
-    return { importService: new ImportService(db, asService), stub };
+    const importService = new ImportService(
+      em.getRepository<Quiz, QuizRepository>(Quiz),
+      em.getRepository<Round, RoundRepository>(Round),
+      em.getRepository<Question, QuestionRepository>(Question),
+      asService,
+    );
+    return { importService, stub };
   }
 
   describe('preview', () => {
@@ -100,7 +122,7 @@ describe('ImportService (Postgres integration)', () => {
         'History',
         'Music',
       ]);
-      const quizzes = await db.select().from(schema.quizzes);
+      const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(0);
     });
 
@@ -135,11 +157,11 @@ describe('ImportService (Postgres integration)', () => {
       expect(result.roundCount).toBe(2);
       expect(result.questionCount).toBe(3);
 
-      const roundRows = await db
-        .select()
-        .from(schema.rounds)
-        .where(eq(schema.rounds.quizId, result.quizId))
-        .orderBy(schema.rounds.orderIndex);
+      const roundRows = await em.find(
+        Round,
+        { quiz: result.quizId },
+        { orderBy: { orderIndex: 'asc' } },
+      );
       expect(roundRows.map((round) => round.title)).toEqual([
         'History',
         'Music',
@@ -151,10 +173,9 @@ describe('ImportService (Postgres integration)', () => {
         roundRows.find((round) => round.title === 'Music')?.breakAfter,
       ).toBe(true);
 
-      const questionRows = await db
-        .select()
-        .from(schema.questions)
-        .where(eq(schema.questions.roundId, roundRows[1].id));
+      const questionRows = await em.find(Question, {
+        round: roundRows[1].id,
+      });
       expect(questionRows).toHaveLength(1);
       expect(questionRows[0].type).toBe('audio');
       expect(questionRows[0].points).toBe(2);
@@ -167,20 +188,22 @@ describe('ImportService (Postgres integration)', () => {
     it('re-imports idempotently, updating questions in place with stable ids', async () => {
       const { importService } = makeService();
       const first = await importService.confirm(VALID_CSV, 'Trivia Night');
-      const before = await db
-        .select()
-        .from(schema.questions)
-        .orderBy(schema.questions.orderIndex);
+      const before = await em.find(
+        Question,
+        {},
+        { orderBy: { orderIndex: 'asc' } },
+      );
 
       const second = await importService.confirm(VALID_CSV, 'Trivia Night');
 
       expect(second.quizId).toBe(first.quizId);
-      const quizzes = await db.select().from(schema.quizzes);
+      const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(1);
-      const after = await db
-        .select()
-        .from(schema.questions)
-        .orderBy(schema.questions.orderIndex);
+      const after = await em.find(
+        Question,
+        {},
+        { orderBy: { orderIndex: 'asc' } },
+      );
       expect(after.map((question) => question.id).sort()).toEqual(
         before.map((question) => question.id).sort(),
       );
@@ -189,16 +212,16 @@ describe('ImportService (Postgres integration)', () => {
     it('updates edited questions and deletes rounds and questions removed from the sheet', async () => {
       const { importService } = makeService();
       const first = await importService.confirm(VALID_CSV, 'Trivia Night');
-      const [historyRound] = await db
-        .select()
-        .from(schema.rounds)
-        .where(eq(schema.rounds.quizId, first.quizId))
-        .orderBy(schema.rounds.orderIndex);
-      const [keptQuestion] = await db
-        .select()
-        .from(schema.questions)
-        .where(eq(schema.questions.roundId, historyRound.id))
-        .orderBy(schema.questions.orderIndex);
+      const [historyRound] = await em.find(
+        Round,
+        { quiz: first.quizId },
+        { orderBy: { orderIndex: 'asc' } },
+      );
+      const [keptQuestion] = await em.find(
+        Question,
+        { round: historyRound.id },
+        { orderBy: { orderIndex: 'asc' } },
+      );
 
       const second = await importService.confirm(EDITED_CSV, 'Trivia Night');
 
@@ -206,16 +229,12 @@ describe('ImportService (Postgres integration)', () => {
       expect(second.roundCount).toBe(1);
       expect(second.questionCount).toBe(1);
 
-      const roundRows = await db
-        .select()
-        .from(schema.rounds)
-        .where(eq(schema.rounds.quizId, first.quizId));
+      const roundRows = await em.find(Round, { quiz: first.quizId });
       expect(roundRows).toHaveLength(1);
 
-      const questionRows = await db
-        .select()
-        .from(schema.questions)
-        .where(eq(schema.questions.roundId, historyRound.id));
+      const questionRows = await em.find(Question, {
+        round: historyRound.id,
+      });
       expect(questionRows).toHaveLength(1);
       expect(questionRows[0].id).toBe(keptQuestion.id);
       expect(questionRows[0].prompt).toBe(
@@ -230,7 +249,7 @@ describe('ImportService (Postgres integration)', () => {
         importService.confirm(BROKEN_CSV, 'Trivia Night'),
       ).rejects.toThrow(ImportBlockedError);
 
-      const quizzes = await db.select().from(schema.quizzes);
+      const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(0);
     });
 
@@ -268,11 +287,17 @@ describe('ImportService (Postgres integration)', () => {
       // covered separately in game-state.service.spec.ts.
       const { importService } = makeService();
       const result = await importService.confirm(VALID_CSV, 'Trivia Night');
-      const seedService = new SeedService(db);
-      const [session] = await db
-        .insert(schema.gameSessions)
-        .values({ quizId: result.quizId, joinCode: 'ABC234' })
-        .returning();
+      const seedService = new SeedService(
+        em.getRepository<Quiz, QuizRepository>(Quiz),
+        em.getRepository<Round, RoundRepository>(Round),
+        em.getRepository<Question, QuestionRepository>(Question),
+        em.getRepository<GameSession, GameSessionRepository>(GameSession),
+      );
+      const session = em.create(GameSession, {
+        quiz: result.quizId,
+        joinCode: 'ABC234',
+      });
+      await em.flush();
 
       const game = await seedService.loadGame(
         result.quizId,

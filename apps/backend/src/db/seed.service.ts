@@ -1,11 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { QuestionType } from '@campus-pubquiz/types';
-import { DRIZZLE } from '@/db/db.constants';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { Question } from '@/db/entities/question.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { QuestionRepository } from '@/db/repositories/question.repository';
+import { QuizRepository } from '@/db/repositories/quiz.repository';
+import { RoundRepository } from '@/db/repositories/round.repository';
 import { generateJoinCode } from '@/db/join-code.util';
 import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
-import * as schema from '@/db/schema';
 import type {
   CreatedGameSession,
   SeededGame,
@@ -31,18 +35,22 @@ function toViewPayload(payload: unknown): QuestionPayload {
 @Injectable()
 export class SeedService {
   constructor(
-    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+    @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
+    @InjectRepository(Round) private readonly rounds: RoundRepository,
+    @InjectRepository(Question)
+    private readonly questions: QuestionRepository,
+    @InjectRepository(GameSession)
+    private readonly gameSessions: GameSessionRepository,
   ) {}
 
   async seed(): Promise<SeededGame> {
-    const [existingSession] = await this.db
-      .select()
-      .from(schema.gameSessions)
-      .orderBy(desc(schema.gameSessions.createdAt))
-      .limit(1);
+    const [existingSession] = await this.gameSessions.find(
+      {},
+      { orderBy: { createdAt: 'desc' }, limit: 1 },
+    );
     if (existingSession) {
       return this.loadGame(
-        existingSession.quizId,
+        existingSession.quiz.id,
         existingSession.id,
         existingSession.joinCode,
       );
@@ -50,39 +58,38 @@ export class SeedService {
     return this.createSeededGame();
   }
 
-  async createSession(quizId: string): Promise<CreatedGameSession> {
-    const [session] = await this.db
-      .insert(schema.gameSessions)
-      .values({ quizId, joinCode: generateJoinCode() })
-      .returning();
+  async createSession(quizId: number): Promise<CreatedGameSession> {
+    const session = this.gameSessions.create({
+      quiz: quizId,
+      joinCode: generateJoinCode(),
+    });
+    await this.gameSessions.getEntityManager().persistAndFlush(session);
     return { gameSessionId: session.id, joinCode: session.joinCode };
   }
 
   async loadGame(
-    quizId: string,
-    gameSessionId: string,
+    quizId: number,
+    gameSessionId: number,
     joinCode: string,
   ): Promise<SeededGame> {
-    const roundRows = await this.db
-      .select()
-      .from(schema.rounds)
-      .where(eq(schema.rounds.quizId, quizId))
-      .orderBy(schema.rounds.orderIndex);
+    const roundRows = await this.rounds.find(
+      { quiz: quizId },
+      { orderBy: { orderIndex: 'asc' } },
+    );
 
     const rounds: SeededRound[] = [];
     for (const roundRow of roundRows) {
-      const questionRows = await this.db
-        .select()
-        .from(schema.questions)
-        .where(eq(schema.questions.roundId, roundRow.id))
-        .orderBy(schema.questions.orderIndex);
+      const questionRows = await this.questions.find(
+        { round: roundRow.id },
+        { orderBy: { orderIndex: 'asc' } },
+      );
 
       rounds.push({
         id: roundRow.id,
         breakAfter: roundRow.breakAfter,
         questions: questionRows.map((row) => ({
           id: row.id,
-          type: row.type as QuestionType,
+          type: row.type,
           prompt: row.prompt,
           points: row.points,
           answer: row.answer,
@@ -95,44 +102,38 @@ export class SeedService {
   }
 
   private async createSeededGame(): Promise<SeededGame> {
-    const [quiz] = await this.db
-      .insert(schema.quizzes)
-      .values({ title: HARDCODED_QUIZ.title })
-      .returning();
+    const quiz = this.quizzes.create({ title: HARDCODED_QUIZ.title });
+    await this.quizzes.getEntityManager().persistAndFlush(quiz);
 
     const rounds: SeededRound[] = [];
     for (const [roundIndex, round] of HARDCODED_QUIZ.rounds.entries()) {
-      const [roundRow] = await this.db
-        .insert(schema.rounds)
-        .values({
-          quizId: quiz.id,
-          title: round.title,
-          orderIndex: roundIndex,
-          breakAfter: round.breakAfter,
-        })
-        .returning();
+      const roundRow = this.rounds.create({
+        quiz,
+        title: round.title,
+        orderIndex: roundIndex,
+        breakAfter: round.breakAfter,
+      });
+      await this.rounds.getEntityManager().persistAndFlush(roundRow);
 
       const questions: SeededRound['questions'] = [];
       for (const [questionIndex, question] of round.questions.entries()) {
-        const [questionRow] = await this.db
-          .insert(schema.questions)
-          .values({
-            roundId: roundRow.id,
-            orderIndex: questionIndex,
-            type: question.type,
-            prompt: question.prompt,
-            answer: question.answer,
-            payload: {
-              options: question.options,
-              mediaUrl: question.mediaUrl,
-            },
-            points: question.points,
-          })
-          .returning();
+        const questionRow = this.questions.create({
+          round: roundRow,
+          orderIndex: questionIndex,
+          type: question.type,
+          prompt: question.prompt,
+          answer: question.answer,
+          payload: {
+            options: question.options,
+            mediaUrl: question.mediaUrl,
+          },
+          points: question.points,
+        });
+        await this.questions.getEntityManager().persistAndFlush(questionRow);
 
         questions.push({
           id: questionRow.id,
-          type: questionRow.type as QuestionType,
+          type: questionRow.type,
           prompt: questionRow.prompt,
           points: questionRow.points,
           answer: questionRow.answer,

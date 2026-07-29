@@ -40,7 +40,7 @@ function gradeOptions(maxPoints: number): GradeOption[] {
 }
 
 function GradeRow({ answer, maxPoints, onGrade }: GradeRowProps) {
-  const isGraded = answer.pointsAwarded !== null;
+  const isGraded = answer.gradedAt !== null;
   const options = gradeOptions(maxPoints);
   const matchesAGradeOption = options.some((option) => option.value === answer.pointsAwarded);
 
@@ -81,8 +81,8 @@ export default function AdminPage() {
   const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
   const [submittedPassword, setSubmittedPassword] = useState('');
   const [gradingIndex, setGradingIndex] = useState(0);
-  const [pendingQuizId, setPendingQuizId] = useState<string | null>(null);
-  const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<string | null>(null);
+  const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
+  const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
 
   useEffect(() => {
     // Deferred to an effect (not a useState initializer) so the server-rendered

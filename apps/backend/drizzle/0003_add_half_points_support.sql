@@ -1,1 +1,0 @@
-ALTER TABLE "answers" ALTER COLUMN "points_awarded" SET DATA TYPE double precision;

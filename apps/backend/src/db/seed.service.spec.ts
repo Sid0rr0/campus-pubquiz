@@ -2,40 +2,63 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Client } from 'pg';
+import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
 import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
-import * as schema from '@/db/schema';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { Question } from '@/db/entities/question.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { QuestionRepository } from '@/db/repositories/question.repository';
+import { QuizRepository } from '@/db/repositories/quiz.repository';
+import { RoundRepository } from '@/db/repositories/round.repository';
 import { SeedService } from '@/db/seed.service';
 
 describe('SeedService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;
-  let client: Client;
-  let db: NodePgDatabase<typeof schema>;
+  let orm: MikroORM;
+  let em: EntityManager;
   let seedService: SeedService;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    client = new Client({ connectionString: container.getConnectionUri() });
-    await client.connect();
-    db = drizzle(client, { schema });
-    await migrate(db, { migrationsFolder: './drizzle' });
+    orm = await MikroORM.init({
+      clientUrl: container.getConnectionUri(),
+      entities: ['./dist/db/entities/*.entity.js'],
+      entitiesTs: ['./src/db/entities/*.entity.ts'],
+      migrations: {
+        path: './dist/db/migrations',
+        pathTs: './src/db/migrations',
+      },
+    });
+    await orm.getMigrator().up();
   }, 60_000);
 
   afterAll(async () => {
-    await client.end();
+    await orm.close(true);
     await container.stop();
   });
 
+  function makeSeedService(scope: EntityManager): SeedService {
+    return new SeedService(
+      scope.getRepository<Quiz, QuizRepository>(Quiz),
+      scope.getRepository<Round, RoundRepository>(Round),
+      scope.getRepository<Question, QuestionRepository>(Question),
+      scope.getRepository<GameSession, GameSessionRepository>(GameSession),
+    );
+  }
+
   beforeEach(() => {
-    seedService = new SeedService(db);
+    em = orm.em.fork();
+    seedService = makeSeedService(em);
   });
 
   afterEach(async () => {
-    await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
-    );
+    await em
+      .getConnection()
+      .execute(
+        'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      );
   });
 
   it('creates the quiz/rounds/questions/session from the hardcoded fixture on first seed', async () => {
@@ -52,20 +75,18 @@ describe('SeedService (Postgres integration)', () => {
     });
     expect(result.joinCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
 
-    const quizzesInDb = await db.select().from(schema.quizzes);
+    const quizzesInDb = await em.find(Quiz, {});
     expect(quizzesInDb).toHaveLength(1);
   });
 
-  it('assigns real UUIDs to every seeded round and question', async () => {
+  it('assigns sequential integer ids to every seeded round and question', async () => {
     const result = await seedService.seed();
-    const uuidPattern =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    expect(result.quizId).toMatch(uuidPattern);
+    expect(Number.isInteger(result.quizId)).toBe(true);
     for (const round of result.rounds) {
-      expect(round.id).toMatch(uuidPattern);
+      expect(Number.isInteger(round.id)).toBe(true);
       for (const question of round.questions) {
-        expect(question.id).toMatch(uuidPattern);
+        expect(Number.isInteger(question.id)).toBe(true);
       }
     }
   });
@@ -76,8 +97,8 @@ describe('SeedService (Postgres integration)', () => {
 
     expect(second).toEqual(first);
 
-    const quizzesInDb = await db.select().from(schema.quizzes);
-    const sessionsInDb = await db.select().from(schema.gameSessions);
+    const quizzesInDb = await em.find(Quiz, {});
+    const sessionsInDb = await em.find(GameSession, {});
     expect(quizzesInDb).toHaveLength(1);
     expect(sessionsInDb).toHaveLength(1);
   });
@@ -91,22 +112,20 @@ describe('SeedService (Postgres integration)', () => {
     expect(session.joinCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
     expect(session.joinCode).not.toBe(first.joinCode);
 
-    const sessionsInDb = await db.select().from(schema.gameSessions);
+    const sessionsInDb = await em.find(GameSession, {});
     expect(sessionsInDb).toHaveLength(2);
   });
 
   it('resumes the most recently created game session on seed after a restart', async () => {
     const first = await seedService.seed();
-    const [newerSession] = await db
-      .insert(schema.gameSessions)
-      .values({
-        quizId: first.quizId,
-        joinCode: 'ZZZZZZ',
-        createdAt: new Date(Date.now() + 60_000),
-      })
-      .returning();
+    const newerSession = em.create(GameSession, {
+      quiz: first.quizId,
+      joinCode: 'ZZZZZZ',
+      createdAt: new Date(Date.now() + 60_000),
+    });
+    await em.flush();
 
-    const resumed = await new SeedService(db).seed();
+    const resumed = await makeSeedService(orm.em.fork()).seed();
 
     expect(resumed.gameSessionId).toBe(newerSession.id);
     expect(resumed.joinCode).toBe('ZZZZZZ');

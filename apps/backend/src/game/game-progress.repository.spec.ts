@@ -2,50 +2,54 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { eq } from 'drizzle-orm';
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Client } from 'pg';
-import * as schema from '@/db/schema';
+import { MikroORM } from '@mikro-orm/postgresql';
+import { GameSession } from '@/db/entities/game-session.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameProgressRepository } from '@/game/game-progress.repository';
 
 describe('GameProgressRepository (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;
-  let client: Client;
-  let db: NodePgDatabase<typeof schema>;
+  let orm: MikroORM;
   let repository: GameProgressRepository;
-  let sessionId: string;
+  let sessionId: number;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    client = new Client({ connectionString: container.getConnectionUri() });
-    await client.connect();
-    db = drizzle(client, { schema });
-    await migrate(db, { migrationsFolder: './drizzle' });
+    orm = await MikroORM.init({
+      clientUrl: container.getConnectionUri(),
+      entities: ['./dist/db/entities/*.entity.js'],
+      entitiesTs: ['./src/db/entities/*.entity.ts'],
+      migrations: {
+        path: './dist/db/migrations',
+        pathTs: './src/db/migrations',
+      },
+    });
+    await orm.getMigrator().up();
   }, 60_000);
 
   afterAll(async () => {
-    await client.end();
+    await orm.close(true);
     await container.stop();
   });
 
   beforeEach(async () => {
-    repository = new GameProgressRepository(db);
-    const [quiz] = await db
-      .insert(schema.quizzes)
-      .values({ title: 'Restart Resilience Quiz' })
-      .returning();
-    const [session] = await db
-      .insert(schema.gameSessions)
-      .values({ quizId: quiz.id, joinCode: 'ABCDEF' })
-      .returning();
+    const em = orm.em.fork();
+    const quiz = em.create(Quiz, { title: 'Restart Resilience Quiz' });
+    const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });
+    await em.flush();
     sessionId = session.id;
+    repository = new GameProgressRepository(
+      em.getRepository<GameSession, GameSessionRepository>(GameSession),
+    );
   });
 
   afterEach(async () => {
-    await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
-    );
+    await orm.em
+      .getConnection()
+      .execute(
+        'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      );
   });
 
   it('returns the default lobby progress for a freshly seeded session', async () => {
@@ -94,12 +98,22 @@ describe('GameProgressRepository (Postgres integration)', () => {
 
   it('normalizes a legacy locked status to question_open on load', async () => {
     // Sessions persisted before block-based locking may still carry 'locked'.
-    await db
-      .update(schema.gameSessions)
-      .set({ status: 'locked', currentRoundIndex: 0, currentQuestionIndex: 1 })
-      .where(eq(schema.gameSessions.id, sessionId));
+    await orm.em
+      .getConnection()
+      .execute(
+        'UPDATE game_sessions SET status = ?, current_round_index = ?, current_question_index = ? WHERE id = ?',
+        ['locked', 0, 1, sessionId],
+      );
 
-    const progress = await repository.load(sessionId);
+    // A fresh fork, not the identity-mapped `em` from beforeEach, so the
+    // raw SQL update above isn't masked by an in-memory cached entity —
+    // mirrors how each production request gets its own EntityManager fork.
+    const freshRepository = new GameProgressRepository(
+      orm.em
+        .fork()
+        .getRepository<GameSession, GameSessionRepository>(GameSession),
+    );
+    const progress = await freshRepository.load(sessionId);
 
     expect(progress).toEqual({
       status: 'question_open',
@@ -111,9 +125,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
   });
 
   it('returns null for a session that does not exist', async () => {
-    const progress = await repository.load(
-      '00000000-0000-0000-0000-000000000000',
-    );
+    const progress = await repository.load(999_999_999);
     expect(progress).toBeNull();
   });
 });

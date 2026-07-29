@@ -1,3 +1,4 @@
+import { MikroORM } from '@mikro-orm/core';
 import {
   IllegalGameTransitionError,
   type GameProgress,
@@ -7,17 +8,26 @@ import type { SeededGame } from '@/db/seed.types';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
 import { GameStateService } from '@/game/game-state.service';
 
+// GameStateService.onModuleInit is wrapped in @CreateRequestContext(), which
+// requires a real MikroORM instance (checked via `instanceof`) — these tests
+// mock the DB-touching services entirely, so a prototype-only fake with a
+// working em.fork() is enough to satisfy the decorator without a real DB.
+function createFakeOrm(): MikroORM {
+  const em = { name: 'default', fork: () => em };
+  return Object.assign(Object.create(MikroORM.prototype) as MikroORM, { em });
+}
+
 const FIXTURE_SEEDED_GAME: SeededGame = {
-  quizId: 'quiz-1',
-  gameSessionId: 'session-1',
+  quizId: 1,
+  gameSessionId: 101,
   joinCode: 'ABCDEF',
   rounds: [
     {
-      id: 'round-1',
+      id: 11,
       breakAfter: false,
       questions: [
         {
-          id: 'r1q1',
+          id: 21,
           type: 'multiple_choice',
           prompt: 'Capital of France?',
           options: ['Paris', 'London', 'Berlin', 'Rome'],
@@ -25,7 +35,7 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
           answer: 'Paris',
         },
         {
-          id: 'r1q2',
+          id: 22,
           type: 'free_text',
           prompt: 'Name the largest planet in the solar system.',
           points: 2,
@@ -34,11 +44,11 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
       ],
     },
     {
-      id: 'round-2',
+      id: 12,
       breakAfter: true,
       questions: [
         {
-          id: 'r2q1',
+          id: 23,
           type: 'picture',
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
@@ -46,7 +56,7 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
           answer: 'Eiffel Tower',
         },
         {
-          id: 'r2q2',
+          id: 24,
           type: 'free_text',
           prompt: 'Name this flag.',
           points: 3,
@@ -58,16 +68,16 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
 };
 
 const IMPORTED_QUIZ_GAME: SeededGame = {
-  quizId: 'quiz-2',
-  gameSessionId: 'session-2',
+  quizId: 2,
+  gameSessionId: 102,
   joinCode: 'GHIJKL',
   rounds: [
     {
-      id: 'round-imported',
+      id: 13,
       breakAfter: true,
       questions: [
         {
-          id: 'iq1',
+          id: 25,
           type: 'free_text',
           prompt: 'Imported question',
           points: 1,
@@ -84,7 +94,7 @@ function createFakeSeedService() {
     loadGame: jest.fn().mockResolvedValue(IMPORTED_QUIZ_GAME),
     createSession: jest
       .fn()
-      .mockResolvedValue({ gameSessionId: 'session-2', joinCode: 'GHIJKL' }),
+      .mockResolvedValue({ gameSessionId: 102, joinCode: 'GHIJKL' }),
   };
 }
 
@@ -122,6 +132,7 @@ describe('GameStateService', () => {
     service = new GameStateService(
       asSeedService(seedService),
       asGameProgressRepository(progressRepository),
+      createFakeOrm(),
     );
     await service.onModuleInit();
   });
@@ -130,6 +141,7 @@ describe('GameStateService', () => {
     const uninitialized = new GameStateService(
       asSeedService(createFakeSeedService()),
       asGameProgressRepository(createFakeGameProgressRepository()),
+      createFakeOrm(),
     );
     await expect(uninitialized.applyAction('START_QUIZ')).rejects.toThrow(
       /before initialization/i,
@@ -137,7 +149,7 @@ describe('GameStateService', () => {
   });
 
   it('exposes the seeded game session id', () => {
-    expect(service.getGameSessionId()).toBe('session-1');
+    expect(service.getGameSessionId()).toBe(101);
   });
 
   it('includes the session join code in the snapshot', () => {
@@ -157,51 +169,51 @@ describe('GameStateService', () => {
   });
 
   it('reflects teams set via setTeams in the snapshot', () => {
-    service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
+    service.setTeams([{ teamId: 31, teamName: 'The Quizzards' }]);
 
     expect(service.getSnapshot().teams).toEqual([
-      { teamId: 'team-1', teamName: 'The Quizzards', isConnected: false },
+      { teamId: 31, teamName: 'The Quizzards', isConnected: false },
     ]);
   });
 
   it('clears the connected teams when a new quiz session is selected', async () => {
-    service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
+    service.setTeams([{ teamId: 31, teamName: 'The Quizzards' }]);
 
-    const snapshot = await service.selectQuiz('quiz-2');
+    const snapshot = await service.selectQuiz(2);
 
     expect(snapshot.teams).toEqual([]);
   });
 
   describe('team connection presence (one live device per team + kick)', () => {
     it('has no connected socket for a team that has never joined', () => {
-      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+      expect(service.getConnectedSocketId(31)).toBeUndefined();
     });
 
     it('tracks which socket is connected for a team', () => {
-      service.setTeamConnected('team-1', 'socket-a');
+      service.setTeamConnected(31, 'socket-a');
 
-      expect(service.getConnectedSocketId('team-1')).toBe('socket-a');
+      expect(service.getConnectedSocketId(31)).toBe('socket-a');
     });
 
     it('reflects isConnected in the snapshot once a team is connected', () => {
-      service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
-      service.setTeamConnected('team-1', 'socket-a');
+      service.setTeams([{ teamId: 31, teamName: 'The Quizzards' }]);
+      service.setTeamConnected(31, 'socket-a');
 
       expect(service.getSnapshot().teams).toEqual([
-        { teamId: 'team-1', teamName: 'The Quizzards', isConnected: true },
+        { teamId: 31, teamName: 'The Quizzards', isConnected: true },
       ]);
     });
 
     it('clears a team connection by socket id and returns the freed teamId', () => {
-      service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
-      service.setTeamConnected('team-1', 'socket-a');
+      service.setTeams([{ teamId: 31, teamName: 'The Quizzards' }]);
+      service.setTeamConnected(31, 'socket-a');
 
       const clearedTeamId = service.clearTeamConnectionBySocketId('socket-a');
 
-      expect(clearedTeamId).toBe('team-1');
-      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+      expect(clearedTeamId).toBe(31);
+      expect(service.getConnectedSocketId(31)).toBeUndefined();
       expect(service.getSnapshot().teams).toEqual([
-        { teamId: 'team-1', teamName: 'The Quizzards', isConnected: false },
+        { teamId: 31, teamName: 'The Quizzards', isConnected: false },
       ]);
     });
 
@@ -212,21 +224,21 @@ describe('GameStateService', () => {
     });
 
     it('does not disturb another team connection when clearing an unrelated socket id', () => {
-      service.setTeamConnected('team-1', 'socket-a');
-      service.setTeamConnected('team-2', 'socket-b');
+      service.setTeamConnected(31, 'socket-a');
+      service.setTeamConnected(32, 'socket-b');
 
       service.clearTeamConnectionBySocketId('socket-a');
 
-      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
-      expect(service.getConnectedSocketId('team-2')).toBe('socket-b');
+      expect(service.getConnectedSocketId(31)).toBeUndefined();
+      expect(service.getConnectedSocketId(32)).toBe('socket-b');
     });
 
     it('resets team connections when a new quiz session is selected', async () => {
-      service.setTeamConnected('team-1', 'socket-a');
+      service.setTeamConnected(31, 'socket-a');
 
-      await service.selectQuiz('quiz-2');
+      await service.selectQuiz(2);
 
-      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+      expect(service.getConnectedSocketId(31)).toBeUndefined();
     });
   });
 
@@ -258,7 +270,7 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
-    expect(snapshot.currentQuestion?.id).toBe('r1q1');
+    expect(snapshot.currentQuestion?.id).toBe(21);
   });
 
   it('advances to the next question within round 1', async () => {
@@ -272,7 +284,7 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
-    expect(snapshot.currentQuestion?.id).toBe('r1q2');
+    expect(snapshot.currentQuestion?.id).toBe(22);
   });
 
   it('moves into round 2 after round 1 finishes (no break configured)', async () => {
@@ -287,7 +299,7 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
-    expect(snapshot.currentQuestion?.id).toBe('r2q1');
+    expect(snapshot.currentQuestion?.id).toBe(23);
   });
 
   it('moves back to the previous question with PREVIOUS', async () => {
@@ -302,7 +314,7 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
-    expect(snapshot.currentQuestion?.id).toBe('r1q1');
+    expect(snapshot.currentQuestion?.id).toBe(21);
   });
 
   it('rejects PREVIOUS at the very first question of the quiz', async () => {
@@ -358,7 +370,7 @@ describe('GameStateService', () => {
     const withLeaderboard = await service.applyAction('TOGGLE_LEADERBOARD');
     expect(withLeaderboard.progress.status).toBe('question_open');
     expect(withLeaderboard.progress.isLeaderboardVisible).toBe(true);
-    expect(withLeaderboard.currentQuestion?.id).toBe('r1q1');
+    expect(withLeaderboard.currentQuestion?.id).toBe(21);
   });
 
   it('propagates an illegal-transition error for out-of-order actions', async () => {
@@ -374,18 +386,18 @@ describe('GameStateService', () => {
 
   it('reflects a leaderboard set via setLeaderboard in the snapshot', () => {
     service.setLeaderboard([
-      { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5 },
     ]);
 
     expect(service.getSnapshot().leaderboard).toEqual([
-      { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5 },
     ]);
   });
 
   it('persists progress via the repository after applying an action', async () => {
     await service.applyAction('START_QUIZ');
 
-    expect(progressRepository.save).toHaveBeenCalledWith('session-1', {
+    expect(progressRepository.save).toHaveBeenCalledWith(101, {
       status: 'rules',
       roundIndex: 0,
       questionIndex: 0,
@@ -405,6 +417,7 @@ describe('GameStateService', () => {
     const rehydratedService = new GameStateService(
       asSeedService(createFakeSeedService()),
       asGameProgressRepository(rehydratingRepository),
+      createFakeOrm(),
     );
     await rehydratedService.onModuleInit();
 
@@ -416,24 +429,24 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
-    expect(snapshot.currentQuestion?.id).toBe('r1q2');
+    expect(snapshot.currentQuestion?.id).toBe(22);
   });
 
   it('exposes the active quiz id', () => {
-    expect(service.getActiveQuizId()).toBe('quiz-1');
+    expect(service.getActiveQuizId()).toBe(1);
   });
 
   it('rejects selecting a quiz while a quiz is in progress', async () => {
     await service.applyAction('START_QUIZ');
 
-    await expect(service.selectQuiz('quiz-2')).rejects.toThrow(/lobby/i);
+    await expect(service.selectQuiz(2)).rejects.toThrow(/lobby/i);
     expect(seedService.createSession).not.toHaveBeenCalled();
   });
 
   it('selects a quiz after the game has ended and resets back to the lobby', async () => {
     await service.applyAction('END_QUIZ');
 
-    const snapshot = await service.selectQuiz('quiz-2');
+    const snapshot = await service.selectQuiz(2);
 
     expect(snapshot.progress).toEqual({
       status: 'lobby',
@@ -442,27 +455,19 @@ describe('GameStateService', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     });
-    expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
-    expect(seedService.loadGame).toHaveBeenCalledWith(
-      'quiz-2',
-      'session-2',
-      'GHIJKL',
-    );
+    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
   });
 
   it('selects a quiz in the lobby: creates a new session, reloads rounds, resets state', async () => {
     service.setLeaderboard([
-      { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5 },
     ]);
 
-    const snapshot = await service.selectQuiz('quiz-2');
+    const snapshot = await service.selectQuiz(2);
 
-    expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
-    expect(seedService.loadGame).toHaveBeenCalledWith(
-      'quiz-2',
-      'session-2',
-      'GHIJKL',
-    );
+    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
     expect(snapshot.progress).toEqual({
       status: 'lobby',
       roundIndex: 0,
@@ -471,16 +476,16 @@ describe('GameStateService', () => {
       revealIndex: 0,
     });
     expect(snapshot.leaderboard).toEqual([]);
-    expect(service.getActiveQuizId()).toBe('quiz-2');
-    expect(service.getGameSessionId()).toBe('session-2');
+    expect(service.getActiveQuizId()).toBe(2);
+    expect(service.getGameSessionId()).toBe(102);
   });
 
   it('persists later actions under the newly created session id', async () => {
-    await service.selectQuiz('quiz-2');
+    await service.selectQuiz(2);
 
     await service.applyAction('START_QUIZ');
 
-    expect(progressRepository.save).toHaveBeenCalledWith('session-2', {
+    expect(progressRepository.save).toHaveBeenCalledWith(102, {
       status: 'rules',
       roundIndex: 0,
       questionIndex: 0,
@@ -490,15 +495,15 @@ describe('GameStateService', () => {
   });
 
   it('drives the game with the newly selected quiz rounds after selection', async () => {
-    await service.selectQuiz('quiz-2');
+    await service.selectQuiz(2);
 
     await service.applyAction('START_QUIZ');
     const started = await service.applyAction('ADVANCE');
-    expect(started.currentQuestion?.id).toBe('iq1');
+    expect(started.currentQuestion?.id).toBe(25);
   });
 
   it('exposes the new session join code in the snapshot after selecting a quiz', async () => {
-    const snapshot = await service.selectQuiz('quiz-2');
+    const snapshot = await service.selectQuiz(2);
 
     expect(snapshot.joinCode).toBe('GHIJKL');
   });
@@ -512,15 +517,13 @@ describe('GameStateService', () => {
       await service.applyAction('START_QUIZ');
       await service.applyAction('ADVANCE'); // -> r1q1
       expect(service.getSnapshot().blockQuestions.map((q) => q.id)).toEqual([
-        'r1q1',
+        21,
       ]);
 
       await service.applyAction('ADVANCE'); // -> r1q2
       await service.applyAction('ADVANCE'); // -> r2q1 (same block: round 1 has no break)
       expect(service.getSnapshot().blockQuestions.map((q) => q.id)).toEqual([
-        'r1q1',
-        'r1q2',
-        'r2q1',
+        21, 22, 23,
       ]);
     });
 
@@ -534,10 +537,7 @@ describe('GameStateService', () => {
 
       expect(snapshot.progress.status).toBe('break');
       expect(snapshot.blockQuestions.map((q) => q.id)).toEqual([
-        'r1q1',
-        'r1q2',
-        'r2q1',
-        'r2q2',
+        21, 22, 23, 24,
       ]);
     });
 
@@ -576,10 +576,10 @@ describe('GameStateService', () => {
 
       expect(revealed.progress.status).toBe('reveal');
       expect(revealed.revealQuestions.map((q) => [q.id, q.answer])).toEqual([
-        ['r1q1', 'Paris'],
-        ['r1q2', 'Jupiter'],
-        ['r2q1', 'Eiffel Tower'],
-        ['r2q2', 'France'],
+        [21, 'Paris'],
+        [22, 'Jupiter'],
+        [23, 'Eiffel Tower'],
+        [24, 'France'],
       ]);
     });
 
@@ -646,18 +646,16 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> r1q1
       await service.applyAction('ADVANCE'); // -> r1q2
 
-      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(true);
-      expect(service.isQuestionOpenForAnswering('r1q2')).toBe(true);
+      expect(service.isQuestionOpenForAnswering(21)).toBe(true);
+      expect(service.isQuestionOpenForAnswering(22)).toBe(true);
     });
 
     it('treats unrevealed and unknown questions as closed for answering', async () => {
       await service.applyAction('START_QUIZ');
       await service.applyAction('ADVANCE'); // -> r1q1
 
-      expect(service.isQuestionOpenForAnswering('r2q1')).toBe(false);
-      expect(service.isQuestionOpenForAnswering('no-such-question')).toBe(
-        false,
-      );
+      expect(service.isQuestionOpenForAnswering(23)).toBe(false);
+      expect(service.isQuestionOpenForAnswering(999999)).toBe(false);
     });
 
     it('closes the whole block for answering once the break starts', async () => {
@@ -668,17 +666,17 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE');
       await service.applyAction('ADVANCE'); // -> break
 
-      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(false);
-      expect(service.isQuestionOpenForAnswering('r2q2')).toBe(false);
+      expect(service.isQuestionOpenForAnswering(21)).toBe(false);
+      expect(service.isQuestionOpenForAnswering(24)).toBe(false);
     });
 
     it('closes answering while still in the lobby', () => {
-      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(false);
+      expect(service.isQuestionOpenForAnswering(21)).toBe(false);
     });
 
     it('closes answering while showing the rules screen', async () => {
       await service.applyAction('START_QUIZ');
-      expect(service.isQuestionOpenForAnswering('r1q1')).toBe(false);
+      expect(service.isQuestionOpenForAnswering(21)).toBe(false);
     });
 
     it('starts with no answered team ids', () => {
@@ -688,9 +686,9 @@ describe('GameStateService', () => {
     it('reflects answered team ids for the current question only', async () => {
       await service.applyAction('START_QUIZ');
       await service.applyAction('ADVANCE'); // -> r1q1
-      service.setAnsweredTeamIds('r1q1', ['team-1']);
+      service.setAnsweredTeamIds(21, [31]);
 
-      expect(service.getSnapshot().answeredTeamIds).toEqual(['team-1']);
+      expect(service.getSnapshot().answeredTeamIds).toEqual([31]);
 
       await service.applyAction('ADVANCE'); // -> r1q2, nobody answered it yet
       expect(service.getSnapshot().answeredTeamIds).toEqual([]);
@@ -701,10 +699,10 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> r1q1
       // Same question id as the imported quiz's first question, so stale
       // indicators would leak into the new session if selectQuiz kept them.
-      service.setAnsweredTeamIds('iq1', ['team-1']);
+      service.setAnsweredTeamIds(25, [31]);
       await service.applyAction('END_QUIZ');
 
-      await service.selectQuiz('quiz-2');
+      await service.selectQuiz(2);
       await service.applyAction('START_QUIZ');
       await service.applyAction('ADVANCE'); // current question: iq1
 

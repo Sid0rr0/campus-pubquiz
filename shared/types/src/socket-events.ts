@@ -28,7 +28,7 @@ export const SOCKET_ROOMS = {
 export type QuestionType = 'free_text' | 'multiple_choice' | 'picture' | 'audio';
 
 export interface QuestionView {
-  id: string;
+  id: number;
   type: QuestionType;
   prompt: string;
   options?: string[];
@@ -41,13 +41,13 @@ export interface RevealQuestionView extends QuestionView {
 }
 
 export interface LeaderboardEntry {
-  teamId: string;
+  teamId: number;
   teamName: string;
   totalPoints: number;
 }
 
 export interface TeamView {
-  teamId: string;
+  teamId: number;
   teamName: string;
   isConnected: boolean;
 }
@@ -65,7 +65,7 @@ export interface StateSnapshotPayload {
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
   revealQuestions: RevealQuestionView[];
   /** Teams that have answered the current question. Empty when none is open. */
-  answeredTeamIds: string[];
+  answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];
   joinCode: string;
   teams: TeamView[];
@@ -76,14 +76,14 @@ export interface AdminActionPayload {
 }
 
 export interface SubmitAnswerPayload {
-  questionId: string;
-  teamId: string;
+  questionId: number;
+  teamId: number;
   value: string;
 }
 
 export interface AnswerReceivedPayload {
-  questionId: string;
-  teamId: string;
+  questionId: number;
+  teamId: number;
   teamName: string;
   value: string;
 }
@@ -96,12 +96,12 @@ export interface JoinPlayersPayload {
 }
 
 export interface TeamAnswerView {
-  questionId: string;
+  questionId: number;
   value: string;
 }
 
 export interface JoinAcceptedPayload {
-  teamId: string;
+  teamId: number;
   teamToken: string;
   teamCode: string;
   teamName: string;
@@ -110,25 +110,27 @@ export interface JoinAcceptedPayload {
 }
 
 export interface AnswerView {
-  answerId: string;
-  teamId: string;
+  answerId: number;
+  teamId: number;
   teamName: string;
   value: string;
-  pointsAwarded: number | null;
+  pointsAwarded: number;
+  /** Set once the admin grades this answer — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
+  gradedAt: string | null;
 }
 
 export interface AnswersUpdatedPayload {
-  questionId: string;
+  questionId: number;
   answers: AnswerView[];
 }
 
 export interface GradeAnswerPayload {
-  answerId: string;
+  answerId: number;
   pointsAwarded: number;
 }
 
 export interface QuizSummaryQuestion {
-  id: string;
+  id: number;
   prompt: string;
   options?: string[];
   answer: string;
@@ -141,24 +143,24 @@ export interface QuizSummaryRound {
 }
 
 export interface QuizSummary {
-  id: string;
+  id: number;
   title: string;
   rounds: QuizSummaryRound[];
 }
 
 export interface QuizzesListedPayload {
-  activeQuizId: string;
+  activeQuizId: number;
   quizzes: QuizSummary[];
 }
 
 export interface SelectQuizPayload {
-  quizId: string;
+  quizId: number;
 }
 
 export interface ListAnswersPayload {
-  questionId: string;
+  questionId: number;
 }
 
 export interface KickTeamPayload {
-  teamId: string;
+  teamId: number;
 }

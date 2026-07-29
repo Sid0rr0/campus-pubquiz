@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
+import { MikroORM } from '@mikro-orm/core';
 import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { SeedService } from '@/db/seed.service';
@@ -11,19 +12,29 @@ import type { QuizService } from '@/quiz/quiz.service';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 
+// GameStateService.onModuleInit and every DB-touching GameGateway handler
+// are wrapped in @CreateRequestContext(), which requires a real MikroORM
+// instance (checked via `instanceof`) — these tests mock the DB-touching
+// services entirely, so a prototype-only fake with a working em.fork() is
+// enough to satisfy the decorator without a real DB.
+function createFakeOrm(): MikroORM {
+  const em = { name: 'default', fork: () => em };
+  return Object.assign(Object.create(MikroORM.prototype) as MikroORM, { em });
+}
+
 const ADMIN_PASSWORD = 'test-admin-password';
 
 const FIXTURE_SEEDED_GAME: SeededGame = {
-  quizId: 'quiz-1',
-  gameSessionId: 'session-1',
+  quizId: 1,
+  gameSessionId: 101,
   joinCode: 'ABCDEF',
   rounds: [
     {
-      id: 'round-1',
+      id: 11,
       breakAfter: false,
       questions: [
         {
-          id: 'r1q1',
+          id: 21,
           type: 'free_text',
           prompt: 'Q1',
           points: 1,
@@ -35,16 +46,16 @@ const FIXTURE_SEEDED_GAME: SeededGame = {
 };
 
 const IMPORTED_QUIZ_GAME: SeededGame = {
-  quizId: 'quiz-2',
-  gameSessionId: 'session-2',
+  quizId: 2,
+  gameSessionId: 102,
   joinCode: 'GHIJKL',
   rounds: [
     {
-      id: 'round-imported',
+      id: 13,
       breakAfter: true,
       questions: [
         {
-          id: 'iq1',
+          id: 25,
           type: 'free_text',
           prompt: 'Imported question',
           points: 1,
@@ -61,7 +72,7 @@ function createFakeSeedService() {
     loadGame: jest.fn().mockResolvedValue(IMPORTED_QUIZ_GAME),
     createSession: jest
       .fn()
-      .mockResolvedValue({ gameSessionId: 'session-2', joinCode: 'GHIJKL' }),
+      .mockResolvedValue({ gameSessionId: 102, joinCode: 'GHIJKL' }),
   };
 }
 
@@ -74,8 +85,8 @@ function asSeedService(mock: MockSeedService): SeedService {
 function createFakeQuizService() {
   return {
     list: jest.fn().mockResolvedValue([
-      { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-      { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
+      { id: 2, title: 'Imported Quiz', rounds: [] },
     ]),
   };
 }
@@ -106,14 +117,14 @@ function asGameProgressRepository(
 function createFakeTeamService() {
   return {
     join: jest.fn().mockResolvedValue({
-      id: 'team-1',
+      id: 31,
       name: 'The Quizzards',
       token: 'team-token-1',
       code: 'team-code-1',
     }),
     listForSession: jest
       .fn()
-      .mockResolvedValue([{ teamId: 'team-1', teamName: 'The Quizzards' }]),
+      .mockResolvedValue([{ teamId: 31, teamName: 'The Quizzards' }]),
   };
 }
 
@@ -126,28 +137,29 @@ function asTeamService(mock: MockTeamService): TeamService {
 function createFakeAnswerService() {
   return {
     submit: jest.fn().mockResolvedValue({
-      answerId: 'answer-1',
-      teamId: 'team-1',
+      answerId: 41,
+      teamId: 31,
       teamName: 'The Quizzards',
       value: 'Banana',
     }),
     listForQuestion: jest.fn().mockResolvedValue([
       {
-        answerId: 'answer-1',
-        teamId: 'team-1',
+        answerId: 41,
+        teamId: 31,
         teamName: 'The Quizzards',
         value: 'Banana',
-        pointsAwarded: null,
+        pointsAwarded: 0,
+        gradedAt: null,
       },
     ]),
     listForTeam: jest
       .fn()
-      .mockResolvedValue([{ questionId: 'r1q1', value: 'Banana' }]),
-    grade: jest.fn().mockResolvedValue({ questionId: 'r1q1' }),
+      .mockResolvedValue([{ questionId: 21, value: 'Banana' }]),
+    grade: jest.fn().mockResolvedValue({ questionId: 21 }),
     computeLeaderboard: jest
       .fn()
       .mockResolvedValue([
-        { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 2 },
+        { teamId: 31, teamName: 'The Quizzards', totalPoints: 2 },
       ]),
   };
 }
@@ -251,6 +263,7 @@ describe('GameGateway', () => {
     const gameStateService = new GameStateService(
       asSeedService(seedService),
       asGameProgressRepository(createFakeGameProgressRepository()),
+      createFakeOrm(),
     );
     await gameStateService.onModuleInit();
     teamService = createFakeTeamService();
@@ -260,6 +273,7 @@ describe('GameGateway', () => {
       asTeamService(teamService),
       asAnswerService(answerService),
       asQuizService(quizService),
+      createFakeOrm(),
     );
     server = createMockServer();
     gateway.server = asServer(server);
@@ -393,22 +407,19 @@ describe('GameGateway', () => {
       joinCode: 'ABCDEF',
     });
 
-    expect(teamService.join).toHaveBeenCalledWith(
-      'session-1',
-      'The Quizzards',
-      { teamToken: undefined, teamCode: undefined, joinCode: 'ABCDEF' },
-    );
+    expect(teamService.join).toHaveBeenCalledWith(101, 'The Quizzards', {
+      teamToken: undefined,
+      teamCode: undefined,
+      joinCode: 'ABCDEF',
+    });
     expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_ACCEPTED, {
-      teamId: 'team-1',
+      teamId: 31,
       teamName: 'The Quizzards',
       teamToken: 'team-token-1',
       teamCode: 'team-code-1',
-      answers: [{ questionId: 'r1q1', value: 'Banana' }],
+      answers: [{ questionId: 21, value: 'Banana' }],
     });
-    expect(answerService.listForTeam).toHaveBeenCalledWith(
-      'session-1',
-      'team-1',
-    );
+    expect(answerService.listForTeam).toHaveBeenCalledWith(101, 31);
   });
 
   it('passes the team code through to TeamService.join when the player supplies one', async () => {
@@ -421,11 +432,11 @@ describe('GameGateway', () => {
       teamCode: 'RECOVER1',
     });
 
-    expect(teamService.join).toHaveBeenCalledWith(
-      'session-1',
-      'The Quizzards',
-      { teamToken: undefined, teamCode: 'RECOVER1', joinCode: 'ABCDEF' },
-    );
+    expect(teamService.join).toHaveBeenCalledWith(101, 'The Quizzards', {
+      teamToken: undefined,
+      teamCode: 'RECOVER1',
+      joinCode: 'ABCDEF',
+    });
   });
 
   it('broadcasts the updated connected-team list to all rooms after a join', async () => {
@@ -437,16 +448,14 @@ describe('GameGateway', () => {
       joinCode: 'ABCDEF',
     });
 
-    expect(teamService.listForSession).toHaveBeenCalledWith('session-1');
+    expect(teamService.listForSession).toHaveBeenCalledWith(101);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
-        teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards', isConnected: true },
-        ],
+        teams: [{ teamId: 31, teamName: 'The Quizzards', isConnected: true }],
       }),
     );
   });
@@ -482,27 +491,23 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(player));
 
     await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 'r1q1',
-      teamId: 'team-1',
+      questionId: 21,
+      teamId: 31,
       value: 'Banana',
     });
 
-    expect(answerService.submit).toHaveBeenCalledWith(
-      'session-1',
-      'r1q1',
-      'team-1',
-      'Banana',
-    );
+    expect(answerService.submit).toHaveBeenCalledWith(101, 21, 31, 'Banana');
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: 'r1q1',
+      questionId: 21,
       answers: [
         {
-          answerId: 'answer-1',
-          teamId: 'team-1',
+          answerId: 41,
+          teamId: 31,
           teamName: 'The Quizzards',
           value: 'Banana',
-          pointsAwarded: null,
+          pointsAwarded: 0,
+          gradedAt: null,
         },
       ],
     });
@@ -514,14 +519,14 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(player));
 
     await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 'r1q1',
-      teamId: 'team-1',
+      questionId: 21,
+      teamId: 31,
       value: 'Banana',
     });
 
     expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWER_RECEIVED, {
-      questionId: 'r1q1',
-      teamId: 'team-1',
+      questionId: 21,
+      teamId: 31,
       teamName: 'The Quizzards',
       value: 'Banana',
     });
@@ -533,8 +538,8 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(player));
 
     await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 'r1q1',
-      teamId: 'team-1',
+      questionId: 21,
+      teamId: 31,
       value: 'Banana',
     });
 
@@ -542,7 +547,7 @@ describe('GameGateway', () => {
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({ answeredTeamIds: ['team-1'] }),
+      expect.objectContaining({ answeredTeamIds: [31] }),
     );
   });
 
@@ -553,8 +558,8 @@ describe('GameGateway', () => {
 
     await expect(
       gateway.handleSubmitAnswer(asSocket(player), {
-        questionId: 'r1q1',
-        teamId: 'team-1',
+        questionId: 21,
+        teamId: 31,
         value: 'Banana',
       }),
     ).rejects.toThrow(WsException);
@@ -569,8 +574,8 @@ describe('GameGateway', () => {
 
     await expect(
       gateway.handleSubmitAnswer(asSocket(admin), {
-        questionId: 'r1q1',
-        teamId: 'team-1',
+        questionId: 21,
+        teamId: 31,
         value: 'Banana',
       }),
     ).rejects.toThrow(WsException);
@@ -584,21 +589,22 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(admin));
 
     await gateway.handleGradeAnswer(asSocket(admin), {
-      answerId: 'answer-1',
+      answerId: 41,
       pointsAwarded: 2,
     });
 
-    expect(answerService.grade).toHaveBeenCalledWith('answer-1', 2);
+    expect(answerService.grade).toHaveBeenCalledWith(41, 2);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: 'r1q1',
+      questionId: 21,
       answers: [
         {
-          answerId: 'answer-1',
-          teamId: 'team-1',
+          answerId: 41,
+          teamId: 31,
           teamName: 'The Quizzards',
           value: 'Banana',
-          pointsAwarded: null,
+          pointsAwarded: 0,
+          gradedAt: null,
         },
       ],
     });
@@ -611,18 +617,18 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(admin));
 
     await gateway.handleGradeAnswer(asSocket(admin), {
-      answerId: 'answer-1',
+      answerId: 41,
       pointsAwarded: 2,
     });
 
-    expect(answerService.computeLeaderboard).toHaveBeenCalledWith('session-1');
+    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 2 },
+          { teamId: 31, teamName: 'The Quizzards', totalPoints: 2 },
         ],
       }),
     );
@@ -634,7 +640,7 @@ describe('GameGateway', () => {
 
     await expect(
       gateway.handleGradeAnswer(asSocket(player), {
-        answerId: 'answer-1',
+        answerId: 41,
         pointsAwarded: 2,
       }),
     ).rejects.toThrow(WsException);
@@ -650,10 +656,10 @@ describe('GameGateway', () => {
     await gateway.handleListQuizzes(asSocket(admin));
 
     expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.QUIZZES_LISTED, {
-      activeQuizId: 'quiz-1',
+      activeQuizId: 1,
       quizzes: [
-        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+        { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 2, title: 'Imported Quiz', rounds: [] },
       ],
     });
   });
@@ -674,9 +680,9 @@ describe('GameGateway', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    await gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' });
+    await gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 });
 
-    expect(seedService.createSession).toHaveBeenCalledWith('quiz-2');
+    expect(seedService.createSession).toHaveBeenCalledWith(2);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
     expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
@@ -695,21 +701,19 @@ describe('GameGateway', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    await gateway.handleListAnswers(asSocket(admin), { questionId: 'r1q1' });
+    await gateway.handleListAnswers(asSocket(admin), { questionId: 21 });
 
-    expect(answerService.listForQuestion).toHaveBeenCalledWith(
-      'session-1',
-      'r1q1',
-    );
+    expect(answerService.listForQuestion).toHaveBeenCalledWith(101, 21);
     expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: 'r1q1',
+      questionId: 21,
       answers: [
         {
-          answerId: 'answer-1',
-          teamId: 'team-1',
+          answerId: 41,
+          teamId: 31,
           teamName: 'The Quizzards',
           value: 'Banana',
-          pointsAwarded: null,
+          pointsAwarded: 0,
+          gradedAt: null,
         },
       ],
     });
@@ -720,7 +724,7 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(player));
 
     await expect(
-      gateway.handleListAnswers(asSocket(player), { questionId: 'r1q1' }),
+      gateway.handleListAnswers(asSocket(player), { questionId: 21 }),
     ).rejects.toThrow(WsException);
     expect(answerService.listForQuestion).not.toHaveBeenCalled();
   });
@@ -730,7 +734,7 @@ describe('GameGateway', () => {
     await gateway.handleConnection(asSocket(player));
 
     await expect(
-      gateway.handleSelectQuiz(asSocket(player), { quizId: 'quiz-2' }),
+      gateway.handleSelectQuiz(asSocket(player), { quizId: 2 }),
     ).rejects.toThrow(WsException);
     expect(seedService.createSession).not.toHaveBeenCalled();
   });
@@ -822,16 +826,16 @@ describe('GameGateway', () => {
       await gateway.handleConnection(asSocket(player));
 
       await gateway.handleSubmitAnswer(asSocket(player), {
-        questionId: 'r1q1',
-        teamId: 'team-1',
+        questionId: 21,
+        teamId: 31,
         value: 'Banana',
       });
 
       expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining(SOCKET_EVENTS.SUBMIT_ANSWER),
       );
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('r1q1'));
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('team-1'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('21'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('31'));
     });
 
     it('logs a GRADE_ANSWER event with the answer id and points', async () => {
@@ -841,14 +845,14 @@ describe('GameGateway', () => {
       await gateway.handleConnection(asSocket(admin));
 
       await gateway.handleGradeAnswer(asSocket(admin), {
-        answerId: 'answer-1',
+        answerId: 41,
         pointsAwarded: 2,
       });
 
       expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining(SOCKET_EVENTS.GRADE_ANSWER),
       );
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('answer-1'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('41'));
     });
 
     it('logs a LIST_QUIZZES event', async () => {
@@ -870,12 +874,12 @@ describe('GameGateway', () => {
       });
       await gateway.handleConnection(asSocket(admin));
 
-      await gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' });
+      await gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 });
 
       expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining(SOCKET_EVENTS.SELECT_QUIZ),
       );
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('quiz-2'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('2'));
     });
   });
 
@@ -887,7 +891,7 @@ describe('GameGateway', () => {
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
 
     await expect(
-      gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' }),
+      gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 }),
     ).rejects.toThrow(WsException);
     expect(seedService.createSession).not.toHaveBeenCalled();
   });
@@ -985,7 +989,7 @@ describe('GameGateway', () => {
       await gateway.handleConnection(asSocket(player));
 
       expect(() =>
-        gateway.handleKickTeam(asSocket(player), { teamId: 'team-1' }),
+        gateway.handleKickTeam(asSocket(player), { teamId: 31 }),
       ).toThrow(WsException);
     });
 
@@ -996,7 +1000,7 @@ describe('GameGateway', () => {
       });
       await gateway.handleConnection(asSocket(admin));
 
-      gateway.handleKickTeam(asSocket(admin), { teamId: 'team-1' });
+      gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
 
       expect(playerA.emit).toHaveBeenCalledWith(
         'exception',
@@ -1012,7 +1016,7 @@ describe('GameGateway', () => {
       });
       await gateway.handleConnection(asSocket(admin));
 
-      gateway.handleKickTeam(asSocket(admin), { teamId: 'team-1' });
+      gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
       // A real disconnect() call fires the socket.io 'disconnect' event,
       // which our gateway hooks via handleDisconnect.
       gateway.handleDisconnect(asSocket(playerA));
@@ -1033,7 +1037,7 @@ describe('GameGateway', () => {
       await gateway.handleConnection(asSocket(admin));
 
       expect(() =>
-        gateway.handleKickTeam(asSocket(admin), { teamId: 'no-such-team' }),
+        gateway.handleKickTeam(asSocket(admin), { teamId: 999 }),
       ).not.toThrow();
     });
   });

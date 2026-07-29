@@ -1,8 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { QuizSummary } from '@campus-pubquiz/types';
-import { DRIZZLE } from '@/db/db.constants';
-import * as schema from '@/db/schema';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { QuizRepository } from '@/db/repositories/quiz.repository';
 
 interface QuestionPayload {
   options?: string[];
@@ -18,32 +18,19 @@ function toSummaryPayload(payload: unknown): QuestionPayload {
 @Injectable()
 export class QuizService {
   constructor(
-    @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+    @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
   ) {}
 
   async list(): Promise<QuizSummary[]> {
-    const quizzes = await this.db.query.quizzes.findMany({
-      orderBy: (quizzesTable, { asc }) => asc(quizzesTable.createdAt),
-      with: {
-        rounds: {
-          orderBy: (roundsTable, { asc }) => asc(roundsTable.orderIndex),
-          with: {
-            questions: {
-              orderBy: (questionsTable, { asc }) =>
-                asc(questionsTable.orderIndex),
-            },
-          },
-        },
-      },
-    });
+    const quizzes = await this.quizzes.findAllWithRoundsAndQuestions();
 
     return quizzes.map((quiz) => ({
       id: quiz.id,
       title: quiz.title,
-      rounds: quiz.rounds.map((round) => ({
+      rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
-        questions: round.questions.map((question) => ({
+        questions: round.questions.getItems().map((question) => ({
           id: question.id,
           prompt: question.prompt,
           answer: question.answer,

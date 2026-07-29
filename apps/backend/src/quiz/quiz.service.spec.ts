@@ -2,81 +2,85 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Client } from 'pg';
-import * as schema from '@/db/schema';
+import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import { Question } from '@/db/entities/question.entity';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
+import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { QuizService } from '@/quiz/quiz.service';
 
 describe('QuizService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;
-  let client: Client;
-  let db: NodePgDatabase<typeof schema>;
+  let orm: MikroORM;
+  let em: EntityManager;
   let quizService: QuizService;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    client = new Client({ connectionString: container.getConnectionUri() });
-    await client.connect();
-    db = drizzle(client, { schema });
-    await migrate(db, { migrationsFolder: './drizzle' });
+    orm = await MikroORM.init({
+      clientUrl: container.getConnectionUri(),
+      entities: ['./dist/db/entities/*.entity.js'],
+      entitiesTs: ['./src/db/entities/*.entity.ts'],
+      migrations: {
+        path: './dist/db/migrations',
+        pathTs: './src/db/migrations',
+      },
+    });
+    await orm.getMigrator().up();
   }, 60_000);
 
   afterAll(async () => {
-    await client.end();
+    await orm.close(true);
     await container.stop();
   });
 
   beforeEach(() => {
-    quizService = new QuizService(db);
+    em = orm.em.fork();
+    quizService = new QuizService(em.getRepository<Quiz, QuizRepository>(Quiz));
   });
 
   afterEach(async () => {
-    await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
-    );
+    await em
+      .getConnection()
+      .execute(
+        'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      );
   });
 
-  async function insertQuiz(title: string) {
-    const [quiz] = await db
-      .insert(schema.quizzes)
-      .values({ title })
-      .returning();
+  async function insertQuiz(title: string): Promise<Quiz> {
+    const quiz = em.create(Quiz, { title });
+    await em.flush();
     return quiz;
   }
 
   async function insertRound(
-    quizId: string,
+    quiz: Quiz,
     title: string,
     orderIndex: number,
     breakAfter = false,
-  ) {
-    const [round] = await db
-      .insert(schema.rounds)
-      .values({ quizId, title, orderIndex, breakAfter })
-      .returning();
+  ): Promise<Round> {
+    const round = em.create(Round, { quiz, title, orderIndex, breakAfter });
+    await em.flush();
     return round;
   }
 
   async function insertQuestion(
-    roundId: string,
+    round: Round,
     prompt: string,
     orderIndex: number,
     payload: { options?: string[]; answer?: string } = {},
-  ) {
+  ): Promise<Question> {
     const { answer, ...restPayload } = payload;
-    const [question] = await db
-      .insert(schema.questions)
-      .values({
-        roundId,
-        orderIndex,
-        type: payload.options ? 'multiple_choice' : 'free_text',
-        prompt,
-        answer: answer || 'unknown',
-        payload: restPayload,
-        points: 1,
-      })
-      .returning();
+    const question = em.create(Question, {
+      round,
+      orderIndex,
+      type: payload.options ? 'multiple_choice' : 'free_text',
+      prompt,
+      answer: answer || 'unknown',
+      payload: restPayload,
+      points: 1,
+    });
+    await em.flush();
     return question;
   }
 
@@ -97,12 +101,12 @@ describe('QuizService (Postgres integration)', () => {
 
   it("includes each quiz's rounds and questions in order", async () => {
     const quiz = await insertQuiz('Campus Pub Quiz Night');
-    const round1 = await insertRound(quiz.id, 'Round 1', 0, true);
-    await insertRound(quiz.id, 'Round 2', 1);
-    const q1 = await insertQuestion(round1.id, 'Name a fruit', 0, {
+    const round1 = await insertRound(quiz, 'Round 1', 0, true);
+    await insertRound(quiz, 'Round 2', 1);
+    const q1 = await insertQuestion(round1, 'Name a fruit', 0, {
       answer: 'Banana',
     });
-    const q2 = await insertQuestion(round1.id, 'Name a vegetable', 1, {
+    const q2 = await insertQuestion(round1, 'Name a vegetable', 1, {
       answer: 'Carrot',
     });
 
@@ -123,8 +127,8 @@ describe('QuizService (Postgres integration)', () => {
 
   it("includes each question's options and correct answer", async () => {
     const quiz = await insertQuiz('Campus Pub Quiz Night');
-    const round = await insertRound(quiz.id, 'Round 1', 0);
-    const question = await insertQuestion(round.id, 'Capital of France?', 0, {
+    const round = await insertRound(quiz, 'Round 1', 0);
+    const question = await insertQuestion(round, 'Capital of France?', 0, {
       options: ['Paris', 'London', 'Berlin'],
       answer: 'Paris',
     });
