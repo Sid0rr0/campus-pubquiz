@@ -3,6 +3,7 @@ import {
   getBlockStartRoundIndex,
   getNextGameState,
   getQuizStructureSummary,
+  isLastQuestionOfBreakAfterRound,
   IllegalGameTransitionError,
   InvalidQuizConfigError,
   type GameContext,
@@ -115,7 +116,7 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('locks the whole block by entering a break when the finished round has breakAfter: true', () => {
+  it('enters the locking countdown when the finished round has breakAfter: true', () => {
     const open: GameProgress = {
       status: 'question_open',
       roundIndex: 1,
@@ -124,8 +125,33 @@ describe('getNextGameState', () => {
       revealIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
-    expect(next.status).toBe('break');
+    expect(next.status).toBe('locking');
     expect(next.roundIndex).toBe(1);
+    expect(next.questionIndex).toBe(1);
+  });
+
+  it('enters a break once the locking countdown is advanced past', () => {
+    const locking: GameProgress = {
+      status: 'locking',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    const next = getNextGameState(locking, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...locking, status: 'break' });
+  });
+
+  it('steps back from the locking countdown to the last question, unlocking it again', () => {
+    const locking: GameProgress = {
+      status: 'locking',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    const next = getNextGameState(locking, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...locking, status: 'question_open' });
   });
 
   it('moves from break to reveal once grading is finished, starting at the first reveal question', () => {
@@ -438,6 +464,41 @@ describe('getNextGameState', () => {
     expect(() => getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
+  });
+});
+
+describe('isLastQuestionOfBreakAfterRound', () => {
+  it('is true on the last question of a round with breakAfter: true', () => {
+    const progress: GameProgress = {
+      status: 'question_open',
+      roundIndex: 1,
+      questionIndex: 1, // last question of round 1 (questionCount: 2)
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    expect(isLastQuestionOfBreakAfterRound(progress, twoRoundsWithBreakAfterSecond)).toBe(true);
+  });
+
+  it('is false on an earlier question of a round with breakAfter: true', () => {
+    const progress: GameProgress = {
+      status: 'question_open',
+      roundIndex: 1,
+      questionIndex: 0, // first of two questions in round 1
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    expect(isLastQuestionOfBreakAfterRound(progress, twoRoundsWithBreakAfterSecond)).toBe(false);
+  });
+
+  it('is false on the last question of a round with breakAfter: false', () => {
+    const progress: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 1, // last question of round 0 (breakAfter: false)
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    expect(isLastQuestionOfBreakAfterRound(progress, twoRoundsWithBreakAfterSecond)).toBe(false);
   });
 });
 

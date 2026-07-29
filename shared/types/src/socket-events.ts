@@ -71,6 +71,8 @@ export interface StateSnapshotPayload {
   leaderboard: LeaderboardEntry[];
   joinCode: string;
   teams: TeamView[];
+  /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */
+  questionLockAt: number | null;
 }
 
 export interface AdminActionPayload {

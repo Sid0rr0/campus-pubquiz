@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress, QuestionView } from '@campus-pubquiz/types';
 import DisplayPage from '@/app/display/page';
 
@@ -34,7 +34,7 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
 }
 
 const question: QuestionView = {
-  id: 'r1q1',
+  id: 1,
   type: 'multiple_choice',
   prompt: 'Capital of France?',
   options: ['Paris', 'London'],
@@ -231,6 +231,66 @@ describe('DisplayPage', () => {
     render(<DisplayPage />);
 
     expect(screen.getByText(/1 of 2 teams answered/i)).toBeInTheDocument();
+  });
+
+  describe('question lock countdown', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('shows no countdown while the question itself is open', () => {
+      mockUseGameSocket.mockReturnValue({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: question,
+          questionLockAt: null,
+        },
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.queryByTestId('question-lock-countdown')).not.toBeInTheDocument();
+    });
+
+    it('hides the question and shows the seconds remaining once locking starts', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
+      mockUseGameSocket.mockReturnValue({
+        snapshot: {
+          progress: progress({ status: 'locking' }),
+          currentQuestion: question,
+          questionLockAt: Date.now() + 45_000,
+        },
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.getByTestId('question-lock-countdown')).toHaveTextContent('45');
+      expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
+    });
+
+    it('counts down as time passes', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
+      mockUseGameSocket.mockReturnValue({
+        snapshot: {
+          progress: progress({ status: 'locking' }),
+          currentQuestion: question,
+          questionLockAt: Date.now() + 10_000,
+        },
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      act(() => {
+        vi.advanceTimersByTime(3_000);
+      });
+
+      expect(screen.getByTestId('question-lock-countdown')).toHaveTextContent('7');
+    });
   });
 
   it('shows the rules screen after the lobby, before the first question opens', () => {

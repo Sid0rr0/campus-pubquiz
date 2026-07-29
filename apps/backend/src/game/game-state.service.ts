@@ -27,6 +27,9 @@ const LOBBY_PROGRESS: GameProgress = {
   revealIndex: 0,
 };
 
+/** How long the 'locking' countdown runs before auto-advancing into the break. */
+const QUESTION_LOCK_DURATION_MS = 60_000;
+
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.
 function toQuestionView(question: RevealQuestionView): QuestionView {
@@ -43,6 +46,8 @@ function toQuestionView(question: RevealQuestionView): QuestionView {
 @Injectable()
 export class GameStateService implements OnModuleInit {
   private progress: GameProgress = { ...LOBBY_PROGRESS };
+  /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
+  private questionLockAt: number | null = null;
 
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
@@ -69,6 +74,7 @@ export class GameStateService implements OnModuleInit {
     if (savedProgress) {
       this.progress = savedProgress;
     }
+    this.updateQuestionLockAt();
   }
 
   getGameSessionId(): number {
@@ -99,6 +105,7 @@ export class GameStateService implements OnModuleInit {
     this.teams = [];
     this.answeredTeamIdsByQuestion = {};
     this.connectedTeamSockets = {};
+    this.updateQuestionLockAt();
     return this.getSnapshot();
   }
 
@@ -159,7 +166,8 @@ export class GameStateService implements OnModuleInit {
 
   isQuestionOpenForAnswering(questionId: number): boolean {
     return (
-      this.progress.status === 'question_open' &&
+      (this.progress.status === 'question_open' ||
+        this.progress.status === 'locking') &&
       this.getBlockQuestions().some((question) => question.id === questionId)
     );
   }
@@ -181,13 +189,32 @@ export class GameStateService implements OnModuleInit {
           isConnected: Boolean(this.connectedTeamSockets[team.teamId]),
         }),
       ),
+      questionLockAt: this.questionLockAt,
     };
+  }
+
+  /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
+  getQuestionLockAt(): number | null {
+    return this.questionLockAt;
   }
 
   async applyAction(action: GameAction): Promise<StateSnapshotPayload> {
     this.progress = getNextGameState(this.progress, action, this.getContext());
+    this.updateQuestionLockAt();
     await this.progressRepository.save(this.getGameSessionId(), this.progress);
     return this.getSnapshot();
+  }
+
+  /**
+   * Recomputes the auto-lock deadline from the current progress: armed only
+   * while in the 'locking' countdown, so a gateway timer can advance into the
+   * break automatically without the admin clicking Advance.
+   */
+  private updateQuestionLockAt(): void {
+    const shouldArm = this.progress.status === 'locking';
+    this.questionLockAt = shouldArm
+      ? Date.now() + QUESTION_LOCK_DURATION_MS
+      : null;
   }
 
   private getSeededGame(): SeededGame {
@@ -212,8 +239,14 @@ export class GameStateService implements OnModuleInit {
     return this.getSeededGame().rounds[this.progress.roundIndex]?.title ?? '';
   }
 
+  // Stays populated through 'locking' (not just 'question_open') so answers
+  // remain submittable during the countdown — display simply doesn't render
+  // it during 'locking', but /play keeps showing the last question.
   private getCurrentQuestion(): QuestionView | null {
-    if (this.progress.status !== 'question_open') {
+    if (
+      this.progress.status !== 'question_open' &&
+      this.progress.status !== 'locking'
+    ) {
       return null;
     }
     return (
@@ -225,13 +258,14 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * The block's questions (with their correct answers) revealed so far:
-   * everything up to the current question while one is open, or the whole
-   * just-locked block during break/reveal. Empty outside those statuses.
+   * everything up to the current question while one is open (or locking),
+   * or the whole just-locked block during break/reveal. Empty otherwise.
    */
   private getBlockSeededQuestions(): RevealQuestionView[] {
     const { status, roundIndex, questionIndex } = this.progress;
     if (
       status !== 'question_open' &&
+      status !== 'locking' &&
       status !== 'break' &&
       status !== 'reveal'
     ) {
@@ -243,7 +277,8 @@ export class GameStateService implements OnModuleInit {
 
     return rounds.slice(blockStart, roundIndex + 1).flatMap((round, offset) => {
       const isCurrentRound = blockStart + offset === roundIndex;
-      const isPartiallyRevealed = status === 'question_open' && isCurrentRound;
+      const isPartiallyRevealed =
+        (status === 'question_open' || status === 'locking') && isCurrentRound;
       return isPartiallyRevealed
         ? round.questions.slice(0, questionIndex + 1)
         : round.questions;

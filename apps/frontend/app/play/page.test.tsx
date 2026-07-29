@@ -242,6 +242,21 @@ describe('PlayPage', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
+  it('keeps showing the question and answer form during the locking countdown', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'locking' }),
+          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+  });
+
   it('shows a hint to look at the big screen for a picture question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(

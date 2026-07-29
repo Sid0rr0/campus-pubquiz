@@ -391,7 +391,7 @@ describe('GameStateService', () => {
     );
   });
 
-  it('enters a break once round 2 (breakAfter: true) finishes, hiding the question', async () => {
+  it('enters the locking countdown once round 2 (breakAfter: true) finishes, keeping the question visible', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> round_intro(0)
     await service.applyAction('ADVANCE'); // -> r1q1
@@ -399,9 +399,13 @@ describe('GameStateService', () => {
     await service.applyAction('ADVANCE'); // -> round_intro(1)
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
-    const snapshot = await service.applyAction('ADVANCE'); // round 2 done, breakAfter -> break
-    expect(snapshot.progress.status).toBe('break');
-    expect(snapshot.currentQuestion).toBeNull();
+    const locking = await service.applyAction('ADVANCE'); // round 2 done, breakAfter -> locking
+    expect(locking.progress.status).toBe('locking');
+    expect(locking.currentQuestion?.id).toBe(24);
+
+    const breakSnapshot = await service.applyAction('ADVANCE'); // locking -> break
+    expect(breakSnapshot.progress.status).toBe('break');
+    expect(breakSnapshot.currentQuestion).toBeNull();
   });
 
   it('goes from break to reveal to ended for the final round group', async () => {
@@ -412,6 +416,7 @@ describe('GameStateService', () => {
     await service.applyAction('ADVANCE'); // -> round_intro(1)
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
+    await service.applyAction('ADVANCE'); // -> locking
     await service.applyAction('ADVANCE'); // -> break
 
     const revealSnapshot = await service.applyAction('FINISH_GRADING');
@@ -602,6 +607,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       const snapshot = await service.applyAction('ADVANCE'); // -> break
 
       expect(snapshot.progress.status).toBe('break');
@@ -618,6 +624,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       const snapshot = await service.applyAction('ADVANCE'); // -> break
 
       snapshot.blockQuestions.forEach((question) => {
@@ -635,6 +642,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       const breakSnapshot = await service.applyAction('ADVANCE'); // -> break
       expect(breakSnapshot.revealQuestions).toEqual([]);
     });
@@ -647,6 +655,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       await service.applyAction('ADVANCE'); // -> break
       const revealed = await service.applyAction('FINISH_GRADING'); // -> reveal
 
@@ -667,6 +676,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       await service.applyAction('ADVANCE'); // -> break
       const first = await service.applyAction('FINISH_GRADING'); // -> reveal
       expect(first.progress.revealIndex).toBe(0);
@@ -696,6 +706,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       await service.applyAction('ADVANCE'); // -> break
       await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
 
@@ -712,6 +723,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       await service.applyAction('ADVANCE'); // -> break
       await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
       await service.applyAction('ADVANCE'); // -> revealIndex 1
@@ -742,6 +754,20 @@ describe('GameStateService', () => {
       expect(service.isQuestionOpenForAnswering(999999)).toBe(false);
     });
 
+    it('keeps the last question open for answering during the locking countdown', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      const locking = await service.applyAction('ADVANCE'); // -> locking
+
+      expect(locking.progress.status).toBe('locking');
+      expect(service.isQuestionOpenForAnswering(24)).toBe(true);
+    });
+
     it('closes the whole block for answering once the break starts', async () => {
       await service.applyAction('START_QUIZ');
       await service.applyAction('ADVANCE'); // -> round_intro(0)
@@ -750,6 +776,7 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> round_intro(1)
       await service.applyAction('ADVANCE'); // -> r2q1
       await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
       await service.applyAction('ADVANCE'); // -> break
 
       expect(service.isQuestionOpenForAnswering(21)).toBe(false);
@@ -796,6 +823,135 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // current question: iq1
 
       expect(service.getSnapshot().answeredTeamIds).toEqual([]);
+    });
+  });
+
+  describe('question lock countdown', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('has no lock armed in the lobby', () => {
+      expect(service.getQuestionLockAt()).toBeNull();
+    });
+
+    it('does not arm a lock on the last question of a round with breakAfter: false', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2 (last of round 1, breakAfter: false)
+      expect(service.getQuestionLockAt()).toBeNull();
+    });
+
+    it('does not arm a lock on the first question of a breakAfter round', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      expect(service.getQuestionLockAt()).toBeNull();
+    });
+
+    it('does not arm a lock while merely sitting on the last question of a breakAfter round', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      const snapshot = await service.applyAction('ADVANCE'); // -> r2q2 (last, breakAfter, still open)
+
+      expect(snapshot.progress.status).toBe('question_open');
+      expect(service.getQuestionLockAt()).toBeNull();
+      expect(snapshot.questionLockAt).toBeNull();
+    });
+
+    it('arms a 60s lock deadline once the admin advances into the locking countdown', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      const locking = await service.applyAction('ADVANCE'); // -> locking
+
+      expect(locking.progress.status).toBe('locking');
+      expect(service.getQuestionLockAt()).toBe(Date.now() + 60_000);
+      expect(locking.questionLockAt).toBe(Date.now() + 60_000);
+    });
+
+    it('clears the lock when the admin steps back from locking to the last question', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking, lock armed
+
+      const back = await service.applyAction('PREVIOUS'); // -> question_open again
+
+      expect(back.progress.status).toBe('question_open');
+      expect(back.questionLockAt).toBeNull();
+      expect(service.getQuestionLockAt()).toBeNull();
+    });
+
+    it('clears the lock once the countdown advances into the break', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking, lock armed
+      const breakSnapshot = await service.applyAction('ADVANCE'); // -> break
+
+      expect(breakSnapshot.progress.status).toBe('break');
+      expect(breakSnapshot.questionLockAt).toBeNull();
+      expect(service.getQuestionLockAt()).toBeNull();
+    });
+
+    it('clears the lock when a new quiz is selected', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking, lock armed
+      await service.applyAction('END_QUIZ');
+
+      await service.selectQuiz(2);
+
+      expect(service.getQuestionLockAt()).toBeNull();
+    });
+
+    it('re-arms a fresh lock deadline on rehydrate if restarted mid-countdown', async () => {
+      const rehydratingRepository = createFakeGameProgressRepository({
+        status: 'locking',
+        roundIndex: 1,
+        questionIndex: 1, // last question of round 2 (breakAfter: true)
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+      });
+      const rehydratedService = new GameStateService(
+        asSeedService(createFakeSeedService()),
+        asGameProgressRepository(rehydratingRepository),
+        createFakeOrm(),
+      );
+      await rehydratedService.onModuleInit();
+
+      expect(rehydratedService.getQuestionLockAt()).toBe(Date.now() + 60_000);
     });
   });
 

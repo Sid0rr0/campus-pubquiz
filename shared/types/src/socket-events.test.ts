@@ -52,6 +52,7 @@ describe('block answering payloads', () => {
       leaderboard: [],
       joinCode: 'ABC234',
       teams: [{ teamId: 1, teamName: 'Quizzards', isConnected: true }],
+      questionLockAt: null,
     };
     const listAnswers: ListAnswersPayload = { questionId: 1 };
 
@@ -82,6 +83,7 @@ describe('block answering payloads', () => {
       leaderboard: [],
       joinCode: 'ABC234',
       teams: [],
+      questionLockAt: null,
     };
 
     expect(snapshot.revealQuestions.map((question) => question.answer)).toEqual([

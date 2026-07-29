@@ -307,7 +307,9 @@ function PlayPageContent() {
           <h1 className="font-display text-2xl">{roundTitle}</h1>
         </div>
       )}
-      {!progress.isLeaderboardVisible && progress.status === 'question_open' && selectedQuestion && (
+      {!progress.isLeaderboardVisible &&
+        (progress.status === 'question_open' || progress.status === 'locking') &&
+        selectedQuestion && (
         <div className="flex flex-col gap-6">
           {blockQuestions.length > 1 && (
             <nav aria-label="Open questions" className="flex flex-wrap gap-2">

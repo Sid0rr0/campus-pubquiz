@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, type OnModuleDestroy } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   ConnectedSocket,
@@ -39,11 +39,14 @@ const VALID_ROOMS: string[] = [
 @WebSocketGateway({
   cors: { origin: corsOriginValidator },
 })
-export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class GameGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
+{
   @WebSocketServer()
   server!: Server;
 
   private readonly logger = new Logger(GameGateway.name);
+  private questionLockTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly gameState: GameStateService,
@@ -52,6 +55,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly quizService: QuizService,
     private readonly orm: MikroORM,
   ) {}
+
+  onModuleDestroy(): void {
+    if (this.questionLockTimer) {
+      clearTimeout(this.questionLockTimer);
+      this.questionLockTimer = null;
+    }
+  }
 
   async handleConnection(client: Socket): Promise<void> {
     const role = client.handshake.query.role;
@@ -83,11 +93,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!teamId) return;
 
     this.logger.log(`Client ${client.id} disconnected, freeing team ${teamId}`);
-    this.server
-      .to(SOCKET_ROOMS.DISPLAY)
-      .to(SOCKET_ROOMS.ADMIN)
-      .to(SOCKET_ROOMS.PLAYERS)
-      .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
+    this.broadcastState(this.gameState.getSnapshot());
   }
 
   // Socket.IO events aren't covered by @mikro-orm/nestjs's HTTP-only
@@ -115,6 +121,50 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException(message);
     }
 
+    this.broadcastState(snapshot);
+    this.rearmQuestionLockTimer();
+  }
+
+  /**
+   * Fires when the last question of a breakAfter round has been open for
+   * QUESTION_LOCK_DURATION_MS with no admin action — auto-advances exactly
+   * as if the admin had clicked "Advance" themselves.
+   */
+  @CreateRequestContext()
+  private async handleQuestionLockTimerExpired(): Promise<void> {
+    this.questionLockTimer = null;
+
+    let snapshot: StateSnapshotPayload;
+    try {
+      snapshot = await this.gameState.applyAction('ADVANCE');
+    } catch (error) {
+      this.logger.error(
+        `Auto-lock ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+
+    this.broadcastState(snapshot);
+    this.rearmQuestionLockTimer();
+  }
+
+  /** (Re)arms the auto-lock timer to match GameStateService's current deadline, clearing any stale one first. */
+  private rearmQuestionLockTimer(): void {
+    if (this.questionLockTimer) {
+      clearTimeout(this.questionLockTimer);
+      this.questionLockTimer = null;
+    }
+
+    const lockAt = this.gameState.getQuestionLockAt();
+    if (lockAt === null) return;
+
+    const delay = Math.max(0, lockAt - Date.now());
+    this.questionLockTimer = setTimeout(() => {
+      void this.handleQuestionLockTimerExpired();
+    }, delay);
+  }
+
+  private broadcastState(snapshot: StateSnapshotPayload): void {
     this.server
       .to(SOCKET_ROOMS.DISPLAY)
       .to(SOCKET_ROOMS.ADMIN)
@@ -175,11 +225,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.gameState.getGameSessionId(),
       );
       this.gameState.setTeams(teams);
-      this.server
-        .to(SOCKET_ROOMS.DISPLAY)
-        .to(SOCKET_ROOMS.ADMIN)
-        .to(SOCKET_ROOMS.PLAYERS)
-        .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
+      this.broadcastState(this.gameState.getSnapshot());
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to join';
       throw new WsException(message);
@@ -233,11 +279,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       payload.questionId,
       answers.map((answer) => answer.teamId),
     );
-    this.server
-      .to(SOCKET_ROOMS.DISPLAY)
-      .to(SOCKET_ROOMS.ADMIN)
-      .to(SOCKET_ROOMS.PLAYERS)
-      .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
+    this.broadcastState(this.gameState.getSnapshot());
   }
 
   @SubscribeMessage(SOCKET_EVENTS.GRADE_ANSWER)
@@ -276,11 +318,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.answerService.computeLeaderboard(gameSessionId);
     this.gameState.setLeaderboard(leaderboard);
 
-    this.server
-      .to(SOCKET_ROOMS.DISPLAY)
-      .to(SOCKET_ROOMS.ADMIN)
-      .to(SOCKET_ROOMS.PLAYERS)
-      .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
+    this.broadcastState(this.gameState.getSnapshot());
   }
 
   @SubscribeMessage(SOCKET_EVENTS.LIST_QUIZZES)
@@ -322,11 +360,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       throw new WsException(message);
     }
 
-    this.server
-      .to(SOCKET_ROOMS.DISPLAY)
-      .to(SOCKET_ROOMS.ADMIN)
-      .to(SOCKET_ROOMS.PLAYERS)
-      .emit(SOCKET_EVENTS.STATE_UPDATED, snapshot);
+    this.broadcastState(snapshot);
+    this.rearmQuestionLockTimer();
   }
 
   @SubscribeMessage(SOCKET_EVENTS.LIST_ANSWERS)

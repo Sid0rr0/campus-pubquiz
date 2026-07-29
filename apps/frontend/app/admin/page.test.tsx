@@ -257,6 +257,42 @@ describe('AdminPage', () => {
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
+  it('shows an Advance button that sends ADVANCE during the locking countdown, to skip it early', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'locking' }),
+        currentQuestion: { id: 'r2q3', type: 'free_text', prompt: 'Name this song.', points: 3 },
+        questionLockAt: Date.now() + 60_000,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /^advance$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it('sends PREVIOUS to step back from the locking countdown to the question', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'locking' }),
+        currentQuestion: { id: 'r2q3', type: 'free_text', prompt: 'Name this song.', points: 3 },
+        questionLockAt: Date.now() + 60_000,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
   it('hides the Previous button outside of question_open', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {

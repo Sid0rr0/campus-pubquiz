@@ -3,6 +3,7 @@ export type GameStatus =
   | 'rules'
   | 'round_intro'
   | 'question_open'
+  | 'locking'
   | 'break'
   | 'reveal'
   | 'ended';
@@ -111,6 +112,15 @@ export function getBlockStartRoundIndex(roundIndex: number, context: GameContext
   return 0;
 }
 
+/** True when `progress` is sitting on the last question of a round that grades after itself. */
+export function isLastQuestionOfBreakAfterRound(
+  progress: GameProgress,
+  context: GameContext,
+): boolean {
+  const round = context.rounds[progress.roundIndex];
+  return round.breakAfter && progress.questionIndex + 1 >= round.questionCount;
+}
+
 function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): GameProgress {
   const round = context.rounds[progress.roundIndex];
   const isLastQuestionInRound = progress.questionIndex + 1 >= round.questionCount;
@@ -120,7 +130,7 @@ function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): 
   }
 
   if (round.breakAfter) {
-    return { ...progress, status: 'break' };
+    return { ...progress, status: 'locking' };
   }
 
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
@@ -246,12 +256,14 @@ export function getNextGameState(
         return { ...progress, status: 'question_open', questionIndex: 0 };
       }
       if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
+      if (progress.status === 'locking') return { ...progress, status: 'break' };
       if (progress.status === 'reveal') return advanceFromReveal(progress, context);
       return illegal(progress.status, action);
 
     case 'PREVIOUS':
       if (progress.status === 'round_intro') return previousFromRoundIntro(progress, context);
       if (progress.status === 'question_open') return previousFromQuestionOpen(progress);
+      if (progress.status === 'locking') return { ...progress, status: 'question_open' };
       if (progress.status === 'reveal') return previousFromReveal(progress);
       return illegal(progress.status, action);
 

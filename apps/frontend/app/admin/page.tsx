@@ -163,16 +163,19 @@ export default function AdminPage() {
 
   const { progress, currentQuestion, leaderboard = [], teams = [], answeredTeamIds = [] } = snapshot;
   const showGrading = liveAnswers && currentQuestion && liveAnswers.questionId === currentQuestion.id;
-  const showAnswerStatus = progress.status === 'question_open';
+  const showAnswerStatus =
+    progress.status === 'question_open' || progress.status === 'locking';
   const canStartQuiz = progress.status === 'lobby';
   const canAdvance =
     progress.status === 'rules' ||
     progress.status === 'round_intro' ||
     progress.status === 'question_open' ||
+    progress.status === 'locking' ||
     progress.status === 'reveal';
   const canGoToPreviousQuestion =
     progress.status === 'round_intro' ||
     progress.status === 'question_open' ||
+    progress.status === 'locking' ||
     (progress.status === 'reveal' && progress.revealIndex > 0);
   const canFinishGrading = progress.status === 'break';
   const canEndQuiz = progress.status !== 'ended';
