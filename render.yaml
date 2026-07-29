@@ -6,7 +6,6 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /
-    preDeployCommand: node dist/scripts/migrate.js
     envVars:
       - key: DATABASE_URL
         sync: false

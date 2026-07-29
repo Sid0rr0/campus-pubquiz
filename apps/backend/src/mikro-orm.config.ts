@@ -5,6 +5,10 @@ export default defineConfig({
   clientUrl:
     process.env.DATABASE_URL ??
     'postgres://postgres:postgres@localhost:5432/campus_pubquiz',
+  driverOptions:
+    process.env.NODE_ENV === 'production'
+      ? { connection: { ssl: { rejectUnauthorized: false } } }
+      : undefined,
   entities: ['./dist/db/entities/*.entity.js'],
   entitiesTs: ['./src/db/entities/*.entity.ts'],
   metadataProvider: TsMorphMetadataProvider,

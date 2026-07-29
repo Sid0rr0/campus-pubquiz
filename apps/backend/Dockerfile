@@ -28,4 +28,4 @@ COPY --from=build /app/apps/backend/dist apps/backend/dist
 
 WORKDIR /app/apps/backend
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "node dist/scripts/migrate.js && node dist/main.js"]
