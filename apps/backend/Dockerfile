@@ -25,7 +25,6 @@ COPY shared/types/package.json shared/types/package.json
 RUN pnpm install --prod --frozen-lockfile
 COPY --from=build /app/shared/types/dist shared/types/dist
 COPY --from=build /app/apps/backend/dist apps/backend/dist
-COPY --from=build /app/apps/backend/drizzle apps/backend/drizzle
 
 WORKDIR /app/apps/backend
 EXPOSE 3000

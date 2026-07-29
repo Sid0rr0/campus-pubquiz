@@ -1,0 +1,1153 @@
+{
+  "namespaces": [
+    "public"
+  ],
+  "name": "public",
+  "tables": [
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int4",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "game_session_id": {
+          "name": "game_session_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "question_id": {
+          "name": "question_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "points_awarded": {
+          "name": "points_awarded",
+          "type": "float4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 24,
+          "scale": null,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "float"
+        },
+        "graded_at": {
+          "name": "graded_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        }
+      },
+      "name": "answers",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "game_session_id",
+            "question_id",
+            "team_id"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "answers_game_session_id_question_id_team_id_unique",
+          "unique": true,
+          "primary": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "answers_pkey",
+          "unique": true,
+          "primary": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "answers_game_session_id_foreign": {
+          "columnNames": [
+            "game_session_id"
+          ],
+          "constraintName": "answers_game_session_id_foreign",
+          "localTableName": "public.answers",
+          "referencedTableName": "public.game_sessions",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        },
+        "answers_question_id_foreign": {
+          "columnNames": [
+            "question_id"
+          ],
+          "constraintName": "answers_question_id_foreign",
+          "localTableName": "public.answers",
+          "referencedTableName": "public.questions",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        },
+        "answers_team_id_foreign": {
+          "columnNames": [
+            "team_id"
+          ],
+          "constraintName": "answers_team_id_foreign",
+          "localTableName": "public.answers",
+          "referencedTableName": "public.teams",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        }
+      },
+      "nativeEnums": {},
+      "comment": null
+    },
+    {
+      "columns": {
+        "game_session_id": {
+          "name": "game_session_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        }
+      },
+      "name": "game_session_teams",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "game_session_id",
+            "team_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "game_session_teams_pkey",
+          "unique": true,
+          "primary": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "game_session_teams_game_session_id_foreign": {
+          "columnNames": [
+            "game_session_id"
+          ],
+          "constraintName": "game_session_teams_game_session_id_foreign",
+          "localTableName": "public.game_session_teams",
+          "referencedTableName": "public.game_sessions",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        },
+        "game_session_teams_team_id_foreign": {
+          "columnNames": [
+            "team_id"
+          ],
+          "constraintName": "game_session_teams_team_id_foreign",
+          "localTableName": "public.game_session_teams",
+          "referencedTableName": "public.teams",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        }
+      },
+      "nativeEnums": {},
+      "comment": null
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int4",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "quiz_id": {
+          "name": "quiz_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "join_code": {
+          "name": "join_code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "'lobby'",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "current_round_index": {
+          "name": "current_round_index",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "current_question_index": {
+          "name": "current_question_index",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "reveal_index": {
+          "name": "reveal_index",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "is_leaderboard_visible": {
+          "name": "is_leaderboard_visible",
+          "type": "bool",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "false",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "boolean"
+        }
+      },
+      "name": "game_sessions",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "join_code"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "game_sessions_join_code_unique",
+          "unique": true,
+          "primary": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "game_sessions_pkey",
+          "unique": true,
+          "primary": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "game_sessions_quiz_id_foreign": {
+          "columnNames": [
+            "quiz_id"
+          ],
+          "constraintName": "game_sessions_quiz_id_foreign",
+          "localTableName": "public.game_sessions",
+          "referencedTableName": "public.quizzes",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        }
+      },
+      "nativeEnums": {},
+      "comment": null
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int4",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "round_id": {
+          "name": "round_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "prompt": {
+          "name": "prompt",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "answer": {
+          "name": "answer",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
+        "points": {
+          "name": "points",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": "1",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        }
+      },
+      "name": "questions",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "questions_pkey",
+          "unique": true,
+          "primary": true
+        },
+        {
+          "columnNames": [
+            "round_id",
+            "order_index"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "questions_round_id_order_index_unique",
+          "unique": true,
+          "primary": false
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "questions_round_id_foreign": {
+          "columnNames": [
+            "round_id"
+          ],
+          "constraintName": "questions_round_id_foreign",
+          "localTableName": "public.questions",
+          "referencedTableName": "public.rounds",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        }
+      },
+      "nativeEnums": {},
+      "comment": null
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int4",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "name": "quizzes",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "quizzes_pkey",
+          "unique": true,
+          "primary": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {},
+      "nativeEnums": {},
+      "comment": null
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int4",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "quiz_id": {
+          "name": "quiz_id",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "break_after": {
+          "name": "break_after",
+          "type": "bool",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "false",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "boolean"
+        }
+      },
+      "name": "rounds",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "rounds_pkey",
+          "unique": true,
+          "primary": true
+        },
+        {
+          "columnNames": [
+            "quiz_id",
+            "order_index"
+          ],
+          "composite": true,
+          "constraint": true,
+          "keyName": "rounds_quiz_id_order_index_unique",
+          "unique": true,
+          "primary": false
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "rounds_quiz_id_foreign": {
+          "columnNames": [
+            "quiz_id"
+          ],
+          "constraintName": "rounds_quiz_id_foreign",
+          "localTableName": "public.rounds",
+          "referencedTableName": "public.quizzes",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "updateRule": "cascade",
+          "deleteRule": "cascade"
+        }
+      },
+      "nativeEnums": {},
+      "comment": null
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int4",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz(6)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": true,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        }
+      },
+      "name": "teams",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "name"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "teams_name_unique",
+          "unique": true,
+          "primary": false
+        },
+        {
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": false,
+          "keyName": "teams_pkey",
+          "unique": true,
+          "primary": true
+        },
+        {
+          "columnNames": [
+            "token"
+          ],
+          "composite": false,
+          "constraint": true,
+          "keyName": "teams_token_unique",
+          "unique": true,
+          "primary": false
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {},
+      "nativeEnums": {},
+      "comment": null
+    }
+  ],
+  "nativeEnums": {}
+}
