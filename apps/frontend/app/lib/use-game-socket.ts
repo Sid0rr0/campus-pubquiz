@@ -11,6 +11,7 @@ import {
   type GradeAnswerPayload,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
+  type KickTeamPayload,
   type ListAnswersPayload,
   type QuizzesListedPayload,
   type SelectQuizPayload,
@@ -36,6 +37,7 @@ export interface UseGameSocketResult {
   submitAnswer: (questionId: string, teamId: string, value: string) => void;
   liveAnswers: AnswersUpdatedPayload | null;
   gradeAnswer: (answerId: string, pointsAwarded: number) => void;
+  kickTeam: (teamId: string) => void;
   quizzes: QuizzesListedPayload | null;
   requestQuizzes: () => void;
   selectQuiz: (quizId: string) => void;
@@ -154,6 +156,11 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.GRADE_ANSWER, payload);
   }, []);
 
+  const kickTeam = useCallback((teamId: string) => {
+    const payload: KickTeamPayload = { teamId };
+    socketRef.current?.emit(SOCKET_EVENTS.KICK_TEAM, payload);
+  }, []);
+
   const requestQuizzes = useCallback(() => {
     socketRef.current?.emit(SOCKET_EVENTS.LIST_QUIZZES);
   }, []);
@@ -177,6 +184,7 @@ export function useGameSocket(
     submitAnswer,
     liveAnswers,
     gradeAnswer,
+    kickTeam,
     quizzes,
     requestQuizzes,
     selectQuiz,

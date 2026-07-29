@@ -15,6 +15,7 @@ import {
 import { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import { GameProgressRepository } from '@/game/game-progress.repository';
+import type { TeamRosterEntry } from '@/team/team.service';
 
 const LOBBY_PROGRESS: GameProgress = {
   status: 'lobby',
@@ -43,8 +44,10 @@ export class GameStateService implements OnModuleInit {
 
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
-  private teams: TeamView[] = [];
+  private teams: TeamRosterEntry[] = [];
   private answeredTeamIdsByQuestion: Record<string, string[]> = {};
+  /** teamId -> socket.id of the one device currently connected as that team. */
+  private connectedTeamSockets: Record<string, string> = {};
 
   constructor(
     private readonly seedService: SeedService,
@@ -88,6 +91,7 @@ export class GameStateService implements OnModuleInit {
     this.leaderboard = [];
     this.teams = [];
     this.answeredTeamIdsByQuestion = {};
+    this.connectedTeamSockets = {};
     return this.getSnapshot();
   }
 
@@ -109,8 +113,34 @@ export class GameStateService implements OnModuleInit {
     this.leaderboard = leaderboard;
   }
 
-  setTeams(teams: TeamView[]): void {
+  setTeams(teams: TeamRosterEntry[]): void {
     this.teams = teams;
+  }
+
+  getConnectedSocketId(teamId: string): string | undefined {
+    return this.connectedTeamSockets[teamId];
+  }
+
+  setTeamConnected(teamId: string, socketId: string): void {
+    this.connectedTeamSockets = {
+      ...this.connectedTeamSockets,
+      [teamId]: socketId,
+    };
+  }
+
+  /** Called on socket disconnect; returns the teamId that was cleared, if any. */
+  clearTeamConnectionBySocketId(socketId: string): string | null {
+    const entry = Object.entries(this.connectedTeamSockets).find(
+      ([, sid]) => sid === socketId,
+    );
+    if (!entry) return null;
+    const [clearedTeamId] = entry;
+    this.connectedTeamSockets = Object.fromEntries(
+      Object.entries(this.connectedTeamSockets).filter(
+        ([teamId]) => teamId !== clearedTeamId,
+      ),
+    );
+    return clearedTeamId;
   }
 
   setAnsweredTeamIds(questionId: string, teamIds: string[]): void {
@@ -137,7 +167,12 @@ export class GameStateService implements OnModuleInit {
       answeredTeamIds: this.getAnsweredTeamIds(),
       leaderboard: this.leaderboard,
       joinCode: this.getSeededGame().joinCode,
-      teams: this.teams,
+      teams: this.teams.map(
+        (team): TeamView => ({
+          ...team,
+          isConnected: Boolean(this.connectedTeamSockets[team.teamId]),
+        }),
+      ),
     };
   }
 

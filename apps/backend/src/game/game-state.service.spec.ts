@@ -160,7 +160,7 @@ describe('GameStateService', () => {
     service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
 
     expect(service.getSnapshot().teams).toEqual([
-      { teamId: 'team-1', teamName: 'The Quizzards' },
+      { teamId: 'team-1', teamName: 'The Quizzards', isConnected: false },
     ]);
   });
 
@@ -170,6 +170,64 @@ describe('GameStateService', () => {
     const snapshot = await service.selectQuiz('quiz-2');
 
     expect(snapshot.teams).toEqual([]);
+  });
+
+  describe('team connection presence (one live device per team + kick)', () => {
+    it('has no connected socket for a team that has never joined', () => {
+      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+    });
+
+    it('tracks which socket is connected for a team', () => {
+      service.setTeamConnected('team-1', 'socket-a');
+
+      expect(service.getConnectedSocketId('team-1')).toBe('socket-a');
+    });
+
+    it('reflects isConnected in the snapshot once a team is connected', () => {
+      service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
+      service.setTeamConnected('team-1', 'socket-a');
+
+      expect(service.getSnapshot().teams).toEqual([
+        { teamId: 'team-1', teamName: 'The Quizzards', isConnected: true },
+      ]);
+    });
+
+    it('clears a team connection by socket id and returns the freed teamId', () => {
+      service.setTeams([{ teamId: 'team-1', teamName: 'The Quizzards' }]);
+      service.setTeamConnected('team-1', 'socket-a');
+
+      const clearedTeamId = service.clearTeamConnectionBySocketId('socket-a');
+
+      expect(clearedTeamId).toBe('team-1');
+      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+      expect(service.getSnapshot().teams).toEqual([
+        { teamId: 'team-1', teamName: 'The Quizzards', isConnected: false },
+      ]);
+    });
+
+    it('returns null when clearing a socket id that is not connected to any team', () => {
+      expect(
+        service.clearTeamConnectionBySocketId('unknown-socket'),
+      ).toBeNull();
+    });
+
+    it('does not disturb another team connection when clearing an unrelated socket id', () => {
+      service.setTeamConnected('team-1', 'socket-a');
+      service.setTeamConnected('team-2', 'socket-b');
+
+      service.clearTeamConnectionBySocketId('socket-a');
+
+      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+      expect(service.getConnectedSocketId('team-2')).toBe('socket-b');
+    });
+
+    it('resets team connections when a new quiz session is selected', async () => {
+      service.setTeamConnected('team-1', 'socket-a');
+
+      await service.selectQuiz('quiz-2');
+
+      expect(service.getConnectedSocketId('team-1')).toBeUndefined();
+    });
   });
 
   it('starts in the lobby with no current question', () => {

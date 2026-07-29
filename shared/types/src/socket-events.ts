@@ -16,6 +16,7 @@ export const SOCKET_EVENTS = {
   LIST_QUIZZES: 'game:list_quizzes',
   SELECT_QUIZ: 'game:select_quiz',
   LIST_ANSWERS: 'game:list_answers',
+  KICK_TEAM: 'game:kick_team',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -48,6 +49,7 @@ export interface LeaderboardEntry {
 export interface TeamView {
   teamId: string;
   teamName: string;
+  isConnected: boolean;
 }
 
 export interface StateSnapshotPayload {
@@ -155,4 +157,8 @@ export interface SelectQuizPayload {
 
 export interface ListAnswersPayload {
   questionId: string;
+}
+
+export interface KickTeamPayload {
+  teamId: string;
 }

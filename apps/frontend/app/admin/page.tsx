@@ -102,6 +102,7 @@ export default function AdminPage() {
     sendAction,
     liveAnswers,
     gradeAnswer,
+    kickTeam,
     quizzes = null,
     requestQuizzes = () => {},
     selectQuiz = () => {},
@@ -301,13 +302,28 @@ export default function AdminPage() {
                         ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
                         : undefined
                     }
-                    className="text-sm font-bold"
+                    className="flex items-center gap-1.5 text-sm font-bold"
                   >
+                    <span
+                      aria-hidden="true"
+                      className={team.isConnected ? 'text-green' : 'text-background/30'}
+                    >
+                      ●
+                    </span>
                     {team.teamName}
                     {hasAnswered && (
                       <span aria-hidden="true" className="ml-1 text-cyan">
                         ✓
                       </span>
+                    )}
+                    {team.isConnected && (
+                      <button
+                        type="button"
+                        onClick={() => kickTeam(team.teamId)}
+                        className="ml-auto text-xs font-extrabold text-magenta underline"
+                      >
+                        Kick
+                      </button>
                     )}
                   </li>
                 );

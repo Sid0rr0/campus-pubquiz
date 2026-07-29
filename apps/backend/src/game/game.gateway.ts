@@ -7,6 +7,7 @@ import {
   WebSocketServer,
   WsException,
   type OnGatewayConnection,
+  type OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import {
@@ -15,6 +16,7 @@ import {
   type AdminActionPayload,
   type GradeAnswerPayload,
   type JoinPlayersPayload,
+  type KickTeamPayload,
   type ListAnswersPayload,
   type SelectQuizPayload,
   type StateSnapshotPayload,
@@ -35,7 +37,7 @@ const VALID_ROOMS: string[] = [
 @WebSocketGateway({
   cors: { origin: corsOriginValidator },
 })
-export class GameGateway implements OnGatewayConnection {
+export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -71,6 +73,18 @@ export class GameGateway implements OnGatewayConnection {
     await client.join(role);
     this.logger.log(`Client ${client.id} connected as ${role}`);
     client.emit(SOCKET_EVENTS.STATE_SYNC, this.gameState.getSnapshot());
+  }
+
+  handleDisconnect(client: Socket): void {
+    const teamId = this.gameState.clearTeamConnectionBySocketId(client.id);
+    if (!teamId) return;
+
+    this.logger.log(`Client ${client.id} disconnected, freeing team ${teamId}`);
+    this.server
+      .to(SOCKET_ROOMS.DISPLAY)
+      .to(SOCKET_ROOMS.ADMIN)
+      .to(SOCKET_ROOMS.PLAYERS)
+      .emit(SOCKET_EVENTS.STATE_UPDATED, this.gameState.getSnapshot());
   }
 
   @SubscribeMessage(SOCKET_EVENTS.ADMIN_ACTION)
@@ -125,6 +139,19 @@ export class GameGateway implements OnGatewayConnection {
           joinCode: payload.joinCode,
         },
       );
+
+      const existingSocketId = this.gameState.getConnectedSocketId(team.id);
+      const isLiveElsewhere =
+        existingSocketId &&
+        existingSocketId !== client.id &&
+        this.server.sockets.sockets.get(existingSocketId)?.connected;
+      if (isLiveElsewhere) {
+        throw new WsException(
+          `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
+        );
+      }
+      this.gameState.setTeamConnected(team.id, client.id);
+
       const savedAnswers = await this.answerService.listForTeam(
         this.gameState.getGameSessionId(),
         team.id,
@@ -308,6 +335,32 @@ export class GameGateway implements OnGatewayConnection {
       questionId: payload.questionId,
       answers,
     });
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.KICK_TEAM)
+  handleKickTeam(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: KickTeamPayload,
+  ): void {
+    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+      throw new WsException('Only admin clients may remove a team');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.KICK_TEAM} from ${client.id}: teamId=${payload.teamId}`,
+    );
+
+    const socketId = this.gameState.getConnectedSocketId(payload.teamId);
+    const targetSocket = socketId
+      ? this.server.sockets.sockets.get(socketId)
+      : undefined;
+    if (!targetSocket) return;
+
+    targetSocket.emit(
+      'exception',
+      'You were removed from this team by the quiz master',
+    );
+    targetSocket.disconnect(true);
   }
 
   private isValidAdminPassword(client: Socket): boolean {

@@ -158,16 +158,25 @@ function asAnswerService(mock: MockAnswerService): AnswerService {
   return mock as unknown as AnswerService;
 }
 
-function createMockSocket(role?: string, auth: Record<string, string> = {}) {
+function createMockSocket(
+  role?: string,
+  auth: Record<string, string> = {},
+  id = 'socket-1',
+) {
   const rooms = new Set<string>();
-  return {
-    id: 'socket-1',
+  const socket = {
+    id,
     handshake: { query: role === undefined ? {} : { role }, auth },
     join: jest.fn((room: string) => rooms.add(room)),
     rooms,
     emit: jest.fn(),
+    connected: true,
     disconnect: jest.fn(),
   };
+  socket.disconnect.mockImplementation(() => {
+    socket.connected = false;
+  });
+  return socket;
 }
 
 type MockSocket = ReturnType<typeof createMockSocket>;
@@ -178,7 +187,12 @@ function asSocket(mock: MockSocket): Socket {
 
 function createMockServer() {
   const to = jest.fn();
-  const server = { to, emit: jest.fn() };
+  const socketsById = new Map<string, MockSocket>();
+  const server = {
+    to,
+    emit: jest.fn(),
+    sockets: { sockets: socketsById },
+  };
   to.mockReturnValue(server);
   return server;
 }
@@ -187,6 +201,19 @@ type MockServer = ReturnType<typeof createMockServer>;
 
 function asServer(mock: MockServer): Server {
   return mock as unknown as Server;
+}
+
+/** Connects a players-room socket the way a real client would, and registers
+ * it in the mock server's socket registry so presence/kick lookups can find it. */
+async function connectPlayer(
+  gateway: GameGateway,
+  server: MockServer,
+  id: string,
+): Promise<MockSocket> {
+  const socket = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, id);
+  await gateway.handleConnection(asSocket(socket));
+  server.sockets.sockets.set(id, socket);
+  return socket;
 }
 
 describe('GameGateway', () => {
@@ -417,7 +444,9 @@ describe('GameGateway', () => {
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards', isConnected: true },
+        ],
       }),
     );
   });
@@ -861,5 +890,151 @@ describe('GameGateway', () => {
       gateway.handleSelectQuiz(asSocket(admin), { quizId: 'quiz-2' }),
     ).rejects.toThrow(WsException);
     expect(seedService.createSession).not.toHaveBeenCalled();
+  });
+
+  describe('one live connection per team + admin kick', () => {
+    async function joinAsPlayer(id: string) {
+      const player = await connectPlayer(gateway, server, id);
+      await gateway.handleJoinPlayers(asSocket(player), {
+        teamName: 'The Quizzards',
+        joinCode: 'ABCDEF',
+      });
+      return player;
+    }
+
+    it('rejects a second device joining the same team while the first is still connected', async () => {
+      await joinAsPlayer('socket-a');
+      const playerB = await connectPlayer(gateway, server, 'socket-b');
+
+      await expect(
+        gateway.handleJoinPlayers(asSocket(playerB), {
+          teamName: 'The Quizzards',
+          joinCode: 'ABCDEF',
+        }),
+      ).rejects.toThrow(/already connected/i);
+    });
+
+    it('allows the same still-connected socket to re-join the team it already holds', async () => {
+      const playerA = await joinAsPlayer('socket-a');
+
+      await expect(
+        gateway.handleJoinPlayers(asSocket(playerA), {
+          teamName: 'The Quizzards',
+          joinCode: 'ABCDEF',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('allows a new device to join once the previous device disconnects', async () => {
+      const playerA = await joinAsPlayer('socket-a');
+      gateway.handleDisconnect(asSocket(playerA));
+      const playerB = await connectPlayer(gateway, server, 'socket-b');
+
+      await expect(
+        gateway.handleJoinPlayers(asSocket(playerB), {
+          teamName: 'The Quizzards',
+          joinCode: 'ABCDEF',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('allows a new device to join when the previous socket is stale (disconnect event has not fired yet)', async () => {
+      const playerA = await joinAsPlayer('socket-a');
+      // Simulate the transport already having dropped without our
+      // handleDisconnect hook having run yet (e.g. a page-refresh race).
+      playerA.connected = false;
+      const playerB = await connectPlayer(gateway, server, 'socket-b');
+
+      await expect(
+        gateway.handleJoinPlayers(asSocket(playerB), {
+          teamName: 'The Quizzards',
+          joinCode: 'ABCDEF',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('broadcasts STATE_UPDATED when a connected team disconnects', async () => {
+      const playerA = await joinAsPlayer('socket-a');
+      server.to.mockClear();
+      server.emit.mockClear();
+
+      gateway.handleDisconnect(asSocket(playerA));
+
+      expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
+      expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+      expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+      expect(server.emit).toHaveBeenCalledWith(
+        SOCKET_EVENTS.STATE_UPDATED,
+        expect.anything(),
+      );
+    });
+
+    it('does not broadcast when a socket with no connected team disconnects', async () => {
+      const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
+      await gateway.handleConnection(asSocket(display));
+      server.to.mockClear();
+      server.emit.mockClear();
+
+      gateway.handleDisconnect(asSocket(display));
+
+      expect(server.emit).not.toHaveBeenCalled();
+    });
+
+    it('rejects KICK_TEAM from a non-admin client', async () => {
+      const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+      await gateway.handleConnection(asSocket(player));
+
+      expect(() =>
+        gateway.handleKickTeam(asSocket(player), { teamId: 'team-1' }),
+      ).toThrow(WsException);
+    });
+
+    it('notifies and disconnects the connected socket when the admin kicks its team', async () => {
+      const playerA = await joinAsPlayer('socket-a');
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      gateway.handleKickTeam(asSocket(admin), { teamId: 'team-1' });
+
+      expect(playerA.emit).toHaveBeenCalledWith(
+        'exception',
+        'You were removed from this team by the quiz master',
+      );
+      expect(playerA.disconnect).toHaveBeenCalledWith(true);
+    });
+
+    it('frees the connection slot so a new device can join after a kick', async () => {
+      const playerA = await joinAsPlayer('socket-a');
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      gateway.handleKickTeam(asSocket(admin), { teamId: 'team-1' });
+      // A real disconnect() call fires the socket.io 'disconnect' event,
+      // which our gateway hooks via handleDisconnect.
+      gateway.handleDisconnect(asSocket(playerA));
+
+      const playerB = await connectPlayer(gateway, server, 'socket-b');
+      await expect(
+        gateway.handleJoinPlayers(asSocket(playerB), {
+          teamName: 'The Quizzards',
+          joinCode: 'ABCDEF',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('does nothing when kicking a team that has no connected socket', async () => {
+      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+        password: ADMIN_PASSWORD,
+      });
+      await gateway.handleConnection(asSocket(admin));
+
+      expect(() =>
+        gateway.handleKickTeam(asSocket(admin), { teamId: 'no-such-team' }),
+      ).not.toThrow();
+    });
   });
 });
