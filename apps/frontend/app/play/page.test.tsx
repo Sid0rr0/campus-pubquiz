@@ -126,7 +126,12 @@ describe('PlayPage', () => {
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
     window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
     const joinTeam = vi.fn();
-    const joinedTeam = { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'stored-token' };
+    const joinedTeam = {
+      teamId: 'team-1',
+      teamName: 'Returning Team',
+      teamToken: 'stored-token',
+      teamCode: 'stored-team-code',
+    };
     mockUseGameSocket.mockReturnValue(
       socketResult({
         snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
@@ -148,6 +153,7 @@ describe('PlayPage', () => {
 
     expect(joinTeam).toHaveBeenCalledWith('Returning Team', {
       teamToken: 'stored-token',
+      teamCode: 'stored-team-code',
       joinCode: 'ABCDEF',
     });
   });

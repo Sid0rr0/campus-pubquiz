@@ -29,7 +29,7 @@ describe('Drizzle schema (Postgres integration)', () => {
   afterEach(async () => {
     // last-write-wins over FK order: children first
     await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
     );
   });
 
@@ -101,11 +101,14 @@ describe('Drizzle schema (Postgres integration)', () => {
     const [team] = await db
       .insert(schema.teams)
       .values({
-        gameSessionId: session.id,
         name: 'The Quizzards',
         token: 'team-token-1',
+        code: 'team-code-1',
       })
       .returning();
+    await db
+      .insert(schema.gameSessionTeams)
+      .values({ gameSessionId: session.id, teamId: team.id });
     const [answer] = await db
       .insert(schema.answers)
       .values({
@@ -196,11 +199,14 @@ describe('Drizzle schema (Postgres integration)', () => {
     const [team] = await db
       .insert(schema.teams)
       .values({
-        gameSessionId: session.id,
         name: 'Revisers',
         token: 'team-token-2',
+        code: 'team-code-2',
       })
       .returning();
+    await db
+      .insert(schema.gameSessionTeams)
+      .values({ gameSessionId: session.id, teamId: team.id });
 
     await db.insert(schema.answers).values({
       gameSessionId: session.id,

@@ -89,6 +89,7 @@ export interface AnswerReceivedPayload {
 export interface JoinPlayersPayload {
   teamName: string;
   teamToken?: string;
+  teamCode?: string;
   joinCode?: string;
 }
 
@@ -100,6 +101,7 @@ export interface TeamAnswerView {
 export interface JoinAcceptedPayload {
   teamId: string;
   teamToken: string;
+  teamCode: string;
   teamName: string;
   /** The team's saved answers in this session, so reconnects restore them. */
   answers: TeamAnswerView[];

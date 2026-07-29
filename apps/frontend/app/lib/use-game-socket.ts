@@ -23,6 +23,7 @@ export type GameSocketRole = 'display' | 'admin' | 'players';
 
 export interface JoinTeamOptions {
   teamToken?: string;
+  teamCode?: string;
   joinCode?: string;
 }
 
@@ -134,6 +135,7 @@ export function useGameSocket(
     const payload: JoinPlayersPayload = {
       teamName,
       teamToken: options.teamToken,
+      teamCode: options.teamCode,
       joinCode: options.joinCode,
     };
     socketRef.current?.emit(SOCKET_EVENTS.JOIN_PLAYERS, payload);

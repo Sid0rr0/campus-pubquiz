@@ -119,7 +119,11 @@ export class GameGateway implements OnGatewayConnection {
       const team = await this.teamService.join(
         this.gameState.getGameSessionId(),
         payload.teamName,
-        { teamToken: payload.teamToken, joinCode: payload.joinCode },
+        {
+          teamToken: payload.teamToken,
+          teamCode: payload.teamCode,
+          joinCode: payload.joinCode,
+        },
       );
       const savedAnswers = await this.answerService.listForTeam(
         this.gameState.getGameSessionId(),
@@ -129,6 +133,7 @@ export class GameGateway implements OnGatewayConnection {
         teamId: team.id,
         teamName: team.name,
         teamToken: team.token,
+        teamCode: team.code,
         answers: savedAnswers,
       });
 

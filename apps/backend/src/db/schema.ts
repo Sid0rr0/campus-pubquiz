@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -79,25 +80,30 @@ export const gameSessions = pgTable('game_sessions', {
     .defaultNow(),
 });
 
-export const teams = pgTable(
-  'teams',
+export const teams = pgTable('teams', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  token: text('token').notNull().unique(),
+  code: text('code').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const gameSessionTeams = pgTable(
+  'game_session_teams',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
     gameSessionId: uuid('game_session_id')
       .notNull()
       .references(() => gameSessions.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    token: text('token').notNull().unique(),
-    createdAt: timestamp('created_at', { withTimezone: true })
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    joinedAt: timestamp('joined_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    uniqueIndex('teams_game_session_id_name_idx').on(
-      table.gameSessionId,
-      table.name,
-    ),
-  ],
+  (table) => [primaryKey({ columns: [table.gameSessionId, table.teamId] })],
 );
 
 export const answers = pgTable(
@@ -154,18 +160,29 @@ export const gameSessionsRelations = relations(
       fields: [gameSessions.quizId],
       references: [quizzes.id],
     }),
-    teams: many(teams),
+    gameSessionTeams: many(gameSessionTeams),
     answers: many(answers),
   }),
 );
 
-export const teamsRelations = relations(teams, ({ one, many }) => ({
-  gameSession: one(gameSessions, {
-    fields: [teams.gameSessionId],
-    references: [gameSessions.id],
-  }),
+export const teamsRelations = relations(teams, ({ many }) => ({
+  sessions: many(gameSessionTeams),
   answers: many(answers),
 }));
+
+export const gameSessionTeamsRelations = relations(
+  gameSessionTeams,
+  ({ one }) => ({
+    gameSession: one(gameSessions, {
+      fields: [gameSessionTeams.gameSessionId],
+      references: [gameSessions.id],
+    }),
+    team: one(teams, {
+      fields: [gameSessionTeams.teamId],
+      references: [teams.id],
+    }),
+  }),
+);
 
 export const answersRelations = relations(answers, ({ one }) => ({
   gameSession: one(gameSessions, {

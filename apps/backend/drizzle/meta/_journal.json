@@ -29,6 +29,13 @@
       "when": 1785305988578,
       "tag": "0003_add_half_points_support",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785308280492,
+      "tag": "0004_add_persistent_teams",
+      "breakpoints": true
     }
   ]
 }

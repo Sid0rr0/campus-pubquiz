@@ -8,7 +8,7 @@ import { Client } from 'pg';
 import * as schema from '@/db/schema';
 import {
   InvalidJoinCodeError,
-  TeamNameTakenError,
+  TeamCodeRequiredError,
   TeamService,
 } from '@/team/team.service';
 
@@ -47,7 +47,7 @@ describe('TeamService (Postgres integration)', () => {
 
   afterEach(async () => {
     await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
     );
   });
 
@@ -63,7 +63,7 @@ describe('TeamService (Postgres integration)', () => {
     return session.id;
   }
 
-  it('creates a new team with a generated token when the join code matches', async () => {
+  it('creates a new team with a generated token and code when the join code matches', async () => {
     const team = await teamService.join(sessionId, 'The Quizzards', {
       joinCode: 'ABCDEF',
     });
@@ -71,6 +71,7 @@ describe('TeamService (Postgres integration)', () => {
     expect(team.name).toBe('The Quizzards');
     expect(team.token).toEqual(expect.any(String));
     expect(team.token.length).toBeGreaterThan(10);
+    expect(team.code).toMatch(/^[A-HJ-NP-Z2-9]+$/);
   });
 
   it('accepts a join code regardless of casing and surrounding whitespace', async () => {
@@ -111,15 +112,35 @@ describe('TeamService (Postgres integration)', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('rejects a duplicate team name within the same session', async () => {
+  it('requires the team code to join under an existing name', async () => {
     await teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' });
 
     await expect(
       teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' }),
-    ).rejects.toThrow(TeamNameTakenError);
+    ).rejects.toThrow(TeamCodeRequiredError);
+
+    const rows = await db.select().from(schema.teams);
+    expect(rows).toHaveLength(1);
   });
 
-  it('creates a fresh team when the token belongs to a different session and the new code matches', async () => {
+  it('lets a second device join the same team in the same session given the correct team code', async () => {
+    const created = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
+
+    const secondDevice = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+      teamCode: created.code,
+    });
+
+    expect(secondDevice.id).toBe(created.id);
+    expect(secondDevice.token).toBe(created.token);
+
+    const rows = await db.select().from(schema.gameSessionTeams);
+    expect(rows).toHaveLength(1);
+  });
+
+  it('reuses the same team across sessions when the token is valid and the new session join code matches', async () => {
     const original = await teamService.join(sessionId, 'The Quizzards', {
       joinCode: 'ABCDEF',
     });
@@ -130,11 +151,31 @@ describe('TeamService (Postgres integration)', () => {
       joinCode: 'GHIJKL',
     });
 
-    expect(rejoined.id).not.toBe(original.id);
-    expect(rejoined.token).not.toBe(original.token);
+    expect(rejoined.id).toBe(original.id);
+    expect(rejoined.token).toBe(original.token);
 
     const rows = await db.select().from(schema.teams);
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(1);
+
+    const roster = await db.select().from(schema.gameSessionTeams);
+    expect(roster).toHaveLength(2);
+  });
+
+  it('reuses the same team across sessions when the correct team code is given', async () => {
+    const original = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
+    const session2Id = await createSecondSession('GHIJKL');
+
+    const rejoined = await teamService.join(session2Id, 'The Quizzards', {
+      joinCode: 'GHIJKL',
+      teamCode: original.code,
+    });
+
+    expect(rejoined.id).toBe(original.id);
+
+    const rows = await db.select().from(schema.teams);
+    expect(rows).toHaveLength(1);
   });
 
   it('rejects a stale token from another session when the join code is also stale', async () => {
@@ -149,6 +190,19 @@ describe('TeamService (Postgres integration)', () => {
         joinCode: 'ABCDEF',
       }),
     ).rejects.toThrow(InvalidJoinCodeError);
+  });
+
+  it('rejects a duplicate team name in a different session without the team code', async () => {
+    const session2Id = await createSecondSession('GHIJKL');
+
+    await teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' });
+
+    await expect(
+      teamService.join(session2Id, 'The Quizzards', { joinCode: 'GHIJKL' }),
+    ).rejects.toThrow(TeamCodeRequiredError);
+
+    const rows = await db.select().from(schema.teams);
+    expect(rows).toHaveLength(1);
   });
 
   it('lists only the teams of the given session in join order', async () => {
@@ -169,18 +223,5 @@ describe('TeamService (Postgres integration)', () => {
       { teamId: first.id, teamName: 'First Team' },
       { teamId: second.id, teamName: 'Second Team' },
     ]);
-  });
-
-  it('allows the same team name in two different sessions', async () => {
-    const session2Id = await createSecondSession('GHIJKL');
-
-    await teamService.join(sessionId, 'The Quizzards', { joinCode: 'ABCDEF' });
-    const teamInSecondSession = await teamService.join(
-      session2Id,
-      'The Quizzards',
-      { joinCode: 'GHIJKL' },
-    );
-
-    expect(teamInSecondSession.name).toBe('The Quizzards');
   });
 });

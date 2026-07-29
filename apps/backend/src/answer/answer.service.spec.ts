@@ -62,15 +62,18 @@ describe('AnswerService (Postgres integration)', () => {
 
   afterEach(async () => {
     await client.query(
-      'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
+      'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
     );
   });
 
   async function insertTeam(name: string, token: string) {
     const [team] = await db
       .insert(schema.teams)
-      .values({ gameSessionId: sessionId, name, token })
+      .values({ name, token, code: `code-${token}` })
       .returning();
+    await db
+      .insert(schema.gameSessionTeams)
+      .values({ gameSessionId: sessionId, teamId: team.id });
     return team;
   }
 

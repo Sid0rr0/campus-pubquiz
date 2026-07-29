@@ -8,6 +8,7 @@ import { RulesContent } from '@/app/components/rules-content';
 
 const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
 const TEAM_TOKEN_STORAGE_KEY = 'campus-pubquiz-team-token';
+const TEAM_CODE_STORAGE_KEY = 'campus-pubquiz-team-code';
 const JOIN_CODE_STORAGE_KEY = 'campus-pubquiz-join-code';
 
 const OPTION_ACCENT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
@@ -20,6 +21,7 @@ function normalizeJoinCode(code: string): string {
 function storedJoinOptions(): JoinTeamOptions {
   return {
     teamToken: window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY) ?? undefined,
+    teamCode: window.localStorage.getItem(TEAM_CODE_STORAGE_KEY) ?? undefined,
     joinCode: window.localStorage.getItem(JOIN_CODE_STORAGE_KEY) ?? undefined,
   };
 }
@@ -121,6 +123,7 @@ function PlayPageContent() {
   const [teamName, setTeamName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [codeInput, setCodeInput] = useState(codeFromUrl);
+  const [teamCodeInput, setTeamCodeInput] = useState('');
   // null = follow the question currently shown on the big screen.
   const [browsedQuestionId, setBrowsedQuestionId] = useState<string | null>(null);
   const {
@@ -155,6 +158,7 @@ function PlayPageContent() {
   useEffect(() => {
     if (team) {
       window.localStorage.setItem(TEAM_TOKEN_STORAGE_KEY, team.teamToken);
+      window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, team.teamCode);
     }
   }, [team]);
 
@@ -174,16 +178,21 @@ function PlayPageContent() {
     window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, trimmedName);
     window.localStorage.setItem(JOIN_CODE_STORAGE_KEY, normalizedCode);
     setTeamName(trimmedName);
-    joinTeam(trimmedName, { joinCode: normalizedCode });
+    joinTeam(trimmedName, {
+      joinCode: normalizedCode,
+      teamCode: teamCodeInput.trim() || undefined,
+    });
   }
 
   function handleStartOver() {
     window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
     window.localStorage.removeItem(TEAM_TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
     window.localStorage.removeItem(JOIN_CODE_STORAGE_KEY);
     setTeamName(null);
     setNameInput('');
     setCodeInput(codeFromUrl);
+    setTeamCodeInput('');
   }
 
   if (!teamName) {
@@ -212,6 +221,19 @@ function PlayPageContent() {
             autoComplete="off"
             spellCheck={false}
             placeholder="e.g. ABC234"
+            className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
+          />
+          <label htmlFor="team-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
+            Team code (only if this team has played before)
+          </label>
+          <input
+            id="team-code"
+            value={teamCodeInput}
+            onChange={(event) => setTeamCodeInput(event.target.value)}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="e.g. QZX456"
             className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
           />
           <button
@@ -249,7 +271,12 @@ function PlayPageContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
-      <p className="mb-4 text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+      <p className="mb-1 text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+      {team && (
+        <p className="mb-4 text-xs text-foreground/45">
+          Team code: {team.teamCode} — save it to play as this team another night.
+        </p>
+      )}
       {connectionError && !team && (
         <div className="mb-4">
           <JoinError message={connectionError} onStartOver={handleStartOver} />

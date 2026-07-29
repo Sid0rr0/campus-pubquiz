@@ -109,6 +109,7 @@ function createFakeTeamService() {
       id: 'team-1',
       name: 'The Quizzards',
       token: 'team-token-1',
+      code: 'team-code-1',
     }),
     listForSession: jest
       .fn()
@@ -368,17 +369,35 @@ describe('GameGateway', () => {
     expect(teamService.join).toHaveBeenCalledWith(
       'session-1',
       'The Quizzards',
-      { teamToken: undefined, joinCode: 'ABCDEF' },
+      { teamToken: undefined, teamCode: undefined, joinCode: 'ABCDEF' },
     );
     expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.JOIN_ACCEPTED, {
       teamId: 'team-1',
       teamName: 'The Quizzards',
       teamToken: 'team-token-1',
+      teamCode: 'team-code-1',
       answers: [{ questionId: 'r1q1', value: 'Banana' }],
     });
     expect(answerService.listForTeam).toHaveBeenCalledWith(
       'session-1',
       'team-1',
+    );
+  });
+
+  it('passes the team code through to TeamService.join when the player supplies one', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+      joinCode: 'ABCDEF',
+      teamCode: 'RECOVER1',
+    });
+
+    expect(teamService.join).toHaveBeenCalledWith(
+      'session-1',
+      'The Quizzards',
+      { teamToken: undefined, teamCode: 'RECOVER1', joinCode: 'ABCDEF' },
     );
   });
 

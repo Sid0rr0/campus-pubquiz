@@ -118,9 +118,19 @@ export class AnswerService {
         teamName: schema.teams.name,
         totalPoints,
       })
-      .from(schema.teams)
-      .leftJoin(schema.answers, eq(schema.answers.teamId, schema.teams.id))
-      .where(eq(schema.teams.gameSessionId, gameSessionId))
+      .from(schema.gameSessionTeams)
+      .innerJoin(
+        schema.teams,
+        eq(schema.gameSessionTeams.teamId, schema.teams.id),
+      )
+      .leftJoin(
+        schema.answers,
+        and(
+          eq(schema.answers.teamId, schema.teams.id),
+          eq(schema.answers.gameSessionId, gameSessionId),
+        ),
+      )
+      .where(eq(schema.gameSessionTeams.gameSessionId, gameSessionId))
       .groupBy(schema.teams.id, schema.teams.name)
       .orderBy(desc(totalPoints), asc(schema.teams.name));
 
