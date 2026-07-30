@@ -404,8 +404,22 @@ describe('PlayPage', () => {
 
   it('shows a navigator for revealed block questions with answered questions marked', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = { id: 'r1q1', type: 'free_text' as const, prompt: 'Name a fruit', points: 1 };
-    const q2 = { id: 'r1q2', type: 'free_text' as const, prompt: 'Name a planet', points: 1 };
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    const q2 = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
     mockUseGameSocket.mockReturnValue(
       socketResult({
         snapshot: {
@@ -424,11 +438,103 @@ describe('PlayPage', () => {
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
 
+  it('shows the whole round as disabled slots in the picker, not just the next question', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: q1,
+          blockQuestions: [q1],
+          upcomingQuestions: [
+            { roundNumber: 1, questionNumberInRound: 2 },
+            { roundNumber: 1, questionNumberInRound: 3 },
+          ],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    const upcomingButton2 = screen.getByRole('button', { name: /question 2 \(not open yet\)/i });
+    const upcomingButton3 = screen.getByRole('button', { name: /question 3 \(not open yet\)/i });
+    expect(upcomingButton2).toBeDisabled();
+    expect(upcomingButton3).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^question 1$/i })).not.toBeDisabled();
+  });
+
+  it('restarts question numbering from 1 for each round in the picker', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const r1q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    const r1q2 = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
+    const r2q1 = {
+      id: 'r2q1',
+      type: 'free_text' as const,
+      prompt: 'Name a country',
+      points: 1,
+      roundNumber: 2,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open', roundIndex: 1 }),
+          currentQuestion: r2q1,
+          blockQuestions: [r1q1, r1q2, r2q1],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByRole('navigation', { name: /round 1 questions/i })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /round 2 questions/i })).toBeInTheDocument();
+    // Two separate "Question 1" buttons — one per round, each numbered from 1.
+    expect(screen.getAllByRole('button', { name: /^question 1$/i })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /^question 2$/i })).toBeInTheDocument();
+  });
+
   it('lets the team browse back to an earlier open question and revise its answer', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    const q1 = { id: 'r1q1', type: 'free_text' as const, prompt: 'Name a fruit', points: 1 };
-    const q2 = { id: 'r1q2', type: 'free_text' as const, prompt: 'Name a planet', points: 1 };
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    const q2 = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
     mockUseGameSocket.mockReturnValue(
       socketResult({
         snapshot: {
@@ -463,7 +569,14 @@ describe('PlayPage', () => {
           progress: progress({ status: 'break' }),
           currentQuestion: null,
           blockQuestions: [
-            { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+            {
+              id: 'r1q1',
+              type: 'free_text',
+              prompt: 'Name a fruit',
+              points: 1,
+              roundNumber: 1,
+              questionNumberInRound: 1,
+            },
           ],
         },
         team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
@@ -473,6 +586,110 @@ describe('PlayPage', () => {
 
     expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
     expect(screen.getByText(/answers are locked/i)).toBeInTheDocument();
+  });
+
+  it('still shows the block question picker during the grading break so teams can browse back', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    const q2 = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'break' }),
+          currentQuestion: null,
+          blockQuestions: [q1, q2],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        myAnswers: { r1q1: 'Banana', r1q2: 'Mars' },
+      }),
+    );
+    render(<PlayPage />);
+
+    // Defaults to the block's last question, with the picker showing both.
+    expect(screen.getByText('Name a planet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /question 1 \(answered\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /question 2 \(answered\)/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /question 1 \(answered\)/i }));
+
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/answers are locked/i)).toBeInTheDocument();
+  });
+
+  it('still shows the block question picker during reveal', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    const q2 = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal' }),
+          currentQuestion: null,
+          blockQuestions: [q1, q2],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByRole('button', { name: /^question 1$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^question 2$/i })).toBeInTheDocument();
+    expect(screen.getByText(/revealing answers/i)).toBeInTheDocument();
+  });
+
+  it('hides the block question picker during break when the leaderboard overlay is toggled on', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'break', isLeaderboardVisible: true }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.queryByText('Name a fruit')).not.toBeInTheDocument();
+    expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
   });
 
   it('does not show an answer form before the team identity has been confirmed', () => {

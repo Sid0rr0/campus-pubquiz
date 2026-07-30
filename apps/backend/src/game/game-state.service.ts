@@ -11,6 +11,7 @@ import {
   type GameContext,
   type GameProgress,
   type LeaderboardEntry,
+  type QuestionPosition,
   type QuestionView,
   type RevealQuestionView,
   type StateSnapshotPayload,
@@ -199,6 +200,7 @@ export class GameStateService implements OnModuleInit {
       roundTitle: this.getCurrentRoundTitle(),
       currentQuestion: this.getCurrentQuestion(),
       blockQuestions: this.getBlockQuestions(),
+      upcomingQuestions: this.getUpcomingQuestionPositions(),
       revealQuestions: this.getRevealQuestions(),
       answeredTeamIds: this.getAnsweredTeamIds(),
       leaderboard: this.leaderboard,
@@ -342,6 +344,35 @@ export class GameStateService implements OnModuleInit {
    */
   private getBlockQuestions(): BlockQuestionView[] {
     return this.getBlockSeededQuestions().map(toBlockQuestionView);
+  }
+
+  /**
+   * Positions of the current round's remaining questions, not open yet — the
+   * whole round's shape, so the picker doesn't grow as questions unlock.
+   * Round boundaries within a block only advance through a round_intro
+   * screen, so these can only ever be later in the same round.
+   */
+  private getUpcomingQuestionPositions(): QuestionPosition[] {
+    const { status, roundIndex, questionIndex } = this.progress;
+    if (status !== 'question_open' && status !== 'locking') {
+      return [];
+    }
+    const round = this.getSeededGame().rounds[roundIndex];
+    if (!round) {
+      return [];
+    }
+    const positions: QuestionPosition[] = [];
+    for (
+      let index = questionIndex + 1;
+      index < round.questions.length;
+      index += 1
+    ) {
+      positions.push({
+        roundNumber: roundIndex + 1,
+        questionNumberInRound: index + 1,
+      });
+    }
+    return positions;
   }
 
   /**

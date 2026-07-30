@@ -724,6 +724,112 @@ describe('GameStateService', () => {
       ]);
     });
 
+    it("exposes the current round's remaining question as upcoming while a question is open", async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      const r1q1 = await service.applyAction('ADVANCE'); // -> r1q1
+      expect(r1q1.upcomingQuestions).toEqual([
+        { roundNumber: 1, questionNumberInRound: 2 },
+      ]);
+
+      const r1q2 = await service.applyAction('ADVANCE'); // -> r1q2
+      expect(r1q2.upcomingQuestions).toEqual([]);
+
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      const r2q1 = await service.applyAction('ADVANCE'); // -> r2q1
+      expect(r2q1.upcomingQuestions).toEqual([
+        { roundNumber: 2, questionNumberInRound: 2 },
+      ]);
+
+      const r2q2 = await service.applyAction('ADVANCE'); // -> r2q2
+      expect(r2q2.upcomingQuestions).toEqual([]);
+    });
+
+    it('exposes every remaining question in the round as upcoming, not just the next one', async () => {
+      const threeQuestionRoundGame: SeededGame = {
+        quizId: 3,
+        gameSessionId: 103,
+        joinCode: 'ZZZZZZ',
+        rounds: [
+          {
+            id: 31,
+            title: 'Triple Round',
+            breakAfter: true,
+            questions: [
+              {
+                id: 41,
+                type: 'free_text',
+                prompt: 'Q1',
+                points: 1,
+                answer: 'A1',
+              },
+              {
+                id: 42,
+                type: 'free_text',
+                prompt: 'Q2',
+                points: 1,
+                answer: 'A2',
+              },
+              {
+                id: 43,
+                type: 'free_text',
+                prompt: 'Q3',
+                points: 1,
+                answer: 'A3',
+              },
+            ],
+          },
+        ],
+      };
+      const customSeedService = {
+        seed: jest.fn().mockResolvedValue(threeQuestionRoundGame),
+        loadGame: jest.fn(),
+        createSession: jest.fn(),
+      };
+      const customService = new GameStateService(
+        asSeedService(customSeedService as unknown as MockSeedService),
+        asGameProgressRepository(createFakeGameProgressRepository()),
+        createFakeOrm(),
+      );
+      await customService.onModuleInit();
+
+      await customService.applyAction('START_QUIZ');
+      await customService.applyAction('ADVANCE'); // -> round_intro(0)
+      const q1 = await customService.applyAction('ADVANCE'); // -> q1
+      expect(q1.upcomingQuestions).toEqual([
+        { roundNumber: 1, questionNumberInRound: 2 },
+        { roundNumber: 1, questionNumberInRound: 3 },
+      ]);
+
+      const q2 = await customService.applyAction('ADVANCE'); // -> q2
+      expect(q2.upcomingQuestions).toEqual([
+        { roundNumber: 1, questionNumberInRound: 3 },
+      ]);
+
+      const q3 = await customService.applyAction('ADVANCE'); // -> q3
+      expect(q3.upcomingQuestions).toEqual([]);
+    });
+
+    it('exposes no upcoming questions outside question_open/locking', async () => {
+      expect(service.getSnapshot().upcomingQuestions).toEqual([]);
+
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      const locking = await service.applyAction('ADVANCE'); // -> locking
+      expect(locking.upcomingQuestions).toEqual([]);
+
+      const brk = await service.applyAction('ADVANCE'); // -> break
+      expect(brk.upcomingQuestions).toEqual([]);
+
+      const revealed = await service.applyAction('FINISH_GRADING'); // -> reveal
+      expect(revealed.upcomingQuestions).toEqual([]);
+    });
+
     it('exposes no reveal questions outside reveal', async () => {
       await service.applyAction('START_QUIZ');
       expect(service.getSnapshot().revealQuestions).toEqual([]);

@@ -44,9 +44,10 @@ describe('block answering payloads', () => {
       roundTitle: 'Round 1',
       currentQuestion: { id: 2, type: 'free_text', prompt: 'Second?', points: 10 },
       blockQuestions: [
-        { id: 1, type: 'free_text', prompt: 'First?', points: 10 },
-        { id: 2, type: 'free_text', prompt: 'Second?', points: 10 },
+        { id: 1, type: 'free_text', prompt: 'First?', points: 10, roundNumber: 1, questionNumberInRound: 1 },
+        { id: 2, type: 'free_text', prompt: 'Second?', points: 10, roundNumber: 1, questionNumberInRound: 2 },
       ],
+      upcomingQuestions: [],
       revealQuestions: [],
       answeredTeamIds: [1],
       leaderboard: [],
@@ -76,6 +77,7 @@ describe('block answering payloads', () => {
       roundTitle: 'Round 1',
       currentQuestion: null,
       blockQuestions: [],
+      upcomingQuestions: [],
       revealQuestions: [
         { id: 1, type: 'free_text', prompt: 'First?', points: 10, answer: 'One' },
         { id: 2, type: 'free_text', prompt: 'Second?', points: 10, answer: 'Two' },

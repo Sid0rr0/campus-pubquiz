@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { QuestionView } from '@campus-pubquiz/types';
+import type { BlockQuestionView, QuestionPosition, QuestionView } from '@campus-pubquiz/types';
 import { useGameSocket, type JoinTeamOptions } from '@/app/lib/use-game-socket';
 import { RulesContent } from '@/app/components/rules-content';
 
@@ -115,6 +115,50 @@ function JoinError({ message, onStartOver }: JoinErrorProps) {
       </button>
     </div>
   );
+}
+
+interface PickerSlot {
+  key: string;
+  questionNumberInRound: number;
+  /** Null for a not-yet-open slot — rendered as a disabled placeholder. */
+  question: BlockQuestionView | null;
+}
+
+interface PickerRound {
+  roundNumber: number;
+  slots: PickerSlot[];
+}
+
+/** Groups the block's questions (plus the round's remaining upcoming slots, if any) by round, numbering each round's slots from 1 — so the whole round's shape is visible up front. */
+function buildPickerRounds(
+  blockQuestions: BlockQuestionView[],
+  upcomingQuestions: QuestionPosition[],
+): PickerRound[] {
+  const flatSlots: Array<PickerSlot & { roundNumber: number }> = blockQuestions.map((question) => ({
+    key: `q-${question.id}`,
+    roundNumber: question.roundNumber,
+    questionNumberInRound: question.questionNumberInRound,
+    question,
+  }));
+  for (const upcomingQuestion of upcomingQuestions) {
+    flatSlots.push({
+      key: `upcoming-${upcomingQuestion.roundNumber}-${upcomingQuestion.questionNumberInRound}`,
+      roundNumber: upcomingQuestion.roundNumber,
+      questionNumberInRound: upcomingQuestion.questionNumberInRound,
+      question: null,
+    });
+  }
+
+  const rounds: PickerRound[] = [];
+  for (const slot of flatSlots) {
+    const lastRound = rounds[rounds.length - 1];
+    if (lastRound && lastRound.roundNumber === slot.roundNumber) {
+      lastRound.slots.push(slot);
+    } else {
+      rounds.push({ roundNumber: slot.roundNumber, slots: [slot] });
+    }
+  }
+  return rounds;
 }
 
 function PlayPageContent() {
@@ -264,15 +308,29 @@ function PlayPageContent() {
     progress,
     currentQuestion,
     blockQuestions = [],
+    upcomingQuestions = [],
     quizStructure = { blockCount: 0, topicsPerBlock: null },
     roundTitle = '',
   } = snapshot;
+  const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
+  const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
+  // Falls back to the block's last question so the browser still has
+  // something selected during break/reveal, when there's no currentQuestion.
   const selectedQuestion =
-    blockQuestions.find((question) => question.id === browsedQuestionId) ?? currentQuestion;
+    blockQuestions.find((question) => question.id === browsedQuestionId) ??
+    currentQuestion ??
+    blockQuestions[blockQuestions.length - 1] ??
+    null;
   // Answering stays available even while the leaderboard is toggled on for
   // the big screen — only a real lock (status leaving question_open/locking)
   // should stop teams from answering.
   const isAnswerable = progress.status === 'question_open' || progress.status === 'locking';
+  const isBreakOrReveal = progress.status === 'break' || progress.status === 'reveal';
+  // The block browser (question picker + prompt) stays up through break/reveal
+  // too, so teams can review the block they just answered — unless the
+  // leaderboard overlay is toggled on, which takes over the screen instead.
+  const showBlockBrowser =
+    Boolean(selectedQuestion) && (isAnswerable || (!progress.isLeaderboardVisible && isBreakOrReveal));
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
@@ -316,31 +374,56 @@ function PlayPageContent() {
           <h1 className="font-display text-2xl">{roundTitle}</h1>
         </div>
       )}
-      {isAnswerable && selectedQuestion && (
+      {showBlockBrowser && selectedQuestion && (
         <div className="flex flex-col gap-6">
-          {blockQuestions.length > 1 && (
-            <nav aria-label="Open questions" className="flex flex-wrap gap-2">
-              {blockQuestions.map((question, index) => {
-                const isAnswered = question.id in myAnswers;
-                const isSelected = question.id === selectedQuestion.id;
-                return (
-                  <button
-                    key={question.id}
-                    type="button"
-                    aria-label={`Question ${index + 1}${isAnswered ? ' (answered)' : ''}`}
-                    onClick={() => setBrowsedQuestionId(question.id)}
-                    className={
-                      isSelected
-                        ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-magenta bg-white font-extrabold text-magenta'
-                        : 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground/30 bg-white font-extrabold'
-                    }
-                  >
-                    {index + 1}
-                    {isAnswered && <span aria-hidden="true" className="ml-1 text-green">✓</span>}
-                  </button>
-                );
-              })}
-            </nav>
+          {totalPickerSlots > 1 && (
+            <div className="flex flex-col gap-2">
+              {pickerRounds.map((round) => (
+                <div key={round.roundNumber} className="flex flex-wrap items-center gap-2">
+                  {pickerRounds.length > 1 && (
+                    <span className="text-xs font-extrabold tracking-wide text-foreground/45">
+                      R{round.roundNumber}
+                    </span>
+                  )}
+                  <nav aria-label={`Round ${round.roundNumber} questions`} className="flex flex-wrap gap-2">
+                    {round.slots.map((slot) => {
+                      if (!slot.question) {
+                        return (
+                          <button
+                            key={slot.key}
+                            type="button"
+                            disabled
+                            aria-label={`Question ${slot.questionNumberInRound} (not open yet)`}
+                            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-dashed border-foreground/20 bg-white/40 font-extrabold text-foreground/30"
+                          >
+                            {slot.questionNumberInRound}
+                          </button>
+                        );
+                      }
+                      const question = slot.question;
+                      const isAnswered = question.id in myAnswers;
+                      const isSelected = question.id === selectedQuestion.id;
+                      return (
+                        <button
+                          key={slot.key}
+                          type="button"
+                          aria-label={`Question ${slot.questionNumberInRound}${isAnswered ? ' (answered)' : ''}`}
+                          onClick={() => setBrowsedQuestionId(question.id)}
+                          className={
+                            isSelected
+                              ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-magenta bg-white font-extrabold text-magenta'
+                              : 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground/30 bg-white font-extrabold'
+                          }
+                        >
+                          {slot.questionNumberInRound}
+                          {isAnswered && <span aria-hidden="true" className="ml-1 text-green">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ))}
+            </div>
           )}
           <h1 className="text-balance font-display text-2xl leading-tight">{selectedQuestion.prompt}</h1>
           {(selectedQuestion.type === 'picture' || selectedQuestion.type === 'audio') && (
@@ -348,7 +431,7 @@ function PlayPageContent() {
               👀 Look at the screen
             </p>
           )}
-          {team && (
+          {isAnswerable && team && (
             <AnswerForm
               key={selectedQuestion.id}
               question={selectedQuestion}
@@ -356,15 +439,17 @@ function PlayPageContent() {
               onSubmit={(value) => submitAnswer(selectedQuestion.id, team.teamId, value)}
             />
           )}
+          {!isAnswerable && progress.status === 'break' && (
+            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+              Answers are locked — grading in progress…
+            </p>
+          )}
+          {!isAnswerable && progress.status === 'reveal' && (
+            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+              Revealing answers…
+            </p>
+          )}
         </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'break' && (
-        <h1 className="mt-16 text-center font-display text-2xl">
-          Answers are locked — grading in progress…
-        </h1>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'reveal' && (
-        <h1 className="mt-16 text-center font-display text-2xl">Revealing answers…</h1>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'ended' && (
         <h1 className="mt-16 text-center font-display text-2xl">Quiz complete!</h1>

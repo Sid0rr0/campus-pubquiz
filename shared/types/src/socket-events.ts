@@ -77,6 +77,12 @@ export interface StateSnapshotPayload {
    * during break/reveal (for grading). Empty otherwise.
    */
   blockQuestions: BlockQuestionView[];
+  /**
+   * Positions of the current round's remaining questions — not open yet,
+   * shown as disabled slots in the block picker so the whole round's shape
+   * is visible up front. Empty unless a question is open/locking.
+   */
+  upcomingQuestions: QuestionPosition[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
   revealQuestions: BlockRevealQuestionView[];
   /** Teams that have answered the current question. Empty when none is open. */
