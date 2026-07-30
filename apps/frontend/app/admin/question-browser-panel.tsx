@@ -68,15 +68,7 @@ export function QuestionBrowserPanel({
               roundIndex >= activeBlockStartIndex && roundIndex <= currentRoundIndex;
             return (
               <div key={`${round.title}-${roundIndex}`} className="flex flex-wrap items-center gap-1.5">
-                <p
-                  className={
-                    isActiveRound
-                      ? 'text-xs font-extrabold tracking-wide text-foreground/55'
-                      : 'text-[10px] font-bold tracking-wide text-foreground/35'
-                  }
-                >
-                  {round.title}
-                </p>
+                <span>{roundIndex + 1}</span>
                 <nav aria-label={`${round.title} questions`} className="flex flex-wrap gap-1">
                   {round.questions.map((question, questionIndex) => {
                     const isSelected = question.id === selectedQuestionId;
@@ -94,6 +86,16 @@ export function QuestionBrowserPanel({
                     );
                   })}
                 </nav>
+
+                <p
+                  className={
+                    isActiveRound
+                      ? 'text-xs font-extrabold tracking-wide text-foreground/55'
+                      : 'text-[10px] font-bold tracking-wide text-foreground/35'
+                  }
+                >
+                  {round.title}
+                </p>
               </div>
             );
           })}
