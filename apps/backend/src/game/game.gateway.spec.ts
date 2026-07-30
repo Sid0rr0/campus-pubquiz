@@ -392,8 +392,9 @@ describe('GameGateway', () => {
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
-        leaderboard: [{ teamId: 31, teamName: 'The Quizzards', totalPoints: 2 }],
+        leaderboard: [
+          { teamId: 31, teamName: 'The Quizzards', totalPoints: 2 },
+        ],
       }),
     );
   });
