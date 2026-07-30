@@ -6,6 +6,9 @@ interface NavigationButtonsProps {
   progressStatus: GameStatus;
   canGoToPreviousQuestion: boolean;
   canAdvance: boolean;
+  isLeaderboardVisible: boolean;
+  leaderboardRevealCount: number;
+  leaderboardTeamCount: number;
   onAction: (action: GameAction) => void;
   className?: string;
 }
@@ -25,10 +28,19 @@ export function NavigationButtons({
   progressStatus,
   canGoToPreviousQuestion,
   canAdvance,
+  isLeaderboardVisible,
+  leaderboardRevealCount,
+  leaderboardTeamCount,
   onAction,
   className = '',
 }: NavigationButtonsProps) {
-  if (!canGoToPreviousQuestion && !canAdvance) {
+  // While the board is up, Advance takes over revealing teams one at a time;
+  // once every team has been shown it reverts to its normal role.
+  const hasUnrevealedTeams =
+    isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
+  const showAdvanceSlot = canAdvance || hasUnrevealedTeams;
+
+  if (!canGoToPreviousQuestion && !showAdvanceSlot) {
     return null;
   }
 
@@ -37,17 +49,19 @@ export function NavigationButtons({
       {canGoToPreviousQuestion && (
         <button
           onClick={() => onAction('PREVIOUS')}
-          className="min-h-11 flex-1 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+          disabled={isLeaderboardVisible}
+          className="min-h-11 flex-1 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
         >
           Previous
         </button>
       )}
-      {canAdvance && (
+      {showAdvanceSlot && (
         <button
-          onClick={() => onAction('ADVANCE')}
-          className="min-h-11 flex-1 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
+          onClick={() => onAction(hasUnrevealedTeams ? 'REVEAL_NEXT_TEAM' : 'ADVANCE')}
+          disabled={isLeaderboardVisible && !hasUnrevealedTeams}
+          className="min-h-11 flex-1 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
         >
-          {getAdvanceLabel(progressStatus)}
+          {hasUnrevealedTeams ? 'Show Next Team' : getAdvanceLabel(progressStatus)}
         </button>
       )}
     </div>

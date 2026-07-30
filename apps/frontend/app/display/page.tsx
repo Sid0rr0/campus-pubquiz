@@ -60,12 +60,7 @@ function isAudioUrl(url: string): boolean {
   return AUDIO_EXTENSION_PATTERN.test(url);
 }
 
-const OPTION_ACCENT_CLASSES = [
-  'border-cyan text-cyan',
-  'border-magenta text-magenta',
-  'border-green text-green',
-  'border-orange text-orange',
-];
+const OPTION_ACCENT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
 interface QuestionDisplayProps {
@@ -123,12 +118,18 @@ function QuestionDisplay({
               <li
                 key={option}
                 className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-xl font-bold ${
-                  isCorrect
-                    ? 'border-green text-green'
-                    : OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]
+                  isCorrect ? 'border-green' : 'border-foreground/30'
                 }`}
               >
-                <span className="font-display">{OPTION_LETTERS[index % OPTION_LETTERS.length]}</span>
+                <span
+                  className={`font-display ${
+                    isCorrect
+                      ? 'text-green'
+                      : OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]
+                  }`}
+                >
+                  {OPTION_LETTERS[index % OPTION_LETTERS.length]}
+                </span>
                 <span className="text-foreground">{option}</span>
                 {isCorrect && (
                   <span aria-hidden="true" className="ml-auto text-green">
@@ -248,6 +249,7 @@ function DisplayPageContent() {
     currentQuestion,
     quizStructure = { blockCount: 0, topicsPerBlock: null },
     leaderboard = [],
+    leaderboardRevealCount = 0,
     teams = [],
     answeredTeamIds = [],
     revealQuestions = [],
@@ -258,15 +260,18 @@ function DisplayPageContent() {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
       {progress.isLeaderboardVisible && (
-        <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="flex flex-1 flex-col justify-center gap-6 px-24 py-10"
+        >
           <h1 className="text-center font-display text-4xl">
-            <span className="text-magenta">Leaderboard</span>{' '}
-            <span className="font-body text-lg font-extrabold text-foreground/55">
-              AFTER ROUND {progress.roundIndex + 1}
-            </span>
+            <span className="text-magenta">Leaderboard</span>
+          
           </h1>
-          <Leaderboard entries={leaderboard} />
-        </div>
+          <Leaderboard entries={leaderboard} revealCount={leaderboardRevealCount} />
+        </motion.div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
         <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">

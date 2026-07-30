@@ -285,6 +285,35 @@ describe('getNextGameState', () => {
     expect(next.status).toBe('ended');
   });
 
+  it('allows REVEAL_NEXT_TEAM without changing progress while the leaderboard is visible', () => {
+    const openWithLeaderboard: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: true,
+      revealIndex: 0,
+    };
+    const next = getNextGameState(
+      openWithLeaderboard,
+      'REVEAL_NEXT_TEAM',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual(openWithLeaderboard);
+  });
+
+  it('rejects REVEAL_NEXT_TEAM while the leaderboard is hidden', () => {
+    const openWithoutLeaderboard: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    expect(() =>
+      getNextGameState(openWithoutLeaderboard, 'REVEAL_NEXT_TEAM', twoRoundsWithBreakAfterSecond),
+    ).toThrow(IllegalGameTransitionError);
+  });
+
   it('force-ends the quiz from any in-progress status', () => {
     const grading: GameProgress = {
       status: 'break',

@@ -51,6 +51,11 @@ export class GameStateService implements OnModuleInit {
 
   private seededGame: SeededGame | null = null;
   private leaderboard: LeaderboardEntry[] = [];
+  /**
+   * How many teams (counting up from last place) are currently revealed on
+   * the leaderboard. Ephemeral — not persisted, resets on toggle/new game.
+   */
+  private leaderboardRevealCount = 0;
   private teams: TeamRosterEntry[] = [];
   private answeredTeamIdsByQuestion: Record<number, number[]> = {};
   /** teamId -> socket.id of the one device currently connected as that team. */
@@ -102,6 +107,7 @@ export class GameStateService implements OnModuleInit {
     // no progress to persist here.
     this.progress = { ...LOBBY_PROGRESS };
     this.leaderboard = [];
+    this.leaderboardRevealCount = 0;
     this.teams = [];
     this.answeredTeamIdsByQuestion = {};
     this.connectedTeamSockets = {};
@@ -182,6 +188,7 @@ export class GameStateService implements OnModuleInit {
       revealQuestions: this.getRevealQuestions(),
       answeredTeamIds: this.getAnsweredTeamIds(),
       leaderboard: this.leaderboard,
+      leaderboardRevealCount: this.leaderboardRevealCount,
       joinCode: this.getSeededGame().joinCode,
       teams: this.teams.map(
         (team): TeamView => ({
@@ -201,8 +208,30 @@ export class GameStateService implements OnModuleInit {
   async applyAction(action: GameAction): Promise<StateSnapshotPayload> {
     this.progress = getNextGameState(this.progress, action, this.getContext());
     this.updateQuestionLockAt();
+    this.updateLeaderboardRevealCount(action);
     await this.progressRepository.save(this.getGameSessionId(), this.progress);
     return this.getSnapshot();
+  }
+
+  /**
+   * Toggling the board resets the reveal to nothing shown; from then on,
+   * ADVANCE and REVEAL_NEXT_TEAM both step the reveal forward one team at a
+   * time (bottom-up) — whichever button the admin has on screen works.
+   */
+  private updateLeaderboardRevealCount(action: GameAction): void {
+    if (action === 'TOGGLE_LEADERBOARD') {
+      this.leaderboardRevealCount = 0;
+      return;
+    }
+    if (
+      (action === 'ADVANCE' || action === 'REVEAL_NEXT_TEAM') &&
+      this.progress.isLeaderboardVisible
+    ) {
+      this.leaderboardRevealCount = Math.min(
+        this.leaderboardRevealCount + 1,
+        this.leaderboard.length,
+      );
+    }
   }
 
   /**

@@ -174,6 +174,7 @@ export default function AdminPage() {
     currentQuestion,
     blockQuestions = [],
     leaderboard = [],
+    leaderboardRevealCount = 0,
     teams = [],
     answeredTeamIds = [],
   } = snapshot;
@@ -219,6 +220,9 @@ export default function AdminPage() {
         canAdvance={canAdvance}
         canFinishGrading={canFinishGrading}
         canEndQuiz={canEndQuiz}
+        isLeaderboardVisible={progress.isLeaderboardVisible}
+        leaderboardRevealCount={leaderboardRevealCount}
+        leaderboardTeamCount={leaderboard.length}
         onAction={sendAction}
         teams={teams}
         showAnswerStatus={showAnswerStatus}
@@ -239,12 +243,16 @@ export default function AdminPage() {
             progressStatus={progress.status}
             canGoToPreviousQuestion={canGoToPreviousQuestion}
             canAdvance={canAdvance}
+            isLeaderboardVisible={progress.isLeaderboardVisible}
+            leaderboardRevealCount={leaderboardRevealCount}
+            leaderboardTeamCount={leaderboard.length}
             onAction={sendAction}
           />
           <AdminActions
             canStartQuiz={canStartQuiz}
             canFinishGrading={canFinishGrading}
             canEndQuiz={canEndQuiz}
+            isLeaderboardVisible={progress.isLeaderboardVisible}
             onAction={sendAction}
           />
         </div>

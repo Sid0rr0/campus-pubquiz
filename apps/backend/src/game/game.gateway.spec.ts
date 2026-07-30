@@ -378,6 +378,44 @@ describe('GameGateway', () => {
     );
   });
 
+  it('recomputes the leaderboard when toggled on, so every joined team shows up even before any grading', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleAdminAction(asSocket(admin), {
+      action: 'TOGGLE_LEADERBOARD',
+    });
+
+    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
+        leaderboard: [{ teamId: 31, teamName: 'The Quizzards', totalPoints: 2 }],
+      }),
+    );
+  });
+
+  it('does not recompute the leaderboard when toggled off', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      password: ADMIN_PASSWORD,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleAdminAction(asSocket(admin), {
+      action: 'TOGGLE_LEADERBOARD',
+    }); // on
+    answerService.computeLeaderboard.mockClear();
+
+    await gateway.handleAdminAction(asSocket(admin), {
+      action: 'TOGGLE_LEADERBOARD',
+    }); // off
+
+    expect(answerService.computeLeaderboard).not.toHaveBeenCalled();
+  });
+
   it('rejects an admin action from a non-admin client without broadcasting', async () => {
     const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
     await gateway.handleConnection(asSocket(display));

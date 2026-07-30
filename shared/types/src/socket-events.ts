@@ -71,6 +71,12 @@ export interface StateSnapshotPayload {
   /** Teams that have answered the current question. Empty when none is open. */
   answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];
+  /**
+   * How many teams (counting up from last place) are currently revealed on
+   * the leaderboard, driven by REVEAL_NEXT_TEAM / ADVANCE while the board is
+   * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
+   */
+  leaderboardRevealCount: number;
   joinCode: string;
   teams: TeamView[];
   /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */

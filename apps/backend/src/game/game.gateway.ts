@@ -121,6 +121,17 @@ export class GameGateway
       throw new WsException(message);
     }
 
+    // The leaderboard otherwise only refreshes on GRADE_ANSWER, so toggling
+    // it on before any grading has happened would show nothing — recompute
+    // fresh here so every currently-joined team appears, 0 points and all.
+    if (payload.action === 'TOGGLE_LEADERBOARD' && snapshot.progress.isLeaderboardVisible) {
+      const leaderboard = await this.answerService.computeLeaderboard(
+        this.gameState.getGameSessionId(),
+      );
+      this.gameState.setLeaderboard(leaderboard);
+      snapshot = this.gameState.getSnapshot();
+    }
+
     this.broadcastState(snapshot);
     this.rearmQuestionLockTimer();
   }

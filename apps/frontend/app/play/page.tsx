@@ -269,6 +269,10 @@ function PlayPageContent() {
   } = snapshot;
   const selectedQuestion =
     blockQuestions.find((question) => question.id === browsedQuestionId) ?? currentQuestion;
+  // Answering stays available even while the leaderboard is toggled on for
+  // the big screen — only a real lock (status leaving question_open/locking)
+  // should stop teams from answering.
+  const isAnswerable = progress.status === 'question_open' || progress.status === 'locking';
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
@@ -283,8 +287,13 @@ function PlayPageContent() {
           <JoinError message={connectionError} onStartOver={handleStartOver} />
         </div>
       )}
-      {progress.isLeaderboardVisible && (
-        <h1 className="text-center font-display text-3xl text-magenta">Leaderboard</h1>
+      {progress.isLeaderboardVisible && !isAnswerable && (
+        <div className="mt-16 flex flex-col items-center gap-2 text-center">
+          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+            👀 Look at the screen
+          </p>
+          <h1 className="font-display text-2xl text-magenta">Leaderboard</h1>
+        </div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
         <div className="mt-16 flex flex-col items-center gap-3">
@@ -307,9 +316,7 @@ function PlayPageContent() {
           <h1 className="font-display text-2xl">{roundTitle}</h1>
         </div>
       )}
-      {!progress.isLeaderboardVisible &&
-        (progress.status === 'question_open' || progress.status === 'locking') &&
-        selectedQuestion && (
+      {isAnswerable && selectedQuestion && (
         <div className="flex flex-col gap-6">
           {blockQuestions.length > 1 && (
             <nav aria-label="Open questions" className="flex flex-wrap gap-2">

@@ -557,6 +557,7 @@ describe('DisplayPage', () => {
           { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
           { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
         ],
+        leaderboardRevealCount: 2,
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -568,5 +569,25 @@ describe('DisplayPage', () => {
     expect(entries[0]).toHaveTextContent('5');
     expect(entries[1]).toHaveTextContent('Second Place');
     expect(entries[1]).toHaveTextContent('3');
+  });
+
+  it('only shows teams revealed so far, bottom-up, while more remain hidden', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+        leaderboard: [
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
+        ],
+        leaderboardRevealCount: 1,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Second Place')).toBeInTheDocument();
+    expect(screen.queryByText('The Quizzards')).not.toBeInTheDocument();
   });
 });

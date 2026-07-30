@@ -6,15 +6,17 @@ interface AdminActionsProps {
   canStartQuiz: boolean;
   canFinishGrading: boolean;
   canEndQuiz: boolean;
+  isLeaderboardVisible: boolean;
   onAction: (action: GameAction) => void;
   className?: string;
 }
 
-/** Start Quiz, Finish Grading, Toggle Leaderboard, End Quiz — everything but Previous/Advance. */
+/** Start Quiz, Finish Grading, Open/Close Leaderboard, End Quiz — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canFinishGrading,
   canEndQuiz,
+  isLeaderboardVisible,
   onAction,
   className = '',
 }: AdminActionsProps) {
@@ -40,7 +42,7 @@ export function AdminActions({
         onClick={() => onAction('TOGGLE_LEADERBOARD')}
         className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
       >
-        Toggle Leaderboard
+        {isLeaderboardVisible ? 'Close Leaderboard' : 'Open Leaderboard'}
       </button>
       {canEndQuiz && (
         <button

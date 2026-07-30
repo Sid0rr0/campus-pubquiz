@@ -17,6 +17,9 @@ interface MobileAdminBarProps {
   canAdvance: boolean;
   canFinishGrading: boolean;
   canEndQuiz: boolean;
+  isLeaderboardVisible: boolean;
+  leaderboardRevealCount: number;
+  leaderboardTeamCount: number;
   onAction: (action: GameAction) => void;
   teams: TeamView[];
   showAnswerStatus: boolean;
@@ -35,6 +38,9 @@ export function MobileAdminBar({
   canAdvance,
   canFinishGrading,
   canEndQuiz,
+  isLeaderboardVisible,
+  leaderboardRevealCount,
+  leaderboardTeamCount,
   onAction,
   teams,
   showAnswerStatus,
@@ -90,6 +96,7 @@ export function MobileAdminBar({
               canStartQuiz={canStartQuiz}
               canFinishGrading={canFinishGrading}
               canEndQuiz={canEndQuiz}
+              isLeaderboardVisible={isLeaderboardVisible}
               onAction={handleDrawerAction}
             />
             <TeamsPanel
@@ -106,6 +113,9 @@ export function MobileAdminBar({
         progressStatus={progressStatus}
         canGoToPreviousQuestion={canGoToPreviousQuestion}
         canAdvance={canAdvance}
+        isLeaderboardVisible={isLeaderboardVisible}
+        leaderboardRevealCount={leaderboardRevealCount}
+        leaderboardTeamCount={leaderboardTeamCount}
         onAction={onAction}
         className="flex-1"
       />
