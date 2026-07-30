@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress } from '@campus-pubquiz/types';
@@ -19,6 +19,14 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
     revealIndex: 0,
     ...overrides,
   };
+}
+
+// Advance/Previous render in both the always-mounted mobile sticky bar and
+// the desktop sidebar (each hidden from the other via a CSS media query that
+// jsdom doesn't evaluate) — scope to the desktop <aside> (the "complementary"
+// landmark) so these queries match exactly one button.
+function getDesktopButton(name: RegExp): HTMLElement {
+  return within(screen.getByRole('complementary')).getByRole('button', { name });
 }
 
 describe('AdminPage', () => {
@@ -162,7 +170,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /advance/i }));
+    await userEvent.click(getDesktopButton(/advance/i));
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
@@ -176,8 +184,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    const button = screen.getByRole('button', { name: /begin quiz/i });
-    await userEvent.click(button);
+    await userEvent.click(getDesktopButton(/begin quiz/i));
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
@@ -195,7 +202,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+    await userEvent.click(getDesktopButton(/^previous$/i));
 
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
@@ -213,7 +220,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /start round/i }));
+    await userEvent.click(getDesktopButton(/start round/i));
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
@@ -231,7 +238,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+    await userEvent.click(getDesktopButton(/^previous$/i));
 
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
@@ -252,7 +259,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+    await userEvent.click(getDesktopButton(/^previous$/i));
 
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
@@ -270,7 +277,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^advance$/i }));
+    await userEvent.click(getDesktopButton(/^advance$/i));
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
@@ -288,7 +295,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+    await userEvent.click(getDesktopButton(/^previous$/i));
 
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
@@ -337,7 +344,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^previous$/i }));
+    await userEvent.click(getDesktopButton(/^previous$/i));
 
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
@@ -354,7 +361,7 @@ describe('AdminPage', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /^advance$/i }));
+    await userEvent.click(getDesktopButton(/^advance$/i));
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });

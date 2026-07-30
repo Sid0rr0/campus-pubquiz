@@ -8,6 +8,10 @@ import { Leaderboard } from '@/app/components/leaderboard';
 import { RoundsList } from '@/app/components/rounds-list';
 import { ImportPanel } from '@/app/admin/import-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
+import { NavigationButtons } from '@/app/admin/navigation-buttons';
+import { AdminActions } from '@/app/admin/admin-actions';
+import { TeamsPanel } from '@/app/admin/teams-panel';
+import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
@@ -204,8 +208,24 @@ export default function AdminPage() {
   const canEndQuiz = progress.status !== 'ended';
 
   return (
-    <main className="flex min-h-screen bg-background text-foreground">
-      <aside className="flex w-72 shrink-0 flex-col gap-5 bg-foreground p-5 text-background">
+    <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
+      <MobileAdminBar
+        progressStatus={progress.status}
+        joinCode={snapshot.joinCode}
+        activeQuizTitle={activeQuizTitle}
+        connectionError={connectionError}
+        canStartQuiz={canStartQuiz}
+        canGoToPreviousQuestion={canGoToPreviousQuestion}
+        canAdvance={canAdvance}
+        canFinishGrading={canFinishGrading}
+        canEndQuiz={canEndQuiz}
+        onAction={sendAction}
+        teams={teams}
+        showAnswerStatus={showAnswerStatus}
+        answeredTeamIds={answeredTeamIds}
+        onKickTeam={kickTeam}
+      />
+      <aside className="hidden w-72 shrink-0 flex-col gap-5 bg-foreground p-5 text-background md:flex">
         <h1 className="font-display text-lg">Quiz Master</h1>
         {connectionError && (
           <p role="alert" className="font-extrabold text-magenta">
@@ -215,104 +235,28 @@ export default function AdminPage() {
         {activeQuizTitle && <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>}
         <p className="text-sm font-bold">Status: {progress.status} ({snapshot?.joinCode})</p>
         <div className="flex flex-col gap-2">
-          {canStartQuiz && (
-            <button
-              onClick={() => sendAction('START_QUIZ')}
-              className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
-            >
-              Start Quiz
-            </button>
-          )}
-          {canGoToPreviousQuestion && (
-            <button
-              onClick={() => sendAction('PREVIOUS')}
-              className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
-            >
-              Previous
-            </button>
-          )}
-          {canAdvance && (
-            <button
-              onClick={() => sendAction('ADVANCE')}
-              className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
-            >
-              {progress.status === 'rules'
-                ? 'Begin Quiz'
-                : progress.status === 'round_intro'
-                  ? 'Start Round'
-                  : 'Advance'}
-            </button>
-          )}
-          {canFinishGrading && (
-            <button
-              onClick={() => sendAction('FINISH_GRADING')}
-              className="min-h-12 rounded-lg bg-magenta text-sm font-extrabold text-white"
-            >
-              Finish Grading
-            </button>
-          )}
-          <button
-            onClick={() => sendAction('TOGGLE_LEADERBOARD')}
-            className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
-          >
-            Toggle Leaderboard
-          </button>
-          {canEndQuiz && (
-            <button
-              onClick={() => sendAction('END_QUIZ')}
-              className="min-h-11 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/60"
-            >
-              End Quiz
-            </button>
-          )}
+          <NavigationButtons
+            progressStatus={progress.status}
+            canGoToPreviousQuestion={canGoToPreviousQuestion}
+            canAdvance={canAdvance}
+            onAction={sendAction}
+          />
+          <AdminActions
+            canStartQuiz={canStartQuiz}
+            canFinishGrading={canFinishGrading}
+            canEndQuiz={canEndQuiz}
+            onAction={sendAction}
+          />
         </div>
-        {teams.length > 0 && (
-          <section className="mt-auto flex flex-col gap-2 border-t border-background/20 pt-4">
-            <h2 className="text-xs font-extrabold tracking-wide text-background/60">
-              Teams ({teams.length})
-            </h2>
-            <ul className="flex flex-col gap-1">
-              {teams.map((team) => {
-                const hasAnswered = showAnswerStatus && answeredTeamIds.includes(team.teamId);
-                return (
-                  <li
-                    key={team.teamId}
-                    aria-label={
-                      showAnswerStatus
-                        ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
-                        : undefined
-                    }
-                    className="flex items-center gap-1.5 text-sm font-bold"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={team.isConnected ? 'text-green' : 'text-background/30'}
-                    >
-                      ●
-                    </span>
-                    {team.teamName}
-                    {hasAnswered && (
-                      <span aria-hidden="true" className="ml-1 text-cyan">
-                        ✓
-                      </span>
-                    )}
-                    {team.isConnected && (
-                      <button
-                        type="button"
-                        onClick={() => kickTeam(team.teamId)}
-                        className="ml-auto text-xs font-extrabold text-magenta underline"
-                      >
-                        Kick
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
+        <TeamsPanel
+          teams={teams}
+          showAnswerStatus={showAnswerStatus}
+          answeredTeamIds={answeredTeamIds}
+          onKickTeam={kickTeam}
+          className="mt-auto border-t border-background/20 pt-4"
+        />
       </aside>
-      <div className="flex flex-1 flex-col gap-6 p-7">
+      <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
         {canChooseQuiz && (
           <ImportPanel adminPassword={submittedPassword} onImported={requestQuizzes} />
         )}
