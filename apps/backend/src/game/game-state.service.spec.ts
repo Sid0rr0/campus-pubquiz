@@ -461,7 +461,9 @@ describe('GameStateService', () => {
     expect(service.getSnapshot().leaderboardRevealCount).toBe(2);
 
     // Bounded: a further reveal doesn't exceed the number of teams.
-    await expect(service.applyAction('REVEAL_NEXT_TEAM')).resolves.toMatchObject({
+    await expect(
+      service.applyAction('REVEAL_NEXT_TEAM'),
+    ).resolves.toMatchObject({
       leaderboardRevealCount: 2,
     });
   });
@@ -690,6 +692,38 @@ describe('GameStateService', () => {
       });
     });
 
+    it('never leaks the correct answer through currentQuestion while a question is open', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      const snapshot = await service.applyAction('ADVANCE'); // -> r1q1
+
+      expect(snapshot.currentQuestion).not.toHaveProperty('answer');
+      expect(snapshot.currentQuestion).not.toHaveProperty('answerMediaUrl');
+    });
+
+    it('labels block questions with their round and in-round position', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      const snapshot = await service.applyAction('ADVANCE'); // -> r2q2
+
+      expect(
+        snapshot.blockQuestions.map((q) => [
+          q.id,
+          q.roundNumber,
+          q.questionNumberInRound,
+        ]),
+      ).toEqual([
+        [21, 1, 1],
+        [22, 1, 2],
+        [23, 2, 1],
+        [24, 2, 2],
+      ]);
+    });
+
     it('exposes no reveal questions outside reveal', async () => {
       await service.applyAction('START_QUIZ');
       expect(service.getSnapshot().revealQuestions).toEqual([]);
@@ -773,6 +807,48 @@ describe('GameStateService', () => {
       await service.applyAction('ADVANCE'); // -> locking
       await service.applyAction('ADVANCE'); // -> break
       await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
+
+      await expect(service.applyAction('PREVIOUS')).rejects.toThrow(
+        IllegalGameTransitionError,
+      );
+    });
+
+    it("starts break review at the block's last question, walking backward via PREVIOUS without reopening it for answers", async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
+      const entered = await service.applyAction('ADVANCE'); // -> break
+      expect(entered.progress).toMatchObject({
+        status: 'break',
+        revealIndex: 3,
+      });
+
+      const back = await service.applyAction('PREVIOUS');
+      expect(back.progress).toMatchObject({ status: 'break', revealIndex: 2 });
+      // Still fully locked: the block stays answer-free and browsable, but no
+      // question re-enters 'question_open'/'locking'.
+      expect(back.blockQuestions.map((q) => q.id)).toEqual([21, 22, 23, 24]);
+      expect(service.isQuestionOpenForAnswering(23)).toBe(false);
+    });
+
+    it('rejects PREVIOUS at the first question of a break with no earlier block', async () => {
+      await service.applyAction('START_QUIZ');
+      await service.applyAction('ADVANCE'); // -> round_intro(0)
+      await service.applyAction('ADVANCE'); // -> r1q1
+      await service.applyAction('ADVANCE'); // -> r1q2
+      await service.applyAction('ADVANCE'); // -> round_intro(1)
+      await service.applyAction('ADVANCE'); // -> r2q1
+      await service.applyAction('ADVANCE'); // -> r2q2
+      await service.applyAction('ADVANCE'); // -> locking
+      await service.applyAction('ADVANCE'); // -> break, revealIndex 3
+      await service.applyAction('PREVIOUS'); // revealIndex 2
+      await service.applyAction('PREVIOUS'); // revealIndex 1
+      await service.applyAction('PREVIOUS'); // revealIndex 0
 
       await expect(service.applyAction('PREVIOUS')).rejects.toThrow(
         IllegalGameTransitionError,

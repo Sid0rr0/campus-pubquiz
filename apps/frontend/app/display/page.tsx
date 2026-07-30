@@ -252,6 +252,7 @@ function DisplayPageContent() {
     leaderboardRevealCount = 0,
     teams = [],
     answeredTeamIds = [],
+    blockQuestions = [],
     revealQuestions = [],
     roundTitle = '',
     questionLockAt = null,
@@ -341,11 +342,37 @@ function DisplayPageContent() {
           <QuestionLockCountdown key={questionLockAt} lockAt={questionLockAt} />
         </div>
       )}
-      {!progress.isLeaderboardVisible && progress.status === 'break' && (
-        <div className="flex flex-1 items-center justify-center px-16 text-center">
-          <h1 className="font-display text-4xl">Grading in progress…</h1>
-        </div>
-      )}
+      {!progress.isLeaderboardVisible &&
+        progress.status === 'break' &&
+        (blockQuestions[progress.revealIndex] ? (
+          <>
+            <div className="flex items-center justify-between border-b-2 border-dashed border-foreground/30 px-8 py-4">
+              <div className="font-display text-lg text-magenta">🍺 Trivia Night</div>
+              <div className="flex items-center gap-3 text-sm font-extrabold tracking-wide">
+                <span className="text-foreground/55">GRADING</span>
+                <span className="rounded-lg bg-foreground px-3 py-1 text-background">
+                  ROUND {blockQuestions[progress.revealIndex].roundNumber} · QUESTION{' '}
+                  {blockQuestions[progress.revealIndex].questionNumberInRound}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+              <QuestionDisplay
+                prompt={blockQuestions[progress.revealIndex].prompt}
+                mediaUrl={blockQuestions[progress.revealIndex].mediaUrl}
+                options={blockQuestions[progress.revealIndex].options}
+                mediaTestIdPrefix="grading"
+              />
+              <p className="font-extrabold tracking-wide text-foreground/55">
+                Grading in progress…
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center px-16 text-center">
+            <h1 className="font-display text-4xl">Grading in progress…</h1>
+          </div>
+        ))}
       {!progress.isLeaderboardVisible &&
         progress.status === 'reveal' &&
         revealQuestions[progress.revealIndex] && (
@@ -355,7 +382,8 @@ function DisplayPageContent() {
               <div className="flex items-center gap-3 text-sm font-extrabold tracking-wide">
                 <span className="text-foreground/55">REVEALING ANSWERS</span>
                 <span className="rounded-lg bg-foreground px-3 py-1 text-background">
-                  QUESTION {progress.revealIndex + 1} OF {revealQuestions.length}
+                  ROUND {revealQuestions[progress.revealIndex].roundNumber} · QUESTION{' '}
+                  {revealQuestions[progress.revealIndex].questionNumberInRound}
                 </span>
               </div>
             </div>

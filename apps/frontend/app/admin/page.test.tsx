@@ -300,7 +300,7 @@ describe('AdminPage', () => {
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
-  it('hides the Previous button outside of question_open', () => {
+  it('hides the Previous button on the first question of the first block, during a break', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
@@ -316,6 +316,60 @@ describe('AdminPage', () => {
     render(<AdminPage />);
 
     expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the Previous button during a break once the admin has stepped back within the block', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break', roundIndex: 1, revealIndex: 1 }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r2q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r2q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
+  });
+
+  it('shows the Previous button on the first question of a break when an earlier block exists', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
+        currentQuestion: null,
+        blockQuestions: [{ id: 'r2q1', type: 'free_text', prompt: 'Name this song.', points: 1 }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      quizzes: {
+        activeQuizId: 'quiz-1',
+        quizzes: [
+          {
+            id: 'quiz-1',
+            title: 'Campus Pub Quiz Night',
+            rounds: [
+              {
+                title: 'Round 1',
+                breakAfter: true,
+                questions: [{ id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' }],
+              },
+              {
+                title: 'Round 2',
+                breakAfter: true,
+                questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    render(<AdminPage />);
+
+    expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
   });
 
   it('hides the Previous button on the first reveal question', () => {

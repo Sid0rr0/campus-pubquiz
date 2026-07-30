@@ -5,6 +5,8 @@ import {
   getNextGameState,
   getQuizStructureSummary,
   type AdminQuestionContext,
+  type BlockQuestionView,
+  type BlockRevealQuestionView,
   type GameAction,
   type GameContext,
   type GameProgress,
@@ -40,6 +42,18 @@ function toQuestionView(question: RevealQuestionView): QuestionView {
     points: question.points,
     ...(question.options !== undefined ? { options: question.options } : {}),
     ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),
+  };
+}
+
+// Same answer-stripping, plus the round/question-in-round labels the block
+// and break-review headers need.
+function toBlockQuestionView(
+  question: BlockRevealQuestionView,
+): BlockQuestionView {
+  return {
+    ...toQuestionView(question),
+    roundNumber: question.roundNumber,
+    questionNumberInRound: question.questionNumberInRound,
   };
 }
 
@@ -278,11 +292,11 @@ export class GameStateService implements OnModuleInit {
     ) {
       return null;
     }
-    return (
+    const question =
       this.getSeededGame().rounds[this.progress.roundIndex]?.questions[
         this.progress.questionIndex
-      ] ?? null
-    );
+      ];
+    return question ? toQuestionView(question) : null;
   }
 
   /**
@@ -290,7 +304,7 @@ export class GameStateService implements OnModuleInit {
    * everything up to the current question while one is open (or locking),
    * or the whole just-locked block during break/reveal. Empty otherwise.
    */
-  private getBlockSeededQuestions(): RevealQuestionView[] {
+  private getBlockSeededQuestions(): BlockRevealQuestionView[] {
     const { status, roundIndex, questionIndex } = this.progress;
     if (
       status !== 'question_open' &&
@@ -305,12 +319,18 @@ export class GameStateService implements OnModuleInit {
     const blockStart = getBlockStartRoundIndex(roundIndex, this.getContext());
 
     return rounds.slice(blockStart, roundIndex + 1).flatMap((round, offset) => {
-      const isCurrentRound = blockStart + offset === roundIndex;
+      const currentRoundIndex = blockStart + offset;
+      const isCurrentRound = currentRoundIndex === roundIndex;
       const isPartiallyRevealed =
         (status === 'question_open' || status === 'locking') && isCurrentRound;
-      return isPartiallyRevealed
+      const questions = isPartiallyRevealed
         ? round.questions.slice(0, questionIndex + 1)
         : round.questions;
+      return questions.map((question, questionOffset) => ({
+        ...question,
+        roundNumber: currentRoundIndex + 1,
+        questionNumberInRound: questionOffset + 1,
+      }));
     });
   }
 
@@ -320,15 +340,15 @@ export class GameStateService implements OnModuleInit {
    * while grading. Answer-free: this is broadcast to every connected phone
    * and the big screen.
    */
-  private getBlockQuestions(): QuestionView[] {
-    return this.getBlockSeededQuestions().map(toQuestionView);
+  private getBlockQuestions(): BlockQuestionView[] {
+    return this.getBlockSeededQuestions().map(toBlockQuestionView);
   }
 
   /**
    * The just-finished block's questions with correct answers, shown once
    * grading is done. Only populated during reveal.
    */
-  private getRevealQuestions(): RevealQuestionView[] {
+  private getRevealQuestions(): BlockRevealQuestionView[] {
     if (this.progress.status !== 'reveal') {
       return [];
     }

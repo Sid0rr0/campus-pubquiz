@@ -204,7 +204,8 @@ export default function AdminPage() {
     progress.status === 'round_intro' ||
     progress.status === 'question_open' ||
     progress.status === 'locking' ||
-    (progress.status === 'reveal' && progress.revealIndex > 0);
+    ((progress.status === 'break' || progress.status === 'reveal') &&
+      (progress.revealIndex > 0 || activeBlockStartIndex > 0));
   const canFinishGrading = progress.status === 'break';
   const canEndQuiz = progress.status !== 'ended';
 
@@ -231,6 +232,7 @@ export default function AdminPage() {
       />
       <aside className="hidden w-72 shrink-0 flex-col gap-5 bg-foreground p-5 text-background md:flex">
         <h1 className="font-display text-lg">Quiz Master</h1>
+        <span>Display: R{progress.roundIndex + 1}Q{progress.questionIndex + 1}</span>
         {connectionError && (
           <p role="alert" className="font-extrabold text-magenta">
             {connectionError}

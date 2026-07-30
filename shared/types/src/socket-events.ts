@@ -42,6 +42,17 @@ export interface RevealQuestionView extends QuestionView {
   answerMediaUrl?: string;
 }
 
+/** Where a question sits in the quiz, for headers on the block/reveal/break screens. */
+export interface QuestionPosition {
+  /** 1-based position of this question's round within the quiz. */
+  roundNumber: number;
+  /** 1-based position of this question within its round. */
+  questionNumberInRound: number;
+}
+
+export type BlockQuestionView = QuestionView & QuestionPosition;
+export type BlockRevealQuestionView = RevealQuestionView & QuestionPosition;
+
 export interface LeaderboardEntry {
   teamId: number;
   teamName: string;
@@ -65,9 +76,9 @@ export interface StateSnapshotPayload {
    * current block while a question is open, or the whole just-locked block
    * during break/reveal (for grading). Empty otherwise.
    */
-  blockQuestions: QuestionView[];
+  blockQuestions: BlockQuestionView[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
-  revealQuestions: RevealQuestionView[];
+  revealQuestions: BlockRevealQuestionView[];
   /** Teams that have answered the current question. Empty when none is open. */
   answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];
