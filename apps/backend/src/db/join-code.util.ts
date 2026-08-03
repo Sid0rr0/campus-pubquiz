@@ -1,12 +1,14 @@
-import { randomInt } from 'node:crypto';
+import {
+  adjectives,
+  animals,
+  colors,
+  uniqueNamesGenerator,
+} from 'unique-names-generator';
 
-const JOIN_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const JOIN_CODE_LENGTH = 6;
-
-export function generateJoinCode(length: number = JOIN_CODE_LENGTH): string {
-  let code = '';
-  for (let i = 0; i < length; i += 1) {
-    code += JOIN_CODE_ALPHABET[randomInt(JOIN_CODE_ALPHABET.length)];
-  }
-  return code;
+export function generateJoinCode(): string {
+  return uniqueNamesGenerator({
+    dictionaries: [adjectives, colors, animals],
+    separator: '-',
+    style: 'upperCase',
+  });
 }

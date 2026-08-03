@@ -73,7 +73,7 @@ describe('SeedService (Postgres integration)', () => {
         HARDCODED_QUIZ.rounds[roundIndex].breakAfter,
       );
     });
-    expect(result.joinCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
+    expect(result.joinCode).toMatch(/^[A-Z]+-[A-Z]+-[A-Z]+$/);
 
     const quizzesInDb = await em.find(Quiz, {});
     expect(quizzesInDb).toHaveLength(1);
@@ -109,7 +109,7 @@ describe('SeedService (Postgres integration)', () => {
     const session = await seedService.createSession(first.quizId);
 
     expect(session.gameSessionId).not.toBe(first.gameSessionId);
-    expect(session.joinCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
+    expect(session.joinCode).toMatch(/^[A-Z]+-[A-Z]+-[A-Z]+$/);
     expect(session.joinCode).not.toBe(first.joinCode);
 
     const sessionsInDb = await em.find(GameSession, {});

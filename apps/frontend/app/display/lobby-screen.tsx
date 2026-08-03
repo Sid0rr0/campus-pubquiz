@@ -26,7 +26,9 @@ export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
           <p className="text-sm font-extrabold tracking-wide text-foreground/55">
             SCAN TO JOIN — OR GO TO /PLAY AND ENTER THE CODE
           </p>
-          <p className="font-display text-4xl tracking-[0.3em] text-magenta">{joinCode}</p>
+          <p className="font-display max-w-3xl text-3xl tracking-widest text-magenta wrap-break-word">
+            {joinCode}
+          </p>
         </div>
       )}
     </div>

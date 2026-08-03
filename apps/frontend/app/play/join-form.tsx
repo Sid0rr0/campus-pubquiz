@@ -54,7 +54,7 @@ export function JoinForm({
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
-          placeholder="e.g. ABC234"
+          placeholder="e.g. BOLD-AMBER-OTTER"
           className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
         />
         <label htmlFor="team-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
@@ -67,7 +67,7 @@ export function JoinForm({
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
-          placeholder="e.g. QZX456"
+          placeholder="e.g. QUICK-JADE-FOX"
           className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
         />
         <button

@@ -80,7 +80,7 @@ describe('TeamService (Postgres integration)', () => {
     expect(team.name).toBe('The Quizzards');
     expect(team.token).toEqual(expect.any(String));
     expect(team.token.length).toBeGreaterThan(10);
-    expect(team.code).toMatch(/^[A-HJ-NP-Z2-9]+$/);
+    expect(team.code).toMatch(/^[A-Z]+-[A-Z]+-[A-Z]+$/);
   });
 
   it('accepts a join code regardless of casing and surrounding whitespace', async () => {
