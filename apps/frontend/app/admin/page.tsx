@@ -1,16 +1,14 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import * as Collapsible from '@radix-ui/react-collapsible';
 import { getBlockStartRoundIndex, type QuizSummaryRound } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
-import { RoundsList } from '@/app/components/rounds-list';
+import { AdminLoginForm } from '@/app/admin/admin-login-form';
+import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { ImportPanel } from '@/app/admin/import-panel';
+import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
-import { NavigationButtons } from '@/app/admin/navigation-buttons';
-import { AdminActions } from '@/app/admin/admin-actions';
-import { TeamsPanel } from '@/app/admin/teams-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
@@ -29,7 +27,6 @@ export default function AdminPage() {
   const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
   const [submittedPassword, setSubmittedPassword] = useState('');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
-  const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
   const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
 
   useEffect(() => {
@@ -70,13 +67,6 @@ export default function AdminPage() {
   }, [gameStatus, quizzes, requestQuizzes]);
 
   useEffect(() => {
-    if (!canChooseQuiz) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPendingQuizId(null);
-    }
-  }, [canChooseQuiz]);
-
-  useEffect(() => {
     // A fresh quiz list from the server is authoritative; drop the optimistic
     // override so future renders trust `quizzes.activeQuizId` again.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -114,45 +104,21 @@ export default function AdminPage() {
   const displayedActiveQuizId = activeQuizIdOverride ?? quizzes?.activeQuizId ?? null;
   const activeQuizTitle =
     quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.title ?? null;
-  const pendingQuizTitle = quizzes?.quizzes.find((quiz) => quiz.id === pendingQuizId)?.title ?? null;
   const activeQuizRounds =
     quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.rounds ?? EMPTY_ROUNDS;
 
-  function handleConfirmQuizSelection(): void {
-    if (!pendingQuizId) {
-      return;
-    }
-    selectQuiz(pendingQuizId);
-    setActiveQuizIdOverride(pendingQuizId);
-    setPendingQuizId(null);
-  }
-
-  function handleCancelQuizSelection(): void {
-    setPendingQuizId(null);
+  function handleSelectQuiz(quizId: number): void {
+    selectQuiz(quizId);
+    setActiveQuizIdOverride(quizId);
   }
 
   if (!hasSubmittedPassword && !snapshot && !connectionError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <form onSubmit={handleSubmitPassword} className="flex w-72 flex-col gap-2">
-          <label htmlFor="admin-password" className="text-xs font-extrabold tracking-wide text-foreground/55">
-            Admin password
-          </label>
-          <input
-            id="admin-password"
-            type="password"
-            value={passwordInput}
-            onChange={(event) => setPasswordInput(event.target.value)}
-            className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
-          />
-          <button
-            type="submit"
-            className="mt-2 min-h-12 rounded-xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
-          >
-            Connect
-          </button>
-        </form>
-      </main>
+      <AdminLoginForm
+        passwordInput={passwordInput}
+        onPasswordInputChange={setPasswordInput}
+        onSubmit={handleSubmitPassword}
+      />
     );
   }
 
@@ -230,118 +196,38 @@ export default function AdminPage() {
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
       />
-      <aside className="hidden w-72 shrink-0 flex-col gap-5 bg-foreground p-5 text-background md:flex">
-        <h1 className="font-display text-lg">Quiz Master</h1>
-        <span>Display: R{progress.roundIndex + 1}Q{progress.questionIndex + 1}</span>
-        {connectionError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {connectionError}
-          </p>
-        )}
-        {activeQuizTitle && <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>}
-        <p className="text-sm font-bold">Status: {progress.status} ({snapshot?.joinCode})</p>
-        <div className="flex flex-col gap-2">
-          <NavigationButtons
-            progressStatus={progress.status}
-            canGoToPreviousQuestion={canGoToPreviousQuestion}
-            canAdvance={canAdvance}
-            isLeaderboardVisible={progress.isLeaderboardVisible}
-            leaderboardRevealCount={leaderboardRevealCount}
-            leaderboardTeamCount={leaderboard.length}
-            onAction={sendAction}
-          />
-          <AdminActions
-            canStartQuiz={canStartQuiz}
-            canFinishGrading={canFinishGrading}
-            canEndQuiz={canEndQuiz}
-            isLeaderboardVisible={progress.isLeaderboardVisible}
-            onAction={sendAction}
-          />
-        </div>
-        <TeamsPanel
-          teams={teams}
-          showAnswerStatus={showAnswerStatus}
-          answeredTeamIds={answeredTeamIds}
-          onKickTeam={kickTeam}
-          className="mt-auto border-t border-background/20 pt-4"
-        />
-      </aside>
+      <DesktopSidebar
+        progressStatus={progress.status}
+        roundIndex={progress.roundIndex}
+        questionIndex={progress.questionIndex}
+        joinCode={snapshot.joinCode}
+        activeQuizTitle={activeQuizTitle}
+        connectionError={connectionError}
+        canStartQuiz={canStartQuiz}
+        canGoToPreviousQuestion={canGoToPreviousQuestion}
+        canAdvance={canAdvance}
+        canFinishGrading={canFinishGrading}
+        canEndQuiz={canEndQuiz}
+        isLeaderboardVisible={progress.isLeaderboardVisible}
+        leaderboardRevealCount={leaderboardRevealCount}
+        leaderboardTeamCount={leaderboard.length}
+        onAction={sendAction}
+        teams={teams}
+        showAnswerStatus={showAnswerStatus}
+        answeredTeamIds={answeredTeamIds}
+        onKickTeam={kickTeam}
+      />
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
         {canChooseQuiz && (
           <ImportPanel adminPassword={submittedPassword} onImported={requestQuizzes} />
         )}
         {canChooseQuiz && quizzes && (
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-xl">
-              {progress.status === 'ended' ? 'Choose New Quiz' : 'Choose Quiz'}
-            </h2>
-            <ul className="flex flex-col gap-2">
-              {quizzes.quizzes.map((quiz) => {
-                const isActive = quiz.id === displayedActiveQuizId;
-                const isPending = quiz.id === pendingQuizId;
-                return (
-                  <li key={quiz.id}>
-                    <Collapsible.Root
-                      open={isPending}
-                      onOpenChange={(open) => setPendingQuizId(open ? quiz.id : null)}
-                    >
-                      <Collapsible.Trigger asChild>
-                        <button
-                          type="button"
-                          aria-label={
-                            isPending
-                              ? `${quiz.title} selected, awaiting confirmation`
-                              : isActive
-                                ? `Restart quiz ${quiz.title}`
-                                : `Select quiz ${quiz.title}`
-                          }
-                          className={
-                            isPending
-                              ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-magenta bg-white px-4 font-extrabold'
-                              : isActive
-                                ? 'flex min-h-11 w-full items-center justify-between rounded-xl border-2 border-cyan bg-white px-4 font-extrabold'
-                                : 'flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold'
-                          }
-                        >
-                          <span>{quiz.title}</span>
-                          {isPending && <span className="text-sm text-magenta">selected</span>}
-                          {!isPending && isActive && <span className="text-sm text-cyan">active</span>}
-                        </button>
-                      </Collapsible.Trigger>
-                      <Collapsible.Content className="mt-2">
-                        <RoundsList rounds={quiz.rounds} />
-                      </Collapsible.Content>
-                    </Collapsible.Root>
-                  </li>
-                );
-              })}
-            </ul>
-            {pendingQuizId && (
-              <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-magenta bg-white px-4 py-3">
-                <p className="text-sm font-bold">
-                  {pendingQuizId === displayedActiveQuizId
-                    ? `Restart "${pendingQuizTitle}"? This clears teams and answers.`
-                    : `Start "${pendingQuizTitle}"? This replaces the current game session.`}
-                </p>
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCancelQuizSelection}
-                    className="min-h-10 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleConfirmQuizSelection}
-                    className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white"
-                  >
-                    Confirm
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
+          <QuizPickerPanel
+            progressStatus={progress.status}
+            quizzes={quizzes}
+            displayedActiveQuizId={displayedActiveQuizId}
+            onSelectQuiz={handleSelectQuiz}
+          />
         )}
         <QuestionBrowserPanel
           rounds={activeQuizRounds}
