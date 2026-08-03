@@ -1,3 +1,5 @@
+import { getOptionLetter } from '@/app/lib/option-letters';
+
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 
 // Neither media_url nor answer_media_url is tied to the question's `type`
@@ -6,9 +8,6 @@ const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 function isAudioUrl(url: string): boolean {
   return AUDIO_EXTENSION_PATTERN.test(url);
 }
-
-const OPTION_ACCENT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
 interface QuestionDisplayProps {
   prompt: string;
@@ -68,14 +67,8 @@ export function QuestionDisplay({
                   isCorrect ? 'border-green' : 'border-foreground/30'
                 }`}
               >
-                <span
-                  className={`font-display ${
-                    isCorrect
-                      ? 'text-green'
-                      : OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]
-                  }`}
-                >
-                  {OPTION_LETTERS[index % OPTION_LETTERS.length]}
+                <span className={`font-display ${isCorrect ? 'text-green' : 'text-cyan'}`}>
+                  {getOptionLetter(index)}
                 </span>
                 <span className="text-foreground">{option}</span>
                 {isCorrect && (

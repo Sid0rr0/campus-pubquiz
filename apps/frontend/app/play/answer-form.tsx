@@ -2,9 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import type { QuestionView } from '@campus-pubquiz/types';
-
-const OPTION_ACCENT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
+import { getOptionLetter } from '@/app/lib/option-letters';
 
 interface AnswerFormProps {
   question: QuestionView;
@@ -32,8 +30,8 @@ export function AnswerForm({ question, initialValue = '', onSubmit }: AnswerForm
                   : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold'
               }
             >
-              <span aria-hidden="true" className={`font-display ${OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]}`}>
-                {OPTION_LETTERS[index % OPTION_LETTERS.length]}
+              <span aria-hidden="true" className="font-display text-cyan">
+                {getOptionLetter(index)}
               </span>
               {option}
               {isChosen && (
