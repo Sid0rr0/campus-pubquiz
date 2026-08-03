@@ -1,6 +1,7 @@
 import type { BlockQuestionView, GameProgress, JoinAcceptedPayload, QuestionView } from '@campus-pubquiz/types';
 import { AnswerForm } from '@/app/play/answer-form';
-import { QuestionPicker, type PickerRound } from '@/app/play/question-picker';
+import { QuestionPicker } from '@/app/play/question-picker';
+import type { PickerRound } from '@/app/play/question-picker-slots';
 
 interface QuestionBrowserProps {
   progress: GameProgress;

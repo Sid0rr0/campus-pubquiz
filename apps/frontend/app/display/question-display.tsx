@@ -63,7 +63,7 @@ export function QuestionDisplay({
             const isCorrect = correctAnswer !== undefined && option === correctAnswer;
             return (
               <li
-                key={option}
+                key={index}
                 className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-xl font-bold ${
                   isCorrect ? 'border-green' : 'border-foreground/30'
                 }`}

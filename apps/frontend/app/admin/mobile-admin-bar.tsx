@@ -2,30 +2,13 @@
 
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import type { GameAction, GameStatus, TeamView } from '@campus-pubquiz/types';
+import type { GameAction } from '@campus-pubquiz/types';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
 import { TeamsPanel } from '@/app/admin/teams-panel';
+import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
 
-interface MobileAdminBarProps {
-  progressStatus: GameStatus;
-  joinCode: string;
-  activeQuizTitle: string | null;
-  connectionError: string | null;
-  canStartQuiz: boolean;
-  canGoToPreviousQuestion: boolean;
-  canAdvance: boolean;
-  canFinishGrading: boolean;
-  canEndQuiz: boolean;
-  isLeaderboardVisible: boolean;
-  leaderboardRevealCount: number;
-  leaderboardTeamCount: number;
-  onAction: (action: GameAction) => void;
-  teams: TeamView[];
-  showAnswerStatus: boolean;
-  answeredTeamIds: number[];
-  onKickTeam: (teamId: number) => void;
-}
+type MobileAdminBarProps = AdminSidebarProps;
 
 /** Sticky Previous/Advance bar + hamburger drawer for everything else — mobile only. */
 export function MobileAdminBar({

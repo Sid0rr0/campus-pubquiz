@@ -6,7 +6,7 @@ import { useGameSocket } from '@/app/lib/use-game-socket';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/play/join-form';
 import { QuestionBrowser } from '@/app/play/question-browser';
-import { buildPickerRounds } from '@/app/play/question-picker';
+import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import {
   JOIN_CODE_STORAGE_KEY,
   TEAM_CODE_STORAGE_KEY,

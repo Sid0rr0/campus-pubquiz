@@ -22,7 +22,7 @@ export function AnswerForm({ question, initialValue = '', onSubmit }: AnswerForm
           const isChosen = option === initialValue;
           return (
             <button
-              key={option}
+              key={index}
               type="button"
               aria-pressed={isChosen}
               onClick={() => onSubmit(option)}
