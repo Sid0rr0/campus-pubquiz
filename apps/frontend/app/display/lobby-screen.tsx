@@ -1,0 +1,34 @@
+import { QRCodeSVG } from 'qrcode.react';
+import type { TeamView } from '@campus-pubquiz/types';
+import { ScatteredTeamNames } from '@/app/display/scattered-team-names';
+
+const QR_SIZE_PX = 220;
+
+interface LobbyScreenProps {
+  teams: TeamView[];
+  joinCode: string | null | undefined;
+}
+
+export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
+  return (
+    <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
+      <ScatteredTeamNames teams={teams} />
+      <h1 className="font-display text-4xl">Waiting for the quiz to start…</h1>
+      {joinCode && (
+        <div className="flex flex-col items-center gap-4">
+          <div className="rounded-2xl border-2 border-foreground/30 bg-white p-5">
+            <QRCodeSVG
+              value={`${window.location.origin}/play?code=${joinCode}`}
+              title="Join QR code"
+              size={QR_SIZE_PX}
+            />
+          </div>
+          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+            SCAN TO JOIN — OR GO TO /PLAY AND ENTER THE CODE
+          </p>
+          <p className="font-display text-4xl tracking-[0.3em] text-magenta">{joinCode}</p>
+        </div>
+      )}
+    </div>
+  );
+}
