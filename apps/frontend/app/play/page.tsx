@@ -2,142 +2,20 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { BlockQuestionView, QuestionPosition, QuestionView } from '@campus-pubquiz/types';
-import { useGameSocket, type JoinTeamOptions } from '@/app/lib/use-game-socket';
-import { RulesContent } from '@/app/components/rules-content';
-
-const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
-const TEAM_TOKEN_STORAGE_KEY = 'campus-pubquiz-team-token';
-const TEAM_CODE_STORAGE_KEY = 'campus-pubquiz-team-code';
-const JOIN_CODE_STORAGE_KEY = 'campus-pubquiz-join-code';
-
-const OPTION_ACCENT_CLASSES = ['text-cyan', 'text-magenta', 'text-green', 'text-orange'];
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
-
-function normalizeJoinCode(code: string): string {
-  return code.trim().toUpperCase();
-}
-
-function storedJoinOptions(): JoinTeamOptions {
-  return {
-    teamToken: window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY) ?? undefined,
-    teamCode: window.localStorage.getItem(TEAM_CODE_STORAGE_KEY) ?? undefined,
-    joinCode: window.localStorage.getItem(JOIN_CODE_STORAGE_KEY) ?? undefined,
-  };
-}
-
-interface AnswerFormProps {
-  question: QuestionView;
-  initialValue?: string;
-  onSubmit: (value: string) => void;
-}
-
-function AnswerForm({ question, initialValue = '', onSubmit }: AnswerFormProps) {
-  const [value, setValue] = useState(initialValue);
-
-  if (question.type === 'multiple_choice' && question.options) {
-    return (
-      <div className="flex flex-col gap-2.5">
-        {question.options.map((option, index) => {
-          const isChosen = option === initialValue;
-          return (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={isChosen}
-              onClick={() => onSubmit(option)}
-              className={
-                isChosen
-                  ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-magenta bg-white px-4 text-lg font-bold'
-                  : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold'
-              }
-            >
-              <span aria-hidden="true" className={`font-display ${OPTION_ACCENT_CLASSES[index % OPTION_ACCENT_CLASSES.length]}`}>
-                {OPTION_LETTERS[index % OPTION_LETTERS.length]}
-              </span>
-              {option}
-              {isChosen && (
-                <span aria-hidden="true" className="ml-auto font-display text-magenta">
-                  ✓
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!value.trim()) return;
-    onSubmit(value.trim());
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <label htmlFor="answer-value" className="text-xs font-extrabold tracking-wide text-foreground/55">
-        Your answer
-      </label>
-      <input
-        id="answer-value"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
-      />
-      <button
-        type="submit"
-        className="min-h-14 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
-      >
-        Submit
-      </button>
-    </form>
-  );
-}
-
-interface PickerSlot {
-  key: string;
-  questionNumberInRound: number;
-  /** Null for a not-yet-open slot — rendered as a disabled placeholder. */
-  question: BlockQuestionView | null;
-}
-
-interface PickerRound {
-  roundNumber: number;
-  slots: PickerSlot[];
-}
-
-/** Groups the block's questions (plus the round's remaining upcoming slots, if any) by round, numbering each round's slots from 1 — so the whole round's shape is visible up front. */
-function buildPickerRounds(
-  blockQuestions: BlockQuestionView[],
-  upcomingQuestions: QuestionPosition[],
-): PickerRound[] {
-  const flatSlots: Array<PickerSlot & { roundNumber: number }> = blockQuestions.map((question) => ({
-    key: `q-${question.id}`,
-    roundNumber: question.roundNumber,
-    questionNumberInRound: question.questionNumberInRound,
-    question,
-  }));
-  for (const upcomingQuestion of upcomingQuestions) {
-    flatSlots.push({
-      key: `upcoming-${upcomingQuestion.roundNumber}-${upcomingQuestion.questionNumberInRound}`,
-      roundNumber: upcomingQuestion.roundNumber,
-      questionNumberInRound: upcomingQuestion.questionNumberInRound,
-      question: null,
-    });
-  }
-
-  const rounds: PickerRound[] = [];
-  for (const slot of flatSlots) {
-    const lastRound = rounds[rounds.length - 1];
-    if (lastRound && lastRound.roundNumber === slot.roundNumber) {
-      lastRound.slots.push(slot);
-    } else {
-      rounds.push({ roundNumber: slot.roundNumber, slots: [slot] });
-    }
-  }
-  return rounds;
-}
+import { useGameSocket } from '@/app/lib/use-game-socket';
+import { GameStatusScreens } from '@/app/play/game-status-screens';
+import { JoinForm } from '@/app/play/join-form';
+import { QuestionBrowser } from '@/app/play/question-browser';
+import { buildPickerRounds } from '@/app/play/question-picker';
+import {
+  JOIN_CODE_STORAGE_KEY,
+  TEAM_CODE_STORAGE_KEY,
+  TEAM_NAME_STORAGE_KEY,
+  TEAM_TOKEN_STORAGE_KEY,
+  clearStoredIdentity,
+  normalizeJoinCode,
+  storedJoinOptions,
+} from '@/app/play/storage';
 
 function PlayPageContent() {
   const searchParams = useSearchParams();
@@ -223,10 +101,7 @@ function PlayPageContent() {
   }
 
   function handleLogOut() {
-    window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
-    window.localStorage.removeItem(TEAM_TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
-    window.localStorage.removeItem(JOIN_CODE_STORAGE_KEY);
+    clearStoredIdentity();
     setTeamName(null);
     setNameInput('');
     setCodeInput(codeFromUrl);
@@ -236,67 +111,18 @@ function PlayPageContent() {
 
   if (!teamName || (connectionError && !team)) {
     return (
-      <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
-        <h1 className="text-center font-display text-3xl text-magenta">🍺 Join the quiz</h1>
-        <p className="-mt-2 text-center text-sm text-foreground/65">Grab a table, pick a name</p>
-        {connectionError && (
-          <p role="alert" className="text-center font-extrabold text-magenta">
-            {connectionError}
-          </p>
-        )}
-        <form onSubmit={handleJoin} className="mt-3 flex flex-col gap-2">
-          <label htmlFor="team-name" className="text-xs font-extrabold tracking-wide text-foreground/55">
-            Team name
-          </label>
-          <input
-            id="team-name"
-            value={nameInput}
-            onChange={(event) => setNameInput(event.target.value)}
-            className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
-          />
-          <label htmlFor="game-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
-            Game code
-          </label>
-          <input
-            id="game-code"
-            value={codeInput}
-            onChange={(event) => setCodeInput(event.target.value)}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="e.g. ABC234"
-            className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
-          />
-          <label htmlFor="team-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
-            Team code (only if this team has played before)
-          </label>
-          <input
-            id="team-code"
-            value={teamCodeInput}
-            onChange={(event) => setTeamCodeInput(event.target.value)}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="e.g. QZX456"
-            className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
-          />
-          <button
-            type="submit"
-            className="mt-2 min-h-14 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
-          >
-            Join the quiz
-          </button>
-        </form>
-        {hasStoredIdentity && (
-          <button
-            type="button"
-            onClick={handleLogOut}
-            className="mx-auto text-xs font-extrabold text-foreground/45 underline"
-          >
-            Log out
-          </button>
-        )}
-      </main>
+      <JoinForm
+        nameInput={nameInput}
+        onNameInputChange={setNameInput}
+        codeInput={codeInput}
+        onCodeInputChange={setCodeInput}
+        teamCodeInput={teamCodeInput}
+        onTeamCodeInputChange={setTeamCodeInput}
+        connectionError={connectionError}
+        hasStoredIdentity={hasStoredIdentity}
+        onSubmit={handleJoin}
+        onLogOut={handleLogOut}
+      />
     );
   }
 
@@ -361,114 +187,24 @@ function PlayPageContent() {
           Team code: {team.teamCode} — save it to play as this team another night.
         </p>
       )}
-      {progress.isLeaderboardVisible && !isAnswerable && (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-            👀 Look at the screen
-          </p>
-          <h1 className="font-display text-2xl text-magenta">Leaderboard</h1>
-        </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
-        <div className="mt-16 flex flex-col items-center gap-3">
-          <h1 className="text-center font-display text-2xl">Waiting for the quiz to start…</h1>
-          <a href="/rules" className="text-sm font-extrabold text-cyan underline">
-            Read the rules
-          </a>
-        </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'rules' && (
-        <div className="mt-6">
-          <RulesContent quizStructure={quizStructure} />
-        </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'round_intro' && (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-            👀 Look at the screen
-          </p>
-          <h1 className="font-display text-2xl">{roundTitle}</h1>
-        </div>
-      )}
+      <GameStatusScreens
+        progress={progress}
+        isAnswerable={isAnswerable}
+        quizStructure={quizStructure}
+        roundTitle={roundTitle}
+      />
       {showBlockBrowser && selectedQuestion && (
-        <div className="flex flex-col gap-6">
-          {totalPickerSlots > 1 && (
-            <div className="flex flex-col gap-2">
-              {pickerRounds.map((round) => (
-                <div key={round.roundNumber} className="flex flex-wrap items-center gap-2">
-                  {pickerRounds.length > 1 && (
-                    <span className="text-xs font-extrabold tracking-wide text-foreground/45">
-                      R{round.roundNumber}
-                    </span>
-                  )}
-                  <nav aria-label={`Round ${round.roundNumber} questions`} className="flex flex-wrap gap-2">
-                    {round.slots.map((slot) => {
-                      if (!slot.question) {
-                        return (
-                          <button
-                            key={slot.key}
-                            type="button"
-                            disabled
-                            aria-label={`Question ${slot.questionNumberInRound} (not open yet)`}
-                            className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-dashed border-foreground/20 bg-white/40 font-extrabold text-foreground/30"
-                          >
-                            {slot.questionNumberInRound}
-                          </button>
-                        );
-                      }
-                      const question = slot.question;
-                      const isAnswered = question.id in myAnswers;
-                      const isSelected = question.id === selectedQuestion.id;
-                      return (
-                        <button
-                          key={slot.key}
-                          type="button"
-                          aria-label={`Question ${slot.questionNumberInRound}${isAnswered ? ' (answered)' : ''}`}
-                          onClick={() => setBrowsedQuestionId(question.id)}
-                          className={
-                            isSelected
-                              ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-magenta bg-white font-extrabold text-magenta'
-                              : 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground/30 bg-white font-extrabold'
-                          }
-                        >
-                          {slot.questionNumberInRound}
-                          {isAnswered && <span aria-hidden="true" className="ml-1 text-green">✓</span>}
-                        </button>
-                      );
-                    })}
-                  </nav>
-                </div>
-              ))}
-            </div>
-          )}
-          <h1 className="text-balance font-display text-2xl leading-tight">{selectedQuestion.prompt}</h1>
-          {(selectedQuestion.type === 'picture' || selectedQuestion.type === 'audio') && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-          )}
-          {isAnswerable && team && (
-            <AnswerForm
-              key={selectedQuestion.id}
-              question={selectedQuestion}
-              initialValue={myAnswers[selectedQuestion.id] ?? ''}
-              onSubmit={(value) => submitAnswer(selectedQuestion.id, team.teamId, value)}
-            />
-          )}
-          {!isAnswerable && progress.status === 'break' && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              Answers are locked — grading in progress…
-            </p>
-          )}
-          {!isAnswerable && progress.status === 'reveal' && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              Revealing answers…
-            </p>
-          )}
-        </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'ended' && (
-        <h1 className="mt-16 text-center font-display text-2xl">Quiz complete!</h1>
+        <QuestionBrowser
+          progress={progress}
+          isAnswerable={isAnswerable}
+          team={team}
+          pickerRounds={pickerRounds}
+          totalPickerSlots={totalPickerSlots}
+          selectedQuestion={selectedQuestion}
+          myAnswers={myAnswers}
+          onSelectQuestion={setBrowsedQuestionId}
+          onSubmitAnswer={submitAnswer}
+        />
       )}
     </main>
   );
