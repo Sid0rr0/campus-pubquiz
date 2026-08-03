@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "ecc.install.v1",
+  "installedAt": "2026-08-03T20:12:04.011Z",
+  "target": {
+    "id": "claude-project",
+    "target": "claude-project",
+    "kind": "project",
+    "root": "/Users/hung/projects/campus-pubquiz/.claude",
+    "installStatePath": "/Users/hung/projects/campus-pubquiz/.claude/ecc/install-state.json"
+  },
+  "request": {
+    "profile": null,
+    "modules": [],
+    "includeComponents": [
+      "skill:accessibility",
+      "skill:database-migrations",
+      "skill:deployment-patterns",
+      "skill:docker-patterns",
+      "skill:nestjs-patterns",
+      "skill:nextjs-turbopack",
+      "skill:postgres-patterns",
+      "skill:react-patterns",
+      "skill:react-performance",
+      "skill:react-testing"
+    ],
+    "excludeComponents": [
+      "baseline:rules",
+      "baseline:agents",
+      "baseline:commands"
+    ],
+    "legacyLanguages": [],
+    "legacyMode": false
+  },
+  "resolution": {
+    "selectedModules": [
+      "skill-accessibility",
+      "skill-database-migrations",
+      "skill-deployment-patterns",
+      "skill-docker-patterns",
+      "skill-nestjs-patterns",
+      "skill-nextjs-turbopack",
+      "skill-postgres-patterns",
+      "skill-react-patterns",
+      "skill-react-performance",
+      "skill-react-testing"
+    ],
+    "skippedModules": []
+  },
+  "source": {
+    "repoVersion": "2.0.0",
+    "repoCommit": "4130457d674d2180c5af2c5f634f3cae4cbc6c4f",
+    "manifestVersion": 1
+  },
+  "operations": [
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-accessibility",
+      "sourcePath": "/Users/hung/projects/ECC/skills/accessibility/SKILL.md",
+      "sourceRelativePath": "skills/accessibility/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/accessibility/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-database-migrations",
+      "sourcePath": "/Users/hung/projects/ECC/skills/database-migrations/SKILL.md",
+      "sourceRelativePath": "skills/database-migrations/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/database-migrations/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-deployment-patterns",
+      "sourcePath": "/Users/hung/projects/ECC/skills/deployment-patterns/SKILL.md",
+      "sourceRelativePath": "skills/deployment-patterns/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/deployment-patterns/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-docker-patterns",
+      "sourcePath": "/Users/hung/projects/ECC/skills/docker-patterns/SKILL.md",
+      "sourceRelativePath": "skills/docker-patterns/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/docker-patterns/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-nestjs-patterns",
+      "sourcePath": "/Users/hung/projects/ECC/skills/nestjs-patterns/SKILL.md",
+      "sourceRelativePath": "skills/nestjs-patterns/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/nestjs-patterns/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-nextjs-turbopack",
+      "sourcePath": "/Users/hung/projects/ECC/skills/nextjs-turbopack/SKILL.md",
+      "sourceRelativePath": "skills/nextjs-turbopack/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/nextjs-turbopack/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-postgres-patterns",
+      "sourcePath": "/Users/hung/projects/ECC/skills/postgres-patterns/SKILL.md",
+      "sourceRelativePath": "skills/postgres-patterns/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/postgres-patterns/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-react-patterns",
+      "sourcePath": "/Users/hung/projects/ECC/skills/react-patterns/SKILL.md",
+      "sourceRelativePath": "skills/react-patterns/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/react-patterns/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-react-performance",
+      "sourcePath": "/Users/hung/projects/ECC/skills/react-performance/SKILL.md",
+      "sourceRelativePath": "skills/react-performance/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/react-performance/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    },
+    {
+      "kind": "copy-file",
+      "moduleId": "skill-react-testing",
+      "sourcePath": "/Users/hung/projects/ECC/skills/react-testing/SKILL.md",
+      "sourceRelativePath": "skills/react-testing/SKILL.md",
+      "destinationPath": "/Users/hung/projects/campus-pubquiz/.claude/skills/ecc/react-testing/SKILL.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": false
+    }
+  ]
+}
