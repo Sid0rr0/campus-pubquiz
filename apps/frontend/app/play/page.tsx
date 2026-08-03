@@ -95,28 +95,6 @@ function AnswerForm({ question, initialValue = '', onSubmit }: AnswerFormProps) 
   );
 }
 
-interface JoinErrorProps {
-  message: string;
-  onStartOver: () => void;
-}
-
-function JoinError({ message, onStartOver }: JoinErrorProps) {
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <p role="alert" className="text-center font-extrabold text-magenta">
-        {message}
-      </p>
-      <button
-        type="button"
-        onClick={onStartOver}
-        className="min-h-12 rounded-2xl border-2 border-foreground/35 bg-white px-6 font-display"
-      >
-        Start over
-      </button>
-    </div>
-  );
-}
-
 interface PickerSlot {
   key: string;
   questionNumberInRound: number;
@@ -168,6 +146,11 @@ function PlayPageContent() {
   const [nameInput, setNameInput] = useState('');
   const [codeInput, setCodeInput] = useState(codeFromUrl);
   const [teamCodeInput, setTeamCodeInput] = useState('');
+  // Tracks whether this browser ever completed a real join (has a saved team
+  // token) - distinguishes "reconnecting an existing team" from "typing a
+  // name that happens to collide with someone else's team", which should not
+  // offer a "Log out" button since there was never anything logged into.
+  const [hasStoredIdentity, setHasStoredIdentity] = useState(false);
   // null = follow the question currently shown on the big screen.
   const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(null);
   const {
@@ -194,8 +177,19 @@ function PlayPageContent() {
     const storedName = window.localStorage.getItem(TEAM_NAME_STORAGE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamName(storedName);
+    setHasStoredIdentity(Boolean(window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY)));
     if (storedName) {
-      joinTeam(storedName, storedJoinOptions());
+      const storedOptions = storedJoinOptions();
+      // Pre-fills the join form in case this reconnect attempt fails and we
+      // fall back to showing it - the team shouldn't have to retype everything.
+      setNameInput(storedName);
+      if (storedOptions.joinCode) {
+        setCodeInput(storedOptions.joinCode);
+      }
+      if (storedOptions.teamCode) {
+        setTeamCodeInput(storedOptions.teamCode);
+      }
+      joinTeam(storedName, storedOptions);
     }
   }, [joinTeam]);
 
@@ -228,7 +222,7 @@ function PlayPageContent() {
     });
   }
 
-  function handleStartOver() {
+  function handleLogOut() {
     window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
     window.localStorage.removeItem(TEAM_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
@@ -237,13 +231,19 @@ function PlayPageContent() {
     setNameInput('');
     setCodeInput(codeFromUrl);
     setTeamCodeInput('');
+    setHasStoredIdentity(false);
   }
 
-  if (!teamName) {
+  if (!teamName || (connectionError && !team)) {
     return (
       <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
         <h1 className="text-center font-display text-3xl text-magenta">🍺 Join the quiz</h1>
         <p className="-mt-2 text-center text-sm text-foreground/65">Grab a table, pick a name</p>
+        {connectionError && (
+          <p role="alert" className="text-center font-extrabold text-magenta">
+            {connectionError}
+          </p>
+        )}
         <form onSubmit={handleJoin} className="mt-3 flex flex-col gap-2">
           <label htmlFor="team-name" className="text-xs font-extrabold tracking-wide text-foreground/55">
             Team name
@@ -287,6 +287,15 @@ function PlayPageContent() {
             Join the quiz
           </button>
         </form>
+        {hasStoredIdentity && (
+          <button
+            type="button"
+            onClick={handleLogOut}
+            className="mx-auto text-xs font-extrabold text-foreground/45 underline"
+          >
+            Log out
+          </button>
+        )}
       </main>
     );
   }
@@ -295,11 +304,14 @@ function PlayPageContent() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background text-foreground">
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
-        {connectionError && !team ? (
-          <JoinError message={connectionError} onStartOver={handleStartOver} />
-        ) : (
-          <p className="font-display text-xl">Connecting…</p>
-        )}
+        <p className="font-display text-xl">Connecting…</p>
+        <button
+          type="button"
+          onClick={handleLogOut}
+          className="text-xs font-extrabold text-foreground/45 underline"
+        >
+          Log out
+        </button>
       </main>
     );
   }
@@ -334,16 +346,20 @@ function PlayPageContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
-      <p className="mb-1 text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+        <button
+          type="button"
+          onClick={handleLogOut}
+          className="text-xs font-extrabold text-foreground/45 underline"
+        >
+          Log out
+        </button>
+      </div>
       {team && (
         <p className="mb-4 text-xs text-foreground/45">
           Team code: {team.teamCode} — save it to play as this team another night.
         </p>
-      )}
-      {connectionError && !team && (
-        <div className="mb-4">
-          <JoinError message={connectionError} onStartOver={handleStartOver} />
-        </div>
       )}
       {progress.isLeaderboardVisible && !isAnswerable && (
         <div className="mt-16 flex flex-col items-center gap-2 text-center">
