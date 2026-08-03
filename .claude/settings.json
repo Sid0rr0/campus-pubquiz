@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const cmd=i.tool_input?.command||'';if(/\\b(cat|less|more|head|tail|type)\\b[^\\n&|;]{0,40}\\.env(\\.[a-zA-Z0-9._-]+)?\\b/.test(cmd)){console.error('[Hook] BLOCKED: refusing to print .env contents to the transcript. ADMIN_PASSWORD and DATABASE_URL live there \\u2014 read individual values with grep for a specific key instead.');process.exit(2)}console.log(d)})\""
+          }
+        ],
+        "description": "Block Bash commands that would dump .env contents (ADMIN_PASSWORD, DATABASE_URL) into the transcript"
+      }
+    ]
+  }
+}
