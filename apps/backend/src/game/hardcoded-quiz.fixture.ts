@@ -3,7 +3,7 @@ import type { QuestionView } from '@campus-pubquiz/types';
 // Extends the player-safe QuestionView with the correct answer, which the
 // seed inserts into the DB payload for the admin-only quiz summary — never
 // sent to players (see SeedService.toViewPayload).
-export interface FixtureQuestion extends QuestionView {
+interface FixtureQuestion extends QuestionView {
   answer: string;
   /** Shown alongside the answer during reveal only — independent of the question's own media_url. */
   answerMediaUrl?: string;

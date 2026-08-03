@@ -10,7 +10,7 @@ import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.r
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { generateJoinCode } from '@/db/join-code.util';
 
-export class TeamNameTakenError extends Error {
+class TeamNameTakenError extends Error {
   constructor(teamName: string) {
     super(`Team name "${teamName}" is already taken`);
     this.name = 'TeamNameTakenError';
