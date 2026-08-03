@@ -10,6 +10,7 @@ import { ImportPanel } from '@/app/admin/import-panel';
 import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
+import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
 
 const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
@@ -112,6 +113,46 @@ export default function AdminPage() {
     setActiveQuizIdOverride(quizId);
   }
 
+  const roundIndex = snapshot?.progress.roundIndex ?? 0;
+  const revealIndex = snapshot?.progress.revealIndex ?? 0;
+  const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
+  const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
+  const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
+  // Rounds before the active block are already locked and graded; guard on
+  // rounds.length so a stale/incomplete quiz list can never index past its
+  // own array inside getBlockStartRoundIndex.
+  const activeBlockStartIndex =
+    activeQuizRounds.length > roundIndex
+      ? getBlockStartRoundIndex(roundIndex, {
+          rounds: activeQuizRounds.map((round) => ({
+            questionCount: round.questions.length,
+            breakAfter: round.breakAfter,
+          })),
+        })
+      : 0;
+  const canStartQuiz = gameStatus === 'lobby';
+  const canAdvance =
+    gameStatus === 'rules' ||
+    gameStatus === 'round_intro' ||
+    gameStatus === 'question_open' ||
+    gameStatus === 'locking' ||
+    gameStatus === 'reveal';
+  const canGoToPreviousQuestion =
+    gameStatus === 'round_intro' ||
+    gameStatus === 'question_open' ||
+    gameStatus === 'locking' ||
+    ((gameStatus === 'break' || gameStatus === 'reveal') &&
+      (revealIndex > 0 || activeBlockStartIndex > 0));
+  const hasUnrevealedTeams = isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
+
+  useAdminKeyboardShortcuts({
+    canAdvance,
+    canGoToPreviousQuestion,
+    hasUnrevealedTeams,
+    isLeaderboardVisible,
+    sendAction,
+  });
+
   if (!hasSubmittedPassword && !snapshot && !connectionError) {
     return (
       <AdminLoginForm
@@ -140,38 +181,12 @@ export default function AdminPage() {
     currentQuestion,
     blockQuestions = [],
     leaderboard = [],
-    leaderboardRevealCount = 0,
     teams = [],
     answeredTeamIds = [],
   } = snapshot;
   const fallbackQuestions = currentQuestion ? [currentQuestion, ...blockQuestions] : blockQuestions;
-  // Rounds before the active block are already locked and graded; guard on
-  // rounds.length so a stale/incomplete quiz list can never index past its
-  // own array inside getBlockStartRoundIndex.
-  const activeBlockStartIndex =
-    activeQuizRounds.length > progress.roundIndex
-      ? getBlockStartRoundIndex(progress.roundIndex, {
-          rounds: activeQuizRounds.map((round) => ({
-            questionCount: round.questions.length,
-            breakAfter: round.breakAfter,
-          })),
-        })
-      : 0;
   const showAnswerStatus =
     progress.status === 'question_open' || progress.status === 'locking';
-  const canStartQuiz = progress.status === 'lobby';
-  const canAdvance =
-    progress.status === 'rules' ||
-    progress.status === 'round_intro' ||
-    progress.status === 'question_open' ||
-    progress.status === 'locking' ||
-    progress.status === 'reveal';
-  const canGoToPreviousQuestion =
-    progress.status === 'round_intro' ||
-    progress.status === 'question_open' ||
-    progress.status === 'locking' ||
-    ((progress.status === 'break' || progress.status === 'reveal') &&
-      (progress.revealIndex > 0 || activeBlockStartIndex > 0));
   const canFinishGrading = progress.status === 'break';
   const canEndQuiz = progress.status !== 'ended';
 
