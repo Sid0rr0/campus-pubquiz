@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { getBlockStartRoundIndex, type QuizSummaryRound } from '@campus-pubquiz/types';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import {
+  getBlockStartRoundIndex,
+  type GameStatus,
+  type QuizSummaryRound,
+  type QuizzesListedPayload,
+} from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { AdminLoginForm } from '@/app/admin/admin-login-form';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
@@ -29,6 +35,8 @@ export default function AdminPage() {
   const [submittedPassword, setSubmittedPassword] = useState('');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
+  const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
+  const [quizzesError, setQuizzesError] = useState<string | null>(null);
 
   useEffect(() => {
     // Deferred to an effect (not a useState initializer) so the server-rendered
@@ -49,8 +57,6 @@ export default function AdminPage() {
     liveAnswers,
     gradeAnswer,
     kickTeam,
-    quizzes = null,
-    requestQuizzes = () => {},
     selectQuiz = () => {},
     listAnswers = () => {},
   } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
@@ -58,14 +64,35 @@ export default function AdminPage() {
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
 
+  const refetchQuizzes = useCallback(() => {
+    fetchQuizzes(submittedPassword)
+      .then((payload) => {
+        setQuizzes(payload);
+        setQuizzesError(null);
+      })
+      .catch((error: unknown) => {
+        setQuizzesError(error instanceof QuizApiError ? error.message : 'Could not load quizzes');
+      });
+  }, [submittedPassword]);
+
+  const lastFetchedStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
     // Fetch once on connect (any status) so the question browser has data
     // immediately, then keep refreshing on every lobby/ended visit to pick
-    // up re-imports.
-    if (gameStatus === 'lobby' || gameStatus === 'ended' || (gameStatus && quizzes === null)) {
-      requestQuizzes();
+    // up re-imports. Keyed off the *transition*, not off `quizzes` itself —
+    // depending on `quizzes` here would re-trigger this effect every time
+    // its own fetch resolves, since each response is a fresh object even
+    // when the quiz list hasn't changed, causing an infinite refetch loop.
+    if (!gameStatus) return;
+    const isFirstFetch = lastFetchedStatusRef.current === undefined;
+    const enteredChoosableStatus =
+      (gameStatus === 'lobby' || gameStatus === 'ended') &&
+      lastFetchedStatusRef.current !== gameStatus;
+    if (isFirstFetch || enteredChoosableStatus) {
+      refetchQuizzes();
     }
-  }, [gameStatus, quizzes, requestQuizzes]);
+    lastFetchedStatusRef.current = gameStatus;
+  }, [gameStatus, refetchQuizzes]);
 
   useEffect(() => {
     // A fresh quiz list from the server is authoritative; drop the optimistic
@@ -234,7 +261,12 @@ export default function AdminPage() {
       />
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
         {canChooseQuiz && (
-          <ImportPanel adminPassword={submittedPassword} onImported={requestQuizzes} />
+          <ImportPanel adminPassword={submittedPassword} onImported={refetchQuizzes} />
+        )}
+        {canChooseQuiz && quizzesError && (
+          <p role="alert" className="font-extrabold text-magenta">
+            {quizzesError}
+          </p>
         )}
         {canChooseQuiz && quizzes && (
           <QuizPickerPanel

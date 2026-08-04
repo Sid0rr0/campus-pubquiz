@@ -1,6 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
-import { AdminPasswordGuard } from '@/import/admin-password.guard';
+import { AdminPasswordGuard } from '@/auth/admin-password.guard';
 
 function contextWithHeaders(
   headers: Record<string, unknown>,

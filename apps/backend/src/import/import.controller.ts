@@ -12,7 +12,7 @@ import type {
   ImportPreview,
   ImportRequest,
 } from '@campus-pubquiz/types';
-import { AdminPasswordGuard } from '@/import/admin-password.guard';
+import { AdminPasswordGuard } from '@/auth/admin-password.guard';
 import {
   ImportBlockedError,
   ImportLockedError,

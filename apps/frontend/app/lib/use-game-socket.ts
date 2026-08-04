@@ -13,7 +13,6 @@ import {
   type JoinPlayersPayload,
   type KickTeamPayload,
   type ListAnswersPayload,
-  type QuizzesListedPayload,
   type SelectQuizPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
@@ -38,8 +37,6 @@ export interface UseGameSocketResult {
   liveAnswers: AnswersUpdatedPayload | null;
   gradeAnswer: (answerId: number, pointsAwarded: number) => void;
   kickTeam: (teamId: number) => void;
-  quizzes: QuizzesListedPayload | null;
-  requestQuizzes: () => void;
   selectQuiz: (quizId: number) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
@@ -64,7 +61,6 @@ export function useGameSocket(
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
-  const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
   const socketRef = useRef<Socket | null>(null);
 
@@ -103,10 +99,6 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload: AnswersUpdatedPayload) => {
       setLiveAnswers(payload);
-    });
-
-    socket.on(SOCKET_EVENTS.QUIZZES_LISTED, (payload: QuizzesListedPayload) => {
-      setQuizzes(payload);
     });
 
     socket.on('connect_error', (payload: unknown) => {
@@ -161,10 +153,6 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.KICK_TEAM, payload);
   }, []);
 
-  const requestQuizzes = useCallback(() => {
-    socketRef.current?.emit(SOCKET_EVENTS.LIST_QUIZZES);
-  }, []);
-
   const selectQuiz = useCallback((quizId: number) => {
     const payload: SelectQuizPayload = { quizId };
     socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
@@ -185,8 +173,6 @@ export function useGameSocket(
     liveAnswers,
     gradeAnswer,
     kickTeam,
-    quizzes,
-    requestQuizzes,
     selectQuiz,
     myAnswers,
     listAnswers,

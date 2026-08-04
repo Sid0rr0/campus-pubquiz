@@ -8,7 +8,6 @@ import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
 import type { AnswerService } from '@/answer/answer.service';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
-import type { QuizService } from '@/quiz/quiz.service';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 
@@ -82,21 +81,6 @@ type MockSeedService = ReturnType<typeof createFakeSeedService>;
 
 function asSeedService(mock: MockSeedService): SeedService {
   return mock as unknown as SeedService;
-}
-
-function createFakeQuizService() {
-  return {
-    list: jest.fn().mockResolvedValue([
-      { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
-      { id: 2, title: 'Imported Quiz', rounds: [] },
-    ]),
-  };
-}
-
-type MockQuizService = ReturnType<typeof createFakeQuizService>;
-
-function asQuizService(mock: MockQuizService): QuizService {
-  return mock as unknown as QuizService;
 }
 
 function createFakeGameProgressRepository() {
@@ -235,7 +219,6 @@ describe('GameGateway', () => {
   let server: MockServer;
   let teamService: MockTeamService;
   let answerService: MockAnswerService;
-  let quizService: MockQuizService;
   let seedService: MockSeedService;
   const originalAdminPassword = process.env.ADMIN_PASSWORD;
 
@@ -261,7 +244,6 @@ describe('GameGateway', () => {
   });
 
   beforeEach(async () => {
-    quizService = createFakeQuizService();
     seedService = createFakeSeedService();
     const gameStateService = new GameStateService(
       asSeedService(seedService),
@@ -275,7 +257,6 @@ describe('GameGateway', () => {
       gameStateService,
       asTeamService(teamService),
       asAnswerService(answerService),
-      asQuizService(quizService),
       createFakeOrm(),
     );
     server = createMockServer();
@@ -709,33 +690,6 @@ describe('GameGateway', () => {
     expect(answerService.grade).not.toHaveBeenCalled();
   });
 
-  it('lists quizzes with the active quiz id for an admin client', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
-    await gateway.handleListQuizzes(asSocket(admin));
-
-    expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.QUIZZES_LISTED, {
-      activeQuizId: 1,
-      quizzes: [
-        { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
-        { id: 2, title: 'Imported Quiz', rounds: [] },
-      ],
-    });
-  });
-
-  it('rejects LIST_QUIZZES from a non-admin client', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
-    await expect(gateway.handleListQuizzes(asSocket(player))).rejects.toThrow(
-      WsException,
-    );
-    expect(quizService.list).not.toHaveBeenCalled();
-  });
-
   it('selects a quiz and broadcasts the reset snapshot to all three rooms', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
       password: ADMIN_PASSWORD,
@@ -927,19 +881,6 @@ describe('GameGateway', () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('41'));
     });
 
-    it('logs a LIST_QUIZZES event', async () => {
-      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-        password: ADMIN_PASSWORD,
-      });
-      await gateway.handleConnection(asSocket(admin));
-
-      await gateway.handleListQuizzes(asSocket(admin));
-
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining(SOCKET_EVENTS.LIST_QUIZZES),
-      );
-    });
-
     it('logs a SELECT_QUIZ event with the quiz id', async () => {
       const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
         password: ADMIN_PASSWORD,
@@ -1016,7 +957,6 @@ describe('GameGateway', () => {
         gameStateService,
         asTeamService(createFakeTeamService()),
         asAnswerService(createFakeAnswerService()),
-        asQuizService(createFakeQuizService()),
         createFakeOrm(),
       );
       const localServer = createMockServer();

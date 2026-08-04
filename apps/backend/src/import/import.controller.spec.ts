@@ -4,7 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { createImportPreview, type ImportPreview } from '@campus-pubquiz/types';
-import { AdminPasswordGuard } from '@/import/admin-password.guard';
+import { AdminPasswordGuard } from '@/auth/admin-password.guard';
 import { ImportController } from '@/import/import.controller';
 import {
   ImportBlockedError,

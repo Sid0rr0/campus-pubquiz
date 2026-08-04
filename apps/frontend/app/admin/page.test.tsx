@@ -1,14 +1,22 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress } from '@campus-pubquiz/types';
 import AdminPage from '@/app/admin/page';
 
-const { mockUseGameSocket } = vi.hoisted(() => ({ mockUseGameSocket: vi.fn() }));
+const { mockUseGameSocket, mockFetchQuizzes } = vi.hoisted(() => ({
+  mockUseGameSocket: vi.fn(),
+  mockFetchQuizzes: vi.fn(),
+}));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
 }));
+
+vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
+  return { ...actual, fetchQuizzes: mockFetchQuizzes };
+});
 
 function progress(overrides: Partial<GameProgress> = {}): GameProgress {
   return {
@@ -33,6 +41,8 @@ describe('AdminPage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     mockUseGameSocket.mockReset();
+    mockFetchQuizzes.mockReset();
+    mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
   });
 
   it('shows the admin password form before connecting', () => {
@@ -336,7 +346,28 @@ describe('AdminPage', () => {
     expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
   });
 
-  it('shows the Previous button on the first question of a break when an earlier block exists', () => {
+  it('shows the Previous button on the first question of a break when an earlier block exists', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        {
+          id: 'quiz-1',
+          title: 'Campus Pub Quiz Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: [{ id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' }],
+            },
+            {
+              title: 'Round 2',
+              breakAfter: true,
+              questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
+            },
+          ],
+        },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
@@ -345,31 +376,10 @@ describe('AdminPage', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          {
-            id: 'quiz-1',
-            title: 'Campus Pub Quiz Night',
-            rounds: [
-              {
-                title: 'Round 1',
-                breakAfter: true,
-                questions: [{ id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' }],
-              },
-              {
-                title: 'Round 2',
-                breakAfter: true,
-                questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
-              },
-            ],
-          },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
+    await waitFor(() => expect(getDesktopButton(/^previous$/i)).toBeInTheDocument());
   });
 
   it('hides the Previous button on the first reveal question', () => {
@@ -959,6 +969,25 @@ describe('AdminPage', () => {
 
   it('browses to another question via the round number picker', async () => {
     const listAnswers = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        {
+          id: 'quiz-1',
+          title: 'Campus Pub Quiz Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: [
+                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+              ],
+            },
+          ],
+        },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break', questionIndex: 1 }),
@@ -973,29 +1002,12 @@ describe('AdminPage', () => {
       listAnswers,
       liveAnswers: null,
       gradeAnswer: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          {
-            id: 'quiz-1',
-            title: 'Campus Pub Quiz Night',
-            rounds: [
-              {
-                title: 'Round 1',
-                breakAfter: true,
-                questions: [
-                  { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
-                  { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
-                ],
-              },
-            ],
-          },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /grade question 2 of round 1/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /grade question 2 of round 1/i }),
+    );
 
     expect(listAnswers).toHaveBeenCalledWith('r1q2');
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
@@ -1003,6 +1015,30 @@ describe('AdminPage', () => {
 
   it('lets the admin grade any question at any game status, not just during a break', async () => {
     const listAnswers = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        {
+          id: 'quiz-1',
+          title: 'Campus Pub Quiz Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: [
+                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+              ],
+            },
+            {
+              title: 'Round 2',
+              breakAfter: true,
+              questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
+            },
+          ],
+        },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
@@ -1013,117 +1049,87 @@ describe('AdminPage', () => {
       listAnswers,
       liveAnswers: null,
       gradeAnswer: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          {
-            id: 'quiz-1',
-            title: 'Campus Pub Quiz Night',
-            rounds: [
-              {
-                title: 'Round 1',
-                breakAfter: true,
-                questions: [
-                  { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
-                  { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
-                ],
-              },
-              {
-                title: 'Round 2',
-                breakAfter: true,
-                questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
-              },
-            ],
-          },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /grade question 1 of round 2/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /grade question 1 of round 2/i }),
+    );
 
     expect(listAnswers).toHaveBeenCalledWith('r2q1');
     expect(screen.getByText('Name this song.')).toBeInTheDocument();
   });
 
-  it('requests the quiz list while the game is in the lobby or ended', () => {
-    const requestQuizzes = vi.fn();
+  it('requests the quiz list while the game is in the lobby or ended', async () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes,
       selectQuiz: vi.fn(),
-      quizzes: null,
     });
     render(<AdminPage />);
 
-    expect(requestQuizzes).toHaveBeenCalled();
+    await waitFor(() => expect(mockFetchQuizzes).toHaveBeenCalled());
   });
 
-  it('refreshes the quiz list when the admin returns from ended to lobby', () => {
-    const requestQuizzes = vi.fn();
+  it('refreshes the quiz list when the admin returns from ended to lobby', async () => {
     let status: GameProgress['status'] = 'ended';
 
     mockUseGameSocket.mockImplementation(() => ({
       snapshot: { progress: progress({ status }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes,
       selectQuiz: vi.fn(),
-      quizzes: null,
     }));
 
     const { rerender } = render(<AdminPage />);
-    expect(requestQuizzes).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockFetchQuizzes).toHaveBeenCalledTimes(1));
 
     status = 'lobby';
     rerender(<AdminPage />);
 
-    expect(requestQuizzes).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mockFetchQuizzes).toHaveBeenCalledTimes(2));
   });
 
-  it('shows quiz selection after the game has ended', () => {
+  it('shows quiz selection after the game has ended', async () => {
     const selectQuiz = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Spring Quiz', rounds: [] },
+        { id: 'quiz-2', title: 'Summer Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz,
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Spring Quiz', rounds: [] },
-          { id: 'quiz-2', title: 'Summer Quiz', rounds: [] },
-        ],
-      },
     });
 
     render(<AdminPage />);
 
-    expect(screen.getByRole('heading', { name: /choose new quiz/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /choose new quiz/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /select quiz summer quiz/i })).toBeInTheDocument();
   });
 
-  it('lists available quizzes in the lobby with the active quiz marked', () => {
+  it('lists available quizzes in the lobby with the active quiz marked', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    expect(screen.getByText('Campus Pub Quiz Night')).toBeInTheDocument();
+    expect(await screen.findByText('Campus Pub Quiz Night')).toBeInTheDocument();
     expect(screen.getByText('Imported Quiz')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /restart quiz campus pub quiz night/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /select quiz imported quiz/i })).toBeEnabled();
@@ -1131,46 +1137,44 @@ describe('AdminPage', () => {
 
   it('does not call selectQuiz until the quiz choice is confirmed', async () => {
     const selectQuiz = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz,
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /select quiz imported quiz/i }));
 
     expect(selectQuiz).not.toHaveBeenCalled();
     expect(screen.getByText(/start "imported quiz"\?/i)).toBeInTheDocument();
   });
 
   it('marks the clicked quiz as selected while awaiting confirmation', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /select quiz imported quiz/i }));
 
     expect(
       screen.getByRole('button', { name: /imported quiz selected, awaiting confirmation/i }),
@@ -1178,75 +1182,73 @@ describe('AdminPage', () => {
   });
 
   it('shows the rounds and questions for the quiz selected in the picker', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        {
+          id: 'quiz-2',
+          title: 'Imported Quiz',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: false,
+              questions: [{ id: 'q-1', prompt: 'Name a fruit', answer: 'Banana' }],
+            },
+          ],
+        },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          {
-            id: 'quiz-2',
-            title: 'Imported Quiz',
-            rounds: [
-              {
-                title: 'Round 1',
-                breakAfter: false,
-                questions: [{ id: 'q-1', prompt: 'Name a fruit', answer: 'Banana' }],
-              },
-            ],
-          },
-        ],
-      },
     });
     render(<AdminPage />);
 
     expect(screen.queryByText('Name a fruit')).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /select quiz imported quiz/i }));
 
     expect(screen.getByText('Round 1')).toBeInTheDocument();
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
   it('shows a question\'s options and correct answer once its quiz is selected', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        {
+          id: 'quiz-2',
+          title: 'Imported Quiz',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: false,
+              questions: [
+                {
+                  id: 'q-1',
+                  prompt: 'Capital of France?',
+                  options: ['Paris', 'London', 'Berlin'],
+                  answer: 'Paris',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          {
-            id: 'quiz-2',
-            title: 'Imported Quiz',
-            rounds: [
-              {
-                title: 'Round 1',
-                breakAfter: false,
-                questions: [
-                  {
-                    id: 'q-1',
-                    prompt: 'Capital of France?',
-                    options: ['Paris', 'London', 'Berlin'],
-                    answer: 'Paris',
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /select quiz imported quiz/i }));
 
     expect(screen.getByText(/options: paris, london, berlin/i)).toBeInTheDocument();
     expect(screen.getByText(/answer: paris/i)).toBeInTheDocument();
@@ -1254,24 +1256,25 @@ describe('AdminPage', () => {
 
   it('restarts the current quiz once restarting it is confirmed', async () => {
     const selectQuiz = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz,
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
 
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /restart quiz campus pub quiz night/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /restart quiz campus pub quiz night/i }),
+    );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
     expect(selectQuiz).toHaveBeenCalledWith('quiz-1');
@@ -1279,23 +1282,22 @@ describe('AdminPage', () => {
 
   it('selects a different quiz once the selection is confirmed', async () => {
     const selectQuiz = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz,
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /select quiz imported quiz/i }));
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
     expect(selectQuiz).toHaveBeenCalledWith('quiz-2');
@@ -1303,51 +1305,56 @@ describe('AdminPage', () => {
 
   it('clears the pending selection when cancel is clicked', async () => {
     const selectQuiz = vi.fn();
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz,
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /select quiz imported quiz/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /select quiz imported quiz/i }));
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(screen.queryByText(/start "imported quiz"\?/i)).not.toBeInTheDocument();
     expect(selectQuiz).not.toHaveBeenCalled();
   });
 
-  it('shows the active quiz name in the left panel', () => {
+  it('shows the active quiz name in the left panel', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
     const sidebar = screen.getByRole('complementary');
-    expect(sidebar).toHaveTextContent(/quiz: campus pub quiz night/i);
+    await waitFor(() => expect(sidebar).toHaveTextContent(/quiz: campus pub quiz night/i));
   });
 
-  it('hides the quiz picker once the game has left the lobby', () => {
+  it('hides the quiz picker once the game has left the lobby', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
+        { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
+      ],
+    });
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
@@ -1355,18 +1362,11 @@ describe('AdminPage', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      requestQuizzes: vi.fn(),
       selectQuiz: vi.fn(),
-      quizzes: {
-        activeQuizId: 'quiz-1',
-        quizzes: [
-          { id: 'quiz-1', title: 'Campus Pub Quiz Night', rounds: [] },
-          { id: 'quiz-2', title: 'Imported Quiz', rounds: [] },
-        ],
-      },
     });
     render(<AdminPage />);
 
+    await waitFor(() => expect(mockFetchQuizzes).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /select quiz/i })).not.toBeInTheDocument();
   });
 

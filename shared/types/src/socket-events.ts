@@ -7,13 +7,11 @@ export const SOCKET_EVENTS = {
   ANSWER_RECEIVED: 'game:answer_received',
   JOIN_ACCEPTED: 'game:join_accepted',
   ANSWERS_UPDATED: 'game:answers_updated',
-  QUIZZES_LISTED: 'game:quizzes_listed',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',
   SUBMIT_ANSWER: 'game:submit_answer',
   JOIN_PLAYERS: 'game:join_players',
   GRADE_ANSWER: 'game:grade_answer',
-  LIST_QUIZZES: 'game:list_quizzes',
   SELECT_QUIZ: 'game:select_quiz',
   LIST_ANSWERS: 'game:list_answers',
   KICK_TEAM: 'game:kick_team',

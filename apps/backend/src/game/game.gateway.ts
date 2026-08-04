@@ -27,7 +27,6 @@ import {
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/game-state.service';
-import { QuizService } from '@/quiz/quiz.service';
 import { corsOriginValidator } from '@/config/cors.config';
 
 const VALID_ROOMS: string[] = [
@@ -52,7 +51,6 @@ export class GameGateway
     private readonly gameState: GameStateService,
     private readonly teamService: TeamService,
     private readonly answerService: AnswerService,
-    private readonly quizService: QuizService,
     private readonly orm: MikroORM,
   ) {}
 
@@ -333,22 +331,6 @@ export class GameGateway
     this.gameState.setLeaderboard(leaderboard);
 
     this.broadcastState(this.gameState.getSnapshot());
-  }
-
-  @SubscribeMessage(SOCKET_EVENTS.LIST_QUIZZES)
-  @CreateRequestContext()
-  async handleListQuizzes(@ConnectedSocket() client: Socket): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
-      throw new WsException('Only admin clients may list quizzes');
-    }
-
-    this.logger.log(`${SOCKET_EVENTS.LIST_QUIZZES} from ${client.id}`);
-
-    const quizzes = await this.quizService.list();
-    client.emit(SOCKET_EVENTS.QUIZZES_LISTED, {
-      activeQuizId: this.gameState.getActiveQuizId(),
-      quizzes,
-    });
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SELECT_QUIZ)
