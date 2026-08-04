@@ -26,7 +26,8 @@ export interface GradedAnswer {
 interface LeaderboardRow {
   teamId: number;
   teamName: string;
-  totalPoints: string | number;
+  quizPoints: string | number;
+  bonusPoints: string | number;
 }
 
 @Injectable()
@@ -115,28 +116,41 @@ export class AnswerService {
 
   async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {
     const knex = this.gameSessionTeams.getKnex();
+    // Pre-aggregated as subqueries (rather than two leftJoins straight off
+    // "t") so a team with several answers *and* several bonus awards doesn't
+    // fan out into a cross product that inflates both sums.
+    const answerTotals = knex('answers')
+      .where('game_session_id', gameSessionId)
+      .groupBy('team_id')
+      .select('team_id')
+      .select(knex.raw('sum(points_awarded) as total'));
+    const bonusTotals = knex('bonus_awards')
+      .where('game_session_id', gameSessionId)
+      .groupBy('team_id')
+      .select('team_id')
+      .select(knex.raw('sum(points) as total'));
+
     const rows = (await knex('game_session_teams as gst')
       .join('teams as t', 't.id', 'gst.team_id')
-      .leftJoin('answers as a', function join() {
-        this.on('a.team_id', '=', 't.id').andOn(
-          'a.game_session_id',
-          '=',
-          knex.raw('?', [gameSessionId]),
-        );
-      })
+      .leftJoin(answerTotals.as('ans'), 'ans.team_id', 't.id')
+      .leftJoin(bonusTotals.as('bonus'), 'bonus.team_id', 't.id')
       .where('gst.game_session_id', gameSessionId)
-      .groupBy('t.id', 't.name')
       .select('t.id as teamId', 't.name as teamName')
-      .select(knex.raw('coalesce(sum(a.points_awarded), 0) as "totalPoints"'))
+      .select(knex.raw('coalesce(ans.total, 0) as "quizPoints"'))
+      .select(knex.raw('coalesce(bonus.total, 0) as "bonusPoints"'))
       .orderBy([
-        { column: 'totalPoints', order: 'desc' },
+        {
+          column: knex.raw('coalesce(ans.total, 0) + coalesce(bonus.total, 0)'),
+          order: 'desc',
+        },
         { column: 't.name', order: 'asc' },
       ])) as LeaderboardRow[];
 
     return rows.map((row) => ({
       teamId: row.teamId,
       teamName: row.teamName,
-      totalPoints: Number(row.totalPoints),
+      totalPoints: Number(row.quizPoints) + Number(row.bonusPoints),
+      bonusPoints: Number(row.bonusPoints),
     }));
   }
 }

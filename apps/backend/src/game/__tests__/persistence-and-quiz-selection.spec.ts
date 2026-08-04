@@ -92,7 +92,7 @@ describe('GameStateService — persistence and quiz selection', () => {
 
   it('selects a quiz in the lobby: creates a new session, reloads rounds, resets state', async () => {
     service.setLeaderboard([
-      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5 },
+      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
     ]);
 
     const snapshot = await service.selectQuiz(2);

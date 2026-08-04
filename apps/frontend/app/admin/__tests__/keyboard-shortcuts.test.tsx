@@ -107,8 +107,8 @@ describe('AdminPage — keyboard shortcuts', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 1, teamName: 'The Quizzards', totalPoints: 10 },
-          { teamId: 2, teamName: 'Beer Necessities', totalPoints: 5 },
+          { teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 },
+          { teamId: 2, teamName: 'Beer Necessities', totalPoints: 5, bonusPoints: 0 },
         ],
         leaderboardRevealCount: 0,
       },

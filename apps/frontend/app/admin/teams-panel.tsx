@@ -1,12 +1,20 @@
 'use client';
 
-import type { TeamView } from '@campus-pubquiz/types';
+import { useState } from 'react';
+import type { BonusCategory, TeamView } from '@campus-pubquiz/types';
+import { BonusAwardForm } from '@/app/admin/bonus-award-form';
 
 interface TeamsPanelProps {
   teams: TeamView[];
   showAnswerStatus: boolean;
   answeredTeamIds: number[];
   onKickTeam: (teamId: number) => void;
+  onAwardBonus: (
+    teamId: number,
+    category: BonusCategory,
+    points: number,
+    reason?: string,
+  ) => void;
   className?: string;
 }
 
@@ -15,10 +23,17 @@ export function TeamsPanel({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
+  onAwardBonus,
   className = '',
 }: TeamsPanelProps) {
+  const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
   if (teams.length === 0) {
-    return null;
+    return (
+      <section className={`flex flex-col gap-2 ${className}`}>
+        <h2 className="text-xs font-extrabold tracking-wide text-background/60">Teams (0)</h2>
+        <p className="text-sm font-bold text-background/50">No teams have joined yet.</p>
+      </section>
+    );
   }
 
   return (
@@ -26,9 +41,10 @@ export function TeamsPanel({
       <h2 className="text-xs font-extrabold tracking-wide text-background/60">
         Teams ({teams.length})
       </h2>
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-col gap-1.5">
         {teams.map((team) => {
           const hasAnswered = showAnswerStatus && answeredTeamIds.includes(team.teamId);
+          const isAwarding = awardingTeamId === team.teamId;
           return (
             <li
               key={team.teamId}
@@ -37,25 +53,43 @@ export function TeamsPanel({
                   ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
                   : undefined
               }
-              className="flex items-center gap-1.5 text-sm font-bold"
+              className="flex flex-col gap-1.5"
             >
-              <span aria-hidden="true" className={team.isConnected ? 'text-green' : 'text-background/30'}>
-                ●
-              </span>
-              {team.teamName}
-              {hasAnswered && (
-                <span aria-hidden="true" className="ml-1 text-cyan">
-                  ✓
+              <div className="flex items-center gap-1.5 text-sm font-bold">
+                <span aria-hidden="true" className={team.isConnected ? 'text-green' : 'text-background/30'}>
+                  ●
                 </span>
-              )}
-              {team.isConnected && (
+                {team.teamName}
+                {hasAnswered && (
+                  <span aria-hidden="true" className="ml-1 text-cyan">
+                    ✓
+                  </span>
+                )}
                 <button
                   type="button"
-                  onClick={() => onKickTeam(team.teamId)}
-                  className="ml-auto text-xs font-extrabold text-magenta underline"
+                  onClick={() => setAwardingTeamId(isAwarding ? null : team.teamId)}
+                  className="ml-auto text-xs font-extrabold text-cyan underline"
                 >
-                  Kick
+                  Bonus
                 </button>
+                {team.isConnected && (
+                  <button
+                    type="button"
+                    onClick={() => onKickTeam(team.teamId)}
+                    className="text-xs font-extrabold text-magenta underline"
+                  >
+                    Kick
+                  </button>
+                )}
+              </div>
+              {isAwarding && (
+                <BonusAwardForm
+                  onAward={(category, points, reason) => {
+                    onAwardBonus(team.teamId, category, points, reason);
+                    setAwardingTeamId(null);
+                  }}
+                  onCancel={() => setAwardingTeamId(null)}
+                />
               )}
             </li>
           );

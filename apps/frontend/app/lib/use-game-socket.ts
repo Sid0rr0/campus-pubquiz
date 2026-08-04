@@ -7,6 +7,8 @@ import {
   type AdminActionPayload,
   type AnswerReceivedPayload,
   type AnswersUpdatedPayload,
+  type AwardBonusPayload,
+  type BonusCategory,
   type GameAction,
   type GradeAnswerPayload,
   type JoinAcceptedPayload,
@@ -37,6 +39,12 @@ export interface UseGameSocketResult {
   liveAnswers: AnswersUpdatedPayload | null;
   gradeAnswer: (answerId: number, pointsAwarded: number) => void;
   kickTeam: (teamId: number) => void;
+  awardBonus: (
+    teamId: number,
+    category: BonusCategory,
+    points: number,
+    reason?: string,
+  ) => void;
   selectQuiz: (quizId: number) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
@@ -153,6 +161,14 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.KICK_TEAM, payload);
   }, []);
 
+  const awardBonus = useCallback(
+    (teamId: number, category: BonusCategory, points: number, reason?: string) => {
+      const payload: AwardBonusPayload = { teamId, category, points, reason };
+      socketRef.current?.emit(SOCKET_EVENTS.AWARD_BONUS, payload);
+    },
+    [],
+  );
+
   const selectQuiz = useCallback((quizId: number) => {
     const payload: SelectQuizPayload = { quizId };
     socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
@@ -173,6 +189,7 @@ export function useGameSocket(
     liveAnswers,
     gradeAnswer,
     kickTeam,
+    awardBonus,
     selectQuiz,
     myAnswers,
     listAnswers,

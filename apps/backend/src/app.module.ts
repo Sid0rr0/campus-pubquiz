@@ -8,6 +8,7 @@ import { GameProgressRepository } from '@/game/game-progress.repository';
 import { GameStateService } from '@/game/game-state.service';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
+import { BonusService } from '@/bonus/bonus.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { QuizController } from '@/quiz/quiz.controller';
 import { ImportController } from '@/import/import.controller';
@@ -21,6 +22,7 @@ import { ImportService } from '@/import/import.service';
     SeedService,
     TeamService,
     AnswerService,
+    BonusService,
     QuizService,
     GameProgressRepository,
     GameStateService,

@@ -5,6 +5,7 @@ import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
 import type { AnswerService } from '@/answer/answer.service';
+import type { BonusService } from '@/bonus/bonus.service';
 import type { GameProgressRepository } from '@/game/game-progress.repository';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
@@ -210,11 +211,14 @@ export function createFakeAnswerService() {
       .fn()
       .mockResolvedValue([{ questionId: 21, value: 'Banana' }]),
     grade: jest.fn().mockResolvedValue({ questionId: 21 }),
-    computeLeaderboard: jest
-      .fn()
-      .mockResolvedValue([
-        { teamId: 31, teamName: 'The Quizzards', totalPoints: 2 },
-      ]),
+    computeLeaderboard: jest.fn().mockResolvedValue([
+      {
+        teamId: 31,
+        teamName: 'The Quizzards',
+        totalPoints: 2,
+        bonusPoints: 0,
+      },
+    ]),
   };
 }
 
@@ -222,6 +226,18 @@ export type MockAnswerService = ReturnType<typeof createFakeAnswerService>;
 
 export function asAnswerService(mock: MockAnswerService): AnswerService {
   return mock as unknown as AnswerService;
+}
+
+export function createFakeBonusService() {
+  return {
+    award: jest.fn().mockResolvedValue({ teamId: 31 }),
+  };
+}
+
+export type MockBonusService = ReturnType<typeof createFakeBonusService>;
+
+export function asBonusService(mock: MockBonusService): BonusService {
+  return mock as unknown as BonusService;
 }
 
 export function createMockSocket(
@@ -287,6 +303,7 @@ export interface TestGateway {
   server: MockServer;
   teamService: MockTeamService;
   answerService: MockAnswerService;
+  bonusService: MockBonusService;
   seedService: MockSeedService;
 }
 
@@ -302,15 +319,24 @@ export async function createTestGateway(): Promise<TestGateway> {
   await gameStateService.onModuleInit();
   const teamService = createFakeTeamService();
   const answerService = createFakeAnswerService();
+  const bonusService = createFakeBonusService();
   const gateway = new GameGateway(
     gameStateService,
     asTeamService(teamService),
     asAnswerService(answerService),
+    asBonusService(bonusService),
     createFakeOrm(),
   );
   const server = createMockServer();
   gateway.server = asServer(server);
-  return { gateway, server, teamService, answerService, seedService };
+  return {
+    gateway,
+    server,
+    teamService,
+    answerService,
+    bonusService,
+    seedService,
+  };
 }
 
 /** Opens r1q1 via an admin START_QUIZ + ADVANCE past the rules screen and round intro card, then clears broadcast bookkeeping. */

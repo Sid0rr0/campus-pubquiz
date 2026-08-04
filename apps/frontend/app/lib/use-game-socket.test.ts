@@ -247,6 +247,22 @@ describe('useGameSocket', () => {
     });
   });
 
+  it('awardBonus emits an AWARD_BONUS event with teamId, category, points and reason', () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.awardBonus(31, 'custom', 3, 'Best team name');
+    });
+
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.AWARD_BONUS, {
+      teamId: 31,
+      category: 'custom',
+      points: 3,
+      reason: 'Best team name',
+    });
+  });
+
   it('selectQuiz emits a SELECT_QUIZ event with the quiz id', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
     const fakeSocket = getFakeSocket();

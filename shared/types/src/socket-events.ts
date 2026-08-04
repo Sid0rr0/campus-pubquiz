@@ -15,6 +15,7 @@ export const SOCKET_EVENTS = {
   SELECT_QUIZ: 'game:select_quiz',
   LIST_ANSWERS: 'game:list_answers',
   KICK_TEAM: 'game:kick_team',
+  AWARD_BONUS: 'game:award_bonus',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -60,6 +61,8 @@ export interface LeaderboardEntry {
   teamId: number;
   teamName: string;
   totalPoints: number;
+  /** Sum of this team's bonus awards, already included in totalPoints — shown separately as a badge. */
+  bonusPoints: number;
 }
 
 export interface TeamView {
@@ -216,4 +219,15 @@ export interface ListAnswersPayload {
 
 export interface KickTeamPayload {
   teamId: number;
+}
+
+/** "shot"/"selfie" are the predefined quick-award categories; "custom" requires a `reason`. */
+export type BonusCategory = 'shot' | 'selfie' | 'custom';
+
+export interface AwardBonusPayload {
+  teamId: number;
+  category: BonusCategory;
+  /** Free-text reason, required for category "custom", ignored otherwise. */
+  reason?: string;
+  points: number;
 }

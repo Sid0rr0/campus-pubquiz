@@ -4,9 +4,9 @@ import type { LeaderboardEntry } from '@campus-pubquiz/types';
 import { Leaderboard } from '@/app/components/leaderboard';
 
 const ENTRIES: LeaderboardEntry[] = [
-  { teamId: 1, teamName: 'First Place', totalPoints: 30 },
-  { teamId: 2, teamName: 'Second Place', totalPoints: 20 },
-  { teamId: 3, teamName: 'Third Place', totalPoints: 10 },
+  { teamId: 1, teamName: 'First Place', totalPoints: 30, bonusPoints: 0 },
+  { teamId: 2, teamName: 'Second Place', totalPoints: 20, bonusPoints: 0 },
+  { teamId: 3, teamName: 'Third Place', totalPoints: 10, bonusPoints: 0 },
 ];
 
 describe('Leaderboard', () => {
@@ -56,5 +56,29 @@ describe('Leaderboard', () => {
     // Third Place is rank 3 in the full list even though it's the only row shown.
     const row = screen.getByText('Third Place').closest('li');
     expect(row).toHaveTextContent('3');
+  });
+
+  it('shows a "+N" badge for a team with accumulated bonus points', () => {
+    const withBonus: LeaderboardEntry[] = [
+      { teamId: 1, teamName: 'First Place', totalPoints: 31, bonusPoints: 1 },
+    ];
+    render(<Leaderboard entries={withBonus} />);
+
+    expect(screen.getByText('+1')).toBeInTheDocument();
+  });
+
+  it('shows a "-N" badge for a team with a negative bonus total (penalty)', () => {
+    const withPenalty: LeaderboardEntry[] = [
+      { teamId: 1, teamName: 'First Place', totalPoints: 28, bonusPoints: -2 },
+    ];
+    render(<Leaderboard entries={withPenalty} />);
+
+    expect(screen.getByText('-2')).toBeInTheDocument();
+  });
+
+  it('shows no badge for a team with no bonus points', () => {
+    render(<Leaderboard entries={ENTRIES} />);
+
+    expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
   });
 });

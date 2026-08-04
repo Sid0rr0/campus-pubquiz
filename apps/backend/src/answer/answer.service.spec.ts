@@ -4,6 +4,7 @@ import {
 } from '@testcontainers/postgresql';
 import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
 import { Answer } from '@/db/entities/answer.entity';
+import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -70,7 +71,7 @@ describe('AnswerService (Postgres integration)', () => {
     await em
       .getConnection()
       .execute(
-        'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
+        'TRUNCATE answers, bonus_awards, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
       );
   });
 
@@ -252,8 +253,13 @@ describe('AnswerService (Postgres integration)', () => {
     const leaderboard = await answerService.computeLeaderboard(session.id);
 
     expect(leaderboard).toEqual([
-      { teamId: teamA.id, teamName: 'Team A', totalPoints: 2.5 },
-      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1 },
+      {
+        teamId: teamA.id,
+        teamName: 'Team A',
+        totalPoints: 2.5,
+        bonusPoints: 0,
+      },
+      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1, bonusPoints: 0 },
     ]);
   });
 
@@ -263,7 +269,89 @@ describe('AnswerService (Postgres integration)', () => {
 
     const leaderboard = await answerService.computeLeaderboard(session.id);
     expect(leaderboard).toEqual([
-      { teamId: team.id, teamName: 'The Quizzards', totalPoints: 0 },
+      {
+        teamId: team.id,
+        teamName: 'The Quizzards',
+        totalPoints: 0,
+        bonusPoints: 0,
+      },
+    ]);
+  });
+
+  it('folds bonus awards into the leaderboard total and reports them separately', async () => {
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+
+    const answerA1 = await answerService.submit(
+      session.id,
+      question.id,
+      teamA.id,
+      'Banana',
+    );
+    await answerService.grade(answerA1.answerId, 2);
+
+    em.create(BonusAward, {
+      gameSession: session,
+      team: teamA,
+      category: 'shot',
+      points: 1,
+    });
+    em.create(BonusAward, {
+      gameSession: session,
+      team: teamA,
+      category: 'custom',
+      reason: 'Best team name',
+      points: 3,
+    });
+    em.create(BonusAward, {
+      gameSession: session,
+      team: teamB,
+      category: 'selfie',
+      points: 1,
+    });
+    await em.flush();
+
+    const leaderboard = await answerService.computeLeaderboard(session.id);
+
+    expect(leaderboard).toEqual([
+      { teamId: teamA.id, teamName: 'Team A', totalPoints: 6, bonusPoints: 4 },
+      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1, bonusPoints: 1 },
+    ]);
+  });
+
+  it('subtracts a negative bonus (penalty) from the leaderboard total', async () => {
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+
+    const answerA1 = await answerService.submit(
+      session.id,
+      question.id,
+      teamA.id,
+      'Banana',
+    );
+    await answerService.grade(answerA1.answerId, 5);
+    const answerB1 = await answerService.submit(
+      session.id,
+      question.id,
+      teamB.id,
+      'Mango',
+    );
+    await answerService.grade(answerB1.answerId, 1);
+
+    em.create(BonusAward, {
+      gameSession: session,
+      team: teamA,
+      category: 'custom',
+      reason: 'Late arrival',
+      points: -4,
+    });
+    await em.flush();
+
+    const leaderboard = await answerService.computeLeaderboard(session.id);
+
+    expect(leaderboard).toEqual([
+      { teamId: teamA.id, teamName: 'Team A', totalPoints: 1, bonusPoints: -4 },
+      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1, bonusPoints: 0 },
     ]);
   });
 });

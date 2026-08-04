@@ -8,6 +8,7 @@ import {
   createFakeGameProgressRepository,
   createFakeTeamService,
   createFakeAnswerService,
+  createFakeBonusService,
   createMockSocket,
   createMockServer,
   asSocket,
@@ -16,6 +17,7 @@ import {
   asGameProgressRepository,
   asTeamService,
   asAnswerService,
+  asBonusService,
   useAdminPasswordEnv,
   type MockServer,
 } from './test-utils';
@@ -70,6 +72,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       gameStateService,
       asTeamService(createFakeTeamService()),
       asAnswerService(createFakeAnswerService()),
+      asBonusService(createFakeBonusService()),
       createFakeOrm(),
     );
     const localServer = createMockServer();

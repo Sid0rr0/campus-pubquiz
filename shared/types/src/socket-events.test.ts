@@ -24,6 +24,7 @@ describe('SOCKET_EVENTS', () => {
       SELECT_QUIZ: 'game:select_quiz',
       LIST_ANSWERS: 'game:list_answers',
       KICK_TEAM: 'game:kick_team',
+      AWARD_BONUS: 'game:award_bonus',
     });
   });
 });

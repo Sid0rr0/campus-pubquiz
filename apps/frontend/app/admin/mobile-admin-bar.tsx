@@ -28,6 +28,7 @@ export function MobileAdminBar({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
+  onAwardBonus,
 }: MobileAdminBarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -85,6 +86,7 @@ export function MobileAdminBar({
               showAnswerStatus={showAnswerStatus}
               answeredTeamIds={answeredTeamIds}
               onKickTeam={onKickTeam}
+              onAwardBonus={onAwardBonus}
               className="mt-auto border-t border-background/20 pt-4"
             />
           </Dialog.Content>

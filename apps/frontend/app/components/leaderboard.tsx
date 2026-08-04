@@ -50,6 +50,17 @@ export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
               {rank + 1}
             </span>
             <span className={`flex-1 font-bold ${rank === 0 ? 'text-xl' : 'text-lg'}`}>{entry.teamName}</span>
+            {entry.bonusPoints !== 0 && (
+              <span
+                aria-label={`${entry.bonusPoints} bonus points`}
+                className={`rounded-full px-2 py-0.5 text-sm font-extrabold ${
+                  entry.bonusPoints > 0 ? 'bg-cyan text-dark-blue' : 'bg-magenta text-white'
+                }`}
+              >
+                {entry.bonusPoints > 0 ? '+' : ''}
+                {entry.bonusPoints}
+              </span>
+            )}
             <span className="font-display text-xl">{entry.totalPoints}</span>
           </motion.li>
         );

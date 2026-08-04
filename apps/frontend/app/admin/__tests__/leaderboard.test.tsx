@@ -79,8 +79,8 @@ describe('AdminPage — leaderboard', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 1, teamName: 'The Quizzards', totalPoints: 10 },
-          { teamId: 2, teamName: 'Beer Necessities', totalPoints: 5 },
+          { teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 },
+          { teamId: 2, teamName: 'Beer Necessities', totalPoints: 5, bonusPoints: 0 },
         ],
         leaderboardRevealCount: 0,
       },
@@ -100,7 +100,7 @@ describe('AdminPage — leaderboard', () => {
       snapshot: {
         progress: progress({ status: 'question_open', isLeaderboardVisible: true }),
         currentQuestion: null,
-        leaderboard: [{ teamId: 1, teamName: 'The Quizzards', totalPoints: 10 }],
+        leaderboard: [{ teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 }],
         leaderboardRevealCount: 1,
       },
       connectionError: null,
@@ -118,7 +118,7 @@ describe('AdminPage — leaderboard', () => {
       snapshot: {
         progress: progress({ status: 'question_open', isLeaderboardVisible: false }),
         currentQuestion: null,
-        leaderboard: [{ teamId: 1, teamName: 'The Quizzards', totalPoints: 10 }],
+        leaderboard: [{ teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 }],
         leaderboardRevealCount: 1,
       },
       connectionError: null,
@@ -139,8 +139,8 @@ describe('AdminPage — leaderboard', () => {
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0 },
         ],
       },
       connectionError: null,

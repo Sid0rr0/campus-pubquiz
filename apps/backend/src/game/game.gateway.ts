@@ -16,6 +16,7 @@ import {
   SOCKET_ROOMS,
   type AdminActionPayload,
   type AnswersUpdatedPayload,
+  type AwardBonusPayload,
   type GradeAnswerPayload,
   type JoinPlayersPayload,
   type KickTeamPayload,
@@ -26,6 +27,7 @@ import {
 } from '@campus-pubquiz/types';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
+import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { GameStateService } from '@/game/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
 
@@ -51,6 +53,7 @@ export class GameGateway
     private readonly gameState: GameStateService,
     private readonly teamService: TeamService,
     private readonly answerService: AnswerService,
+    private readonly bonusService: BonusService,
     private readonly orm: MikroORM,
   ) {}
 
@@ -408,6 +411,42 @@ export class GameGateway
       'You were removed from this team by the quiz master',
     );
     targetSocket.disconnect(true);
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.AWARD_BONUS)
+  @CreateRequestContext()
+  async handleAwardBonus(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: AwardBonusPayload,
+  ): Promise<void> {
+    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+      throw new WsException('Only admin clients may award bonus points');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.AWARD_BONUS} from ${client.id}: teamId=${payload.teamId} category=${payload.category} points=${payload.points}`,
+    );
+
+    try {
+      await this.bonusService.award(
+        this.gameState.getGameSessionId(),
+        payload.teamId,
+        payload.category,
+        payload.points,
+        payload.reason,
+      );
+    } catch (error) {
+      if (error instanceof InvalidBonusAwardError) {
+        throw new WsException(error.message);
+      }
+      throw error;
+    }
+
+    const leaderboard = await this.answerService.computeLeaderboard(
+      this.gameState.getGameSessionId(),
+    );
+    this.gameState.setLeaderboard(leaderboard);
+    this.broadcastState(this.gameState.getSnapshot());
   }
 
   private buildAnswersUpdatedPayload(

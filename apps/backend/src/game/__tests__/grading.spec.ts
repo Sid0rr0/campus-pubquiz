@@ -78,7 +78,12 @@ describe('GameGateway — grading', () => {
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
         leaderboard: [
-          { teamId: 31, teamName: 'The Quizzards', totalPoints: 2 },
+          {
+            teamId: 31,
+            teamName: 'The Quizzards',
+            totalPoints: 2,
+            bonusPoints: 0,
+          },
         ],
       }),
     );

@@ -57,6 +57,7 @@ export default function AdminPage() {
     liveAnswers,
     gradeAnswer,
     kickTeam,
+    awardBonus,
     selectQuiz = () => {},
     listAnswers = () => {},
   } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
@@ -289,6 +290,7 @@ export default function AdminPage() {
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
+        onAwardBonus={awardBonus}
       />
       <DesktopSidebar
         progressStatus={progress.status}
@@ -309,6 +311,7 @@ export default function AdminPage() {
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
+        onAwardBonus={awardBonus}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
         {canChooseQuiz && (

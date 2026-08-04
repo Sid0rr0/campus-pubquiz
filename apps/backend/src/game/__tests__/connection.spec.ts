@@ -6,17 +6,15 @@ import {
   createTestGateway,
   asSocket,
   useAdminPasswordEnv,
-  type MockServer,
 } from './test-utils';
 
 describe('GameGateway — connection', () => {
   useAdminPasswordEnv();
 
   let gateway: GameGateway;
-  let server: MockServer;
 
   beforeEach(async () => {
-    ({ gateway, server } = await createTestGateway());
+    ({ gateway } = await createTestGateway());
   });
 
   it('joins a connecting display client to the display room and sends a state snapshot', async () => {

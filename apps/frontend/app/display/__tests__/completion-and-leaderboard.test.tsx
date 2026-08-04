@@ -56,8 +56,8 @@ describe('DisplayPage — completion and leaderboard', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0 },
         ],
         leaderboardRevealCount: 2,
       },
@@ -79,8 +79,8 @@ describe('DisplayPage — completion and leaderboard', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5 },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3 },
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0 },
         ],
         leaderboardRevealCount: 1,
       },

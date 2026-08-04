@@ -1,4 +1,9 @@
-import type { GameAction, GameStatus, TeamView } from '@campus-pubquiz/types';
+import type {
+  BonusCategory,
+  GameAction,
+  GameStatus,
+  TeamView,
+} from '@campus-pubquiz/types';
 
 /** Shared by DesktopSidebar and MobileAdminBar — the two panels present the same quiz-master actions in different layouts. */
 export interface AdminSidebarProps {
@@ -18,4 +23,10 @@ export interface AdminSidebarProps {
   showAnswerStatus: boolean;
   answeredTeamIds: number[];
   onKickTeam: (teamId: number) => void;
+  onAwardBonus: (
+    teamId: number,
+    category: BonusCategory,
+    points: number,
+    reason?: string,
+  ) => void;
 }
