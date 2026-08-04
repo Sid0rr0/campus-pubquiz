@@ -7,7 +7,6 @@ import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
-import { BreakScreen } from '@/app/display/break-screen';
 import { LobbyScreen } from '@/app/display/lobby-screen';
 import { QuestionLockCountdown } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
@@ -37,7 +36,6 @@ function DisplayPageContent() {
     leaderboardRevealCount = 0,
     teams = [],
     answeredTeamIds = [],
-    blockQuestions = [],
     revealQuestions = [],
     roundTitle = '',
     questionLockAt = null,
@@ -90,12 +88,10 @@ function DisplayPageContent() {
           <QuestionLockCountdown key={questionLockAt} lockAt={questionLockAt} />
         </div>
       )}
-      {!progress.isLeaderboardVisible && progress.status === 'break_intro' && (
-        <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'break' && (
-        <BreakScreen blockQuestion={blockQuestions[progress.revealIndex]} />
-      )}
+      {!progress.isLeaderboardVisible &&
+        (progress.status === 'break_intro' || progress.status === 'break') && (
+          <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
+        )}
       {!progress.isLeaderboardVisible &&
         progress.status === 'reveal_intro' &&
         revealQuestions[progress.revealIndex] && (

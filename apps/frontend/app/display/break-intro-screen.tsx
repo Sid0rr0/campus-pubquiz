@@ -2,7 +2,7 @@ interface BreakIntroScreenProps {
   roundNumber: number;
 }
 
-/** Shown once right when a block locks, before the grading-review view — same round_intro-style treatment, but for "BREAK" instead of a round's name. */
+/** Shown for the whole grading break (both 'break_intro' and 'break') — same round_intro-style treatment, but for "BREAK" instead of a round's name. Grading itself happens off-screen in the admin panel. */
 export function BreakIntroScreen({ roundNumber }: BreakIntroScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">

@@ -108,19 +108,65 @@ export default function AdminPage() {
     setSelectedQuestionId(null);
   }, [snapshot?.joinCode]);
 
-  // Grading is independent of game status: default to whatever question is
-  // currently open, or the just-locked block's first question during a
-  // break, but a manual pick from the browser sticks regardless of how the
-  // state machine moves afterward.
-  const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
+  const revealIndex = snapshot?.progress.revealIndex ?? 0;
+  // Which question the audience is actually looking at right now: only the
+  // open question while it's open/locking, or the reveal question at
+  // `revealIndex` once the reveal walk starts. `break` shows a plain
+  // grading message with no specific question (grading happens off-screen
+  // in this panel), so it's deliberately excluded here — the "B" marker
+  // below covers it instead.
+  const displayQuestionId =
+    gameStatus === 'question_open' || gameStatus === 'locking'
+      ? (snapshot?.currentQuestion?.id ?? null)
+      : gameStatus === 'reveal'
+        ? (snapshot?.revealQuestions?.[revealIndex]?.id ?? null)
+        : null;
+  // round_intro/reveal_intro show a round's title card instead of a question
+  // — no question id exists to mark on-display, so the browser instead marks
+  // that round's "T" indicator. reveal_intro's round comes from the reveal
+  // question at the crossed-into position (progress.roundIndex stays pinned
+  // to the block's last round throughout break/reveal, so it can't be used
+  // here); round_intro's round is progress.roundIndex itself.
+  const revealIntroRoundNumber = snapshot?.revealQuestions?.[revealIndex]?.roundNumber;
+  const displayTitleRoundIndex =
+    gameStatus === 'round_intro'
+      ? (snapshot?.progress.roundIndex ?? null)
+      : gameStatus === 'reveal_intro' && revealIntroRoundNumber !== undefined
+        ? revealIntroRoundNumber - 1
+        : null;
+  // break_intro and break both show the block's plain grading/break card —
+  // progress.roundIndex is the breakAfter round whose block just finished,
+  // so the "B" indicator on that round's row lights up for the whole break,
+  // not just its intro moment.
+  const displayBreakRoundIndex =
+    gameStatus === 'break_intro' || gameStatus === 'break' ? (snapshot?.progress.roundIndex ?? null) : null;
+  // Grading defaults to whatever's on display, but a manual pick from the
+  // browser sticks — until Prev/Advance brings the displayed question back
+  // around to match it, at which point the sync effect below drops the
+  // override so the two keep moving together again instead of the pick
+  // going stale. Outside display statuses, grading still needs *something*
+  // to default to (break has real questions to grade even though nothing
+  // shows on /display), so it falls back to the block's first question —
+  // naturally null wherever blockQuestions is empty (e.g. round_intro).
   const defaultBlockQuestionId = snapshot?.blockQuestions?.[0]?.id ?? null;
-  const effectiveQuestionId = selectedQuestionId ?? currentQuestionId ?? defaultBlockQuestionId;
+  const effectiveQuestionId = selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
 
   useEffect(() => {
     if (effectiveQuestionId !== null) {
       listAnswers(effectiveQuestionId);
     }
   }, [effectiveQuestionId, listAnswers]);
+
+  useEffect(() => {
+    // Once the admin's manual pick coincides with the question actually on
+    // /display (either because they picked the displayed question, or
+    // Prev/Advance brought the display back around to it), drop the
+    // override so grading resumes following the display automatically.
+    if (selectedQuestionId !== null && selectedQuestionId === displayQuestionId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedQuestionId(null);
+    }
+  }, [selectedQuestionId, displayQuestionId]);
 
   function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -141,7 +187,6 @@ export default function AdminPage() {
   }
 
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
-  const revealIndex = snapshot?.progress.revealIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
@@ -287,6 +332,9 @@ export default function AdminPage() {
           currentRoundIndex={progress.roundIndex}
           activeBlockStartIndex={activeBlockStartIndex}
           selectedQuestionId={effectiveQuestionId}
+          displayQuestionId={displayQuestionId}
+          displayTitleRoundIndex={displayTitleRoundIndex}
+          displayBreakRoundIndex={displayBreakRoundIndex}
           onSelectQuestion={setSelectedQuestionId}
           liveAnswers={liveAnswers}
           teams={teams}

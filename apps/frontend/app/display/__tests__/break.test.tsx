@@ -27,17 +27,22 @@ describe('DisplayPage — break', () => {
     searchParamsRef.current = new URLSearchParams();
   });
 
-  it('shows a plain grading message during a break with no block questions to review', () => {
+  it('shows a "BREAK" title card once a round locks, with no block questions to review', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'break' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'break_intro', roundIndex: 1 }), currentQuestion: null },
       connectionError: null,
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
-    expect(screen.getByText(/grading/i)).toBeInTheDocument();
+
+    expect(screen.getByText('BREAK')).toBeInTheDocument();
+    expect(screen.getByText(/round 2/i)).toBeInTheDocument();
   });
 
-  it('shows the question under review during a break, without its answer', () => {
+  it('keeps showing the same "BREAK" title card for the whole grading break, even once block questions exist', () => {
+    // Grading happens off-screen in the admin panel; the display stays on
+    // the plain BREAK card throughout — the block's questions/answers only
+    // appear later, during the reveal_intro/reveal walk.
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break', roundIndex: 1, revealIndex: 1 }),
@@ -69,28 +74,9 @@ describe('DisplayPage — break', () => {
     });
     render(<DisplayPage />);
 
-    expect(screen.getByText('Name this flag.')).toBeInTheDocument();
-    expect(screen.getByText(/round 2/i)).toBeInTheDocument();
-    expect(screen.getByText(/break.*question 2/i)).toBeInTheDocument();
-    expect(screen.queryByText('Which landmark?')).not.toBeInTheDocument();
-    expect(screen.queryByText(/answer/i)).not.toBeInTheDocument();
-    // The round's name isn't shown yet during break — only later, on the
-    // reveal_intro card, before that round's answers appear.
-    expect(screen.queryByText('World Landmarks')).not.toBeInTheDocument();
-  });
-
-  it('shows a "BREAK" title card before the grading-review view, once a round locks', () => {
-    mockUseGameSocket.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'break_intro', roundIndex: 1 }),
-        currentQuestion: null,
-      },
-      connectionError: null,
-      sendAction: vi.fn(),
-    });
-    render(<DisplayPage />);
-
     expect(screen.getByText('BREAK')).toBeInTheDocument();
     expect(screen.getByText(/round 2/i)).toBeInTheDocument();
+    expect(screen.queryByText('Name this flag.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Which landmark?')).not.toBeInTheDocument();
   });
 });
