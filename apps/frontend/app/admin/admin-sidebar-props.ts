@@ -9,7 +9,6 @@ export interface AdminSidebarProps {
   canStartQuiz: boolean;
   canGoToPreviousQuestion: boolean;
   canAdvance: boolean;
-  canFinishGrading: boolean;
   canEndQuiz: boolean;
   isLeaderboardVisible: boolean;
   leaderboardRevealCount: number;

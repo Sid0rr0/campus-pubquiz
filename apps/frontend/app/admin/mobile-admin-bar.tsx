@@ -19,7 +19,6 @@ export function MobileAdminBar({
   canStartQuiz,
   canGoToPreviousQuestion,
   canAdvance,
-  canFinishGrading,
   canEndQuiz,
   isLeaderboardVisible,
   leaderboardRevealCount,
@@ -77,7 +76,6 @@ export function MobileAdminBar({
             </p>
             <AdminActions
               canStartQuiz={canStartQuiz}
-              canFinishGrading={canFinishGrading}
               canEndQuiz={canEndQuiz}
               isLeaderboardVisible={isLeaderboardVisible}
               onAction={handleDrawerAction}

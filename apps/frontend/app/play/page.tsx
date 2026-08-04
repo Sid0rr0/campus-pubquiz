@@ -163,7 +163,11 @@ function PlayPageContent() {
   // the big screen — only a real lock (status leaving question_open/locking)
   // should stop teams from answering.
   const isAnswerable = progress.status === 'question_open' || progress.status === 'locking';
-  const isBreakOrReveal = progress.status === 'break' || progress.status === 'reveal';
+  const isBreakOrReveal =
+    progress.status === 'break_intro' ||
+    progress.status === 'break' ||
+    progress.status === 'reveal_intro' ||
+    progress.status === 'reveal';
   // The block browser (question picker + prompt) stays up through break/reveal
   // too, so teams can review the block they just answered — unless the
   // leaderboard overlay is toggled on, which takes over the screen instead.

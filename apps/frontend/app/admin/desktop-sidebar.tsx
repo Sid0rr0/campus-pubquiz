@@ -19,7 +19,6 @@ export function DesktopSidebar({
   canStartQuiz,
   canGoToPreviousQuestion,
   canAdvance,
-  canFinishGrading,
   canEndQuiz,
   isLeaderboardVisible,
   leaderboardRevealCount,
@@ -57,7 +56,6 @@ export function DesktopSidebar({
         />
         <AdminActions
           canStartQuiz={canStartQuiz}
-          canFinishGrading={canFinishGrading}
           canEndQuiz={canEndQuiz}
           isLeaderboardVisible={isLeaderboardVisible}
           onAction={onAction}

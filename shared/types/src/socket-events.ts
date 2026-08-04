@@ -48,8 +48,13 @@ export interface QuestionPosition {
   questionNumberInRound: number;
 }
 
-export type BlockQuestionView = QuestionView & QuestionPosition;
-export type BlockRevealQuestionView = RevealQuestionView & QuestionPosition;
+/** Title of the round a block/reveal question belongs to — a block can span multiple rounds, so this is carried per-question rather than once per snapshot. */
+export interface QuestionRoundTitle {
+  roundTitle: string;
+}
+
+export type BlockQuestionView = QuestionView & QuestionPosition & QuestionRoundTitle;
+export type BlockRevealQuestionView = RevealQuestionView & QuestionPosition & QuestionRoundTitle;
 
 export interface LeaderboardEntry {
   teamId: number;

@@ -10,8 +10,8 @@ export function RevealScreen({ revealQuestion }: RevealScreenProps) {
   return (
     <>
       <TriviaHeader
-        label="REVEALING ANSWERS"
-        badge={`ROUND ${revealQuestion.roundNumber} · QUESTION ${revealQuestion.questionNumberInRound}`}
+        label={`ROUND ${revealQuestion.roundNumber}`}
+        badge={`REVEALING ANSWERS · QUESTION ${revealQuestion.questionNumberInRound}`}
       />
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
         <QuestionDisplay

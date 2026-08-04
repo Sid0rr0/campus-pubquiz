@@ -163,12 +163,21 @@ export default function AdminPage() {
     gameStatus === 'round_intro' ||
     gameStatus === 'question_open' ||
     gameStatus === 'locking' ||
+    gameStatus === 'break_intro' ||
+    gameStatus === 'break' ||
+    gameStatus === 'reveal_intro' ||
     gameStatus === 'reveal';
   const canGoToPreviousQuestion =
     gameStatus === 'round_intro' ||
     gameStatus === 'question_open' ||
     gameStatus === 'locking' ||
-    ((gameStatus === 'break' || gameStatus === 'reveal') &&
+    // 'break_intro' always steps back to 'locking'; 'reveal' always has
+    // somewhere to go back to, at worst its own round's reveal_intro card.
+    // Only 'break'/'reveal_intro' can hit the true start of the quiz's
+    // reveal history, where Previous has nothing left to do.
+    gameStatus === 'break_intro' ||
+    gameStatus === 'reveal' ||
+    ((gameStatus === 'break' || gameStatus === 'reveal_intro') &&
       (revealIndex > 0 || activeBlockStartIndex > 0));
   const hasUnrevealedTeams = isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 
@@ -214,7 +223,6 @@ export default function AdminPage() {
   const fallbackQuestions = currentQuestion ? [currentQuestion, ...blockQuestions] : blockQuestions;
   const showAnswerStatus =
     progress.status === 'question_open' || progress.status === 'locking';
-  const canFinishGrading = progress.status === 'break';
   const canEndQuiz = progress.status !== 'ended';
 
   return (
@@ -227,7 +235,6 @@ export default function AdminPage() {
         canStartQuiz={canStartQuiz}
         canGoToPreviousQuestion={canGoToPreviousQuestion}
         canAdvance={canAdvance}
-        canFinishGrading={canFinishGrading}
         canEndQuiz={canEndQuiz}
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
@@ -248,7 +255,6 @@ export default function AdminPage() {
         canStartQuiz={canStartQuiz}
         canGoToPreviousQuestion={canGoToPreviousQuestion}
         canAdvance={canAdvance}
-        canFinishGrading={canFinishGrading}
         canEndQuiz={canEndQuiz}
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}

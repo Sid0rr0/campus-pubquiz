@@ -32,6 +32,7 @@ const revealQuestions = [
     answer: 'Paris',
     roundNumber: 1,
     questionNumberInRound: 1,
+    roundTitle: 'General Knowledge',
   },
   {
     id: 'r1q2',
@@ -41,6 +42,7 @@ const revealQuestions = [
     answer: 'Jupiter',
     roundNumber: 1,
     questionNumberInRound: 2,
+    roundTitle: 'General Knowledge',
   },
 ];
 
@@ -82,8 +84,39 @@ describe('DisplayPage — reveal', () => {
 
     expect(screen.getByText('Largest planet?')).toBeInTheDocument();
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText(/round 1.*question 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/round 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/revealing answers.*question 2/i)).toBeInTheDocument();
     expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
+  });
+
+  it("shows a round intro card with the question's own round title before revealing a new round's answers, even for a block spanning multiple rounds", () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal_intro', roundIndex: 1, revealIndex: 2 }),
+        currentQuestion: null,
+        revealQuestions: [
+          ...revealQuestions,
+          {
+            id: 'r2q1',
+            type: 'free_text' as const,
+            prompt: 'Tallest mountain?',
+            points: 2,
+            answer: 'Everest',
+            roundNumber: 2,
+            questionNumberInRound: 1,
+            roundTitle: 'Geography',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Geography')).toBeInTheDocument();
+    expect(screen.getByText(/round 2/i)).toBeInTheDocument();
+    expect(screen.queryByText('General Knowledge')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tallest mountain?')).not.toBeInTheDocument();
   });
 
   it('shows media for picture and audio reveal questions', () => {

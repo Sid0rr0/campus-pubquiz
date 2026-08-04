@@ -96,7 +96,7 @@ describe('GameStateService — question lock countdown', () => {
     expect(service.getQuestionLockAt()).toBeNull();
   });
 
-  it('clears the lock once the countdown advances into the break', async () => {
+  it('clears the lock once the countdown advances into the break intro card', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> round_intro(0)
     await service.applyAction('ADVANCE'); // -> r1q1
@@ -105,9 +105,9 @@ describe('GameStateService — question lock countdown', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking, lock armed
-    const breakSnapshot = await service.applyAction('ADVANCE'); // -> break
+    const breakSnapshot = await service.applyAction('ADVANCE'); // -> break_intro
 
-    expect(breakSnapshot.progress.status).toBe('break');
+    expect(breakSnapshot.progress.status).toBe('break_intro');
     expect(breakSnapshot.questionLockAt).toBeNull();
     expect(service.getQuestionLockAt()).toBeNull();
   });

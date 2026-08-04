@@ -130,7 +130,7 @@ describe('getNextGameState', () => {
     expect(next.questionIndex).toBe(1);
   });
 
-  it("enters a break once the locking countdown is advanced past, starting review at the block's last question", () => {
+  it("enters a break intro card once the locking countdown is advanced past, starting review at the block's last question", () => {
     const locking: GameProgress = {
       status: 'locking',
       roundIndex: 1,
@@ -139,7 +139,7 @@ describe('getNextGameState', () => {
       revealIndex: 0,
     };
     const next = getNextGameState(locking, 'ADVANCE', twoRoundsWithBreakAfterSecond);
-    expect(next).toEqual({ ...locking, status: 'break', revealIndex: 3 }); // last of 4 questions in the 2-round block
+    expect(next).toEqual({ ...locking, status: 'break_intro', revealIndex: 3 }); // last of 4 questions in the 2-round block
   });
 
   it('steps back from the locking countdown to the last question, unlocking it again', () => {
@@ -154,7 +154,31 @@ describe('getNextGameState', () => {
     expect(next).toEqual({ ...locking, status: 'question_open' });
   });
 
-  it('moves from break to reveal once grading is finished, starting at the first reveal question', () => {
+  it('moves from the break intro card into break once Advance is pressed again, same position', () => {
+    const breakIntro: GameProgress = {
+      status: 'break_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3,
+    };
+    const next = getNextGameState(breakIntro, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...breakIntro, status: 'break' });
+  });
+
+  it('steps back from the break intro card to the locking countdown', () => {
+    const breakIntro: GameProgress = {
+      status: 'break_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3,
+    };
+    const next = getNextGameState(breakIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...breakIntro, status: 'locking' });
+  });
+
+  it('moves from break to a reveal round intro card once Advance is pressed, before any answer is shown', () => {
     const grading: GameProgress = {
       status: 'break',
       roundIndex: 1,
@@ -162,18 +186,30 @@ describe('getNextGameState', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     };
-    const next = getNextGameState(grading, 'FINISH_GRADING', twoRoundsWithBreakAfterSecond);
-    expect(next.status).toBe('reveal');
+    const next = getNextGameState(grading, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next.status).toBe('reveal_intro');
     expect(next.revealIndex).toBe(0);
   });
 
-  it('steps to the next question within reveal before leaving the block (same block spans 2 rounds, 4 questions)', () => {
+  it('moves from a reveal round intro card into reveal once Advance is pressed again, same position', () => {
+    const revealIntro: GameProgress = {
+      status: 'reveal_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    const next = getNextGameState(revealIntro, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...revealIntro, status: 'reveal' });
+  });
+
+  it('steps to the next question within reveal while staying in the same round', () => {
     const revealing: GameProgress = {
       status: 'reveal',
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
-      revealIndex: 0,
+      revealIndex: 2, // round 1's first question within the 2-round block
     };
     const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -181,7 +217,25 @@ describe('getNextGameState', () => {
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
-      revealIndex: 1,
+      revealIndex: 3,
+    });
+  });
+
+  it("shows the next round's own intro card when reveal crosses a round boundary within the same block", () => {
+    const revealing: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 1, // round 0's last question within the 2-round block
+    };
+    const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({
+      status: 'reveal_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 2, // round 1's first question
     });
   });
 
@@ -223,19 +277,91 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('moves back to the previous reveal question', () => {
+  it('moves back to the previous reveal question within the same round', () => {
     const revealing: GameProgress = {
       status: 'reveal',
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
-      revealIndex: 2,
+      revealIndex: 3, // round 1's second question within the 2-round block
     };
     const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
-    expect(next).toEqual({ ...revealing, revealIndex: 1 });
+    expect(next).toEqual({ ...revealing, revealIndex: 2 });
   });
 
-  it('rejects moving back past the first reveal question when there is no earlier block', () => {
+  it("steps back to a reveal round's own intro card when Previous is pressed at that round's first question", () => {
+    const revealing: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 2, // round 1's first question within the 2-round block
+    };
+    const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...revealing, status: 'reveal_intro' });
+  });
+
+  it("steps back from a reveal round intro card to the previous round's last reveal question", () => {
+    const revealIntro: GameProgress = {
+      status: 'reveal_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 2, // round 1's first question within the 2-round block
+    };
+    const next = getNextGameState(revealIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...revealIntro, status: 'reveal', revealIndex: 1 });
+  });
+
+  it("steps back from the block's first reveal round intro card into that same block's break, not straight into an earlier block", () => {
+    const revealIntro: GameProgress = {
+      status: 'reveal_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+    };
+    const next = getNextGameState(revealIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    // Re-entering break restarts review at the block's last question, same
+    // as break_intro->break does — the illegal-transition case (no earlier
+    // block to cross into) only surfaces once Previous is pressed enough
+    // more times from here to walk that review back to its own first
+    // question; see "rejects moving back past a break with no earlier
+    // block to review" below.
+    expect(next).toEqual({ ...revealIntro, status: 'break', revealIndex: 3 }); // last of 4 questions in the 2-round block
+  });
+
+  it("crosses into the previous block's reveal once Previous walks a re-entered break review all the way back to its own first question", () => {
+    const breakFirstThenTwo: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 2, breakAfter: true },
+      ],
+    };
+    const revealIntro: GameProgress = {
+      status: 'reveal_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0, // first question of the second block's reveal
+    };
+    const backToBreak = getNextGameState(revealIntro, 'PREVIOUS', breakFirstThenTwo);
+    expect(backToBreak).toEqual({ ...revealIntro, status: 'break', revealIndex: 1 }); // last of 2 questions in round 1's block
+
+    const stepBack = getNextGameState(backToBreak, 'PREVIOUS', breakFirstThenTwo);
+    expect(stepBack).toEqual({ ...backToBreak, revealIndex: 0 });
+
+    const crossed = getNextGameState(stepBack, 'PREVIOUS', breakFirstThenTwo);
+    expect(crossed).toEqual({
+      status: 'reveal',
+      roundIndex: 0,
+      questionIndex: 0, // last (only) question of round 0
+      isLeaderboardVisible: false,
+      revealIndex: 0, // last (only) reveal question of round 0's block
+    });
+  });
+
+  it('steps back from the very first reveal question of a block to its own round intro card', () => {
     const revealing: GameProgress = {
       status: 'reveal',
       roundIndex: 1,
@@ -243,33 +369,8 @@ describe('getNextGameState', () => {
       isLeaderboardVisible: false,
       revealIndex: 0,
     };
-    expect(() => getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
-      IllegalGameTransitionError,
-    );
-  });
-
-  it("crosses into the previous block's reveal once Previous walks past the first reveal question", () => {
-    const breakFirstThenTwo: GameContext = {
-      rounds: [
-        { questionCount: 1, breakAfter: true },
-        { questionCount: 2, breakAfter: true },
-      ],
-    };
-    const revealing: GameProgress = {
-      status: 'reveal',
-      roundIndex: 1,
-      questionIndex: 1,
-      isLeaderboardVisible: false,
-      revealIndex: 0, // first question of the second block's reveal
-    };
-    const next = getNextGameState(revealing, 'PREVIOUS', breakFirstThenTwo);
-    expect(next).toEqual({
-      status: 'reveal',
-      roundIndex: 0,
-      questionIndex: 0, // last (only) question of round 0
-      isLeaderboardVisible: false,
-      revealIndex: 0, // last (only) reveal question of round 0's block
-    });
+    const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...revealing, status: 'reveal_intro' });
   });
 
   it('toggles the leaderboard on without changing the underlying status', () => {
@@ -359,13 +460,6 @@ describe('getNextGameState', () => {
   it('rejects starting a quiz that is already open', () => {
     const open: GameProgress = { ...lobby, status: 'question_open' };
     expect(() => getNextGameState(open, 'START_QUIZ', twoRoundsWithBreakAfterSecond)).toThrow(
-      IllegalGameTransitionError,
-    );
-  });
-
-  it('rejects finishing grading outside of a break', () => {
-    const open: GameProgress = { ...lobby, status: 'question_open' };
-    expect(() => getNextGameState(open, 'FINISH_GRADING', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
   });

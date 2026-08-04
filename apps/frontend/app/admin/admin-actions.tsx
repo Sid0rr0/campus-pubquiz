@@ -4,17 +4,15 @@ import type { GameAction } from '@campus-pubquiz/types';
 
 interface AdminActionsProps {
   canStartQuiz: boolean;
-  canFinishGrading: boolean;
   canEndQuiz: boolean;
   isLeaderboardVisible: boolean;
   onAction: (action: GameAction) => void;
   className?: string;
 }
 
-/** Start Quiz, Finish Grading, Open/Close Leaderboard, End Quiz — everything but Previous/Advance. */
+/** Start Quiz, Open/Close Leaderboard, End Quiz — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
-  canFinishGrading,
   canEndQuiz,
   isLeaderboardVisible,
   onAction,
@@ -28,14 +26,6 @@ export function AdminActions({
           className="min-h-11 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
         >
           Start Quiz
-        </button>
-      )}
-      {canFinishGrading && (
-        <button
-          onClick={() => onAction('FINISH_GRADING')}
-          className="min-h-12 rounded-lg bg-magenta text-sm font-extrabold text-white"
-        >
-          Finish Grading
         </button>
       )}
       <button

@@ -55,6 +55,7 @@ function toBlockQuestionView(
     ...toQuestionView(question),
     roundNumber: question.roundNumber,
     questionNumberInRound: question.questionNumberInRound,
+    roundTitle: question.roundTitle,
   };
 }
 
@@ -311,7 +312,9 @@ export class GameStateService implements OnModuleInit {
     if (
       status !== 'question_open' &&
       status !== 'locking' &&
+      status !== 'break_intro' &&
       status !== 'break' &&
+      status !== 'reveal_intro' &&
       status !== 'reveal'
     ) {
       return [];
@@ -332,6 +335,7 @@ export class GameStateService implements OnModuleInit {
         ...question,
         roundNumber: currentRoundIndex + 1,
         questionNumberInRound: questionOffset + 1,
+        roundTitle: round.title,
       }));
     });
   }
@@ -377,10 +381,15 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * The just-finished block's questions with correct answers, shown once
-   * grading is done. Only populated during reveal.
+   * grading is done. Populated from the first reveal round intro card
+   * onward (not just 'reveal' itself) so the display can read the upcoming
+   * question's round title before its answer is actually shown.
    */
   private getRevealQuestions(): BlockRevealQuestionView[] {
-    if (this.progress.status !== 'reveal') {
+    if (
+      this.progress.status !== 'reveal_intro' &&
+      this.progress.status !== 'reveal'
+    ) {
       return [];
     }
     return this.getBlockSeededQuestions();

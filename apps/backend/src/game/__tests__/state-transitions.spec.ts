@@ -178,9 +178,9 @@ describe('GameStateService — state transitions', () => {
     expect(locking.progress.status).toBe('locking');
     expect(locking.currentQuestion?.id).toBe(24);
 
-    const breakSnapshot = await service.applyAction('ADVANCE'); // locking -> break
-    expect(breakSnapshot.progress.status).toBe('break');
-    expect(breakSnapshot.currentQuestion).toBeNull();
+    const breakIntroSnapshot = await service.applyAction('ADVANCE'); // locking -> break_intro
+    expect(breakIntroSnapshot.progress.status).toBe('break_intro');
+    expect(breakIntroSnapshot.currentQuestion).toBeNull();
   });
 
   it('goes from break to reveal to ended for the final round group', async () => {
@@ -192,15 +192,24 @@ describe('GameStateService — state transitions', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     await service.applyAction('ADVANCE'); // -> break
 
-    const revealSnapshot = await service.applyAction('FINISH_GRADING');
+    const revealIntroSnapshot = await service.applyAction('ADVANCE'); // -> reveal_intro (round 0)
+    expect(revealIntroSnapshot.progress.status).toBe('reveal_intro');
+    expect(revealIntroSnapshot.progress.revealIndex).toBe(0);
+
+    const revealSnapshot = await service.applyAction('ADVANCE');
     expect(revealSnapshot.progress.status).toBe('reveal');
     expect(revealSnapshot.progress.revealIndex).toBe(0);
 
-    // The block has 4 questions (r1q1, r1q2, r2q1, r2q2): ADVANCE steps
-    // through each one before finally leaving reveal.
-    await service.applyAction('ADVANCE'); // -> revealIndex 1
+    // The block has 4 questions across 2 rounds (r1q1, r1q2, r2q1, r2q2):
+    // ADVANCE steps through each one, showing a fresh reveal_intro card
+    // whenever it crosses into the next round, before finally leaving reveal.
+    await service.applyAction('ADVANCE'); // -> revealIndex 1 (round 0, still)
+    const round2Intro = await service.applyAction('ADVANCE'); // -> reveal_intro (round 1)
+    expect(round2Intro.progress.status).toBe('reveal_intro');
+    expect(round2Intro.progress.revealIndex).toBe(2);
     await service.applyAction('ADVANCE'); // -> revealIndex 2
     await service.applyAction('ADVANCE'); // -> revealIndex 3 (last)
     const endedSnapshot = await service.applyAction('ADVANCE'); // -> ended

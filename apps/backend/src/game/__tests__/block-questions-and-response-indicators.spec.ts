@@ -49,6 +49,7 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     const snapshot = await service.applyAction('ADVANCE'); // -> break
 
     expect(snapshot.progress.status).toBe('break');
@@ -206,7 +207,7 @@ describe('GameStateService — block questions and response indicators', () => {
     const brk = await service.applyAction('ADVANCE'); // -> break
     expect(brk.upcomingQuestions).toEqual([]);
 
-    const revealed = await service.applyAction('FINISH_GRADING'); // -> reveal
+    const revealed = await service.applyAction('ADVANCE'); // -> reveal
     expect(revealed.upcomingQuestions).toEqual([]);
   });
 
@@ -234,8 +235,10 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     await service.applyAction('ADVANCE'); // -> break
-    const revealed = await service.applyAction('FINISH_GRADING'); // -> reveal
+    await service.applyAction('ADVANCE'); // -> reveal_intro (round 0)
+    const revealed = await service.applyAction('ADVANCE'); // -> reveal
 
     expect(revealed.progress.status).toBe('reveal');
     expect(revealed.revealQuestions.map((q) => [q.id, q.answer])).toEqual([
@@ -250,9 +253,17 @@ describe('GameStateService — block questions and response indicators', () => {
     expect(
       revealed.revealQuestions.find((q) => q.id === 23)?.answerMediaUrl,
     ).toBeUndefined();
+    // Each question carries its own round's title, not just the block's last
+    // round — the block spans both "General Knowledge" and "Landmarks & Flags".
+    expect(revealed.revealQuestions.map((q) => [q.id, q.roundTitle])).toEqual([
+      [21, 'General Knowledge'],
+      [22, 'General Knowledge'],
+      [23, 'Landmarks & Flags'],
+      [24, 'Landmarks & Flags'],
+    ]);
   });
 
-  it('pages through the reveal block one question at a time via ADVANCE and PREVIOUS', async () => {
+  it('pages through the reveal block one question at a time via ADVANCE and PREVIOUS, with a fresh round intro card at the round boundary', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> round_intro(0)
     await service.applyAction('ADVANCE'); // -> r1q1
@@ -261,8 +272,10 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     await service.applyAction('ADVANCE'); // -> break
-    const first = await service.applyAction('FINISH_GRADING'); // -> reveal
+    await service.applyAction('ADVANCE'); // -> reveal_intro (round 0)
+    const first = await service.applyAction('ADVANCE'); // -> reveal
     expect(first.progress.revealIndex).toBe(0);
     expect(first.progress.status).toBe('reveal');
 
@@ -272,6 +285,12 @@ describe('GameStateService — block questions and response indicators', () => {
       revealIndex: 1,
     });
 
+    const thirdIntro = await service.applyAction('ADVANCE'); // crosses into round 1
+    expect(thirdIntro.progress).toMatchObject({
+      status: 'reveal_intro',
+      revealIndex: 2,
+    });
+
     const third = await service.applyAction('ADVANCE');
     expect(third.progress).toMatchObject({
       status: 'reveal',
@@ -279,10 +298,13 @@ describe('GameStateService — block questions and response indicators', () => {
     });
 
     const back = await service.applyAction('PREVIOUS');
-    expect(back.progress).toMatchObject({ status: 'reveal', revealIndex: 1 });
+    expect(back.progress).toMatchObject({
+      status: 'reveal_intro',
+      revealIndex: 2,
+    });
   });
 
-  it('rejects PREVIOUS at the very first reveal question', async () => {
+  it('steps back from the very first reveal round intro card into that same break review, then rejects once walked back to its own start', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> round_intro(0)
     await service.applyAction('ADVANCE'); // -> r1q1
@@ -291,8 +313,26 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     await service.applyAction('ADVANCE'); // -> break
-    await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
+    await service.applyAction('ADVANCE'); // -> reveal_intro, revealIndex 0
+    await service.applyAction('ADVANCE'); // -> reveal, revealIndex 0
+
+    const backToIntro = await service.applyAction('PREVIOUS');
+    expect(backToIntro.progress).toMatchObject({
+      status: 'reveal_intro',
+      revealIndex: 0,
+    });
+
+    const backToBreak = await service.applyAction('PREVIOUS');
+    expect(backToBreak.progress).toMatchObject({
+      status: 'break',
+      revealIndex: 3,
+    });
+
+    await service.applyAction('PREVIOUS'); // revealIndex 2
+    await service.applyAction('PREVIOUS'); // revealIndex 1
+    await service.applyAction('PREVIOUS'); // revealIndex 0
 
     await expect(service.applyAction('PREVIOUS')).rejects.toThrow(
       IllegalGameTransitionError,
@@ -308,6 +348,7 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     const entered = await service.applyAction('ADVANCE'); // -> break
     expect(entered.progress).toMatchObject({
       status: 'break',
@@ -331,6 +372,7 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro, revealIndex 3
     await service.applyAction('ADVANCE'); // -> break, revealIndex 3
     await service.applyAction('PREVIOUS'); // revealIndex 2
     await service.applyAction('PREVIOUS'); // revealIndex 1
@@ -350,10 +392,13 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction('ADVANCE'); // -> r2q1
     await service.applyAction('ADVANCE'); // -> r2q2
     await service.applyAction('ADVANCE'); // -> locking
+    await service.applyAction('ADVANCE'); // -> break_intro
     await service.applyAction('ADVANCE'); // -> break
-    await service.applyAction('FINISH_GRADING'); // -> reveal, revealIndex 0
+    await service.applyAction('ADVANCE'); // -> reveal_intro (round 0)
+    await service.applyAction('ADVANCE'); // -> reveal, revealIndex 0
     await service.applyAction('ADVANCE'); // -> revealIndex 1
-    await service.applyAction('ADVANCE'); // -> revealIndex 2
+    await service.applyAction('ADVANCE'); // -> reveal_intro (round 1)
+    await service.applyAction('ADVANCE'); // -> reveal, revealIndex 2
     await service.applyAction('ADVANCE'); // -> revealIndex 3 (last)
     const ended = await service.applyAction('ADVANCE'); // -> ended (round-2 is last)
 

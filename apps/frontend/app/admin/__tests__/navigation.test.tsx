@@ -251,10 +251,24 @@ describe('AdminPage — navigation', () => {
     await waitFor(() => expect(getDesktopButton(/^previous$/i)).toBeInTheDocument());
   });
 
-  it('hides the Previous button on the first reveal question', () => {
+  it('shows the Previous button on the first reveal question, since it can still step back to the round intro card', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
+  });
+
+  it('hides the Previous button on the first reveal round intro card, with no earlier block to step back to', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal_intro', revealIndex: 0 }),
         currentQuestion: null,
       },
       connectionError: null,
@@ -310,7 +324,7 @@ describe('AdminPage — navigation', () => {
     expect(screen.queryByRole('button', { name: /lock answers/i })).not.toBeInTheDocument();
   });
 
-  it('sends FINISH_GRADING when the Finish Grading button is clicked', async () => {
+  it('sends ADVANCE when the Advance button is clicked during a break', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'break' }), currentQuestion: null },
@@ -319,9 +333,9 @@ describe('AdminPage — navigation', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /finish grading/i }));
+    await userEvent.click(getDesktopButton(/^advance$/i));
 
-    expect(sendAction).toHaveBeenCalledWith('FINISH_GRADING');
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
   it('sends END_QUIZ when the End Quiz button is clicked', async () => {
