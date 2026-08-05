@@ -118,6 +118,30 @@ describe('PlayPage — join and reconnect', () => {
     });
   });
 
+  it('resends joinTeam with a corrected team code when retrying with the same name and game code', async () => {
+    const joinTeam = vi.fn();
+    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    const { rerender } = render(<PlayPage />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
+    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'abcdef');
+    await userEvent.click(screen.getByRole('button', { name: /join/i }));
+
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ joinTeam, connectionError: 'Team name taken — enter its team code' }),
+    );
+    rerender(<PlayPage />);
+    joinTeam.mockClear();
+
+    await userEvent.type(screen.getByRole('textbox', { name: /team code/i }), 'quick-jade-fox');
+    await userEvent.click(screen.getByRole('button', { name: /join/i }));
+
+    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
+      joinCode: 'ABCDEF',
+      teamCode: 'quick-jade-fox',
+    });
+  });
+
   it('re-joins with the stored name, token and join code when the game returns to the lobby', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');

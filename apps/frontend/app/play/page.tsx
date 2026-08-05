@@ -36,9 +36,14 @@ function PlayPageContent() {
   // connects once this is known, so a fresh visitor with no code yet doesn't
   // land in the server's single implicit "default" session by accident.
   const [activeJoinCode, setActiveJoinCode] = useState<string | null>(codeFromUrl || null);
+  // Bumped on every form submission so the join effect below re-fires even
+  // when the submitted name/code are unchanged from the last attempt — e.g.
+  // retrying after a name-collision error with only the team code field
+  // corrected, where teamName/activeJoinCode wouldn't otherwise change.
+  const [joinAttempt, setJoinAttempt] = useState(0);
   // Always holds the latest typed team code without making the join effect
   // below re-fire on every keystroke (it should only fire on an actual
-  // identity/session change).
+  // identity/session/attempt change).
   const teamCodeInputRef = useRef(teamCodeInput);
   useEffect(() => {
     teamCodeInputRef.current = teamCodeInput;
@@ -91,9 +96,12 @@ function PlayPageContent() {
 
   useEffect(() => {
     // Fires once this connection's identity (team name + session code) is
-    // known, whichever of the join form / stored identity / URL supplied it.
-    // Deliberately excludes teamCodeInput from its deps (read via a ref
-    // instead) so retyping the team code doesn't re-fire this join.
+    // known, whichever of the join form / stored identity / URL supplied it —
+    // and again on every joinAttempt bump, so resubmitting the form with the
+    // same name/code (e.g. only the team code field corrected after a
+    // collision error) still re-sends the join instead of being a no-op.
+    // Deliberately excludes teamCodeInput itself from its deps (read via a
+    // ref instead) so retyping the team code alone doesn't re-fire this join.
     if (!teamName || !activeJoinCode) return;
     const storedOptions = storedJoinOptions();
     joinTeam(teamName, {
@@ -101,7 +109,7 @@ function PlayPageContent() {
       teamCode: teamCodeInputRef.current.trim() || storedOptions.teamCode,
       joinCode: activeJoinCode,
     });
-  }, [teamName, activeJoinCode, joinTeam]);
+  }, [teamName, activeJoinCode, joinAttempt, joinTeam]);
 
   useEffect(() => {
     if (team) {
@@ -127,6 +135,7 @@ function PlayPageContent() {
     window.localStorage.setItem(JOIN_CODE_STORAGE_KEY, normalizedCode);
     setTeamName(trimmedName);
     setActiveJoinCode(normalizedCode);
+    setJoinAttempt((count) => count + 1);
   }
 
   function handleLogOut() {
