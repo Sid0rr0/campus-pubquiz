@@ -99,10 +99,16 @@ could never be revealed).
 ## Real-Time Protocol (Socket.IO)
 
 Clients connect with `?role=display|admin|players` and are joined to a room of
-the same name. Admin connections must also present the shared password in the
-socket handshake. Every connection immediately receives a full state snapshot
-(`STATE_SYNC`) — reconnection is a first-class feature, since phones sleep and
-venue Wi-Fi drops.
+the same name. Admin connections (both `admin` and `moderator` roles) must
+also present a valid session cookie, read from the raw `Cookie` header sent
+with the socket handshake (the browser attaches it automatically since the
+`withCredentials: true` client option is set). Every connection immediately
+receives a full state snapshot (`STATE_SYNC`) —
+reconnection is a first-class feature, since phones sleep and venue Wi-Fi
+drops. If a session expires or is revoked mid-event, only that one admin
+socket drops — live game state lives server-side independent of any admin
+connection, so `display`/`players` clients are unaffected; the admin just
+reconnects with a fresh token.
 
 ### The snapshot
 
@@ -177,9 +183,20 @@ never only in memory.
 
 ## Authentication
 
-- **Admin**: one shared password (`ADMIN_PASSWORD` env var) sent in the socket
-  handshake. The admin page remembers it in `localStorage`. No accounts, no
-  per-grader attribution.
+- **Admin/moderator**: per-user accounts with two roles — `admin` (everything,
+  including user management) and `moderator` (everything except user
+  management). New accounts self-register as `pending`; an existing admin
+  approves them and assigns a role. Passwords are bcrypt-hashed; login issues
+  an opaque, DB-backed session token with sliding expiration (every validated
+  request/handshake pushes it forward), delivered as an httpOnly session
+  cookie (`campus_pubquiz_session`, set by `POST /auth/login`). REST calls
+  send it automatically (`credentials: 'include'`); the Socket.IO handshake
+  reads it from the raw `Cookie` header (`extractSessionCookie`), since
+  `cookie-parser`'s Express middleware doesn't run on the WS upgrade.
+  Deactivating a user revokes all of its sessions immediately. The first
+  admin account is bootstrapped at
+  startup from `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars,
+  since self-registration alone can't produce the first approver.
 - **Teams**: join with a team name + the session's join code (typed or via the
   QR code on the display). The server issues a team token, stored in
   `localStorage`; presenting it on reconnect restores the team identity even
@@ -241,7 +258,9 @@ pnpm dev:frontend   # frontend only
 pnpm dev:backend    # backend only
 ```
 
-Required backend env: `DATABASE_URL` (Postgres), `ADMIN_PASSWORD`, optionally
+Required backend env: `DATABASE_URL` (Postgres); optionally
+`BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` (creates the first admin
+account at startup — required until at least one admin exists) and
 `FRONTEND_ORIGIN` (CORS, defaults to `http://localhost:8888`). Frontend:
 `NEXT_PUBLIC_BACKEND_URL` (defaults to `http://localhost:3000`).
 
@@ -255,7 +274,9 @@ Deployment target is a single instance on Railway/Fly.io with Postgres. Do
   answers themselves are safe in Postgres.
 - **Venue internet is a hard dependency** — phones on mobile data are the
   mitigation; a phone hotspot can carry the two PCs if Wi-Fi dies.
-- **Single shared admin password** — no audit trail of who graded what.
+- **Grading isn't attributed on `Answer` rows** — per-user accounts and
+  sessions now identify who's connected to the admin room, but grading a
+  specific answer doesn't yet stamp a `gradedBy` user id on it.
 - **`localStorage` identity** — private browsing or cleared storage loses the
   team token; there is no admin "re-link phone to team" escape hatch yet.
 - **Not built yet** (Milestone 3, planned in

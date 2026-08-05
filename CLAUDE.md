@@ -52,7 +52,7 @@ Migrations live in `apps/backend/src/db/migrations/` (one squashed initial migra
 
 ### Auth
 
-- Admin: single shared password via env var → signed cookie. No accounts.
+- Admin/moderator: per-user accounts with two roles — `admin` (everything, including user management) and `moderator` (everything except user management). Self-registration creates a `pending` account; an existing admin approves it and assigns a role before it can log in. Passwords are bcrypt-hashed (`bcryptjs`); login issues an opaque, DB-backed session token (`Session` entity) with sliding expiration, delivered as an httpOnly cookie (`campus_pubquiz_session`) rather than a token the frontend handles directly. REST requests send it automatically via `credentials: 'include'` (checked by `SessionGuard`/`RolesGuard`); the Socket.IO handshake reads it from the raw `Cookie` header (`extractSessionCookie` in `session-cookie.ts`), since `cookie-parser`'s middleware doesn't run on the WS upgrade. Deactivating a user revokes all of its sessions immediately. The first admin is bootstrapped at startup from `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars (`AuthBootstrapService`), since self-registration alone can never produce the first approver — a no-op once any admin exists.
 - Teams: short join code per game session → token stored in `localStorage`. Token survives page refresh; reconnecting restores team identity.
 
 ### Question import: Google Sheets → CSV
@@ -87,8 +87,8 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 - **Single backend instance** — redeploy drops all sockets (~10s freeze, no data loss). Reconnect/resync path must be built and tested early.
 - **JSON payload column** — flexible for new question types; requires per-type Zod validation at import time or crashes will happen live on stage.
 - **Last-write-wins answers** — teams can revise until question locks. This is the desired pub-quiz behavior.
-- **localStorage tokens** — private browsing or cleared storage loses team identity. Admin needs a "re-link phone to team" escape hatch.
-- **Shared admin password** — no per-user attribution. Fine until you have multiple graders and need an audit trail.
+- **localStorage tokens** — private browsing or cleared storage loses team identity (this now also applies to admin/moderator session tokens, matching the existing team-token precedent). Admin needs a "re-link phone to team" escape hatch.
+- **Grading isn't attributed on `Answer` rows** — sessions identify who's connected to the admin room, but grading a specific answer doesn't yet stamp a `gradedBy` user id. Smaller residual tradeoff now that per-user accounts exist; fine until an audit trail of who-graded-what is needed.
 
 ## Question Types Planned
 
@@ -122,7 +122,7 @@ Evidence: `.claude/tdd/milestone-2.tdd.md`.
 1. Shared `SheetRow`/`ImportPreview`/`ImportRequest` (`csvText`, not a sheet URL) contract in `shared/types`
 2. Backend CSV parsing (`sheet-csv.parser.ts`, BOM/header-tolerant) + per-type Zod validation (`question-row.schema.ts`)
 3. `ImportService`: pure `preview()`, idempotent `confirm()` upserting on `(quiz/round, orderIndex)` unique indexes, lobby/ended-only locking, active-quiz reload on re-import
-4. `POST /import/preview` and `POST /import/confirm`, guarded by `AdminPasswordGuard` (mirrors the socket handshake password check)
+4. `POST /import/preview` and `POST /import/confirm`, guarded by an admin-only guard (mirrored the socket handshake password check at the time; both now use `SessionGuard`/`RolesGuard`, see "Auth" above)
 5. Admin `ImportPanel`: upload a CSV file → preview table with per-row issues → confirm gated on `isImportable`, wired into the lobby/ended quiz picker
 6. Display renders `picture` questions as `<img>` and `audio` questions as an autoplaying `<audio controls>`; PlayPage shows a "Look at the screen" hint for both
 

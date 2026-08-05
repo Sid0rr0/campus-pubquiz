@@ -9,7 +9,9 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: ADMIN_PASSWORD
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
         sync: false
       - key: FRONTEND_ORIGIN
         sync: false
