@@ -152,12 +152,14 @@ function PlayPageContent() {
   } = snapshot;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
-  // Falls back to the block's last question so the browser still has
-  // something selected during break/reveal, when there's no currentQuestion.
+  // Defaults to the block's last (furthest-ever-opened) question rather than
+  // currentQuestion, which tracks the display's literal position - stepping
+  // the display backward with PREVIOUS must not drag /play's default view
+  // back with it, since teams should keep answering the newest question.
   const selectedQuestion =
     blockQuestions.find((question) => question.id === browsedQuestionId) ??
-    currentQuestion ??
     blockQuestions[blockQuestions.length - 1] ??
+    currentQuestion ??
     null;
   // Answering stays available even while the leaderboard is toggled on for
   // the big screen — only a real lock (status leaving question_open/locking)

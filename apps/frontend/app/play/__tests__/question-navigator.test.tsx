@@ -182,4 +182,41 @@ describe('PlayPage — question navigator', () => {
 
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Apple');
   });
+
+  it('keeps showing the furthest-opened question when the display steps PREVIOUS', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    const q2 = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        // The admin hit PREVIOUS on /display: progress/currentQuestion step
+        // back to q1, but furthestOpenIndex (and so blockQuestions) still
+        // reflects q2 as the latest question ever opened.
+        snapshot: {
+          progress: progress({ status: 'question_open', questionIndex: 0, furthestOpenIndex: 1 }),
+          currentQuestion: q1,
+          blockQuestions: [q1, q2],
+        },
+        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('Name a planet')).toBeInTheDocument();
+    expect(screen.queryByText('Name a fruit')).not.toBeInTheDocument();
+  });
 });
