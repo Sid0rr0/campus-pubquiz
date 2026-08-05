@@ -7,7 +7,9 @@ import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
+import { Session } from '@/db/entities/session.entity';
 import { Team } from '@/db/entities/team.entity';
+import { User } from '@/db/entities/user.entity';
 import config from '@/mikro-orm.config';
 
 @Global()
@@ -23,6 +25,8 @@ import config from '@/mikro-orm.config';
       GameSessionTeam,
       Answer,
       BonusAward,
+      User,
+      Session,
     ]),
   ],
   exports: [MikroOrmModule],
