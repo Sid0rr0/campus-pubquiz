@@ -73,11 +73,15 @@ describe('GameStateService — persistence and quiz selection', () => {
     expect(service.getActiveQuizId(joinCode)).toBe(1);
   });
 
-  it('rejects creating a session while the default session has a quiz in progress', async () => {
+  it('creates a new concurrent session even while the default session has a quiz in progress', async () => {
     await service.applyAction(joinCode, 'START_QUIZ');
 
-    await expect(service.createSession(2)).rejects.toThrow(/lobby/i);
-    expect(seedService.createSession).not.toHaveBeenCalled();
+    const snapshot = await service.createSession(2);
+
+    expect(snapshot.joinCode).toBe('GHIJKL');
+    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    // The original session keeps running untouched by the new one.
+    expect(service.getSnapshot(joinCode).progress.status).toBe('rules');
   });
 
   it('creates a session after the default game has ended, starting it in the lobby', async () => {

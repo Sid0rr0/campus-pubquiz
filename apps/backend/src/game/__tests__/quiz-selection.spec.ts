@@ -60,16 +60,18 @@ describe('GameGateway — quiz selection', () => {
     expect(seedService.createSession).not.toHaveBeenCalled();
   });
 
-  it('surfaces a mid-game quiz selection as a WsException', async () => {
+  it('creates a new concurrent session for a mid-game quiz selection (phase 4 lifts the old single-session block)', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
       token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
 
-    await expect(
-      gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 }),
-    ).rejects.toThrow(WsException);
-    expect(seedService.createSession).not.toHaveBeenCalled();
+    await gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 });
+
+    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('GHIJKL', SOCKET_ROOMS.ADMIN),
+    );
   });
 });

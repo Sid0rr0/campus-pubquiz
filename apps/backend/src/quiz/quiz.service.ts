@@ -21,6 +21,13 @@ export class QuizService {
     @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
   ) {}
 
+  /** Titles for the given quiz ids, for the session picker — GameStateService knows quizId but not quiz metadata. */
+  async findTitles(quizIds: number[]): Promise<Map<number, string>> {
+    if (quizIds.length === 0) return new Map();
+    const quizzes = await this.quizzes.find({ id: { $in: quizIds } });
+    return new Map(quizzes.map((quiz) => [quiz.id, quiz.title]));
+  }
+
   async list(): Promise<QuizSummary[]> {
     const quizzes = await this.quizzes.findAllWithRoundsAndQuestions();
 

@@ -148,4 +148,31 @@ describe('QuizService (Postgres integration)', () => {
   it('returns an empty list when no quizzes exist', async () => {
     await expect(quizService.list()).resolves.toEqual([]);
   });
+
+  describe('findTitles', () => {
+    it('maps requested quiz ids to their titles', async () => {
+      const quizA = await insertQuiz('Campus Pub Quiz Night');
+      const quizB = await insertQuiz('Imported Quiz');
+
+      const titles = await quizService.findTitles([quizA.id, quizB.id]);
+
+      expect(titles.get(quizA.id)).toBe('Campus Pub Quiz Night');
+      expect(titles.get(quizB.id)).toBe('Imported Quiz');
+    });
+
+    it('omits ids that do not exist rather than throwing', async () => {
+      const quizA = await insertQuiz('Campus Pub Quiz Night');
+
+      const titles = await quizService.findTitles([quizA.id, 999_999]);
+
+      expect(titles.size).toBe(1);
+      expect(titles.has(999_999)).toBe(false);
+    });
+
+    it('returns an empty map without querying for an empty id list', async () => {
+      const titles = await quizService.findTitles([]);
+
+      expect(titles.size).toBe(0);
+    });
+  });
 });

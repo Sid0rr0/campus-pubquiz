@@ -5,6 +5,7 @@ import {
   getNextGameState,
   getQuizStructureSummary,
   getRoundAndQuestionForBlockPosition,
+  type ActiveSessionSummary,
   type AdminQuestionContext,
   type BlockQuestionView,
   type BlockRevealQuestionView,
@@ -129,6 +130,14 @@ function toBlockQuestionView(
   };
 }
 
+/** Thrown by closeSession when a joinCode can't be evicted from the in-memory map yet. */
+export class SessionCloseBlockedError extends Error {
+  constructor(joinCode: string, reason: string) {
+    super(`Cannot close session "${joinCode}": ${reason}`);
+    this.name = 'SessionCloseBlockedError';
+  }
+}
+
 @Injectable()
 export class GameStateService implements OnModuleInit {
   private readonly sessions = new Map<string, SessionState>();
@@ -183,24 +192,52 @@ export class GameStateService implements OnModuleInit {
     return this.getSession(joinCode).seededGame.quizId;
   }
 
+  /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles are filled in by the caller — this service only knows quizId, not quiz metadata. */
+  listSessions(): Omit<ActiveSessionSummary, 'quizTitle'>[] {
+    return Array.from(this.sessions.values()).map((session) => ({
+      joinCode: session.seededGame.joinCode,
+      quizId: session.seededGame.quizId,
+      status: session.progress.status,
+      teamCount: session.teams.length,
+    }));
+  }
+
+  /**
+   * Evicts a session's in-memory state once it's done — the eviction policy
+   * decided for phase 4: explicit admin action rather than an idle-timeout
+   * sweep, since it's deterministic and needs no background timer. Only
+   * allowed once the quiz has `ended` (closing a live game would strand any
+   * still-connected display/players), and never for the default session,
+   * since single-session call sites still resolve it via
+   * `getDefaultJoinCode()` until phase 5 removes that reliance.
+   */
+  closeSession(joinCode: string): void {
+    const session = this.getSession(joinCode);
+    if (session.progress.status !== 'ended') {
+      throw new SessionCloseBlockedError(
+        joinCode,
+        `still in progress (status: "${session.progress.status}")`,
+      );
+    }
+    if (joinCode === this.defaultJoinCode) {
+      throw new SessionCloseBlockedError(
+        joinCode,
+        'still the default session used by legacy single-session call sites',
+      );
+    }
+    this.sessions.delete(joinCode);
+  }
+
   /**
    * Allocates a brand-new GameSession/joinCode for `quizId`, leaving any
    * other session's state untouched, and becomes the new default session.
-   * Blocked while the default session has a quiz in progress — a narrower,
-   * interim rule kept from the single-session era until phase 4 gives the
-   * admin an explicit multi-session creation surface.
+   * No longer blocked by another session's progress — phase 4's `POST
+   * /sessions` lets an admin start additional concurrent games regardless of
+   * how far along any other session is; the old single-session-era guard
+   * only made sense back when there was no way to see or reach a session
+   * other than the implicit default one.
    */
   async createSession(quizId: number): Promise<StateSnapshotPayload> {
-    const current = this.getSession(this.requireDefaultJoinCode());
-    if (
-      current.progress.status !== 'lobby' &&
-      current.progress.status !== 'ended'
-    ) {
-      throw new Error(
-        'A quiz can only be selected while the game is in the lobby or after the quiz has ended',
-      );
-    }
-
     const created = await this.seedService.createSession(quizId);
     const seededGame = await this.seedService.loadGame(
       quizId,

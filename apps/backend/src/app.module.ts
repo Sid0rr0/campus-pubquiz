@@ -16,6 +16,7 @@ import { QuizService } from '@/quiz/quiz.service';
 import { QuizController } from '@/quiz/quiz.controller';
 import { ImportController } from '@/import/import.controller';
 import { ImportService } from '@/import/import.service';
+import { SessionsController } from '@/session/sessions.controller';
 
 @Module({
   imports: [DbModule, AuthModule],
@@ -25,6 +26,7 @@ import { ImportService } from '@/import/import.service';
     UsersController,
     ImportController,
     QuizController,
+    SessionsController,
   ],
   providers: [
     AppService,
