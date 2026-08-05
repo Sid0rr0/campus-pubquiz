@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
+import { AuthController } from '@/auth/auth.controller';
+import { AuthModule } from '@/auth/auth.module';
+import { UsersController } from '@/auth/users.controller';
 import { DbModule } from '@/db/db.module';
 import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
@@ -15,8 +18,14 @@ import { ImportController } from '@/import/import.controller';
 import { ImportService } from '@/import/import.service';
 
 @Module({
-  imports: [DbModule],
-  controllers: [AppController, ImportController, QuizController],
+  imports: [DbModule, AuthModule],
+  controllers: [
+    AppController,
+    AuthController,
+    UsersController,
+    ImportController,
+    QuizController,
+  ],
   providers: [
     AppService,
     SeedService,

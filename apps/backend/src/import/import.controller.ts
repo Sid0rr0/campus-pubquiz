@@ -12,7 +12,8 @@ import type {
   ImportPreview,
   ImportRequest,
 } from '@campus-pubquiz/types';
-import { AdminPasswordGuard } from '@/auth/admin-password.guard';
+import { RolesGuard } from '@/auth/roles.guard';
+import { SessionGuard } from '@/auth/session.guard';
 import {
   ImportBlockedError,
   ImportLockedError,
@@ -27,7 +28,7 @@ function requireCsvText(body: Partial<ImportRequest>): ImportRequest {
 }
 
 @Controller('import')
-@UseGuards(AdminPasswordGuard)
+@UseGuards(SessionGuard, RolesGuard)
 export class ImportController {
   constructor(private readonly importService: ImportService) {}
 

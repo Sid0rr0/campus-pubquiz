@@ -1,11 +1,12 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import type { QuizzesListedPayload } from '@campus-pubquiz/types';
-import { AdminPasswordGuard } from '@/auth/admin-password.guard';
+import { RolesGuard } from '@/auth/roles.guard';
+import { SessionGuard } from '@/auth/session.guard';
 import { GameStateService } from '@/game/game-state.service';
 import { QuizService } from '@/quiz/quiz.service';
 
 @Controller('quizzes')
-@UseGuards(AdminPasswordGuard)
+@UseGuards(SessionGuard, RolesGuard)
 export class QuizController {
   constructor(
     private readonly quizService: QuizService,

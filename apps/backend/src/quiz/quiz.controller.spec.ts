@@ -1,5 +1,6 @@
 import type { QuizSummary } from '@campus-pubquiz/types';
-import { AdminPasswordGuard } from '@/auth/admin-password.guard';
+import { RolesGuard } from '@/auth/roles.guard';
+import { SessionGuard } from '@/auth/session.guard';
 import { QuizController } from '@/quiz/quiz.controller';
 import type { QuizService } from '@/quiz/quiz.service';
 import type { GameStateService } from '@/game/game-state.service';
@@ -15,12 +16,13 @@ function makeController() {
 }
 
 describe('QuizController', () => {
-  it('is protected by the admin password guard', () => {
+  it('is protected by SessionGuard + RolesGuard', () => {
     const guards = Reflect.getMetadata('__guards__', QuizController) as
       | unknown[]
       | undefined;
 
-    expect(guards).toContain(AdminPasswordGuard);
+    expect(guards).toContain(SessionGuard);
+    expect(guards).toContain(RolesGuard);
   });
 
   it('returns the active quiz id alongside the quiz list', async () => {

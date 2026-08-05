@@ -4,7 +4,8 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { createImportPreview, type ImportPreview } from '@campus-pubquiz/types';
-import { AdminPasswordGuard } from '@/auth/admin-password.guard';
+import { RolesGuard } from '@/auth/roles.guard';
+import { SessionGuard } from '@/auth/session.guard';
 import { ImportController } from '@/import/import.controller';
 import {
   ImportBlockedError,
@@ -34,12 +35,13 @@ function blockedPreview(): ImportPreview {
 }
 
 describe('ImportController', () => {
-  it('is protected by the admin password guard', () => {
+  it('is protected by SessionGuard + RolesGuard', () => {
     const guards = Reflect.getMetadata('__guards__', ImportController) as
       | unknown[]
       | undefined;
 
-    expect(guards).toContain(AdminPasswordGuard);
+    expect(guards).toContain(SessionGuard);
+    expect(guards).toContain(RolesGuard);
   });
 
   describe('preview', () => {
