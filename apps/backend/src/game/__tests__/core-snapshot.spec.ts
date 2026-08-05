@@ -11,6 +11,7 @@ import {
 describe('GameStateService — core snapshot', () => {
   let service: GameStateService;
   let progressRepository: MockGameProgressRepository;
+  let joinCode: string;
 
   beforeEach(async () => {
     progressRepository = createFakeGameProgressRepository();
@@ -20,6 +21,7 @@ describe('GameStateService — core snapshot', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
+    joinCode = service.getDefaultJoinCode();
   });
 
   it('throws if used before onModuleInit resolves the seeded game', async () => {
@@ -28,43 +30,43 @@ describe('GameStateService — core snapshot', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
     );
-    await expect(uninitialized.applyAction('START_QUIZ')).rejects.toThrow(
-      /before initialization/i,
-    );
+    await expect(
+      uninitialized.applyAction('ABCDEF', 'START_QUIZ'),
+    ).rejects.toThrow(/before initialization/i);
   });
 
   it('exposes the seeded game session id', () => {
-    expect(service.getGameSessionId()).toBe(101);
+    expect(service.getGameSessionId(joinCode)).toBe(101);
   });
 
   it('includes the session join code in the snapshot', () => {
-    expect(service.getSnapshot().joinCode).toBe('ABCDEF');
+    expect(service.getSnapshot(joinCode).joinCode).toBe('ABCDEF');
   });
 
   it('summarizes the active quiz structure (blocks and topics per block) in the snapshot', () => {
     // FIXTURE_SEEDED_GAME: round-1 (no break) + round-2 (breakAfter) = 1 block of 2 topics.
-    expect(service.getSnapshot().quizStructure).toEqual({
+    expect(service.getSnapshot(joinCode).quizStructure).toEqual({
       blockCount: 1,
       topicsPerBlock: 2,
     });
   });
 
   it('starts with no connected teams in the snapshot', () => {
-    expect(service.getSnapshot().teams).toEqual([]);
+    expect(service.getSnapshot(joinCode).teams).toEqual([]);
   });
 
   it('reflects teams set via setTeams in the snapshot', () => {
-    service.setTeams([{ teamId: 31, teamName: 'The Quizzards' }]);
+    service.setTeams(joinCode, [{ teamId: 31, teamName: 'The Quizzards' }]);
 
-    expect(service.getSnapshot().teams).toEqual([
+    expect(service.getSnapshot(joinCode).teams).toEqual([
       { teamId: 31, teamName: 'The Quizzards', isConnected: false },
     ]);
   });
 
   it('clears the connected teams when a new quiz session is selected', async () => {
-    service.setTeams([{ teamId: 31, teamName: 'The Quizzards' }]);
+    service.setTeams(joinCode, [{ teamId: 31, teamName: 'The Quizzards' }]);
 
-    const snapshot = await service.selectQuiz(2);
+    const snapshot = await service.createSession(2);
 
     expect(snapshot.teams).toEqual([]);
   });
