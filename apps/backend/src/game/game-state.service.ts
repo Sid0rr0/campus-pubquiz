@@ -170,6 +170,11 @@ export class GameStateService implements OnModuleInit {
     return this.requireDefaultJoinCode();
   }
 
+  /** Whether a session exists for this joinCode — lets the gateway reject a handshake's `?code=` before trusting it. */
+  hasSession(joinCode: string): boolean {
+    return this.sessions.has(joinCode);
+  }
+
   getGameSessionId(joinCode: string): number {
     return this.getSession(joinCode).seededGame.gameSessionId;
   }

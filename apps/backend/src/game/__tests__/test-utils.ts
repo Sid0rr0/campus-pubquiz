@@ -289,6 +289,7 @@ export function createMockSocket(
   role?: string,
   auth: Record<string, string> = {},
   id = 'socket-1',
+  code?: string,
 ) {
   const rooms = new Set<string>();
   const cookie = auth.token
@@ -297,10 +298,14 @@ export function createMockSocket(
   const socket = {
     id,
     handshake: {
-      query: role === undefined ? {} : { role },
+      query: {
+        ...(role === undefined ? {} : { role }),
+        ...(code === undefined ? {} : { code }),
+      },
       headers: { cookie },
     },
     join: jest.fn((room: string) => rooms.add(room)),
+    leave: jest.fn((room: string) => rooms.delete(room)),
     rooms,
     data: {} as Record<string, unknown>,
     emit: jest.fn(),

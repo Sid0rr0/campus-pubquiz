@@ -1,5 +1,9 @@
 import { WsException } from '@nestjs/websockets';
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  sessionRoom,
+} from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
   TEST_SESSION_TOKEN,
@@ -28,9 +32,15 @@ describe('GameGateway — quiz selection', () => {
     await gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 });
 
     expect(seedService.createSession).toHaveBeenCalledWith(2);
-    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
-    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
-    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('GHIJKL', SOCKET_ROOMS.DISPLAY),
+    );
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('GHIJKL', SOCKET_ROOMS.ADMIN),
+    );
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('GHIJKL', SOCKET_ROOMS.PLAYERS),
+    );
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({

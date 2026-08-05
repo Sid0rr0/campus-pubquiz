@@ -1,4 +1,8 @@
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  sessionRoom,
+} from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
@@ -145,9 +149,15 @@ describe('GameGateway — question lock auto-advance timer', () => {
 
     await jest.advanceTimersByTimeAsync(60_000);
 
-    expect(localServer.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
-    expect(localServer.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
-    expect(localServer.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(localServer.to).toHaveBeenCalledWith(
+      sessionRoom('ZZZZZZ', SOCKET_ROOMS.DISPLAY),
+    );
+    expect(localServer.to).toHaveBeenCalledWith(
+      sessionRoom('ZZZZZZ', SOCKET_ROOMS.ADMIN),
+    );
+    expect(localServer.to).toHaveBeenCalledWith(
+      sessionRoom('ZZZZZZ', SOCKET_ROOMS.PLAYERS),
+    );
     expect(localServer.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({

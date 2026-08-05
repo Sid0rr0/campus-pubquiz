@@ -1,4 +1,8 @@
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  sessionRoom,
+} from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
   TEST_MODERATOR_USER,
@@ -21,7 +25,9 @@ describe('GameGateway — connection', () => {
     const client = createMockSocket(SOCKET_ROOMS.DISPLAY);
     await gateway.handleConnection(asSocket(client));
 
-    expect(client.join).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
+    expect(client.join).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
+    );
     expect(client.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_SYNC,
       expect.objectContaining({
@@ -63,7 +69,9 @@ describe('GameGateway — connection', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    expect(admin.join).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(admin.join).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
+    );
     expect(admin.disconnect).not.toHaveBeenCalled();
   });
 
@@ -79,7 +87,9 @@ describe('GameGateway — connection', () => {
     });
     await gateway.handleConnection(asSocket(moderator));
 
-    expect(moderator.join).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(moderator.join).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
+    );
     expect(moderator.disconnect).not.toHaveBeenCalled();
   });
 

@@ -14,6 +14,7 @@ import type { Server, Socket } from 'socket.io';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  sessionRoom,
   type AdminActionPayload,
   type AnswersUpdatedPayload,
   type AwardBonusPayload,
@@ -22,6 +23,7 @@ import {
   type KickTeamPayload,
   type ListAnswersPayload,
   type SelectQuizPayload,
+  type SocketRoomName,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
@@ -50,7 +52,7 @@ export class GameGateway
   server!: Server;
 
   private readonly logger = new Logger(GameGateway.name);
-  private questionLockTimer: NodeJS.Timeout | null = null;
+  private readonly questionLockTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly gameState: GameStateService,
@@ -62,10 +64,10 @@ export class GameGateway
   ) {}
 
   onModuleDestroy(): void {
-    if (this.questionLockTimer) {
-      clearTimeout(this.questionLockTimer);
-      this.questionLockTimer = null;
+    for (const timer of this.questionLockTimers.values()) {
+      clearTimeout(timer);
     }
+    this.questionLockTimers.clear();
   }
 
   @CreateRequestContext()
@@ -78,6 +80,30 @@ export class GameGateway
       );
       client.disconnect();
       return;
+    }
+
+    const requestedCode = client.handshake.query.code;
+    if (requestedCode !== undefined && typeof requestedCode !== 'string') {
+      this.logger.warn(
+        `Rejected connection ${client.id}: malformed session code`,
+      );
+      client.disconnect();
+      return;
+    }
+
+    let joinCode: string;
+    if (typeof requestedCode === 'string') {
+      if (!this.gameState.hasSession(requestedCode)) {
+        this.logger.warn(
+          `Rejected connection ${client.id}: unknown session code "${requestedCode}"`,
+        );
+        client.emit('exception', 'Unknown game session code');
+        client.disconnect();
+        return;
+      }
+      joinCode = requestedCode;
+    } else {
+      joinCode = this.gameState.getDefaultJoinCode();
     }
 
     if (role === SOCKET_ROOMS.ADMIN) {
@@ -93,16 +119,18 @@ export class GameGateway
       (client.data as { user?: AuthUser }).user = user;
     }
 
-    await client.join(role);
-    this.logger.log(`Client ${client.id} connected as ${role}`);
-    client.emit(
-      SOCKET_EVENTS.STATE_SYNC,
-      this.gameState.getSnapshot(this.gameState.getDefaultJoinCode()),
+    (client.data as { joinCode?: string }).joinCode = joinCode;
+    await client.join(sessionRoom(joinCode, role as SocketRoomName));
+    this.logger.log(
+      `Client ${client.id} connected as ${role} (session ${joinCode})`,
     );
+    client.emit(SOCKET_EVENTS.STATE_SYNC, this.gameState.getSnapshot(joinCode));
   }
 
   handleDisconnect(client: Socket): void {
-    const joinCode = this.gameState.getDefaultJoinCode();
+    const joinCode = (client.data as { joinCode?: string }).joinCode;
+    if (!joinCode) return;
+
     const teamId = this.gameState.clearTeamConnectionBySocketId(
       joinCode,
       client.id,
@@ -110,7 +138,16 @@ export class GameGateway
     if (!teamId) return;
 
     this.logger.log(`Client ${client.id} disconnected, freeing team ${teamId}`);
-    this.broadcastState(this.gameState.getSnapshot(joinCode));
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
+  }
+
+  /** Every non-connection handler reads the joinCode fixed on this socket at connect time. */
+  private resolveJoinCode(client: Socket): string {
+    const joinCode = (client.data as { joinCode?: string }).joinCode;
+    if (!joinCode) {
+      throw new WsException('Connection not associated with a game session');
+    }
+    return joinCode;
   }
 
   // Socket.IO events aren't covered by @mikro-orm/nestjs's HTTP-only
@@ -121,7 +158,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: AdminActionPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may perform game actions');
     }
 
@@ -129,7 +167,6 @@ export class GameGateway
       `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
     );
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     let snapshot: StateSnapshotPayload;
     try {
       snapshot = await this.gameState.applyAction(joinCode, payload.action);
@@ -153,8 +190,8 @@ export class GameGateway
       snapshot = this.gameState.getSnapshot(joinCode);
     }
 
-    this.broadcastState(snapshot);
-    this.rearmQuestionLockTimer();
+    this.broadcastState(joinCode, snapshot);
+    this.rearmQuestionLockTimer(joinCode);
   }
 
   /**
@@ -163,10 +200,11 @@ export class GameGateway
    * as if the admin had clicked "Advance" themselves.
    */
   @CreateRequestContext()
-  private async handleQuestionLockTimerExpired(): Promise<void> {
-    this.questionLockTimer = null;
+  private async handleQuestionLockTimerExpired(
+    joinCode: string,
+  ): Promise<void> {
+    this.questionLockTimers.delete(joinCode);
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     let snapshot: StateSnapshotPayload;
     try {
       snapshot = await this.gameState.applyAction(joinCode, 'ADVANCE');
@@ -177,33 +215,38 @@ export class GameGateway
       return;
     }
 
-    this.broadcastState(snapshot);
-    this.rearmQuestionLockTimer();
+    this.broadcastState(joinCode, snapshot);
+    this.rearmQuestionLockTimer(joinCode);
   }
 
-  /** (Re)arms the auto-lock timer to match GameStateService's current deadline, clearing any stale one first. */
-  private rearmQuestionLockTimer(): void {
-    if (this.questionLockTimer) {
-      clearTimeout(this.questionLockTimer);
-      this.questionLockTimer = null;
+  /** (Re)arms this session's auto-lock timer to match GameStateService's current deadline, clearing any stale one first. */
+  private rearmQuestionLockTimer(joinCode: string): void {
+    const existing = this.questionLockTimers.get(joinCode);
+    if (existing) {
+      clearTimeout(existing);
+      this.questionLockTimers.delete(joinCode);
     }
 
-    const lockAt = this.gameState.getQuestionLockAt(
-      this.gameState.getDefaultJoinCode(),
-    );
+    const lockAt = this.gameState.getQuestionLockAt(joinCode);
     if (lockAt === null) return;
 
     const delay = Math.max(0, lockAt - Date.now());
-    this.questionLockTimer = setTimeout(() => {
-      void this.handleQuestionLockTimerExpired();
-    }, delay);
+    this.questionLockTimers.set(
+      joinCode,
+      setTimeout(() => {
+        void this.handleQuestionLockTimerExpired(joinCode);
+      }, delay),
+    );
   }
 
-  private broadcastState(snapshot: StateSnapshotPayload): void {
+  private broadcastState(
+    joinCode: string,
+    snapshot: StateSnapshotPayload,
+  ): void {
     this.server
-      .to(SOCKET_ROOMS.DISPLAY)
-      .to(SOCKET_ROOMS.ADMIN)
-      .to(SOCKET_ROOMS.PLAYERS)
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.DISPLAY))
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
       .emit(SOCKET_EVENTS.STATE_UPDATED, snapshot);
   }
 
@@ -213,7 +256,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: JoinPlayersPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.PLAYERS)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
       throw new WsException('Only player clients may join a team');
     }
 
@@ -221,7 +265,6 @@ export class GameGateway
       `${SOCKET_EVENTS.JOIN_PLAYERS} from ${client.id}: teamName=${payload.teamName}`,
     );
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     try {
       const team = await this.teamService.join(
         this.gameState.getGameSessionId(joinCode),
@@ -264,7 +307,7 @@ export class GameGateway
         this.gameState.getGameSessionId(joinCode),
       );
       this.gameState.setTeams(joinCode, teams);
-      this.broadcastState(this.gameState.getSnapshot(joinCode));
+      this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to join';
       throw new WsException(message);
@@ -277,7 +320,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SubmitAnswerPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.PLAYERS)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
       throw new WsException('Only player clients may submit answers');
     }
 
@@ -285,7 +329,6 @@ export class GameGateway
       `${SOCKET_EVENTS.SUBMIT_ANSWER} from ${client.id}: questionId=${payload.questionId} teamId=${payload.teamId}`,
     );
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     if (
       !this.gameState.isQuestionOpenForAnswering(joinCode, payload.questionId)
     ) {
@@ -311,7 +354,7 @@ export class GameGateway
       payload.questionId,
     );
     this.server
-      .to(SOCKET_ROOMS.ADMIN)
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))
       .emit(
         SOCKET_EVENTS.ANSWERS_UPDATED,
         this.buildAnswersUpdatedPayload(joinCode, payload.questionId, answers),
@@ -322,7 +365,7 @@ export class GameGateway
       payload.questionId,
       answers.map((answer) => answer.teamId),
     );
-    this.broadcastState(this.gameState.getSnapshot(joinCode));
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 
   @SubscribeMessage(SOCKET_EVENTS.GRADE_ANSWER)
@@ -331,7 +374,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GradeAnswerPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may grade answers');
     }
 
@@ -344,7 +388,6 @@ export class GameGateway
       payload.pointsAwarded,
     );
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     const gameSessionId = this.gameState.getGameSessionId(joinCode);
 
     const answers = await this.answerService.listForQuestion(
@@ -352,7 +395,7 @@ export class GameGateway
       questionId,
     );
     this.server
-      .to(SOCKET_ROOMS.ADMIN)
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))
       .emit(
         SOCKET_EVENTS.ANSWERS_UPDATED,
         this.buildAnswersUpdatedPayload(joinCode, questionId, answers),
@@ -362,7 +405,7 @@ export class GameGateway
       await this.answerService.computeLeaderboard(gameSessionId);
     this.gameState.setLeaderboard(joinCode, leaderboard);
 
-    this.broadcastState(this.gameState.getSnapshot(joinCode));
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SELECT_QUIZ)
@@ -371,7 +414,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SelectQuizPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+    const oldJoinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(oldJoinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may select a quiz');
     }
 
@@ -388,8 +432,19 @@ export class GameGateway
       throw new WsException(message);
     }
 
-    this.broadcastState(snapshot);
-    this.rearmQuestionLockTimer();
+    // createSession always mints a brand-new session/joinCode (Phase 2) —
+    // move the requesting admin's own socket into it so today's single-admin
+    // flow keeps working. Any other client still in the old session's rooms
+    // (a display/player connected before this fired) is not migrated: real
+    // multi-session creation UX (an explicit picker, not this legacy
+    // SELECT_QUIZ action) is Phase 4/5's job.
+    const newJoinCode = snapshot.joinCode;
+    await client.leave(sessionRoom(oldJoinCode, SOCKET_ROOMS.ADMIN));
+    await client.join(sessionRoom(newJoinCode, SOCKET_ROOMS.ADMIN));
+    (client.data as { joinCode?: string }).joinCode = newJoinCode;
+
+    this.broadcastState(newJoinCode, snapshot);
+    this.rearmQuestionLockTimer(newJoinCode);
   }
 
   @SubscribeMessage(SOCKET_EVENTS.LIST_ANSWERS)
@@ -398,7 +453,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: ListAnswersPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may list answers');
     }
 
@@ -406,7 +462,6 @@ export class GameGateway
       `${SOCKET_EVENTS.LIST_ANSWERS} from ${client.id}: questionId=${payload.questionId}`,
     );
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     const answers = await this.answerService.listForQuestion(
       this.gameState.getGameSessionId(joinCode),
       payload.questionId,
@@ -422,7 +477,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: KickTeamPayload,
   ): void {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may remove a team');
     }
 
@@ -431,7 +487,7 @@ export class GameGateway
     );
 
     const socketId = this.gameState.getConnectedSocketId(
-      this.gameState.getDefaultJoinCode(),
+      joinCode,
       payload.teamId,
     );
     const targetSocket = socketId
@@ -452,7 +508,8 @@ export class GameGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: AwardBonusPayload,
   ): Promise<void> {
-    if (!client.rooms.has(SOCKET_ROOMS.ADMIN)) {
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may award bonus points');
     }
 
@@ -460,7 +517,6 @@ export class GameGateway
       `${SOCKET_EVENTS.AWARD_BONUS} from ${client.id}: teamId=${payload.teamId} category=${payload.category} points=${payload.points}`,
     );
 
-    const joinCode = this.gameState.getDefaultJoinCode();
     try {
       await this.bonusService.award(
         this.gameState.getGameSessionId(joinCode),
@@ -480,7 +536,7 @@ export class GameGateway
       this.gameState.getGameSessionId(joinCode),
     );
     this.gameState.setLeaderboard(joinCode, leaderboard);
-    this.broadcastState(this.gameState.getSnapshot(joinCode));
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 
   private buildAnswersUpdatedPayload(

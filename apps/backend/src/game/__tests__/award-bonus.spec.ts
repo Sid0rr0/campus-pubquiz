@@ -1,5 +1,9 @@
 import { WsException } from '@nestjs/websockets';
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  sessionRoom,
+} from '@campus-pubquiz/types';
 import { InvalidBonusAwardError } from '@/bonus/bonus.service';
 import type { GameGateway } from '@/game/game.gateway';
 import {
@@ -43,9 +47,15 @@ describe('GameGateway — award bonus', () => {
       undefined,
     );
     expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
-    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.DISPLAY);
-    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
-    expect(server.to).toHaveBeenCalledWith(SOCKET_ROOMS.PLAYERS);
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
+    );
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
+    );
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
+    );
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
       expect.objectContaining({
