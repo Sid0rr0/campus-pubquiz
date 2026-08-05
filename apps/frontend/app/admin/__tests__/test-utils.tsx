@@ -1,5 +1,27 @@
 import { screen, within } from '@testing-library/react';
-import type { GameProgress } from '@campus-pubquiz/types';
+import { vi } from 'vitest';
+import type { AuthUser, GameProgress } from '@campus-pubquiz/types';
+import type { UseAuthResult } from '@/app/lib/use-auth';
+
+export const TEST_ADMIN_USER: AuthUser = {
+  id: 1,
+  username: 'test-admin',
+  role: 'admin',
+  status: 'active',
+};
+
+export function authenticatedAuthResult(overrides: Partial<UseAuthResult> = {}): UseAuthResult {
+  return {
+    user: TEST_ADMIN_USER,
+    status: 'authenticated',
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    clearError: vi.fn(),
+    ...overrides,
+  };
+}
 
 export function progress(overrides: Partial<GameProgress> = {}): GameProgress {
   return {

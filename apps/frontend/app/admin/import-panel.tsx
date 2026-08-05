@@ -6,11 +6,10 @@ import { confirmImport, previewImport } from '@/app/lib/import-api';
 import { RoundsList } from '@/app/components/rounds-list';
 
 interface ImportPanelProps {
-  adminPassword: string;
   onImported?: (result: ImportConfirmResult) => void;
 }
 
-export function ImportPanel({ adminPassword, onImported }: ImportPanelProps) {
+export function ImportPanel({ onImported }: ImportPanelProps) {
   const [quizTitle, setQuizTitle] = useState('');
   const [csvText, setCsvText] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -27,7 +26,7 @@ export function ImportPanel({ adminPassword, onImported }: ImportPanelProps) {
     setCsvText(text);
 
     try {
-      const result = await previewImport(text, quizTitle || undefined, adminPassword);
+      const result = await previewImport(text, quizTitle || undefined);
       setPreview(result);
     } catch (previewError) {
       setError(previewError instanceof Error ? previewError.message : 'Could not read the file');
@@ -39,7 +38,7 @@ export function ImportPanel({ adminPassword, onImported }: ImportPanelProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await confirmImport(csvText, quizTitle || undefined, adminPassword);
+      const result = await confirmImport(csvText, quizTitle || undefined);
       setPreview(null);
       setCsvText(null);
       onImported?.(result);

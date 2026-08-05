@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import {
   getBlockStartRoundIndex,
   type GameStatus,
@@ -9,8 +10,11 @@ import {
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
+import { useAuth } from '@/app/lib/use-auth';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { AdminLoginForm } from '@/app/admin/admin-login-form';
+import { AdminRegisterForm } from '@/app/admin/admin-register-form';
+import { PendingApprovalView } from '@/app/admin/pending-approval-view';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { ImportPanel } from '@/app/admin/import-panel';
 import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
@@ -18,38 +22,21 @@ import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
 import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
 
-const ADMIN_PASSWORD_STORAGE_KEY = 'campus-pubquiz-admin-password';
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
 
-function getStoredAdminPassword(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  return window.localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) ?? '';
-}
-
 export default function AdminPage() {
+  const auth = useAuth();
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [hasSubmittedPassword, setHasSubmittedPassword] = useState(false);
-  const [submittedPassword, setSubmittedPassword] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [registerValidationError, setRegisterValidationError] = useState<string | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Deferred to an effect (not a useState initializer) so the server-rendered
-    // HTML always starts from the signed-out state — localStorage only exists
-    // on the client and would otherwise mismatch during hydration.
-    const storedPassword = getStoredAdminPassword();
-    if (storedPassword) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPasswordInput(storedPassword);
-      setSubmittedPassword(storedPassword);
-      setHasSubmittedPassword(true);
-    }
-  }, []);
+  const isAuthenticated = auth.status === 'authenticated';
   const {
     snapshot,
     connectionError,
@@ -60,13 +47,13 @@ export default function AdminPage() {
     awardBonus,
     selectQuiz = () => {},
     listAnswers = () => {},
-  } = useGameSocket('admin', submittedPassword, hasSubmittedPassword);
+  } = useGameSocket('admin', isAuthenticated);
 
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
 
   const refetchQuizzes = useCallback(() => {
-    fetchQuizzes(submittedPassword)
+    fetchQuizzes()
       .then((payload) => {
         setQuizzes(payload);
         setQuizzesError(null);
@@ -74,7 +61,7 @@ export default function AdminPage() {
       .catch((error: unknown) => {
         setQuizzesError(error instanceof QuizApiError ? error.message : 'Could not load quizzes');
       });
-  }, [submittedPassword]);
+  }, []);
 
   const lastFetchedStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
@@ -169,11 +156,38 @@ export default function AdminPage() {
     }
   }, [selectedQuestionId, displayQuestionId]);
 
-  function handleSubmitPassword(event: FormEvent<HTMLFormElement>): void {
+  function handleLoginSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    window.localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, passwordInput);
-    setHasSubmittedPassword(true);
-    setSubmittedPassword(passwordInput);
+    // auth.error already surfaces the failure message — this catch only
+    // exists so the rejection auth.login() rethrows doesn't go unhandled.
+    auth.login(usernameInput, passwordInput).catch(() => {});
+  }
+
+  function handleRegisterSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    if (passwordInput !== confirmPasswordInput) {
+      setRegisterValidationError('Passwords do not match');
+      return;
+    }
+    setRegisterValidationError(null);
+    auth
+      .register(usernameInput, passwordInput)
+      .then(() => {
+        setPasswordInput('');
+        setConfirmPasswordInput('');
+      })
+      .catch(() => {});
+  }
+
+  function switchAuthView(view: 'login' | 'register'): void {
+    setAuthView(view);
+    setRegisterValidationError(null);
+    auth.clearError();
+  }
+
+  function handleLogout(): void {
+    auth.logout();
+    setAuthView('login');
   }
 
   const displayedActiveQuizId = activeQuizIdOverride ?? quizzes?.activeQuizId ?? null;
@@ -235,12 +249,40 @@ export default function AdminPage() {
     sendAction,
   });
 
-  if (!hasSubmittedPassword && !snapshot && !connectionError) {
+  if (auth.status === 'checking') {
     return (
-      <AdminLoginForm
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <p className="font-display text-xl">Loading…</p>
+      </main>
+    );
+  }
+
+  if (auth.status === 'pending') {
+    return <PendingApprovalView onLogout={handleLogout} />;
+  }
+
+  if (auth.status === 'unauthenticated') {
+    return authView === 'register' ? (
+      <AdminRegisterForm
+        usernameInput={usernameInput}
         passwordInput={passwordInput}
+        confirmPasswordInput={confirmPasswordInput}
+        onUsernameInputChange={setUsernameInput}
         onPasswordInputChange={setPasswordInput}
-        onSubmit={handleSubmitPassword}
+        onConfirmPasswordInputChange={setConfirmPasswordInput}
+        onSubmit={handleRegisterSubmit}
+        onSwitchToLogin={() => switchAuthView('login')}
+        error={registerValidationError ?? auth.error}
+      />
+    ) : (
+      <AdminLoginForm
+        usernameInput={usernameInput}
+        passwordInput={passwordInput}
+        onUsernameInputChange={setUsernameInput}
+        onPasswordInputChange={setPasswordInput}
+        onSubmit={handleLoginSubmit}
+        onSwitchToRegister={() => switchAuthView('register')}
+        error={auth.error}
       />
     );
   }
@@ -314,9 +356,18 @@ export default function AdminPage() {
         onAwardBonus={awardBonus}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
-        {canChooseQuiz && (
-          <ImportPanel adminPassword={submittedPassword} onImported={refetchQuizzes} />
-        )}
+        <div className="flex items-center justify-end gap-4 text-sm font-bold">
+          <span className="text-foreground/60">{auth.user?.username}</span>
+          {auth.user?.role === 'admin' && (
+            <Link href="/admin/users" className="underline">
+              Users
+            </Link>
+          )}
+          <button type="button" onClick={handleLogout} className="underline">
+            Log out
+          </button>
+        </div>
+        {canChooseQuiz && <ImportPanel onImported={refetchQuizzes} />}
         {canChooseQuiz && quizzesError && (
           <p role="alert" className="font-extrabold text-magenta">
             {quizzesError}

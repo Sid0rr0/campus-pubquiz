@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
-import { progress } from './test-utils';
+import { authenticatedAuthResult, progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes } = vi.hoisted(() => ({
+const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
   mockFetchQuizzes: vi.fn(),
+  mockUseAuth: vi.fn(),
 }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
@@ -17,10 +18,14 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   return { ...actual, fetchQuizzes: mockFetchQuizzes };
 });
 
+vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
+
 describe('AdminPage — status and teams', () => {
   beforeEach(() => {
     window.localStorage.clear();
     mockUseGameSocket.mockReset();
+    mockUseAuth.mockReset();
+    mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
   });

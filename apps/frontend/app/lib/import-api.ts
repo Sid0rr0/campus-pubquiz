@@ -25,13 +25,12 @@ async function postImport<T>(
   path: 'preview' | 'confirm',
   csvText: string,
   quizTitle: string | undefined,
-  adminPassword: string,
 ): Promise<T> {
   const response = await fetch(`${getBackendUrl()}/import/${path}`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      'x-admin-password': adminPassword,
     },
     body: JSON.stringify({ csvText, quizTitle }),
   });
@@ -51,15 +50,13 @@ async function postImport<T>(
 export function previewImport(
   csvText: string,
   quizTitle: string | undefined,
-  adminPassword: string,
 ): Promise<ImportPreview> {
-  return postImport<ImportPreview>('preview', csvText, quizTitle, adminPassword);
+  return postImport<ImportPreview>('preview', csvText, quizTitle);
 }
 
 export function confirmImport(
   csvText: string,
   quizTitle: string | undefined,
-  adminPassword: string,
 ): Promise<ImportConfirmResult> {
-  return postImport<ImportConfirmResult>('confirm', csvText, quizTitle, adminPassword);
+  return postImport<ImportConfirmResult>('confirm', csvText, quizTitle);
 }

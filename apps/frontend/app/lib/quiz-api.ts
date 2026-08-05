@@ -11,9 +11,9 @@ export class QuizApiError extends Error {
   }
 }
 
-export async function fetchQuizzes(adminPassword: string): Promise<QuizzesListedPayload> {
+export async function fetchQuizzes(): Promise<QuizzesListedPayload> {
   const response = await fetch(`${getBackendUrl()}/quizzes`, {
-    headers: { 'x-admin-password': adminPassword },
+    credentials: 'include',
   });
 
   if (!response.ok) {

@@ -9,7 +9,7 @@ describe('import-api', () => {
   });
 
   describe('previewImport', () => {
-    it('posts the csv text and admin password header and returns the preview', async () => {
+    it('posts the csv text with credentials and returns the preview', async () => {
       const preview = { quizTitle: 'Trivia Night', rounds: [], issues: [], isImportable: true };
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
@@ -17,15 +17,15 @@ describe('import-api', () => {
       });
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      const result = await previewImport('csv,text', 'Trivia Night', 'secret');
+      const result = await previewImport('csv,text', 'Trivia Night');
 
       expect(result).toEqual(preview);
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:3000/import/preview',
         expect.objectContaining({
           method: 'POST',
+          credentials: 'include',
           headers: expect.objectContaining({
-            'x-admin-password': 'secret',
             'Content-Type': 'application/json',
           }) as Record<string, string>,
           body: JSON.stringify({ csvText: 'csv,text', quizTitle: 'Trivia Night' }),
@@ -37,11 +37,11 @@ describe('import-api', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
-        json: () => Promise.resolve({ message: 'Invalid admin password' }),
+        json: () => Promise.resolve({ message: 'Invalid or expired session' }),
       }) as unknown as typeof fetch;
 
-      await expect(previewImport('csv', undefined, 'wrong')).rejects.toThrow(
-        'Invalid admin password',
+      await expect(previewImport('csv', undefined)).rejects.toThrow(
+        'Invalid or expired session',
       );
     });
   });
@@ -54,7 +54,7 @@ describe('import-api', () => {
         json: () => Promise.resolve(result),
       }) as unknown as typeof fetch;
 
-      const response = await confirmImport('csv,text', 'Trivia Night', 'secret');
+      const response = await confirmImport('csv,text', 'Trivia Night');
 
       expect(response).toEqual(result);
     });
@@ -67,7 +67,7 @@ describe('import-api', () => {
         json: () => Promise.resolve({ message: 'Validation failed', issues }),
       }) as unknown as typeof fetch;
 
-      const error = await confirmImport('csv', undefined, 'secret').catch((e: unknown) => e);
+      const error = await confirmImport('csv', undefined).catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ImportApiError);
       expect((error as ImportApiError).issues).toEqual(issues);

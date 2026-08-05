@@ -40,12 +40,12 @@ describe('useGameSocket', () => {
     mockIo.mockClear();
   });
 
-  it('passes the admin password through socket auth when provided', () => {
-    renderHook(() => useGameSocket('admin', 'secret-pass'));
+  it('connects with credentials so the session cookie is sent on the handshake', () => {
+    renderHook(() => useGameSocket('admin'));
 
     expect(mockIo).toHaveBeenCalledWith('http://localhost:3000', {
       query: { role: 'admin' },
-      auth: { password: 'secret-pass' },
+      withCredentials: true,
     });
   });
 
@@ -56,7 +56,7 @@ describe('useGameSocket', () => {
   });
 
   it('does not open a socket until enabled for admin connections', () => {
-    renderHook(() => useGameSocket('admin', 'secret-pass', false));
+    renderHook(() => useGameSocket('admin', false));
 
     expect(mockIo).not.toHaveBeenCalled();
   });
