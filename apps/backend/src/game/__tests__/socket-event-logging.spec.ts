@@ -2,18 +2,15 @@ import { Logger } from '@nestjs/common';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   openFirstQuestion,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
 } from './test-utils';
 
 describe('GameGateway — socket event logging', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
   let logSpy: jest.SpyInstance;
@@ -54,18 +51,18 @@ describe('GameGateway — socket event logging', () => {
     );
   });
 
-  it('warns when an admin connection is rejected for a bad password', async () => {
+  it('warns when an admin connection is rejected for an invalid session token', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: 'wrong-password',
+      token: 'wrong-token',
     });
     await gateway.handleConnection(asSocket(admin));
 
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('password'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('session'));
   });
 
   it('logs an ADMIN_ACTION event with the action name', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -115,7 +112,7 @@ describe('GameGateway — socket event logging', () => {
 
   it('logs a GRADE_ANSWER event with the answer id and points', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -132,7 +129,7 @@ describe('GameGateway — socket event logging', () => {
 
   it('logs a SELECT_QUIZ event with the quiz id', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 

@@ -95,7 +95,9 @@ describe('GameStateService — block questions and response indicators', () => {
     expect(backOnIntroCard.currentQuestion).toBeNull();
     // r2q1 stays revealed/answerable underneath the intro card, same as
     // Previous stepping back onto an already-open question directly.
-    expect(backOnIntroCard.blockQuestions.map((q) => q.id)).toEqual([21, 22, 23]);
+    expect(backOnIntroCard.blockQuestions.map((q) => q.id)).toEqual([
+      21, 22, 23,
+    ]);
     expect(service.isQuestionOpenForAnswering(23)).toBe(true);
     expect(backOnIntroCard.upcomingQuestions).toEqual([
       { roundNumber: 2, questionNumberInRound: 2 },

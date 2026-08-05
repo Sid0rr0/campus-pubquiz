@@ -1,20 +1,20 @@
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_MODERATOR_USER,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   asSocket,
-  useAdminPasswordEnv,
+  type MockSessionService,
 } from './test-utils';
 
 describe('GameGateway — connection', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
+  let sessionService: MockSessionService;
 
   beforeEach(async () => {
-    ({ gateway } = await createTestGateway());
+    ({ gateway, sessionService } = await createTestGateway());
   });
 
   it('joins a connecting display client to the display room and sends a state snapshot', async () => {
@@ -57,9 +57,9 @@ describe('GameGateway — connection', () => {
     expect(client.disconnect).toHaveBeenCalled();
   });
 
-  it('joins an admin client that presents the correct password', async () => {
+  it('joins an admin client that presents a valid session token', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -67,28 +67,44 @@ describe('GameGateway — connection', () => {
     expect(admin.disconnect).not.toHaveBeenCalled();
   });
 
-  it('disconnects an admin client with the wrong password', async () => {
+  it('joins a moderator client that presents a valid session token', async () => {
+    const moderatorToken = 'moderator-token';
+    sessionService.validate.mockImplementation((token: string | undefined) =>
+      Promise.resolve(
+        token === moderatorToken ? { user: TEST_MODERATOR_USER } : null,
+      ),
+    );
+    const moderator = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: moderatorToken,
+    });
+    await gateway.handleConnection(asSocket(moderator));
+
+    expect(moderator.join).toHaveBeenCalledWith(SOCKET_ROOMS.ADMIN);
+    expect(moderator.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('disconnects an admin client with an invalid or expired token', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: 'wrong-password',
+      token: 'wrong-token',
     });
     await gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).not.toHaveBeenCalled();
     expect(admin.emit).toHaveBeenCalledWith(
       'exception',
-      'Invalid admin password',
+      'Invalid or expired session',
     );
     expect(admin.disconnect).toHaveBeenCalled();
   });
 
-  it('disconnects an admin client with no password at all', async () => {
+  it('disconnects an admin client with no token at all', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN);
     await gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).not.toHaveBeenCalled();
     expect(admin.emit).toHaveBeenCalledWith(
       'exception',
-      'Invalid admin password',
+      'Invalid or expired session',
     );
     expect(admin.disconnect).toHaveBeenCalled();
   });

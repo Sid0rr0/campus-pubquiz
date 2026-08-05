@@ -2,18 +2,15 @@ import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
   type MockSeedService,
 } from './test-utils';
 
 describe('GameGateway — quiz selection', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
   let seedService: MockSeedService;
@@ -24,7 +21,7 @@ describe('GameGateway — quiz selection', () => {
 
   it('selects a quiz and broadcasts the reset snapshot to all three rooms', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -55,7 +52,7 @@ describe('GameGateway — quiz selection', () => {
 
   it('surfaces a mid-game quiz selection as a WsException', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });

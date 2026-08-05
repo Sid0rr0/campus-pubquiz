@@ -2,19 +2,16 @@ import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   connectPlayer,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
   type MockSocket,
 } from './test-utils';
 
 describe('GameGateway — one live connection per team + admin kick', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
 
@@ -121,7 +118,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
   it('notifies and disconnects the connected socket when the admin kicks its team', async () => {
     const playerA = await joinAsPlayer('socket-a');
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -137,7 +134,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
   it('frees the connection slot so a new device can join after a kick', async () => {
     const playerA = await joinAsPlayer('socket-a');
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -157,7 +154,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
   it('does nothing when kicking a team that has no connected socket', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 

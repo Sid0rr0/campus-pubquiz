@@ -25,6 +25,9 @@ import {
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
+import type { AuthUser } from '@campus-pubquiz/types';
+import { extractSessionCookie } from '@/auth/session-cookie';
+import { SessionService } from '@/auth/session.service';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
@@ -38,7 +41,7 @@ const VALID_ROOMS: string[] = [
 ];
 
 @WebSocketGateway({
-  cors: { origin: corsOriginValidator },
+  cors: { origin: corsOriginValidator, credentials: true },
 })
 export class GameGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
@@ -54,6 +57,7 @@ export class GameGateway
     private readonly teamService: TeamService,
     private readonly answerService: AnswerService,
     private readonly bonusService: BonusService,
+    private readonly sessions: SessionService,
     private readonly orm: MikroORM,
   ) {}
 
@@ -64,6 +68,7 @@ export class GameGateway
     }
   }
 
+  @CreateRequestContext()
   async handleConnection(client: Socket): Promise<void> {
     const role = client.handshake.query.role;
 
@@ -75,13 +80,17 @@ export class GameGateway
       return;
     }
 
-    if (role === SOCKET_ROOMS.ADMIN && !this.isValidAdminPassword(client)) {
-      this.logger.warn(
-        `Rejected connection ${client.id}: invalid admin password`,
-      );
-      client.emit('exception', 'Invalid admin password');
-      client.disconnect();
-      return;
+    if (role === SOCKET_ROOMS.ADMIN) {
+      const user = await this.resolveAdminUser(client);
+      if (!user) {
+        this.logger.warn(
+          `Rejected connection ${client.id}: invalid or expired session`,
+        );
+        client.emit('exception', 'Invalid or expired session');
+        client.disconnect();
+        return;
+      }
+      (client.data as { user?: AuthUser }).user = user;
     }
 
     await client.join(role);
@@ -460,12 +469,10 @@ export class GameGateway
     return { questionId, question, answers };
   }
 
-  private isValidAdminPassword(client: Socket): boolean {
-    const password: unknown = client.handshake.auth.password;
-    return (
-      typeof password === 'string' &&
-      password.length > 0 &&
-      password === process.env.ADMIN_PASSWORD
-    );
+  private async resolveAdminUser(client: Socket): Promise<AuthUser | null> {
+    const token = extractSessionCookie(client.handshake.headers.cookie);
+    if (!token) return null;
+    const validated = await this.sessions.validate(token);
+    return validated?.user ?? null;
   }
 }

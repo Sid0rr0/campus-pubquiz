@@ -2,18 +2,15 @@ import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
   type MockAnswerService,
 } from './test-utils';
 
 describe('GameGateway — admin actions', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
   let answerService: MockAnswerService;
@@ -24,7 +21,7 @@ describe('GameGateway — admin actions', () => {
 
   it('applies an admin action and broadcasts the updated snapshot to all three rooms', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -44,7 +41,7 @@ describe('GameGateway — admin actions', () => {
 
   it('recomputes the leaderboard when toggled on, so every joined team shows up even before any grading', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -70,7 +67,7 @@ describe('GameGateway — admin actions', () => {
 
   it('does not recompute the leaderboard when toggled off', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -98,7 +95,7 @@ describe('GameGateway — admin actions', () => {
 
   it('propagates an illegal-transition error for an out-of-order admin action without broadcasting', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 

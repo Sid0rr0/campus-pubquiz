@@ -1,6 +1,12 @@
 import { MikroORM } from '@mikro-orm/core';
 import type { Server, Socket } from 'socket.io';
-import { SOCKET_ROOMS, type GameProgress } from '@campus-pubquiz/types';
+import {
+  SOCKET_ROOMS,
+  type AuthUser,
+  type GameProgress,
+} from '@campus-pubquiz/types';
+import { SESSION_COOKIE_NAME } from '@/auth/session-cookie';
+import type { SessionService } from '@/auth/session.service';
 import type { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
@@ -20,7 +26,46 @@ export function createFakeOrm(): MikroORM {
   return Object.assign(Object.create(MikroORM.prototype) as MikroORM, { em });
 }
 
-export const ADMIN_PASSWORD = 'test-admin-password';
+export const TEST_SESSION_TOKEN = 'test-session-token';
+
+export const TEST_ADMIN_USER: AuthUser = {
+  id: 1,
+  username: 'test-admin',
+  role: 'admin',
+  status: 'active',
+};
+
+export const TEST_MODERATOR_USER: AuthUser = {
+  id: 2,
+  username: 'test-moderator',
+  role: 'moderator',
+  status: 'active',
+};
+
+/** Validates TEST_SESSION_TOKEN as an admin by default; pass a different
+ * token->user map (e.g. { [TEST_SESSION_TOKEN]: TEST_MODERATOR_USER }) to
+ * test moderator admission, or {} to test rejection of an unknown token. */
+export function createFakeSessionService(
+  validTokens: Record<string, AuthUser> = {
+    [TEST_SESSION_TOKEN]: TEST_ADMIN_USER,
+  },
+) {
+  return {
+    validate: jest.fn((token: string | undefined) =>
+      Promise.resolve(
+        typeof token === 'string' && token in validTokens
+          ? { user: validTokens[token] }
+          : null,
+      ),
+    ),
+  };
+}
+
+export type MockSessionService = ReturnType<typeof createFakeSessionService>;
+
+export function asSessionService(mock: MockSessionService): SessionService {
+  return mock as unknown as SessionService;
+}
 
 export const FIXTURE_SEEDED_GAME: SeededGame = {
   quizId: 1,
@@ -246,11 +291,18 @@ export function createMockSocket(
   id = 'socket-1',
 ) {
   const rooms = new Set<string>();
+  const cookie = auth.token
+    ? `${SESSION_COOKIE_NAME}=${auth.token}`
+    : undefined;
   const socket = {
     id,
-    handshake: { query: role === undefined ? {} : { role }, auth },
+    handshake: {
+      query: role === undefined ? {} : { role },
+      headers: { cookie },
+    },
     join: jest.fn((room: string) => rooms.add(room)),
     rooms,
+    data: {} as Record<string, unknown>,
     emit: jest.fn(),
     connected: true,
     disconnect: jest.fn(),
@@ -305,6 +357,7 @@ export interface TestGateway {
   answerService: MockAnswerService;
   bonusService: MockBonusService;
   seedService: MockSeedService;
+  sessionService: MockSessionService;
 }
 
 /** Builds a GameGateway wired to fresh fake services/mock server, seeded with
@@ -320,11 +373,13 @@ export async function createTestGateway(): Promise<TestGateway> {
   const teamService = createFakeTeamService();
   const answerService = createFakeAnswerService();
   const bonusService = createFakeBonusService();
+  const sessionService = createFakeSessionService();
   const gateway = new GameGateway(
     gameStateService,
     asTeamService(teamService),
     asAnswerService(answerService),
     asBonusService(bonusService),
+    asSessionService(sessionService),
     createFakeOrm(),
   );
   const server = createMockServer();
@@ -336,6 +391,7 @@ export async function createTestGateway(): Promise<TestGateway> {
     answerService,
     bonusService,
     seedService,
+    sessionService,
   };
 }
 
@@ -345,7 +401,7 @@ export async function openFirstQuestion(
   server: MockServer,
 ): Promise<void> {
   const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-    password: ADMIN_PASSWORD,
+    token: TEST_SESSION_TOKEN,
   });
   await gateway.handleConnection(asSocket(admin));
   await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
@@ -353,17 +409,4 @@ export async function openFirstQuestion(
   await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> r1q1
   server.to.mockClear();
   server.emit.mockClear();
-}
-
-/** Sets process.env.ADMIN_PASSWORD for the suite and restores the original value after. */
-export function useAdminPasswordEnv(): void {
-  const originalAdminPassword = process.env.ADMIN_PASSWORD;
-
-  beforeAll(() => {
-    process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
-  });
-
-  afterAll(() => {
-    process.env.ADMIN_PASSWORD = originalAdminPassword;
-  });
 }

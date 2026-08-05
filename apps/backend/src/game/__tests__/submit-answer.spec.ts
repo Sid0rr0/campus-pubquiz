@@ -2,19 +2,16 @@ import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   openFirstQuestion,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
   type MockAnswerService,
 } from './test-utils';
 
 describe('GameGateway — submit answer', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
   let answerService: MockAnswerService;
@@ -116,7 +113,7 @@ describe('GameGateway — submit answer', () => {
 
   it('rejects SUBMIT_ANSWER from a non-players client', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 

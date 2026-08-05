@@ -2,18 +2,15 @@ import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
   type MockAnswerService,
 } from './test-utils';
 
 describe('GameGateway — grading', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
   let answerService: MockAnswerService;
@@ -24,7 +21,7 @@ describe('GameGateway — grading', () => {
 
   it('grades an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -62,7 +59,7 @@ describe('GameGateway — grading', () => {
 
   it('refreshes the leaderboard and broadcasts STATE_UPDATED to all three rooms after grading', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -104,7 +101,7 @@ describe('GameGateway — grading', () => {
 
   it('lists answers for a requested block question to the requesting admin only', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 

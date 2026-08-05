@@ -3,19 +3,16 @@ import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { InvalidBonusAwardError } from '@/bonus/bonus.service';
 import type { GameGateway } from '@/game/game.gateway';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
   asSocket,
-  useAdminPasswordEnv,
   type MockServer,
   type MockBonusService,
   type MockAnswerService,
 } from './test-utils';
 
 describe('GameGateway — award bonus', () => {
-  useAdminPasswordEnv();
-
   let gateway: GameGateway;
   let server: MockServer;
   let bonusService: MockBonusService;
@@ -28,7 +25,7 @@ describe('GameGateway — award bonus', () => {
 
   it('awards a predefined-category bonus and refreshes the leaderboard for all rooms', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -66,7 +63,7 @@ describe('GameGateway — award bonus', () => {
 
   it('awards a custom bonus with an admin-written reason', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
@@ -102,7 +99,7 @@ describe('GameGateway — award bonus', () => {
 
   it('surfaces a validation error from BonusService as a WsException', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
     bonusService.award.mockRejectedValueOnce(

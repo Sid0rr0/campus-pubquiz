@@ -3,12 +3,13 @@ import type { SeededGame } from '@/db/seed.types';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
 import {
-  ADMIN_PASSWORD,
+  TEST_SESSION_TOKEN,
   createFakeOrm,
   createFakeGameProgressRepository,
   createFakeTeamService,
   createFakeAnswerService,
   createFakeBonusService,
+  createFakeSessionService,
   createMockSocket,
   createMockServer,
   asSocket,
@@ -18,13 +19,11 @@ import {
   asTeamService,
   asAnswerService,
   asBonusService,
-  useAdminPasswordEnv,
+  asSessionService,
   type MockServer,
 } from './test-utils';
 
 describe('GameGateway — question lock auto-advance timer', () => {
-  useAdminPasswordEnv();
-
   const BREAK_AFTER_GAME: SeededGame = {
     quizId: 3,
     gameSessionId: 103,
@@ -73,6 +72,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       asTeamService(createFakeTeamService()),
       asAnswerService(createFakeAnswerService()),
       asBonusService(createFakeBonusService()),
+      asSessionService(createFakeSessionService()),
       createFakeOrm(),
     );
     const localServer = createMockServer();
@@ -86,7 +86,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
     localServer: MockServer,
   ) {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await localGateway.handleConnection(asSocket(admin));
     await localGateway.handleAdminAction(asSocket(admin), {
@@ -193,7 +193,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
     const { gateway: localGateway, server: localServer } =
       await createGatewayWithBreakAfterGame();
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      password: ADMIN_PASSWORD,
+      token: TEST_SESSION_TOKEN,
     });
     await localGateway.handleConnection(asSocket(admin));
     await localGateway.handleAdminAction(asSocket(admin), {
