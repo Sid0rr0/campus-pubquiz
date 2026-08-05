@@ -23,6 +23,7 @@ const lobby: GameProgress = {
   questionIndex: 0,
   isLeaderboardVisible: false,
   revealIndex: 0,
+  furthestOpenIndex: 0,
 };
 
 describe('getNextGameState', () => {
@@ -34,6 +35,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -46,6 +48,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -65,6 +68,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -77,6 +81,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -87,6 +92,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -95,6 +101,9 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      // Just opened for the first time — furthestOpenIndex tracks forward
+      // with it, block position 1 (round 0's second question).
+      furthestOpenIndex: 1,
     });
   });
 
@@ -105,6 +114,7 @@ describe('getNextGameState', () => {
       questionIndex: 1, // last question of round 0 (questionCount: 2)
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -113,6 +123,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -123,6 +134,7 @@ describe('getNextGameState', () => {
       questionIndex: 1, // last question of round 1 (breakAfter: true)
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('locking');
@@ -137,6 +149,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(locking, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...locking, status: 'break_intro', revealIndex: 3 }); // last of 4 questions in the 2-round block
@@ -149,6 +162,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(locking, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...locking, status: 'question_open' });
@@ -161,6 +175,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 3,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(breakIntro, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...breakIntro, status: 'break' });
@@ -173,6 +188,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 3,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(breakIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...breakIntro, status: 'locking' });
@@ -185,6 +201,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(grading, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('reveal_intro');
@@ -198,6 +215,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealIntro, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...revealIntro, status: 'reveal' });
@@ -210,6 +228,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 2, // round 1's first question within the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -218,6 +237,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 3,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -228,6 +248,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 1, // round 0's last question within the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -236,6 +257,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 2, // round 1's first question
+      furthestOpenIndex: 0,
     });
   });
 
@@ -246,6 +268,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 3, // last of 4 questions in the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('ended');
@@ -266,6 +289,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0, // round 0 alone is a 1-question block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'ADVANCE', threeRounds);
     expect(next).toEqual({
@@ -274,6 +298,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -284,6 +309,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 3, // round 1's second question within the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...revealing, revealIndex: 2 });
@@ -296,6 +322,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 2, // round 1's first question within the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...revealing, status: 'reveal_intro' });
@@ -308,6 +335,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 2, // round 1's first question within the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...revealIntro, status: 'reveal', revealIndex: 1 });
@@ -320,6 +348,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     // Re-entering break restarts review at the block's last question, same
@@ -344,6 +373,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0, // first question of the second block's reveal
+      furthestOpenIndex: 0,
     };
     const backToBreak = getNextGameState(revealIntro, 'PREVIOUS', breakFirstThenTwo);
     expect(backToBreak).toEqual({ ...revealIntro, status: 'break', revealIndex: 1 }); // last of 2 questions in round 1's block
@@ -358,6 +388,7 @@ describe('getNextGameState', () => {
       questionIndex: 0, // last (only) question of round 0
       isLeaderboardVisible: false,
       revealIndex: 0, // last (only) reveal question of round 0's block
+      furthestOpenIndex: 0,
     });
   });
 
@@ -368,6 +399,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(revealing, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...revealing, status: 'reveal_intro' });
@@ -380,6 +412,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...open, isLeaderboardVisible: true });
@@ -392,6 +425,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: true,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(openWithLeaderboard, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...openWithLeaderboard, isLeaderboardVisible: false });
@@ -404,6 +438,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(ended, 'TOGGLE_LEADERBOARD', twoRoundsWithBreakAfterSecond);
     expect(next.isLeaderboardVisible).toBe(true);
@@ -417,6 +452,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: true,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(
       openWithLeaderboard,
@@ -433,6 +469,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(() =>
       getNextGameState(openWithoutLeaderboard, 'REVEAL_NEXT_TEAM', twoRoundsWithBreakAfterSecond),
@@ -446,6 +483,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(grading, 'END_QUIZ', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('ended');
@@ -471,6 +509,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(() => getNextGameState(ended, 'END_QUIZ', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
@@ -484,6 +523,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(() => getNextGameState(ended, 'ADVANCE', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
@@ -500,6 +540,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(() => getNextGameState(open, 'ADVANCE', badContext)).toThrow(InvalidQuizConfigError);
   });
@@ -511,6 +552,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -519,6 +561,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -529,6 +572,7 @@ describe('getNextGameState', () => {
       questionIndex: 0, // first question of round 1, still the same open block as round 0
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -537,6 +581,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -547,6 +592,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(roundIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -555,6 +601,7 @@ describe('getNextGameState', () => {
       questionIndex: 1, // last question of round 0 (questionCount: 2)
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -565,6 +612,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(open, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({
@@ -573,6 +621,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -589,6 +638,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(roundIntro, 'PREVIOUS', breakFirstThenTwo);
     expect(next).toEqual({
@@ -597,6 +647,7 @@ describe('getNextGameState', () => {
       questionIndex: 0, // last (only) question of round 0
       isLeaderboardVisible: false,
       revealIndex: 0, // last (only) reveal question of round 0's block
+      furthestOpenIndex: 0,
     });
   });
 
@@ -607,6 +658,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 3, // last of 4 questions in the 2-round block
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...grading, revealIndex: 2 });
@@ -625,6 +677,7 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     const next = getNextGameState(grading, 'PREVIOUS', breakFirstThenTwo);
     expect(next).toEqual({
@@ -633,6 +686,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -643,10 +697,51 @@ describe('getNextGameState', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(() => getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
+  });
+
+  it("carries furthestOpenIndex forward as ADVANCE opens questions, and doesn't shrink it when Previous walks back", () => {
+    let progress = getNextGameState({ ...lobby, status: 'rules' }, 'ADVANCE', twoRoundsWithBreakAfterSecond); // round_intro(0,0)
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // question_open(0,0), furthest 0
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // question_open(0,1), furthest 1
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // round_intro(1,0), furthest still 1 (no break)
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // question_open(1,0), furthest 2
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // question_open(1,1), furthest 3
+
+    const steppedBack = getNextGameState(progress, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(steppedBack).toMatchObject({
+      status: 'question_open',
+      roundIndex: 1,
+      questionIndex: 0,
+      furthestOpenIndex: 3, // unchanged — question (1,1) stays open even though the display stepped back off it
+    });
+  });
+
+  it('resets furthestOpenIndex to 0 once a new block starts after the previous block is fully revealed', () => {
+    const twoSingleQuestionBlocks: GameContext = {
+      rounds: [
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: true },
+      ],
+    };
+    let progress = getNextGameState({ ...lobby, status: 'rules' }, 'ADVANCE', twoSingleQuestionBlocks); // round_intro(0)
+    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // question_open(0,0), furthest 0
+    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // locking
+    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // break_intro
+    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // break
+    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // reveal_intro (round 0)
+    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // reveal
+    const nextBlockIntro = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // round_intro(1) — new block
+
+    expect(nextBlockIntro).toMatchObject({
+      status: 'round_intro',
+      roundIndex: 1,
+      furthestOpenIndex: 0,
+    });
   });
 });
 
@@ -658,6 +753,7 @@ describe('isLastQuestionOfBreakAfterRound', () => {
       questionIndex: 1, // last question of round 1 (questionCount: 2)
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(isLastQuestionOfBreakAfterRound(progress, twoRoundsWithBreakAfterSecond)).toBe(true);
   });
@@ -669,6 +765,7 @@ describe('isLastQuestionOfBreakAfterRound', () => {
       questionIndex: 0, // first of two questions in round 1
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(isLastQuestionOfBreakAfterRound(progress, twoRoundsWithBreakAfterSecond)).toBe(false);
   });
@@ -680,6 +777,7 @@ describe('isLastQuestionOfBreakAfterRound', () => {
       questionIndex: 1, // last question of round 0 (breakAfter: false)
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     };
     expect(isLastQuestionOfBreakAfterRound(progress, twoRoundsWithBreakAfterSecond)).toBe(false);
   });

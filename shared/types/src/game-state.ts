@@ -81,6 +81,14 @@ export interface GameProgress {
    * 'break_intro'/'break'/'reveal_intro'/'reveal'.
    */
   revealIndex: number;
+  /**
+   * Furthest position (block-relative, same numbering as revealIndex)
+   * reached via ADVANCE while the current block's questions are open —
+   * monotonic within a block, so stepping back with Previous never makes an
+   * already-shown question unanswerable again. Reset to 0 whenever a new
+   * block starts. Meaningless outside 'question_open'/'locking'.
+   */
+  furthestOpenIndex: number;
 }
 
 export class IllegalGameTransitionError extends Error {
@@ -132,7 +140,16 @@ function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): 
   const isLastQuestionInRound = progress.questionIndex + 1 >= round.questionCount;
 
   if (!isLastQuestionInRound) {
-    return { ...progress, status: 'question_open', questionIndex: progress.questionIndex + 1 };
+    const questionIndex = progress.questionIndex + 1;
+    return {
+      ...progress,
+      status: 'question_open',
+      questionIndex,
+      furthestOpenIndex: Math.max(
+        progress.furthestOpenIndex,
+        getBlockPositionForQuestion(progress.roundIndex, questionIndex, context),
+      ),
+    };
   }
 
   if (round.breakAfter) {
@@ -236,6 +253,34 @@ function getRoundIndexForBlockPosition(
   return roundIndex;
 }
 
+/** Inverse of `getRoundIndexForBlockPosition`: the (roundIndex, questionIndex) pair `position` refers to. */
+export function getRoundAndQuestionForBlockPosition(
+  blockStartRoundIndex: number,
+  position: number,
+  context: GameContext,
+): { roundIndex: number; questionIndex: number } {
+  const roundIndex = getRoundIndexForBlockPosition(blockStartRoundIndex, position, context);
+  let consumed = 0;
+  for (let index = blockStartRoundIndex; index < roundIndex; index += 1) {
+    consumed += context.rounds[index].questionCount;
+  }
+  return { roundIndex, questionIndex: position - consumed };
+}
+
+/** Block-relative position (same numbering as revealIndex/furthestOpenIndex) of a given (roundIndex, questionIndex) pair. */
+function getBlockPositionForQuestion(
+  roundIndex: number,
+  questionIndex: number,
+  context: GameContext,
+): number {
+  const blockStart = getBlockStartRoundIndex(roundIndex, context);
+  let position = questionIndex;
+  for (let index = blockStart; index < roundIndex; index += 1) {
+    position += context.rounds[index].questionCount;
+  }
+  return position;
+}
+
 /** True when block position `position` is the first question of its round within the block — including the block's very first question. */
 function isFirstQuestionOfItsRound(
   blockStartRoundIndex: number,
@@ -267,12 +312,15 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
     return { ...progress, status: 'ended', revealIndex: 0 };
   }
 
+  // A new block starts here — its questions haven't been opened yet, so the
+  // previous block's furthest-open watermark must not leak forward into it.
   return {
     ...progress,
     status: 'round_intro',
     roundIndex: progress.roundIndex + 1,
     questionIndex: 0,
     revealIndex: 0,
+    furthestOpenIndex: 0,
   };
 }
 
@@ -355,7 +403,15 @@ export function getNextGameState(
         return { ...progress, status: 'round_intro', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
       }
       if (progress.status === 'round_intro') {
-        return { ...progress, status: 'question_open', questionIndex: 0 };
+        return {
+          ...progress,
+          status: 'question_open',
+          questionIndex: 0,
+          furthestOpenIndex: Math.max(
+            progress.furthestOpenIndex,
+            getBlockPositionForQuestion(progress.roundIndex, 0, context),
+          ),
+        };
       }
       if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
       if (progress.status === 'locking') {

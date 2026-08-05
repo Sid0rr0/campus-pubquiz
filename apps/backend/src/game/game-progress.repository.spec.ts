@@ -61,6 +61,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -71,6 +72,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 2,
       isLeaderboardVisible: true,
       revealIndex: 0,
+      furthestOpenIndex: 2,
     });
 
     const reloaded = await repository.load(sessionId);
@@ -80,6 +82,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 2,
       isLeaderboardVisible: true,
       revealIndex: 0,
+      furthestOpenIndex: 2,
     });
   });
 
@@ -90,6 +93,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 2,
       isLeaderboardVisible: false,
       revealIndex: 3,
+      furthestOpenIndex: 0,
     });
 
     const reloaded = await repository.load(sessionId);
@@ -121,6 +125,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 

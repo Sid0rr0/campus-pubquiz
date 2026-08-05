@@ -13,6 +13,7 @@ export class GameSession extends BaseEntity {
     | 'currentRoundIndex'
     | 'currentQuestionIndex'
     | 'revealIndex'
+    | 'furthestOpenIndex'
     | 'isLeaderboardVisible';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
@@ -32,6 +33,9 @@ export class GameSession extends BaseEntity {
 
   @Property({ default: 0 })
   revealIndex: number = 0;
+
+  @Property({ default: 0 })
+  furthestOpenIndex: number = 0;
 
   @Property({ default: false })
   isLeaderboardVisible: boolean = false;

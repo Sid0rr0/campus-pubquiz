@@ -678,6 +678,22 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "boolean"
+        },
+        "furthest_open_index": {
+          "name": "furthest_open_index",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
         }
       },
       "name": "game_sessions",

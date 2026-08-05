@@ -17,6 +17,7 @@ export class GameProgressRepository {
     session.currentRoundIndex = progress.roundIndex;
     session.currentQuestionIndex = progress.questionIndex;
     session.revealIndex = progress.revealIndex;
+    session.furthestOpenIndex = progress.furthestOpenIndex;
     session.isLeaderboardVisible = progress.isLeaderboardVisible;
     await this.gameSessions.getEntityManager().flush();
   }
@@ -38,6 +39,7 @@ export class GameProgressRepository {
       roundIndex: session.currentRoundIndex,
       questionIndex: session.currentQuestionIndex,
       revealIndex: session.revealIndex,
+      furthestOpenIndex: session.furthestOpenIndex,
       isLeaderboardVisible: session.isLeaderboardVisible,
     };
   }

@@ -34,6 +34,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 
@@ -44,6 +45,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     const rehydratedService = new GameStateService(
       asSeedService(createFakeGameStateSeedService()),
@@ -59,6 +61,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe(22);
   });
@@ -85,6 +88,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(seedService.createSession).toHaveBeenCalledWith(2);
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
@@ -105,6 +109,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(snapshot.leaderboard).toEqual([]);
     expect(service.getActiveQuizId()).toBe(2);
@@ -122,6 +127,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 

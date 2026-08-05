@@ -34,6 +34,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(snapshot.currentQuestion).toBeNull();
   });
@@ -47,6 +48,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(snapshot.roundTitle).toBe('General Knowledge');
     expect(snapshot.currentQuestion).toBeNull();
@@ -62,6 +64,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe(21);
   });
@@ -77,6 +80,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 1, // r1q2 (block position 1) just opened
     });
     expect(snapshot.currentQuestion?.id).toBe(22);
   });
@@ -93,6 +97,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 1, // r1q2 (block position 1) was already opened
     });
     expect(snapshot.roundTitle).toBe('Landmarks & Flags');
     expect(snapshot.currentQuestion).toBeNull();
@@ -111,6 +116,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 2, // r2q1 (block position 2) just opened
     });
     expect(snapshot.currentQuestion?.id).toBe(23);
   });
@@ -127,6 +133,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 1, // stepping back with PREVIOUS doesn't shrink it — r1q2 stayed open
     });
     expect(snapshot.currentQuestion?.id).toBe(21);
   });
@@ -142,6 +149,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     expect(snapshot.currentQuestion).toBeNull();
   });
@@ -156,6 +164,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
   });
 

@@ -7,6 +7,7 @@ export function progress(overrides: Partial<GameProgress> = {}): GameProgress {
     questionIndex: 0,
     isLeaderboardVisible: false,
     revealIndex: 0,
+    furthestOpenIndex: 0,
     ...overrides,
   };
 }

@@ -40,6 +40,32 @@ describe('GameStateService — block questions and response indicators', () => {
     ]);
   });
 
+  it('keeps an already-opened question answerable after the admin steps the display back with PREVIOUS', async () => {
+    await service.applyAction('START_QUIZ');
+    await service.applyAction('ADVANCE'); // -> round_intro(0)
+    await service.applyAction('ADVANCE'); // -> r1q1
+    await service.applyAction('ADVANCE'); // -> r1q2
+    await service.applyAction('ADVANCE'); // -> round_intro(1)
+    await service.applyAction('ADVANCE'); // -> r2q1 (23) — furthest reached: r1q1, r1q2, r2q1
+    expect(service.getSnapshot().blockQuestions.map((q) => q.id)).toEqual([
+      21, 22, 23,
+    ]);
+
+    await service.applyAction('PREVIOUS'); // -> round_intro(1)
+    const back = await service.applyAction('PREVIOUS'); // -> r1q2 (22) again, display steps backward
+
+    expect(back.progress.status).toBe('question_open');
+    expect(back.currentQuestion?.id).toBe(22);
+    // r2q1 was already shown on display before stepping back — it must stay
+    // revealed/answerable for players even though it's no longer on screen.
+    expect(back.blockQuestions.map((q) => q.id)).toEqual([21, 22, 23]);
+    expect(service.isQuestionOpenForAnswering(23)).toBe(true);
+    // Only r2q2 has genuinely never been shown yet.
+    expect(back.upcomingQuestions).toEqual([
+      { roundNumber: 2, questionNumberInRound: 2 },
+    ]);
+  });
+
   it('keeps the whole locked block browsable during the grading break', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> round_intro(0)

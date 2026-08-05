@@ -135,6 +135,7 @@ describe('GameStateService — question lock countdown', () => {
       questionIndex: 1, // last question of round 2 (breakAfter: true)
       isLeaderboardVisible: false,
       revealIndex: 0,
+      furthestOpenIndex: 0,
     });
     const rehydratedService = new GameStateService(
       asSeedService(createFakeGameStateSeedService()),

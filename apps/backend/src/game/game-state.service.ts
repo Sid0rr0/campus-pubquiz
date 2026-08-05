@@ -4,6 +4,7 @@ import {
   getBlockStartRoundIndex,
   getNextGameState,
   getQuizStructureSummary,
+  getRoundAndQuestionForBlockPosition,
   type AdminQuestionContext,
   type BlockQuestionView,
   type BlockRevealQuestionView,
@@ -28,6 +29,7 @@ const LOBBY_PROGRESS: GameProgress = {
   questionIndex: 0,
   isLeaderboardVisible: false,
   revealIndex: 0,
+  furthestOpenIndex: 0,
 };
 
 /** How long the 'locking' countdown runs before auto-advancing into the break. */
@@ -304,11 +306,14 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * The block's questions (with their correct answers) revealed so far:
-   * everything up to the current question while one is open (or locking),
+   * everything up to the furthest question ever opened (not just the one
+   * currently on screen — PREVIOUS can walk the display backward without
+   * re-hiding questions already shown) while the block is open (or locking),
    * or the whole just-locked block during break/reveal. Empty otherwise.
    */
   private getBlockSeededQuestions(): BlockRevealQuestionView[] {
-    const { status, roundIndex, questionIndex } = this.progress;
+    const { status, roundIndex, questionIndex, furthestOpenIndex } =
+      this.progress;
     if (
       status !== 'question_open' &&
       status !== 'locking' &&
@@ -320,24 +325,34 @@ export class GameStateService implements OnModuleInit {
       return [];
     }
 
+    const context = this.getContext();
     const rounds = this.getSeededGame().rounds;
-    const blockStart = getBlockStartRoundIndex(roundIndex, this.getContext());
+    const blockStart = getBlockStartRoundIndex(roundIndex, context);
+    const isOpenPhase = status === 'question_open' || status === 'locking';
+    const revealBoundary = isOpenPhase
+      ? getRoundAndQuestionForBlockPosition(
+          blockStart,
+          furthestOpenIndex,
+          context,
+        )
+      : { roundIndex, questionIndex };
 
-    return rounds.slice(blockStart, roundIndex + 1).flatMap((round, offset) => {
-      const currentRoundIndex = blockStart + offset;
-      const isCurrentRound = currentRoundIndex === roundIndex;
-      const isPartiallyRevealed =
-        (status === 'question_open' || status === 'locking') && isCurrentRound;
-      const questions = isPartiallyRevealed
-        ? round.questions.slice(0, questionIndex + 1)
-        : round.questions;
-      return questions.map((question, questionOffset) => ({
-        ...question,
-        roundNumber: currentRoundIndex + 1,
-        questionNumberInRound: questionOffset + 1,
-        roundTitle: round.title,
-      }));
-    });
+    return rounds
+      .slice(blockStart, revealBoundary.roundIndex + 1)
+      .flatMap((round, offset) => {
+        const currentRoundIndex = blockStart + offset;
+        const isCurrentRound = currentRoundIndex === revealBoundary.roundIndex;
+        const isPartiallyRevealed = isOpenPhase && isCurrentRound;
+        const questions = isPartiallyRevealed
+          ? round.questions.slice(0, revealBoundary.questionIndex + 1)
+          : round.questions;
+        return questions.map((question, questionOffset) => ({
+          ...question,
+          roundNumber: currentRoundIndex + 1,
+          questionNumberInRound: questionOffset + 1,
+          roundTitle: round.title,
+        }));
+      });
   }
 
   /**
@@ -351,28 +366,38 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Positions of the current round's remaining questions, not open yet — the
-   * whole round's shape, so the picker doesn't grow as questions unlock.
-   * Round boundaries within a block only advance through a round_intro
-   * screen, so these can only ever be later in the same round.
+   * Positions of the furthest-opened round's remaining questions, not open
+   * yet — the whole round's shape, so the picker doesn't grow as questions
+   * unlock. Based on furthestOpenIndex rather than the literal display
+   * position, so stepping the display back with PREVIOUS doesn't re-mark
+   * already-opened questions as upcoming. Round boundaries within a block
+   * only advance through a round_intro screen, so these can only ever be
+   * later in the furthest-opened round.
    */
   private getUpcomingQuestionPositions(): QuestionPosition[] {
-    const { status, roundIndex, questionIndex } = this.progress;
+    const { status, roundIndex, furthestOpenIndex } = this.progress;
     if (status !== 'question_open' && status !== 'locking') {
       return [];
     }
-    const round = this.getSeededGame().rounds[roundIndex];
+    const context = this.getContext();
+    const blockStart = getBlockStartRoundIndex(roundIndex, context);
+    const furthest = getRoundAndQuestionForBlockPosition(
+      blockStart,
+      furthestOpenIndex,
+      context,
+    );
+    const round = this.getSeededGame().rounds[furthest.roundIndex];
     if (!round) {
       return [];
     }
     const positions: QuestionPosition[] = [];
     for (
-      let index = questionIndex + 1;
+      let index = furthest.questionIndex + 1;
       index < round.questions.length;
       index += 1
     ) {
       positions.push({
-        roundNumber: roundIndex + 1,
+        roundNumber: furthest.roundIndex + 1,
         questionNumberInRound: index + 1,
       });
     }
