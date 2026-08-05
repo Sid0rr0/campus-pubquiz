@@ -1,4 +1,4 @@
-import type { GameAction, GameProgress, QuizStructureSummary } from './game-state';
+import type { GameAction, GameProgress, GameStatus, QuizStructureSummary } from './game-state';
 
 export const SOCKET_EVENTS = {
   // server -> client
@@ -23,6 +23,24 @@ export const SOCKET_ROOMS = {
   ADMIN: 'admin',
   PLAYERS: 'players',
 } as const;
+
+export type SocketRoomName = (typeof SOCKET_ROOMS)[keyof typeof SOCKET_ROOMS];
+
+/**
+ * Socket.IO handshake `query` contract. `code` is optional so today's
+ * single-session handshake (no code) keeps working unchanged; once a client
+ * knows its session's joinCode it passes it here to be routed to that
+ * session's rooms instead of the sole implicit one.
+ */
+export interface GameSocketHandshakeQuery {
+  role: SocketRoomName;
+  code?: string;
+}
+
+/** Room name for one role within one session — keeps the `${role}:${code}` naming convention in one place. */
+export function sessionRoom(code: string, role: SocketRoomName): string {
+  return `${role}:${code}`;
+}
 
 export type QuestionType = 'free_text' | 'multiple_choice' | 'picture' | 'audio';
 
@@ -211,6 +229,20 @@ export interface QuizzesListedPayload {
 
 export interface SelectQuizPayload {
   quizId: number;
+}
+
+/** Request body for POST /sessions — start a new concurrent GameSession for a quiz. */
+export interface CreateSessionPayload {
+  quizId: number;
+}
+
+/** One running GameSession, as listed by GET /sessions for the admin session picker. */
+export interface ActiveSessionSummary {
+  joinCode: string;
+  quizId: number;
+  quizTitle: string;
+  status: GameStatus;
+  teamCount: number;
 }
 
 export interface ListAnswersPayload {
