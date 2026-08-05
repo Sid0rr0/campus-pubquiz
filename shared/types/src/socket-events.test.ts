@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  sessionRoom,
+  type ActiveSessionSummary,
+  type CreateSessionPayload,
+  type GameSocketHandshakeQuery,
   type JoinAcceptedPayload,
   type ListAnswersPayload,
   type QuizzesListedPayload,
@@ -140,5 +144,54 @@ describe('SOCKET_ROOMS', () => {
       ADMIN: 'admin',
       PLAYERS: 'players',
     });
+  });
+});
+
+describe('sessionRoom', () => {
+  it('joins role and code with a colon so each session gets its own room per role', () => {
+    expect(sessionRoom('ABC234', SOCKET_ROOMS.DISPLAY)).toBe('display:ABC234');
+    expect(sessionRoom('ABC234', SOCKET_ROOMS.ADMIN)).toBe('admin:ABC234');
+    expect(sessionRoom('ABC234', SOCKET_ROOMS.PLAYERS)).toBe('players:ABC234');
+  });
+
+  it('produces distinct room names for different join codes with the same role', () => {
+    expect(sessionRoom('AAA111', SOCKET_ROOMS.DISPLAY)).not.toBe(
+      sessionRoom('BBB222', SOCKET_ROOMS.DISPLAY),
+    );
+  });
+});
+
+describe('GameSocketHandshakeQuery', () => {
+  it('allows a bare role (today\'s single-session handshake) with no code', () => {
+    const query: GameSocketHandshakeQuery = { role: SOCKET_ROOMS.ADMIN };
+
+    expect(query.code).toBeUndefined();
+  });
+
+  it('allows role plus an optional session code for multi-session connections', () => {
+    const query: GameSocketHandshakeQuery = { role: SOCKET_ROOMS.PLAYERS, code: 'ABC234' };
+
+    expect(query).toEqual({ role: 'players', code: 'ABC234' });
+  });
+});
+
+describe('session lifecycle payloads', () => {
+  it('CreateSessionPayload carries the quiz id to start a new concurrent session', () => {
+    const payload: CreateSessionPayload = { quizId: 5 };
+
+    expect(payload.quizId).toBe(5);
+  });
+
+  it('ActiveSessionSummary describes one running session for the admin session picker', () => {
+    const summary: ActiveSessionSummary = {
+      joinCode: 'ABC234',
+      quizId: 5,
+      quizTitle: 'Campus Pub Quiz Night',
+      status: 'question_open',
+      teamCount: 3,
+    };
+
+    expect(summary.joinCode).toBe('ABC234');
+    expect(summary.teamCount).toBe(3);
   });
 });
