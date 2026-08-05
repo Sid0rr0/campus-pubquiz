@@ -1,5 +1,6 @@
 import {
   Entity,
+  Index,
   ManyToOne,
   OptionalProps,
   Property,
@@ -13,6 +14,9 @@ import { AnswerRepository } from '@/db/repositories/answer.repository';
 
 @Entity({ tableName: 'answers', repository: () => AnswerRepository })
 @Unique({ properties: ['gameSession', 'question', 'team'] })
+// listForTeam() (answer.service.ts) filters by (gameSession, team), which
+// isn't a usable prefix of the unique index above (team is its 3rd column).
+@Index({ properties: ['gameSession', 'team'] })
 export class Answer extends BaseEntity {
   [OptionalProps]?: 'createdAt' | 'updatedAt' | 'pointsAwarded';
 

@@ -168,6 +168,17 @@
         },
         {
           "columnNames": [
+            "game_session_id",
+            "team_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "answers_game_session_id_team_id_index",
+          "unique": false,
+          "primary": false
+        },
+        {
+          "columnNames": [
             "id"
           ],
           "composite": false,
@@ -360,6 +371,17 @@
       "name": "bonus_awards",
       "schema": "public",
       "indexes": [
+        {
+          "columnNames": [
+            "game_session_id",
+            "team_id"
+          ],
+          "composite": true,
+          "constraint": false,
+          "keyName": "bonus_awards_game_session_id_team_id_index",
+          "unique": false,
+          "primary": false
+        },
         {
           "columnNames": [
             "id"

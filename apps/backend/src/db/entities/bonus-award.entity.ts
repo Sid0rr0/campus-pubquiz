@@ -1,6 +1,7 @@
 import {
   Entity,
   Enum,
+  Index,
   ManyToOne,
   OptionalProps,
   Property,
@@ -13,7 +14,10 @@ import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 
 const BONUS_CATEGORIES: BonusCategory[] = ['shot', 'selfie', 'custom'];
 
+// Supports computeLeaderboard()'s per-session, group-by-team aggregation
+// (answer.service.ts), which otherwise has no index to filter on at all.
 @Entity({ tableName: 'bonus_awards', repository: () => BonusAwardRepository })
+@Index({ properties: ['gameSession', 'team'] })
 export class BonusAward extends BaseEntity {
   [OptionalProps]?: 'createdAt' | 'updatedAt';
 
