@@ -5,16 +5,16 @@ import AdminPage from '@/app/admin/page';
 import { AuthApiError } from '@/app/lib/auth-api';
 import { progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockLogin, mockRegister, mockFetchMe, mockLogout } = vi.hoisted(
-  () => ({
+const { mockUseGameSocket, mockFetchQuizzes, mockLogin, mockRegister, mockFetchMe, mockLogout, searchParamsRef } =
+  vi.hoisted(() => ({
     mockUseGameSocket: vi.fn(),
     mockFetchQuizzes: vi.fn(),
     mockLogin: vi.fn(),
     mockRegister: vi.fn(),
     mockFetchMe: vi.fn(),
     mockLogout: vi.fn(),
-  }),
-);
+    searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
+  }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
@@ -24,6 +24,11 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
   return { ...actual, fetchQuizzes: mockFetchQuizzes };
 });
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => searchParamsRef.current,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
 
 vi.mock('@/app/lib/auth-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/auth-api')>();
@@ -41,6 +46,7 @@ const NO_SESSION_ERROR = new AuthApiError('Missing or invalid session cookie', 4
 
 describe('AdminPage — connection', () => {
   beforeEach(() => {
+    searchParamsRef.current = new URLSearchParams('code=TESTCODE');
     mockUseGameSocket.mockReset();
     mockFetchQuizzes.mockReset();
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
@@ -72,7 +78,7 @@ describe('AdminPage — connection', () => {
     await user.click(screen.getByRole('button', { name: /log in/i }));
 
     expect(mockLogin).toHaveBeenCalledWith('alice', 'hunter2');
-    await waitFor(() => expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true));
+    await waitFor(() => expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true, 'TESTCODE'));
   });
 
   it('restores an existing session after a refresh and reconnects automatically', async () => {
@@ -83,7 +89,7 @@ describe('AdminPage — connection', () => {
     render(<AdminPage />);
 
     await waitFor(() => expect(screen.getByText(/connecting…/i)).toBeInTheDocument());
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true);
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true, 'TESTCODE');
   });
 
   it('shows a pending-approval message when login fails because the account is pending', async () => {

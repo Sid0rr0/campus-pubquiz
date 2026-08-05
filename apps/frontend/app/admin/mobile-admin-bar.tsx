@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { GameAction } from '@campus-pubquiz/types';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
@@ -75,6 +76,12 @@ export function MobileAdminBar({
             <p className="text-sm font-bold">
               Status: {progressStatus} ({joinCode})
             </p>
+            <div className="flex gap-3 text-xs font-extrabold underline">
+              <Link href={`/display?code=${joinCode}`} target="_blank" rel="noopener noreferrer">
+                Open display
+              </Link>
+              <Link href="/admin">Switch session</Link>
+            </div>
             <AdminActions
               canStartQuiz={canStartQuiz}
               canEndQuiz={canEndQuiz}

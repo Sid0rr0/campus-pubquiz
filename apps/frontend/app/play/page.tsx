@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
@@ -31,6 +31,18 @@ function PlayPageContent() {
   const [hasStoredIdentity, setHasStoredIdentity] = useState(false);
   // null = follow the question currently shown on the big screen.
   const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(null);
+  // The session this connection is pinned to — from the URL up front, or
+  // filled in once storage/the join form supplies one. The socket only
+  // connects once this is known, so a fresh visitor with no code yet doesn't
+  // land in the server's single implicit "default" session by accident.
+  const [activeJoinCode, setActiveJoinCode] = useState<string | null>(codeFromUrl || null);
+  // Always holds the latest typed team code without making the join effect
+  // below re-fire on every keystroke (it should only fire on an actual
+  // identity/session change).
+  const teamCodeInputRef = useRef(teamCodeInput);
+  useEffect(() => {
+    teamCodeInputRef.current = teamCodeInput;
+  });
   const {
     snapshot,
     team,
@@ -38,7 +50,7 @@ function PlayPageContent() {
     joinTeam,
     submitAnswer,
     myAnswers = {},
-  } = useGameSocket('players');
+  } = useGameSocket('players', Boolean(activeJoinCode), activeJoinCode ?? undefined);
   const gameStatus = snapshot?.progress.status;
   const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
 
@@ -63,13 +75,33 @@ function PlayPageContent() {
       setNameInput(storedName);
       if (storedOptions.joinCode) {
         setCodeInput(storedOptions.joinCode);
+        // Only fills the gap when the URL didn't already pin a code — the URL
+        // is the stronger signal (e.g. a fresh QR scan for a different game).
+        setActiveJoinCode((current) => current ?? storedOptions.joinCode ?? null);
       }
       if (storedOptions.teamCode) {
         setTeamCodeInput(storedOptions.teamCode);
       }
-      joinTeam(storedName, storedOptions);
     }
-  }, [joinTeam]);
+    // The actual joinTeam call happens in the effect below, once the socket
+    // for activeJoinCode has had a chance to connect — calling it here would
+    // race the socket's own connecting effect when the code only came from
+    // storage (see the effect below for the full explanation).
+  }, []);
+
+  useEffect(() => {
+    // Fires once this connection's identity (team name + session code) is
+    // known, whichever of the join form / stored identity / URL supplied it.
+    // Deliberately excludes teamCodeInput from its deps (read via a ref
+    // instead) so retyping the team code doesn't re-fire this join.
+    if (!teamName || !activeJoinCode) return;
+    const storedOptions = storedJoinOptions();
+    joinTeam(teamName, {
+      teamToken: storedOptions.teamToken,
+      teamCode: teamCodeInputRef.current.trim() || storedOptions.teamCode,
+      joinCode: activeJoinCode,
+    });
+  }, [teamName, activeJoinCode, joinTeam]);
 
   useEffect(() => {
     if (team) {
@@ -94,10 +126,7 @@ function PlayPageContent() {
     window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, trimmedName);
     window.localStorage.setItem(JOIN_CODE_STORAGE_KEY, normalizedCode);
     setTeamName(trimmedName);
-    joinTeam(trimmedName, {
-      joinCode: normalizedCode,
-      teamCode: teamCodeInput.trim() || undefined,
-    });
+    setActiveJoinCode(normalizedCode);
   }
 
   function handleLogOut() {
@@ -107,6 +136,7 @@ function PlayPageContent() {
     setCodeInput(codeFromUrl);
     setTeamCodeInput('');
     setHasStoredIdentity(false);
+    setActiveJoinCode(codeFromUrl || null);
   }
 
   if (!teamName || (connectionError && !team)) {

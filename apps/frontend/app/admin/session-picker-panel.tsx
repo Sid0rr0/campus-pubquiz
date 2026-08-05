@@ -1,0 +1,129 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import type { ActiveSessionSummary, QuizzesListedPayload } from '@campus-pubquiz/types';
+import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
+import { closeSession, createSession, fetchSessions, SessionApiError } from '@/app/lib/sessions-api';
+
+interface SessionPickerPanelProps {
+  /** Navigates the browser into the console for a specific session's code — owned by the page since only it holds the router. */
+  onOpenSession: (joinCode: string) => void;
+}
+
+/** Landing screen shown when the admin hasn't pinned a specific session via `?code=` yet — lists every session currently running in the process and offers to start a new one. */
+export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
+  const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
+  const [quizzes, setQuizzes] = useState<QuizzesListedPayload['quizzes']>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const refresh = useCallback(() => {
+    fetchSessions()
+      .then((result) => {
+        setSessions(result);
+        setError(null);
+      })
+      .catch((fetchError: unknown) => {
+        setError(fetchError instanceof SessionApiError ? fetchError.message : 'Could not load sessions');
+      });
+    fetchQuizzes()
+      .then((result) => setQuizzes(result.quizzes))
+      .catch((fetchError: unknown) => {
+        setError(fetchError instanceof QuizApiError ? fetchError.message : 'Could not load quizzes');
+      });
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  async function handleCreate(quizId: number) {
+    setIsCreating(true);
+    setError(null);
+    try {
+      const session = await createSession(quizId);
+      onOpenSession(session.joinCode);
+    } catch (createError) {
+      setError(createError instanceof SessionApiError ? createError.message : 'Could not start session');
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleClose(joinCode: string) {
+    setError(null);
+    try {
+      await closeSession(joinCode);
+      refresh();
+    } catch (closeError) {
+      setError(closeError instanceof SessionApiError ? closeError.message : 'Could not close session');
+    }
+  }
+
+  return (
+    <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
+      <h1 className="font-display text-2xl">Quiz Sessions</h1>
+      {error && (
+        <p role="alert" className="font-extrabold text-magenta">
+          {error}
+        </p>
+      )}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-xl">Running Sessions</h2>
+        {sessions.length === 0 && (
+          <p className="text-sm text-foreground/55">No sessions running yet.</p>
+        )}
+        <ul className="flex flex-col gap-2">
+          {sessions.map((session) => (
+            <li
+              key={session.joinCode}
+              className="flex items-center justify-between gap-3 rounded-xl border border-foreground/15 bg-white px-4 py-3"
+            >
+              <div className="flex flex-col">
+                <span className="font-extrabold">{session.quizTitle}</span>
+                <span className="text-xs text-foreground/55">
+                  {session.status} · {session.teamCount} teams · {session.joinCode}
+                </span>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                {session.status === 'ended' && (
+                  <button
+                    type="button"
+                    onClick={() => void handleClose(session.joinCode)}
+                    className="min-h-10 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
+                  >
+                    Close
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onOpenSession(session.joinCode)}
+                  className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white"
+                >
+                  Open
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-xl">Start a New Session</h2>
+        <ul className="flex flex-col gap-2">
+          {quizzes.map((quiz) => (
+            <li key={quiz.id}>
+              <button
+                type="button"
+                disabled={isCreating}
+                onClick={() => void handleCreate(quiz.id)}
+                className="flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold disabled:opacity-40"
+              >
+                {quiz.title}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}

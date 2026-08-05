@@ -63,6 +63,7 @@ function getExceptionMessage(payload: unknown): string {
 export function useGameSocket(
   role: GameSocketRole,
   enabled = true,
+  joinCode?: string,
 ): UseGameSocketResult {
   const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -77,7 +78,7 @@ export function useGameSocket(
     }
 
     const socket = io(getBackendUrl(), {
-      query: { role },
+      query: joinCode ? { role, code: joinCode } : { role },
       withCredentials: true,
     });
     socketRef.current = socket;
@@ -125,7 +126,7 @@ export function useGameSocket(
     return () => {
       socket.disconnect();
     };
-  }, [enabled, role]);
+  }, [enabled, role, joinCode]);
 
   const sendAction = useCallback((action: GameAction) => {
     const payload: AdminActionPayload = { action };

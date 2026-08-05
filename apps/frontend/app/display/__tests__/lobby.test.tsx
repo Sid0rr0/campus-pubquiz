@@ -33,6 +33,14 @@ describe('DisplayPage — lobby', () => {
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 
+  it('passes the ?code= query parameter to the socket handshake', () => {
+    searchParamsRef.current = new URLSearchParams('code=GHIJKL');
+    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    render(<DisplayPage />);
+
+    expect(mockUseGameSocket).toHaveBeenCalledWith('display', true, 'GHIJKL');
+  });
+
   it('shows a waiting message in the lobby', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },

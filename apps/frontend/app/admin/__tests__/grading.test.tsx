@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth } = vi.hoisted(() => ({
+const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
   mockFetchQuizzes: vi.fn(),
   mockUseAuth: vi.fn(),
+  searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
 }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
@@ -21,9 +22,15 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => searchParamsRef.current,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
+
 describe('AdminPage — grading', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    searchParamsRef.current = new URLSearchParams('code=TESTCODE');
     mockUseGameSocket.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
 import { TeamsPanel } from '@/app/admin/teams-panel';
@@ -45,6 +46,12 @@ export function DesktopSidebar({
       <p className="text-sm font-bold">
         Status: {progressStatus} ({joinCode})
       </p>
+      <div className="flex gap-3 text-xs font-extrabold underline">
+        <Link href={`/display?code=${joinCode}`} target="_blank" rel="noopener noreferrer">
+          Open display
+        </Link>
+        <Link href="/admin">Switch session</Link>
+      </div>
       <div className="flex flex-col gap-2">
         <NavigationButtons
           progressStatus={progressStatus}

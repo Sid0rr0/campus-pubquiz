@@ -15,10 +15,13 @@ import { RevealScreen } from '@/app/display/reveal-screen';
 
 function DisplayPageContent() {
   const searchParams = useSearchParams();
-  const { snapshot } = useGameSocket('display');
-  // The query parameter pins the display to a specific game session's code
-  // (e.g. a pre-printed URL); otherwise the live snapshot provides it.
-  const joinCode = searchParams.get('code') ?? snapshot?.joinCode;
+  // The query parameter pins this connection to a specific game session's
+  // code (e.g. a pre-printed URL) — without it the socket falls back to the
+  // server's single implicit "default" session, which only works when
+  // exactly one session is running.
+  const codeFromUrl = searchParams.get('code') ?? undefined;
+  const { snapshot } = useGameSocket('display', true, codeFromUrl);
+  const joinCode = codeFromUrl ?? snapshot?.joinCode;
 
   if (!snapshot) {
     return (

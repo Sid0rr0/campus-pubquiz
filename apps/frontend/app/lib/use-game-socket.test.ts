@@ -61,6 +61,31 @@ describe('useGameSocket', () => {
     expect(mockIo).not.toHaveBeenCalled();
   });
 
+  it('includes the join code in the handshake query when provided', () => {
+    renderHook(() => useGameSocket('display', true, 'ABCDEF'));
+
+    expect(mockIo).toHaveBeenCalledWith('http://localhost:3000', {
+      query: { role: 'display', code: 'ABCDEF' },
+      withCredentials: true,
+    });
+  });
+
+  it('reconnects with a new handshake query when the join code changes', () => {
+    const { rerender } = renderHook(
+      ({ joinCode }: { joinCode: string }) => useGameSocket('display', true, joinCode),
+      { initialProps: { joinCode: 'AAAAAA' } },
+    );
+    const firstSocket = getFakeSocket();
+
+    rerender({ joinCode: 'BBBBBB' });
+
+    expect(firstSocket.disconnect).toHaveBeenCalled();
+    expect(mockIo).toHaveBeenLastCalledWith('http://localhost:3000', {
+      query: { role: 'display', code: 'BBBBBB' },
+      withCredentials: true,
+    });
+  });
+
   it('adopts the snapshot sent on STATE_SYNC', async () => {
     const { result } = renderHook(() => useGameSocket('display'));
     const fakeSocket = getFakeSocket();

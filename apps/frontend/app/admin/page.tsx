@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getBlockStartRoundIndex,
   type GameStatus,
@@ -20,12 +21,16 @@ import { ImportPanel } from '@/app/admin/import-panel';
 import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
+import { SessionPickerPanel } from '@/app/admin/session-picker-panel';
 import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
 
-export default function AdminPage() {
+function AdminPageContent() {
   const auth = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionCode = searchParams.get('code');
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -47,7 +52,17 @@ export default function AdminPage() {
     awardBonus,
     selectQuiz = () => {},
     listAnswers = () => {},
-  } = useGameSocket('admin', isAuthenticated);
+  } = useGameSocket('admin', isAuthenticated && Boolean(sessionCode), sessionCode ?? undefined);
+
+  useEffect(() => {
+    // SELECT_QUIZ always mints a brand-new session (never overwrites the
+    // current one) and migrates this admin socket into it — keep the URL's
+    // ?code= following that migration so a refresh lands back in the same
+    // session instead of falling through to the picker screen.
+    if (snapshot && snapshot.joinCode !== sessionCode) {
+      router.replace(`/admin?code=${snapshot.joinCode}`);
+    }
+  }, [snapshot, sessionCode, router]);
 
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
@@ -287,6 +302,12 @@ export default function AdminPage() {
     );
   }
 
+  if (!sessionCode) {
+    return (
+      <SessionPickerPanel onOpenSession={(joinCode) => router.push(`/admin?code=${joinCode}`)} />
+    );
+  }
+
   if (!snapshot) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
@@ -403,5 +424,14 @@ export default function AdminPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function AdminPage() {
+  // useSearchParams requires a Suspense boundary during static prerendering.
+  return (
+    <Suspense fallback={null}>
+      <AdminPageContent />
+    </Suspense>
   );
 }
