@@ -11,6 +11,7 @@ import {
 
 describe('GameStateService — persistence and quiz selection', () => {
   let service: GameStateService;
+  let joinCode: string;
   let progressRepository: MockGameProgressRepository;
   let seedService: MockSeedService;
 
@@ -23,10 +24,11 @@ describe('GameStateService — persistence and quiz selection', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
+    joinCode = service.getDefaultJoinCode();
   });
 
   it('persists progress via the repository after applying an action', async () => {
-    await service.applyAction('START_QUIZ');
+    await service.applyAction(joinCode, 'START_QUIZ');
 
     expect(progressRepository.save).toHaveBeenCalledWith(101, {
       status: 'rules',
@@ -53,8 +55,9 @@ describe('GameStateService — persistence and quiz selection', () => {
       createFakeOrm(),
     );
     await rehydratedService.onModuleInit();
+    const rehydratedJoinCode = rehydratedService.getDefaultJoinCode();
 
-    const snapshot = rehydratedService.getSnapshot();
+    const snapshot = rehydratedService.getSnapshot(rehydratedJoinCode);
     expect(snapshot.progress).toEqual({
       status: 'question_open',
       roundIndex: 0,
@@ -67,20 +70,20 @@ describe('GameStateService — persistence and quiz selection', () => {
   });
 
   it('exposes the active quiz id', () => {
-    expect(service.getActiveQuizId()).toBe(1);
+    expect(service.getActiveQuizId(joinCode)).toBe(1);
   });
 
-  it('rejects selecting a quiz while a quiz is in progress', async () => {
-    await service.applyAction('START_QUIZ');
+  it('rejects creating a session while the default session has a quiz in progress', async () => {
+    await service.applyAction(joinCode, 'START_QUIZ');
 
-    await expect(service.selectQuiz(2)).rejects.toThrow(/lobby/i);
+    await expect(service.createSession(2)).rejects.toThrow(/lobby/i);
     expect(seedService.createSession).not.toHaveBeenCalled();
   });
 
-  it('selects a quiz after the game has ended and resets back to the lobby', async () => {
-    await service.applyAction('END_QUIZ');
+  it('creates a session after the default game has ended, starting it in the lobby', async () => {
+    await service.applyAction(joinCode, 'END_QUIZ');
 
-    const snapshot = await service.selectQuiz(2);
+    const snapshot = await service.createSession(2);
 
     expect(snapshot.progress).toEqual({
       status: 'lobby',
@@ -94,12 +97,12 @@ describe('GameStateService — persistence and quiz selection', () => {
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
   });
 
-  it('selects a quiz in the lobby: creates a new session, reloads rounds, resets state', async () => {
-    service.setLeaderboard([
+  it('creates a session from the lobby: allocates a new session, loads its rounds, starts fresh', async () => {
+    service.setLeaderboard(joinCode, [
       { teamId: 31, teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
     ]);
 
-    const snapshot = await service.selectQuiz(2);
+    const snapshot = await service.createSession(2);
 
     expect(seedService.createSession).toHaveBeenCalledWith(2);
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
@@ -112,14 +115,20 @@ describe('GameStateService — persistence and quiz selection', () => {
       furthestOpenIndex: -1,
     });
     expect(snapshot.leaderboard).toEqual([]);
-    expect(service.getActiveQuizId()).toBe(2);
-    expect(service.getGameSessionId()).toBe(102);
+    expect(service.getActiveQuizId(snapshot.joinCode)).toBe(2);
+    expect(service.getGameSessionId(snapshot.joinCode)).toBe(102);
+  });
+
+  it('becomes the new default session, so single-session call sites follow it', async () => {
+    const created = await service.createSession(2);
+
+    expect(service.getDefaultJoinCode()).toBe(created.joinCode);
   });
 
   it('persists later actions under the newly created session id', async () => {
-    await service.selectQuiz(2);
+    const created = await service.createSession(2);
 
-    await service.applyAction('START_QUIZ');
+    await service.applyAction(created.joinCode, 'START_QUIZ');
 
     expect(progressRepository.save).toHaveBeenCalledWith(102, {
       status: 'rules',
@@ -131,17 +140,17 @@ describe('GameStateService — persistence and quiz selection', () => {
     });
   });
 
-  it('drives the game with the newly selected quiz rounds after selection', async () => {
-    await service.selectQuiz(2);
+  it('drives the game with the newly created session rounds', async () => {
+    const created = await service.createSession(2);
 
-    await service.applyAction('START_QUIZ');
-    await service.applyAction('ADVANCE'); // -> round_intro(0)
-    const started = await service.applyAction('ADVANCE');
+    await service.applyAction(created.joinCode, 'START_QUIZ');
+    await service.applyAction(created.joinCode, 'ADVANCE'); // -> round_intro(0)
+    const started = await service.applyAction(created.joinCode, 'ADVANCE');
     expect(started.currentQuestion?.id).toBe(25);
   });
 
-  it('exposes the new session join code in the snapshot after selecting a quiz', async () => {
-    const snapshot = await service.selectQuiz(2);
+  it('exposes the new session join code in the snapshot after creating a session', async () => {
+    const snapshot = await service.createSession(2);
 
     expect(snapshot.joinCode).toBe('GHIJKL');
   });

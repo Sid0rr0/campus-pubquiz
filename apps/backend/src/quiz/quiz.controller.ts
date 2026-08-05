@@ -17,7 +17,9 @@ export class QuizController {
   async list(): Promise<QuizzesListedPayload> {
     const quizzes = await this.quizService.list();
     return {
-      activeQuizId: this.gameState.getActiveQuizId(),
+      activeQuizId: this.gameState.getActiveQuizId(
+        this.gameState.getDefaultJoinCode(),
+      ),
       quizzes,
     };
   }

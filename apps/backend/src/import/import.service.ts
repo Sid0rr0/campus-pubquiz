@@ -77,7 +77,8 @@ export class ImportService {
     csvText: string,
     quizTitle?: string,
   ): Promise<ImportConfirmResult> {
-    const status = this.gameState.getSnapshot().progress.status;
+    const joinCode = this.gameState.getDefaultJoinCode();
+    const status = this.gameState.getSnapshot(joinCode).progress.status;
     if (!IMPORTABLE_STATUSES.includes(status)) {
       throw new ImportLockedError(status);
     }
@@ -90,8 +91,8 @@ export class ImportService {
     const quizId = await this.upsertQuiz(preview.quizTitle);
     await this.upsertRounds(quizId, preview.rounds);
 
-    if (quizId === this.gameState.getActiveQuizId()) {
-      await this.gameState.reloadActiveQuiz();
+    if (quizId === this.gameState.getActiveQuizId(joinCode)) {
+      await this.gameState.reloadActiveQuiz(joinCode);
     }
 
     return {

@@ -9,6 +9,7 @@ import {
 
 describe('GameStateService — getAdminQuestionContext', () => {
   let service: GameStateService;
+  let joinCode: string;
 
   beforeEach(async () => {
     service = new GameStateService(
@@ -17,10 +18,11 @@ describe('GameStateService — getAdminQuestionContext', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
+    joinCode = service.getDefaultJoinCode();
   });
 
   it('returns the correct answer and round position for a question', () => {
-    expect(service.getAdminQuestionContext(23)).toEqual({
+    expect(service.getAdminQuestionContext(joinCode, 23)).toEqual({
       type: 'picture',
       prompt: 'Which landmark is shown?',
       mediaUrl: 'https://example.com/landmark.jpg',
@@ -34,7 +36,7 @@ describe('GameStateService — getAdminQuestionContext', () => {
   });
 
   it('numbers a question within its own round, not the whole quiz', () => {
-    expect(service.getAdminQuestionContext(22)).toMatchObject({
+    expect(service.getAdminQuestionContext(joinCode, 22)).toMatchObject({
       roundNumber: 1,
       questionNumberInRound: 2,
       totalQuestionsInRound: 2,
@@ -42,6 +44,6 @@ describe('GameStateService — getAdminQuestionContext', () => {
   });
 
   it('returns null for an unknown question id', () => {
-    expect(service.getAdminQuestionContext(999999)).toBeNull();
+    expect(service.getAdminQuestionContext(joinCode, 999999)).toBeNull();
   });
 });

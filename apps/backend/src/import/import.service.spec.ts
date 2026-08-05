@@ -53,6 +53,7 @@ function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
     ...overrides,
   };
   const asService = {
+    getDefaultJoinCode: () => 'ABCDEF',
     getSnapshot: () => ({ progress: { status: stub.status } }),
     getActiveQuizId: () => stub.activeQuizId,
     reloadActiveQuiz: stub.reloadActiveQuiz,

@@ -35,6 +35,74 @@ const LOBBY_PROGRESS: GameProgress = {
 /** How long the 'locking' countdown runs before auto-advancing into the break. */
 const QUESTION_LOCK_DURATION_MS = 60_000;
 
+/** Everything GameStateService tracks for one concurrently-running GameSession, keyed by its joinCode. */
+interface SessionState {
+  seededGame: SeededGame;
+  progress: GameProgress;
+  /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
+  questionLockAt: number | null;
+  leaderboard: LeaderboardEntry[];
+  /**
+   * How many teams (counting up from last place) are currently revealed on
+   * the leaderboard. Ephemeral — not persisted, resets on toggle/new game.
+   */
+  leaderboardRevealCount: number;
+  teams: TeamRosterEntry[];
+  answeredTeamIdsByQuestion: Record<number, number[]>;
+  /** teamId -> socket.id of the one device currently connected as that team. */
+  connectedTeamSockets: Record<number, string>;
+}
+
+function freshSessionState(
+  seededGame: SeededGame,
+  progress: GameProgress,
+): SessionState {
+  return {
+    seededGame,
+    progress,
+    questionLockAt: computeQuestionLockAt(progress),
+    leaderboard: [],
+    leaderboardRevealCount: 0,
+    teams: [],
+    answeredTeamIdsByQuestion: {},
+    connectedTeamSockets: {},
+  };
+}
+
+/**
+ * Recomputes the auto-lock deadline for a given progress: armed only while
+ * in the 'locking' countdown, so a gateway timer can advance into the break
+ * automatically without the admin clicking Advance.
+ */
+function computeQuestionLockAt(progress: GameProgress): number | null {
+  return progress.status === 'locking'
+    ? Date.now() + QUESTION_LOCK_DURATION_MS
+    : null;
+}
+
+/**
+ * Toggling the board resets the reveal to nothing shown; from then on,
+ * ADVANCE and REVEAL_NEXT_TEAM both step the reveal forward one team at a
+ * time (bottom-up) — whichever button the admin has on screen works.
+ */
+function computeLeaderboardRevealCount(
+  action: GameAction,
+  newProgress: GameProgress,
+  leaderboard: LeaderboardEntry[],
+  currentRevealCount: number,
+): number {
+  if (action === 'TOGGLE_LEADERBOARD') {
+    return 0;
+  }
+  if (
+    (action === 'ADVANCE' || action === 'REVEAL_NEXT_TEAM') &&
+    newProgress.isLeaderboardVisible
+  ) {
+    return Math.min(currentRevealCount + 1, leaderboard.length);
+  }
+  return currentRevealCount;
+}
+
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.
 function toQuestionView(question: RevealQuestionView): QuestionView {
@@ -63,21 +131,16 @@ function toBlockQuestionView(
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
-  private progress: GameProgress = { ...LOBBY_PROGRESS };
-  /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
-  private questionLockAt: number | null = null;
-
-  private seededGame: SeededGame | null = null;
-  private leaderboard: LeaderboardEntry[] = [];
+  private readonly sessions = new Map<string, SessionState>();
   /**
-   * How many teams (counting up from last place) are currently revealed on
-   * the leaderboard. Ephemeral — not persisted, resets on toggle/new game.
+   * The one session today's single-session gateway/REST call sites (not yet
+   * updated to thread a real per-connection joinCode) operate on. Points at
+   * the most recently created session — set at onModuleInit and again by
+   * createSession — so today's single-session UX keeps working unchanged
+   * while the state underneath is already multi-session-shaped. Superseded
+   * once callers pick a session explicitly (milestone-4 phases 3-5).
    */
-  private leaderboardRevealCount = 0;
-  private teams: TeamRosterEntry[] = [];
-  private answeredTeamIdsByQuestion: Record<number, number[]> = {};
-  /** teamId -> socket.id of the one device currently connected as that team. */
-  private connectedTeamSockets: Record<number, string> = {};
+  private defaultJoinCode: string | null = null;
 
   constructor(
     private readonly seedService: SeedService,
@@ -90,217 +153,261 @@ export class GameStateService implements OnModuleInit {
   // the injected repositories to use — @CreateRequestContext() forks one.
   @CreateRequestContext()
   async onModuleInit(): Promise<void> {
-    this.seededGame = await this.seedService.seed();
+    const seededGame = await this.seedService.seed();
     const savedProgress = await this.progressRepository.load(
-      this.seededGame.gameSessionId,
+      seededGame.gameSessionId,
     );
-    if (savedProgress) {
-      this.progress = savedProgress;
-    }
-    this.updateQuestionLockAt();
+    const session = freshSessionState(
+      seededGame,
+      savedProgress ?? { ...LOBBY_PROGRESS },
+    );
+    this.sessions.set(seededGame.joinCode, session);
+    this.defaultJoinCode = seededGame.joinCode;
   }
 
-  getGameSessionId(): number {
-    return this.getSeededGame().gameSessionId;
+  /** The joinCode of the session single-session call sites operate on until they're wired for real session selection. */
+  getDefaultJoinCode(): string {
+    return this.requireDefaultJoinCode();
   }
 
-  getActiveQuizId(): number {
-    return this.getSeededGame().quizId;
+  getGameSessionId(joinCode: string): number {
+    return this.getSession(joinCode).seededGame.gameSessionId;
   }
 
-  async selectQuiz(quizId: number): Promise<StateSnapshotPayload> {
-    if (this.progress.status !== 'lobby' && this.progress.status !== 'ended') {
+  getActiveQuizId(joinCode: string): number {
+    return this.getSession(joinCode).seededGame.quizId;
+  }
+
+  /**
+   * Allocates a brand-new GameSession/joinCode for `quizId`, leaving any
+   * other session's state untouched, and becomes the new default session.
+   * Blocked while the default session has a quiz in progress — a narrower,
+   * interim rule kept from the single-session era until phase 4 gives the
+   * admin an explicit multi-session creation surface.
+   */
+  async createSession(quizId: number): Promise<StateSnapshotPayload> {
+    const current = this.getSession(this.requireDefaultJoinCode());
+    if (
+      current.progress.status !== 'lobby' &&
+      current.progress.status !== 'ended'
+    ) {
       throw new Error(
         'A quiz can only be selected while the game is in the lobby or after the quiz has ended',
       );
     }
 
-    const session = await this.seedService.createSession(quizId);
-    this.seededGame = await this.seedService.loadGame(
+    const created = await this.seedService.createSession(quizId);
+    const seededGame = await this.seedService.loadGame(
       quizId,
-      session.gameSessionId,
-      session.joinCode,
+      created.gameSessionId,
+      created.joinCode,
     );
     // The fresh game_sessions row already starts in lobby state, so there is
     // no progress to persist here.
-    this.progress = { ...LOBBY_PROGRESS };
-    this.leaderboard = [];
-    this.leaderboardRevealCount = 0;
-    this.teams = [];
-    this.answeredTeamIdsByQuestion = {};
-    this.connectedTeamSockets = {};
-    this.updateQuestionLockAt();
-    return this.getSnapshot();
+    const session = freshSessionState(seededGame, { ...LOBBY_PROGRESS });
+    this.sessions.set(seededGame.joinCode, session);
+    this.defaultJoinCode = seededGame.joinCode;
+    return this.getSnapshot(seededGame.joinCode);
   }
 
   /**
-   * Re-reads the active quiz's rounds from the database, keeping the current
+   * Re-reads the active quiz's rounds from the database, keeping the
    * session, join code and progress — used after a re-import updates the
    * active quiz's questions in place.
    */
-  async reloadActiveQuiz(): Promise<void> {
-    const { quizId, gameSessionId, joinCode } = this.getSeededGame();
-    this.seededGame = await this.seedService.loadGame(
+  async reloadActiveQuiz(joinCode: string): Promise<void> {
+    const session = this.getSession(joinCode);
+    const { quizId, gameSessionId } = session.seededGame;
+    const seededGame = await this.seedService.loadGame(
       quizId,
       gameSessionId,
       joinCode,
     );
+    this.sessions.set(joinCode, { ...session, seededGame });
   }
 
-  setLeaderboard(leaderboard: LeaderboardEntry[]): void {
-    this.leaderboard = leaderboard;
+  setLeaderboard(joinCode: string, leaderboard: LeaderboardEntry[]): void {
+    const session = this.getSession(joinCode);
+    this.sessions.set(joinCode, { ...session, leaderboard });
   }
 
-  setTeams(teams: TeamRosterEntry[]): void {
-    this.teams = teams;
+  setTeams(joinCode: string, teams: TeamRosterEntry[]): void {
+    const session = this.getSession(joinCode);
+    this.sessions.set(joinCode, { ...session, teams });
   }
 
-  getConnectedSocketId(teamId: number): string | undefined {
-    return this.connectedTeamSockets[teamId];
+  getConnectedSocketId(joinCode: string, teamId: number): string | undefined {
+    return this.getSession(joinCode).connectedTeamSockets[teamId];
   }
 
-  setTeamConnected(teamId: number, socketId: string): void {
-    this.connectedTeamSockets = {
-      ...this.connectedTeamSockets,
-      [teamId]: socketId,
-    };
+  setTeamConnected(joinCode: string, teamId: number, socketId: string): void {
+    const session = this.getSession(joinCode);
+    this.sessions.set(joinCode, {
+      ...session,
+      connectedTeamSockets: {
+        ...session.connectedTeamSockets,
+        [teamId]: socketId,
+      },
+    });
   }
 
   /** Called on socket disconnect; returns the teamId that was cleared, if any. */
-  clearTeamConnectionBySocketId(socketId: string): number | null {
-    const entry = Object.entries(this.connectedTeamSockets).find(
+  clearTeamConnectionBySocketId(
+    joinCode: string,
+    socketId: string,
+  ): number | null {
+    const session = this.getSession(joinCode);
+    const entry = Object.entries(session.connectedTeamSockets).find(
       ([, sid]) => sid === socketId,
     );
     if (!entry) return null;
     const [clearedTeamId] = entry;
-    this.connectedTeamSockets = Object.fromEntries(
-      Object.entries(this.connectedTeamSockets).filter(
-        ([teamId]) => teamId !== clearedTeamId,
+    this.sessions.set(joinCode, {
+      ...session,
+      connectedTeamSockets: Object.fromEntries(
+        Object.entries(session.connectedTeamSockets).filter(
+          ([teamId]) => teamId !== clearedTeamId,
+        ),
       ),
-    );
+    });
     return Number(clearedTeamId);
   }
 
-  setAnsweredTeamIds(questionId: number, teamIds: number[]): void {
-    this.answeredTeamIdsByQuestion = {
-      ...this.answeredTeamIdsByQuestion,
-      [questionId]: teamIds,
-    };
+  setAnsweredTeamIds(
+    joinCode: string,
+    questionId: number,
+    teamIds: number[],
+  ): void {
+    const session = this.getSession(joinCode);
+    this.sessions.set(joinCode, {
+      ...session,
+      answeredTeamIdsByQuestion: {
+        ...session.answeredTeamIdsByQuestion,
+        [questionId]: teamIds,
+      },
+    });
   }
 
-  isQuestionOpenForAnswering(questionId: number): boolean {
+  isQuestionOpenForAnswering(joinCode: string, questionId: number): boolean {
+    const session = this.getSession(joinCode);
     return (
-      (this.progress.status === 'question_open' ||
-        this.progress.status === 'locking' ||
-        this.progress.status === 'round_intro') &&
-      this.getBlockQuestions().some((question) => question.id === questionId)
+      (session.progress.status === 'question_open' ||
+        session.progress.status === 'locking' ||
+        session.progress.status === 'round_intro') &&
+      this.getBlockQuestions(session).some(
+        (question) => question.id === questionId,
+      )
     );
   }
 
-  getSnapshot(): StateSnapshotPayload {
+  getSnapshot(joinCode: string): StateSnapshotPayload {
+    const session = this.getSession(joinCode);
     return {
-      progress: this.progress,
-      quizStructure: getQuizStructureSummary(this.getContext()),
-      roundTitle: this.getCurrentRoundTitle(),
-      currentQuestion: this.getCurrentQuestion(),
-      blockQuestions: this.getBlockQuestions(),
-      upcomingQuestions: this.getUpcomingQuestionPositions(),
-      revealQuestions: this.getRevealQuestions(),
-      answeredTeamIds: this.getAnsweredTeamIds(),
-      leaderboard: this.leaderboard,
-      leaderboardRevealCount: this.leaderboardRevealCount,
-      joinCode: this.getSeededGame().joinCode,
-      teams: this.teams.map(
+      progress: session.progress,
+      quizStructure: getQuizStructureSummary(this.getContext(session)),
+      roundTitle: this.getCurrentRoundTitle(session),
+      currentQuestion: this.getCurrentQuestion(session),
+      blockQuestions: this.getBlockQuestions(session),
+      upcomingQuestions: this.getUpcomingQuestionPositions(session),
+      revealQuestions: this.getRevealQuestions(session),
+      answeredTeamIds: this.getAnsweredTeamIds(session),
+      leaderboard: session.leaderboard,
+      leaderboardRevealCount: session.leaderboardRevealCount,
+      joinCode: session.seededGame.joinCode,
+      teams: session.teams.map(
         (team): TeamView => ({
           ...team,
-          isConnected: Boolean(this.connectedTeamSockets[team.teamId]),
+          isConnected: Boolean(session.connectedTeamSockets[team.teamId]),
         }),
       ),
-      questionLockAt: this.questionLockAt,
+      questionLockAt: session.questionLockAt,
     };
   }
 
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
-  getQuestionLockAt(): number | null {
-    return this.questionLockAt;
+  getQuestionLockAt(joinCode: string): number | null {
+    return this.getSession(joinCode).questionLockAt;
   }
 
-  async applyAction(action: GameAction): Promise<StateSnapshotPayload> {
-    this.progress = getNextGameState(this.progress, action, this.getContext());
-    this.updateQuestionLockAt();
-    this.updateLeaderboardRevealCount(action);
-    await this.progressRepository.save(this.getGameSessionId(), this.progress);
-    return this.getSnapshot();
+  async applyAction(
+    joinCode: string,
+    action: GameAction,
+  ): Promise<StateSnapshotPayload> {
+    const session = this.getSession(joinCode);
+    const progress = getNextGameState(
+      session.progress,
+      action,
+      this.getContext(session),
+    );
+    const updated: SessionState = {
+      ...session,
+      progress,
+      questionLockAt: computeQuestionLockAt(progress),
+      leaderboardRevealCount: computeLeaderboardRevealCount(
+        action,
+        progress,
+        session.leaderboard,
+        session.leaderboardRevealCount,
+      ),
+    };
+    this.sessions.set(joinCode, updated);
+    await this.progressRepository.save(
+      updated.seededGame.gameSessionId,
+      progress,
+    );
+    return this.getSnapshot(joinCode);
   }
 
-  /**
-   * Toggling the board resets the reveal to nothing shown; from then on,
-   * ADVANCE and REVEAL_NEXT_TEAM both step the reveal forward one team at a
-   * time (bottom-up) — whichever button the admin has on screen works.
-   */
-  private updateLeaderboardRevealCount(action: GameAction): void {
-    if (action === 'TOGGLE_LEADERBOARD') {
-      this.leaderboardRevealCount = 0;
-      return;
-    }
-    if (
-      (action === 'ADVANCE' || action === 'REVEAL_NEXT_TEAM') &&
-      this.progress.isLeaderboardVisible
-    ) {
-      this.leaderboardRevealCount = Math.min(
-        this.leaderboardRevealCount + 1,
-        this.leaderboard.length,
-      );
-    }
-  }
-
-  /**
-   * Recomputes the auto-lock deadline from the current progress: armed only
-   * while in the 'locking' countdown, so a gateway timer can advance into the
-   * break automatically without the admin clicking Advance.
-   */
-  private updateQuestionLockAt(): void {
-    const shouldArm = this.progress.status === 'locking';
-    this.questionLockAt = shouldArm
-      ? Date.now() + QUESTION_LOCK_DURATION_MS
-      : null;
-  }
-
-  private getSeededGame(): SeededGame {
-    if (!this.seededGame) {
+  private requireDefaultJoinCode(): string {
+    if (!this.defaultJoinCode) {
       throw new Error(
         'GameStateService used before initialization (onModuleInit has not resolved yet)',
       );
     }
-    return this.seededGame;
+    return this.defaultJoinCode;
   }
 
-  private getContext(): GameContext {
+  private getSession(joinCode: string): SessionState {
+    // Distinguishing "never initialized" from "unknown joinCode" gives
+    // onModuleInit-ordering bugs a clearer error than a generic lookup miss.
+    if (!this.defaultJoinCode) {
+      throw new Error(
+        'GameStateService used before initialization (onModuleInit has not resolved yet)',
+      );
+    }
+    const session = this.sessions.get(joinCode);
+    if (!session) {
+      throw new Error(`Unknown game session for join code "${joinCode}"`);
+    }
+    return session;
+  }
+
+  private getContext(session: SessionState): GameContext {
     return {
-      rounds: this.getSeededGame().rounds.map((round) => ({
+      rounds: session.seededGame.rounds.map((round) => ({
         questionCount: round.questions.length,
         breakAfter: round.breakAfter,
       })),
     };
   }
 
-  private getCurrentRoundTitle(): string {
-    return this.getSeededGame().rounds[this.progress.roundIndex]?.title ?? '';
+  private getCurrentRoundTitle(session: SessionState): string {
+    return session.seededGame.rounds[session.progress.roundIndex]?.title ?? '';
   }
 
   // Stays populated through 'locking' (not just 'question_open') so answers
   // remain submittable during the countdown — display simply doesn't render
   // it during 'locking', but /play keeps showing the last question.
-  private getCurrentQuestion(): QuestionView | null {
+  private getCurrentQuestion(session: SessionState): QuestionView | null {
     if (
-      this.progress.status !== 'question_open' &&
-      this.progress.status !== 'locking'
+      session.progress.status !== 'question_open' &&
+      session.progress.status !== 'locking'
     ) {
       return null;
     }
     const question =
-      this.getSeededGame().rounds[this.progress.roundIndex]?.questions[
-        this.progress.questionIndex
+      session.seededGame.rounds[session.progress.roundIndex]?.questions[
+        session.progress.questionIndex
       ];
     return question ? toQuestionView(question) : null;
   }
@@ -316,9 +423,11 @@ export class GameStateService implements OnModuleInit {
    * fresh round, since it still points at the previous round/block), or the
    * whole just-locked block during break/reveal. Empty otherwise.
    */
-  private getBlockSeededQuestions(): BlockRevealQuestionView[] {
+  private getBlockSeededQuestions(
+    session: SessionState,
+  ): BlockRevealQuestionView[] {
     const { status, roundIndex, questionIndex, furthestOpenIndex } =
-      this.progress;
+      session.progress;
     if (
       status !== 'question_open' &&
       status !== 'locking' &&
@@ -331,8 +440,8 @@ export class GameStateService implements OnModuleInit {
       return [];
     }
 
-    const context = this.getContext();
-    const rounds = this.getSeededGame().rounds;
+    const context = this.getContext(session);
+    const rounds = session.seededGame.rounds;
     const blockStart = getBlockStartRoundIndex(roundIndex, context);
     const isOpenPhase =
       status === 'question_open' ||
@@ -370,8 +479,8 @@ export class GameStateService implements OnModuleInit {
    * while grading. Answer-free: this is broadcast to every connected phone
    * and the big screen.
    */
-  private getBlockQuestions(): BlockQuestionView[] {
-    return this.getBlockSeededQuestions().map(toBlockQuestionView);
+  private getBlockQuestions(session: SessionState): BlockQuestionView[] {
+    return this.getBlockSeededQuestions(session).map(toBlockQuestionView);
   }
 
   /**
@@ -388,8 +497,10 @@ export class GameStateService implements OnModuleInit {
    * round yet) — in that case the whole round about to start is upcoming,
    * not whatever's left of the round furthestOpenIndex still points at.
    */
-  private getUpcomingQuestionPositions(): QuestionPosition[] {
-    const { status, roundIndex, furthestOpenIndex } = this.progress;
+  private getUpcomingQuestionPositions(
+    session: SessionState,
+  ): QuestionPosition[] {
+    const { status, roundIndex, furthestOpenIndex } = session.progress;
     if (
       status !== 'question_open' &&
       status !== 'locking' &&
@@ -397,7 +508,7 @@ export class GameStateService implements OnModuleInit {
     ) {
       return [];
     }
-    const context = this.getContext();
+    const context = this.getContext(session);
     const blockStart = getBlockStartRoundIndex(roundIndex, context);
     const furthest = getRoundAndQuestionForBlockPosition(
       blockStart,
@@ -408,7 +519,7 @@ export class GameStateService implements OnModuleInit {
       status === 'round_intro' && furthest.roundIndex < roundIndex
         ? { roundIndex, questionIndex: -1 }
         : furthest;
-    const round = this.getSeededGame().rounds[target.roundIndex];
+    const round = session.seededGame.rounds[target.roundIndex];
     if (!round) {
       return [];
     }
@@ -432,14 +543,14 @@ export class GameStateService implements OnModuleInit {
    * onward (not just 'reveal' itself) so the display can read the upcoming
    * question's round title before its answer is actually shown.
    */
-  private getRevealQuestions(): BlockRevealQuestionView[] {
+  private getRevealQuestions(session: SessionState): BlockRevealQuestionView[] {
     if (
-      this.progress.status !== 'reveal_intro' &&
-      this.progress.status !== 'reveal'
+      session.progress.status !== 'reveal_intro' &&
+      session.progress.status !== 'reveal'
     ) {
       return [];
     }
-    return this.getBlockSeededQuestions();
+    return this.getBlockSeededQuestions(session);
   }
 
   /**
@@ -447,8 +558,11 @@ export class GameStateService implements OnModuleInit {
    * view alone. Callers MUST only forward this over an admin-room-only
    * channel (ANSWERS_UPDATED) — never through the broadcast snapshot.
    */
-  getAdminQuestionContext(questionId: number): AdminQuestionContext | null {
-    const rounds = this.getSeededGame().rounds;
+  getAdminQuestionContext(
+    joinCode: string,
+    questionId: number,
+  ): AdminQuestionContext | null {
+    const rounds = this.getSession(joinCode).seededGame.rounds;
     for (const [roundOffset, round] of rounds.entries()) {
       const questionOffset = round.questions.findIndex(
         (question) => question.id === questionId,
@@ -476,11 +590,11 @@ export class GameStateService implements OnModuleInit {
     return null;
   }
 
-  private getAnsweredTeamIds(): number[] {
-    const currentQuestion = this.getCurrentQuestion();
+  private getAnsweredTeamIds(session: SessionState): number[] {
+    const currentQuestion = this.getCurrentQuestion(session);
     if (!currentQuestion) {
       return [];
     }
-    return this.answeredTeamIdsByQuestion[currentQuestion.id] ?? [];
+    return session.answeredTeamIdsByQuestion[currentQuestion.id] ?? [];
   }
 }

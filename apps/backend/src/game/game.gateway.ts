@@ -95,15 +95,22 @@ export class GameGateway
 
     await client.join(role);
     this.logger.log(`Client ${client.id} connected as ${role}`);
-    client.emit(SOCKET_EVENTS.STATE_SYNC, this.gameState.getSnapshot());
+    client.emit(
+      SOCKET_EVENTS.STATE_SYNC,
+      this.gameState.getSnapshot(this.gameState.getDefaultJoinCode()),
+    );
   }
 
   handleDisconnect(client: Socket): void {
-    const teamId = this.gameState.clearTeamConnectionBySocketId(client.id);
+    const joinCode = this.gameState.getDefaultJoinCode();
+    const teamId = this.gameState.clearTeamConnectionBySocketId(
+      joinCode,
+      client.id,
+    );
     if (!teamId) return;
 
     this.logger.log(`Client ${client.id} disconnected, freeing team ${teamId}`);
-    this.broadcastState(this.gameState.getSnapshot());
+    this.broadcastState(this.gameState.getSnapshot(joinCode));
   }
 
   // Socket.IO events aren't covered by @mikro-orm/nestjs's HTTP-only
@@ -122,9 +129,10 @@ export class GameGateway
       `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
     );
 
+    const joinCode = this.gameState.getDefaultJoinCode();
     let snapshot: StateSnapshotPayload;
     try {
-      snapshot = await this.gameState.applyAction(payload.action);
+      snapshot = await this.gameState.applyAction(joinCode, payload.action);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Invalid game action';
@@ -139,10 +147,10 @@ export class GameGateway
       snapshot.progress.isLeaderboardVisible
     ) {
       const leaderboard = await this.answerService.computeLeaderboard(
-        this.gameState.getGameSessionId(),
+        this.gameState.getGameSessionId(joinCode),
       );
-      this.gameState.setLeaderboard(leaderboard);
-      snapshot = this.gameState.getSnapshot();
+      this.gameState.setLeaderboard(joinCode, leaderboard);
+      snapshot = this.gameState.getSnapshot(joinCode);
     }
 
     this.broadcastState(snapshot);
@@ -158,9 +166,10 @@ export class GameGateway
   private async handleQuestionLockTimerExpired(): Promise<void> {
     this.questionLockTimer = null;
 
+    const joinCode = this.gameState.getDefaultJoinCode();
     let snapshot: StateSnapshotPayload;
     try {
-      snapshot = await this.gameState.applyAction('ADVANCE');
+      snapshot = await this.gameState.applyAction(joinCode, 'ADVANCE');
     } catch (error) {
       this.logger.error(
         `Auto-lock ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -179,7 +188,9 @@ export class GameGateway
       this.questionLockTimer = null;
     }
 
-    const lockAt = this.gameState.getQuestionLockAt();
+    const lockAt = this.gameState.getQuestionLockAt(
+      this.gameState.getDefaultJoinCode(),
+    );
     if (lockAt === null) return;
 
     const delay = Math.max(0, lockAt - Date.now());
@@ -210,9 +221,10 @@ export class GameGateway
       `${SOCKET_EVENTS.JOIN_PLAYERS} from ${client.id}: teamName=${payload.teamName}`,
     );
 
+    const joinCode = this.gameState.getDefaultJoinCode();
     try {
       const team = await this.teamService.join(
-        this.gameState.getGameSessionId(),
+        this.gameState.getGameSessionId(joinCode),
         payload.teamName,
         {
           teamToken: payload.teamToken,
@@ -221,7 +233,10 @@ export class GameGateway
         },
       );
 
-      const existingSocketId = this.gameState.getConnectedSocketId(team.id);
+      const existingSocketId = this.gameState.getConnectedSocketId(
+        joinCode,
+        team.id,
+      );
       const isLiveElsewhere =
         existingSocketId &&
         existingSocketId !== client.id &&
@@ -231,10 +246,10 @@ export class GameGateway
           `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
         );
       }
-      this.gameState.setTeamConnected(team.id, client.id);
+      this.gameState.setTeamConnected(joinCode, team.id, client.id);
 
       const savedAnswers = await this.answerService.listForTeam(
-        this.gameState.getGameSessionId(),
+        this.gameState.getGameSessionId(joinCode),
         team.id,
       );
       client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
@@ -246,10 +261,10 @@ export class GameGateway
       });
 
       const teams = await this.teamService.listForSession(
-        this.gameState.getGameSessionId(),
+        this.gameState.getGameSessionId(joinCode),
       );
-      this.gameState.setTeams(teams);
-      this.broadcastState(this.gameState.getSnapshot());
+      this.gameState.setTeams(joinCode, teams);
+      this.broadcastState(this.gameState.getSnapshot(joinCode));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to join';
       throw new WsException(message);
@@ -270,12 +285,15 @@ export class GameGateway
       `${SOCKET_EVENTS.SUBMIT_ANSWER} from ${client.id}: questionId=${payload.questionId} teamId=${payload.teamId}`,
     );
 
-    if (!this.gameState.isQuestionOpenForAnswering(payload.questionId)) {
+    const joinCode = this.gameState.getDefaultJoinCode();
+    if (
+      !this.gameState.isQuestionOpenForAnswering(joinCode, payload.questionId)
+    ) {
       throw new WsException('Answers are locked for this question');
     }
 
     const submitted = await this.answerService.submit(
-      this.gameState.getGameSessionId(),
+      this.gameState.getGameSessionId(joinCode),
       payload.questionId,
       payload.teamId,
       payload.value,
@@ -289,21 +307,22 @@ export class GameGateway
     });
 
     const answers = await this.answerService.listForQuestion(
-      this.gameState.getGameSessionId(),
+      this.gameState.getGameSessionId(joinCode),
       payload.questionId,
     );
     this.server
       .to(SOCKET_ROOMS.ADMIN)
       .emit(
         SOCKET_EVENTS.ANSWERS_UPDATED,
-        this.buildAnswersUpdatedPayload(payload.questionId, answers),
+        this.buildAnswersUpdatedPayload(joinCode, payload.questionId, answers),
       );
 
     this.gameState.setAnsweredTeamIds(
+      joinCode,
       payload.questionId,
       answers.map((answer) => answer.teamId),
     );
-    this.broadcastState(this.gameState.getSnapshot());
+    this.broadcastState(this.gameState.getSnapshot(joinCode));
   }
 
   @SubscribeMessage(SOCKET_EVENTS.GRADE_ANSWER)
@@ -325,7 +344,8 @@ export class GameGateway
       payload.pointsAwarded,
     );
 
-    const gameSessionId = this.gameState.getGameSessionId();
+    const joinCode = this.gameState.getDefaultJoinCode();
+    const gameSessionId = this.gameState.getGameSessionId(joinCode);
 
     const answers = await this.answerService.listForQuestion(
       gameSessionId,
@@ -335,14 +355,14 @@ export class GameGateway
       .to(SOCKET_ROOMS.ADMIN)
       .emit(
         SOCKET_EVENTS.ANSWERS_UPDATED,
-        this.buildAnswersUpdatedPayload(questionId, answers),
+        this.buildAnswersUpdatedPayload(joinCode, questionId, answers),
       );
 
     const leaderboard =
       await this.answerService.computeLeaderboard(gameSessionId);
-    this.gameState.setLeaderboard(leaderboard);
+    this.gameState.setLeaderboard(joinCode, leaderboard);
 
-    this.broadcastState(this.gameState.getSnapshot());
+    this.broadcastState(this.gameState.getSnapshot(joinCode));
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SELECT_QUIZ)
@@ -361,7 +381,7 @@ export class GameGateway
 
     let snapshot: StateSnapshotPayload;
     try {
-      snapshot = await this.gameState.selectQuiz(payload.quizId);
+      snapshot = await this.gameState.createSession(payload.quizId);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to select quiz';
@@ -386,13 +406,14 @@ export class GameGateway
       `${SOCKET_EVENTS.LIST_ANSWERS} from ${client.id}: questionId=${payload.questionId}`,
     );
 
+    const joinCode = this.gameState.getDefaultJoinCode();
     const answers = await this.answerService.listForQuestion(
-      this.gameState.getGameSessionId(),
+      this.gameState.getGameSessionId(joinCode),
       payload.questionId,
     );
     client.emit(
       SOCKET_EVENTS.ANSWERS_UPDATED,
-      this.buildAnswersUpdatedPayload(payload.questionId, answers),
+      this.buildAnswersUpdatedPayload(joinCode, payload.questionId, answers),
     );
   }
 
@@ -409,7 +430,10 @@ export class GameGateway
       `${SOCKET_EVENTS.KICK_TEAM} from ${client.id}: teamId=${payload.teamId}`,
     );
 
-    const socketId = this.gameState.getConnectedSocketId(payload.teamId);
+    const socketId = this.gameState.getConnectedSocketId(
+      this.gameState.getDefaultJoinCode(),
+      payload.teamId,
+    );
     const targetSocket = socketId
       ? this.server.sockets.sockets.get(socketId)
       : undefined;
@@ -436,9 +460,10 @@ export class GameGateway
       `${SOCKET_EVENTS.AWARD_BONUS} from ${client.id}: teamId=${payload.teamId} category=${payload.category} points=${payload.points}`,
     );
 
+    const joinCode = this.gameState.getDefaultJoinCode();
     try {
       await this.bonusService.award(
-        this.gameState.getGameSessionId(),
+        this.gameState.getGameSessionId(joinCode),
         payload.teamId,
         payload.category,
         payload.points,
@@ -452,17 +477,21 @@ export class GameGateway
     }
 
     const leaderboard = await this.answerService.computeLeaderboard(
-      this.gameState.getGameSessionId(),
+      this.gameState.getGameSessionId(joinCode),
     );
-    this.gameState.setLeaderboard(leaderboard);
-    this.broadcastState(this.gameState.getSnapshot());
+    this.gameState.setLeaderboard(joinCode, leaderboard);
+    this.broadcastState(this.gameState.getSnapshot(joinCode));
   }
 
   private buildAnswersUpdatedPayload(
+    joinCode: string,
     questionId: number,
     answers: AnswersUpdatedPayload['answers'],
   ): AnswersUpdatedPayload {
-    const question = this.gameState.getAdminQuestionContext(questionId);
+    const question = this.gameState.getAdminQuestionContext(
+      joinCode,
+      questionId,
+    );
     if (!question) {
       throw new WsException(`Unknown question ${questionId}`);
     }

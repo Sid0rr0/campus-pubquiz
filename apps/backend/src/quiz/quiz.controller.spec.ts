@@ -7,7 +7,10 @@ import type { GameStateService } from '@/game/game-state.service';
 
 function makeController() {
   const quizService = { list: jest.fn() };
-  const gameState = { getActiveQuizId: jest.fn().mockReturnValue(1) };
+  const gameState = {
+    getActiveQuizId: jest.fn().mockReturnValue(1),
+    getDefaultJoinCode: jest.fn().mockReturnValue('ABCDEF'),
+  };
   const controller = new QuizController(
     quizService as unknown as QuizService,
     gameState as unknown as GameStateService,
