@@ -31,7 +31,11 @@ export function GameStatusScreens({ progress, isAnswerable, quizStructure, round
           <RulesContent quizStructure={quizStructure} />
         </div>
       )}
-      {!progress.isLeaderboardVisible && progress.status === 'round_intro' && (
+      {/* Only for a genuinely fresh round (nothing opened yet) - if Previous
+          stepped the display back into an already-open round's intro card,
+          isAnswerable is true and the block browser renders instead so
+          teams can keep answering underneath the card. */}
+      {!progress.isLeaderboardVisible && progress.status === 'round_intro' && !isAnswerable && (
         <div className="mt-16 flex flex-col items-center gap-2 text-center">
           <p className="text-sm font-extrabold tracking-wide text-foreground/55">👀 Look at the screen</p>
           <h1 className="font-display text-2xl">{roundTitle}</h1>

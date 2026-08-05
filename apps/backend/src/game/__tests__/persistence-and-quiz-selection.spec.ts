@@ -34,7 +34,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
   });
 
@@ -88,7 +88,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
     expect(seedService.createSession).toHaveBeenCalledWith(2);
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
@@ -109,7 +109,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
     expect(snapshot.leaderboard).toEqual([]);
     expect(service.getActiveQuizId()).toBe(2);
@@ -127,7 +127,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
   });
 

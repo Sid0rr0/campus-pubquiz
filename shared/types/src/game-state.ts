@@ -85,8 +85,13 @@ export interface GameProgress {
    * Furthest position (block-relative, same numbering as revealIndex)
    * reached via ADVANCE while the current block's questions are open —
    * monotonic within a block, so stepping back with Previous never makes an
-   * already-shown question unanswerable again. Reset to 0 whenever a new
-   * block starts. Meaningless outside 'question_open'/'locking'.
+   * already-shown question unanswerable again. -1 means no question in the
+   * current block has ever been opened yet (distinct from 0, a real opened
+   * first question) — reset to -1 whenever a new block starts. Relevant
+   * during 'question_open'/'locking', and during 'round_intro' to tell a
+   * fresh round (nothing open yet, show the intro card) from Previous
+   * stepping back into a round whose questions are already open (keep them
+   * answerable underneath the card).
    */
   furthestOpenIndex: number;
 }
@@ -320,7 +325,7 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
     roundIndex: progress.roundIndex + 1,
     questionIndex: 0,
     revealIndex: 0,
-    furthestOpenIndex: 0,
+    furthestOpenIndex: -1,
   };
 }
 

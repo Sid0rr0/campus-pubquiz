@@ -34,8 +34,8 @@ export class GameSession extends BaseEntity {
   @Property({ default: 0 })
   revealIndex: number = 0;
 
-  @Property({ default: 0 })
-  furthestOpenIndex: number = 0;
+  @Property({ default: -1 })
+  furthestOpenIndex: number = -1;
 
   @Property({ default: false })
   isLeaderboardVisible: boolean = false;

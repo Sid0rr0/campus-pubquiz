@@ -61,7 +61,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
   });
 
@@ -125,7 +125,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       questionIndex: 1,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
   });
 

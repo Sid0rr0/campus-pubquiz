@@ -298,7 +298,7 @@ describe('getNextGameState', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
   });
 
@@ -721,7 +721,7 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('resets furthestOpenIndex to 0 once a new block starts after the previous block is fully revealed', () => {
+  it('resets furthestOpenIndex to -1 (nothing opened yet) once a new block starts after the previous block is fully revealed', () => {
     const twoSingleQuestionBlocks: GameContext = {
       rounds: [
         { questionCount: 1, breakAfter: true },
@@ -740,7 +740,28 @@ describe('getNextGameState', () => {
     expect(nextBlockIntro).toMatchObject({
       status: 'round_intro',
       roundIndex: 1,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
+    });
+  });
+
+  it("keeps furthestOpenIndex pointing at an already-opened question when Previous steps back into that round's intro card", () => {
+    let progress = getNextGameState({ ...lobby, status: 'rules' }, 'ADVANCE', twoRoundsWithBreakAfterSecond); // round_intro(0,0)
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // question_open(0,0), furthest 0
+    progress = getNextGameState(progress, 'ADVANCE', twoRoundsWithBreakAfterSecond); // question_open(0,1), furthest 1
+
+    const backToFirstQuestion = getNextGameState(progress, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(backToFirstQuestion).toMatchObject({
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+    });
+    const backToIntroCard = getNextGameState(backToFirstQuestion, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    // Distinguishable from a fresh round_intro (furthestOpenIndex -1): this
+    // round's first question was genuinely opened, so it stays at least 0.
+    expect(backToIntroCard).toMatchObject({
+      status: 'round_intro',
+      roundIndex: 0,
+      furthestOpenIndex: 1,
     });
   });
 });

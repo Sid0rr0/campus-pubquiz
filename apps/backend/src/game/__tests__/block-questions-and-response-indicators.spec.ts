@@ -66,6 +66,42 @@ describe('GameStateService — block questions and response indicators', () => {
     ]);
   });
 
+  it("shows no block questions yet on a fresh round's intro card, with the whole round upcoming", async () => {
+    await service.applyAction('START_QUIZ');
+    await service.applyAction('ADVANCE'); // -> round_intro(0)
+    await service.applyAction('ADVANCE'); // -> r1q1
+    await service.applyAction('ADVANCE'); // -> r1q2
+    const freshIntro = await service.applyAction('ADVANCE'); // -> round_intro(1), nothing opened in round 1 yet
+
+    expect(freshIntro.progress.status).toBe('round_intro');
+    expect(freshIntro.blockQuestions.map((q) => q.id)).toEqual([21, 22]);
+    expect(freshIntro.upcomingQuestions).toEqual([
+      { roundNumber: 2, questionNumberInRound: 1 },
+      { roundNumber: 2, questionNumberInRound: 2 },
+    ]);
+  });
+
+  it("keeps a round's questions answerable directly on its intro card when Previous steps back into it", async () => {
+    await service.applyAction('START_QUIZ');
+    await service.applyAction('ADVANCE'); // -> round_intro(0)
+    await service.applyAction('ADVANCE'); // -> r1q1
+    await service.applyAction('ADVANCE'); // -> r1q2
+    await service.applyAction('ADVANCE'); // -> round_intro(1)
+    await service.applyAction('ADVANCE'); // -> r2q1 (23), furthest reached: r1q1, r1q2, r2q1
+
+    const backOnIntroCard = await service.applyAction('PREVIOUS'); // -> round_intro(1), r2q1 already open
+
+    expect(backOnIntroCard.progress.status).toBe('round_intro');
+    expect(backOnIntroCard.currentQuestion).toBeNull();
+    // r2q1 stays revealed/answerable underneath the intro card, same as
+    // Previous stepping back onto an already-open question directly.
+    expect(backOnIntroCard.blockQuestions.map((q) => q.id)).toEqual([21, 22, 23]);
+    expect(service.isQuestionOpenForAnswering(23)).toBe(true);
+    expect(backOnIntroCard.upcomingQuestions).toEqual([
+      { roundNumber: 2, questionNumberInRound: 2 },
+    ]);
+  });
+
   it('keeps the whole locked block browsable during the grading break', async () => {
     await service.applyAction('START_QUIZ');
     await service.applyAction('ADVANCE'); // -> round_intro(0)

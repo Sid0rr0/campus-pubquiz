@@ -29,7 +29,7 @@ const LOBBY_PROGRESS: GameProgress = {
   questionIndex: 0,
   isLeaderboardVisible: false,
   revealIndex: 0,
-  furthestOpenIndex: 0,
+  furthestOpenIndex: -1,
 };
 
 /** How long the 'locking' countdown runs before auto-advancing into the break. */
@@ -191,7 +191,8 @@ export class GameStateService implements OnModuleInit {
   isQuestionOpenForAnswering(questionId: number): boolean {
     return (
       (this.progress.status === 'question_open' ||
-        this.progress.status === 'locking') &&
+        this.progress.status === 'locking' ||
+        this.progress.status === 'round_intro') &&
       this.getBlockQuestions().some((question) => question.id === questionId)
     );
   }
@@ -309,7 +310,11 @@ export class GameStateService implements OnModuleInit {
    * everything up to the furthest question ever opened (not just the one
    * currently on screen — PREVIOUS can walk the display backward without
    * re-hiding questions already shown) while the block is open (or locking),
-   * or the whole just-locked block during break/reveal. Empty otherwise.
+   * during round_intro (Previous can step back into a round's intro card
+   * without hiding that round's already-opened questions — furthestOpenIndex
+   * naturally excludes anything from a round_intro reached by ADVANCE into a
+   * fresh round, since it still points at the previous round/block), or the
+   * whole just-locked block during break/reveal. Empty otherwise.
    */
   private getBlockSeededQuestions(): BlockRevealQuestionView[] {
     const { status, roundIndex, questionIndex, furthestOpenIndex } =
@@ -317,6 +322,7 @@ export class GameStateService implements OnModuleInit {
     if (
       status !== 'question_open' &&
       status !== 'locking' &&
+      status !== 'round_intro' &&
       status !== 'break_intro' &&
       status !== 'break' &&
       status !== 'reveal_intro' &&
@@ -328,7 +334,10 @@ export class GameStateService implements OnModuleInit {
     const context = this.getContext();
     const rounds = this.getSeededGame().rounds;
     const blockStart = getBlockStartRoundIndex(roundIndex, context);
-    const isOpenPhase = status === 'question_open' || status === 'locking';
+    const isOpenPhase =
+      status === 'question_open' ||
+      status === 'locking' ||
+      status === 'round_intro';
     const revealBoundary = isOpenPhase
       ? getRoundAndQuestionForBlockPosition(
           blockStart,
@@ -373,10 +382,19 @@ export class GameStateService implements OnModuleInit {
    * already-opened questions as upcoming. Round boundaries within a block
    * only advance through a round_intro screen, so these can only ever be
    * later in the furthest-opened round.
+   *
+   * During round_intro, furthestOpenIndex may still point at an earlier
+   * round (a fresh round_intro reached by ADVANCE, nothing open in the new
+   * round yet) — in that case the whole round about to start is upcoming,
+   * not whatever's left of the round furthestOpenIndex still points at.
    */
   private getUpcomingQuestionPositions(): QuestionPosition[] {
     const { status, roundIndex, furthestOpenIndex } = this.progress;
-    if (status !== 'question_open' && status !== 'locking') {
+    if (
+      status !== 'question_open' &&
+      status !== 'locking' &&
+      status !== 'round_intro'
+    ) {
       return [];
     }
     const context = this.getContext();
@@ -386,18 +404,22 @@ export class GameStateService implements OnModuleInit {
       furthestOpenIndex,
       context,
     );
-    const round = this.getSeededGame().rounds[furthest.roundIndex];
+    const target =
+      status === 'round_intro' && furthest.roundIndex < roundIndex
+        ? { roundIndex, questionIndex: -1 }
+        : furthest;
+    const round = this.getSeededGame().rounds[target.roundIndex];
     if (!round) {
       return [];
     }
     const positions: QuestionPosition[] = [];
     for (
-      let index = furthest.questionIndex + 1;
+      let index = target.questionIndex + 1;
       index < round.questions.length;
       index += 1
     ) {
       positions.push({
-        roundNumber: furthest.roundIndex + 1,
+        roundNumber: target.roundIndex + 1,
         questionNumberInRound: index + 1,
       });
     }

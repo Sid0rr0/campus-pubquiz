@@ -163,8 +163,14 @@ function PlayPageContent() {
     null;
   // Answering stays available even while the leaderboard is toggled on for
   // the big screen — only a real lock (status leaving question_open/locking)
-  // should stop teams from answering.
-  const isAnswerable = progress.status === 'question_open' || progress.status === 'locking';
+  // should stop teams from answering. round_intro also stays answerable when
+  // Previous steps the display back into a round whose questions are already
+  // open (blockQuestions non-empty) — only a genuinely fresh round_intro
+  // (nothing opened yet) blocks answering.
+  const isAnswerable =
+    progress.status === 'question_open' ||
+    progress.status === 'locking' ||
+    (progress.status === 'round_intro' && blockQuestions.length > 0);
   const isBreakOrReveal =
     progress.status === 'break_intro' ||
     progress.status === 'break' ||

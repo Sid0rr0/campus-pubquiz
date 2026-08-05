@@ -34,7 +34,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
     expect(snapshot.currentQuestion).toBeNull();
   });
@@ -48,7 +48,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
     expect(snapshot.roundTitle).toBe('General Knowledge');
     expect(snapshot.currentQuestion).toBeNull();
@@ -164,7 +164,7 @@ describe('GameStateService — state transitions', () => {
       questionIndex: 0,
       isLeaderboardVisible: false,
       revealIndex: 0,
-      furthestOpenIndex: 0,
+      furthestOpenIndex: -1,
     });
   });
 

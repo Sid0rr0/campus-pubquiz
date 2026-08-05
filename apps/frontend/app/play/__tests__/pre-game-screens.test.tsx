@@ -41,7 +41,7 @@ describe('PlayPage — pre-game screens', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
-  it('shows the round name and a "look at the screen" hint on the round intro card', () => {
+  it('shows the round name and a "look at the screen" hint on a fresh round intro card', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseGameSocket.mockReturnValue(
       socketResult({
@@ -57,6 +57,33 @@ describe('PlayPage — pre-game screens', () => {
 
     expect(screen.getByText('Picture Round')).toBeInTheDocument();
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
+  });
+
+  it("stays on the block browser, not the round intro card, when Previous re-enters an already-open round", () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'round_intro', furthestOpenIndex: 0 }),
+          currentQuestion: null,
+          roundTitle: 'Picture Round',
+          blockQuestions: [q1],
+        },
+        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.queryByText('Picture Round')).not.toBeInTheDocument();
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
   it('shows a link to the rules page while waiting in the lobby', () => {
