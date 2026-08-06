@@ -20,6 +20,7 @@ describe('SOCKET_EVENTS', () => {
       ANSWER_RECEIVED: 'game:answer_received',
       JOIN_ACCEPTED: 'game:join_accepted',
       ANSWERS_UPDATED: 'game:answers_updated',
+      SESSION_CLOSED: 'game:session_closed',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',

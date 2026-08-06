@@ -46,7 +46,12 @@ describe('GameGateway — notifySessionClosed', () => {
   it('does not crash when a socket disconnects after its own session has been closed', async () => {
     const { gateway, gameStateService } = testGateway;
 
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'player-1', 'ABCDEF');
+    const player = createMockSocket(
+      SOCKET_ROOMS.PLAYERS,
+      {},
+      'player-1',
+      'ABCDEF',
+    );
     await gateway.handleConnection(asSocket(player));
 
     // ABCDEF is the fixture's default session, which closeSession refuses to

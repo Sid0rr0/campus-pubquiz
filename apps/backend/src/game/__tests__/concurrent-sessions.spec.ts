@@ -92,6 +92,7 @@ function createSessionAwareTeamService() {
       const team = teamsBySession[gameSessionId];
       return Promise.resolve([{ teamId: team.id, teamName: team.name }]);
     }),
+    removeFromRoster: jest.fn().mockResolvedValue(undefined),
   };
 }
 
