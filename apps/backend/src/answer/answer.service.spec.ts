@@ -13,6 +13,7 @@ import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { AnswerService } from '@/answer/answer.service';
 
@@ -52,6 +53,7 @@ describe('AnswerService (Postgres integration)', () => {
       em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
         GameSessionTeam,
       ),
+      em.getRepository<Question, QuestionRepository>(Question),
     );
     const quiz = em.create(Quiz, { title: 'Answer Test Quiz' });
     round = em.create(Round, { quiz, title: 'Round 1', orderIndex: 0 });
@@ -166,6 +168,85 @@ describe('AnswerService (Postgres integration)', () => {
   it('lists answers with zero points and a null gradedAt before grading', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     await answerService.submit(session.id, question.id, team.id, 'Banana');
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      question.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).toBeNull();
+  });
+
+  it('auto-grades a correct multiple choice answer on submit, awarding full points', async () => {
+    const mcQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'multiple_choice',
+      prompt: 'Capital of France?',
+      answer: 'Paris',
+      points: 2,
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(session.id, mcQuestion.id, team.id, 'Paris');
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      mcQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(2);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades an incorrect multiple choice answer on submit as zero points', async () => {
+    const mcQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'multiple_choice',
+      prompt: 'Capital of France?',
+      answer: 'Paris',
+      points: 2,
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(session.id, mcQuestion.id, team.id, 'London');
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      mcQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('re-grades a multiple choice answer when the team changes their pick before locking', async () => {
+    const mcQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'multiple_choice',
+      prompt: 'Capital of France?',
+      answer: 'Paris',
+      points: 2,
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(session.id, mcQuestion.id, team.id, 'London');
+    await answerService.submit(session.id, mcQuestion.id, team.id, 'Paris');
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      mcQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(2);
+  });
+
+  it('leaves free_text answers ungraded on submit (unaffected by multiple choice auto-grading)', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(session.id, question.id, team.id, 'Apple');
 
     const [answer] = await answerService.listForQuestion(
       session.id,

@@ -7,9 +7,11 @@ import type {
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 
 export interface SubmittedAnswer {
@@ -48,6 +50,8 @@ export class AnswerService {
     @InjectRepository(Team) private readonly teams: TeamRepository,
     @InjectRepository(GameSessionTeam)
     private readonly gameSessionTeams: GameSessionTeamRepository,
+    @InjectRepository(Question)
+    private readonly questions: QuestionRepository,
   ) {}
 
   async submit(
@@ -56,6 +60,15 @@ export class AnswerService {
     teamId: number,
     value: string,
   ): Promise<SubmittedAnswer> {
+    const question = await this.questions.findOneOrFail(questionId, {
+      fields: ['type', 'answer', 'points'],
+    });
+    // Multiple choice has one exact-match correct option (enforced at
+    // import time), so it can be graded the instant it's submitted — no
+    // admin judgement call needed like free_text/picture/audio require.
+    const isAutoGraded = question.type === 'multiple_choice';
+    const isCorrect = isAutoGraded && value === question.answer;
+
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
     const now = new Date();
@@ -65,13 +78,17 @@ export class AnswerService {
         question: questionId,
         team: teamId,
         value,
+        pointsAwarded: isCorrect ? question.points : 0,
+        ...(isAutoGraded ? { gradedAt: now } : {}),
         createdAt: now,
         updatedAt: now,
       },
       {
         onConflictFields: ['gameSession', 'question', 'team'],
         onConflictAction: 'merge',
-        onConflictMergeFields: ['value', 'updatedAt'],
+        onConflictMergeFields: isAutoGraded
+          ? ['value', 'updatedAt', 'pointsAwarded', 'gradedAt']
+          : ['value', 'updatedAt'],
       },
     );
 
