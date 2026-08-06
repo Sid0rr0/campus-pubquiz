@@ -1,12 +1,20 @@
 import { getOptionLetter } from '@/app/lib/option-letters';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
+const HTTP_URL_PATTERN = /^https?:\/\//i;
 
 // Neither media_url nor answer_media_url is tied to the question's `type`
 // (e.g. a free_text question can carry a photo or reveal one), so image vs.
 // audio is inferred from the URL's file extension instead.
 function isAudioUrl(url: string): boolean {
   return AUDIO_EXTENSION_PATTERN.test(url);
+}
+
+// media_url/answer_media_url come from an admin-imported spreadsheet, not a
+// trusted author — restrict to http(s) so a malicious sheet can't slip in a
+// data:/blob: payload that bloats or hangs the shared display.
+function isHttpUrl(url: string): boolean {
+  return HTTP_URL_PATTERN.test(url);
 }
 
 interface QuestionDisplayProps {
@@ -34,7 +42,10 @@ export function QuestionDisplay({
   // media_url rather than showing both — e.g. a picture round's image gives
   // way to whatever the answer_media_url shows instead.
   const isRevealing = correctAnswer !== undefined;
-  const questionMediaUrl = isRevealing && answerMediaUrl ? undefined : mediaUrl;
+  const rawQuestionMediaUrl = isRevealing && answerMediaUrl ? undefined : mediaUrl;
+  const questionMediaUrl =
+    rawQuestionMediaUrl && isHttpUrl(rawQuestionMediaUrl) ? rawQuestionMediaUrl : undefined;
+  const safeAnswerMediaUrl = answerMediaUrl && isHttpUrl(answerMediaUrl) ? answerMediaUrl : undefined;
 
   return (
     <>
@@ -44,7 +55,7 @@ export function QuestionDisplay({
         <img
           data-testid={`${mediaTestIdPrefix}-image`}
           src={questionMediaUrl}
-          alt=""
+          alt="Question image"
           className="max-h-64 rounded-xl"
         />
       )}
@@ -87,19 +98,19 @@ export function QuestionDisplay({
           {correctAnswer}
         </p>
       )}
-      {isRevealing && answerMediaUrl && !isAudioUrl(answerMediaUrl) && (
+      {isRevealing && safeAnswerMediaUrl && !isAudioUrl(safeAnswerMediaUrl) && (
         // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
         <img
           data-testid={`${mediaTestIdPrefix}-answer-image`}
-          src={answerMediaUrl}
-          alt=""
+          src={safeAnswerMediaUrl}
+          alt="Answer image"
           className="max-h-64 rounded-xl"
         />
       )}
-      {isRevealing && answerMediaUrl && isAudioUrl(answerMediaUrl) && (
+      {isRevealing && safeAnswerMediaUrl && isAudioUrl(safeAnswerMediaUrl) && (
         <audio
           data-testid={`${mediaTestIdPrefix}-answer-audio`}
-          src={answerMediaUrl}
+          src={safeAnswerMediaUrl}
           controls
           autoPlay
         />

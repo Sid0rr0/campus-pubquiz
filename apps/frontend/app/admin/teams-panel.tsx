@@ -59,6 +59,7 @@ export function TeamsPanel({
                 <span aria-hidden="true" className={team.isConnected ? 'text-green' : 'text-background/30'}>
                   ●
                 </span>
+                <span className="sr-only">{team.isConnected ? 'Connected' : 'Disconnected'}</span>
                 {team.teamName}
                 {hasAnswered && (
                   <span aria-hidden="true" className="ml-1 text-cyan">

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -42,6 +42,20 @@ function AdminPageContent() {
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
 
   const isAuthenticated = auth.status === 'authenticated';
+
+  // The code the socket actually connects with. Only adopts `sessionCode`
+  // (the URL's ?code=) when it points at a session the socket doesn't
+  // already know about — a deep link, a freshly picked session, or a
+  // manual URL edit to a different session. SELECT_QUIZ migrates the
+  // existing admin socket into a new session server-side and pushes an
+  // updated STATE_SYNC without a reconnect; the URL-sync effect below then
+  // updates ?code= to match that migration, which must not be treated as
+  // "a different session" here, or every quiz selection would force a
+  // pointless full socket reconnect (and briefly hide already-correct data
+  // behind the "Connecting…" screen).
+  const [connectJoinCode, setConnectJoinCode] = useState<string | null>(sessionCode);
+  const connectedJoinCodeRef = useRef<string | null>(null);
+
   const {
     snapshot,
     connectionError,
@@ -52,13 +66,33 @@ function AdminPageContent() {
     awardBonus,
     selectQuiz = () => {},
     listAnswers = () => {},
-  } = useGameSocket('admin', isAuthenticated && Boolean(sessionCode), sessionCode ?? undefined);
+    reconnectedAt,
+  } = useGameSocket(
+    'admin',
+    isAuthenticated && Boolean(connectJoinCode),
+    connectJoinCode ?? undefined,
+  );
+
+  useEffect(() => {
+    if (snapshot) {
+      connectedJoinCodeRef.current = snapshot.joinCode;
+    }
+  }, [snapshot]);
+
+  useEffect(() => {
+    if (sessionCode && sessionCode !== connectedJoinCodeRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setConnectJoinCode(sessionCode);
+    }
+  }, [sessionCode]);
 
   useEffect(() => {
     // SELECT_QUIZ always mints a brand-new session (never overwrites the
     // current one) and migrates this admin socket into it — keep the URL's
     // ?code= following that migration so a refresh lands back in the same
-    // session instead of falling through to the picker screen.
+    // session instead of falling through to the picker screen. Pure URL
+    // bookkeeping — `connectJoinCode` above deliberately doesn't treat this
+    // as a new session to connect to.
     if (snapshot && snapshot.joinCode !== sessionCode) {
       router.replace(`/admin?code=${snapshot.joinCode}`);
     }
@@ -166,10 +200,14 @@ function AdminPageContent() {
   const effectiveQuestionId = selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
 
   useEffect(() => {
+    // `liveAnswers` is transient, request-driven data — it isn't part of the
+    // STATE_SYNC snapshot the server resends automatically on reconnect, so
+    // `reconnectedAt` is included here to re-request it after a dropped
+    // connection recovers (e.g. a phone/laptop losing Wi-Fi mid-grading).
     if (effectiveQuestionId !== null) {
       listAnswers(effectiveQuestionId);
     }
-  }, [effectiveQuestionId, listAnswers]);
+  }, [effectiveQuestionId, listAnswers, reconnectedAt]);
 
   useEffect(() => {
     // Once the admin's manual pick coincides with the question actually on
@@ -221,6 +259,10 @@ function AdminPageContent() {
     quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.title ?? null;
   const activeQuizRounds =
     quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.rounds ?? EMPTY_ROUNDS;
+  const roundTitles = useMemo(
+    () => activeQuizRounds.map((round) => round.title),
+    [activeQuizRounds],
+  );
 
   function handleSelectQuiz(quizId: number): void {
     selectQuiz(quizId);
@@ -429,11 +471,7 @@ function AdminPageContent() {
         />
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Teams</h2>
-          <TeamsTable
-            teams={teams}
-            leaderboard={leaderboard}
-            roundTitles={activeQuizRounds.map((round) => round.title)}
-          />
+          <TeamsTable teams={teams} leaderboard={leaderboard} roundTitles={roundTitles} />
         </section>
       </div>
     </main>

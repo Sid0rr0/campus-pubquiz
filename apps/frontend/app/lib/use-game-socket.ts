@@ -49,6 +49,14 @@ export interface UseGameSocketResult {
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
   listAnswers: (questionId: number) => void;
+  /**
+   * Timestamp of the most recent successful (re)connection, including the
+   * first one. Transient, request-driven data (e.g. `listAnswers` results)
+   * isn't part of the `STATE_SYNC` snapshot the server resends automatically
+   * on reconnect, so consumers that need to re-request it after a dropped
+   * connection should add this to their effect's dependency array.
+   */
+  reconnectedAt: number | null;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -70,6 +78,7 @@ export function useGameSocket(
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
+  const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -77,11 +86,25 @@ export function useGameSocket(
       return;
     }
 
+    // A fresh connect (first mount, or `role`/`joinCode` identity change)
+    // starts from a clean slate — otherwise the previous identity's data
+    // stays on screen until the new STATE_SYNC arrives.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSnapshot(null);
+    setConnectionError(null);
+    setTeam(null);
+    setLiveAnswers(null);
+    setMyAnswers({});
+
     const socket = io(getBackendUrl(), {
       query: joinCode ? { role, code: joinCode } : { role },
       withCredentials: true,
     });
     socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setReconnectedAt(Date.now());
+    });
 
     socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateSnapshotPayload) => {
       setSnapshot(payload);
@@ -193,5 +216,6 @@ export function useGameSocket(
     selectQuiz,
     myAnswers,
     listAnswers,
+    reconnectedAt,
   };
 }
