@@ -18,7 +18,7 @@ describe('GameStateService — question lock countdown', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   beforeEach(() => {
@@ -146,10 +146,8 @@ describe('GameStateService — question lock countdown', () => {
     );
     await rehydratedService.onModuleInit();
 
-    expect(
-      rehydratedService.getQuestionLockAt(
-        rehydratedService.getDefaultJoinCode(),
-      ),
-    ).toBe(Date.now() + 60_000);
+    expect(rehydratedService.getQuestionLockAt('ABCDEF')).toBe(
+      Date.now() + 60_000,
+    );
   });
 });

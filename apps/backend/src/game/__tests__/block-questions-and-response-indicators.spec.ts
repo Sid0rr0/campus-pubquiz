@@ -21,7 +21,7 @@ describe('GameStateService — block questions and response indicators', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('exposes no block questions in the lobby', () => {
@@ -241,7 +241,7 @@ describe('GameStateService — block questions and response indicators', () => {
       createFakeOrm(),
     );
     await customService.onModuleInit();
-    const customJoinCode = customService.getDefaultJoinCode();
+    const customJoinCode = threeQuestionRoundGame.joinCode;
 
     await customService.applyAction(customJoinCode, 'START_QUIZ');
     await customService.applyAction(customJoinCode, 'ADVANCE'); // -> round_intro(0)

@@ -83,9 +83,25 @@ describe('ImportController', () => {
       importService.confirm.mockResolvedValue(result);
 
       await expect(
-        controller.confirm({ csvText: CSV, quizTitle: 'Trivia Night' }),
+        controller.confirm({
+          csvText: CSV,
+          quizTitle: 'Trivia Night',
+          joinCode: 'ABCDEF',
+        }),
       ).resolves.toBe(result);
-      expect(importService.confirm).toHaveBeenCalledWith(CSV, 'Trivia Night');
+      expect(importService.confirm).toHaveBeenCalledWith(
+        CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
+    });
+
+    it('rejects a body without joinCode', async () => {
+      const { controller } = makeController();
+
+      await expect(controller.confirm({ csvText: CSV })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('maps a blocked import to 422 with the issues attached', async () => {
@@ -93,7 +109,7 @@ describe('ImportController', () => {
       const preview = blockedPreview();
       importService.confirm.mockRejectedValue(new ImportBlockedError(preview));
 
-      const promise = controller.confirm({ csvText: CSV });
+      const promise = controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' });
 
       await expect(promise).rejects.toThrow(UnprocessableEntityException);
       await promise.catch((error: UnprocessableEntityException) => {
@@ -107,18 +123,18 @@ describe('ImportController', () => {
         new ImportLockedError('question_open'),
       );
 
-      await expect(controller.confirm({ csvText: CSV })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('lets unexpected errors bubble up unchanged', async () => {
       const { controller, importService } = makeController();
       importService.confirm.mockRejectedValue(new Error('db down'));
 
-      await expect(controller.confirm({ csvText: CSV })).rejects.toThrow(
-        'db down',
-      );
+      await expect(
+        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
+      ).rejects.toThrow('db down');
     });
   });
 });

@@ -75,9 +75,9 @@ export class ImportService {
    */
   async confirm(
     csvText: string,
+    joinCode: string,
     quizTitle?: string,
   ): Promise<ImportConfirmResult> {
-    const joinCode = this.gameState.getDefaultJoinCode();
     const status = this.gameState.getSnapshot(joinCode).progress.status;
     if (!IMPORTABLE_STATUSES.includes(status)) {
       throw new ImportLockedError(status);

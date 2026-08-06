@@ -21,7 +21,7 @@ describe('GameStateService — core snapshot', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('throws if used before onModuleInit resolves the seeded game', async () => {

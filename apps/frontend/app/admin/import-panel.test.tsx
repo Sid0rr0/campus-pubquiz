@@ -49,7 +49,7 @@ describe('ImportPanel', () => {
       isImportable: true,
     });
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await uploadCsv(user);
 
     await waitFor(() => expect(mockPreviewImport).toHaveBeenCalledWith(
@@ -84,7 +84,7 @@ describe('ImportPanel', () => {
       isImportable: true,
     });
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await uploadCsv(user);
 
     expect(await screen.findByText(/options: paris, london, berlin/i)).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('ImportPanel', () => {
       isImportable: true,
     });
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await uploadCsv(user);
 
     const historyItem = (await screen.findByText('History')).closest('li');
@@ -121,7 +121,7 @@ describe('ImportPanel', () => {
       isImportable: false,
     });
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await uploadCsv(user);
 
     expect(await screen.findByText(/missing answer/i)).toBeInTheDocument();
@@ -140,7 +140,7 @@ describe('ImportPanel', () => {
     mockConfirmImport.mockResolvedValue({ quizId: 'quiz-1', roundCount: 1, questionCount: 3 });
     const onImported = vi.fn();
 
-    render(<ImportPanel onImported={onImported} />);
+    render(<ImportPanel joinCode="TESTCODE" onImported={onImported} />);
     await uploadCsv(user);
     await screen.findByText('History');
 
@@ -151,6 +151,7 @@ describe('ImportPanel', () => {
     await waitFor(() => expect(mockConfirmImport).toHaveBeenCalledWith(
       expect.stringContaining('round,type,question'),
       undefined,
+      'TESTCODE',
     ));
     expect(onImported).toHaveBeenCalledWith({ quizId: 'quiz-1', roundCount: 1, questionCount: 3 });
   });
@@ -165,7 +166,7 @@ describe('ImportPanel', () => {
     });
     mockConfirmImport.mockRejectedValue(new ImportApiError('A quiz is currently running', 409));
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await uploadCsv(user);
     await screen.findByText('History');
 
@@ -178,7 +179,7 @@ describe('ImportPanel', () => {
     const user = userEvent.setup();
     mockPreviewImport.mockRejectedValue(new ImportApiError('Could not read the CSV file', 200));
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await uploadCsv(user);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not read the csv file/i);
@@ -193,7 +194,7 @@ describe('ImportPanel', () => {
       isImportable: true,
     });
 
-    render(<ImportPanel />);
+    render(<ImportPanel joinCode="TESTCODE" />);
     await user.type(screen.getByLabelText(/quiz title/i), 'Trivia Night');
     await uploadCsv(user);
 

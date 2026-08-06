@@ -53,7 +53,6 @@ function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
     ...overrides,
   };
   const asService = {
-    getDefaultJoinCode: () => 'ABCDEF',
     getSnapshot: () => ({ progress: { status: stub.status } }),
     getActiveQuizId: () => stub.activeQuizId,
     reloadActiveQuiz: stub.reloadActiveQuiz,
@@ -152,7 +151,11 @@ describe('ImportService (Postgres integration)', () => {
       const { importService } = makeService();
 
       // Act
-      const result = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const result = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
 
       // Assert
       expect(result.roundCount).toBe(2);
@@ -189,14 +192,22 @@ describe('ImportService (Postgres integration)', () => {
 
     it('re-imports idempotently, updating questions in place with stable ids', async () => {
       const { importService } = makeService();
-      const first = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const first = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
       const before = await em.find(
         Question,
         {},
         { orderBy: { orderIndex: 'asc' } },
       );
 
-      const second = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const second = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
 
       expect(second.quizId).toBe(first.quizId);
       const quizzes = await em.find(Quiz, {});
@@ -213,7 +224,11 @@ describe('ImportService (Postgres integration)', () => {
 
     it('updates edited questions and deletes rounds and questions removed from the sheet', async () => {
       const { importService } = makeService();
-      const first = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const first = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
       const [historyRound] = await em.find(
         Round,
         { quiz: first.quizId },
@@ -225,7 +240,11 @@ describe('ImportService (Postgres integration)', () => {
         { orderBy: { orderIndex: 'asc' } },
       );
 
-      const second = await importService.confirm(EDITED_CSV, 'Trivia Night');
+      const second = await importService.confirm(
+        EDITED_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
 
       expect(second.quizId).toBe(first.quizId);
       expect(second.roundCount).toBe(1);
@@ -248,7 +267,7 @@ describe('ImportService (Postgres integration)', () => {
       const { importService } = makeService();
 
       await expect(
-        importService.confirm(BROKEN_CSV, 'Trivia Night'),
+        importService.confirm(BROKEN_CSV, 'ABCDEF', 'Trivia Night'),
       ).rejects.toThrow(ImportBlockedError);
 
       const quizzes = await em.find(Quiz, {});
@@ -259,25 +278,33 @@ describe('ImportService (Postgres integration)', () => {
       const { importService } = makeService({ status: 'question_open' });
 
       await expect(
-        importService.confirm(VALID_CSV, 'Trivia Night'),
+        importService.confirm(VALID_CSV, 'ABCDEF', 'Trivia Night'),
       ).rejects.toThrow(ImportLockedError);
     });
 
     it('allows importing after the quiz has ended', async () => {
       const { importService } = makeService({ status: 'ended' });
 
-      const result = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const result = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
 
       expect(result.questionCount).toBe(3);
     });
 
     it('reloads the in-memory game when the imported quiz is the active one', async () => {
       const { importService, stub } = makeService();
-      const first = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const first = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
       expect(stub.reloadActiveQuiz).not.toHaveBeenCalled();
 
       stub.activeQuizId = first.quizId;
-      await importService.confirm(VALID_CSV, 'Trivia Night');
+      await importService.confirm(VALID_CSV, 'ABCDEF', 'Trivia Night');
 
       expect(stub.reloadActiveQuiz).toHaveBeenCalledTimes(1);
     });
@@ -288,7 +315,11 @@ describe('ImportService (Postgres integration)', () => {
       // projection sent to clients is GameStateService's responsibility,
       // covered separately in game-state.service.spec.ts.
       const { importService } = makeService();
-      const result = await importService.confirm(VALID_CSV, 'Trivia Night');
+      const result = await importService.confirm(
+        VALID_CSV,
+        'ABCDEF',
+        'Trivia Night',
+      );
       const seedService = new SeedService(
         em.getRepository<Quiz, QuizRepository>(Quiz),
         em.getRepository<Round, RoundRepository>(Round),

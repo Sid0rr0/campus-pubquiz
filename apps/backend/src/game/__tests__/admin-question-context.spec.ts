@@ -18,7 +18,7 @@ describe('GameStateService — getAdminQuestionContext', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('returns the correct answer and round position for a question', () => {

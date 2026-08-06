@@ -21,7 +21,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   describe('listSessions', () => {
@@ -66,11 +66,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
   });
 
   describe('closeSession', () => {
-    // createSession always hands defaultJoinCode to the *new* session
-    // (existing behavior, see createSession's own doc comment) — creating a
-    // second session first is what makes the original `joinCode` non-default
-    // for these tests.
-    it('rejects closing a non-default session that has not ended yet', async () => {
+    it('rejects closing a session that has not ended yet', async () => {
       await service.createSession(2);
       await service.applyAction(joinCode, 'START_QUIZ');
 
@@ -82,17 +78,8 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       );
     });
 
-    it('rejects closing the default session even once it has ended', async () => {
-      await service.applyAction(joinCode, 'START_QUIZ');
-      await service.applyAction(joinCode, 'END_QUIZ');
-
-      expect(() => service.closeSession(joinCode)).toThrow(
-        SessionCloseBlockedError,
-      );
-    });
-
-    it('evicts a non-default session once it has ended', async () => {
-      await service.createSession(2); // original `joinCode` is no longer default
+    it('evicts a session once it has ended', async () => {
+      await service.createSession(2);
       await service.applyAction(joinCode, 'START_QUIZ');
       await service.applyAction(joinCode, 'END_QUIZ');
 

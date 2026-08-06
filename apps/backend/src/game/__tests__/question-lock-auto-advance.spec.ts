@@ -89,9 +89,12 @@ describe('GameGateway — question lock auto-advance timer', () => {
     localGateway: GameGateway,
     localServer: MockServer,
   ) {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'ZZZZZZ',
+    );
     await localGateway.handleConnection(asSocket(admin));
     await localGateway.handleAdminAction(asSocket(admin), {
       action: 'START_QUIZ',
@@ -202,9 +205,12 @@ describe('GameGateway — question lock auto-advance timer', () => {
   it('does not arm a lock on a question that is not the last of a breakAfter round', async () => {
     const { gateway: localGateway, server: localServer } =
       await createGatewayWithBreakAfterGame();
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'ZZZZZZ',
+    );
     await localGateway.handleConnection(asSocket(admin));
     await localGateway.handleAdminAction(asSocket(admin), {
       action: 'START_QUIZ',

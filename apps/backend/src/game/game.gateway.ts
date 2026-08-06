@@ -85,28 +85,18 @@ export class GameGateway
     }
 
     const requestedCode = client.handshake.query.code;
-    if (requestedCode !== undefined && typeof requestedCode !== 'string') {
+    if (
+      typeof requestedCode !== 'string' ||
+      !this.gameState.hasSession(requestedCode)
+    ) {
       this.logger.warn(
-        `Rejected connection ${client.id}: malformed session code`,
+        `Rejected connection ${client.id}: unknown session code "${String(requestedCode)}"`,
       );
+      client.emit('exception', 'Unknown game session code');
       client.disconnect();
       return;
     }
-
-    let joinCode: string;
-    if (typeof requestedCode === 'string') {
-      if (!this.gameState.hasSession(requestedCode)) {
-        this.logger.warn(
-          `Rejected connection ${client.id}: unknown session code "${requestedCode}"`,
-        );
-        client.emit('exception', 'Unknown game session code');
-        client.disconnect();
-        return;
-      }
-      joinCode = requestedCode;
-    } else {
-      joinCode = this.gameState.getDefaultJoinCode();
-    }
+    const joinCode = requestedCode;
 
     if (role === SOCKET_ROOMS.ADMIN) {
       const user = await this.resolveAdminUser(client);

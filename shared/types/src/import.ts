@@ -54,10 +54,14 @@ export interface ImportPreview {
  * Request body shared by POST /import/preview and POST /import/confirm.
  * `csvText` is the content of an uploaded CSV file (e.g. a Google Sheets
  * "File → Download → CSV" export), read client-side and sent as text.
+ * `joinCode` identifies which session's active quiz to check/reload against
+ * — required by /import/confirm, ignored by /import/preview (which never
+ * touches game state).
  */
 export interface ImportRequest {
   csvText: string;
   quizTitle?: string;
+  joinCode?: string;
 }
 
 export interface ImportConfirmResult {

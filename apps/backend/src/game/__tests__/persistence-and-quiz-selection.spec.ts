@@ -24,7 +24,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('persists progress via the repository after applying an action', async () => {
@@ -55,7 +55,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       createFakeOrm(),
     );
     await rehydratedService.onModuleInit();
-    const rehydratedJoinCode = rehydratedService.getDefaultJoinCode();
+    const rehydratedJoinCode = 'ABCDEF';
 
     const snapshot = rehydratedService.getSnapshot(rehydratedJoinCode);
     expect(snapshot.progress).toEqual({
@@ -127,12 +127,6 @@ describe('GameStateService — persistence and quiz selection', () => {
     expect(snapshot.leaderboard).toEqual([]);
     expect(service.getActiveQuizId(snapshot.joinCode)).toBe(2);
     expect(service.getGameSessionId(snapshot.joinCode)).toBe(102);
-  });
-
-  it('becomes the new default session, so single-session call sites follow it', async () => {
-    const created = await service.createSession(2);
-
-    expect(service.getDefaultJoinCode()).toBe(created.joinCode);
   });
 
   it('persists later actions under the newly created session id', async () => {

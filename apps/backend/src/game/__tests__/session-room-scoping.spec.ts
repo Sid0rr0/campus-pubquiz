@@ -36,15 +36,6 @@ describe('GameGateway — session room scoping', () => {
     ({ gateway, server } = await createTestGateway());
   });
 
-  it('joins a connecting client to its session-scoped room when no code is given, defaulting to the current session', async () => {
-    const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
-    await gateway.handleConnection(asSocket(display));
-
-    expect(display.join).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-    );
-  });
-
   it('joins a connecting client to the session named by an explicit code', async () => {
     const display = createMockSocket(
       SOCKET_ROOMS.DISPLAY,
@@ -77,15 +68,17 @@ describe('GameGateway — session room scoping', () => {
   });
 
   it("keeps two sessions fully isolated: an admin action in one only broadcasts to that session's rooms", async () => {
-    // Session A ('ABCDEF') is seeded by createTestGateway and starts as the
-    // default. A fresh admin connects with no code (resolves to A) and
-    // spins up session B via SELECT_QUIZ, which becomes the new default and
-    // migrates that admin's own socket into B's rooms — leaving A's state,
-    // still in the map under 'ABCDEF', reachable only by explicitly
+    // Session A ('ABCDEF') is seeded by createTestGateway. A fresh admin
+    // connects to it explicitly, then spins up session B via SELECT_QUIZ,
+    // which migrates that admin's own socket into B's rooms — leaving A's
+    // state, still in the map under 'ABCDEF', reachable only by explicitly
     // reconnecting with ?code=ABCDEF.
-    const adminForB = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+    const adminForB = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'ABCDEF',
+    );
     await gateway.handleConnection(asSocket(adminForB));
     await gateway.handleSelectQuiz(asSocket(adminForB), { quizId: 2 });
 
@@ -124,14 +117,18 @@ describe('GameGateway — session room scoping', () => {
     );
   });
 
-  it("clears the connection roster of the disconnecting socket's own session, not the current default", async () => {
-    const adminForB = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+  it("clears the connection roster of the disconnecting socket's own session, not the admin's other session", async () => {
+    const adminForB = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'ABCDEF',
+    );
     await gateway.handleConnection(asSocket(adminForB));
     await gateway.handleSelectQuiz(asSocket(adminForB), { quizId: 2 });
-    // Default is now session B ('GHIJKL'); session A ('ABCDEF') still holds
-    // the fixture team's connection from createTestGateway's seed data.
+    // adminForB's socket is now in session B ('GHIJKL'); session A
+    // ('ABCDEF') still holds the fixture team's connection from
+    // createTestGateway's seed data.
 
     const playerInA = createMockSocket(
       SOCKET_ROOMS.PLAYERS,
@@ -206,9 +203,12 @@ describe('GameGateway — session room scoping', () => {
 
     jest.useFakeTimers();
     try {
-      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-        token: TEST_SESSION_TOKEN,
-      });
+      const admin = createMockSocket(
+        SOCKET_ROOMS.ADMIN,
+        { token: TEST_SESSION_TOKEN },
+        'socket-1',
+        'ZZZZZZ',
+      );
       await localGateway.handleConnection(asSocket(admin));
       await localGateway.handleAdminAction(asSocket(admin), {
         action: 'START_QUIZ',

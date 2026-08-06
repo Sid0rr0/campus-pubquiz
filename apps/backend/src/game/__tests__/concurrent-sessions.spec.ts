@@ -190,11 +190,14 @@ describe('GameGateway — concurrent sessions (phase 6 verification)', () => {
     gateway.server = asServer(server);
   });
 
-  /** Opens session A's only question (default session at onModuleInit). */
+  /** Opens session A's only question (the session seeded at onModuleInit). */
   async function openSessionA() {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'AAAAAA',
+    );
     await gateway.handleConnection(asSocket(admin));
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
     await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> round_intro
@@ -202,12 +205,15 @@ describe('GameGateway — concurrent sessions (phase 6 verification)', () => {
     return admin;
   }
 
-  /** Creates session B via SELECT_QUIZ (from a fresh admin resolving the still-default
-   * session A first) and opens its only question. Leaves B as the new default. */
+  /** Creates session B via SELECT_QUIZ (from a fresh admin connected to session
+   * A first) and opens its only question. */
   async function createAndOpenSessionB() {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'AAAAAA',
+    );
     await gateway.handleConnection(asSocket(admin));
     await gateway.handleSelectQuiz(asSocket(admin), { quizId: 20 });
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
@@ -222,9 +228,12 @@ describe('GameGateway — concurrent sessions (phase 6 verification)', () => {
       'question_open',
     );
 
-    const adminB = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
+    const adminB = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      'AAAAAA',
+    );
     await gateway.handleConnection(asSocket(adminB));
     await gateway.handleSelectQuiz(asSocket(adminB), { quizId: 20 });
 

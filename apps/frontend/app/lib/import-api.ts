@@ -26,6 +26,7 @@ async function postImport<T>(
   path: 'preview' | 'confirm',
   csvText: string,
   quizTitle: string | undefined,
+  joinCode?: string,
 ): Promise<T> {
   const response = await fetch(`${getBackendUrl()}/import/${path}`, {
     method: 'POST',
@@ -34,7 +35,7 @@ async function postImport<T>(
       'Content-Type': 'application/json',
       ...CSRF_HEADERS,
     },
-    body: JSON.stringify({ csvText, quizTitle }),
+    body: JSON.stringify({ csvText, quizTitle, joinCode }),
   });
 
   if (!response.ok) {
@@ -59,6 +60,7 @@ export function previewImport(
 export function confirmImport(
   csvText: string,
   quizTitle: string | undefined,
+  joinCode: string,
 ): Promise<ImportConfirmResult> {
-  return postImport<ImportConfirmResult>('confirm', csvText, quizTitle);
+  return postImport<ImportConfirmResult>('confirm', csvText, quizTitle, joinCode);
 }

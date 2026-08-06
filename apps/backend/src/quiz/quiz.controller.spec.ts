@@ -9,7 +9,6 @@ function makeController() {
   const quizService = { list: jest.fn() };
   const gameState = {
     getActiveQuizId: jest.fn().mockReturnValue(1),
-    getDefaultJoinCode: jest.fn().mockReturnValue('ABCDEF'),
   };
   const controller = new QuizController(
     quizService as unknown as QuizService,
@@ -37,9 +36,23 @@ describe('QuizController', () => {
     quizService.list.mockResolvedValue(quizzes);
     gameState.getActiveQuizId.mockReturnValue(1);
 
-    await expect(controller.list()).resolves.toEqual({
+    await expect(controller.list('ABCDEF')).resolves.toEqual({
       activeQuizId: 1,
       quizzes,
     });
+  });
+
+  it('returns a null active quiz id when no joinCode is given', async () => {
+    const { controller, quizService, gameState } = makeController();
+    const quizzes: QuizSummary[] = [
+      { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
+    ];
+    quizService.list.mockResolvedValue(quizzes);
+
+    await expect(controller.list()).resolves.toEqual({
+      activeQuizId: null,
+      quizzes,
+    });
+    expect(gameState.getActiveQuizId).not.toHaveBeenCalled();
   });
 });

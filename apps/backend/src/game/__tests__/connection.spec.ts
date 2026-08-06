@@ -63,6 +63,35 @@ describe('GameGateway — connection', () => {
     expect(client.disconnect).toHaveBeenCalled();
   });
 
+  it('disconnects a client that connects with no session code at all', async () => {
+    const client = createMockSocket(SOCKET_ROOMS.DISPLAY, {}, 'socket-1', null);
+    await gateway.handleConnection(asSocket(client));
+
+    expect(client.join).not.toHaveBeenCalled();
+    expect(client.emit).toHaveBeenCalledWith(
+      'exception',
+      'Unknown game session code',
+    );
+    expect(client.disconnect).toHaveBeenCalled();
+  });
+
+  it('disconnects a client that connects with an unrecognized session code', async () => {
+    const client = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'socket-1',
+      'NOTREAL',
+    );
+    await gateway.handleConnection(asSocket(client));
+
+    expect(client.join).not.toHaveBeenCalled();
+    expect(client.emit).toHaveBeenCalledWith(
+      'exception',
+      'Unknown game session code',
+    );
+    expect(client.disconnect).toHaveBeenCalled();
+  });
+
   it('joins an admin client that presents a valid session token', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
       token: TEST_SESSION_TOKEN,

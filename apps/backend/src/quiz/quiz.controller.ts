@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import type { QuizzesListedPayload } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -14,12 +14,12 @@ export class QuizController {
   ) {}
 
   @Get()
-  async list(): Promise<QuizzesListedPayload> {
+  async list(
+    @Query('joinCode') joinCode?: string,
+  ): Promise<QuizzesListedPayload> {
     const quizzes = await this.quizService.list();
     return {
-      activeQuizId: this.gameState.getActiveQuizId(
-        this.gameState.getDefaultJoinCode(),
-      ),
+      activeQuizId: joinCode ? this.gameState.getActiveQuizId(joinCode) : null,
       quizzes,
     };
   }

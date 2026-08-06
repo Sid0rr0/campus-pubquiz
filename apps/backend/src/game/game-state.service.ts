@@ -141,15 +141,8 @@ export class SessionCloseBlockedError extends Error {
 @Injectable()
 export class GameStateService implements OnModuleInit {
   private readonly sessions = new Map<string, SessionState>();
-  /**
-   * The one session today's single-session gateway/REST call sites (not yet
-   * updated to thread a real per-connection joinCode) operate on. Points at
-   * the most recently created session — set at onModuleInit and again by
-   * createSession — so today's single-session UX keeps working unchanged
-   * while the state underneath is already multi-session-shaped. Superseded
-   * once callers pick a session explicitly (milestone-4 phases 3-5).
-   */
-  private defaultJoinCode: string | null = null;
+  /** Whether onModuleInit has resolved — lets getSession distinguish "used too early" from "unknown joinCode". */
+  private initialized = false;
 
   constructor(
     private readonly seedService: SeedService,
@@ -171,12 +164,7 @@ export class GameStateService implements OnModuleInit {
       savedProgress ?? { ...LOBBY_PROGRESS },
     );
     this.sessions.set(seededGame.joinCode, session);
-    this.defaultJoinCode = seededGame.joinCode;
-  }
-
-  /** The joinCode of the session single-session call sites operate on until they're wired for real session selection. */
-  getDefaultJoinCode(): string {
-    return this.requireDefaultJoinCode();
+    this.initialized = true;
   }
 
   /** Whether a session exists for this joinCode — lets the gateway reject a handshake's `?code=` before trusting it. */
@@ -206,10 +194,8 @@ export class GameStateService implements OnModuleInit {
    * Evicts a session's in-memory state once it's done — the eviction policy
    * decided for phase 4: explicit admin action rather than an idle-timeout
    * sweep, since it's deterministic and needs no background timer. Only
-   * allowed once the quiz has `ended` (closing a live game would strand any
-   * still-connected display/players), and never for the default session,
-   * since single-session call sites still resolve it via
-   * `getDefaultJoinCode()` until phase 5 removes that reliance.
+   * allowed once the quiz has `ended` — closing a live game would strand any
+   * still-connected display/players.
    */
   closeSession(joinCode: string): void {
     const session = this.getSession(joinCode);
@@ -219,23 +205,14 @@ export class GameStateService implements OnModuleInit {
         `still in progress (status: "${session.progress.status}")`,
       );
     }
-    if (joinCode === this.defaultJoinCode) {
-      throw new SessionCloseBlockedError(
-        joinCode,
-        'still the default session used by legacy single-session call sites',
-      );
-    }
     this.sessions.delete(joinCode);
   }
 
   /**
    * Allocates a brand-new GameSession/joinCode for `quizId`, leaving any
-   * other session's state untouched, and becomes the new default session.
-   * No longer blocked by another session's progress — phase 4's `POST
-   * /sessions` lets an admin start additional concurrent games regardless of
-   * how far along any other session is; the old single-session-era guard
-   * only made sense back when there was no way to see or reach a session
-   * other than the implicit default one.
+   * other session's state untouched. Not blocked by another session's
+   * progress — `POST /sessions` lets an admin start additional concurrent
+   * games regardless of how far along any other session is.
    */
   async createSession(quizId: number): Promise<StateSnapshotPayload> {
     const created = await this.seedService.createSession(quizId);
@@ -248,7 +225,6 @@ export class GameStateService implements OnModuleInit {
     // no progress to persist here.
     const session = freshSessionState(seededGame, { ...LOBBY_PROGRESS });
     this.sessions.set(seededGame.joinCode, session);
-    this.defaultJoinCode = seededGame.joinCode;
     return this.getSnapshot(seededGame.joinCode);
   }
 
@@ -400,19 +376,10 @@ export class GameStateService implements OnModuleInit {
     return this.getSnapshot(joinCode);
   }
 
-  private requireDefaultJoinCode(): string {
-    if (!this.defaultJoinCode) {
-      throw new Error(
-        'GameStateService used before initialization (onModuleInit has not resolved yet)',
-      );
-    }
-    return this.defaultJoinCode;
-  }
-
   private getSession(joinCode: string): SessionState {
     // Distinguishing "never initialized" from "unknown joinCode" gives
     // onModuleInit-ordering bugs a clearer error than a generic lookup miss.
-    if (!this.defaultJoinCode) {
+    if (!this.initialized) {
       throw new Error(
         'GameStateService used before initialization (onModuleInit has not resolved yet)',
       );

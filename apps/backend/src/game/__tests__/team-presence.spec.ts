@@ -18,7 +18,7 @@ describe('GameStateService — team connection presence (one live device per tea
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('has no connected socket for a team that has never joined', () => {

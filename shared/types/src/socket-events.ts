@@ -235,7 +235,8 @@ export interface QuizSummary {
 }
 
 export interface QuizzesListedPayload {
-  activeQuizId: number;
+  /** The quiz the given joinCode's session is currently running, or null when no joinCode was provided. */
+  activeQuizId: number | null;
   quizzes: QuizSummary[];
 }
 

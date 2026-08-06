@@ -41,7 +41,7 @@ describe('AdminPage — quiz picker', () => {
 
   it('requests the quiz list while the game is in the lobby or ended', async () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -55,7 +55,7 @@ describe('AdminPage — quiz picker', () => {
     let status: GameProgress['status'] = 'ended';
 
     mockUseGameSocket.mockImplementation(() => ({
-      snapshot: { progress: progress({ status }), currentQuestion: null },
+      snapshot: { progress: progress({ status }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -80,7 +80,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz,
@@ -101,7 +101,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -124,7 +124,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz,
@@ -146,7 +146,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -179,7 +179,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -220,7 +220,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -243,7 +243,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz,
@@ -269,7 +269,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz,
@@ -292,7 +292,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz,
@@ -315,7 +315,7 @@ describe('AdminPage — quiz picker', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction: vi.fn(),
       selectQuiz: vi.fn(),
@@ -338,6 +338,7 @@ describe('AdminPage — quiz picker', () => {
       snapshot: {
         progress: progress({ status: 'question_open' }),
         currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        joinCode: 'TESTCODE',
       },
       connectionError: null,
       sendAction: vi.fn(),

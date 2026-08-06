@@ -19,7 +19,7 @@ describe('GameStateService — leaderboard', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('toggles the leaderboard without disturbing the underlying status', async () => {

@@ -6,10 +6,11 @@ import { confirmImport, previewImport } from '@/app/lib/import-api';
 import { RoundsList } from '@/app/components/rounds-list';
 
 interface ImportPanelProps {
+  joinCode: string;
   onImported?: (result: ImportConfirmResult) => void;
 }
 
-export function ImportPanel({ onImported }: ImportPanelProps) {
+export function ImportPanel({ joinCode, onImported }: ImportPanelProps) {
   const [quizTitle, setQuizTitle] = useState('');
   const [csvText, setCsvText] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -38,7 +39,7 @@ export function ImportPanel({ onImported }: ImportPanelProps) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const result = await confirmImport(csvText, quizTitle || undefined);
+      const result = await confirmImport(csvText, quizTitle || undefined, joinCode);
       setPreview(null);
       setCsvText(null);
       onImported?.(result);

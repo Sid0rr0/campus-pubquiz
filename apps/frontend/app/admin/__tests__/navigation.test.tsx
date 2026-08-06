@@ -265,6 +265,7 @@ describe('AdminPage — navigation', () => {
         progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
         currentQuestion: null,
         blockQuestions: [{ id: 'r2q1', type: 'free_text', prompt: 'Name this song.', points: 1 }],
+        joinCode: 'TESTCODE',
       },
       connectionError: null,
       sendAction: vi.fn(),

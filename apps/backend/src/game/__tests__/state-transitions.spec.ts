@@ -19,7 +19,7 @@ describe('GameStateService — state transitions', () => {
       createFakeOrm(),
     );
     await service.onModuleInit();
-    joinCode = service.getDefaultJoinCode();
+    joinCode = 'ABCDEF';
   });
 
   it('starts in the lobby with no current question', () => {

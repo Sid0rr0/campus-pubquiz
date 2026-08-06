@@ -290,7 +290,12 @@ export function createMockSocket(
   role?: string,
   auth: Record<string, string> = {},
   id = 'socket-1',
-  code?: string,
+  // Defaults to FIXTURE_SEEDED_GAME's join code — every test built on
+  // createTestGateway()/createFakeSeedService() is seeded with it, so
+  // call sites only need to override this when they seed a different game.
+  // Pass `null` explicitly (rather than omitting) to simulate a handshake
+  // with no `?code=` at all.
+  code: string | null = 'ABCDEF',
 ) {
   const rooms = new Set<string>();
   const cookie = auth.token
@@ -301,7 +306,7 @@ export function createMockSocket(
     handshake: {
       query: {
         ...(role === undefined ? {} : { role }),
-        ...(code === undefined ? {} : { code }),
+        ...(code === null ? {} : { code }),
       },
       headers: { cookie },
     },

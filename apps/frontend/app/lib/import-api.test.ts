@@ -54,7 +54,7 @@ describe('import-api', () => {
         json: () => Promise.resolve(result),
       }) as unknown as typeof fetch;
 
-      const response = await confirmImport('csv,text', 'Trivia Night');
+      const response = await confirmImport('csv,text', 'Trivia Night', 'ABCDEF');
 
       expect(response).toEqual(result);
     });
@@ -67,7 +67,7 @@ describe('import-api', () => {
         json: () => Promise.resolve({ message: 'Validation failed', issues }),
       }) as unknown as typeof fetch;
 
-      const error = await confirmImport('csv', undefined).catch((e: unknown) => e);
+      const error = await confirmImport('csv', undefined, 'ABCDEF').catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(ImportApiError);
       expect((error as ImportApiError).issues).toEqual(issues);

@@ -11,8 +11,9 @@ export class QuizApiError extends Error {
   }
 }
 
-export async function fetchQuizzes(): Promise<QuizzesListedPayload> {
-  const response = await fetch(`${getBackendUrl()}/quizzes`, {
+export async function fetchQuizzes(joinCode?: string): Promise<QuizzesListedPayload> {
+  const query = joinCode ? `?joinCode=${encodeURIComponent(joinCode)}` : '';
+  const response = await fetch(`${getBackendUrl()}/quizzes${query}`, {
     credentials: 'include',
   });
 

@@ -121,8 +121,10 @@ function AdminPageContent() {
     };
   }, []);
 
+  const connectedJoinCode = snapshot?.joinCode;
   const refetchQuizzes = useCallback(() => {
-    fetchQuizzes()
+    if (!connectedJoinCode) return;
+    fetchQuizzes(connectedJoinCode)
       .then((payload) => {
         if (!isMountedRef.current) return;
         setQuizzes(payload);
@@ -132,7 +134,7 @@ function AdminPageContent() {
         if (!isMountedRef.current) return;
         setQuizzesError(error instanceof QuizApiError ? error.message : 'Could not load quizzes');
       });
-  }, []);
+  }, [connectedJoinCode]);
 
   const lastFetchedStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
@@ -485,7 +487,9 @@ function AdminPageContent() {
             {closeSessionError}
           </p>
         )}
-        {canChooseQuiz && <ImportPanel onImported={refetchQuizzes} />}
+        {canChooseQuiz && connectedJoinCode && (
+          <ImportPanel joinCode={connectedJoinCode} onImported={refetchQuizzes} />
+        )}
         {canChooseQuiz && quizzesError && (
           <p role="alert" className="font-extrabold text-magenta">
             {quizzesError}
