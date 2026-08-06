@@ -14,4 +14,16 @@ export class QuizRepository extends EntityRepository<Quiz> {
       },
     );
   }
+
+  findByIdWithRoundsAndQuestions(id: number): Promise<Quiz | null> {
+    return this.findOne(
+      { id },
+      {
+        populate: ['rounds', 'rounds.questions'],
+        orderBy: {
+          rounds: { orderIndex: 'asc', questions: { orderIndex: 'asc' } },
+        },
+      },
+    );
+  }
 }

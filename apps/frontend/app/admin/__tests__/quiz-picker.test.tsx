@@ -39,6 +39,21 @@ describe('AdminPage — quiz picker', () => {
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
   });
 
+  it('links to the quiz editor while the game is in the lobby or ended', async () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
+      connectionError: null,
+      sendAction: vi.fn(),
+      selectQuiz: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(await screen.findByRole('link', { name: /create or edit a quiz/i })).toHaveAttribute(
+      'href',
+      '/quizzes/new',
+    );
+  });
+
   it('requests the quiz list while the game is in the lobby or ended', async () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null, joinCode: 'TESTCODE' },

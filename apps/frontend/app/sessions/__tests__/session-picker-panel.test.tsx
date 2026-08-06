@@ -97,6 +97,23 @@ describe('SessionPickerPanel', () => {
     expect(await screen.findByRole('button', { name: 'Imported Quiz' })).toBeInTheDocument();
   });
 
+  it('links to the quiz editor to create a new quiz', () => {
+    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    expect(screen.getByRole('link', { name: /new quiz/i })).toHaveAttribute('href', '/quizzes/new');
+  });
+
+  it('links each listed quiz to its editor', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByRole('button', { name: 'Imported Quiz' });
+    expect(screen.getByRole('link', { name: /edit/i })).toHaveAttribute('href', '/quizzes/2');
+  });
+
   it('creates a new session for the chosen quiz and opens it', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,

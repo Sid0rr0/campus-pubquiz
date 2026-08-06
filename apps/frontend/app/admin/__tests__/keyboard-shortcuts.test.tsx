@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -143,9 +143,16 @@ describe('AdminPage — keyboard shortcuts', () => {
     });
     render(<AdminPage />);
 
-    const quizTitleField = await screen.findByLabelText(/quiz title/i);
-    quizTitleField.focus();
+    // The shortcut listener ignores any focused <input>/<textarea>/<select>
+    // regardless of which component rendered it (see isEditableTarget in
+    // use-admin-keyboard-shortcuts.ts) — a standalone field is enough to
+    // exercise that generic guard without depending on which admin panel
+    // happens to render a text field in this snapshot.
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    field.focus();
     await userEvent.keyboard('{ArrowLeft}{ArrowRight}{ArrowUp}{ArrowDown}');
+    field.remove();
 
     expect(sendAction).not.toHaveBeenCalled();
   });

@@ -3,11 +3,18 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { ImportRoundPreview } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
+import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { QuizService } from '@/quiz/quiz.service';
+import { RoundRepository } from '@/db/repositories/round.repository';
+import {
+  QuizDraftInvalidError,
+  QuizNotFoundError,
+  QuizService,
+} from '@/quiz/quiz.service';
 
 describe('QuizService (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;
@@ -36,7 +43,11 @@ describe('QuizService (Postgres integration)', () => {
 
   beforeEach(() => {
     em = orm.em.fork();
-    quizService = new QuizService(em.getRepository<Quiz, QuizRepository>(Quiz));
+    quizService = new QuizService(
+      em.getRepository<Quiz, QuizRepository>(Quiz),
+      em.getRepository<Round, RoundRepository>(Round),
+      em.getRepository<Question, QuestionRepository>(Question),
+    );
   });
 
   afterEach(async () => {
@@ -173,6 +184,144 @@ describe('QuizService (Postgres integration)', () => {
       const titles = await quizService.findTitles([]);
 
       expect(titles.size).toBe(0);
+    });
+  });
+
+  const VALID_ROUND: ImportRoundPreview = {
+    title: 'History',
+    breakAfter: true,
+    questions: [
+      {
+        type: 'free_text',
+        prompt: 'Largest planet?',
+        answer: 'Jupiter',
+        points: 2,
+      },
+      {
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'Paris',
+        points: 3,
+        options: ['Paris', 'London'],
+      },
+    ],
+  };
+
+  describe('findDraftById', () => {
+    it('returns null when the quiz does not exist', async () => {
+      await expect(quizService.findDraftById(999_999)).resolves.toBeNull();
+    });
+
+    it('returns the full editable draft, including notes and media urls', async () => {
+      const created = await quizService.create('Trivia Night', [
+        {
+          title: 'Music',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'audio',
+              prompt: 'Name this song.',
+              answer: 'Bohemian Rhapsody',
+              points: 2,
+              notes: 'Play only the chorus',
+              mediaUrl: 'https://example.com/song.mp3',
+              answerMediaUrl: 'https://example.com/cover.jpg',
+            },
+          ],
+        },
+      ]);
+
+      const draft = await quizService.findDraftById(created.quizId);
+
+      expect(draft).toEqual({
+        id: created.quizId,
+        title: 'Trivia Night',
+        rounds: [
+          {
+            title: 'Music',
+            breakAfter: true,
+            questions: [
+              {
+                type: 'audio',
+                prompt: 'Name this song.',
+                answer: 'Bohemian Rhapsody',
+                points: 2,
+                notes: 'Play only the chorus',
+                mediaUrl: 'https://example.com/song.mp3',
+                answerMediaUrl: 'https://example.com/cover.jpg',
+              },
+            ],
+          },
+        ],
+      });
+    });
+  });
+
+  describe('create', () => {
+    it('creates a new quiz with its rounds and questions', async () => {
+      const result = await quizService.create('Trivia Night', [VALID_ROUND]);
+
+      expect(result.roundCount).toBe(1);
+      expect(result.questionCount).toBe(2);
+      const quiz = await em.findOneOrFail(Quiz, { id: result.quizId });
+      expect(quiz.title).toBe('Trivia Night');
+    });
+
+    it('rejects an invalid draft without writing anything', async () => {
+      await expect(
+        quizService.create('Trivia Night', [{ ...VALID_ROUND, questions: [] }]),
+      ).rejects.toThrow(QuizDraftInvalidError);
+
+      await expect(em.find(Quiz, {})).resolves.toEqual([]);
+    });
+  });
+
+  describe('update', () => {
+    it('renames the quiz and syncs its rounds/questions', async () => {
+      const created = await quizService.create('Trivia Night', [VALID_ROUND]);
+
+      const result = await quizService.update(
+        created.quizId,
+        'Trivia Night 2',
+        [
+          {
+            title: 'History',
+            breakAfter: true,
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Largest planet?',
+                answer: 'Jupiter',
+                points: 5,
+              },
+            ],
+          },
+        ],
+      );
+
+      expect(result.questionCount).toBe(1);
+      const quiz = await em.findOneOrFail(Quiz, { id: created.quizId });
+      expect(quiz.title).toBe('Trivia Night 2');
+      const questions = await em.find(Question, {});
+      expect(questions).toHaveLength(1);
+      expect(questions[0].points).toBe(5);
+    });
+
+    it('rejects updating a quiz that does not exist', async () => {
+      await expect(
+        quizService.update(999_999, 'Trivia Night', [VALID_ROUND]),
+      ).rejects.toThrow(QuizNotFoundError);
+    });
+
+    it('rejects an invalid draft without writing anything', async () => {
+      const created = await quizService.create('Trivia Night', [VALID_ROUND]);
+
+      await expect(
+        quizService.update(created.quizId, '  ', [VALID_ROUND]),
+      ).rejects.toThrow(QuizDraftInvalidError);
+
+      const quiz = await em.findOneOrFail(Quiz, { id: created.quizId });
+      expect(quiz.title).toBe('Trivia Night');
     });
   });
 });

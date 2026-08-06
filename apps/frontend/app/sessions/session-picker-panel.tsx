@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { ActiveSessionSummary, QuizzesListedPayload } from '@campus-pubquiz/types';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, createSession, fetchSessions, SessionApiError } from '@/app/lib/sessions-api';
@@ -127,18 +128,32 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         </ul>
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="font-display text-xl">Start a New Session</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-xl">Start a New Session</h2>
+          <Link
+            href="/quizzes/new"
+            className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white flex items-center"
+          >
+            New Quiz
+          </Link>
+        </div>
         <ul className="flex flex-col gap-2">
           {quizzes.map((quiz) => (
-            <li key={quiz.id}>
+            <li key={quiz.id} className="flex items-center gap-2">
               <button
                 type="button"
                 disabled={isCreating}
                 onClick={() => void handleCreate(quiz.id)}
-                className="flex min-h-11 w-full items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold disabled:opacity-40"
+                className="flex min-h-11 flex-1 items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold disabled:opacity-40"
               >
                 {quiz.title}
               </button>
+              <Link
+                href={`/quizzes/${quiz.id}`}
+                className="flex min-h-11 shrink-0 items-center rounded-xl border-2 border-foreground/30 px-4 text-sm font-extrabold"
+              >
+                Edit
+              </Link>
             </li>
           ))}
         </ul>

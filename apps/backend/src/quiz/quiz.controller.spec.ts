@@ -1,12 +1,25 @@
-import type { QuizSummary } from '@campus-pubquiz/types';
+import {
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import type { QuizDraft, QuizSummary } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { QuizController } from '@/quiz/quiz.controller';
-import type { QuizService } from '@/quiz/quiz.service';
+import {
+  QuizDraftInvalidError,
+  QuizNotFoundError,
+  type QuizService,
+} from '@/quiz/quiz.service';
 import type { GameStateService } from '@/game/game-state.service';
 
 function makeController() {
-  const quizService = { list: jest.fn() };
+  const quizService = {
+    list: jest.fn(),
+    findDraftById: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  };
   const gameState = {
     getActiveQuizId: jest.fn().mockReturnValue(1),
   };
@@ -54,5 +67,78 @@ describe('QuizController', () => {
       quizzes,
     });
     expect(gameState.getActiveQuizId).not.toHaveBeenCalled();
+  });
+
+  describe('findById', () => {
+    it('returns the draft for an existing quiz', async () => {
+      const { controller, quizService } = makeController();
+      const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
+      quizService.findDraftById.mockResolvedValue(draft);
+
+      await expect(controller.findById(1)).resolves.toBe(draft);
+      expect(quizService.findDraftById).toHaveBeenCalledWith(1);
+    });
+
+    it('maps a missing quiz to 404', async () => {
+      const { controller, quizService } = makeController();
+      quizService.findDraftById.mockResolvedValue(null);
+
+      await expect(controller.findById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('create', () => {
+    it('returns the save result for a valid body', async () => {
+      const { controller, quizService } = makeController();
+      const result = { quizId: 1, roundCount: 1, questionCount: 2 };
+      quizService.create.mockResolvedValue(result);
+
+      await expect(
+        controller.create({ title: 'Trivia Night', rounds: [] }),
+      ).resolves.toBe(result);
+      expect(quizService.create).toHaveBeenCalledWith('Trivia Night', []);
+    });
+
+    it('maps an invalid draft to 422 with the issues attached', async () => {
+      const { controller, quizService } = makeController();
+      const issues = [
+        {
+          roundIndex: -1,
+          questionIndex: null,
+          field: 'rounds',
+          message: 'Quiz needs at least one round',
+        },
+      ];
+      quizService.create.mockRejectedValue(new QuizDraftInvalidError(issues));
+
+      const promise = controller.create({ title: 'Trivia Night', rounds: [] });
+
+      await expect(promise).rejects.toThrow(UnprocessableEntityException);
+      await promise.catch((error: UnprocessableEntityException) => {
+        expect(error.getResponse()).toMatchObject({ issues });
+      });
+    });
+  });
+
+  describe('update', () => {
+    it('returns the save result for a valid body', async () => {
+      const { controller, quizService } = makeController();
+      const result = { quizId: 1, roundCount: 1, questionCount: 2 };
+      quizService.update.mockResolvedValue(result);
+
+      await expect(
+        controller.update(1, { title: 'Trivia Night', rounds: [] }),
+      ).resolves.toBe(result);
+      expect(quizService.update).toHaveBeenCalledWith(1, 'Trivia Night', []);
+    });
+
+    it('maps a missing quiz to 404', async () => {
+      const { controller, quizService } = makeController();
+      quizService.update.mockRejectedValue(new QuizNotFoundError(999));
+
+      await expect(
+        controller.update(999, { title: 'Trivia Night', rounds: [] }),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 });

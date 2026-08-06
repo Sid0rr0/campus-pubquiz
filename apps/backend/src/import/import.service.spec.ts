@@ -18,6 +18,7 @@ import {
   ImportLockedError,
   ImportService,
 } from '@/import/import.service';
+import { QuizService } from '@/quiz/quiz.service';
 
 const HEADER =
   'round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after';
@@ -98,11 +99,15 @@ describe('ImportService (Postgres integration)', () => {
 
   function makeService(overrides: Partial<GameStateStub> = {}) {
     const { stub, asService } = makeGameStateStub(overrides);
-    const importService = new ImportService(
+    const quizService = new QuizService(
       em.getRepository<Quiz, QuizRepository>(Quiz),
       em.getRepository<Round, RoundRepository>(Round),
       em.getRepository<Question, QuestionRepository>(Question),
+    );
+    const importService = new ImportService(
+      em.getRepository<Quiz, QuizRepository>(Quiz),
       asService,
+      quizService,
     );
     return { importService, stub };
   }

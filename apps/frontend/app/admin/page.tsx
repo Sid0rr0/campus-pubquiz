@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getBlockStartRoundIndex,
@@ -15,7 +16,6 @@ import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { useAuth } from '@/app/lib/use-auth';
 import { TeamsTable } from '@/app/admin/teams-table';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
-import { ImportPanel } from '@/app/admin/import-panel';
 import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
@@ -413,7 +413,12 @@ function AdminPageContent() {
           </p>
         )}
         {canChooseQuiz && connectedJoinCode && (
-          <ImportPanel joinCode={connectedJoinCode} onImported={refetchQuizzes} />
+          <Link
+            href="/quizzes/new"
+            className="inline-flex min-h-11 w-fit items-center rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold text-foreground"
+          >
+            Create or edit a quiz
+          </Link>
         )}
         {canChooseQuiz && quizzesError && (
           <p role="alert" className="font-extrabold text-magenta">

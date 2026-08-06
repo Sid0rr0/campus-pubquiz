@@ -4,17 +4,13 @@ import {
   createImportPreview,
   type ImportConfirmResult,
   type ImportPreview,
-  type ImportRoundPreview,
 } from '@campus-pubquiz/types';
-import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
-import { Round } from '@/db/entities/round.entity';
-import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { RoundRepository } from '@/db/repositories/round.repository';
 import { GameStateService } from '@/game/game-state.service';
 import { assembleImportPreview } from '@/import/question-row.schema';
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
+import { QuizService } from '@/quiz/quiz.service';
 
 const DEFAULT_QUIZ_TITLE = 'Imported Quiz';
 
@@ -43,10 +39,8 @@ export class ImportLockedError extends Error {
 export class ImportService {
   constructor(
     @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
-    @InjectRepository(Round) private readonly rounds: RoundRepository,
-    @InjectRepository(Question)
-    private readonly questions: QuestionRepository,
     private readonly gameState: GameStateService,
+    private readonly quizService: QuizService,
   ) {}
 
   /** Validates the uploaded CSV into a preview. Never writes, never throws. */
@@ -89,7 +83,7 @@ export class ImportService {
     }
 
     const quizId = await this.upsertQuiz(preview.quizTitle);
-    await this.upsertRounds(quizId, preview.rounds);
+    await this.quizService.syncRoundsAndQuestions(quizId, preview.rounds);
 
     if (quizId === this.gameState.getActiveQuizId(joinCode)) {
       await this.gameState.reloadActiveQuiz(joinCode);
@@ -113,79 +107,5 @@ export class ImportService {
     const created = this.quizzes.create({ title });
     await this.quizzes.getEntityManager().persistAndFlush(created);
     return created.id;
-  }
-
-  private async upsertRounds(
-    quizId: number,
-    rounds: ImportRoundPreview[],
-  ): Promise<void> {
-    for (const [roundIndex, round] of rounds.entries()) {
-      // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set
-      // timestamps explicitly (see TeamService.addToRoster for the same fix).
-      const roundNow = new Date();
-      const roundRow = await this.rounds.upsert(
-        {
-          quiz: quizId,
-          title: round.title,
-          orderIndex: roundIndex,
-          breakAfter: round.breakAfter,
-          createdAt: roundNow,
-          updatedAt: roundNow,
-        },
-        {
-          onConflictFields: ['quiz', 'orderIndex'],
-          onConflictAction: 'merge',
-          onConflictMergeFields: ['title', 'breakAfter', 'updatedAt'],
-        },
-      );
-
-      for (const [questionIndex, question] of round.questions.entries()) {
-        const payload = {
-          ...(question.options ? { options: question.options } : {}),
-          ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
-          ...(question.answerMediaUrl
-            ? { answerMediaUrl: question.answerMediaUrl }
-            : {}),
-        };
-        const questionNow = new Date();
-        await this.questions.upsert(
-          {
-            round: roundRow.id,
-            orderIndex: questionIndex,
-            type: question.type,
-            prompt: question.prompt,
-            answer: question.answer,
-            notes: question.notes ?? null,
-            payload,
-            points: question.points,
-            createdAt: questionNow,
-            updatedAt: questionNow,
-          },
-          {
-            onConflictFields: ['round', 'orderIndex'],
-            onConflictAction: 'merge',
-            onConflictMergeFields: [
-              'type',
-              'prompt',
-              'answer',
-              'notes',
-              'payload',
-              'points',
-              'updatedAt',
-            ],
-          },
-        );
-      }
-
-      await this.questions.nativeDelete({
-        round: roundRow.id,
-        orderIndex: { $gte: round.questions.length },
-      });
-    }
-
-    await this.rounds.nativeDelete({
-      quiz: quizId,
-      orderIndex: { $gte: rounds.length },
-    });
   }
 }
