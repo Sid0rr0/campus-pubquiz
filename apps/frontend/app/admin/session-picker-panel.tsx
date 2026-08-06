@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ActiveSessionSummary, QuizzesListedPayload } from '@campus-pubquiz/types';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, createSession, fetchSessions, SessionApiError } from '@/app/lib/sessions-api';
@@ -16,19 +16,35 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload['quizzes']>([]);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  // Guards state updates from requests that resolve after this panel has
+  // unmounted (e.g. the admin clicks "Open" on a session before the initial
+  // refresh finishes) — skips the update instead of setting state on a
+  // component nothing is rendering anymore.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const refresh = useCallback(() => {
     fetchSessions()
       .then((result) => {
+        if (!isMountedRef.current) return;
         setSessions(result);
         setError(null);
       })
       .catch((fetchError: unknown) => {
+        if (!isMountedRef.current) return;
         setError(fetchError instanceof SessionApiError ? fetchError.message : 'Could not load sessions');
       });
     fetchQuizzes()
-      .then((result) => setQuizzes(result.quizzes))
+      .then((result) => {
+        if (!isMountedRef.current) return;
+        setQuizzes(result.quizzes);
+      })
       .catch((fetchError: unknown) => {
+        if (!isMountedRef.current) return;
         setError(fetchError instanceof QuizApiError ? fetchError.message : 'Could not load quizzes');
       });
   }, []);
@@ -44,9 +60,10 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       const session = await createSession(quizId);
       onOpenSession(session.joinCode);
     } catch (createError) {
+      if (!isMountedRef.current) return;
       setError(createError instanceof SessionApiError ? createError.message : 'Could not start session');
     } finally {
-      setIsCreating(false);
+      if (isMountedRef.current) setIsCreating(false);
     }
   }
 
@@ -56,6 +73,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       await closeSession(joinCode);
       refresh();
     } catch (closeError) {
+      if (!isMountedRef.current) return;
       setError(closeError instanceof SessionApiError ? closeError.message : 'Could not close session');
     }
   }
