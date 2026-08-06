@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/play/join-form';
 import { QuestionBrowser } from '@/app/play/question-browser';
@@ -10,6 +10,7 @@ import { useTeamJoin } from '@/app/lib/use-team-join';
 import { storedJoinOptions } from '@/app/lib/team-storage';
 
 function PlayPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get('code') ?? '';
   const {
@@ -48,6 +49,17 @@ function PlayPageContent() {
     if (gameStatus !== 'lobby' || !teamName) return;
     joinTeam(teamName, storedJoinOptions());
   }, [gameStatus, teamName, joinTeam]);
+
+  useEffect(() => {
+    // Keeps ?code= in the address bar in sync with whichever session this
+    // socket actually landed on — covers arriving here without a code (e.g.
+    // the home page's post-join redirect, or a restored localStorage
+    // identity) so the URL is always shareable/bookmarkable for this game,
+    // never a stale or absent one.
+    if (snapshot?.joinCode && snapshot.joinCode !== codeFromUrl) {
+      router.replace(`/play?code=${snapshot.joinCode}`);
+    }
+  }, [snapshot, codeFromUrl, router]);
 
   if (!teamName || (connectionError && !team)) {
     return (

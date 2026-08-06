@@ -14,6 +14,7 @@ vi.mock('@/app/lib/use-game-socket', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 vi.mock('qrcode.react', () => ({
@@ -48,7 +49,7 @@ const revealQuestions = [
 
 describe('DisplayPage — reveal', () => {
   beforeEach(() => {
-    searchParamsRef.current = new URLSearchParams();
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
   });
 
   it('shows the current reveal question with its correct answer, same layout as when it was asked', () => {

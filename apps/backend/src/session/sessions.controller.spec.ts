@@ -59,14 +59,48 @@ function snapshot(
   };
 }
 
-describe('SessionsController', () => {
-  it('is protected by SessionGuard + RolesGuard', () => {
-    const guards = Reflect.getMetadata('__guards__', SessionsController) as
-      | unknown[]
-      | undefined;
+function methodGuards(propertyKey: keyof SessionsController): unknown[] {
+  return (Reflect.getMetadata(
+    '__guards__',
+    SessionsController.prototype[propertyKey],
+  ) ?? []) as unknown[];
+}
 
-    expect(guards).toContain(SessionGuard);
-    expect(guards).toContain(RolesGuard);
+describe('SessionsController', () => {
+  it('protects list, create, and close with SessionGuard + RolesGuard', () => {
+    for (const method of ['list', 'create', 'close'] as const) {
+      const guards = methodGuards(method);
+      expect(guards).toContain(SessionGuard);
+      expect(guards).toContain(RolesGuard);
+    }
+  });
+
+  it('leaves listPublic unguarded — /display has no admin login to offer', () => {
+    expect(methodGuards('listPublic')).toEqual([]);
+  });
+
+  describe('listPublic', () => {
+    it('returns every running session with its quiz title, no auth required', async () => {
+      const { controller, gameState, quizService } = makeController();
+      gameState.listSessions.mockReturnValue([
+        { joinCode: 'ABCDEF', quizId: 1, status: 'lobby', teamCount: 0 },
+      ]);
+      quizService.findTitles.mockResolvedValue(
+        new Map([[1, 'Campus Pub Quiz Night']]),
+      );
+
+      const result = await controller.listPublic();
+
+      expect(result).toEqual<ActiveSessionSummary[]>([
+        {
+          joinCode: 'ABCDEF',
+          quizId: 1,
+          quizTitle: 'Campus Pub Quiz Night',
+          status: 'lobby',
+          teamCount: 0,
+        },
+      ]);
+    });
   });
 
   describe('list', () => {

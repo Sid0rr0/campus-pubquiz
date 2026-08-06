@@ -14,6 +14,7 @@ vi.mock('@/app/lib/use-game-socket', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 vi.mock('qrcode.react', () => ({
@@ -24,7 +25,7 @@ vi.mock('qrcode.react', () => ({
 
 describe('DisplayPage — lobby', () => {
   beforeEach(() => {
-    searchParamsRef.current = new URLSearchParams();
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
   });
 
   it('shows a connecting message before the first snapshot arrives', () => {

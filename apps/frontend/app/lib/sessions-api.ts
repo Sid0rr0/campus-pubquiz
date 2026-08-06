@@ -26,6 +26,12 @@ export async function fetchSessions(): Promise<ActiveSessionSummary[]> {
   return handleResponse<ActiveSessionSummary[]>(response);
 }
 
+/** Unauthenticated variant for /display, which runs on venue TV/projector hardware with no admin login of its own. */
+export async function fetchPublicSessions(): Promise<ActiveSessionSummary[]> {
+  const response = await fetch(`${getBackendUrl()}/sessions/public`);
+  return handleResponse<ActiveSessionSummary[]>(response);
+}
+
 export async function createSession(quizId: number): Promise<ActiveSessionSummary> {
   const payload: CreateSessionPayload = { quizId };
   const response = await fetch(`${getBackendUrl()}/sessions`, {

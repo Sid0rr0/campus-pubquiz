@@ -1,12 +1,13 @@
 'use client';
 
 import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
+import { DisplaySessionPicker } from '@/app/display/display-session-picker';
 import { LobbyScreen } from '@/app/display/lobby-screen';
 import { QuestionLockCountdown } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
@@ -14,14 +15,23 @@ import { RevealIntroScreen } from '@/app/display/reveal-intro-screen';
 import { RevealScreen } from '@/app/display/reveal-screen';
 
 function DisplayPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   // The query parameter pins this connection to a specific game session's
-  // code (e.g. a pre-printed URL) — without it the socket falls back to the
-  // server's single implicit "default" session, which only works when
-  // exactly one session is running.
+  // code (e.g. a pre-printed URL or a picked session below). No fallback to
+  // an implicit "default" session — once more than one game can run at
+  // once that would silently point the screen at the wrong game.
   const codeFromUrl = searchParams.get('code') ?? undefined;
-  const { snapshot } = useGameSocket('display', true, codeFromUrl);
-  const joinCode = codeFromUrl ?? snapshot?.joinCode;
+  const { snapshot, connectionError } = useGameSocket('display', Boolean(codeFromUrl), codeFromUrl);
+
+  if (!codeFromUrl || connectionError) {
+    return (
+      <DisplaySessionPicker
+        connectionError={connectionError}
+        onSelectSession={(joinCode) => router.replace(`/display?code=${joinCode}`)}
+      />
+    );
+  }
 
   if (!snapshot) {
     return (
@@ -61,7 +71,7 @@ function DisplayPageContent() {
         </motion.div>
       )}
       {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
-        <LobbyScreen teams={teams} joinCode={joinCode} />
+        <LobbyScreen teams={teams} joinCode={codeFromUrl} />
       )}
       {!progress.isLeaderboardVisible && progress.status === 'rules' && (
         <div className="flex flex-1 items-center justify-center px-16 py-10">

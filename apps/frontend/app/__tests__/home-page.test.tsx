@@ -111,11 +111,12 @@ describe('HomePage', () => {
           teamToken: 'token-1',
           teamCode: 'QUICK-JADE-FOX',
         },
+        snapshot: { joinCode: 'ABCDEF' },
       }),
     );
     rerender(<HomePage />);
 
     expect(screen.getByText(/you're in, the quizzards/i)).toBeInTheDocument();
-    expect(mockRouterPush).toHaveBeenCalledWith('/play');
+    expect(mockRouterPush).toHaveBeenCalledWith('/play?code=ABCDEF');
   });
 });

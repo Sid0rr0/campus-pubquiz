@@ -20,6 +20,7 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     setTeamCodeInput,
     connectionError,
     team,
+    snapshot,
     handleJoin,
   } = useTeamJoin(codeFromUrl);
   const [showTeamCode, setShowTeamCode] = useState(false);
@@ -34,10 +35,12 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
   useEffect(() => {
     // A successful join has nothing left to do on the home page — hand off
     // straight to /play, which already reads the identity this just stored.
-    if (isJoined) {
-      router.push('/play');
+    // Carries ?code= along so the URL identifies this game from the first
+    // paint instead of relying on /play's own localStorage-restore sync.
+    if (isJoined && snapshot) {
+      router.push(`/play?code=${snapshot.joinCode}`);
     }
-  }, [isJoined, router]);
+  }, [isJoined, snapshot, router]);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     handleJoin(event);

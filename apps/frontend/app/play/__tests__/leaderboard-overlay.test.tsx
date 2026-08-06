@@ -14,6 +14,7 @@ vi.mock('@/app/lib/use-game-socket', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 describe('PlayPage — leaderboard overlay', () => {

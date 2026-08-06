@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { closeSession, createSession, fetchSessions, SessionApiError } from '@/app/lib/sessions-api';
+import {
+  closeSession,
+  createSession,
+  fetchPublicSessions,
+  fetchSessions,
+  SessionApiError,
+} from '@/app/lib/sessions-api';
 
 const originalFetch = global.fetch;
 
@@ -40,6 +46,37 @@ describe('sessions-api', () => {
       expect(error).toBeInstanceOf(SessionApiError);
       expect((error as SessionApiError).message).toBe('Invalid or expired session');
       expect((error as SessionApiError).status).toBe(401);
+    });
+  });
+
+  describe('fetchPublicSessions', () => {
+    it('gets /sessions/public without credentials and returns the payload', async () => {
+      const payload = [
+        { joinCode: 'ABCDEF', quizId: 1, quizTitle: 'Campus Pub Quiz Night', status: 'lobby', teamCount: 2 },
+      ];
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(payload),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const result = await fetchPublicSessions();
+
+      expect(result).toEqual(payload);
+      expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/sessions/public');
+    });
+
+    it('throws SessionApiError when the response is not ok', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ message: 'Something broke' }),
+      }) as unknown as typeof fetch;
+
+      const error = await fetchPublicSessions().catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(SessionApiError);
+      expect((error as SessionApiError).message).toBe('Something broke');
     });
   });
 

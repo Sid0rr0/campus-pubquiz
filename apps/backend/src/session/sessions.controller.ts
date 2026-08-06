@@ -32,26 +32,32 @@ function requireQuizId(body: Partial<CreateSessionPayload>): number {
 }
 
 @Controller('sessions')
-@UseGuards(SessionGuard, RolesGuard)
 export class SessionsController {
   constructor(
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
   ) {}
 
+  /**
+   * Unauthenticated on purpose — /display runs on venue TV/projector
+   * hardware that has no admin login of its own, so it needs a way to list
+   * running sessions and let the operator pick one without signing in.
+   * Exposes nothing beyond what a session's own join code already reveals
+   * once printed on the lobby QR code (title, status, team count).
+   */
+  @Get('public')
+  async listPublic(): Promise<ActiveSessionSummary[]> {
+    return this.summarize(this.gameState.listSessions());
+  }
+
   @Get()
+  @UseGuards(SessionGuard, RolesGuard)
   async list(): Promise<ActiveSessionSummary[]> {
-    const sessions = this.gameState.listSessions();
-    const titles = await this.quizService.findTitles(
-      sessions.map((session) => session.quizId),
-    );
-    return sessions.map((session) => ({
-      ...session,
-      quizTitle: titles.get(session.quizId) ?? UNKNOWN_QUIZ_TITLE,
-    }));
+    return this.summarize(this.gameState.listSessions());
   }
 
   @Post()
+  @UseGuards(SessionGuard, RolesGuard)
   async create(
     @Body() body: Partial<CreateSessionPayload>,
   ): Promise<ActiveSessionSummary> {
@@ -68,6 +74,7 @@ export class SessionsController {
   }
 
   @Delete(':joinCode')
+  @UseGuards(SessionGuard, RolesGuard)
   close(@Param('joinCode') joinCode: string): void {
     if (!this.gameState.hasSession(joinCode)) {
       throw new NotFoundException(`Unknown session "${joinCode}"`);
@@ -80,5 +87,17 @@ export class SessionsController {
       }
       throw error;
     }
+  }
+
+  private async summarize(
+    sessions: Omit<ActiveSessionSummary, 'quizTitle'>[],
+  ): Promise<ActiveSessionSummary[]> {
+    const titles = await this.quizService.findTitles(
+      sessions.map((session) => session.quizId),
+    );
+    return sessions.map((session) => ({
+      ...session,
+      quizTitle: titles.get(session.quizId) ?? UNKNOWN_QUIZ_TITLE,
+    }));
   }
 }
