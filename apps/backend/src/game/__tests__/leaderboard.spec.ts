@@ -37,8 +37,20 @@ describe('GameStateService — leaderboard', () => {
 
   it('reveals teams one at a time via REVEAL_NEXT_TEAM, bottom-up and bounded by team count', async () => {
     service.setLeaderboard(joinCode, [
-      { teamId: 1, teamName: 'First', totalPoints: 10, bonusPoints: 0 },
-      { teamId: 2, teamName: 'Second', totalPoints: 5, bonusPoints: 0 },
+      {
+        teamId: 1,
+        teamName: 'First',
+        totalPoints: 10,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Second',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
     ]);
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
@@ -68,8 +80,20 @@ describe('GameStateService — leaderboard', () => {
 
   it('also advances the leaderboard reveal on ADVANCE while the board is visible', async () => {
     service.setLeaderboard(joinCode, [
-      { teamId: 1, teamName: 'First', totalPoints: 10, bonusPoints: 0 },
-      { teamId: 2, teamName: 'Second', totalPoints: 5, bonusPoints: 0 },
+      {
+        teamId: 1,
+        teamName: 'First',
+        totalPoints: 10,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Second',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
     ]);
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
@@ -81,7 +105,13 @@ describe('GameStateService — leaderboard', () => {
 
   it('resets the reveal count whenever the leaderboard is toggled', async () => {
     service.setLeaderboard(joinCode, [
-      { teamId: 1, teamName: 'First', totalPoints: 10, bonusPoints: 0 },
+      {
+        teamId: 1,
+        teamName: 'First',
+        totalPoints: 10,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
     ]);
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'TOGGLE_LEADERBOARD');
@@ -101,11 +131,23 @@ describe('GameStateService — leaderboard', () => {
 
   it('reflects a leaderboard set via setLeaderboard in the snapshot', () => {
     service.setLeaderboard(joinCode, [
-      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
+      {
+        teamId: 31,
+        teamName: 'The Quizzards',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
     ]);
 
     expect(service.getSnapshot(joinCode).leaderboard).toEqual([
-      { teamId: 31, teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
+      {
+        teamId: 31,
+        teamName: 'The Quizzards',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
     ]);
   });
 });

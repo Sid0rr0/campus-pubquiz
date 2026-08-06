@@ -30,6 +30,17 @@ interface LeaderboardRow {
   bonusPoints: string | number;
 }
 
+interface RoundRow {
+  roundId: number;
+  roundTitle: string;
+}
+
+interface RoundTotalRow {
+  roundId: number;
+  teamId: number;
+  total: string | number;
+}
+
 @Injectable()
 export class AnswerService {
   constructor(
@@ -146,11 +157,35 @@ export class AnswerService {
         { column: 't.name', order: 'asc' },
       ])) as LeaderboardRow[];
 
+    // Rounds belong to the session's *current* quiz, not necessarily the one
+    // any given answer was graded under (a mid-game re-import can swap it).
+    const rounds = (await knex('rounds as r')
+      .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
+      .where('gs.id', gameSessionId)
+      .orderBy('r.order_index', 'asc')
+      .select('r.id as roundId', 'r.title as roundTitle')) as RoundRow[];
+
+    const roundTotals = (await knex('answers as a')
+      .join('questions as q', 'q.id', 'a.question_id')
+      .where('a.game_session_id', gameSessionId)
+      .groupBy('q.round_id', 'a.team_id')
+      .select('q.round_id as roundId', 'a.team_id as teamId')
+      .select(knex.raw('sum(a.points_awarded) as total'))) as RoundTotalRow[];
+
     return rows.map((row) => ({
       teamId: row.teamId,
       teamName: row.teamName,
       totalPoints: Number(row.quizPoints) + Number(row.bonusPoints),
       bonusPoints: Number(row.bonusPoints),
+      roundPoints: rounds.map((round) => ({
+        roundTitle: round.roundTitle,
+        points: Number(
+          roundTotals.find(
+            (total) =>
+              total.roundId === round.roundId && total.teamId === row.teamId,
+          )?.total ?? 0,
+        ),
+      })),
     }));
   }
 }

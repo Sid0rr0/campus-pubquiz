@@ -12,7 +12,7 @@ import {
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { useAuth } from '@/app/lib/use-auth';
-import { Leaderboard } from '@/app/components/leaderboard';
+import { TeamsTable } from '@/app/admin/teams-table';
 import { AdminLoginForm } from '@/app/admin/admin-login-form';
 import { AdminRegisterForm } from '@/app/admin/admin-register-form';
 import { PendingApprovalView } from '@/app/admin/pending-approval-view';
@@ -427,12 +427,14 @@ function AdminPageContent() {
           onGrade={gradeAnswer}
           fallbackQuestions={fallbackQuestions}
         />
-        {leaderboard.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-xl">Leaderboard</h2>
-            <Leaderboard entries={leaderboard} />
-          </section>
-        )}
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-xl">Teams</h2>
+          <TeamsTable
+            teams={teams}
+            leaderboard={leaderboard}
+            roundTitles={activeQuizRounds.map((round) => round.title)}
+          />
+        </section>
       </div>
     </main>
   );

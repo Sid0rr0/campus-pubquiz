@@ -258,8 +258,15 @@ describe('AnswerService (Postgres integration)', () => {
         teamName: 'Team A',
         totalPoints: 2.5,
         bonusPoints: 0,
+        roundPoints: [{ roundTitle: 'Round 1', points: 2.5 }],
       },
-      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1, bonusPoints: 0 },
+      {
+        teamId: teamB.id,
+        teamName: 'Team B',
+        totalPoints: 1,
+        bonusPoints: 0,
+        roundPoints: [{ roundTitle: 'Round 1', points: 1 }],
+      },
     ]);
   });
 
@@ -274,6 +281,7 @@ describe('AnswerService (Postgres integration)', () => {
         teamName: 'The Quizzards',
         totalPoints: 0,
         bonusPoints: 0,
+        roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
       },
     ]);
   });
@@ -314,8 +322,20 @@ describe('AnswerService (Postgres integration)', () => {
     const leaderboard = await answerService.computeLeaderboard(session.id);
 
     expect(leaderboard).toEqual([
-      { teamId: teamA.id, teamName: 'Team A', totalPoints: 6, bonusPoints: 4 },
-      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1, bonusPoints: 1 },
+      {
+        teamId: teamA.id,
+        teamName: 'Team A',
+        totalPoints: 6,
+        bonusPoints: 4,
+        roundPoints: [{ roundTitle: 'Round 1', points: 2 }],
+      },
+      {
+        teamId: teamB.id,
+        teamName: 'Team B',
+        totalPoints: 1,
+        bonusPoints: 1,
+        roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
+      },
     ]);
   });
 
@@ -350,8 +370,20 @@ describe('AnswerService (Postgres integration)', () => {
     const leaderboard = await answerService.computeLeaderboard(session.id);
 
     expect(leaderboard).toEqual([
-      { teamId: teamA.id, teamName: 'Team A', totalPoints: 1, bonusPoints: -4 },
-      { teamId: teamB.id, teamName: 'Team B', totalPoints: 1, bonusPoints: 0 },
+      {
+        teamId: teamA.id,
+        teamName: 'Team A',
+        totalPoints: 1,
+        bonusPoints: -4,
+        roundPoints: [{ roundTitle: 'Round 1', points: 5 }],
+      },
+      {
+        teamId: teamB.id,
+        teamName: 'Team B',
+        totalPoints: 1,
+        bonusPoints: 0,
+        roundPoints: [{ roundTitle: 'Round 1', points: 1 }],
+      },
     ]);
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -150,9 +150,13 @@ describe('AdminPage — leaderboard', () => {
       snapshot: {
         progress: progress({ status: 'break' }),
         currentQuestion: null,
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards', isConnected: true },
+          { teamId: 'team-2', teamName: 'Second Place', isConnected: true },
+        ],
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0 },
+          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0, roundPoints: [] },
+          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0, roundPoints: [] },
         ],
       },
       connectionError: null,
@@ -162,9 +166,13 @@ describe('AdminPage — leaderboard', () => {
     });
     render(<AdminPage />);
 
-    expect(screen.getByText('The Quizzards')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.getByText('Second Place')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    const teamsTable = screen.getByRole('table');
+    const quizzardsRow = within(teamsTable).getByText('The Quizzards').closest('tr');
+    expect(quizzardsRow).not.toBeNull();
+    expect(within(quizzardsRow!).getByText('5')).toBeInTheDocument(); // Total column
+
+    const secondPlaceRow = within(teamsTable).getByText('Second Place').closest('tr');
+    expect(secondPlaceRow).not.toBeNull();
+    expect(within(secondPlaceRow!).getByText('3')).toBeInTheDocument(); // Total column
   });
 });

@@ -75,12 +75,24 @@ export interface QuestionRoundTitle {
 export type BlockQuestionView = QuestionView & QuestionPosition & QuestionRoundTitle;
 export type BlockRevealQuestionView = RevealQuestionView & QuestionPosition & QuestionRoundTitle;
 
+export interface RoundPoints {
+  roundTitle: string;
+  points: number;
+}
+
 export interface LeaderboardEntry {
   teamId: number;
   teamName: string;
   totalPoints: number;
   /** Sum of this team's bonus awards, already included in totalPoints — shown separately as a badge. */
   bonusPoints: number;
+  /**
+   * Points earned per round of the session's active quiz, in round order.
+   * Answers graded under a since-replaced quiz's rounds are still folded
+   * into totalPoints but won't appear here (their round no longer belongs
+   * to the session's current quiz).
+   */
+  roundPoints: RoundPoints[];
 }
 
 export interface TeamView {

@@ -15,6 +15,7 @@
     "@campus-pubquiz/types": "workspace:*",
     "@radix-ui/react-collapsible": "^1.1.20",
     "@radix-ui/react-dialog": "^1.1.23",
+    "@tanstack/react-table": "^9.0.0",
     "motion": "^12.43.0",
     "next": "16.2.3",
     "qrcode.react": "^4.2.0",
