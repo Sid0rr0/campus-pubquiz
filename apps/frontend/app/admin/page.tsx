@@ -67,13 +67,24 @@ function AdminPageContent() {
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
 
+  // Guards refetchQuizzes' setState calls against resolving after this page
+  // has unmounted (e.g. logging out or navigating away mid-fetch).
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const refetchQuizzes = useCallback(() => {
     fetchQuizzes()
       .then((payload) => {
+        if (!isMountedRef.current) return;
         setQuizzes(payload);
         setQuizzesError(null);
       })
       .catch((error: unknown) => {
+        if (!isMountedRef.current) return;
         setQuizzesError(error instanceof QuizApiError ? error.message : 'Could not load quizzes');
       });
   }, []);
