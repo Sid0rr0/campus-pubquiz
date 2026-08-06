@@ -335,6 +335,13 @@ export class GameGateway
       throw new WsException('Answers are locked for this question');
     }
 
+    if (
+      this.gameState.getConnectedSocketId(joinCode, payload.teamId) !==
+      client.id
+    ) {
+      throw new WsException('You may only submit answers for your own team');
+    }
+
     const submitted = await this.answerService.submit(
       this.gameState.getGameSessionId(joinCode),
       payload.questionId,

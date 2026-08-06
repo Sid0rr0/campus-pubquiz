@@ -1,5 +1,6 @@
 import type { ActiveSessionSummary, CreateSessionPayload } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
 export class SessionApiError extends Error {
   constructor(
@@ -39,6 +40,7 @@ export async function createSession(quizId: number): Promise<ActiveSessionSummar
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...CSRF_HEADERS,
     },
     body: JSON.stringify(payload),
   });
@@ -49,6 +51,7 @@ export async function closeSession(joinCode: string): Promise<void> {
   const response = await fetch(`${getBackendUrl()}/sessions/${joinCode}`, {
     method: 'DELETE',
     credentials: 'include',
+    headers: CSRF_HEADERS,
   });
   if (!response.ok) {
     const body = (await response.json()) as { message?: string };

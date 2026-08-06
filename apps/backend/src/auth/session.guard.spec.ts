@@ -1,4 +1,8 @@
-import { UnauthorizedException, type ExecutionContext } from '@nestjs/common';
+import {
+  ForbiddenException,
+  UnauthorizedException,
+  type ExecutionContext,
+} from '@nestjs/common';
 import { SessionGuard } from '@/auth/session.guard';
 import { SESSION_COOKIE_NAME } from '@/auth/session-cookie';
 import type { SessionService } from '@/auth/session.service';
@@ -7,8 +11,13 @@ import type { AuthUser } from '@campus-pubquiz/types';
 function createContext(
   cookies: Record<string, string | undefined>,
   request: Record<string, unknown> = {},
+  options: { method?: string; headers?: Record<string, string> } = {},
 ) {
-  Object.assign(request, { cookies });
+  Object.assign(request, {
+    cookies,
+    method: options.method ?? 'GET',
+    headers: options.headers ?? {},
+  });
   return {
     switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
@@ -53,6 +62,39 @@ describe('SessionGuard', () => {
     const context = createContext(
       { [SESSION_COOKIE_NAME]: 'good-token' },
       request,
+    );
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(request.user).toEqual(authUser);
+  });
+
+  it('throws ForbiddenException for a POST request missing the CSRF header, even with a valid cookie', async () => {
+    const sessions = {
+      validate: jest.fn().mockResolvedValue({ user: authUser }),
+    };
+    const guard = new SessionGuard(sessions as unknown as SessionService);
+    const context = createContext(
+      { [SESSION_COOKIE_NAME]: 'good-token' },
+      {},
+      { method: 'POST' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(sessions.validate).not.toHaveBeenCalled();
+  });
+
+  it('sets request.user and returns true for a POST request with a valid token and the CSRF header', async () => {
+    const sessions = {
+      validate: jest.fn().mockResolvedValue({ user: authUser }),
+    };
+    const guard = new SessionGuard(sessions as unknown as SessionService);
+    const request: Record<string, unknown> = {};
+    const context = createContext(
+      { [SESSION_COOKIE_NAME]: 'good-token' },
+      request,
+      { method: 'POST', headers: { 'x-requested-with': 'XMLHttpRequest' } },
     );
 
     await expect(guard.canActivate(context)).resolves.toBe(true);

@@ -9,5 +9,11 @@
     "test": "pnpm -r test",
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev"
+  },
+  "pnpm": {
+    "overrides": {
+      "ws": ">=8.21.0",
+      "socket.io-adapter": ">=2.5.8"
+    }
   }
 }

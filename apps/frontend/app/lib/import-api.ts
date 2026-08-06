@@ -4,6 +4,7 @@ import type {
   ImportRowIssue,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
 export class ImportApiError extends Error {
   constructor(
@@ -31,6 +32,7 @@ async function postImport<T>(
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...CSRF_HEADERS,
     },
     body: JSON.stringify({ csvText, quizTitle }),
   });

@@ -96,6 +96,9 @@ describe('GameGateway — socket event logging', () => {
     await openFirstQuestion(gateway, server);
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
 
     await gateway.handleSubmitAnswer(asSocket(player), {
       questionId: 21,

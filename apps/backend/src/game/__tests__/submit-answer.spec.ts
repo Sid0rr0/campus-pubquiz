@@ -28,6 +28,9 @@ describe('GameGateway — submit answer', () => {
     await openFirstQuestion(gateway, server);
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
 
     await gateway.handleSubmitAnswer(asSocket(player), {
       questionId: 21,
@@ -68,6 +71,9 @@ describe('GameGateway — submit answer', () => {
     await openFirstQuestion(gateway, server);
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
 
     await gateway.handleSubmitAnswer(asSocket(player), {
       questionId: 21,
@@ -87,6 +93,9 @@ describe('GameGateway — submit answer', () => {
     await openFirstQuestion(gateway, server);
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
 
     await gateway.handleSubmitAnswer(asSocket(player), {
       questionId: 21,
@@ -116,6 +125,35 @@ describe('GameGateway — submit answer', () => {
         questionId: 21,
         teamId: 31,
         value: 'Banana',
+      }),
+    ).rejects.toThrow(WsException);
+    expect(answerService.submit).not.toHaveBeenCalled();
+  });
+
+  it('rejects SUBMIT_ANSWER for a team the submitting socket never joined as', async () => {
+    await openFirstQuestion(gateway, server);
+    const teamOwner = createMockSocket(
+      SOCKET_ROOMS.PLAYERS,
+      {},
+      'socket-owner',
+    );
+    await gateway.handleConnection(asSocket(teamOwner));
+    await gateway.handleJoinPlayers(asSocket(teamOwner), {
+      teamName: 'The Quizzards',
+    });
+
+    const attacker = createMockSocket(
+      SOCKET_ROOMS.PLAYERS,
+      {},
+      'socket-attacker',
+    );
+    await gateway.handleConnection(asSocket(attacker));
+
+    await expect(
+      gateway.handleSubmitAnswer(asSocket(attacker), {
+        questionId: 21,
+        teamId: 31,
+        value: 'Hijacked',
       }),
     ).rejects.toThrow(WsException);
     expect(answerService.submit).not.toHaveBeenCalled();

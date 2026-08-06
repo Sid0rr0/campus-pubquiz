@@ -6,6 +6,7 @@ import type {
   UsersListedPayload,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
 export class AuthApiError extends Error {
   constructor(
@@ -52,6 +53,7 @@ export async function logout(): Promise<void> {
   const response = await fetch(`${getBackendUrl()}/auth/logout`, {
     method: 'POST',
     credentials: 'include',
+    headers: CSRF_HEADERS,
   });
   if (!response.ok) return throwApiError(response, 'Logout failed');
 }
@@ -78,7 +80,7 @@ export async function approveUser(userId: number, role: UserRole): Promise<void>
   const response = await fetch(`${getBackendUrl()}/users/${userId}/approve`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
     body: JSON.stringify({ role }),
   });
   if (!response.ok) return throwApiError(response, 'Could not approve user');
@@ -88,6 +90,7 @@ export async function deactivateUser(userId: number): Promise<void> {
   const response = await fetch(`${getBackendUrl()}/users/${userId}/deactivate`, {
     method: 'POST',
     credentials: 'include',
+    headers: CSRF_HEADERS,
   });
   if (!response.ok) return throwApiError(response, 'Could not deactivate user');
 }
