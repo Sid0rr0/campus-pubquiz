@@ -21,10 +21,12 @@ export function MobileAdminBar({
   canGoToPreviousQuestion,
   canAdvance,
   canEndQuiz,
+  canCloseSession,
   isLeaderboardVisible,
   leaderboardRevealCount,
   leaderboardTeamCount,
   onAction,
+  onCloseSession,
   teams,
   showAnswerStatus,
   answeredTeamIds,
@@ -35,6 +37,11 @@ export function MobileAdminBar({
 
   function handleDrawerAction(action: GameAction): void {
     onAction(action);
+    setIsDrawerOpen(false);
+  }
+
+  function handleDrawerCloseSession(): void {
+    onCloseSession();
     setIsDrawerOpen(false);
   }
 
@@ -80,13 +87,15 @@ export function MobileAdminBar({
               <Link href={`/display?code=${joinCode}`} target="_blank" rel="noopener noreferrer">
                 Open display
               </Link>
-              <Link href="/admin">Switch session</Link>
+              <Link href="/sessions">Switch session</Link>
             </div>
             <AdminActions
               canStartQuiz={canStartQuiz}
               canEndQuiz={canEndQuiz}
+              canCloseSession={canCloseSession}
               isLeaderboardVisible={isLeaderboardVisible}
               onAction={handleDrawerAction}
+              onCloseSession={handleDrawerCloseSession}
             />
             <TeamsPanel
               teams={teams}

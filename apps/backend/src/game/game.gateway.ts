@@ -131,7 +131,11 @@ export class GameGateway
 
   handleDisconnect(client: Socket): void {
     const joinCode = (client.data as { joinCode?: string }).joinCode;
-    if (!joinCode) return;
+    // The session may have been closed (evicted from memory) while this
+    // socket was still connected to it — e.g. the admin who just closed it
+    // from within the console disconnecting moments later. Closing already
+    // means nothing here needs cleanup.
+    if (!joinCode || !this.gameState.hasSession(joinCode)) return;
 
     const teamId = this.gameState.clearTeamConnectionBySocketId(
       joinCode,
@@ -251,6 +255,20 @@ export class GameGateway
       .to(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))
       .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
       .emit(SOCKET_EVENTS.STATE_UPDATED, snapshot);
+  }
+
+  /**
+   * Called by SessionsController once it has evicted a session (`DELETE
+   * /sessions/:joinCode`) — the in-memory session is already gone by this
+   * point, so any player still connected to it would otherwise only find out
+   * on its next action, as an opaque "Unknown game session" error. Scoped to
+   * the players room alone: the closing admin already navigates away via its
+   * own REST response, and /display has no redirect target of its own yet.
+   */
+  notifySessionClosed(joinCode: string): void {
+    this.server
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
+      .emit(SOCKET_EVENTS.SESSION_CLOSED, { joinCode });
   }
 
   @SubscribeMessage(SOCKET_EVENTS.JOIN_PLAYERS)

@@ -21,10 +21,12 @@ export function DesktopSidebar({
   canGoToPreviousQuestion,
   canAdvance,
   canEndQuiz,
+  canCloseSession,
   isLeaderboardVisible,
   leaderboardRevealCount,
   leaderboardTeamCount,
   onAction,
+  onCloseSession,
   teams,
   showAnswerStatus,
   answeredTeamIds,
@@ -50,7 +52,7 @@ export function DesktopSidebar({
         <Link href={`/display?code=${joinCode}`} target="_blank" rel="noopener noreferrer">
           Open display
         </Link>
-        <Link href="/admin">Switch session</Link>
+        <Link href="/sessions">Switch session</Link>
       </div>
       <div className="flex flex-col gap-2">
         <NavigationButtons
@@ -65,8 +67,10 @@ export function DesktopSidebar({
         <AdminActions
           canStartQuiz={canStartQuiz}
           canEndQuiz={canEndQuiz}
+          canCloseSession={canCloseSession}
           isLeaderboardVisible={isLeaderboardVisible}
           onAction={onAction}
+          onCloseSession={onCloseSession}
         />
       </div>
       <TeamsPanel

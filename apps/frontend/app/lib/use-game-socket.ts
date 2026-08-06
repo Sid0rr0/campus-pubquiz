@@ -15,6 +15,7 @@ import {
   type JoinPlayersPayload,
   type KickTeamPayload,
   type SelectQuizPayload,
+  type SessionClosedPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
@@ -63,6 +64,8 @@ export interface UseGameSocketResult {
    * effect's dependency array.
    */
   reconnectedAt: number | null;
+  /** The joinCode of this session once its admin closes it, or null otherwise — players-room consumers use this to drop their identity and return to the join screen. */
+  sessionClosed: string | null;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -85,6 +88,7 @@ export function useGameSocket(
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
+  const [sessionClosed, setSessionClosed] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -101,6 +105,7 @@ export function useGameSocket(
     setTeam(null);
     setLiveAnswers(null);
     setMyAnswers({});
+    setSessionClosed(null);
 
     const socket = io(getBackendUrl(), {
       query: joinCode ? { role, code: joinCode } : { role },
@@ -136,6 +141,10 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload: AnswersUpdatedPayload) => {
       setLiveAnswers(payload);
+    });
+
+    socket.on(SOCKET_EVENTS.SESSION_CLOSED, (payload: SessionClosedPayload) => {
+      setSessionClosed(payload.joinCode);
     });
 
     socket.on('connect_error', (payload: unknown) => {
@@ -218,5 +227,6 @@ export function useGameSocket(
     myAnswers,
     setLiveAnswers,
     reconnectedAt,
+    sessionClosed,
   };
 }

@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
@@ -22,14 +21,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => routerRef,
 }));
 
-vi.mock('@/app/admin/session-picker-panel', () => ({
-  SessionPickerPanel: ({ onOpenSession }: { onOpenSession: (joinCode: string) => void }) => (
-    <button type="button" onClick={() => onOpenSession('NEWCODE')}>
-      Open new session
-    </button>
-  ),
-}));
-
 describe('AdminPage — session routing', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams();
@@ -41,24 +32,16 @@ describe('AdminPage — session routing', () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
   });
 
-  it('shows the session picker when no ?code= is in the URL', async () => {
+  it('redirects to /sessions when no ?code= is in the URL', async () => {
     render(<AdminPage />);
 
-    expect(await screen.findByRole('button', { name: /open new session/i })).toBeInTheDocument();
+    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/sessions'));
   });
 
   it('does not connect the socket until a session code is known', () => {
     render(<AdminPage />);
 
     expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', false, undefined);
-  });
-
-  it('navigates to the chosen session when opened from the picker', async () => {
-    render(<AdminPage />);
-
-    await userEvent.click(await screen.findByRole('button', { name: /open new session/i }));
-
-    expect(routerRef.push).toHaveBeenCalledWith('/admin?code=NEWCODE');
   });
 
   it('connects the socket for the session code once present in the URL', () => {
@@ -104,6 +87,6 @@ describe('AdminPage — session routing', () => {
     const [displayLink] = screen.getAllByRole('link', { name: /open display/i });
     expect(displayLink).toHaveAttribute('href', '/display?code=ABCDEF');
     const [switchLink] = screen.getAllByRole('link', { name: /switch session/i });
-    expect(switchLink).toHaveAttribute('href', '/admin');
+    expect(switchLink).toHaveAttribute('href', '/sessions');
   });
 });

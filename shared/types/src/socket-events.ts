@@ -7,6 +7,7 @@ export const SOCKET_EVENTS = {
   ANSWER_RECEIVED: 'game:answer_received',
   JOIN_ACCEPTED: 'game:join_accepted',
   ANSWERS_UPDATED: 'game:answers_updated',
+  SESSION_CLOSED: 'game:session_closed',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',
   SUBMIT_ANSWER: 'game:submit_answer',
@@ -269,4 +270,9 @@ export interface AwardBonusPayload {
   /** Free-text reason, required for category "custom", ignored otherwise. */
   reason?: string;
   points: number;
+}
+
+/** Broadcast to a session's players room once its admin closes it — the session no longer exists server-side, so the client should drop its identity and return to the join screen. */
+export interface SessionClosedPayload {
+  joinCode: string;
 }

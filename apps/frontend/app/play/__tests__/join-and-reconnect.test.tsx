@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
+const { mockUseGameSocket, searchParamsRef, routerRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
+  routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
@@ -15,13 +16,15 @@ vi.mock('@/app/lib/use-game-socket', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => routerRef,
 }));
 
 describe('PlayPage — join and reconnect', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
+    routerRef.push.mockReset();
+    routerRef.replace.mockReset();
     mockUseGameSocket.mockReturnValue(socketResult());
   });
 
@@ -178,5 +181,23 @@ describe('PlayPage — join and reconnect', () => {
       teamCode: 'stored-team-code',
       joinCode: 'ABCDEF',
     });
+  });
+
+  it('clears the session token and redirects to /play when the admin closes the session', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+    mockUseGameSocket.mockReturnValue(socketResult({ sessionClosed: 'ABCDEF' }));
+
+    render(<PlayPage />);
+
+    // Team name/code survive so the team can join another game without
+    // retyping — only this session's token and join code are cleared.
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('Returning Team');
+    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe('QUICK-JADE-FOX');
+    expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
+    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
+    expect(routerRef.push).toHaveBeenCalledWith('/play');
   });
 });

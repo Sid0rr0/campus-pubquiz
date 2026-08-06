@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SessionPickerPanel } from '@/app/admin/session-picker-panel';
+import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
 
 const { mockFetchSessions, mockCreateSession, mockCloseSession, mockFetchQuizzes } = vi.hoisted(() => ({
   mockFetchSessions: vi.fn(),

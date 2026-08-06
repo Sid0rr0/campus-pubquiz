@@ -23,7 +23,10 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     snapshot,
     handleJoin,
   } = useTeamJoin(codeFromUrl);
-  const [showTeamCode, setShowTeamCode] = useState(false);
+  const [teamCodeRevealed, setTeamCodeRevealed] = useState(false);
+  // A restored team code means a returning team — show the field prefilled
+  // right away instead of making them click through to find their own code.
+  const showTeamCode = teamCodeRevealed || Boolean(teamCodeInput);
 
   // Mirrors /play's join gate: teamName (local state, cleared by "log out")
   // is the source of truth, not team (socket state, which the mocked/real
@@ -105,7 +108,7 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setShowTeamCode(true)}
+                  onClick={() => setTeamCodeRevealed(true)}
                   className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
                 >
                   Played before? Enter your team code

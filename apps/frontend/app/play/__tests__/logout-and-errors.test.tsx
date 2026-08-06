@@ -40,8 +40,10 @@ describe('PlayPage — logout and errors', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /log out/i }));
 
-    expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue('');
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
+    // Team name survives logout — the form stays prefilled for playing as
+    // this team again — but the stale join code for this game is cleared.
+    expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue('Returning Team');
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('Returning Team');
     expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
   });
 
@@ -84,7 +86,31 @@ describe('PlayPage — logout and errors', () => {
     await userEvent.click(screen.getByRole('button', { name: /log out/i }));
 
     expect(screen.getByRole('textbox', { name: /team name/i })).toBeInTheDocument();
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
+    // The team's token (this specific game session's auth) is cleared, but
+    // its name is kept so the team can rejoin another game without retyping.
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('Returning Team');
     expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
+  });
+
+  it('prefills the team code field after logging out following a fresh join (server-issued code)', async () => {
+    const joinTeam = vi.fn();
+    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    const { rerender } = render(<PlayPage />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
+    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'ABCDEF');
+    await userEvent.click(screen.getByRole('button', { name: /join/i }));
+
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        joinTeam,
+        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1', teamCode: 'QUICK-JADE-FOX' },
+      }),
+    );
+    rerender(<PlayPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /log out/i }));
+
+    expect(screen.getByRole('textbox', { name: /team code/i })).toHaveValue('QUICK-JADE-FOX');
   });
 });

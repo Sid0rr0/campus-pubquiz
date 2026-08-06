@@ -9,6 +9,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
+import type { GameGateway } from '@/game/game.gateway';
 import {
   SessionCloseBlockedError,
   type GameStateService,
@@ -24,11 +25,13 @@ function makeController() {
     closeSession: jest.fn(),
   };
   const quizService = { findTitles: jest.fn() };
+  const gameGateway = { notifySessionClosed: jest.fn() };
   const controller = new SessionsController(
     gameState as unknown as GameStateService,
     quizService as unknown as QuizService,
+    gameGateway as unknown as GameGateway,
   );
-  return { controller, gameState, quizService };
+  return { controller, gameState, quizService, gameGateway };
 }
 
 function snapshot(
@@ -195,6 +198,15 @@ describe('SessionsController', () => {
       expect(gameState.closeSession).toHaveBeenCalledWith('GHIJKL');
     });
 
+    it('notifies connected players once the session is evicted', () => {
+      const { controller, gameState, gameGateway } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      controller.close('GHIJKL');
+
+      expect(gameGateway.notifySessionClosed).toHaveBeenCalledWith('GHIJKL');
+    });
+
     it('404s for an unknown join code', () => {
       const { controller, gameState } = makeController();
       gameState.hasSession.mockReturnValue(false);
@@ -203,14 +215,15 @@ describe('SessionsController', () => {
       expect(gameState.closeSession).not.toHaveBeenCalled();
     });
 
-    it('maps a blocked close to 409 conflict', () => {
-      const { controller, gameState } = makeController();
+    it('maps a blocked close to 409 conflict without notifying players', () => {
+      const { controller, gameState, gameGateway } = makeController();
       gameState.hasSession.mockReturnValue(true);
       gameState.closeSession.mockImplementation(() => {
         throw new SessionCloseBlockedError('GHIJKL', 'still in progress');
       });
 
       expect(() => controller.close('GHIJKL')).toThrow(ConflictException);
+      expect(gameGateway.notifySessionClosed).not.toHaveBeenCalled();
     });
 
     it('lets unexpected errors bubble up unchanged', () => {

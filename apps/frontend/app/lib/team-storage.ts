@@ -17,9 +17,13 @@ export function storedJoinOptions(): JoinTeamOptions {
   };
 }
 
-export function clearStoredIdentity(): void {
-  window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
+/**
+ * Clears only the session-scoped identity (this game's auth token + join
+ * code) on logout or session close — team name and team code deliberately
+ * survive so the join form stays prefilled for playing as this team again,
+ * another night or another game.
+ */
+export function clearStoredSession(): void {
   window.localStorage.removeItem(TEAM_TOKEN_STORAGE_KEY);
-  window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
   window.localStorage.removeItem(JOIN_CODE_STORAGE_KEY);
 }

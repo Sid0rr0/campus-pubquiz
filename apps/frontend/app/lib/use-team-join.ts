@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { useGameSocket, type UseGameSocketResult } from '@/app/lib/use-game-socket';
 import {
   JOIN_CODE_STORAGE_KEY,
   TEAM_CODE_STORAGE_KEY,
   TEAM_NAME_STORAGE_KEY,
   TEAM_TOKEN_STORAGE_KEY,
-  clearStoredIdentity,
+  clearStoredSession,
   normalizeJoinCode,
   storedJoinOptions,
 } from '@/app/lib/team-storage';
@@ -31,6 +32,7 @@ export interface UseTeamJoinResult extends UseGameSocketResult {
  * persisting the team token/code once accepted, and resubmitting on retry.
  */
 export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
+  const router = useRouter();
   const [teamName, setTeamName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [codeInput, setCodeInput] = useState(codeFromUrl);
@@ -51,7 +53,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
   });
 
   const socket = useGameSocket('players', Boolean(activeJoinCode), activeJoinCode ?? undefined);
-  const { team, joinTeam } = socket;
+  const { team, joinTeam, sessionClosed } = socket;
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -103,8 +105,30 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     if (team) {
       window.localStorage.setItem(TEAM_TOKEN_STORAGE_KEY, team.teamToken);
       window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, team.teamCode);
+      // A fresh join (no team code typed in) only just learned its team code
+      // from the server — mirror it into the field now, the same way the
+      // mount-time prefill already keeps nameInput in sync with storage, so
+      // the form shows it correctly if it ever reappears (log out, retry).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTeamCodeInput(team.teamCode);
     }
   }, [team]);
+
+  useEffect(() => {
+    // The admin closed this session server-side — its token/join code are now
+    // stale, so drop them and send the team back to a fresh /play join screen
+    // rather than letting the next action surface an opaque server error.
+    // Team name and team code deliberately survive so the form stays
+    // prefilled for joining another game as this same team.
+    if (!sessionClosed) return;
+    clearStoredSession();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTeamName(null);
+    setCodeInput('');
+    setHasStoredIdentity(false);
+    setActiveJoinCode(null);
+    router.push('/play');
+  }, [sessionClosed, router]);
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -119,11 +143,12 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
   }
 
   function handleLogOut() {
-    clearStoredIdentity();
+    // Team name and team code deliberately survive logout — only the token
+    // and join code (this specific game session) are cleared, so the join
+    // form stays prefilled for playing as this team again another night.
+    clearStoredSession();
     setTeamName(null);
-    setNameInput('');
     setCodeInput(codeFromUrl);
-    setTeamCodeInput('');
     setHasStoredIdentity(false);
     setActiveJoinCode(codeFromUrl || null);
   }

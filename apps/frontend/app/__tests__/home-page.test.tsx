@@ -57,6 +57,16 @@ describe('HomePage', () => {
     expect(screen.getByRole('textbox', { name: /team code/i })).toBeInTheDocument();
   });
 
+  it('reveals the team code field prefilled when a team code is already stored (returning team)', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
+    mockUseGameSocket.mockReturnValue(socketResult({ connectionError: 'Session expired' }));
+
+    render(<HomePage />);
+
+    expect(screen.getByRole('textbox', { name: /team code/i })).toHaveValue('QUICK-JADE-FOX');
+  });
+
   it('prefills the game code from the ?code= query parameter (QR scan)', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<HomePage />);

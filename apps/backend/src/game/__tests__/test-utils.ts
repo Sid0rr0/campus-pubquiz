@@ -364,6 +364,7 @@ export interface TestGateway {
   bonusService: MockBonusService;
   seedService: MockSeedService;
   sessionService: MockSessionService;
+  gameStateService: GameStateService;
 }
 
 /** Builds a GameGateway wired to fresh fake services/mock server, seeded with
@@ -398,6 +399,7 @@ export async function createTestGateway(): Promise<TestGateway> {
     bonusService,
     seedService,
     sessionService,
+    gameStateService,
   };
 }
 

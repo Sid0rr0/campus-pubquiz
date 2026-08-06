@@ -16,6 +16,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
+import { GameGateway } from '@/game/game.gateway';
 import {
   GameStateService,
   SessionCloseBlockedError,
@@ -36,6 +37,7 @@ export class SessionsController {
   constructor(
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   /**
@@ -87,6 +89,7 @@ export class SessionsController {
       }
       throw error;
     }
+    this.gameGateway.notifySessionClosed(joinCode);
   }
 
   private async summarize(

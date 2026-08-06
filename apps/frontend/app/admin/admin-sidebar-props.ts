@@ -15,10 +15,12 @@ export interface AdminSidebarProps {
   canGoToPreviousQuestion: boolean;
   canAdvance: boolean;
   canEndQuiz: boolean;
+  canCloseSession: boolean;
   isLeaderboardVisible: boolean;
   leaderboardRevealCount: number;
   leaderboardTeamCount: number;
   onAction: (action: GameAction) => void;
+  onCloseSession: () => void;
   teams: TeamView[];
   showAnswerStatus: boolean;
   answeredTeamIds: number[];

@@ -12,6 +12,7 @@ import {
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
+import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { useAuth } from '@/app/lib/use-auth';
 import { TeamsTable } from '@/app/admin/teams-table';
 import { AdminLoginForm } from '@/app/admin/admin-login-form';
@@ -22,7 +23,6 @@ import { ImportPanel } from '@/app/admin/import-panel';
 import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
-import { SessionPickerPanel } from '@/app/admin/session-picker-panel';
 import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
@@ -42,6 +42,7 @@ function AdminPageContent() {
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
   const [answersError, setAnswersError] = useState<string | null>(null);
+  const [closeSessionError, setCloseSessionError] = useState<string | null>(null);
 
   const isAuthenticated = auth.status === 'authenticated';
 
@@ -99,6 +100,14 @@ function AdminPageContent() {
       router.replace(`/admin?code=${snapshot.joinCode}`);
     }
   }, [snapshot, sessionCode, router]);
+
+  useEffect(() => {
+    // The session picker (list + start) now lives at /sessions — /admin
+    // without a ?code= just bounces there instead of rendering it inline.
+    if (isAuthenticated && !sessionCode) {
+      router.replace('/sessions');
+    }
+  }, [isAuthenticated, sessionCode, router]);
 
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
@@ -280,6 +289,18 @@ function AdminPageContent() {
     setActiveQuizIdOverride(quizId);
   }
 
+  function handleCloseSession(): void {
+    if (!snapshot) return;
+    setCloseSessionError(null);
+    closeSession(snapshot.joinCode)
+      .then(() => {
+        router.push('/sessions');
+      })
+      .catch((error: unknown) => {
+        setCloseSessionError(error instanceof SessionApiError ? error.message : 'Could not close session');
+      });
+  }
+
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
@@ -368,7 +389,9 @@ function AdminPageContent() {
 
   if (!sessionCode) {
     return (
-      <SessionPickerPanel onOpenSession={(joinCode) => router.push(`/admin?code=${joinCode}`)} />
+      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <p className="font-display text-xl">Loading…</p>
+      </main>
     );
   }
 
@@ -397,6 +420,7 @@ function AdminPageContent() {
   const showAnswerStatus =
     progress.status === 'question_open' || progress.status === 'locking';
   const canEndQuiz = progress.status !== 'ended';
+  const canCloseSession = progress.status === 'ended';
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
@@ -409,10 +433,12 @@ function AdminPageContent() {
         canGoToPreviousQuestion={canGoToPreviousQuestion}
         canAdvance={canAdvance}
         canEndQuiz={canEndQuiz}
+        canCloseSession={canCloseSession}
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
         leaderboardTeamCount={leaderboard.length}
         onAction={sendAction}
+        onCloseSession={handleCloseSession}
         teams={teams}
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
@@ -430,10 +456,12 @@ function AdminPageContent() {
         canGoToPreviousQuestion={canGoToPreviousQuestion}
         canAdvance={canAdvance}
         canEndQuiz={canEndQuiz}
+        canCloseSession={canCloseSession}
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
         leaderboardTeamCount={leaderboard.length}
         onAction={sendAction}
+        onCloseSession={handleCloseSession}
         teams={teams}
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
@@ -452,6 +480,11 @@ function AdminPageContent() {
             Log out
           </button>
         </div>
+        {closeSessionError && (
+          <p role="alert" className="font-extrabold text-magenta">
+            {closeSessionError}
+          </p>
+        )}
         {canChooseQuiz && <ImportPanel onImported={refetchQuizzes} />}
         {canChooseQuiz && quizzesError && (
           <p role="alert" className="font-extrabold text-magenta">
