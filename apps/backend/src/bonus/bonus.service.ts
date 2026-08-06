@@ -49,9 +49,7 @@ export class BonusService {
       team: teamId,
     });
     if (!isOnRoster) {
-      throw new InvalidBonusAwardError(
-        'Team is not part of this game session',
-      );
+      throw new InvalidBonusAwardError('Team is not part of this game session');
     }
 
     const bonusAward = this.bonusAwards.create({
