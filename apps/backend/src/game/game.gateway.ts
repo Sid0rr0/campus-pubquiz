@@ -33,7 +33,6 @@ import {
   gradeAnswerPayloadSchema,
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
-  listAnswersPayloadSchema,
   parseSocketPayload,
   selectQuizPayloadSchema,
   submitAnswerPayloadSchema,
@@ -468,32 +467,6 @@ export class GameGateway
 
     this.broadcastState(newJoinCode, snapshot);
     this.rearmQuestionLockTimer(newJoinCode);
-  }
-
-  @SubscribeMessage(SOCKET_EVENTS.LIST_ANSWERS)
-  @CreateRequestContext()
-  async handleListAnswers(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(listAnswersPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may list answers');
-    }
-
-    this.logger.log(
-      `${SOCKET_EVENTS.LIST_ANSWERS} from ${client.id}: questionId=${payload.questionId}`,
-    );
-
-    const answers = await this.answerService.listForQuestion(
-      this.gameState.getGameSessionId(joinCode),
-      payload.questionId,
-    );
-    client.emit(
-      SOCKET_EVENTS.ANSWERS_UPDATED,
-      this.buildAnswersUpdatedPayload(joinCode, payload.questionId, answers),
-    );
   }
 
   @SubscribeMessage(SOCKET_EVENTS.KICK_TEAM)

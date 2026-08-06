@@ -14,7 +14,6 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type KickTeamPayload,
-  type ListAnswersPayload,
   type SelectQuizPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
@@ -48,13 +47,20 @@ export interface UseGameSocketResult {
   selectQuiz: (quizId: number) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
-  listAnswers: (questionId: number) => void;
+  /**
+   * Lets the admin page fold a REST-fetched `AnswersUpdatedPayload` (the
+   * initial/on-question-change load, now a GET rather than a round-tripped
+   * socket request) into the same state slot that live ANSWERS_UPDATED
+   * broadcasts from SUBMIT_ANSWER/GRADE_ANSWER already write to.
+   */
+  setLiveAnswers: (payload: AnswersUpdatedPayload | null) => void;
   /**
    * Timestamp of the most recent successful (re)connection, including the
-   * first one. Transient, request-driven data (e.g. `listAnswers` results)
-   * isn't part of the `STATE_SYNC` snapshot the server resends automatically
-   * on reconnect, so consumers that need to re-request it after a dropped
-   * connection should add this to their effect's dependency array.
+   * first one. Transient, request-driven data (e.g. the admin page's
+   * REST-fetched `liveAnswers`) isn't part of the `STATE_SYNC` snapshot the
+   * server resends automatically on reconnect, so consumers that need to
+   * re-fetch it after a dropped connection should add this to their
+   * effect's dependency array.
    */
   reconnectedAt: number | null;
 }
@@ -197,11 +203,6 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
   }, []);
 
-  const listAnswers = useCallback((questionId: number) => {
-    const payload: ListAnswersPayload = { questionId };
-    socketRef.current?.emit(SOCKET_EVENTS.LIST_ANSWERS, payload);
-  }, []);
-
   return {
     snapshot,
     connectionError,
@@ -215,7 +216,7 @@ export function useGameSocket(
     awardBonus,
     selectQuiz,
     myAnswers,
-    listAnswers,
+    setLiveAnswers,
     reconnectedAt,
   };
 }

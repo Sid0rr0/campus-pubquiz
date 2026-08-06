@@ -108,48 +108,4 @@ describe('GameGateway — grading', () => {
     ).rejects.toThrow(WsException);
     expect(answerService.grade).not.toHaveBeenCalled();
   });
-
-  it('lists answers for a requested block question to the requesting admin only', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
-    await gateway.handleListAnswers(asSocket(admin), { questionId: 21 });
-
-    expect(answerService.listForQuestion).toHaveBeenCalledWith(101, 21);
-    expect(admin.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: 21,
-      question: {
-        type: 'free_text',
-        prompt: 'Q1',
-        points: 1,
-        correctAnswer: 'A1',
-        roundTitle: 'Round 1',
-        roundNumber: 1,
-        questionNumberInRound: 1,
-        totalQuestionsInRound: 1,
-      },
-      answers: [
-        {
-          answerId: 41,
-          teamId: 31,
-          teamName: 'The Quizzards',
-          value: 'Banana',
-          pointsAwarded: 0,
-          gradedAt: null,
-        },
-      ],
-    });
-  });
-
-  it('rejects LIST_ANSWERS from a non-admin client', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
-    await expect(
-      gateway.handleListAnswers(asSocket(player), { questionId: 21 }),
-    ).rejects.toThrow(WsException);
-    expect(answerService.listForQuestion).not.toHaveBeenCalled();
-  });
 });

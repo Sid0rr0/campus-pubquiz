@@ -7,7 +7,6 @@ import {
   type CreateSessionPayload,
   type GameSocketHandshakeQuery,
   type JoinAcceptedPayload,
-  type ListAnswersPayload,
   type QuizzesListedPayload,
   type SelectQuizPayload,
   type StateSnapshotPayload,
@@ -26,7 +25,6 @@ describe('SOCKET_EVENTS', () => {
       JOIN_PLAYERS: 'game:join_players',
       GRADE_ANSWER: 'game:grade_answer',
       SELECT_QUIZ: 'game:select_quiz',
-      LIST_ANSWERS: 'game:list_answers',
       KICK_TEAM: 'game:kick_team',
       AWARD_BONUS: 'game:award_bonus',
     });
@@ -59,10 +57,8 @@ describe('block answering payloads', () => {
       teams: [{ teamId: 1, teamName: 'Quizzards', isConnected: true }],
       questionLockAt: null,
     };
-    const listAnswers: ListAnswersPayload = { questionId: 1 };
-
     expect(snapshot.blockQuestions.map((question) => question.id)).toContain(
-      listAnswers.questionId,
+      snapshot.currentQuestion?.id,
     );
     expect(snapshot.answeredTeamIds).toContain(snapshot.teams[0].teamId);
   });

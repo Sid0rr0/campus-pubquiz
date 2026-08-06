@@ -45,7 +45,6 @@ describe('AdminPage — status and teams', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         question: {

@@ -13,7 +13,6 @@ export const SOCKET_EVENTS = {
   JOIN_PLAYERS: 'game:join_players',
   GRADE_ANSWER: 'game:grade_answer',
   SELECT_QUIZ: 'game:select_quiz',
-  LIST_ANSWERS: 'game:list_answers',
   KICK_TEAM: 'game:kick_team',
   AWARD_BONUS: 'game:award_bonus',
 } as const;
@@ -255,10 +254,6 @@ export interface ActiveSessionSummary {
   quizTitle: string;
   status: GameStatus;
   teamCount: number;
-}
-
-export interface ListAnswersPayload {
-  questionId: number;
 }
 
 export interface KickTeamPayload {

@@ -54,10 +54,6 @@ export const selectQuizPayloadSchema = z.object({
   quizId: positiveInt,
 });
 
-export const listAnswersPayloadSchema = z.object({
-  questionId: positiveInt,
-});
-
 export const kickTeamPayloadSchema = z.object({
   teamId: positiveInt,
 });

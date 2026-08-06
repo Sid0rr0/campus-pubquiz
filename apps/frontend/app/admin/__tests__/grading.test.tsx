@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
-  mockFetchQuizzes: vi.fn(),
-  mockUseAuth: vi.fn(),
-  searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
-}));
+const { mockUseGameSocket, mockFetchQuizzes, mockFetchAnswers, mockUseAuth, searchParamsRef } =
+  vi.hoisted(() => ({
+    mockUseGameSocket: vi.fn(),
+    mockFetchQuizzes: vi.fn(),
+    mockFetchAnswers: vi.fn(),
+    mockUseAuth: vi.fn(),
+    searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
+  }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
@@ -18,6 +20,11 @@ vi.mock('@/app/lib/use-game-socket', () => ({
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
   return { ...actual, fetchQuizzes: mockFetchQuizzes };
+});
+
+vi.mock('@/app/lib/answer-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/answer-api')>();
+  return { ...actual, fetchAnswers: mockFetchAnswers };
 });
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
@@ -36,18 +43,21 @@ describe('AdminPage — grading', () => {
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
+    mockFetchAnswers.mockReset();
+    mockFetchAnswers.mockResolvedValue(null);
   });
 
   it('shows live answers for the current question with team name and value', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
         currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers: vi.fn(),
+      setLiveAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         question: {
@@ -82,6 +92,7 @@ describe('AdminPage — grading', () => {
   it('shows every team even if it has not answered yet, and the round, question number and correct answer', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
         currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
         teams: [
@@ -91,7 +102,7 @@ describe('AdminPage — grading', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers: vi.fn(),
+      setLiveAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         question: {
@@ -135,6 +146,7 @@ describe('AdminPage — grading', () => {
     const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         blockQuestions: [
@@ -144,7 +156,7 @@ describe('AdminPage — grading', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers: vi.fn(),
+      setLiveAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         question: {
@@ -181,6 +193,7 @@ describe('AdminPage — grading', () => {
     const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         blockQuestions: [
@@ -190,7 +203,7 @@ describe('AdminPage — grading', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers: vi.fn(),
+      setLiveAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         question: {
@@ -226,6 +239,7 @@ describe('AdminPage — grading', () => {
   it('shows the awarded grade as a disabled, checked quick button for an already-graded answer', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         blockQuestions: [
@@ -235,7 +249,7 @@ describe('AdminPage — grading', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers: vi.fn(),
+      setLiveAnswers: vi.fn(),
       liveAnswers: {
         questionId: 'r1q1',
         question: {
@@ -270,10 +284,10 @@ describe('AdminPage — grading', () => {
     expect(screen.getByRole('button', { name: /grade the quizzards half points/i })).toBeDisabled();
   });
 
-  it('requests and shows the first block question answers during the grading break', () => {
-    const listAnswers = vi.fn();
+  it('requests and shows the first block question answers during the grading break', async () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
         currentQuestion: null,
         blockQuestions: [
@@ -283,18 +297,19 @@ describe('AdminPage — grading', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers,
+      setLiveAnswers: vi.fn(),
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
     render(<AdminPage />);
 
-    expect(listAnswers).toHaveBeenCalledWith('r1q1');
+    await vi.waitFor(() =>
+      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r1q1'),
+    );
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
   it('browses to another question via the round number picker', async () => {
-    const listAnswers = vi.fn();
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: 'quiz-1',
       quizzes: [
@@ -316,6 +331,7 @@ describe('AdminPage — grading', () => {
     });
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
         currentQuestion: null,
         blockQuestions: [
@@ -325,7 +341,7 @@ describe('AdminPage — grading', () => {
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers,
+      setLiveAnswers: vi.fn(),
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
@@ -335,12 +351,13 @@ describe('AdminPage — grading', () => {
       await screen.findByRole('button', { name: /grade question 2 of round 1/i }),
     );
 
-    expect(listAnswers).toHaveBeenCalledWith('r1q2');
+    await vi.waitFor(() =>
+      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r1q2'),
+    );
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
 
   it('lets the admin grade any question at any game status, not just during a break', async () => {
-    const listAnswers = vi.fn();
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: 'quiz-1',
       quizzes: [
@@ -367,12 +384,13 @@ describe('AdminPage — grading', () => {
     });
     mockUseGameSocket.mockReturnValue({
       snapshot: {
+        joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
         currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
       },
       connectionError: null,
       sendAction: vi.fn(),
-      listAnswers,
+      setLiveAnswers: vi.fn(),
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
@@ -382,7 +400,9 @@ describe('AdminPage — grading', () => {
       await screen.findByRole('button', { name: /grade question 1 of round 2/i }),
     );
 
-    expect(listAnswers).toHaveBeenCalledWith('r2q1');
+    await vi.waitFor(() =>
+      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r2q1'),
+    );
     expect(screen.getByText('Name this song.')).toBeInTheDocument();
   });
 });

@@ -301,17 +301,28 @@ describe('useGameSocket', () => {
     });
   });
 
-  it('listAnswers emits a LIST_ANSWERS event with the question id', () => {
+  it('setLiveAnswers writes a REST-fetched payload into liveAnswers', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
-    const fakeSocket = getFakeSocket();
+    const payload = {
+      questionId: 1,
+      question: {
+        type: 'free_text' as const,
+        prompt: 'Q1',
+        points: 1,
+        correctAnswer: 'A1',
+        roundTitle: 'Round 1',
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        totalQuestionsInRound: 1,
+      },
+      answers: [],
+    };
 
     act(() => {
-      result.current.listAnswers(1);
+      result.current.setLiveAnswers(payload);
     });
 
-    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.LIST_ANSWERS, {
-      questionId: 1,
-    });
+    expect(result.current.liveAnswers).toEqual(payload);
   });
 
   it('seeds the team saved answers from JOIN_ACCEPTED', async () => {

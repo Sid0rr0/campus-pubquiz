@@ -10,6 +10,7 @@ import {
   type QuizzesListedPayload,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { useAuth } from '@/app/lib/use-auth';
 import { TeamsTable } from '@/app/admin/teams-table';
@@ -40,6 +41,7 @@ function AdminPageContent() {
   const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
+  const [answersError, setAnswersError] = useState<string | null>(null);
 
   const isAuthenticated = auth.status === 'authenticated';
 
@@ -65,7 +67,7 @@ function AdminPageContent() {
     kickTeam,
     awardBonus,
     selectQuiz = () => {},
-    listAnswers = () => {},
+    setLiveAnswers = () => {},
     reconnectedAt,
   } = useGameSocket(
     'admin',
@@ -202,12 +204,21 @@ function AdminPageContent() {
   useEffect(() => {
     // `liveAnswers` is transient, request-driven data — it isn't part of the
     // STATE_SYNC snapshot the server resends automatically on reconnect, so
-    // `reconnectedAt` is included here to re-request it after a dropped
+    // `reconnectedAt` is included here to re-fetch it after a dropped
     // connection recovers (e.g. a phone/laptop losing Wi-Fi mid-grading).
-    if (effectiveQuestionId !== null) {
-      listAnswers(effectiveQuestionId);
-    }
-  }, [effectiveQuestionId, listAnswers, reconnectedAt]);
+    const joinCode = snapshot?.joinCode;
+    if (!joinCode || effectiveQuestionId === null) return;
+    fetchAnswers(joinCode, effectiveQuestionId)
+      .then((payload) => {
+        if (!isMountedRef.current) return;
+        setLiveAnswers(payload);
+        setAnswersError(null);
+      })
+      .catch((error: unknown) => {
+        if (!isMountedRef.current) return;
+        setAnswersError(error instanceof AnswerApiError ? error.message : 'Could not load answers');
+      });
+  }, [snapshot?.joinCode, effectiveQuestionId, setLiveAnswers, reconnectedAt]);
 
   useEffect(() => {
     // Once the admin's manual pick coincides with the question actually on
@@ -454,6 +465,11 @@ function AdminPageContent() {
             displayedActiveQuizId={displayedActiveQuizId}
             onSelectQuiz={handleSelectQuiz}
           />
+        )}
+        {answersError && (
+          <p role="alert" className="font-extrabold text-magenta">
+            {answersError}
+          </p>
         )}
         <QuestionBrowserPanel
           rounds={activeQuizRounds}
