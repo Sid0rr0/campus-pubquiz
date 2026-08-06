@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { AuthUser } from '@campus-pubquiz/types';
 import {
   AuthApiError,
@@ -26,7 +27,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
   return error instanceof AuthApiError ? error.message : fallback;
 }
 
-export function useAuth(): UseAuthResult {
+function useAuthState(): UseAuthResult {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>('checking');
   const [error, setError] = useState<string | null>(null);
@@ -87,4 +88,23 @@ export function useAuth(): UseAuthResult {
   }, []);
 
   return { user, status, error, login, register, logout, clearError };
+}
+
+// A single provider instance at the app root means every page and the
+// header read the same status/user — logging in on /login is immediately
+// visible in the header without a refetch, and logging out anywhere clears
+// every consumer at once.
+const AuthContext = createContext<UseAuthResult | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
+  const auth = useAuthState();
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): UseAuthResult {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

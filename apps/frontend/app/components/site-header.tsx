@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
 
 /**
@@ -26,6 +26,12 @@ export function SiteHeader() {
 
 function SiteHeaderContent({ isHome }: { isHome: boolean }) {
   const auth = useAuth();
+  const router = useRouter();
+
+  function handleLogout(): void {
+    auth.logout();
+    router.push('/');
+  }
 
   return (
     <header className="flex items-center justify-between border-b-2 border-dashed border-foreground/30 px-8 py-4">
@@ -42,7 +48,7 @@ function SiteHeaderContent({ isHome }: { isHome: boolean }) {
                   Users
                 </Link>
               )}
-              <button type="button" onClick={auth.logout} className="underline">
+              <button type="button" onClick={handleLogout} className="underline">
                 Log out
               </button>
             </>

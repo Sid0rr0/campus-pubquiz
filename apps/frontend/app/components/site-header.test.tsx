@@ -5,8 +5,9 @@ import type { AuthUser } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import { SiteHeader } from '@/app/components/site-header';
 
-const { mockUseAuth, pathnameRef } = vi.hoisted(() => ({
+const { mockUseAuth, mockPush, pathnameRef } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
+  mockPush: vi.fn(),
   pathnameRef: { current: '/sessions' },
 }));
 
@@ -14,6 +15,7 @@ vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => pathnameRef.current,
+  useRouter: () => ({ push: mockPush }),
 }));
 
 const ADMIN_USER: AuthUser = { id: 1, username: 'quizmaster', role: 'admin', status: 'active' };
@@ -37,6 +39,7 @@ describe('SiteHeader', () => {
     pathnameRef.current = '/sessions';
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authResult());
+    mockPush.mockReset();
   });
 
   it('always shows the brand link back to home', () => {
@@ -68,7 +71,7 @@ describe('SiteHeader', () => {
     expect(screen.getByRole('link', { name: /^users$/i })).toHaveAttribute('href', '/admin/users');
   });
 
-  it('calls auth.logout when the Log out button is clicked', async () => {
+  it('calls auth.logout and redirects home when the Log out button is clicked', async () => {
     const logout = vi.fn();
     mockUseAuth.mockReturnValue(authResult({ status: 'authenticated', user: ADMIN_USER, logout }));
     render(<SiteHeader />);
@@ -76,6 +79,7 @@ describe('SiteHeader', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: /log out/i }));
 
     expect(logout).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 
   it('shows neither auth links nor account controls while checking auth status', () => {

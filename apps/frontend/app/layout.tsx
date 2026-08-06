@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Caprasimo, Nunito_Sans } from "next/font/google";
 import { SiteHeader } from "@/app/components/site-header";
+import { AuthProvider } from "@/app/lib/use-auth";
 import "./globals.css";
 
 const caprasimo = Caprasimo({
@@ -31,8 +32,10 @@ export default function RootLayout({
       className={`${caprasimo.variable} ${nunitoSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-body">
-        <SiteHeader />
-        {children}
+        <AuthProvider>
+          <SiteHeader />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

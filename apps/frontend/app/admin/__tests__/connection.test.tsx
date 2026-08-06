@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { AuthApiError } from '@/app/lib/auth-api';
+import { AuthProvider } from '@/app/lib/use-auth';
 import { progress } from './test-utils';
 
 const {
@@ -69,7 +70,11 @@ describe('AdminPage — connection', () => {
 
   it('redirects to /login before authenticating — login/register now live there', async () => {
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
-    render(<AdminPage />);
+    render(
+      <AuthProvider>
+        <AdminPage />
+      </AuthProvider>,
+    );
 
     await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/login'));
   });
@@ -79,7 +84,11 @@ describe('AdminPage — connection', () => {
     mockFetchMe.mockResolvedValue({ user: AUTH_USER });
     mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
 
-    render(<AdminPage />);
+    render(
+      <AuthProvider>
+        <AdminPage />
+      </AuthProvider>,
+    );
 
     await waitFor(() => expect(screen.getByText(/connecting…/i)).toBeInTheDocument());
     expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true, 'TESTCODE');
@@ -94,7 +103,11 @@ describe('AdminPage — connection', () => {
       sendAction: vi.fn(),
     });
 
-    render(<AdminPage />);
+    render(
+      <AuthProvider>
+        <AdminPage />
+      </AuthProvider>,
+    );
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(/invalid or expired session/i),
@@ -109,7 +122,11 @@ describe('AdminPage — connection', () => {
       connectionError: 'Only admin clients may perform game actions',
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    render(
+      <AuthProvider>
+        <AdminPage />
+      </AuthProvider>,
+    );
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(/only admin clients/i),
