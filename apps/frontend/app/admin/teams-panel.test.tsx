@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { TeamView } from '@campus-pubquiz/types';
@@ -93,5 +93,28 @@ describe('TeamsPanel', () => {
 
     expect(screen.queryByRole('button', { name: /^award$/i })).not.toBeInTheDocument();
     expect(onAwardBonus).not.toHaveBeenCalled();
+  });
+
+  it('allows kicking a disconnected team', async () => {
+    const onKickTeam = vi.fn();
+    render(
+      <TeamsPanel
+        teams={TEAMS}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={onKickTeam}
+        onAwardBonus={vi.fn()}
+      />,
+    );
+
+    const disconnectedTeamItem = screen.getByText('Beer Necessities').closest('li');
+    expect(disconnectedTeamItem).not.toBeNull();
+    const kickButton = within(disconnectedTeamItem as HTMLElement).getByRole('button', {
+      name: /^kick$/i,
+    });
+
+    await userEvent.click(kickButton);
+
+    expect(onKickTeam).toHaveBeenCalledWith(2);
   });
 });

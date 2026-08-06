@@ -73,15 +73,13 @@ export function TeamsPanel({
                 >
                   Bonus
                 </button>
-                {team.isConnected && (
-                  <button
-                    type="button"
-                    onClick={() => onKickTeam(team.teamId)}
-                    className="text-xs font-extrabold text-magenta underline"
-                  >
-                    Kick
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => onKickTeam(team.teamId)}
+                  className="text-xs font-extrabold text-magenta underline"
+                >
+                  Kick
+                </button>
               </div>
               {isAwarding && (
                 <BonusAwardForm

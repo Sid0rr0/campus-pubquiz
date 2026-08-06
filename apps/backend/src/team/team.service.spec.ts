@@ -233,4 +233,32 @@ describe('TeamService (Postgres integration)', () => {
       { teamId: second.id, teamName: 'Second Team' },
     ]);
   });
+
+  it('removes a team from the session roster on kick, connected or not', async () => {
+    const team = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
+
+    await teamService.removeFromRoster(sessionId, team.id);
+
+    expect(await teamService.listForSession(sessionId)).toEqual([]);
+  });
+
+  it('leaves the Team entity intact so a kicked team can still join another session', async () => {
+    const session2Id = await createSecondSession('GHIJKL');
+    const team = await teamService.join(sessionId, 'The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
+
+    await teamService.removeFromRoster(sessionId, team.id);
+    const rejoined = await teamService.join(session2Id, 'The Quizzards', {
+      teamToken: team.token,
+      joinCode: 'GHIJKL',
+    });
+
+    expect(rejoined.id).toBe(team.id);
+    expect(await teamService.listForSession(session2Id)).toEqual([
+      { teamId: team.id, teamName: 'The Quizzards' },
+    ]);
+  });
 });

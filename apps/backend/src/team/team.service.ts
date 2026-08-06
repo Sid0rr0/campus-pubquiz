@@ -124,6 +124,14 @@ export class TeamService {
     }));
   }
 
+  /** Removes a team from this session's roster (kick) — the Team entity itself, and its history, are untouched. */
+  async removeFromRoster(gameSessionId: number, teamId: number): Promise<void> {
+    await this.gameSessionTeams.nativeDelete({
+      gameSession: gameSessionId,
+      team: teamId,
+    });
+  }
+
   private async isOnRoster(
     gameSessionId: number,
     teamId: number,

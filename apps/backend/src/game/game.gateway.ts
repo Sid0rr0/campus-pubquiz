@@ -470,10 +470,11 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENTS.KICK_TEAM)
-  handleKickTeam(
+  @CreateRequestContext()
+  async handleKickTeam(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): void {
+  ): Promise<void> {
     const payload = parseSocketPayload(kickTeamPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
@@ -488,16 +489,25 @@ export class GameGateway
       joinCode,
       payload.teamId,
     );
-    const targetSocket = socketId
-      ? this.server.sockets.sockets.get(socketId)
-      : undefined;
-    if (!targetSocket) return;
+    if (socketId) {
+      const targetSocket = this.server.sockets.sockets.get(socketId);
+      targetSocket?.emit(
+        'exception',
+        'You were removed from this team by the quiz master',
+      );
+      targetSocket?.disconnect(true);
+      this.gameState.clearTeamConnectionBySocketId(joinCode, socketId);
+    }
 
-    targetSocket.emit(
-      'exception',
-      'You were removed from this team by the quiz master',
-    );
-    targetSocket.disconnect(true);
+    // Kicking removes the team from this session's roster outright — a
+    // disconnected team has no live socket to boot, so disconnection alone
+    // (the old behavior) was a no-op for it.
+    const gameSessionId = this.gameState.getGameSessionId(joinCode);
+    await this.teamService.removeFromRoster(gameSessionId, payload.teamId);
+
+    const teams = await this.teamService.listForSession(gameSessionId);
+    this.gameState.setTeams(joinCode, teams);
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 
   @SubscribeMessage(SOCKET_EVENTS.AWARD_BONUS)

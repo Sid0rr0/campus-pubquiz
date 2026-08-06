@@ -225,6 +225,7 @@ export function createFakeTeamService() {
     listForSession: jest
       .fn()
       .mockResolvedValue([{ teamId: 31, teamName: 'The Quizzards' }]),
+    removeFromRoster: jest.fn().mockResolvedValue(undefined),
   };
 }
 

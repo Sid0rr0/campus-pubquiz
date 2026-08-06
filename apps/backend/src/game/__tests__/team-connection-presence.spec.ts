@@ -13,14 +13,16 @@ import {
   asSocket,
   type MockServer,
   type MockSocket,
+  type MockTeamService,
 } from './test-utils';
 
 describe('GameGateway — one live connection per team + admin kick', () => {
   let gateway: GameGateway;
   let server: MockServer;
+  let teamService: MockTeamService;
 
   beforeEach(async () => {
-    ({ gateway, server } = await createTestGateway());
+    ({ gateway, server, teamService } = await createTestGateway());
   });
 
   async function joinAsPlayer(id: string): Promise<MockSocket> {
@@ -120,9 +122,9 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));
 
-    expect(() =>
+    await expect(
       gateway.handleKickTeam(asSocket(player), { teamId: 31 }),
-    ).toThrow(WsException);
+    ).rejects.toThrow(WsException);
   });
 
   it('notifies and disconnects the connected socket when the admin kicks its team', async () => {
@@ -132,13 +134,25 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
+    await gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
 
     expect(playerA.emit).toHaveBeenCalledWith(
       'exception',
       'You were removed from this team by the quiz master',
     );
     expect(playerA.disconnect).toHaveBeenCalledWith(true);
+  });
+
+  it('removes the team from the roster when the admin kicks it', async () => {
+    await joinAsPlayer('socket-a');
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
+
+    expect(teamService.removeFromRoster).toHaveBeenCalledWith(101, 31);
   });
 
   it('frees the connection slot so a new device can join after a kick', async () => {
@@ -148,7 +162,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     });
     await gateway.handleConnection(asSocket(admin));
 
-    gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
+    await gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
     // A real disconnect() call fires the socket.io 'disconnect' event,
     // which our gateway hooks via handleDisconnect.
     gateway.handleDisconnect(asSocket(playerA));
@@ -162,14 +176,16 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('does nothing when kicking a team that has no connected socket', async () => {
+  it('removes a disconnected team from the roster without touching any socket', async () => {
     const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
       token: TEST_SESSION_TOKEN,
     });
     await gateway.handleConnection(asSocket(admin));
 
-    expect(() =>
+    await expect(
       gateway.handleKickTeam(asSocket(admin), { teamId: 999 }),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
+
+    expect(teamService.removeFromRoster).toHaveBeenCalledWith(101, 999);
   });
 });
