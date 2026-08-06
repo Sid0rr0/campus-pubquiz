@@ -1,23 +1,22 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { AdminLoginForm } from '@/app/admin/admin-login-form';
+import { LoginForm } from '@/app/login/login-form';
 
-function renderForm(overrides: Partial<React.ComponentProps<typeof AdminLoginForm>> = {}) {
+function renderForm(overrides: Partial<React.ComponentProps<typeof LoginForm>> = {}) {
   const props = {
     usernameInput: '',
     passwordInput: '',
     onUsernameInputChange: vi.fn(),
     onPasswordInputChange: vi.fn(),
     onSubmit: vi.fn((event: React.FormEvent<HTMLFormElement>) => event.preventDefault()),
-    onSwitchToRegister: vi.fn(),
     ...overrides,
   };
-  render(<AdminLoginForm {...props} />);
+  render(<LoginForm {...props} />);
   return props;
 }
 
-describe('AdminLoginForm', () => {
+describe('LoginForm', () => {
   it('renders an error message when provided', () => {
     renderForm({ error: 'Invalid username or password' });
 
@@ -33,12 +32,9 @@ describe('AdminLoginForm', () => {
     expect(props.onSubmit).toHaveBeenCalled();
   });
 
-  it('calls onSwitchToRegister when the register link is clicked', async () => {
-    const user = userEvent.setup();
-    const props = renderForm();
+  it('links to the register page', () => {
+    renderForm();
 
-    await user.click(screen.getByRole('button', { name: /register/i }));
-
-    expect(props.onSwitchToRegister).toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: /register/i })).toHaveAttribute('href', '/register');
   });
 });

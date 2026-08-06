@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { AdminRegisterForm } from '@/app/admin/admin-register-form';
+import { RegisterForm } from '@/app/register/register-form';
 
-function renderForm(overrides: Partial<React.ComponentProps<typeof AdminRegisterForm>> = {}) {
+function renderForm(overrides: Partial<React.ComponentProps<typeof RegisterForm>> = {}) {
   const props = {
     usernameInput: '',
     passwordInput: '',
@@ -12,14 +12,13 @@ function renderForm(overrides: Partial<React.ComponentProps<typeof AdminRegister
     onPasswordInputChange: vi.fn(),
     onConfirmPasswordInputChange: vi.fn(),
     onSubmit: vi.fn((event: React.FormEvent<HTMLFormElement>) => event.preventDefault()),
-    onSwitchToLogin: vi.fn(),
     ...overrides,
   };
-  render(<AdminRegisterForm {...props} />);
+  render(<RegisterForm {...props} />);
   return props;
 }
 
-describe('AdminRegisterForm', () => {
+describe('RegisterForm', () => {
   it('renders an error message when provided', () => {
     renderForm({ error: 'Username "alice" is already taken' });
 
@@ -35,12 +34,9 @@ describe('AdminRegisterForm', () => {
     expect(props.onSubmit).toHaveBeenCalled();
   });
 
-  it('calls onSwitchToLogin when the login link is clicked', async () => {
-    const user = userEvent.setup();
-    const props = renderForm();
+  it('links to the login page', () => {
+    renderForm();
 
-    await user.click(screen.getByRole('button', { name: /log in/i }));
-
-    expect(props.onSwitchToLogin).toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
   });
 });

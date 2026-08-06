@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import Link from 'next/link';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getBlockStartRoundIndex,
@@ -15,9 +14,6 @@ import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { useAuth } from '@/app/lib/use-auth';
 import { TeamsTable } from '@/app/admin/teams-table';
-import { AdminLoginForm } from '@/app/admin/admin-login-form';
-import { AdminRegisterForm } from '@/app/admin/admin-register-form';
-import { PendingApprovalView } from '@/app/admin/pending-approval-view';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { ImportPanel } from '@/app/admin/import-panel';
 import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
@@ -32,11 +28,6 @@ function AdminPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionCode = searchParams.get('code');
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
-  const [usernameInput, setUsernameInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
-  const [registerValidationError, setRegisterValidationError] = useState<string | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
@@ -108,6 +99,15 @@ function AdminPageContent() {
       router.replace('/sessions');
     }
   }, [isAuthenticated, sessionCode, router]);
+
+  useEffect(() => {
+    // Login/register/pending-approval now live at /login and /register —
+    // anyone landing here without a session bounces there instead of
+    // rendering those screens inline.
+    if (auth.status === 'unauthenticated' || auth.status === 'pending') {
+      router.replace('/login');
+    }
+  }, [auth.status, router]);
 
   const gameStatus = snapshot?.progress.status;
   const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
@@ -242,40 +242,6 @@ function AdminPageContent() {
     }
   }, [selectedQuestionId, displayQuestionId]);
 
-  function handleLoginSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    // auth.error already surfaces the failure message — this catch only
-    // exists so the rejection auth.login() rethrows doesn't go unhandled.
-    auth.login(usernameInput, passwordInput).catch(() => {});
-  }
-
-  function handleRegisterSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    if (passwordInput !== confirmPasswordInput) {
-      setRegisterValidationError('Passwords do not match');
-      return;
-    }
-    setRegisterValidationError(null);
-    auth
-      .register(usernameInput, passwordInput)
-      .then(() => {
-        setPasswordInput('');
-        setConfirmPasswordInput('');
-      })
-      .catch(() => {});
-  }
-
-  function switchAuthView(view: 'login' | 'register'): void {
-    setAuthView(view);
-    setRegisterValidationError(null);
-    auth.clearError();
-  }
-
-  function handleLogout(): void {
-    auth.logout();
-    setAuthView('login');
-  }
-
   const displayedActiveQuizId = activeQuizIdOverride ?? quizzes?.activeQuizId ?? null;
   const activeQuizTitle =
     quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.title ?? null;
@@ -351,41 +317,11 @@ function AdminPageContent() {
     sendAction,
   });
 
-  if (auth.status === 'checking') {
+  if (auth.status === 'checking' || auth.status === 'unauthenticated' || auth.status === 'pending') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>
       </main>
-    );
-  }
-
-  if (auth.status === 'pending') {
-    return <PendingApprovalView onLogout={handleLogout} />;
-  }
-
-  if (auth.status === 'unauthenticated') {
-    return authView === 'register' ? (
-      <AdminRegisterForm
-        usernameInput={usernameInput}
-        passwordInput={passwordInput}
-        confirmPasswordInput={confirmPasswordInput}
-        onUsernameInputChange={setUsernameInput}
-        onPasswordInputChange={setPasswordInput}
-        onConfirmPasswordInputChange={setConfirmPasswordInput}
-        onSubmit={handleRegisterSubmit}
-        onSwitchToLogin={() => switchAuthView('login')}
-        error={registerValidationError ?? auth.error}
-      />
-    ) : (
-      <AdminLoginForm
-        usernameInput={usernameInput}
-        passwordInput={passwordInput}
-        onUsernameInputChange={setUsernameInput}
-        onPasswordInputChange={setPasswordInput}
-        onSubmit={handleLoginSubmit}
-        onSwitchToRegister={() => switchAuthView('register')}
-        error={auth.error}
-      />
     );
   }
 
@@ -471,17 +407,6 @@ function AdminPageContent() {
         onAwardBonus={awardBonus}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
-        <div className="flex items-center justify-end gap-4 text-sm font-bold">
-          <span className="text-foreground/60">{auth.user?.username}</span>
-          {auth.user?.role === 'admin' && (
-            <Link href="/admin/users" className="underline">
-              Users
-            </Link>
-          )}
-          <button type="button" onClick={handleLogout} className="underline">
-            Log out
-          </button>
-        </div>
         {closeSessionError && (
           <p role="alert" className="font-extrabold text-magenta">
             {closeSessionError}

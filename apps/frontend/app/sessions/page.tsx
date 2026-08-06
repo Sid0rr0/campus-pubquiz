@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
 
-/** Admin-only landing screen for picking or starting a session — /admin owns every auth screen (login/register/pending), so anyone not already signed in bounces back there instead of duplicating those screens here. */
+/** Admin-only landing screen for picking or starting a session — /login owns every auth screen (login/register/pending), so anyone not already signed in bounces back there instead of duplicating those screens here. */
 export default function SessionsPage() {
   const auth = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (auth.status === 'unauthenticated' || auth.status === 'pending') {
-      router.replace('/admin');
+      router.replace('/login');
     }
   }, [auth.status, router]);
 

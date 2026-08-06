@@ -51,18 +51,18 @@ describe('SessionsPage', () => {
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
 
-  it('redirects to /admin when unauthenticated', async () => {
+  it('redirects to /login when unauthenticated', async () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated' }));
     render(<SessionsPage />);
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/admin'));
+    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/login'));
   });
 
-  it('redirects to /admin when the account is pending approval', async () => {
+  it('redirects to /login when the account is pending approval', async () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'pending' }));
     render(<SessionsPage />);
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/admin'));
+    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/login'));
   });
 
   it('renders the session picker once authenticated', () => {

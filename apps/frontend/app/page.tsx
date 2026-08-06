@@ -22,7 +22,7 @@ function HomePageContent() {
       <JoinPanel codeFromUrl={codeFromUrl} />
       <footer className="px-5 pb-8 text-center text-sm font-bold text-foreground/50">
         Running the quiz tonight?{' '}
-        <Link href="/admin" className="font-extrabold text-foreground underline">
+        <Link href="/login" className="font-extrabold text-foreground underline">
           Quiz master login
         </Link>
       </footer>

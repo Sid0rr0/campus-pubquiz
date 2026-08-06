@@ -137,17 +137,14 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('does not trigger a shortcut while typing in a text field', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: null,
+      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
       connectionError: null,
       sendAction,
     });
-    mockUseAuth.mockReturnValue(
-      authenticatedAuthResult({ status: 'unauthenticated', user: null }),
-    );
     render(<AdminPage />);
 
-    const passwordField = screen.getByLabelText(/^password$/i);
-    passwordField.focus();
+    const quizTitleField = await screen.findByLabelText(/quiz title/i);
+    quizTitleField.focus();
     await userEvent.keyboard('{ArrowLeft}{ArrowRight}{ArrowUp}{ArrowDown}');
 
     expect(sendAction).not.toHaveBeenCalled();

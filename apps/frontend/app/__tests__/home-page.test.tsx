@@ -46,7 +46,7 @@ describe('HomePage', () => {
   it('links to the admin login in the footer', () => {
     render(<HomePage />);
 
-    expect(screen.getByRole('link', { name: /quiz master login/i })).toHaveAttribute('href', '/admin');
+    expect(screen.getByRole('link', { name: /quiz master login/i })).toHaveAttribute('href', '/login');
   });
 
   it('hides the team code field until "Played before?" is clicked', async () => {
