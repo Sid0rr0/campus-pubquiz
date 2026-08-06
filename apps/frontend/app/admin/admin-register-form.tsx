@@ -38,6 +38,7 @@ export function AdminRegisterForm({
           id="register-username"
           value={usernameInput}
           onChange={(event) => onUsernameInputChange(event.target.value)}
+          autoComplete="username"
           className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />
         <label htmlFor="register-password" className="text-xs font-extrabold tracking-wide text-foreground/55">
@@ -48,6 +49,7 @@ export function AdminRegisterForm({
           type="password"
           value={passwordInput}
           onChange={(event) => onPasswordInputChange(event.target.value)}
+          autoComplete="new-password"
           className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />
         <label htmlFor="register-confirm-password" className="text-xs font-extrabold tracking-wide text-foreground/55">
@@ -58,6 +60,7 @@ export function AdminRegisterForm({
           type="password"
           value={confirmPasswordInput}
           onChange={(event) => onConfirmPasswordInputChange(event.target.value)}
+          autoComplete="new-password"
           className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />
         <button

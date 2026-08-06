@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Get,
   Post,
@@ -10,6 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import type {
   AuthUser,
@@ -24,13 +24,14 @@ import {
   AccountPendingError,
   AuthService,
   InvalidCredentialsError,
-  UsernameTakenError,
 } from '@/auth/auth.service';
 import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from '@/auth/session-cookie';
 import { SessionGuard } from '@/auth/session.guard';
+
+const MIN_PASSWORD_LENGTH = 8;
 
 function requireCredentials(body: Partial<LoginRequest>): LoginRequest {
   if (typeof body.username !== 'string' || body.username.trim() === '') {
@@ -47,22 +48,22 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @UseGuards(ThrottlerGuard)
   async register(
     @Body() body: Partial<RegisterRequest>,
   ): Promise<RegisterResponse> {
     const { username, password } = requireCredentials(body);
-    try {
-      await this.authService.register(username, password);
-      return { status: 'pending' };
-    } catch (error) {
-      if (error instanceof UsernameTakenError) {
-        throw new ConflictException(error.message);
-      }
-      throw error;
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      throw new BadRequestException(
+        `password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      );
     }
+    await this.authService.register(username, password);
+    return { status: 'pending' };
   }
 
   @Post('login')
+  @UseGuards(ThrottlerGuard)
   async login(
     @Body() body: Partial<LoginRequest>,
     @Res({ passthrough: true }) res: Response,

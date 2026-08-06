@@ -34,6 +34,7 @@ export function AdminLoginForm({
           id="admin-username"
           value={usernameInput}
           onChange={(event) => onUsernameInputChange(event.target.value)}
+          autoComplete="username"
           className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />
         <label htmlFor="admin-password" className="text-xs font-extrabold tracking-wide text-foreground/55">
@@ -44,6 +45,7 @@ export function AdminLoginForm({
           type="password"
           value={passwordInput}
           onChange={(event) => onPasswordInputChange(event.target.value)}
+          autoComplete="current-password"
           className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />
         <button

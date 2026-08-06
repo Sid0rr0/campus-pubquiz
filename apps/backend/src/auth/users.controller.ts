@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -12,7 +13,7 @@ import type {
   ApproveUserRequest,
   UsersListedPayload,
 } from '@campus-pubquiz/types';
-import { AuthService } from '@/auth/auth.service';
+import { AuthService, UserNotFoundError } from '@/auth/auth.service';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -41,11 +42,25 @@ export class UsersController {
     @Body() body: Partial<ApproveUserRequest>,
   ): Promise<void> {
     const { role } = requireRole(body);
-    await this.authService.approve(id, role);
+    try {
+      await this.authService.approve(id, role);
+    } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
   }
 
   @Post(':id/deactivate')
   async deactivate(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.authService.deactivate(id);
+    try {
+      await this.authService.deactivate(id);
+    } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
   }
 }

@@ -5,7 +5,7 @@ import {
   AccountPendingError,
   AuthService,
   InvalidCredentialsError,
-  UsernameTakenError,
+  UserNotFoundError,
 } from '@/auth/auth.service';
 import type { UserRepository } from '@/db/repositories/user.repository';
 import type { SessionService } from '@/auth/session.service';
@@ -15,25 +15,22 @@ function createFakeUserRepository(users: Partial<User>[] = []) {
   const flush = jest.fn().mockResolvedValue(undefined);
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
   const create = jest.fn((data: Record<string, unknown>) => ({ ...data }));
-  const findOne = jest.fn((where: Record<string, unknown>) =>
-    Promise.resolve(
+  const findOne = jest.fn((where: number | Record<string, unknown>) => {
+    if (typeof where === 'number') {
+      return Promise.resolve(users.find((u) => u.id === where) ?? null);
+    }
+    return Promise.resolve(
       users.find((u) =>
         Object.entries(where).every(
           ([k, v]) => (u as Record<string, unknown>)[k] === v,
         ),
       ) ?? null,
-    ),
-  );
-  const findOneOrFail = jest.fn((id: number) => {
-    const found = users.find((u) => u.id === id);
-    if (!found) throw new Error(`User ${id} not found`);
-    return Promise.resolve(found);
+    );
   });
   const findAll = jest.fn().mockResolvedValue(users);
   return {
     create,
     findOne,
-    findOneOrFail,
     findAll,
     getEntityManager: jest.fn(() => ({ persistAndFlush, flush })),
     persistAndFlush,
@@ -74,7 +71,7 @@ describe('AuthService', () => {
       expect(repo.persistAndFlush).toHaveBeenCalled();
     });
 
-    it('throws UsernameTakenError on a unique constraint violation', async () => {
+    it('resolves silently on a unique constraint violation (no username enumeration)', async () => {
       const repo = createFakeUserRepository();
       repo.persistAndFlush.mockRejectedValueOnce(
         new UniqueConstraintViolationException(new Error('duplicate')),
@@ -84,9 +81,9 @@ describe('AuthService', () => {
         createFakeSessionService() as unknown as SessionService,
       );
 
-      await expect(service.register('alice', 'hunter2')).rejects.toThrow(
-        UsernameTakenError,
-      );
+      await expect(
+        service.register('alice', 'hunter2'),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -228,6 +225,18 @@ describe('AuthService', () => {
       expect(user.status).toBe('active');
       expect(repo.flush).toHaveBeenCalled();
     });
+
+    it('throws UserNotFoundError for an unknown user id', async () => {
+      const repo = createFakeUserRepository([]);
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      await expect(service.approve(999, 'admin')).rejects.toThrow(
+        UserNotFoundError,
+      );
+    });
   });
 
   describe('deactivate', () => {
@@ -249,6 +258,16 @@ describe('AuthService', () => {
 
       expect(user.status).toBe('deactivated');
       expect(sessions.revokeAllForUser).toHaveBeenCalledWith(5);
+    });
+
+    it('throws UserNotFoundError for an unknown user id', async () => {
+      const repo = createFakeUserRepository([]);
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      await expect(service.deactivate(999)).rejects.toThrow(UserNotFoundError);
     });
   });
 

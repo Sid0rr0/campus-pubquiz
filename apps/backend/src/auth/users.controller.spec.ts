@@ -1,8 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { UsersController } from '@/auth/users.controller';
-import type { AuthService } from '@/auth/auth.service';
+import { UserNotFoundError, type AuthService } from '@/auth/auth.service';
 import type { UsersListedPayload } from '@campus-pubquiz/types';
 
 function makeController() {
@@ -59,6 +59,15 @@ describe('UsersController', () => {
 
       expect(authService.approve).toHaveBeenCalledWith(5, 'moderator');
     });
+
+    it('maps UserNotFoundError to a 404', async () => {
+      const { controller, authService } = makeController();
+      authService.approve.mockRejectedValue(new UserNotFoundError(999));
+
+      await expect(
+        controller.approve(999, { role: 'moderator' }),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('deactivate', () => {
@@ -68,6 +77,15 @@ describe('UsersController', () => {
       await controller.deactivate(5);
 
       expect(authService.deactivate).toHaveBeenCalledWith(5);
+    });
+
+    it('maps UserNotFoundError to a 404', async () => {
+      const { controller, authService } = makeController();
+      authService.deactivate.mockRejectedValue(new UserNotFoundError(999));
+
+      await expect(controller.deactivate(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

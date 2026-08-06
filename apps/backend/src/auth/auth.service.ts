@@ -13,13 +13,6 @@ import { UserRepository } from '@/db/repositories/user.repository';
 import { hashPassword } from '@/auth/password-hash';
 import { SessionService, toAuthUser } from '@/auth/session.service';
 
-export class UsernameTakenError extends Error {
-  constructor(username: string) {
-    super(`Username "${username}" is already taken`);
-    this.name = 'UsernameTakenError';
-  }
-}
-
 export class InvalidCredentialsError extends Error {
   constructor() {
     super('Invalid username or password');
@@ -41,6 +34,13 @@ export class AccountDeactivatedError extends Error {
   }
 }
 
+export class UserNotFoundError extends Error {
+  constructor(userId: number) {
+    super(`User ${userId} not found`);
+    this.name = 'UserNotFoundError';
+  }
+}
+
 export interface LoginResult {
   token: string;
   user: AuthUser;
@@ -53,6 +53,12 @@ export class AuthService {
     private readonly sessions: SessionService,
   ) {}
 
+  // Deliberately doesn't distinguish a taken username from a successful
+  // registration in its return value or timing-sensitive control flow — the
+  // login path already avoids leaking whether a username exists, and doing
+  // the same here closes off username enumeration via the register endpoint.
+  // The real admin, who already knows every registrant, is the actual
+  // arbiter of collisions during approval.
   async register(username: string, password: string): Promise<void> {
     const trimmedUsername = username.trim();
     const passwordHash = await hashPassword(password);
@@ -68,7 +74,7 @@ export class AuthService {
       await this.users.getEntityManager().persistAndFlush(user);
     } catch (error) {
       if (error instanceof UniqueConstraintViolationException) {
-        throw new UsernameTakenError(trimmedUsername);
+        return;
       }
       throw error;
     }
@@ -95,14 +101,16 @@ export class AuthService {
   }
 
   async approve(userId: number, role: UserRole): Promise<void> {
-    const user = await this.users.findOneOrFail(userId);
+    const user = await this.users.findOne(userId);
+    if (!user) throw new UserNotFoundError(userId);
     user.role = role;
     user.status = 'active';
     await this.users.getEntityManager().flush();
   }
 
   async deactivate(userId: number): Promise<void> {
-    const user = await this.users.findOneOrFail(userId);
+    const user = await this.users.findOne(userId);
+    if (!user) throw new UserNotFoundError(userId);
     user.status = 'deactivated';
     await this.users.getEntityManager().flush();
     await this.sessions.revokeAllForUser(userId);

@@ -1,15 +1,10 @@
-import {
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
   AccountDeactivatedError,
   AccountPendingError,
   type AuthService,
   InvalidCredentialsError,
-  UsernameTakenError,
 } from '@/auth/auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { SESSION_COOKIE_NAME } from '@/auth/session-cookie';
@@ -50,20 +45,29 @@ describe('AuthController', () => {
       authService.register.mockResolvedValue(undefined);
 
       await expect(
-        controller.register({ username: 'alice', password: 'hunter2' }),
+        controller.register({ username: 'alice', password: 'hunter22' }),
       ).resolves.toEqual({
         status: 'pending',
       });
-      expect(authService.register).toHaveBeenCalledWith('alice', 'hunter2');
+      expect(authService.register).toHaveBeenCalledWith('alice', 'hunter22');
     });
 
-    it('maps a taken username to 409 conflict', async () => {
+    it('rejects a password shorter than the minimum length', async () => {
       const { controller, authService } = makeController();
-      authService.register.mockRejectedValue(new UsernameTakenError('alice'));
 
       await expect(
-        controller.register({ username: 'alice', password: 'hunter2' }),
-      ).rejects.toThrow(ConflictException);
+        controller.register({ username: 'alice', password: 'short' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(authService.register).not.toHaveBeenCalled();
+    });
+
+    it('does not surface a taken-username conflict (avoids username enumeration)', async () => {
+      const { controller, authService } = makeController();
+      authService.register.mockResolvedValue(undefined);
+
+      await expect(
+        controller.register({ username: 'alice', password: 'hunter22' }),
+      ).resolves.toEqual({ status: 'pending' });
     });
   });
 
@@ -104,7 +108,7 @@ describe('AuthController', () => {
       const { res, cookie } = makeResponse();
 
       await expect(
-        controller.login({ username: 'alice', password: 'hunter2' }, res),
+        controller.login({ username: 'alice', password: 'hunter22' }, res),
       ).resolves.toEqual({
         user: authUser,
       });

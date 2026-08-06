@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { AuthController } from '@/auth/auth.controller';
@@ -19,7 +20,14 @@ import { ImportService } from '@/import/import.service';
 import { SessionsController } from '@/session/sessions.controller';
 
 @Module({
-  imports: [DbModule, AuthModule],
+  imports: [
+    // Only applied where routes opt in via @UseGuards(ThrottlerGuard) — the
+    // login/register endpoints, which are now real password-based auth
+    // targets rather than a single shared secret.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
+    DbModule,
+    AuthModule,
+  ],
   controllers: [
     AppController,
     AuthController,
