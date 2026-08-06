@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import Link from 'next/link';
+import { PasswordInput } from '@/app/components/password-input';
 
 interface LoginFormProps {
   usernameInput: string;
@@ -44,13 +45,11 @@ export function LoginForm({
       >
         Password
       </label>
-      <input
+      <PasswordInput
         id="login-password"
-        type="password"
         value={passwordInput}
-        onChange={(event) => onPasswordInputChange(event.target.value)}
+        onChange={onPasswordInputChange}
         autoComplete="current-password"
-        className="min-h-12 rounded-xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
       />
       <button
         type="submit"
