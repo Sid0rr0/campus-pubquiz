@@ -134,8 +134,15 @@ export class AnswerService {
     }));
   }
 
-  async grade(answerId: number, pointsAwarded: number): Promise<GradedAnswer> {
-    const answer = await this.answers.findOneOrFail(answerId);
+  async grade(
+    gameSessionId: number,
+    answerId: number,
+    pointsAwarded: number,
+  ): Promise<GradedAnswer> {
+    const answer = await this.answers.findOneOrFail({
+      id: answerId,
+      gameSession: gameSessionId,
+    });
     answer.pointsAwarded = pointsAwarded;
     answer.gradedAt = new Date();
     await this.answers.getEntityManager().flush();

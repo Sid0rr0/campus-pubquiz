@@ -15,17 +15,9 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
-  type AdminActionPayload,
   type AnswersUpdatedPayload,
-  type AwardBonusPayload,
-  type GradeAnswerPayload,
-  type JoinPlayersPayload,
-  type KickTeamPayload,
-  type ListAnswersPayload,
-  type SelectQuizPayload,
   type SocketRoomName,
   type StateSnapshotPayload,
-  type SubmitAnswerPayload,
 } from '@campus-pubquiz/types';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { extractSessionCookie } from '@/auth/session-cookie';
@@ -35,6 +27,17 @@ import { AnswerService } from '@/answer/answer.service';
 import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { GameStateService } from '@/game/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
+import {
+  adminActionPayloadSchema,
+  awardBonusPayloadSchema,
+  gradeAnswerPayloadSchema,
+  joinPlayersPayloadSchema,
+  kickTeamPayloadSchema,
+  listAnswersPayloadSchema,
+  parseSocketPayload,
+  selectQuizPayloadSchema,
+  submitAnswerPayloadSchema,
+} from '@/game/socket-payload.schemas';
 
 const VALID_ROOMS: string[] = [
   SOCKET_ROOMS.DISPLAY,
@@ -156,8 +159,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleAdminAction(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: AdminActionPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(adminActionPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may perform game actions');
@@ -254,8 +258,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleJoinPlayers(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: JoinPlayersPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(joinPlayersPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
       throw new WsException('Only player clients may join a team');
@@ -318,8 +323,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleSubmitAnswer(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: SubmitAnswerPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(submitAnswerPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
       throw new WsException('Only player clients may submit answers');
@@ -379,8 +385,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleGradeAnswer(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: GradeAnswerPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(gradeAnswerPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may grade answers');
@@ -390,12 +397,20 @@ export class GameGateway
       `${SOCKET_EVENTS.GRADE_ANSWER} from ${client.id}: answerId=${payload.answerId} pointsAwarded=${payload.pointsAwarded}`,
     );
 
-    const { questionId } = await this.answerService.grade(
-      payload.answerId,
-      payload.pointsAwarded,
-    );
-
     const gameSessionId = this.gameState.getGameSessionId(joinCode);
+
+    let questionId: number;
+    try {
+      ({ questionId } = await this.answerService.grade(
+        gameSessionId,
+        payload.answerId,
+        payload.pointsAwarded,
+      ));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to grade answer';
+      throw new WsException(message);
+    }
 
     const answers = await this.answerService.listForQuestion(
       gameSessionId,
@@ -419,8 +434,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleSelectQuiz(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: SelectQuizPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(selectQuizPayloadSchema, rawPayload);
     const oldJoinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(oldJoinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may select a quiz');
@@ -458,8 +474,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleListAnswers(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: ListAnswersPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(listAnswersPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may list answers');
@@ -482,8 +499,9 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENTS.KICK_TEAM)
   handleKickTeam(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: KickTeamPayload,
+    @MessageBody() rawPayload: unknown,
   ): void {
+    const payload = parseSocketPayload(kickTeamPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may remove a team');
@@ -513,8 +531,9 @@ export class GameGateway
   @CreateRequestContext()
   async handleAwardBonus(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: AwardBonusPayload,
+    @MessageBody() rawPayload: unknown,
   ): Promise<void> {
+    const payload = parseSocketPayload(awardBonusPayloadSchema, rawPayload);
     const joinCode = this.resolveJoinCode(client);
     if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
       throw new WsException('Only admin clients may award bonus points');

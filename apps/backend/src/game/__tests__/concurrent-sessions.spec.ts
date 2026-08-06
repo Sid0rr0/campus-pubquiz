@@ -136,7 +136,7 @@ function createSessionAwareAnswerService() {
       ]);
     }),
     listForTeam: jest.fn().mockResolvedValue([]),
-    grade: jest.fn((answerId: number) => {
+    grade: jest.fn((_gameSessionId: number, answerId: number) => {
       const questionId = answerId === 701 ? 501 : 502;
       return Promise.resolve({ questionId });
     }),

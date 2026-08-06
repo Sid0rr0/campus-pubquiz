@@ -265,7 +265,7 @@ describe('AnswerService (Postgres integration)', () => {
       'Banana',
     );
 
-    const graded = await answerService.grade(submitted.answerId, 2);
+    const graded = await answerService.grade(session.id, submitted.answerId, 2);
     expect(graded.questionId).toBe(question.id);
 
     const [answer] = await answerService.listForQuestion(
@@ -274,6 +274,32 @@ describe('AnswerService (Postgres integration)', () => {
     );
     expect(answer.pointsAwarded).toBe(2);
     expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('rejects grading an answer that belongs to a different game session', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await answerService.submit(
+      session.id,
+      question.id,
+      team.id,
+      'Banana',
+    );
+    const otherSession = em.create(GameSession, {
+      quiz: session.quiz,
+      joinCode: 'ZZZZZZ',
+    });
+    await em.flush();
+
+    await expect(
+      answerService.grade(otherSession.id, submitted.answerId, 2),
+    ).rejects.toThrow();
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      question.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).toBeNull();
   });
 
   it('grades an answer with half points', async () => {
@@ -285,7 +311,7 @@ describe('AnswerService (Postgres integration)', () => {
       'Banana',
     );
 
-    await answerService.grade(submitted.answerId, 0.5);
+    await answerService.grade(session.id, submitted.answerId, 0.5);
 
     const [answer] = await answerService.listForQuestion(
       session.id,
@@ -327,9 +353,9 @@ describe('AnswerService (Postgres integration)', () => {
       'Mango',
     );
 
-    await answerService.grade(answerA1.answerId, 2);
-    await answerService.grade(answerA2.answerId, 0.5);
-    await answerService.grade(answerB1.answerId, 1);
+    await answerService.grade(session.id, answerA1.answerId, 2);
+    await answerService.grade(session.id, answerA2.answerId, 0.5);
+    await answerService.grade(session.id, answerB1.answerId, 1);
 
     const leaderboard = await answerService.computeLeaderboard(session.id);
 
@@ -377,7 +403,7 @@ describe('AnswerService (Postgres integration)', () => {
       teamA.id,
       'Banana',
     );
-    await answerService.grade(answerA1.answerId, 2);
+    await answerService.grade(session.id, answerA1.answerId, 2);
 
     em.create(BonusAward, {
       gameSession: session,
@@ -430,14 +456,14 @@ describe('AnswerService (Postgres integration)', () => {
       teamA.id,
       'Banana',
     );
-    await answerService.grade(answerA1.answerId, 5);
+    await answerService.grade(session.id, answerA1.answerId, 5);
     const answerB1 = await answerService.submit(
       session.id,
       question.id,
       teamB.id,
       'Mango',
     );
-    await answerService.grade(answerB1.answerId, 1);
+    await answerService.grade(session.id, answerB1.answerId, 1);
 
     em.create(BonusAward, {
       gameSession: session,

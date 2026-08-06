@@ -34,7 +34,7 @@ describe('GameGateway — grading', () => {
       pointsAwarded: 2,
     });
 
-    expect(answerService.grade).toHaveBeenCalledWith(41, 2);
+    expect(answerService.grade).toHaveBeenCalledWith(101, 41, 2);
     expect(server.to).toHaveBeenCalledWith(
       sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
     );

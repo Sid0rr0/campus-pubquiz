@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type { BonusCategory } from '@campus-pubquiz/types';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
+import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
+import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
 export class InvalidBonusAwardError extends Error {
   constructor(message: string) {
@@ -20,6 +22,8 @@ export class BonusService {
   constructor(
     @InjectRepository(BonusAward)
     private readonly bonusAwards: BonusAwardRepository,
+    @InjectRepository(GameSessionTeam)
+    private readonly gameSessionTeams: GameSessionTeamRepository,
   ) {}
 
   async award(
@@ -38,6 +42,16 @@ export class BonusService {
     const trimmedReason = reason?.trim();
     if (category === 'custom' && !trimmedReason) {
       throw new InvalidBonusAwardError('A custom bonus needs a reason');
+    }
+
+    const isOnRoster = await this.gameSessionTeams.findOne({
+      gameSession: gameSessionId,
+      team: teamId,
+    });
+    if (!isOnRoster) {
+      throw new InvalidBonusAwardError(
+        'Team is not part of this game session',
+      );
     }
 
     const bonusAward = this.bonusAwards.create({

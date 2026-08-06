@@ -1,5 +1,6 @@
 import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import type { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
+import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
 function createFakeBonusAwardRepository() {
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
@@ -11,11 +12,25 @@ function createFakeBonusAwardRepository() {
   };
 }
 
+// Defaults to "team is on the roster" so tests exercising unrelated
+// validation rules (reason/points) don't also have to stub this out.
+function createFakeGameSessionTeamRepository(isOnRoster = true) {
+  return {
+    findOne: jest
+      .fn()
+      .mockResolvedValue(isOnRoster ? { gameSession: 101, team: 31 } : null),
+  };
+}
+
 describe('BonusService', () => {
-  function createService() {
+  function createService(isOnRoster = true) {
     const repo = createFakeBonusAwardRepository();
-    const service = new BonusService(repo as unknown as BonusAwardRepository);
-    return { service, repo };
+    const gameSessionTeams = createFakeGameSessionTeamRepository(isOnRoster);
+    const service = new BonusService(
+      repo as unknown as BonusAwardRepository,
+      gameSessionTeams as unknown as GameSessionTeamRepository,
+    );
+    return { service, repo, gameSessionTeams };
   }
 
   it('persists a predefined-category award, ignoring any reason passed', async () => {
@@ -90,4 +105,17 @@ describe('BonusService', () => {
       );
     },
   );
+
+  it('rejects awarding a team that is not part of this game session', async () => {
+    const { service, repo, gameSessionTeams } = createService(false);
+
+    await expect(service.award(101, 31, 'shot', 1)).rejects.toThrow(
+      InvalidBonusAwardError,
+    );
+    expect(gameSessionTeams.findOne).toHaveBeenCalledWith({
+      gameSession: 101,
+      team: 31,
+    });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
 });
