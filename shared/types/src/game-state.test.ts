@@ -275,6 +275,19 @@ describe('getNextGameState', () => {
     expect(next.revealIndex).toBe(0);
   });
 
+  it('shows the leaderboard immediately when advancing past the last reveal question ends the quiz', () => {
+    const revealing: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3, // last of 4 questions in the 2-round block
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(revealing, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next.isLeaderboardVisible).toBe(true);
+  });
+
   it("shows the next round's intro card from reveal once the last question of the finished block has been shown", () => {
     const threeRounds: GameContext = {
       rounds: [
@@ -492,6 +505,19 @@ describe('getNextGameState', () => {
     };
     const next = getNextGameState(grading, 'END_QUIZ', twoRoundsWithBreakAfterSecond);
     expect(next.status).toBe('ended');
+  });
+
+  it('shows the leaderboard immediately when the quiz ends', () => {
+    const grading: GameProgress = {
+      status: 'break',
+      roundIndex: 0,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(grading, 'END_QUIZ', twoRoundsWithBreakAfterSecond);
+    expect(next.isLeaderboardVisible).toBe(true);
   });
 
   it('rejects advancing from the lobby', () => {

@@ -314,7 +314,10 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
 
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
   if (isLastRound) {
-    return { ...progress, status: 'ended', revealIndex: 0 };
+    // Advancing past the last reveal question ends the quiz the same way
+    // the admin's explicit "End Quiz" button does — the final leaderboard
+    // shouldn't need a second click to appear.
+    return { ...progress, status: 'ended', revealIndex: 0, isLeaderboardVisible: true };
   }
 
   // A new block starts here — its questions haven't been opened yet, so the
@@ -410,7 +413,10 @@ export function getNextGameState(
     if (progress.status === 'ended') {
       illegal(progress.status, action);
     }
-    return { ...progress, status: 'ended' };
+    // Ending the quiz shows the final leaderboard immediately — the admin
+    // shouldn't need a separate TOGGLE_LEADERBOARD action to reveal the
+    // result teams have been waiting for.
+    return { ...progress, status: 'ended', isLeaderboardVisible: true };
   }
 
   switch (action) {

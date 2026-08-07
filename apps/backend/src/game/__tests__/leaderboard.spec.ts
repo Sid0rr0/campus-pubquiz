@@ -125,6 +125,69 @@ describe('GameStateService — leaderboard', () => {
     expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(0);
   });
 
+  it('shows the leaderboard screen immediately when the quiz ends, teams still revealed one at a time', async () => {
+    service.setLeaderboard(joinCode, [
+      {
+        teamId: 1,
+        teamName: 'First',
+        totalPoints: 10,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Second',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+    ]);
+    await service.applyAction(joinCode, 'START_QUIZ');
+
+    const ended = await service.applyAction(joinCode, 'END_QUIZ');
+
+    expect(ended.progress.isLeaderboardVisible).toBe(true);
+    expect(ended.leaderboardRevealCount).toBe(0);
+
+    const afterFirstReveal = await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
+    expect(afterFirstReveal.leaderboardRevealCount).toBe(1);
+  });
+
+  it('shows the leaderboard screen when advancing past the last reveal question ends the quiz naturally', async () => {
+    service.setLeaderboard(joinCode, [
+      {
+        teamId: 1,
+        teamName: 'First',
+        totalPoints: 10,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Second',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+    ]);
+    await service.applyAction(joinCode, 'START_QUIZ');
+
+    let snapshot = service.getSnapshot(joinCode);
+    // Walk ADVANCE all the way through both rounds' questions, the break,
+    // and every reveal step — same as an admin just clicking through to the
+    // end without ever pressing the separate "End Quiz" button.
+    for (let i = 0; i < 20 && snapshot.progress.status !== 'ended'; i += 1) {
+      snapshot = await service.applyAction(joinCode, 'ADVANCE');
+    }
+
+    expect(snapshot.progress.status).toBe('ended');
+    expect(snapshot.progress.isLeaderboardVisible).toBe(true);
+    // The very ADVANCE that crosses into 'ended' also counts as this
+    // leaderboard's first reveal step, same as any other ADVANCE while the
+    // board is visible.
+    expect(snapshot.leaderboardRevealCount).toBe(1);
+  });
+
   it('starts with an empty leaderboard', () => {
     expect(service.getSnapshot(joinCode).leaderboard).toEqual([]);
   });
