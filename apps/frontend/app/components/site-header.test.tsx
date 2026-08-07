@@ -45,7 +45,7 @@ describe('SiteHeader', () => {
   it('always shows the brand link back to home', () => {
     render(<SiteHeader />);
 
-    expect(screen.getByRole('link', { name: /trivia night/i })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /campus pub quiz/i })).toHaveAttribute('href', '/');
   });
 
   it('shows Log in and Register links when unauthenticated', () => {
@@ -95,7 +95,7 @@ describe('SiteHeader', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'authenticated', user: ADMIN_USER }));
     render(<SiteHeader />);
 
-    expect(screen.getByRole('link', { name: /trivia night/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /campus pub quiz/i })).toBeInTheDocument();
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 

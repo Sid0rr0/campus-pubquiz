@@ -3,16 +3,53 @@
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
+import type { GameProgress } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
 import { LobbyScreen } from '@/app/display/lobby-screen';
+import { QuestionDisplay } from '@/app/display/question-display';
 import { QuestionLockCountdown } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RevealIntroScreen } from '@/app/display/reveal-intro-screen';
-import { RevealScreen } from '@/app/display/reveal-screen';
+import { TriviaHeader } from '@/app/display/trivia-header';
+
+interface HeaderContent {
+  label?: string;
+  badge?: string;
+}
+
+/**
+ * Round/question badge for the header — only for statuses whose own screen
+ * has no other way to show that context (question_open/locking/reveal).
+ * round_intro, break_intro/break and reveal_intro already show "ROUND N" in
+ * their own big centered card, so the header stays badge-less there to avoid
+ * showing the same line twice.
+ */
+function getHeaderContent(
+  progress: GameProgress,
+  revealRoundNumber: number | undefined,
+  revealQuestionNumber: number | undefined,
+): HeaderContent {
+  switch (progress.status) {
+    case 'question_open':
+    case 'locking':
+      return {
+        label: `ROUND ${progress.roundIndex + 1}`,
+        badge: `QUESTION ${progress.questionIndex + 1}`,
+      };
+    case 'reveal':
+      if (revealRoundNumber === undefined || revealQuestionNumber === undefined) return {};
+      return {
+        label: `ROUND ${revealRoundNumber}`,
+        badge: `REVEALING ANSWERS · QUESTION ${revealQuestionNumber}`,
+      };
+    default:
+      return {};
+  }
+}
 
 function DisplayPageContent() {
   const router = useRouter();
@@ -54,8 +91,16 @@ function DisplayPageContent() {
     questionLockAt = null,
   } = snapshot;
 
+  const revealQuestion = revealQuestions[progress.revealIndex];
+  const headerContent = getHeaderContent(
+    progress,
+    revealQuestion?.roundNumber,
+    revealQuestion?.questionNumberInRound,
+  );
+
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
+      <TriviaHeader label={headerContent.label} badge={headerContent.badge} />
       {progress.isLeaderboardVisible && (
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
@@ -88,8 +133,6 @@ function DisplayPageContent() {
       )}
       {!progress.isLeaderboardVisible && progress.status === 'question_open' && currentQuestion && (
         <QuestionOpenScreen
-          roundNumber={progress.roundIndex + 1}
-          questionNumber={progress.questionIndex + 1}
           question={currentQuestion}
           answeredCount={answeredTeamIds.length}
           totalTeams={teams.length}
@@ -105,19 +148,24 @@ function DisplayPageContent() {
         (progress.status === 'break_intro' || progress.status === 'break') && (
           <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
         )}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'reveal_intro' &&
-        revealQuestions[progress.revealIndex] && (
-          <RevealIntroScreen
-            roundNumber={revealQuestions[progress.revealIndex].roundNumber}
-            roundTitle={revealQuestions[progress.revealIndex].roundTitle}
+      {!progress.isLeaderboardVisible && progress.status === 'reveal_intro' && revealQuestion && (
+        <RevealIntroScreen
+          roundNumber={revealQuestion.roundNumber}
+          roundTitle={revealQuestion.roundTitle}
+        />
+      )}
+      {!progress.isLeaderboardVisible && progress.status === 'reveal' && revealQuestion && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+          <QuestionDisplay
+            prompt={revealQuestion.prompt}
+            mediaUrl={revealQuestion.mediaUrl}
+            options={revealQuestion.options}
+            correctAnswer={revealQuestion.answer}
+            answerMediaUrl={revealQuestion.answerMediaUrl}
+            mediaTestIdPrefix="reveal"
           />
-        )}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'reveal' &&
-        revealQuestions[progress.revealIndex] && (
-          <RevealScreen revealQuestion={revealQuestions[progress.revealIndex]} />
-        )}
+        </div>
+      )}
       {!progress.isLeaderboardVisible && progress.status === 'ended' && (
         <div className="flex flex-1 items-center justify-center px-16 text-center">
           <h1 className="font-display text-4xl">Quiz complete!</h1>

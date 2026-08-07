@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
+import { Header } from '@/app/components/header';
 
 /**
  * Shared top bar rendered once from the root layout — same "🍺 Trivia Night"
@@ -34,10 +35,7 @@ function SiteHeaderContent({ isHome }: { isHome: boolean }) {
   }
 
   return (
-    <header className="flex items-center justify-between border-b-2 border-dashed border-foreground/30 px-8 py-4">
-      <Link href="/" className="font-display text-lg text-magenta">
-        🍺 Trivia Night
-      </Link>
+    <Header>
       {!isHome && (
         <nav className="flex items-center gap-4 text-sm font-extrabold tracking-wide">
           {auth.status === 'authenticated' && auth.user && (
@@ -65,6 +63,6 @@ function SiteHeaderContent({ isHome }: { isHome: boolean }) {
           )}
         </nav>
       )}
-    </header>
+    </Header>
   );
 }

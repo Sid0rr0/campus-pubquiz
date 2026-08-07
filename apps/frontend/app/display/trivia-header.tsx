@@ -1,17 +1,22 @@
+import { Header } from "@/app/components/header";
+
 interface TriviaHeaderProps {
-  label: string;
-  badge: string;
+  /** Round label (e.g. "ROUND 2"). Omitted on screens that already show their own round text. */
+  label?: string;
+  /** Status badge (e.g. "QUESTION 3"). Omitted on screens with no round/question context. */
+  badge?: string;
 }
 
-/** Shared header bar for question_open/break/reveal — same "🍺 Trivia Night" bar with a status label and a round/question badge. */
+/** Persistent header bar for every /display screen — same "🍺 Trivia Night" bar, with an optional round/question badge for the screens that need one. */
 export function TriviaHeader({ label, badge }: TriviaHeaderProps) {
   return (
-    <div className="flex items-center justify-between border-b-2 border-dashed border-foreground/30 px-8 py-4">
-      <div className="font-display text-lg text-magenta">🍺 Trivia Night</div>
-      <div className="flex items-center gap-3 text-sm font-extrabold tracking-wide">
-        <span className="text-foreground/55">{label}</span>
-        <span className="rounded-lg bg-foreground px-3 py-1 text-background">{badge}</span>
-      </div>
-    </div>
+    <Header>
+      {(label || badge) && (
+        <div className="flex items-center gap-3 text-sm font-extrabold tracking-wide">
+          {label && <span className="text-foreground/55">{label}</span>}
+          {badge && <span className="rounded-lg bg-foreground px-3 py-1 text-background">{badge}</span>}
+        </div>
+      )}
+    </Header>
   );
 }
