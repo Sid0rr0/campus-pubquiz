@@ -170,44 +170,49 @@ function AdminPageContent() {
   }, [snapshot?.joinCode]);
 
   const revealIndex = snapshot?.progress.revealIndex ?? 0;
-  // Which question the audience is actually looking at right now: only the
-  // open question while it's open/locking, or the reveal question at
-  // `revealIndex` once the reveal walk starts. `break` shows a plain
-  // grading message with no specific question (grading happens off-screen
-  // in this panel), so it's deliberately excluded here — the "B" marker
-  // below covers it instead.
+  // Which question the audience is actually looking at right now: the open
+  // question while it's open/locking, the block question at `revealIndex`
+  // during break (every position shows its own content, including the
+  // block's last, just-locked question), or the reveal question at
+  // `revealIndex` once the reveal walk starts.
   const displayQuestionId =
     gameStatus === 'question_open' || gameStatus === 'locking'
       ? (snapshot?.currentQuestion?.id ?? null)
-      : gameStatus === 'reveal'
-        ? (snapshot?.revealQuestions?.[revealIndex]?.id ?? null)
-        : null;
-  // round_intro/reveal_intro show a round's title card instead of a question
-  // — no question id exists to mark on-display, so the browser instead marks
-  // that round's "T" indicator. reveal_intro's round comes from the reveal
-  // question at the crossed-into position (progress.roundIndex stays pinned
-  // to the block's last round throughout break/reveal, so it can't be used
-  // here); round_intro's round is progress.roundIndex itself.
+      : gameStatus === 'break'
+        ? (snapshot?.blockQuestions?.[revealIndex]?.id ?? null)
+        : gameStatus === 'reveal'
+          ? (snapshot?.revealQuestions?.[revealIndex]?.id ?? null)
+          : null;
+  // round_intro/reveal_intro/break_round_intro show a round's title card
+  // instead of a question — no question id exists to mark on-display, so the
+  // browser instead marks that round's "T" indicator. reveal_intro's and
+  // break_round_intro's round comes from the block question at the
+  // crossed-into position (progress.roundIndex stays pinned to the block's
+  // last round throughout break/reveal, so it can't be used here);
+  // round_intro's round is progress.roundIndex itself.
   const revealIntroRoundNumber = snapshot?.revealQuestions?.[revealIndex]?.roundNumber;
+  const breakRoundIntroRoundNumber = snapshot?.blockQuestions?.[revealIndex]?.roundNumber;
   const displayTitleRoundIndex =
     gameStatus === 'round_intro'
       ? (snapshot?.progress.roundIndex ?? null)
       : gameStatus === 'reveal_intro' && revealIntroRoundNumber !== undefined
         ? revealIntroRoundNumber - 1
-        : null;
-  // break_intro and break both show the block's plain grading/break card —
+        : gameStatus === 'break_round_intro' && breakRoundIntroRoundNumber !== undefined
+          ? breakRoundIntroRoundNumber - 1
+          : null;
   // progress.roundIndex is the breakAfter round whose block just finished,
   // so the "B" indicator on that round's row lights up for the whole break,
-  // not just its intro moment.
+  // including its entry beat and round-title pauses.
   const displayBreakRoundIndex =
-    gameStatus === 'break_intro' || gameStatus === 'break' ? (snapshot?.progress.roundIndex ?? null) : null;
+    gameStatus === 'break_intro' || gameStatus === 'break' || gameStatus === 'break_round_intro'
+      ? (snapshot?.progress.roundIndex ?? null)
+      : null;
   // Grading defaults to whatever's on display, but a manual pick from the
   // browser sticks — until Prev/Advance brings the displayed question back
   // around to match it, at which point the sync effect below drops the
   // override so the two keep moving together again instead of the pick
   // going stale. Outside display statuses, grading still needs *something*
-  // to default to (break has real questions to grade even though nothing
-  // shows on /display), so it falls back to the block's first question —
+  // to default to, so it falls back to the block's first question —
   // naturally null wherever blockQuestions is empty (e.g. round_intro).
   const defaultBlockQuestionId = snapshot?.blockQuestions?.[0]?.id ?? null;
   const effectiveQuestionId = selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
@@ -293,20 +298,27 @@ function AdminPageContent() {
     gameStatus === 'locking' ||
     gameStatus === 'break_intro' ||
     gameStatus === 'break' ||
+    gameStatus === 'break_round_intro' ||
     gameStatus === 'reveal_intro' ||
     gameStatus === 'reveal';
   const canGoToPreviousQuestion =
     gameStatus === 'round_intro' ||
     gameStatus === 'question_open' ||
     gameStatus === 'locking' ||
-    // 'break_intro' always steps back to 'locking'; 'reveal' always has
-    // somewhere to go back to, at worst its own round's reveal_intro card.
-    // Only 'break'/'reveal_intro' can hit the true start of the quiz's
-    // reveal history, where Previous has nothing left to do.
-    gameStatus === 'break_intro' ||
+    // 'reveal', 'reveal_intro', 'break', and 'break_intro' always have
+    // somewhere to go back to — 'break_intro' reveals the just-locked
+    // question, 'break' now always pauses on a round's own title card
+    // (break_round_intro) before ever needing to cross a block boundary, and
+    // 'reveal_intro' just re-enters that same block's break, always legal on
+    // its own. Only 'break_round_intro' can hit the true start of the quiz's
+    // reveal history (walking a title card backward past the block's first
+    // question, with no earlier block to cross into), where Previous has
+    // nothing left to do.
     gameStatus === 'reveal' ||
-    ((gameStatus === 'break' || gameStatus === 'reveal_intro') &&
-      (revealIndex > 0 || activeBlockStartIndex > 0));
+    gameStatus === 'reveal_intro' ||
+    gameStatus === 'break_intro' ||
+    gameStatus === 'break' ||
+    (gameStatus === 'break_round_intro' && (revealIndex > 0 || activeBlockStartIndex > 0));
   const hasUnrevealedTeams = isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 
   useAdminKeyboardShortcuts({

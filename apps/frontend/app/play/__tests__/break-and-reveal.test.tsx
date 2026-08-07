@@ -25,7 +25,7 @@ describe('PlayPage — break and reveal', () => {
     mockUseGameSocket.mockReturnValue(socketResult());
   });
 
-  it('tells the team answers are locked during the grading break', () => {
+  it('tells the team answering is locked during the grading break', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(
       socketResult({
@@ -49,7 +49,7 @@ describe('PlayPage — break and reveal', () => {
     render(<PlayPage />);
 
     expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/answers are locked/i)).toBeInTheDocument();
+    expect(screen.getByText(/answering is locked/i)).toBeInTheDocument();
   });
 
   it('still shows the block question picker during the grading break so teams can browse back', async () => {
@@ -92,7 +92,7 @@ describe('PlayPage — break and reveal', () => {
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/answers are locked/i)).toBeInTheDocument();
+    expect(screen.getByText(/answering is locked/i)).toBeInTheDocument();
   });
 
   it('still shows the block question picker during reveal', () => {

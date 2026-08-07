@@ -142,7 +142,7 @@ describe('getNextGameState', () => {
     expect(next.questionIndex).toBe(1);
   });
 
-  it("enters a break intro card once the locking countdown is advanced past, starting review at the block's last question", () => {
+  it("enters break_intro once the locking countdown is advanced past, pinned to the block's last question", () => {
     const locking: GameProgress = {
       status: 'locking',
       roundIndex: 1,
@@ -153,6 +153,32 @@ describe('getNextGameState', () => {
     };
     const next = getNextGameState(locking, 'ADVANCE', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...locking, status: 'break_intro', revealIndex: 3 }); // last of 4 questions in the 2-round block
+  });
+
+  it('reveals the specific just-locked question when Previous is pressed from break_intro, never decrementing past it', () => {
+    const breakIntro: GameProgress = {
+      status: 'break_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(breakIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...breakIntro, status: 'break' });
+  });
+
+  it('skips straight to reveal_intro when Advance is pressed from break_intro', () => {
+    const breakIntro: GameProgress = {
+      status: 'break_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(breakIntro, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...breakIntro, status: 'reveal_intro', revealIndex: 0 });
   });
 
   it('steps back from the locking countdown to the last question, unlocking it again', () => {
@@ -166,32 +192,6 @@ describe('getNextGameState', () => {
     };
     const next = getNextGameState(locking, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     expect(next).toEqual({ ...locking, status: 'question_open' });
-  });
-
-  it('moves from the break intro card into break once Advance is pressed again, same position', () => {
-    const breakIntro: GameProgress = {
-      status: 'break_intro',
-      roundIndex: 1,
-      questionIndex: 1,
-      isLeaderboardVisible: false,
-      revealIndex: 3,
-      furthestOpenIndex: 0,
-    };
-    const next = getNextGameState(breakIntro, 'ADVANCE', twoRoundsWithBreakAfterSecond);
-    expect(next).toEqual({ ...breakIntro, status: 'break' });
-  });
-
-  it('steps back from the break intro card to the locking countdown', () => {
-    const breakIntro: GameProgress = {
-      status: 'break_intro',
-      roundIndex: 1,
-      questionIndex: 1,
-      isLeaderboardVisible: false,
-      revealIndex: 3,
-      furthestOpenIndex: 0,
-    };
-    const next = getNextGameState(breakIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
-    expect(next).toEqual({ ...breakIntro, status: 'locking' });
   });
 
   it('moves from break to a reveal round intro card once Advance is pressed, before any answer is shown', () => {
@@ -352,7 +352,7 @@ describe('getNextGameState', () => {
     };
     const next = getNextGameState(revealIntro, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
     // Re-entering break restarts review at the block's last question, same
-    // as break_intro->break does — the illegal-transition case (no earlier
+    // as locking->break does — the illegal-transition case (no earlier
     // block to cross into) only surfaces once Previous is pressed enough
     // more times from here to walk that review back to its own first
     // question; see "rejects moving back past a break with no earlier
@@ -381,7 +381,12 @@ describe('getNextGameState', () => {
     const stepBack = getNextGameState(backToBreak, 'PREVIOUS', breakFirstThenTwo);
     expect(stepBack).toEqual({ ...backToBreak, revealIndex: 0 });
 
-    const crossed = getNextGameState(stepBack, 'PREVIOUS', breakFirstThenTwo);
+    // Round 1 is the block's only (and therefore first) round — Previous
+    // pauses on its own title card before crossing any further back.
+    const roundTitle = getNextGameState(stepBack, 'PREVIOUS', breakFirstThenTwo);
+    expect(roundTitle).toEqual({ ...stepBack, status: 'break_round_intro' });
+
+    const crossed = getNextGameState(roundTitle, 'PREVIOUS', breakFirstThenTwo);
     expect(crossed).toEqual({
       status: 'reveal',
       roundIndex: 0,
@@ -664,7 +669,7 @@ describe('getNextGameState', () => {
     expect(next).toEqual({ ...grading, revealIndex: 2 });
   });
 
-  it("crosses from a break's first question into the previous block's reveal", () => {
+  it("pauses on round 1's title from a break's first question, then crosses into the previous block's reveal", () => {
     const breakFirstThenTwo: GameContext = {
       rounds: [
         { questionCount: 1, breakAfter: true },
@@ -679,8 +684,11 @@ describe('getNextGameState', () => {
       revealIndex: 0,
       furthestOpenIndex: 0,
     };
-    const next = getNextGameState(grading, 'PREVIOUS', breakFirstThenTwo);
-    expect(next).toEqual({
+    const roundTitle = getNextGameState(grading, 'PREVIOUS', breakFirstThenTwo);
+    expect(roundTitle).toEqual({ ...grading, status: 'break_round_intro' });
+
+    const crossed = getNextGameState(roundTitle, 'PREVIOUS', breakFirstThenTwo);
+    expect(crossed).toEqual({
       status: 'reveal',
       roundIndex: 0,
       questionIndex: 0,
@@ -690,7 +698,7 @@ describe('getNextGameState', () => {
     });
   });
 
-  it('rejects moving back past a break with no earlier block to review', () => {
+  it("pauses on round 1's title, the quiz's very first round, reachable purely by walking Previous", () => {
     const grading: GameProgress = {
       status: 'break',
       roundIndex: 1,
@@ -699,9 +707,35 @@ describe('getNextGameState', () => {
       revealIndex: 0,
       furthestOpenIndex: 0,
     };
-    expect(() => getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
+    const next = getNextGameState(grading, 'PREVIOUS', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...grading, status: 'break_round_intro' });
+  });
+
+  it('rejects moving back past round 1\'s title card with no earlier block to review', () => {
+    const roundTitle: GameProgress = {
+      status: 'break_round_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    expect(() => getNextGameState(roundTitle, 'PREVIOUS', twoRoundsWithBreakAfterSecond)).toThrow(
       IllegalGameTransitionError,
     );
+  });
+
+  it('resumes into the paused question when Advance is pressed from a break round title card', () => {
+    const roundTitle: GameProgress = {
+      status: 'break_round_intro',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 2,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(roundTitle, 'ADVANCE', twoRoundsWithBreakAfterSecond);
+    expect(next).toEqual({ ...roundTitle, status: 'break' });
   });
 
   it("carries furthestOpenIndex forward as ADVANCE opens questions, and doesn't shrink it when Previous walks back", () => {
@@ -731,7 +765,6 @@ describe('getNextGameState', () => {
     let progress = getNextGameState({ ...lobby, status: 'rules' }, 'ADVANCE', twoSingleQuestionBlocks); // round_intro(0)
     progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // question_open(0,0), furthest 0
     progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // locking
-    progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // break_intro
     progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // break
     progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // reveal_intro (round 0)
     progress = getNextGameState(progress, 'ADVANCE', twoSingleQuestionBlocks); // reveal

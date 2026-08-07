@@ -74,8 +74,9 @@ round and the next form a **block** — the unit of locking and grading.
 ### Statuses
 
 ```
-lobby → rules → round_intro → question_open → locking → break_intro → break
-      → reveal_intro → reveal → (next block: round_intro …) → ended
+lobby → rules → round_intro → question_open → locking → break
+      → break_round_intro (per round boundary crossed backward) → reveal_intro
+      → reveal → (next block: round_intro …) → ended
 ```
 
 - `lobby` — waiting for teams; display shows the QR code and join code.
@@ -87,9 +88,26 @@ lobby → rules → round_intro → question_open → locking → break_intro �
   time with `ADVANCE`. **Every question revealed so far in the current block
   stays open**: teams can browse back and change answers (last write wins).
 - `locking` — a brief transient status entered when the admin advances off the
-  last question of a `breakAfter` round, on the way to `break_intro`.
-- `break_intro` / `break` — the whole block locks at once; the admin grades
-  its answers question by question during `break`.
+  last question of a `breakAfter` round, on the way to `break`.
+- `break` — the whole block locks at once; the admin grades its answers
+  question by question, walking backward through the block with `PREVIOUS`.
+  The display shows a plain "BREAK" card for the entry beat (the block's
+  last question, where break starts), then mirrors whichever question is
+  under review (prompt + media, no answer yet — same layout as
+  `question_open`) once `PREVIOUS` steps `revealIndex` off that entry
+  position.
+- `break_round_intro` — a title-card beat during break review, entered
+  whenever `PREVIOUS` walks `revealIndex` back onto a round's first question
+  (mirroring `round_intro`/`reveal_intro`'s treatment, one per round crossed,
+  including the quiz's very first round — so it stays reachable purely by
+  walking `PREVIOUS`). `ADVANCE` resumes into `break` at the same
+  `revealIndex`; `PREVIOUS` continues into the previous round's last question
+  (still `break`, never `reveal` — these answers haven't been publicly
+  revealed) or, at the block's very first question, crosses into the previous
+  block's `reveal` instead of rejecting. Deliberately a separate status from
+  `round_intro`/`reveal_intro`: those two treat their round as still
+  live/open (open for answering, or already revealed) — reusing either here
+  would either reopen a locked round for answers or leak an unrevealed one.
 - `reveal_intro` / `reveal` — grading finished; the admin talks through the
   answers. `ADVANCE` moves to the next block's `round_intro`, or to `ended`
   after the final round.
@@ -99,9 +117,9 @@ lobby → rules → round_intro → question_open → locking → break_intro �
 There is **no per-question locking** — locking is purely a consequence of
 finishing a `breakAfter` round. A `locked` status existed in an earlier
 version of the schema; it is not part of the live state machine today (that
-role is now split across `locking`/`break_intro`/`break`). Any database row
-still carrying the retired `locked` value is normalized to `question_open` on
-load — see [Persistence](#persistence-and-restart-resilience).
+role is now split across `locking`/`break`). Any database row still carrying
+the retired `locked` value is normalized to `question_open` on load — see
+[Persistence](#persistence-and-restart-resilience).
 
 The leaderboard is deliberately _not_ a status: `isLeaderboardVisible` is a
 flag the admin can toggle from any status, so hiding it always resumes exactly

@@ -202,10 +202,31 @@ describe('AdminPage — navigation', () => {
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
-  it('hides the Previous button on the first question of the first block, during a break', () => {
+  it("shows the Previous button on the first question of the first block, during a break — it pauses on that round's own title card", async () => {
+    const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'break' }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r1q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(getDesktopButton(/^previous$/i));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
+  it('hides the Previous button on the first round title card during break review, with no earlier block', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break_round_intro' }),
         currentQuestion: null,
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
@@ -218,6 +239,47 @@ describe('AdminPage — navigation', () => {
     render(<AdminPage />);
 
     expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the Previous button on a break round title card when an earlier block exists', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        {
+          id: 'quiz-1',
+          title: 'Campus Pub Quiz Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: [{ id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' }],
+            },
+            {
+              title: 'Round 2',
+              breakAfter: true,
+              questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
+            },
+          ],
+        },
+      ],
+    });
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break_round_intro', roundIndex: 1, revealIndex: 0 }),
+        currentQuestion: null,
+        blockQuestions: [{ id: 'r2q1', type: 'free_text', prompt: 'Name this song.', points: 1 }],
+        joinCode: 'TESTCODE',
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await waitFor(() => expect(getDesktopButton(/^previous$/i)).toBeInTheDocument());
+    await userEvent.click(getDesktopButton(/^previous$/i));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
   it('shows the Previous button during a break once the admin has stepped back within the block', () => {
@@ -289,18 +351,21 @@ describe('AdminPage — navigation', () => {
     expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
   });
 
-  it('hides the Previous button on the first reveal round intro card, with no earlier block to step back to', () => {
+  it("shows the Previous button on the first reveal round intro card, even with no earlier block — it re-enters that block's own break review", async () => {
+    const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'reveal_intro', revealIndex: 0 }),
         currentQuestion: null,
       },
       connectionError: null,
-      sendAction: vi.fn(),
+      sendAction,
     });
     render(<AdminPage />);
 
-    expect(screen.queryByRole('button', { name: /^previous$/i })).not.toBeInTheDocument();
+    await userEvent.click(getDesktopButton(/^previous$/i));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
   it('sends PREVIOUS from a later reveal question', async () => {

@@ -6,6 +6,7 @@ export type GameStatus =
   | 'locking'
   | 'break_intro'
   | 'break'
+  | 'break_round_intro'
   | 'reveal_intro'
   | 'reveal'
   | 'ended';
@@ -75,10 +76,9 @@ export interface GameProgress {
    * Position within the just-finished block's flattened question list,
    * shown one at a time (same layout as question_open) during reveal, or
    * browsed backward via Previous during break for review. Set to the
-   * block's last question on entering 'break_intro' (carried unchanged into
-   * 'break'), and to a question's position on entering 'reveal_intro'
-   * (carried unchanged into 'reveal'). Meaningless outside
-   * 'break_intro'/'break'/'reveal_intro'/'reveal'.
+   * block's last question on entering 'break', and to a question's position
+   * on entering 'reveal_intro' (carried unchanged into 'reveal'). Meaningless
+   * outside 'break'/'reveal_intro'/'reveal'.
    */
   revealIndex: number;
   /**
@@ -330,16 +330,31 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
 }
 
 /**
- * Steps backward within the current block during break review; once at the
- * block's first question, crosses into the previous block's reveal instead
- * of rejecting, so a whole quiz's worth of already-locked questions stays
- * reachable by Previous.
+ * Steps backward within the current block during break review, pausing on a
+ * round's own title card (mirroring previousFromReveal) whenever revealIndex
+ * lands on that round's first question — including the block's very first
+ * question, so round 1's title stays reachable purely by walking Previous.
  */
 function previousFromBlockReview(progress: GameProgress, context: GameContext): GameProgress {
-  if (progress.revealIndex > 0) {
-    return { ...progress, revealIndex: progress.revealIndex - 1 };
+  const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
+  if (isFirstQuestionOfItsRound(blockStart, progress.revealIndex, context)) {
+    return { ...progress, status: 'break_round_intro' };
   }
-  return enterPreviousBlockReveal(progress, context);
+  return { ...progress, revealIndex: progress.revealIndex - 1 };
+}
+
+/**
+ * Steps back from a break round's title card: into the same block's previous
+ * round at its last question (still 'break', never 'reveal' — these answers
+ * haven't been publicly revealed), or — at the block's very first question —
+ * crosses into the previous block's reveal instead of rejecting, so a whole
+ * quiz's worth of already-locked questions stays reachable by Previous.
+ */
+function previousFromBreakRoundIntro(progress: GameProgress, context: GameContext): GameProgress {
+  if (progress.revealIndex === 0) {
+    return enterPreviousBlockReveal(progress, context);
+  }
+  return { ...progress, status: 'break', revealIndex: progress.revealIndex - 1 };
 }
 
 /**
@@ -423,18 +438,26 @@ export function getNextGameState(
         return {
           ...progress,
           status: 'break_intro',
-          // Starts break review at the block's last question — the one that
-          // just locked — so Previous can walk backward through the block
-          // from there instead of starting pinned to its first question.
+          // Pins to the block's last question — the one that just locked —
+          // so PREVIOUS reveals it directly instead of starting pinned to
+          // the block's first question.
           revealIndex: getBlockQuestionCount(progress.roundIndex, context) - 1,
         };
       }
-      if (progress.status === 'break_intro') return { ...progress, status: 'break' };
+      // Skips straight to revealing, same as 'break' already does from any
+      // position — the admin doesn't need to step into the specific
+      // just-locked question via ADVANCE; that's what PREVIOUS is for.
+      if (progress.status === 'break_intro') {
+        return { ...progress, status: 'reveal_intro', revealIndex: 0 };
+      }
       if (progress.status === 'break') {
         // Reveal always opens on the block's first round's intro card before
         // any answer is shown, same as round_intro precedes question_open.
         return { ...progress, status: 'reveal_intro', revealIndex: 0 };
       }
+      // Resumes into the specific question that was paused on, same as
+      // reveal_intro resuming into 'reveal' at the same revealIndex.
+      if (progress.status === 'break_round_intro') return { ...progress, status: 'break' };
       if (progress.status === 'reveal_intro') return { ...progress, status: 'reveal' };
       if (progress.status === 'reveal') return advanceFromReveal(progress, context);
       return illegal(progress.status, action);
@@ -443,8 +466,11 @@ export function getNextGameState(
       if (progress.status === 'round_intro') return previousFromRoundIntro(progress, context);
       if (progress.status === 'question_open') return previousFromQuestionOpen(progress);
       if (progress.status === 'locking') return { ...progress, status: 'question_open' };
-      if (progress.status === 'break_intro') return { ...progress, status: 'locking' };
+      // Reveals the specific just-locked question at the same revealIndex —
+      // never decrements, so it's never silently skipped past.
+      if (progress.status === 'break_intro') return { ...progress, status: 'break' };
       if (progress.status === 'break') return previousFromBlockReview(progress, context);
+      if (progress.status === 'break_round_intro') return previousFromBreakRoundIntro(progress, context);
       if (progress.status === 'reveal_intro') return previousFromRevealIntro(progress, context);
       if (progress.status === 'reveal') return previousFromReveal(progress, context);
       return illegal(progress.status, action);

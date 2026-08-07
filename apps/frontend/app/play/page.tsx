@@ -138,6 +138,7 @@ function PlayPageContent() {
   const isBreakOrReveal =
     progress.status === 'break_intro' ||
     progress.status === 'break' ||
+    progress.status === 'break_round_intro' ||
     progress.status === 'reveal_intro' ||
     progress.status === 'reveal';
   // The block browser (question picker + prompt) stays up through break/reveal

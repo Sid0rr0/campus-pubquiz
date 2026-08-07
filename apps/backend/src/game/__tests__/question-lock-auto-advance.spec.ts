@@ -145,7 +145,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
     expect(localServer.emit).not.toHaveBeenCalled();
   });
 
-  it('auto-advances to the break intro card 60s after the admin starts the locking countdown, without further admin action', async () => {
+  it('auto-advances to break 60s after the admin starts the locking countdown, without further admin action', async () => {
     const { gateway: localGateway, server: localServer } =
       await createGatewayWithBreakAfterGame();
     await enterLockingCountdown(localGateway, localServer);

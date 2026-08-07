@@ -443,6 +443,7 @@ export class GameStateService implements OnModuleInit {
       status !== 'round_intro' &&
       status !== 'break_intro' &&
       status !== 'break' &&
+      status !== 'break_round_intro' &&
       status !== 'reveal_intro' &&
       status !== 'reveal'
     ) {

@@ -98,7 +98,7 @@ describe('GameStateService — question lock countdown', () => {
     expect(service.getQuestionLockAt(joinCode)).toBeNull();
   });
 
-  it('clears the lock once the countdown advances into the break intro card', async () => {
+  it('clears the lock once the countdown advances into break', async () => {
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
     await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1

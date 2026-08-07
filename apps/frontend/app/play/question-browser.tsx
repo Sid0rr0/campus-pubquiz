@@ -49,9 +49,12 @@ export function QuestionBrowser({
           onSubmit={(value) => onSubmitAnswer(selectedQuestion.id, team.teamId, value)}
         />
       )}
-      {!isAnswerable && progress.status === 'break' && (
+      {!isAnswerable &&
+        (progress.status === 'break_intro' ||
+          progress.status === 'break' ||
+          progress.status === 'break_round_intro') && (
         <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-          Answers are locked — grading in progress…
+          Answering is locked for this question
         </p>
       )}
       {!isAnswerable && progress.status === 'reveal' && (

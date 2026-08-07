@@ -189,9 +189,9 @@ describe('GameStateService — state transitions', () => {
     expect(locking.progress.status).toBe('locking');
     expect(locking.currentQuestion?.id).toBe(24);
 
-    const breakIntroSnapshot = await service.applyAction(joinCode, 'ADVANCE'); // locking -> break_intro
-    expect(breakIntroSnapshot.progress.status).toBe('break_intro');
-    expect(breakIntroSnapshot.currentQuestion).toBeNull();
+    const breakSnapshot = await service.applyAction(joinCode, 'ADVANCE'); // locking -> break_intro
+    expect(breakSnapshot.progress.status).toBe('break_intro');
+    expect(breakSnapshot.currentQuestion).toBeNull();
   });
 
   it('goes from break to reveal to ended for the final round group', async () => {
@@ -204,7 +204,6 @@ describe('GameStateService — state transitions', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
     await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break
 
     const revealIntroSnapshot = await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
     expect(revealIntroSnapshot.progress.status).toBe('reveal_intro');

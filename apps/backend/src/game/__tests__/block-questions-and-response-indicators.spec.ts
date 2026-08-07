@@ -117,10 +117,9 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
-    const snapshot = await service.applyAction(joinCode, 'ADVANCE'); // -> break
+    const snapshot = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
 
-    expect(snapshot.progress.status).toBe('break');
+    expect(snapshot.progress.status).toBe('break_intro');
     expect(snapshot.blockQuestions.map((q) => q.id)).toEqual([21, 22, 23, 24]);
   });
 
@@ -304,7 +303,6 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
     await service.applyAction(joinCode, 'ADVANCE'); // -> break
     await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
     const revealed = await service.applyAction(joinCode, 'ADVANCE'); // -> reveal
@@ -341,7 +339,6 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
     await service.applyAction(joinCode, 'ADVANCE'); // -> break
     await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
     const first = await service.applyAction(joinCode, 'ADVANCE'); // -> reveal
@@ -382,7 +379,6 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
     await service.applyAction(joinCode, 'ADVANCE'); // -> break
     await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro, revealIndex 0
     await service.applyAction(joinCode, 'ADVANCE'); // -> reveal, revealIndex 0
@@ -399,9 +395,35 @@ describe('GameStateService — block questions and response indicators', () => {
       revealIndex: 3,
     });
 
-    await service.applyAction(joinCode, 'PREVIOUS'); // revealIndex 2
-    await service.applyAction(joinCode, 'PREVIOUS'); // revealIndex 1
-    await service.applyAction(joinCode, 'PREVIOUS'); // revealIndex 0
+    const stepToRound2Q1 = await service.applyAction(joinCode, 'PREVIOUS');
+    expect(stepToRound2Q1.progress).toMatchObject({
+      status: 'break',
+      revealIndex: 2,
+    });
+
+    const round2Title = await service.applyAction(joinCode, 'PREVIOUS'); // -> break_round_intro, round 2's own title
+    expect(round2Title.progress).toMatchObject({
+      status: 'break_round_intro',
+      revealIndex: 2,
+    });
+
+    const stepToRound1Q2 = await service.applyAction(joinCode, 'PREVIOUS'); // -> break, round 1's last question
+    expect(stepToRound1Q2.progress).toMatchObject({
+      status: 'break',
+      revealIndex: 1,
+    });
+
+    const stepToRound1Q1 = await service.applyAction(joinCode, 'PREVIOUS');
+    expect(stepToRound1Q1.progress).toMatchObject({
+      status: 'break',
+      revealIndex: 0,
+    });
+
+    const round1Title = await service.applyAction(joinCode, 'PREVIOUS'); // -> break_round_intro, round 1's own title
+    expect(round1Title.progress).toMatchObject({
+      status: 'break_round_intro',
+      revealIndex: 0,
+    });
 
     await expect(service.applyAction(joinCode, 'PREVIOUS')).rejects.toThrow(
       IllegalGameTransitionError,
@@ -417,9 +439,14 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
-    const entered = await service.applyAction(joinCode, 'ADVANCE'); // -> break
+    const entered = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
     expect(entered.progress).toMatchObject({
+      status: 'break_intro',
+      revealIndex: 3,
+    });
+
+    const revealed = await service.applyAction(joinCode, 'PREVIOUS'); // -> break, reveals the just-locked question
+    expect(revealed.progress).toMatchObject({
       status: 'break',
       revealIndex: 3,
     });
@@ -442,10 +469,12 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
     await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro, revealIndex 3
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break, revealIndex 3
+    await service.applyAction(joinCode, 'PREVIOUS'); // -> break, reveals the just-locked question, revealIndex 3
     await service.applyAction(joinCode, 'PREVIOUS'); // revealIndex 2
-    await service.applyAction(joinCode, 'PREVIOUS'); // revealIndex 1
+    await service.applyAction(joinCode, 'PREVIOUS'); // -> break_round_intro, round 2's own title, revealIndex 2
+    await service.applyAction(joinCode, 'PREVIOUS'); // -> break, round 1's last question, revealIndex 1
     await service.applyAction(joinCode, 'PREVIOUS'); // revealIndex 0
+    await service.applyAction(joinCode, 'PREVIOUS'); // -> break_round_intro, round 1's own title
 
     await expect(service.applyAction(joinCode, 'PREVIOUS')).rejects.toThrow(
       IllegalGameTransitionError,
@@ -461,7 +490,6 @@ describe('GameStateService — block questions and response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
     await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
     await service.applyAction(joinCode, 'ADVANCE'); // -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
     await service.applyAction(joinCode, 'ADVANCE'); // -> break
     await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
     await service.applyAction(joinCode, 'ADVANCE'); // -> reveal, revealIndex 0
