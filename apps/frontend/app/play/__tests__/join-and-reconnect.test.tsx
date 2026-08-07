@@ -80,13 +80,13 @@ describe('PlayPage — join and reconnect', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<PlayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenCalledWith('players', true, 'ABCDEF');
+    expect(mockUseGameSocket).toHaveBeenCalledWith('players', true, 'ABCDEF', 0);
   });
 
   it('does not connect the socket until a join code is known', () => {
     render(<PlayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenCalledWith('players', false, undefined);
+    expect(mockUseGameSocket).toHaveBeenCalledWith('players', false, undefined, 0);
   });
 
   it('connects the socket once a code is submitted through the join form', async () => {
@@ -96,7 +96,7 @@ describe('PlayPage — join and reconnect', () => {
     await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'abcdef');
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('players', true, 'ABCDEF');
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith('players', true, 'ABCDEF', 1);
   });
 
   it('skips the join form when a team name is already stored (reconnect)', () => {

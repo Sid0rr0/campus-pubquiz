@@ -81,6 +81,13 @@ export function useGameSocket(
   role: GameSocketRole,
   enabled = true,
   joinCode?: string,
+  // Bumped by callers (e.g. useTeamJoin's joinAttempt) to force a fresh
+  // socket even when role/joinCode are unchanged from the last attempt —
+  // needed because a server-rejected connection (e.g. unknown session code)
+  // disconnects with `skipReconnect` set, so socket.io-client never retries
+  // it on its own. Without this, resubmitting the join form with the same
+  // code would silently emit JOIN_PLAYERS on that dead socket and do nothing.
+  retryKey = 0,
 ): UseGameSocketResult {
   const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -164,7 +171,7 @@ export function useGameSocket(
     return () => {
       socket.disconnect();
     };
-  }, [enabled, role, joinCode]);
+  }, [enabled, role, joinCode, retryKey]);
 
   const sendAction = useCallback((action: GameAction) => {
     const payload: AdminActionPayload = { action };

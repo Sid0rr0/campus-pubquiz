@@ -52,7 +52,17 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     teamCodeInputRef.current = teamCodeInput;
   });
 
-  const socket = useGameSocket('players', Boolean(activeJoinCode), activeJoinCode ?? undefined);
+  // Passing joinAttempt as the retry key forces a brand-new socket on every
+  // resubmission, even when the join code text is unchanged (e.g. a
+  // QR-prefilled or previously-typed code that turned out to be unknown) —
+  // the prior attempt's socket was disconnected server-side and won't
+  // reconnect on its own, so reusing it here would silently drop the join.
+  const socket = useGameSocket(
+    'players',
+    Boolean(activeJoinCode),
+    activeJoinCode ?? undefined,
+    joinAttempt,
+  );
   const { team, joinTeam, sessionClosed } = socket;
 
   useEffect(() => {
