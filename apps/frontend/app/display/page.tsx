@@ -174,82 +174,81 @@ function DisplayPageContent() {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="flex flex-1 flex-col"
         >
-          {progress.isLeaderboardVisible && (
+          {progress.isLeaderboardVisible ? (
             <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
               <h1 className="text-center font-display text-4xl">
                 <span className="text-magenta">Leaderboard</span>
               </h1>
               <Leaderboard entries={leaderboard} revealCount={leaderboardRevealCount} />
             </div>
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
-            <LobbyScreen teams={teams} joinCode={codeFromUrl} />
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'rules' && (
-            <div className="flex flex-1 items-center justify-center px-16 py-10">
-              <RulesContent quizStructure={quizStructure} />
-            </div>
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'round_intro' && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-              <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-                ROUND {progress.roundIndex + 1}
-              </p>
-              <h1 className="text-balance font-display text-6xl text-magenta">{roundTitle}</h1>
-            </div>
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'question_open' && currentQuestion && (
-            <QuestionOpenScreen
-              question={currentQuestion}
-              answeredCount={answeredTeamIds.length}
-              totalTeams={teams.length}
-            />
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'locking' && questionLockAt !== null && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-              <h1 className="font-display text-4xl">Time&apos;s almost up!</h1>
-              <QuestionLockCountdown key={questionLockAt} lockAt={questionLockAt} />
-            </div>
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'break_intro' && (
-            <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'break' && breakReviewQuestion && (
-            <BreakReviewScreen question={breakReviewQuestion} />
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'break' && !breakReviewQuestion && (
-            <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
-          )}
-          {!progress.isLeaderboardVisible &&
-            progress.status === 'break_round_intro' &&
-            breakRoundIntroQuestion && (
-              <BreakRoundIntroScreen
-                roundNumber={breakRoundIntroQuestion.roundNumber}
-                roundTitle={breakRoundIntroQuestion.roundTitle}
-              />
-            )}
-          {!progress.isLeaderboardVisible && progress.status === 'reveal_intro' && revealQuestion && (
-            <RevealIntroScreen
-              roundNumber={revealQuestion.roundNumber}
-              roundTitle={revealQuestion.roundTitle}
-            />
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'reveal' && revealQuestion && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-              <QuestionDisplay
-                prompt={revealQuestion.prompt}
-                mediaUrl={revealQuestion.mediaUrl}
-                options={revealQuestion.options}
-                correctAnswer={revealQuestion.answer}
-                answerMediaUrl={revealQuestion.answerMediaUrl}
-                mediaTestIdPrefix="reveal"
-              />
-            </div>
-          )}
-          {!progress.isLeaderboardVisible && progress.status === 'ended' && (
-            <div className="flex flex-1 items-center justify-center px-16 text-center">
-              <h1 className="font-display text-4xl">Quiz complete!</h1>
-            </div>
+          ) : (
+            <>
+              {progress.status === 'lobby' && <LobbyScreen teams={teams} joinCode={codeFromUrl} />}
+              {progress.status === 'rules' && (
+                <div className="flex flex-1 items-center justify-center px-16 py-10">
+                  <RulesContent quizStructure={quizStructure} />
+                </div>
+              )}
+              {progress.status === 'round_intro' && (
+                <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
+                  <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+                    ROUND {progress.roundIndex + 1}
+                  </p>
+                  <h1 className="text-balance font-display text-6xl text-magenta">{roundTitle}</h1>
+                </div>
+              )}
+              {progress.status === 'question_open' && currentQuestion && (
+                <QuestionOpenScreen
+                  question={currentQuestion}
+                  answeredCount={answeredTeamIds.length}
+                  totalTeams={teams.length}
+                />
+              )}
+              {progress.status === 'locking' && questionLockAt !== null && (
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
+                  <h1 className="font-display text-4xl">Time&apos;s almost up!</h1>
+                  <QuestionLockCountdown key={questionLockAt} lockAt={questionLockAt} />
+                </div>
+              )}
+              {progress.status === 'break_intro' && (
+                <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
+              )}
+              {progress.status === 'break' &&
+                (breakReviewQuestion ? (
+                  <BreakReviewScreen question={breakReviewQuestion} />
+                ) : (
+                  <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
+                ))}
+              {progress.status === 'break_round_intro' && breakRoundIntroQuestion && (
+                <BreakRoundIntroScreen
+                  roundNumber={breakRoundIntroQuestion.roundNumber}
+                  roundTitle={breakRoundIntroQuestion.roundTitle}
+                />
+              )}
+              {progress.status === 'reveal_intro' && revealQuestion && (
+                <RevealIntroScreen
+                  roundNumber={revealQuestion.roundNumber}
+                  roundTitle={revealQuestion.roundTitle}
+                />
+              )}
+              {progress.status === 'reveal' && revealQuestion && (
+                <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+                  <QuestionDisplay
+                    prompt={revealQuestion.prompt}
+                    mediaUrl={revealQuestion.mediaUrl}
+                    options={revealQuestion.options}
+                    correctAnswer={revealQuestion.answer}
+                    answerMediaUrl={revealQuestion.answerMediaUrl}
+                    mediaTestIdPrefix="reveal"
+                  />
+                </div>
+              )}
+              {progress.status === 'ended' && (
+                <div className="flex flex-1 items-center justify-center px-16 text-center">
+                  <h1 className="font-display text-4xl">Quiz complete!</h1>
+                </div>
+              )}
+            </>
           )}
         </motion.div>
       </AnimatePresence>
