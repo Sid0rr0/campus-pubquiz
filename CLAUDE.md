@@ -4,18 +4,6 @@
 
 A live pub quiz web app for campus events. One machine displays questions on a big screen, teams answer on their phones, and the quiz master grades answers and controls the game from an admin laptop.
 
-## Monorepo Structure
-
-```text
-apps/
-  frontend/    Next.js 16, React 19, Tailwind 4 — three routes in one app
-  backend/     NestJS 11, Socket.IO — game logic + REST API
-shared/
-  types/       shared TS types, socket event names, DTOs
-```
-
-Run both with `pnpm dev`. Frontend on port 8888, backend on port 3000.
-
 ## Three UIs (one Next.js app, three routes)
 
 | Route | Who uses it | Purpose |
@@ -37,18 +25,6 @@ Grading happens inside `break` (no separate grading status). Rounds carry a `bre
 `rules` is a one-time screen shown once per quiz, right after `START_QUIZ`, before any question opens — the admin dismisses it with `ADVANCE` (same action that later steps through questions). Its round/topic/break sentence is computed from the active quiz's rounds via `getQuizStructureSummary` (rounds grouped into "blocks" by `breakAfter`, same grouping the reveal/grading flow already uses), not hardcoded.
 
 Only admin actions advance the state. Clients in three rooms (`display`, `admin`, `players`) receive broadcasts. On reconnect, any client receives the full current state snapshot — reconnection is a **core feature**, not a nice-to-have (phones sleep, networks drop).
-
-### Persistence: Postgres + MikroORM
-
-Process restarts must not lose data. Every submitted answer and score is written to the DB. In-memory state is always rebuildable from it. Key schema:
-
-- `Quiz → Round → Question` (authoring-time)
-- `GameSession → Team → Answer` (runtime)
-- `Question` has a `type` enum + JSON `payload` column for extensibility (new types without migrations)
-
-Entities live in `apps/backend/src/db/entities/`, one class per table, each extending `BaseEntity` (`apps/backend/src/db/entities/base.entity.ts`) for a shared auto-increment `id` plus `createdAt`/`updatedAt` (via a `TimestampedEntity` mapped superclass). `game_session_teams` is a pure join table with a composite PK and extends `TimestampedEntity` directly, skipping the surrogate `id`. Data access goes through one repository per entity (`apps/backend/src/db/repositories/`) injected into services via `@InjectRepository` — services never touch the `EntityManager` directly except for `persistAndFlush`/`upsert`/`nativeDelete` calls scoped to their own repository. IDs are sequential integers (Postgres `serial`), not UUIDs.
-
-Migrations live in `apps/backend/src/db/migrations/` (one squashed initial migration as of the MikroORM cutover) and run via `pnpm db:migrate` (`mikro-orm migration:up`) locally or `pnpm db:migrate:prod` (`node dist/scripts/migrate.js`) in deploys. Generate a new migration after an entity change with `pnpm db:migrate:create`.
 
 ### Auth
 
@@ -138,14 +114,6 @@ approach would: the CSV is only ever sent to `/import/preview`/`/import/confirm`
 behind the admin password guard, and `SeedService` strips the stored answer
 from every player-facing `QuestionView`.
 
-## Backend Import Convention
-
-Backend (`apps/backend`) source and test files import via the `@/*` path alias (mapped to `src/*` in `tsconfig.json`), never relative `./`/`../` paths.
-
-## Frontend Import Convention
-
-Frontend (`apps/frontend`) source and test files import via the `@/*` path alias (mapped to the workspace root in `tsconfig.json`, e.g. `@/app/lib/use-game-socket`), never relative `./`/`../` paths. Vitest resolves the same alias via a manual `resolve.alias` entry in `vitest.config.ts`.
-
 ## Git Commit Convention
 
 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope) with a **scope** naming the workspace touched:
@@ -158,14 +126,3 @@ Frontend (`apps/frontend`) source and test files import via the `@/*` path alias
 - Scopes: `shared-types`, `backend`, `frontend`, `repo` (root-level/tooling changes not scoped to one workspace)
 
 Examples: `feat(backend): implement GameGateway`, `test(shared-types): add reproducer for game state machine`, `docs(repo): update CLAUDE.md`.
-
-## Useful Commands
-
-```bash
-pnpm dev              # run frontend + backend in parallel
-pnpm dev:frontend     # frontend only (port 8888)
-pnpm dev:backend      # backend only (port 3000)
-pnpm build            # build all
-pnpm test             # test all
-pnpm lint             # lint all
-```
