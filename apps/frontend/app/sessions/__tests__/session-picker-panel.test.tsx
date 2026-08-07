@@ -94,7 +94,7 @@ describe('SessionPickerPanel', () => {
     });
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
-    expect(await screen.findByRole('button', { name: 'Imported Quiz' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /imported quiz/i })).toBeInTheDocument();
   });
 
   it('links to the quiz editor to create a new quiz', () => {
@@ -110,11 +110,38 @@ describe('SessionPickerPanel', () => {
     });
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
-    await screen.findByRole('button', { name: 'Imported Quiz' });
+    await screen.findByRole('button', { name: /imported quiz/i });
     expect(screen.getByRole('link', { name: /edit/i })).toHaveAttribute('href', '/quizzes/2');
   });
 
-  it('creates a new session for the chosen quiz and opens it', async () => {
+  it('shows a confirmation modal with the quiz rounds and questions before creating a session', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        {
+          id: 2,
+          title: 'Imported Quiz',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: false,
+              questions: [{ id: 1, prompt: 'Name a fruit', answer: 'Banana' }],
+            },
+          ],
+        },
+      ],
+    });
+    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /imported quiz/i }));
+
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: /start "imported quiz"\?/i })).toBeInTheDocument();
+    expect(screen.getByText('Round 1')).toBeInTheDocument();
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+  });
+
+  it('creates a new session for the chosen quiz and opens it once confirmed', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
@@ -129,10 +156,25 @@ describe('SessionPickerPanel', () => {
     const onOpenSession = vi.fn();
     render(<SessionPickerPanel onOpenSession={onOpenSession} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Imported Quiz' }));
+    await userEvent.click(await screen.findByRole('button', { name: /imported quiz/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
     expect(mockCreateSession).toHaveBeenCalledWith(2);
     await waitFor(() => expect(onOpenSession).toHaveBeenCalledWith('GHIJKL'));
+  });
+
+  it('does not create a session when the confirmation modal is cancelled', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /imported quiz/i }));
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(mockCreateSession).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: /start "imported quiz"\?/i })).not.toBeInTheDocument();
   });
 
   it('shows an error when the session list cannot be loaded', async () => {
@@ -151,7 +193,8 @@ describe('SessionPickerPanel', () => {
     mockCreateSession.mockRejectedValue(new SessionApiError('Could not start session', 500));
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Imported Quiz' }));
+    await userEvent.click(await screen.findByRole('button', { name: /imported quiz/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not start session/i);
   });
