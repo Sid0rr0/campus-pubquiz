@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, type FormEvent } from 'react';
+import { JoinForm } from '@/app/components/join-form';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 
 interface JoinPanelProps {
@@ -23,10 +24,6 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     snapshot,
     handleJoin,
   } = useTeamJoin(codeFromUrl);
-  const [teamCodeRevealed, setTeamCodeRevealed] = useState(false);
-  // A restored team code means a returning team — show the field prefilled
-  // right away instead of making them click through to find their own code.
-  const showTeamCode = teamCodeRevealed || Boolean(teamCodeInput);
 
   // Mirrors /play's join gate: teamName (local state, cleared by "log out")
   // is the source of truth, not team (socket state, which the mocked/real
@@ -56,72 +53,16 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
           <>
             <h2 className="mb-1 font-display text-2xl">Join the quiz</h2>
             <p className="mb-5 text-sm font-semibold text-foreground/55">Takes about ten seconds.</p>
-
-            {connectionError && (
-              <p role="alert" className="mb-3 text-sm font-extrabold text-magenta">
-                {connectionError}
-              </p>
-            )}
-
-            <form onSubmit={onSubmit} className="flex flex-col gap-2">
-              <label htmlFor="home-team-name" className="text-xs font-extrabold tracking-wide text-foreground/55">
-                Team name
-              </label>
-              <input
-                id="home-team-name"
-                value={nameInput}
-                onChange={(event) => setNameInput(event.target.value)}
-                placeholder="The Answer Key"
-                className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
-              />
-
-              <label htmlFor="home-game-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
-                Game code
-              </label>
-              <input
-                id="home-game-code"
-                value={codeInput}
-                onChange={(event) => setCodeInput(event.target.value)}
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="e.g. BOLD-AMBER-OTTER"
-                className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
-              />
-
-              {showTeamCode ? (
-                <>
-                  <label htmlFor="home-team-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
-                    Team code
-                  </label>
-                  <input
-                    id="home-team-code"
-                    value={teamCodeInput}
-                    onChange={(event) => setTeamCodeInput(event.target.value)}
-                    autoCapitalize="characters"
-                    autoComplete="off"
-                    spellCheck={false}
-                    placeholder="e.g. QUICK-JADE-FOX"
-                    className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
-                  />
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setTeamCodeRevealed(true)}
-                  className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
-                >
-                  Played before? Enter your team code
-                </button>
-              )}
-
-              <button
-                type="submit"
-                className="mt-4 min-h-14 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_4px_0_#b8006d]"
-              >
-                Join the quiz
-              </button>
-            </form>
+            <JoinForm
+              nameInput={nameInput}
+              onNameInputChange={setNameInput}
+              codeInput={codeInput}
+              onCodeInputChange={setCodeInput}
+              teamCodeInput={teamCodeInput}
+              onTeamCodeInputChange={setTeamCodeInput}
+              connectionError={connectionError}
+              onSubmit={onSubmit}
+            />
           </>
         )}
 

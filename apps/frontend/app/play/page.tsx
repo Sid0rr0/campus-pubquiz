@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
-import { JoinForm } from '@/app/play/join-form';
+import { JoinForm } from '@/app/components/join-form';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { useTeamJoin } from '@/app/lib/use-team-join';
@@ -63,18 +63,30 @@ function PlayPageContent() {
 
   if (!teamName || (connectionError && !team)) {
     return (
-      <JoinForm
-        nameInput={nameInput}
-        onNameInputChange={setNameInput}
-        codeInput={codeInput}
-        onCodeInputChange={setCodeInput}
-        teamCodeInput={teamCodeInput}
-        onTeamCodeInputChange={setTeamCodeInput}
-        connectionError={connectionError}
-        hasStoredIdentity={hasStoredIdentity}
-        onSubmit={handleJoin}
-        onLogOut={handleLogOut}
-      />
+      <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
+        <h1 className="text-center font-display text-3xl text-magenta">🍺 Join the quiz</h1>
+        <p className="-mt-2 text-center text-sm text-foreground/65">Grab a table, pick a name</p>
+        <JoinForm
+          nameInput={nameInput}
+          onNameInputChange={setNameInput}
+          codeInput={codeInput}
+          onCodeInputChange={setCodeInput}
+          teamCodeInput={teamCodeInput}
+          onTeamCodeInputChange={setTeamCodeInput}
+          connectionError={connectionError}
+          onSubmit={handleJoin}
+          alwaysShowTeamCode
+        />
+        {hasStoredIdentity && (
+          <button
+            type="button"
+            onClick={handleLogOut}
+            className="mx-auto text-xs font-extrabold text-foreground/45 underline"
+          >
+            Log out
+          </button>
+        )}
+      </main>
     );
   }
 

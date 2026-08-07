@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef, routerRef } = vi.hoisted(() => ({
+const { mockUseGameSocket, mockFetchPublicSessions, searchParamsRef, routerRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
+  mockFetchPublicSessions: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
   routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
@@ -19,6 +20,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => routerRef,
 }));
 
+vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/sessions-api')>();
+  return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
+});
+
 describe('PlayPage — join and reconnect', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -26,6 +32,8 @@ describe('PlayPage — join and reconnect', () => {
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
     mockUseGameSocket.mockReturnValue(socketResult());
+    mockFetchPublicSessions.mockReset();
+    mockFetchPublicSessions.mockResolvedValue([]);
   });
 
   it('shows a join form asking for a team name and a game code', () => {

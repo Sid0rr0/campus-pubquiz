@@ -4,8 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
+const { mockUseGameSocket, mockFetchPublicSessions, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
+  mockFetchPublicSessions: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
@@ -18,11 +19,18 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
+vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/sessions-api')>();
+  return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
+});
+
 describe('PlayPage — logout and errors', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
     mockUseGameSocket.mockReturnValue(socketResult());
+    mockFetchPublicSessions.mockReset();
+    mockFetchPublicSessions.mockResolvedValue([]);
   });
 
   it('shows the join error directly on the join form, pre-filled, when a returning team reconnect fails', async () => {

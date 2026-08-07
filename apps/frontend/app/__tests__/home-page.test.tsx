@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HomePage from '@/app/page';
 import { socketResult } from './test-utils';
 
-const { mockUseGameSocket, mockRouterPush, searchParamsRef } = vi.hoisted(() => ({
+const { mockUseGameSocket, mockRouterPush, mockFetchPublicSessions, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
   mockRouterPush: vi.fn(),
+  mockFetchPublicSessions: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
@@ -19,12 +20,19 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush, replace: vi.fn() }),
 }));
 
+vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/sessions-api')>();
+  return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
+});
+
 describe('HomePage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
     mockUseGameSocket.mockReturnValue(socketResult());
     mockRouterPush.mockClear();
+    mockFetchPublicSessions.mockReset();
+    mockFetchPublicSessions.mockResolvedValue([]);
   });
 
   it('shows the hero heading and the how-it-works steps', () => {
