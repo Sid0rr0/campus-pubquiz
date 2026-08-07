@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import type { BlockQuestionView, BlockRevealQuestionView, GameProgress } from '@campus-pubquiz/types';
@@ -101,6 +101,17 @@ function DisplayPageContent() {
   // once that would silently point the screen at the wrong game.
   const codeFromUrl = searchParams.get('code') ?? undefined;
   const { snapshot, connectionError } = useGameSocket('display', Boolean(codeFromUrl), codeFromUrl);
+
+  // An unknown/stale code (e.g. a pre-printed QR for a session that's since
+  // ended) still needs the picker's error message on screen, so this only
+  // strips the bad ?code= from the address bar rather than navigating away —
+  // connectionError itself persists past the redirect (see use-game-socket's
+  // early return when `enabled` is false).
+  useEffect(() => {
+    if (codeFromUrl && connectionError) {
+      router.replace('/display');
+    }
+  }, [codeFromUrl, connectionError, router]);
 
   if (!codeFromUrl || connectionError) {
     return (

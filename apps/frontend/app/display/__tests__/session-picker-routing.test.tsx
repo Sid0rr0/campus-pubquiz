@@ -82,4 +82,17 @@ describe('DisplayPage — session picker routing', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/unknown game session code/i);
   });
+
+  it('cleans the bad code from the URL when the code is unknown or stale', async () => {
+    searchParamsRef.current = new URLSearchParams('code=STALE1');
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: 'Unknown game session code',
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    await screen.findByRole('alert');
+    expect(routerRef.replace).toHaveBeenCalledWith('/display');
+  });
 });
