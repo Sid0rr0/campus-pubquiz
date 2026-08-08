@@ -89,6 +89,7 @@ export class QuizService {
         breakAfter: round.breakAfter,
         questions: round.questions.getItems().map((question) => ({
           id: question.id,
+          type: question.type,
           prompt: question.prompt,
           answer: question.answer,
           ...toSummaryPayload(question.payload),

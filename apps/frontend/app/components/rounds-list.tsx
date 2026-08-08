@@ -1,4 +1,7 @@
+import type { QuestionType } from '@campus-pubquiz/types';
+
 interface RoundsListQuestion {
+  type: QuestionType;
   prompt: string;
   options?: string[];
   answer: string;
@@ -22,18 +25,23 @@ export function RoundsList({ rounds }: RoundsListProps) {
   return (
     <ul className="flex flex-col gap-2">
       {rounds.map((round) => (
-        <li key={round.title} className="rounded-lg border border-foreground/15 p-3">
+        <li
+          key={round.title}
+          className="rounded-lg border border-foreground/15 p-3"
+        >
           <p className="font-extrabold">{round.title}</p>
           <ul className="ml-4 list-disc text-sm">
             {round.questions.map((question) => (
               <li key={question.prompt}>
-                {question.prompt}
+                ({question.type}) {question.prompt}
                 {question.options && question.options.length > 0 && (
                   <p className="text-xs text-foreground/60">
                     Options: {question.options.join(', ')}
                   </p>
                 )}
-                <p className="text-xs font-bold text-green">Answer: {question.answer}</p>
+                <p className="text-xs font-bold text-green">
+                  Answer: {question.answer}
+                </p>
               </li>
             ))}
           </ul>

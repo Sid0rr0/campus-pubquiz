@@ -128,8 +128,18 @@ describe('QuizService (Postgres integration)', () => {
         title: 'Round 1',
         breakAfter: true,
         questions: [
-          { id: q1.id, prompt: 'Name a fruit', answer: 'Banana' },
-          { id: q2.id, prompt: 'Name a vegetable', answer: 'Carrot' },
+          {
+            id: q1.id,
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            answer: 'Banana',
+          },
+          {
+            id: q2.id,
+            type: 'free_text',
+            prompt: 'Name a vegetable',
+            answer: 'Carrot',
+          },
         ],
       },
       { title: 'Round 2', breakAfter: false, questions: [] },
@@ -149,6 +159,7 @@ describe('QuizService (Postgres integration)', () => {
     expect(listed.rounds[0].questions).toEqual([
       {
         id: question.id,
+        type: 'multiple_choice',
         prompt: 'Capital of France?',
         options: ['Paris', 'London', 'Berlin'],
         answer: 'Paris',

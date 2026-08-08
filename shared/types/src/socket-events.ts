@@ -1,4 +1,9 @@
-import type { GameAction, GameProgress, GameStatus, QuizStructureSummary } from './game-state';
+import type {
+  GameAction,
+  GameProgress,
+  GameStatus,
+  QuizStructureSummary,
+} from './game-state';
 
 export const SOCKET_EVENTS = {
   // server -> client
@@ -41,7 +46,12 @@ export function sessionRoom(code: string, role: SocketRoomName): string {
   return `${role}:${code}`;
 }
 
-export type QuestionType = 'free_text' | 'multiple_choice' | 'picture' | 'audio' | 'youtube';
+export type QuestionType =
+  | 'free_text'
+  | 'multiple_choice'
+  | 'picture'
+  | 'audio'
+  | 'youtube';
 
 export interface QuestionView {
   id: number;
@@ -74,8 +84,12 @@ export interface QuestionRoundTitle {
   roundTitle: string;
 }
 
-export type BlockQuestionView = QuestionView & QuestionPosition & QuestionRoundTitle;
-export type BlockRevealQuestionView = RevealQuestionView & QuestionPosition & QuestionRoundTitle;
+export type BlockQuestionView = QuestionView &
+  QuestionPosition &
+  QuestionRoundTitle;
+export type BlockRevealQuestionView = RevealQuestionView &
+  QuestionPosition &
+  QuestionRoundTitle;
 
 export interface RoundPoints {
   roundTitle: string;
@@ -219,6 +233,7 @@ export interface GradeAnswerPayload {
 
 export interface QuizSummaryQuestion {
   id: number;
+  type: QuestionType;
   prompt: string;
   options?: string[];
   answer: string;
