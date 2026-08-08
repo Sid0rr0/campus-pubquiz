@@ -8,9 +8,10 @@ import { Header } from '@/app/components/header';
 
 /**
  * Shared top bar rendered once from the root layout — same "🍺 Trivia Night"
- * branding as display's TriviaHeader. Every page gets auth-aware nav on the
- * right (Login/Register when signed out, username + Log out — and Users for
- * admins — when signed in) except the home page, which keeps just the logo.
+ * branding as display's TriviaHeader. Signed-in admins get Sessions/Users/Log
+ * out links on every page; signed-out visitors and non-admin moderators see
+ * no nav at all (no header-driven login entry point — /login and /register
+ * are reached directly).
  *
  * Suppressed entirely on /display: that screen is audience-facing (no auth
  * nav belongs on the big screen) and already has its own per-status header
@@ -23,10 +24,10 @@ export function SiteHeader() {
   if (pathname.startsWith('/display')) {
     return null;
   }
-  return <SiteHeaderContent isHome={pathname === '/'} />;
+  return <SiteHeaderContent />;
 }
 
-function SiteHeaderContent({ isHome }: { isHome: boolean }) {
+function SiteHeaderContent() {
   const auth = useAuth();
   const router = useRouter();
 

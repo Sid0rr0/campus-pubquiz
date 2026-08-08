@@ -18,8 +18,18 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-const ADMIN_USER: AuthUser = { id: 1, username: 'quizmaster', role: 'admin', status: 'active' };
-const MODERATOR_USER: AuthUser = { id: 2, username: 'helper', role: 'moderator', status: 'active' };
+const ADMIN_USER: AuthUser = {
+  id: 1,
+  username: 'quizmaster',
+  role: 'admin',
+  status: 'active',
+};
+const MODERATOR_USER: AuthUser = {
+  id: 2,
+  username: 'helper',
+  role: 'moderator',
+  status: 'active',
+};
 
 function authResult(overrides: Partial<UseAuthResult> = {}): UseAuthResult {
   return {
@@ -45,38 +55,59 @@ describe('SiteHeader', () => {
   it('always shows the brand link back to home', () => {
     render(<SiteHeader />);
 
-    expect(screen.getByRole('link', { name: /campus pub quiz/i })).toHaveAttribute('href', '/');
+    expect(
+      screen.getByRole('link', { name: /campus pub quiz/i }),
+    ).toHaveAttribute('href', '/');
   });
 
-  it('shows Log in and Register links when unauthenticated', () => {
+  it('shows no nav links when unauthenticated', () => {
     render(<SiteHeader />);
 
-    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
-    expect(screen.getByRole('link', { name: /register/i })).toHaveAttribute('href', '/register');
+    expect(
+      screen.queryByRole('link', { name: /log in/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /log out/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the username and a Log out button when authenticated', () => {
-    mockUseAuth.mockReturnValue(authResult({ status: 'authenticated', user: MODERATOR_USER }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: MODERATOR_USER }),
+    );
     render(<SiteHeader />);
 
     expect(screen.getByText('helper')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /^users$/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /log out/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /^users$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows a Users link only for admin users', () => {
-    mockUseAuth.mockReturnValue(authResult({ status: 'authenticated', user: ADMIN_USER }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: ADMIN_USER }),
+    );
     render(<SiteHeader />);
 
-    expect(screen.getByRole('link', { name: /^users$/i })).toHaveAttribute('href', '/admin/users');
+    expect(screen.getByRole('link', { name: /^users$/i })).toHaveAttribute(
+      'href',
+      '/admin/users',
+    );
   });
 
   it('calls auth.logout and redirects home when the Log out button is clicked', async () => {
     const logout = vi.fn();
-    mockUseAuth.mockReturnValue(authResult({ status: 'authenticated', user: ADMIN_USER, logout }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: ADMIN_USER, logout }),
+    );
     render(<SiteHeader />);
 
-    await userEvent.setup().click(screen.getByRole('button', { name: /log out/i }));
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /log out/i }));
 
     expect(logout).toHaveBeenCalled();
     expect(mockPush).toHaveBeenCalledWith('/');
@@ -86,17 +117,27 @@ describe('SiteHeader', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'checking' }));
     render(<SiteHeader />);
 
-    expect(screen.queryByRole('link', { name: /log in/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /log out/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /log in/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /log out/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('shows only the logo, with no nav links, on the home page', () => {
+  it('shows the same nav links on the home page as elsewhere', () => {
     pathnameRef.current = '/';
-    mockUseAuth.mockReturnValue(authResult({ status: 'authenticated', user: ADMIN_USER }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: ADMIN_USER }),
+    );
     render(<SiteHeader />);
 
-    expect(screen.getByRole('link', { name: /campus pub quiz/i })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /campus pub quiz/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /log out/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders nothing on /display — the audience screen owns its own header', () => {

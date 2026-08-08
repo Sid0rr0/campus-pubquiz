@@ -136,9 +136,7 @@ describe('SessionPickerPanel', () => {
     });
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
-    expect(
-      await screen.findByRole('button', { name: /imported quiz/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/imported quiz/i)).toBeInTheDocument();
   });
 
   it('links to the quiz editor to create a new quiz', () => {
@@ -157,7 +155,7 @@ describe('SessionPickerPanel', () => {
     });
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
-    await screen.findByRole('button', { name: /imported quiz/i });
+    await screen.findByText(/imported quiz/i);
     expect(screen.getByRole('link', { name: /edit/i })).toHaveAttribute(
       'href',
       '/quizzes/2',
@@ -191,7 +189,7 @@ describe('SessionPickerPanel', () => {
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /imported quiz/i }),
+      await screen.findByRole('button', { name: /^start$/i }),
     );
 
     expect(mockCreateSession).not.toHaveBeenCalled();
@@ -218,7 +216,7 @@ describe('SessionPickerPanel', () => {
     render(<SessionPickerPanel onOpenSession={onOpenSession} />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /imported quiz/i }),
+      await screen.findByRole('button', { name: /^start$/i }),
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
@@ -234,7 +232,7 @@ describe('SessionPickerPanel', () => {
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /imported quiz/i }),
+      await screen.findByRole('button', { name: /^start$/i }),
     );
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
@@ -265,7 +263,7 @@ describe('SessionPickerPanel', () => {
     render(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /imported quiz/i }),
+      await screen.findByRole('button', { name: /^start$/i }),
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
