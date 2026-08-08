@@ -129,18 +129,4 @@ describe('GameGateway — socket event logging', () => {
     );
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('41'));
   });
-
-  it('logs a SELECT_QUIZ event with the quiz id', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
-    await gateway.handleSelectQuiz(asSocket(admin), { quizId: 2 });
-
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining(SOCKET_EVENTS.SELECT_QUIZ),
-    );
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('2'));
-  });
 });

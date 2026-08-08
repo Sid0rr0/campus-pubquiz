@@ -206,17 +206,17 @@ describe('GameGateway — concurrent sessions (phase 6 verification)', () => {
     return admin;
   }
 
-  /** Creates session B via SELECT_QUIZ (from a fresh admin connected to session
-   * A first) and opens its only question. */
+  /** Creates session B directly via GameStateService (mirroring POST
+   * /sessions) and opens its only question. */
   async function createAndOpenSessionB() {
+    await gameStateService.createSession(20);
     const admin = createMockSocket(
       SOCKET_ROOMS.ADMIN,
       { token: TEST_SESSION_TOKEN },
       'socket-1',
-      'AAAAAA',
+      'BBBBBB',
     );
     await gateway.handleConnection(asSocket(admin));
-    await gateway.handleSelectQuiz(asSocket(admin), { quizId: 20 });
     await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
     await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> round_intro
     await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> question_open (q502)
@@ -229,14 +229,14 @@ describe('GameGateway — concurrent sessions (phase 6 verification)', () => {
       'question_open',
     );
 
+    await gameStateService.createSession(20);
     const adminB = createMockSocket(
       SOCKET_ROOMS.ADMIN,
       { token: TEST_SESSION_TOKEN },
       'socket-1',
-      'AAAAAA',
+      'BBBBBB',
     );
     await gateway.handleConnection(asSocket(adminB));
-    await gateway.handleSelectQuiz(asSocket(adminB), { quizId: 20 });
 
     // Creating B must not touch A's already-open question.
     expect(gameStateService.getSnapshot('AAAAAA').progress.status).toBe(

@@ -50,10 +50,6 @@ export const gradeAnswerPayloadSchema = z.object({
   pointsAwarded: finiteNumber,
 });
 
-export const selectQuizPayloadSchema = z.object({
-  quizId: positiveInt,
-});
-
 export const kickTeamPayloadSchema = z.object({
   teamId: positiveInt,
 });

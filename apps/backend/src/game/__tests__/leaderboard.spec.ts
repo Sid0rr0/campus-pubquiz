@@ -149,7 +149,10 @@ describe('GameStateService — leaderboard', () => {
     expect(ended.progress.isLeaderboardVisible).toBe(true);
     expect(ended.leaderboardRevealCount).toBe(0);
 
-    const afterFirstReveal = await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
+    const afterFirstReveal = await service.applyAction(
+      joinCode,
+      'REVEAL_NEXT_TEAM',
+    );
     expect(afterFirstReveal.leaderboardRevealCount).toBe(1);
   });
 

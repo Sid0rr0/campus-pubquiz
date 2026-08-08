@@ -8,7 +8,6 @@ import {
   type GameSocketHandshakeQuery,
   type JoinAcceptedPayload,
   type QuizzesListedPayload,
-  type SelectQuizPayload,
   type StateSnapshotPayload,
 } from './socket-events';
 
@@ -25,7 +24,6 @@ describe('SOCKET_EVENTS', () => {
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',
       GRADE_ANSWER: 'game:grade_answer',
-      SELECT_QUIZ: 'game:select_quiz',
       KICK_TEAM: 'game:kick_team',
       AWARD_BONUS: 'game:award_bonus',
     });
@@ -109,8 +107,8 @@ describe('block answering payloads', () => {
   });
 });
 
-describe('quiz selection payloads', () => {
-  it('carries quiz summaries and the active quiz id so the admin can pick a quiz', () => {
+describe('quiz listing payloads', () => {
+  it('carries quiz summaries and the active quiz id so the admin can see what is running', () => {
     const listed: QuizzesListedPayload = {
       activeQuizId: 1,
       quizzes: [
@@ -128,9 +126,9 @@ describe('quiz selection payloads', () => {
         { id: 2, title: 'Imported Quiz', rounds: [] },
       ],
     };
-    const select: SelectQuizPayload = { quizId: 2 };
 
-    expect(listed.quizzes.map((quiz) => quiz.id)).toContain(select.quizId);
+    expect(listed.quizzes.map((quiz) => quiz.id)).toEqual([1, 2]);
+    expect(listed.activeQuizId).toBe(1);
   });
 });
 

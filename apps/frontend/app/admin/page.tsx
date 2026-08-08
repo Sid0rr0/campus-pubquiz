@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getBlockStartRoundIndex,
@@ -16,7 +15,6 @@ import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { useAuth } from '@/app/lib/use-auth';
 import { TeamsTable } from '@/app/admin/teams-table';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
-import { QuizPickerPanel } from '@/app/admin/quiz-picker-panel';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
 import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
@@ -29,7 +27,6 @@ function AdminPageContent() {
   const searchParams = useSearchParams();
   const sessionCode = searchParams.get('code');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
-  const [activeQuizIdOverride, setActiveQuizIdOverride] = useState<number | null>(null);
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
   const [answersError, setAnswersError] = useState<string | null>(null);
@@ -40,13 +37,10 @@ function AdminPageContent() {
   // The code the socket actually connects with. Only adopts `sessionCode`
   // (the URL's ?code=) when it points at a session the socket doesn't
   // already know about — a deep link, a freshly picked session, or a
-  // manual URL edit to a different session. SELECT_QUIZ migrates the
-  // existing admin socket into a new session server-side and pushes an
-  // updated STATE_SYNC without a reconnect; the URL-sync effect below then
-  // updates ?code= to match that migration, which must not be treated as
-  // "a different session" here, or every quiz selection would force a
-  // pointless full socket reconnect (and briefly hide already-correct data
-  // behind the "Connecting…" screen).
+  // manual URL edit to a different session — so a snapshot that already
+  // matches the current session never forces a pointless full socket
+  // reconnect (and briefly hides already-correct data behind the
+  // "Connecting…" screen).
   const [connectJoinCode, setConnectJoinCode] = useState<string | null>(sessionCode);
   const connectedJoinCodeRef = useRef<string | null>(null);
 
@@ -58,7 +52,6 @@ function AdminPageContent() {
     gradeAnswer,
     kickTeam,
     awardBonus,
-    selectQuiz = () => {},
     setLiveAnswers = () => {},
     reconnectedAt,
   } = useGameSocket(
@@ -81,10 +74,9 @@ function AdminPageContent() {
   }, [sessionCode]);
 
   useEffect(() => {
-    // SELECT_QUIZ always mints a brand-new session (never overwrites the
-    // current one) and migrates this admin socket into it — keep the URL's
-    // ?code= following that migration so a refresh lands back in the same
-    // session instead of falling through to the picker screen. Pure URL
+    // Keeps the URL's ?code= in sync with whatever session the socket is
+    // actually connected to, so a refresh lands back in the same session
+    // instead of falling through to the picker screen. Pure URL
     // bookkeeping — `connectJoinCode` above deliberately doesn't treat this
     // as a new session to connect to.
     if (snapshot && snapshot.joinCode !== sessionCode) {
@@ -110,7 +102,6 @@ function AdminPageContent() {
   }, [auth.status, router]);
 
   const gameStatus = snapshot?.progress.status;
-  const canChooseQuiz = gameStatus === 'lobby' || gameStatus === 'ended';
 
   // Guards refetchQuizzes' setState calls against resolving after this page
   // has unmounted (e.g. logging out or navigating away mid-fetch).
@@ -154,13 +145,6 @@ function AdminPageContent() {
     }
     lastFetchedStatusRef.current = gameStatus;
   }, [gameStatus, refetchQuizzes]);
-
-  useEffect(() => {
-    // A fresh quiz list from the server is authoritative; drop the optimistic
-    // override so future renders trust `quizzes.activeQuizId` again.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActiveQuizIdOverride(null);
-  }, [quizzes]);
 
   useEffect(() => {
     // A newly selected/restarted quiz invalidates any question id picked
@@ -247,20 +231,15 @@ function AdminPageContent() {
     }
   }, [selectedQuestionId, displayQuestionId]);
 
-  const displayedActiveQuizId = activeQuizIdOverride ?? quizzes?.activeQuizId ?? null;
+  const activeQuizId = quizzes?.activeQuizId ?? null;
   const activeQuizTitle =
-    quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.title ?? null;
+    quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.title ?? null;
   const activeQuizRounds =
-    quizzes?.quizzes.find((quiz) => quiz.id === displayedActiveQuizId)?.rounds ?? EMPTY_ROUNDS;
+    quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.rounds ?? EMPTY_ROUNDS;
   const roundTitles = useMemo(
     () => activeQuizRounds.map((round) => round.title),
     [activeQuizRounds],
   );
-
-  function handleSelectQuiz(quizId: number): void {
-    selectQuiz(quizId);
-    setActiveQuizIdOverride(quizId);
-  }
 
   function handleCloseSession(): void {
     if (!snapshot) return;
@@ -418,32 +397,16 @@ function AdminPageContent() {
         onKickTeam={kickTeam}
         onAwardBonus={awardBonus}
       />
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-7">
+      <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
         {closeSessionError && (
           <p role="alert" className="font-extrabold text-magenta">
             {closeSessionError}
           </p>
         )}
-        {canChooseQuiz && connectedJoinCode && (
-          <Link
-            href="/quizzes/new"
-            className="inline-flex min-h-11 w-fit items-center rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold text-foreground"
-          >
-            Create or edit a quiz
-          </Link>
-        )}
-        {canChooseQuiz && quizzesError && (
+        {quizzesError && (
           <p role="alert" className="font-extrabold text-magenta">
             {quizzesError}
           </p>
-        )}
-        {canChooseQuiz && quizzes && (
-          <QuizPickerPanel
-            progressStatus={progress.status}
-            quizzes={quizzes}
-            displayedActiveQuizId={displayedActiveQuizId}
-            onSelectQuiz={handleSelectQuiz}
-          />
         )}
         {answersError && (
           <p role="alert" className="font-extrabold text-magenta">

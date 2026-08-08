@@ -13,7 +13,6 @@ export const SOCKET_EVENTS = {
   SUBMIT_ANSWER: 'game:submit_answer',
   JOIN_PLAYERS: 'game:join_players',
   GRADE_ANSWER: 'game:grade_answer',
-  SELECT_QUIZ: 'game:select_quiz',
   KICK_TEAM: 'game:kick_team',
   AWARD_BONUS: 'game:award_bonus',
 } as const;
@@ -238,10 +237,6 @@ export interface QuizzesListedPayload {
   /** The quiz the given joinCode's session is currently running, or null when no joinCode was provided. */
   activeQuizId: number | null;
   quizzes: QuizSummary[];
-}
-
-export interface SelectQuizPayload {
-  quizId: number;
 }
 
 /** Request body for POST /sessions — start a new concurrent GameSession for a quiz. */

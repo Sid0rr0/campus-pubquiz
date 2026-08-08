@@ -288,19 +288,6 @@ describe('useGameSocket', () => {
     });
   });
 
-  it('selectQuiz emits a SELECT_QUIZ event with the quiz id', () => {
-    const { result } = renderHook(() => useGameSocket('admin'));
-    const fakeSocket = getFakeSocket();
-
-    act(() => {
-      result.current.selectQuiz(2);
-    });
-
-    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.SELECT_QUIZ, {
-      quizId: 2,
-    });
-  });
-
   it('setLiveAnswers writes a REST-fetched payload into liveAnswers', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
     const payload = {

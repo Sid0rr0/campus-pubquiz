@@ -14,7 +14,6 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type KickTeamPayload,
-  type SelectQuizPayload,
   type SessionClosedPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
@@ -45,7 +44,6 @@ export interface UseGameSocketResult {
     points: number,
     reason?: string,
   ) => void;
-  selectQuiz: (quizId: number) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
   /**
@@ -214,11 +212,6 @@ export function useGameSocket(
     [],
   );
 
-  const selectQuiz = useCallback((quizId: number) => {
-    const payload: SelectQuizPayload = { quizId };
-    socketRef.current?.emit(SOCKET_EVENTS.SELECT_QUIZ, payload);
-  }, []);
-
   return {
     snapshot,
     connectionError,
@@ -230,7 +223,6 @@ export function useGameSocket(
     gradeAnswer,
     kickTeam,
     awardBonus,
-    selectQuiz,
     myAnswers,
     setLiveAnswers,
     reconnectedAt,

@@ -111,15 +111,4 @@ describe('GameGateway — socket payload validation', () => {
     ).rejects.toThrow(WsException);
     expect(bonusService.award).not.toHaveBeenCalled();
   });
-
-  it('rejects SELECT_QUIZ with a non-positive quizId', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
-    await expect(
-      gateway.handleSelectQuiz(asSocket(admin), { quizId: -1 }),
-    ).rejects.toThrow(WsException);
-  });
 });

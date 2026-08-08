@@ -34,7 +34,6 @@ import {
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
   parseSocketPayload,
-  selectQuizPayloadSchema,
   submitAnswerPayloadSchema,
 } from '@/game/socket-payload.schemas';
 
@@ -435,46 +434,6 @@ export class GameGateway
     this.gameState.setLeaderboard(joinCode, leaderboard);
 
     this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
-  }
-
-  @SubscribeMessage(SOCKET_EVENTS.SELECT_QUIZ)
-  @CreateRequestContext()
-  async handleSelectQuiz(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(selectQuizPayloadSchema, rawPayload);
-    const oldJoinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(oldJoinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may select a quiz');
-    }
-
-    this.logger.log(
-      `${SOCKET_EVENTS.SELECT_QUIZ} from ${client.id}: quizId=${payload.quizId}`,
-    );
-
-    let snapshot: StateSnapshotPayload;
-    try {
-      snapshot = await this.gameState.createSession(payload.quizId);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to select quiz';
-      throw new WsException(message);
-    }
-
-    // createSession always mints a brand-new session/joinCode (Phase 2) —
-    // move the requesting admin's own socket into it so today's single-admin
-    // flow keeps working. Any other client still in the old session's rooms
-    // (a display/player connected before this fired) is not migrated: real
-    // multi-session creation UX (an explicit picker, not this legacy
-    // SELECT_QUIZ action) is Phase 4/5's job.
-    const newJoinCode = snapshot.joinCode;
-    await client.leave(sessionRoom(oldJoinCode, SOCKET_ROOMS.ADMIN));
-    await client.join(sessionRoom(newJoinCode, SOCKET_ROOMS.ADMIN));
-    (client.data as { joinCode?: string }).joinCode = newJoinCode;
-
-    this.broadcastState(newJoinCode, snapshot);
-    this.rearmQuestionLockTimer(newJoinCode);
   }
 
   @SubscribeMessage(SOCKET_EVENTS.KICK_TEAM)

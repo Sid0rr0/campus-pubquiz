@@ -31,9 +31,10 @@ import {
 describe('GameGateway — session room scoping', () => {
   let gateway: GameGateway;
   let server: MockServer;
+  let gameStateService: GameStateService;
 
   beforeEach(async () => {
-    ({ gateway, server } = await createTestGateway());
+    ({ gateway, server, gameStateService } = await createTestGateway());
   });
 
   it('joins a connecting client to the session named by an explicit code', async () => {
@@ -68,19 +69,19 @@ describe('GameGateway — session room scoping', () => {
   });
 
   it("keeps two sessions fully isolated: an admin action in one only broadcasts to that session's rooms", async () => {
-    // Session A ('ABCDEF') is seeded by createTestGateway. A fresh admin
-    // connects to it explicitly, then spins up session B via SELECT_QUIZ,
-    // which migrates that admin's own socket into B's rooms — leaving A's
+    // Session A ('ABCDEF') is seeded by createTestGateway. Session B is
+    // created directly via GameStateService (mirroring what POST /sessions
+    // does), and a fresh admin connects straight into it — leaving A's
     // state, still in the map under 'ABCDEF', reachable only by explicitly
     // reconnecting with ?code=ABCDEF.
+    await gameStateService.createSession(2);
     const adminForB = createMockSocket(
       SOCKET_ROOMS.ADMIN,
       { token: TEST_SESSION_TOKEN },
       'socket-1',
-      'ABCDEF',
+      'GHIJKL',
     );
     await gateway.handleConnection(asSocket(adminForB));
-    await gateway.handleSelectQuiz(asSocket(adminForB), { quizId: 2 });
 
     const adminForA = createMockSocket(
       SOCKET_ROOMS.ADMIN,
@@ -118,14 +119,14 @@ describe('GameGateway — session room scoping', () => {
   });
 
   it("clears the connection roster of the disconnecting socket's own session, not the admin's other session", async () => {
+    await gameStateService.createSession(2);
     const adminForB = createMockSocket(
       SOCKET_ROOMS.ADMIN,
       { token: TEST_SESSION_TOKEN },
       'socket-1',
-      'ABCDEF',
+      'GHIJKL',
     );
     await gateway.handleConnection(asSocket(adminForB));
-    await gateway.handleSelectQuiz(asSocket(adminForB), { quizId: 2 });
     // adminForB's socket is now in session B ('GHIJKL'); session A
     // ('ABCDEF') still holds the fixture team's connection from
     // createTestGateway's seed data.
