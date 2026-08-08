@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getBlockStartRoundIndex,
@@ -26,11 +26,15 @@ function AdminPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionCode = searchParams.get('code');
-  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
+    null,
+  );
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
   const [quizzesError, setQuizzesError] = useState<string | null>(null);
   const [answersError, setAnswersError] = useState<string | null>(null);
-  const [closeSessionError, setCloseSessionError] = useState<string | null>(null);
+  const [closeSessionError, setCloseSessionError] = useState<string | null>(
+    null,
+  );
 
   const isAuthenticated = auth.status === 'authenticated';
 
@@ -41,7 +45,9 @@ function AdminPageContent() {
   // matches the current session never forces a pointless full socket
   // reconnect (and briefly hides already-correct data behind the
   // "Connecting…" screen).
-  const [connectJoinCode, setConnectJoinCode] = useState<string | null>(sessionCode);
+  const [connectJoinCode, setConnectJoinCode] = useState<string | null>(
+    sessionCode,
+  );
   const connectedJoinCodeRef = useRef<string | null>(null);
 
   const {
@@ -92,6 +98,13 @@ function AdminPageContent() {
     }
   }, [isAuthenticated, sessionCode, router]);
 
+  const codeFromUrl = searchParams.get('code') ?? undefined;
+  useEffect(() => {
+    if (codeFromUrl && connectionError) {
+      router.replace('/sessions');
+    }
+  }, [codeFromUrl, connectionError, router]);
+
   useEffect(() => {
     // Login/register/pending-approval now live at /login and /register —
     // anyone landing here without a session bounces there instead of
@@ -102,30 +115,7 @@ function AdminPageContent() {
   }, [auth.status, router]);
 
   const gameStatus = snapshot?.progress.status;
-
-  // Guards refetchQuizzes' setState calls against resolving after this page
-  // has unmounted (e.g. logging out or navigating away mid-fetch).
-  const isMountedRef = useRef(true);
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   const connectedJoinCode = snapshot?.joinCode;
-  const refetchQuizzes = useCallback(() => {
-    if (!connectedJoinCode) return;
-    fetchQuizzes(connectedJoinCode)
-      .then((payload) => {
-        if (!isMountedRef.current) return;
-        setQuizzes(payload);
-        setQuizzesError(null);
-      })
-      .catch((error: unknown) => {
-        if (!isMountedRef.current) return;
-        setQuizzesError(error instanceof QuizApiError ? error.message : 'Could not load quizzes');
-      });
-  }, [connectedJoinCode]);
 
   const lastFetchedStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
@@ -135,16 +125,39 @@ function AdminPageContent() {
     // depending on `quizzes` here would re-trigger this effect every time
     // its own fetch resolves, since each response is a fresh object even
     // when the quiz list hasn't changed, causing an infinite refetch loop.
-    if (!gameStatus) return;
+    if (!gameStatus || !connectedJoinCode) return;
     const isFirstFetch = lastFetchedStatusRef.current === undefined;
     const enteredChoosableStatus =
       (gameStatus === 'lobby' || gameStatus === 'ended') &&
       lastFetchedStatusRef.current !== gameStatus;
-    if (isFirstFetch || enteredChoosableStatus) {
-      refetchQuizzes();
-    }
     lastFetchedStatusRef.current = gameStatus;
-  }, [gameStatus, refetchQuizzes]);
+    if (!isFirstFetch && !enteredChoosableStatus) return;
+
+    // A `cancelled` flag scoped to *this* effect invocation, not a
+    // page-wide "is the component still mounted" ref — the latter breaks
+    // under React Strict Mode's dev-only mount→cleanup→remount cycle: its
+    // cleanup fires once and is never reset back, so every fetch after the
+    // very first render is silently discarded and the panel below only
+    // ever appears after a manual reload.
+    let cancelled = false;
+    fetchQuizzes(connectedJoinCode)
+      .then((payload) => {
+        if (cancelled) return;
+        setQuizzes(payload);
+        setQuizzesError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setQuizzesError(
+          error instanceof QuizApiError
+            ? error.message
+            : 'Could not load quizzes',
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameStatus, connectedJoinCode]);
 
   useEffect(() => {
     // A newly selected/restarted quiz invalidates any question id picked
@@ -174,21 +187,26 @@ function AdminPageContent() {
   // crossed-into position (progress.roundIndex stays pinned to the block's
   // last round throughout break/reveal, so it can't be used here);
   // round_intro's round is progress.roundIndex itself.
-  const revealIntroRoundNumber = snapshot?.revealQuestions?.[revealIndex]?.roundNumber;
-  const breakRoundIntroRoundNumber = snapshot?.blockQuestions?.[revealIndex]?.roundNumber;
+  const revealIntroRoundNumber =
+    snapshot?.revealQuestions?.[revealIndex]?.roundNumber;
+  const breakRoundIntroRoundNumber =
+    snapshot?.blockQuestions?.[revealIndex]?.roundNumber;
   const displayTitleRoundIndex =
     gameStatus === 'round_intro'
       ? (snapshot?.progress.roundIndex ?? null)
       : gameStatus === 'reveal_intro' && revealIntroRoundNumber !== undefined
         ? revealIntroRoundNumber - 1
-        : gameStatus === 'break_round_intro' && breakRoundIntroRoundNumber !== undefined
+        : gameStatus === 'break_round_intro' &&
+            breakRoundIntroRoundNumber !== undefined
           ? breakRoundIntroRoundNumber - 1
           : null;
   // progress.roundIndex is the breakAfter round whose block just finished,
   // so the "B" indicator on that round's row lights up for the whole break,
   // including its entry beat and round-title pauses.
   const displayBreakRoundIndex =
-    gameStatus === 'break_intro' || gameStatus === 'break' || gameStatus === 'break_round_intro'
+    gameStatus === 'break_intro' ||
+    gameStatus === 'break' ||
+    gameStatus === 'break_round_intro'
       ? (snapshot?.progress.roundIndex ?? null)
       : null;
   // Grading defaults to whatever's on display, but a manual pick from the
@@ -199,7 +217,8 @@ function AdminPageContent() {
   // to default to, so it falls back to the block's first question —
   // naturally null wherever blockQuestions is empty (e.g. round_intro).
   const defaultBlockQuestionId = snapshot?.blockQuestions?.[0]?.id ?? null;
-  const effectiveQuestionId = selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
+  const effectiveQuestionId =
+    selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
 
   useEffect(() => {
     // `liveAnswers` is transient, request-driven data — it isn't part of the
@@ -208,16 +227,24 @@ function AdminPageContent() {
     // connection recovers (e.g. a phone/laptop losing Wi-Fi mid-grading).
     const joinCode = snapshot?.joinCode;
     if (!joinCode || effectiveQuestionId === null) return;
+    let cancelled = false;
     fetchAnswers(joinCode, effectiveQuestionId)
       .then((payload) => {
-        if (!isMountedRef.current) return;
+        if (cancelled) return;
         setLiveAnswers(payload);
         setAnswersError(null);
       })
       .catch((error: unknown) => {
-        if (!isMountedRef.current) return;
-        setAnswersError(error instanceof AnswerApiError ? error.message : 'Could not load answers');
+        if (cancelled) return;
+        setAnswersError(
+          error instanceof AnswerApiError
+            ? error.message
+            : 'Could not load answers',
+        );
       });
+    return () => {
+      cancelled = true;
+    };
   }, [snapshot?.joinCode, effectiveQuestionId, setLiveAnswers, reconnectedAt]);
 
   useEffect(() => {
@@ -225,7 +252,10 @@ function AdminPageContent() {
     // /display (either because they picked the displayed question, or
     // Prev/Advance brought the display back around to it), drop the
     // override so grading resumes following the display automatically.
-    if (selectedQuestionId !== null && selectedQuestionId === displayQuestionId) {
+    if (
+      selectedQuestionId !== null &&
+      selectedQuestionId === displayQuestionId
+    ) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedQuestionId(null);
     }
@@ -235,7 +265,8 @@ function AdminPageContent() {
   const activeQuizTitle =
     quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.title ?? null;
   const activeQuizRounds =
-    quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.rounds ?? EMPTY_ROUNDS;
+    quizzes?.quizzes.find((quiz) => quiz.id === activeQuizId)?.rounds ??
+    EMPTY_ROUNDS;
   const roundTitles = useMemo(
     () => activeQuizRounds.map((round) => round.title),
     [activeQuizRounds],
@@ -249,7 +280,11 @@ function AdminPageContent() {
         router.push('/sessions');
       })
       .catch((error: unknown) => {
-        setCloseSessionError(error instanceof SessionApiError ? error.message : 'Could not close session');
+        setCloseSessionError(
+          error instanceof SessionApiError
+            ? error.message
+            : 'Could not close session',
+        );
       });
   }
 
@@ -297,8 +332,10 @@ function AdminPageContent() {
     gameStatus === 'reveal_intro' ||
     gameStatus === 'break_intro' ||
     gameStatus === 'break' ||
-    (gameStatus === 'break_round_intro' && (revealIndex > 0 || activeBlockStartIndex > 0));
-  const hasUnrevealedTeams = isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
+    (gameStatus === 'break_round_intro' &&
+      (revealIndex > 0 || activeBlockStartIndex > 0));
+  const hasUnrevealedTeams =
+    isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 
   useAdminKeyboardShortcuts({
     canAdvance,
@@ -308,7 +345,11 @@ function AdminPageContent() {
     sendAction,
   });
 
-  if (auth.status === 'checking' || auth.status === 'unauthenticated' || auth.status === 'pending') {
+  if (
+    auth.status === 'checking' ||
+    auth.status === 'unauthenticated' ||
+    auth.status === 'pending'
+  ) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>
@@ -345,7 +386,9 @@ function AdminPageContent() {
     teams = [],
     answeredTeamIds = [],
   } = snapshot;
-  const fallbackQuestions = currentQuestion ? [currentQuestion, ...blockQuestions] : blockQuestions;
+  const fallbackQuestions = currentQuestion
+    ? [currentQuestion, ...blockQuestions]
+    : blockQuestions;
   const showAnswerStatus =
     progress.status === 'question_open' || progress.status === 'locking';
   const canEndQuiz = progress.status !== 'ended';
@@ -429,7 +472,11 @@ function AdminPageContent() {
         />
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Teams</h2>
-          <TeamsTable teams={teams} leaderboard={leaderboard} roundTitles={roundTitles} />
+          <TeamsTable
+            teams={teams}
+            leaderboard={leaderboard}
+            roundTitles={roundTitles}
+          />
         </section>
       </div>
     </main>

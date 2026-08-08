@@ -4,14 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockFetchAnswers, mockUseAuth, searchParamsRef } =
-  vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
-    mockFetchQuizzes: vi.fn(),
-    mockFetchAnswers: vi.fn(),
-    mockUseAuth: vi.fn(),
-    searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
-  }));
+const {
+  mockUseGameSocket,
+  mockFetchQuizzes,
+  mockFetchAnswers,
+  mockUseAuth,
+  searchParamsRef,
+} = vi.hoisted(() => ({
+  mockUseGameSocket: vi.fn(),
+  mockFetchQuizzes: vi.fn(),
+  mockFetchAnswers: vi.fn(),
+  mockUseAuth: vi.fn(),
+  searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
+}));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
@@ -52,7 +57,12 @@ describe('AdminPage — grading', () => {
       snapshot: {
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
       },
       connectionError: null,
@@ -94,7 +104,12 @@ describe('AdminPage — grading', () => {
       snapshot: {
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
         teams: [
           { teamId: 'team-1', teamName: 'The Quizzards' },
           { teamId: 'team-2', teamName: 'Beer Necessities' },
@@ -130,7 +145,9 @@ describe('AdminPage — grading', () => {
     });
     render(<AdminPage />);
 
-    expect(screen.getByText(/round 2 \(fruit & veg\)/i)).toHaveTextContent('Q3 of 4');
+    expect(screen.getByText(/round 2 \(fruit & veg\)/i)).toHaveTextContent(
+      'Q3 of 4',
+    );
     expect(screen.getByText(/correct answer: banana/i)).toBeInTheDocument();
     expect(screen.getByText('No answer yet')).toBeInTheDocument();
 
@@ -138,7 +155,9 @@ describe('AdminPage — grading', () => {
     expect(unansweredRow).toHaveClass('opacity-40');
     expect(unansweredRow).toHaveTextContent('Beer Necessities');
     expect(
-      screen.getByRole('button', { name: /grade beer necessities full points/i }),
+      screen.getByRole('button', {
+        name: /grade beer necessities full points/i,
+      }),
     ).toBeDisabled();
   });
 
@@ -184,7 +203,9 @@ describe('AdminPage — grading', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /grade the quizzards full points/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /grade the quizzards full points/i }),
+    );
 
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 2);
   });
@@ -231,7 +252,9 @@ describe('AdminPage — grading', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /grade the quizzards half points/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /grade the quizzards half points/i }),
+    );
 
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 1);
   });
@@ -277,11 +300,17 @@ describe('AdminPage — grading', () => {
     });
     render(<AdminPage />);
 
-    const fullPointsButton = screen.getByRole('button', { name: /grade the quizzards full points/i });
+    const fullPointsButton = screen.getByRole('button', {
+      name: /grade the quizzards full points/i,
+    });
     expect(fullPointsButton).toHaveTextContent('✓ 2');
     expect(fullPointsButton).toBeDisabled();
-    expect(screen.getByRole('button', { name: /grade the quizzards 0 points/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /grade the quizzards half points/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /grade the quizzards half points/i }),
+    ).toBeDisabled();
   });
 
   it('requests and shows the first block question answers during the grading break', async () => {
@@ -307,6 +336,53 @@ describe('AdminPage — grading', () => {
       expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r1q1'),
     );
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+  });
+
+  it('keeps showing the last question answers for grading once the quiz has ended', async () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        joinCode: 'TESTCODE',
+        progress: progress({ status: 'ended', isLeaderboardVisible: true }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        ],
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      setLiveAnswers: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 2,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: 0,
+            gradedAt: null,
+          },
+        ],
+      },
+      gradeAnswer: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    expect(screen.getByText('Banana')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /grade the quizzards full points/i }),
+    ).toBeInTheDocument();
   });
 
   it('browses to another question via the round number picker', async () => {
@@ -348,7 +424,9 @@ describe('AdminPage — grading', () => {
     render(<AdminPage />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /grade question 2 of round 1/i }),
+      await screen.findByRole('button', {
+        name: /grade question 2 of round 1/i,
+      }),
     );
 
     await vi.waitFor(() =>
@@ -376,7 +454,9 @@ describe('AdminPage — grading', () => {
             {
               title: 'Round 2',
               breakAfter: true,
-              questions: [{ id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' }],
+              questions: [
+                { id: 'r2q1', prompt: 'Name this song.', answer: 'Yesterday' },
+              ],
             },
           ],
         },
@@ -386,7 +466,12 @@ describe('AdminPage — grading', () => {
       snapshot: {
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -397,7 +482,9 @@ describe('AdminPage — grading', () => {
     render(<AdminPage />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /grade question 1 of round 2/i }),
+      await screen.findByRole('button', {
+        name: /grade question 1 of round 2/i,
+      }),
     );
 
     await vi.waitFor(() =>
