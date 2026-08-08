@@ -3,9 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
-import type { ActiveSessionSummary, QuizzesListedPayload } from '@campus-pubquiz/types';
+import type {
+  ActiveSessionSummary,
+  QuizzesListedPayload,
+} from '@campus-pubquiz/types';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
-import { closeSession, createSession, fetchSessions, SessionApiError } from '@/app/lib/sessions-api';
+import {
+  closeSession,
+  createSession,
+  fetchSessions,
+  SessionApiError,
+} from '@/app/lib/sessions-api';
 import { RoundsList } from '@/app/components/rounds-list';
 
 interface SessionPickerPanelProps {
@@ -41,7 +49,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       })
       .catch((fetchError: unknown) => {
         if (!isMountedRef.current) return;
-        setError(fetchError instanceof SessionApiError ? fetchError.message : 'Could not load sessions');
+        setError(
+          fetchError instanceof SessionApiError
+            ? fetchError.message
+            : 'Could not load sessions',
+        );
       });
     fetchQuizzes()
       .then((result) => {
@@ -50,7 +62,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       })
       .catch((fetchError: unknown) => {
         if (!isMountedRef.current) return;
-        setError(fetchError instanceof QuizApiError ? fetchError.message : 'Could not load quizzes');
+        setError(
+          fetchError instanceof QuizApiError
+            ? fetchError.message
+            : 'Could not load quizzes',
+        );
       });
   }, []);
 
@@ -69,7 +85,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       onOpenSession(session.joinCode);
     } catch (createError) {
       if (!isMountedRef.current) return;
-      setError(createError instanceof SessionApiError ? createError.message : 'Could not start session');
+      setError(
+        createError instanceof SessionApiError
+          ? createError.message
+          : 'Could not start session',
+      );
     } finally {
       if (isMountedRef.current) {
         setIsCreating(false);
@@ -85,7 +105,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       refresh();
     } catch (closeError) {
       if (!isMountedRef.current) return;
-      setError(closeError instanceof SessionApiError ? closeError.message : 'Could not close session');
+      setError(
+        closeError instanceof SessionApiError
+          ? closeError.message
+          : 'Could not close session',
+      );
     }
   }
 
@@ -101,7 +125,9 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Running Sessions</h2>
           {sessions.length === 0 && (
-            <p className="text-sm text-foreground/55">No sessions running yet.</p>
+            <p className="text-sm text-foreground/55">
+              No sessions running yet.
+            </p>
           )}
           <ul className="flex flex-col gap-2">
             {sessions.map((session) => (
@@ -112,7 +138,8 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                 <div className="flex flex-col">
                   <span className="font-extrabold">{session.quizTitle}</span>
                   <span className="text-xs text-foreground/55">
-                    {session.status} · {session.teamCount} teams · {session.joinCode}
+                    {session.status} · {session.teamCount} teams ·{' '}
+                    {session.joinCode}
                   </span>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -149,21 +176,35 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           </div>
           <ul className="flex flex-col gap-2">
             {quizzes.map((quiz) => (
-              <li key={quiz.id} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isCreating}
-                  onClick={() => setPendingQuizId(quiz.id)}
-                  className="flex min-h-11 flex-1 items-center justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold disabled:opacity-40"
-                >
-                  {quiz.title} ({quiz.rounds.length} rounds | {quiz.rounds.reduce((sum, round) => sum + round.questions.length, 0)} total questions)
-                </button>
-                <Link
-                  href={`/quizzes/${quiz.id}`}
-                  className="flex min-h-11 shrink-0 items-center rounded-xl border-2 border-foreground/30 px-4 text-sm font-extrabold"
-                >
-                  Edit
-                </Link>
+              <li
+                key={quiz.id}
+                className="flex items-center gap-2 min-h-11 flex-1 justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold "
+              >
+                <span>
+                  {quiz.title} ({quiz.rounds.length} rounds |{' '}
+                  {quiz.rounds.reduce(
+                    (sum, round) => sum + round.questions.length,
+                    0,
+                  )}{' '}
+                  total questions)
+                </span>
+
+                <div className="flex gap-2">
+                  <Link
+                    href={`/quizzes/${quiz.id}`}
+                    className="flex min-h-8 shrink-0 items-center rounded-xl border border-foreground/30 px-2 text-sm font-bold"
+                  >
+                    Edit
+                  </Link>
+
+                  <button
+                    disabled={isCreating}
+                    onClick={() => setPendingQuizId(quiz.id)}
+                    className="min-h-8 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
+                  >
+                    Start
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -178,7 +219,9 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex max-h-[85vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl bg-white p-5">
-            <Dialog.Title className="font-display text-xl">Start &quot;{pendingQuiz?.title}&quot;?</Dialog.Title>
+            <Dialog.Title className="font-display text-xl">
+              Start &quot;{pendingQuiz?.title}&quot;?
+            </Dialog.Title>
             {pendingQuiz && <RoundsList rounds={pendingQuiz.rounds} />}
             <div className="flex justify-end gap-2">
               <button

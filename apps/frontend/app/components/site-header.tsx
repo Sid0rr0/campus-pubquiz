@@ -36,33 +36,26 @@ function SiteHeaderContent({ isHome }: { isHome: boolean }) {
 
   return (
     <Header>
-      {!isHome && (
-        <nav className="flex items-center gap-4 text-sm font-extrabold tracking-wide">
-          {auth.status === 'authenticated' && auth.user && (
-            <>
-              <span className="text-foreground/60">{auth.user.username}</span>
-              {auth.user.role === 'admin' && (
+      <nav className="flex items-center gap-4 text-sm font-extrabold tracking-wide">
+        {auth.status === 'authenticated' && auth.user && (
+          <>
+            <span className="text-foreground/60">{auth.user.username}</span>
+            {auth.user.role === 'admin' && (
+              <>
+                <Link href="/sessions" className="underline">
+                  Sessions
+                </Link>
                 <Link href="/admin/users" className="underline">
                   Users
                 </Link>
-              )}
-              <button type="button" onClick={handleLogout} className="underline">
-                Log out
-              </button>
-            </>
-          )}
-          {auth.status === 'unauthenticated' && (
-            <>
-              <Link href="/login" className="underline">
-                Log in
-              </Link>
-              <Link href="/register" className="underline">
-                Register
-              </Link>
-            </>
-          )}
-        </nav>
-      )}
+              </>
+            )}
+            <button type="button" onClick={handleLogout} className="underline">
+              Log out
+            </button>
+          </>
+        )}
+      </nav>
     </Header>
   );
 }
