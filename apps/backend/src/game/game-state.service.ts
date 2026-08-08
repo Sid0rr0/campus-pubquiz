@@ -438,8 +438,11 @@ export class GameStateService implements OnModuleInit {
    * during round_intro (Previous can step back into a round's intro card
    * without hiding that round's already-opened questions — furthestOpenIndex
    * naturally excludes anything from a round_intro reached by ADVANCE into a
-   * fresh round, since it still points at the previous round/block), or the
-   * whole just-locked block during break/reveal. Empty otherwise.
+   * fresh round, since it still points at the previous round/block), the
+   * whole just-locked block during break/reveal, or — once the quiz has
+   * ended — the last block ADVANCE walked through, so the admin can still
+   * review/grade its answers instead of the panel vanishing the moment
+   * reveal finishes. Empty otherwise.
    */
   private getBlockSeededQuestions(
     session: SessionState,
@@ -454,7 +457,8 @@ export class GameStateService implements OnModuleInit {
       status !== 'break' &&
       status !== 'break_round_intro' &&
       status !== 'reveal_intro' &&
-      status !== 'reveal'
+      status !== 'reveal' &&
+      status !== 'ended'
     ) {
       return [];
     }

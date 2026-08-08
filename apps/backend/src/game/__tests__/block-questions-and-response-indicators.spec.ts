@@ -481,6 +481,30 @@ describe('GameStateService — block questions and response indicators', () => {
     );
   });
 
+  it('keeps the final block browsable and gradable once the quiz has ended', async () => {
+    await service.applyAction(joinCode, 'START_QUIZ');
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
+    await service.applyAction(joinCode, 'ADVANCE'); // -> locking
+    await service.applyAction(joinCode, 'ADVANCE'); // -> break
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal, revealIndex 0
+    await service.applyAction(joinCode, 'ADVANCE'); // -> revealIndex 1
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 1)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal, revealIndex 2
+    await service.applyAction(joinCode, 'ADVANCE'); // -> revealIndex 3 (last)
+    const ended = await service.applyAction(joinCode, 'ADVANCE'); // -> ended (round-2 is last)
+
+    expect(ended.progress.status).toBe('ended');
+    // The admin must still be able to review/grade the last block's answers
+    // after the quiz auto-ends — losing this list hides the grading panel.
+    expect(ended.blockQuestions.map((q) => q.id)).toEqual([21, 22, 23, 24]);
+  });
+
   it('clears reveal questions once the admin advances past reveal', async () => {
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
