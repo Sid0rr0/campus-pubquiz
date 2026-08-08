@@ -2,9 +2,20 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  CheckIcon,
+  FilePlusIcon,
+  PlusIcon,
+  UploadIcon,
+} from '@radix-ui/react-icons';
 import type { QuizDraftIssue } from '@campus-pubquiz/types';
 import { ImportApiError, previewImport } from '@/app/lib/import-api';
-import { createQuiz, fetchQuizDraft, QuizDraftApiError, updateQuiz } from '@/app/lib/quiz-draft-api';
+import {
+  createQuiz,
+  fetchQuizDraft,
+  QuizDraftApiError,
+  updateQuiz,
+} from '@/app/lib/quiz-draft-api';
 import {
   makeRound,
   roundFromPreview,
@@ -21,14 +32,17 @@ type Phase = 'loading' | 'empty' | 'error' | 'editor';
 
 function issueLabel(issue: QuizDraftIssue): string {
   if (issue.roundIndex === -1) return `Quiz (${issue.field}): ${issue.message}`;
-  const questionLabel = issue.questionIndex !== null ? `, Q${issue.questionIndex + 1}` : '';
+  const questionLabel =
+    issue.questionIndex !== null ? `, Q${issue.questionIndex + 1}` : '';
   return `Round ${issue.roundIndex + 1}${questionLabel} (${issue.field}): ${issue.message}`;
 }
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const router = useRouter();
   const initialQuizIdRef = useRef(quizId);
-  const [phase, setPhase] = useState<Phase>(quizId === 'new' ? 'empty' : 'loading');
+  const [phase, setPhase] = useState<Phase>(
+    quizId === 'new' ? 'empty' : 'loading',
+  );
   const [quizTitle, setQuizTitle] = useState('');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(
@@ -49,13 +63,19 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         setQuizTitle(draft.title);
         setRounds(
           draft.rounds.map((round) =>
-            roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
+            roundFromPreview(crypto.randomUUID(), round, () =>
+              crypto.randomUUID(),
+            ),
           ),
         );
         setPhase('editor');
       })
       .catch((error: unknown) => {
-        setLoadError(error instanceof QuizDraftApiError ? error.message : 'Could not load that quiz.');
+        setLoadError(
+          error instanceof QuizDraftApiError
+            ? error.message
+            : 'Could not load that quiz.',
+        );
         setPhase('error');
       });
   }, []);
@@ -65,7 +85,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     setPhase('editor');
   }
 
-  async function handleCsvFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+  async function handleCsvFile(
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
@@ -83,12 +105,18 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       if (!quizTitle.trim()) setQuizTitle(preview.quizTitle);
       setPhase('editor');
 
-      const questionCount = newRounds.reduce((total, round) => total + round.questions.length, 0);
+      const questionCount = newRounds.reduce(
+        (total, round) => total + round.questions.length,
+        0,
+      );
       if (preview.issues.length > 0) {
         setImportError(
           `Imported with ${preview.issues.length} issue(s) to fix before saving — ` +
             preview.issues
-              .map((issue) => `row ${issue.rowNumber} (${issue.field}): ${issue.message}`)
+              .map(
+                (issue) =>
+                  `row ${issue.rowNumber} (${issue.field}): ${issue.message}`,
+              )
               .join('; '),
         );
       } else {
@@ -98,13 +126,19 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         setTimeout(() => setImportNotice(null), 5000);
       }
     } catch (error) {
-      setImportError(error instanceof ImportApiError ? error.message : 'Could not read that CSV.');
+      setImportError(
+        error instanceof ImportApiError
+          ? error.message
+          : 'Could not read that CSV.',
+      );
     }
   }
 
   function updateRound(roundId: string, patch: Partial<EditorRound>): void {
     setRounds((current) =>
-      current.map((round) => (round.id === roundId ? { ...round, ...patch } : round)),
+      current.map((round) =>
+        round.id === roundId ? { ...round, ...patch } : round,
+      ),
     );
   }
 
@@ -116,7 +150,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     setRounds((current) => {
       const index = current.findIndex((round) => round.id === roundId);
       const targetIndex = index + direction;
-      if (index === -1 || targetIndex < 0 || targetIndex >= current.length) return current;
+      if (index === -1 || targetIndex < 0 || targetIndex >= current.length)
+        return current;
       const copy = current.slice();
       [copy[index], copy[targetIndex]] = [copy[targetIndex], copy[index]];
       return copy;
@@ -124,7 +159,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   }
 
   function addRound(): void {
-    setRounds((current) => [...current, makeRound(crypto.randomUUID(), `Round ${current.length + 1}`)]);
+    setRounds((current) => [
+      ...current,
+      makeRound(crypto.randomUUID(), `Round ${current.length + 1}`),
+    ]);
   }
 
   async function handleSave(): Promise<void> {
@@ -177,23 +215,33 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-7 bg-background p-6 text-center text-foreground">
         <div>
-          <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-magenta">Quiz editor</p>
+          <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-magenta">
+            Quiz editor
+          </p>
           <h1 className="font-display text-3xl">Build a new quiz</h1>
           <p className="mx-auto mt-3 max-w-md text-sm font-bold text-foreground/60">
-            Start from a blank round, or import a CSV of questions to edit from there.
+            Start from a blank round, or import a CSV of questions to edit from
+            there.
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-4">
           <button
             type="button"
             onClick={startFromScratch}
-            className="min-h-16 min-w-56 rounded-2xl bg-magenta px-6 font-display text-lg text-white"
+            className="flex min-h-16 min-w-56 items-center justify-center gap-2 rounded-2xl bg-magenta px-6 font-display text-lg text-white"
           >
+            <FilePlusIcon aria-hidden="true" />
             Start from scratch
           </button>
-          <label className="flex min-h-16 min-w-56 cursor-pointer items-center justify-center rounded-2xl border-2 border-foreground bg-white px-6 font-display text-lg text-foreground">
+          <label className="flex min-h-16 min-w-56 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-foreground bg-white px-6 font-display text-lg text-foreground">
+            <UploadIcon aria-hidden="true" />
             Import CSV
-            <input type="file" accept=".csv,text/csv" onChange={(event) => void handleCsvFile(event)} className="hidden" />
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => void handleCsvFile(event)}
+              className="hidden"
+            />
           </label>
         </div>
         {importError && (
@@ -205,7 +253,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     );
   }
 
-  const questionCount = rounds.reduce((total, round) => total + round.questions.length, 0);
+  const questionCount = rounds.reduce(
+    (total, round) => total + round.questions.length,
+    0,
+  );
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -217,31 +268,49 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           className="min-w-48 flex-1 border-b-2 border-background/40 bg-transparent px-1 py-1 font-display text-xl text-background outline-none"
         />
         <span className="whitespace-nowrap text-xs font-bold text-background/60">
-          {rounds.length} round{rounds.length === 1 ? '' : 's'} · {questionCount} question
+          {rounds.length} round{rounds.length === 1 ? '' : 's'} ·{' '}
+          {questionCount} question
           {questionCount === 1 ? '' : 's'}
         </span>
-        <label className="flex min-h-10 cursor-pointer items-center whitespace-nowrap rounded-xl border-2 border-background/50 px-4 text-xs font-extrabold text-background">
+        <label className="flex min-h-10 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-background/50 px-4 text-xs font-extrabold text-background">
+          <UploadIcon aria-hidden="true" />
           Import CSV
-          <input type="file" accept=".csv,text/csv" onChange={(event) => void handleCsvFile(event)} className="hidden" />
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(event) => void handleCsvFile(event)}
+            className="hidden"
+          />
         </label>
         <button
           type="button"
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="min-h-10 whitespace-nowrap rounded-xl bg-green px-5 text-xs font-extrabold text-white disabled:opacity-50"
+          className="flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-xl bg-green px-5 text-xs font-extrabold text-white disabled:opacity-50"
         >
+          <CheckIcon aria-hidden="true" />
           {savedFlash ? 'Saved ✓' : isSaving ? 'Saving…' : 'Save quiz'}
         </button>
       </div>
 
       {importError && (
-        <p role="alert" className="bg-white px-5 py-3 font-extrabold text-magenta">
+        <p
+          role="alert"
+          className="bg-white px-5 py-3 font-extrabold text-magenta"
+        >
           {importError}
         </p>
       )}
-      {importNotice && <p className="bg-white px-5 py-2 text-sm font-extrabold text-green">{importNotice}</p>}
+      {importNotice && (
+        <p className="bg-white px-5 py-2 text-sm font-extrabold text-green">
+          {importNotice}
+        </p>
+      )}
       {saveError && (
-        <div role="alert" className="bg-white px-5 py-3 font-extrabold text-magenta">
+        <div
+          role="alert"
+          className="bg-white px-5 py-3 font-extrabold text-magenta"
+        >
           <p>{saveError}</p>
           {saveIssues.length > 0 && (
             <ul className="mt-2 flex flex-col gap-1 text-xs font-bold">
@@ -269,9 +338,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         <button
           type="button"
           onClick={addRound}
-          className="self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background"
+          className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background"
         >
-          + Add round
+          <PlusIcon aria-hidden="true" />
+          Add round
         </button>
       </div>
     </main>

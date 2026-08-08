@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { EyeClosedIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 
 interface PasswordInputProps {
   id: string;
@@ -9,7 +10,12 @@ interface PasswordInputProps {
   autoComplete?: string;
 }
 
-export function PasswordInput({ id, value, onChange, autoComplete }: PasswordInputProps) {
+export function PasswordInput({
+  id,
+  value,
+  onChange,
+  autoComplete,
+}: PasswordInputProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -26,9 +32,13 @@ export function PasswordInput({ id, value, onChange, autoComplete }: PasswordInp
         type="button"
         onClick={() => setIsVisible((current) => !current)}
         aria-label={isVisible ? 'Hide password' : 'Show password'}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-extrabold tracking-wide text-foreground/55"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/55"
       >
-        {isVisible ? 'Hide' : 'Show'}
+        {isVisible ? (
+          <EyeClosedIcon aria-hidden="true" />
+        ) : (
+          <EyeOpenIcon aria-hidden="true" />
+        )}
       </button>
     </div>
   );

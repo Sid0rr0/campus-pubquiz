@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import Link from 'next/link';
+import { PersonIcon } from '@radix-ui/react-icons';
 import { PasswordInput } from '@/app/components/password-input';
 
 interface RegisterFormProps {
@@ -69,8 +70,9 @@ export function RegisterForm({
       />
       <button
         type="submit"
-        className="mt-2 min-h-12 rounded-xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
+        className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
       >
+        <PersonIcon aria-hidden="true" />
         Register
       </button>
       <Link href="/login" className="mt-1 text-sm font-bold underline">

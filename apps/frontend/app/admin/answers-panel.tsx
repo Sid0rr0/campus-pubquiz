@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import {
   splitPipeList,
   type AnswerView,
@@ -137,7 +138,7 @@ export function AnswersPanel({
                 onClick={nav.onPrevious}
                 className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
               >
-                ←
+                <ChevronLeftIcon aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -146,7 +147,7 @@ export function AnswersPanel({
                 onClick={nav.onNext}
                 className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
               >
-                →
+                <ChevronRightIcon aria-hidden="true" />
               </button>
             </div>
           )}

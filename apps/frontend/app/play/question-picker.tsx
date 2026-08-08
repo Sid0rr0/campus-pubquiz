@@ -1,3 +1,4 @@
+import { CheckIcon } from '@radix-ui/react-icons';
 import type { BlockQuestionView } from '@campus-pubquiz/types';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 
@@ -8,15 +9,28 @@ interface QuestionPickerProps {
   onSelect: (questionId: BlockQuestionView['id']) => void;
 }
 
-export function QuestionPicker({ pickerRounds, selectedQuestionId, myAnswers, onSelect }: QuestionPickerProps) {
+export function QuestionPicker({
+  pickerRounds,
+  selectedQuestionId,
+  myAnswers,
+  onSelect,
+}: QuestionPickerProps) {
   return (
     <div className="flex flex-col gap-2">
       {pickerRounds.map((round) => (
-        <div key={round.roundNumber} className="flex flex-wrap items-center gap-2">
+        <div
+          key={round.roundNumber}
+          className="flex flex-wrap items-center gap-2"
+        >
           {pickerRounds.length > 1 && (
-            <span className="text-xs font-extrabold tracking-wide text-foreground/45">R{round.roundNumber}</span>
+            <span className="text-xs font-extrabold tracking-wide text-foreground/45">
+              R{round.roundNumber}
+            </span>
           )}
-          <nav aria-label={`Round ${round.roundNumber} questions`} className="flex flex-wrap gap-2">
+          <nav
+            aria-label={`Round ${round.roundNumber} questions`}
+            className="flex flex-wrap gap-2"
+          >
             {round.slots.map((slot) => {
               if (!slot.question) {
                 return (
@@ -47,7 +61,9 @@ export function QuestionPicker({ pickerRounds, selectedQuestionId, myAnswers, on
                   }
                 >
                   {slot.questionNumberInRound}
-                  {isAnswered && <span aria-hidden="true" className="ml-1 text-green">✓</span>}
+                  {isAnswered && (
+                    <CheckIcon aria-hidden="true" className="ml-1 text-green" />
+                  )}
                 </button>
               );
             })}

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ExitIcon } from '@radix-ui/react-icons';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { QuestionBrowser } from '@/app/play/question-browser';
@@ -32,7 +33,9 @@ function PlayPageContent() {
     handleLogOut,
   } = useTeamJoin(codeFromUrl);
   // null = follow the question currently shown on the big screen.
-  const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(null);
+  const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(
+    null,
+  );
   const gameStatus = snapshot?.progress.status;
   const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
 
@@ -64,8 +67,12 @@ function PlayPageContent() {
   if (!teamName || (connectionError && !team)) {
     return (
       <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
-        <h1 className="text-center font-display text-3xl text-magenta">🍺 Join the quiz</h1>
-        <p className="-mt-2 text-center text-sm text-foreground/65">Grab a table, pick a name</p>
+        <h1 className="text-center font-display text-3xl text-magenta">
+          🍺 Join the quiz
+        </h1>
+        <p className="-mt-2 text-center text-sm text-foreground/65">
+          Grab a table, pick a name
+        </p>
         <JoinForm
           nameInput={nameInput}
           onNameInputChange={setNameInput}
@@ -81,8 +88,9 @@ function PlayPageContent() {
           <button
             type="button"
             onClick={handleLogOut}
-            className="mx-auto text-xs font-extrabold text-foreground/45 underline"
+            className="mx-auto flex items-center gap-1 text-xs font-extrabold text-foreground/45 underline"
           >
+            <ExitIcon aria-hidden="true" />
             Log out
           </button>
         )}
@@ -93,13 +101,16 @@ function PlayPageContent() {
   if (!snapshot) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background text-foreground">
-        <p className="text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+        <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+          Playing as {teamName}
+        </p>
         <p className="font-display text-xl">Connecting…</p>
         <button
           type="button"
           onClick={handleLogOut}
-          className="text-xs font-extrabold text-foreground/45 underline"
+          className="flex items-center gap-1 text-xs font-extrabold text-foreground/45 underline"
         >
+          <ExitIcon aria-hidden="true" />
           Log out
         </button>
       </main>
@@ -145,23 +156,28 @@ function PlayPageContent() {
   // too, so teams can review the block they just answered — unless the
   // leaderboard overlay is toggled on, which takes over the screen instead.
   const showBlockBrowser =
-    Boolean(selectedQuestion) && (isAnswerable || (!progress.isLeaderboardVisible && isBreakOrReveal));
+    Boolean(selectedQuestion) &&
+    (isAnswerable || (!progress.isLeaderboardVisible && isBreakOrReveal));
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-sm font-extrabold tracking-wide text-foreground/55">Playing as {teamName}</p>
+        <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+          Playing as {teamName}
+        </p>
         <button
           type="button"
           onClick={handleLogOut}
-          className="text-xs font-extrabold text-foreground/45 underline"
+          className="flex items-center gap-1 text-xs font-extrabold text-foreground/45 underline"
         >
+          <ExitIcon aria-hidden="true" />
           Log out
         </button>
       </div>
       {team && (
         <p className="mb-4 text-xs text-foreground/45">
-          Team code: {team.teamCode} — save it to play as this team another night.
+          Team code: {team.teamCode} — save it to play as this team another
+          night.
         </p>
       )}
       <GameStatusScreens

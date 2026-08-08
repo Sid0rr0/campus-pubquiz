@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { CheckIcon } from '@radix-ui/react-icons';
 import type { QuestionView } from '@campus-pubquiz/types';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
@@ -62,12 +63,10 @@ export function AnswerForm({
               </span>
               {option}
               {isChosen && (
-                <span
+                <CheckIcon
                   aria-hidden="true"
-                  className="ml-auto font-display text-magenta"
-                >
-                  ✓
-                </span>
+                  className="ml-auto text-magenta"
+                />
               )}
             </button>
           );
@@ -103,8 +102,9 @@ export function AnswerForm({
       )}
       <button
         type="submit"
-        className="min-h-14 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
       >
+        <CheckIcon aria-hidden="true" />
         Submit
       </button>
     </form>

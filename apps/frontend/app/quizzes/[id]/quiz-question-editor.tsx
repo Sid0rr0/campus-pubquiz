@@ -1,6 +1,13 @@
 'use client';
 
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  Cross2Icon,
+  PlusIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import {
   extractYoutubeVideoId,
   type QuestionType,
 } from '@campus-pubquiz/types';
@@ -193,26 +200,26 @@ export function QuizQuestionEditor({
           onClick={onMoveUp}
           disabled={isFirst}
           aria-label="Move question up"
-          className="mt-1 h-7 w-7 shrink-0 rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
         >
-          ↑
+          <ArrowUpIcon aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
           aria-label="Move question down"
-          className="mt-1 h-7 w-7 shrink-0 rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
         >
-          ↓
+          <ArrowDownIcon aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={onDelete}
           aria-label="Delete question"
-          className="mt-1 h-7 w-7 shrink-0 rounded-lg border-2 border-magenta/30 font-extrabold text-magenta"
+          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta"
         >
-          ×
+          <TrashIcon aria-hidden="true" />
         </button>
       </div>
 
@@ -266,18 +273,19 @@ export function QuizQuestionEditor({
                 onClick={() => removeOption(optionIndex)}
                 disabled={question.options.length <= 2}
                 aria-label={`Remove option ${optionIndex + 1}`}
-                className="h-7 w-7 shrink-0 rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
               >
-                ×
+                <Cross2Icon aria-hidden="true" />
               </button>
             </div>
           ))}
           <button
             type="button"
             onClick={addOption}
-            className="self-start text-xs font-extrabold text-foreground/60"
+            className="flex items-center gap-1 self-start text-xs font-extrabold text-foreground/60"
           >
-            + Add option
+            <PlusIcon aria-hidden="true" />
+            Add option
           </button>
         </div>
       ) : isSort ? (
@@ -303,36 +311,37 @@ export function QuizQuestionEditor({
                 onClick={() => moveSortItem(itemIndex, -1)}
                 disabled={itemIndex === 0}
                 aria-label={`Move item ${itemIndex + 1} up`}
-                className="h-7 w-7 shrink-0 rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
               >
-                ↑
+                <ArrowUpIcon aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, 1)}
                 disabled={itemIndex === question.sortItems.length - 1}
                 aria-label={`Move item ${itemIndex + 1} down`}
-                className="h-7 w-7 shrink-0 rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
               >
-                ↓
+                <ArrowDownIcon aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => removeSortItem(itemIndex)}
                 disabled={question.sortItems.length <= 2}
                 aria-label={`Remove item ${itemIndex + 1}`}
-                className="h-7 w-7 shrink-0 rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
               >
-                ×
+                <Cross2Icon aria-hidden="true" />
               </button>
             </div>
           ))}
           <button
             type="button"
             onClick={addSortItem}
-            className="self-start text-xs font-extrabold text-foreground/60"
+            className="flex items-center gap-1 self-start text-xs font-extrabold text-foreground/60"
           >
-            + Add item
+            <PlusIcon aria-hidden="true" />
+            Add item
           </button>
         </div>
       ) : isMatch ? (
@@ -366,18 +375,19 @@ export function QuizQuestionEditor({
                 onClick={() => removeMatchPair(pairIndex)}
                 disabled={question.matchPairs.length <= 2}
                 aria-label={`Remove pair ${pairIndex + 1}`}
-                className="h-7 w-7 shrink-0 rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
               >
-                ×
+                <Cross2Icon aria-hidden="true" />
               </button>
             </div>
           ))}
           <button
             type="button"
             onClick={addMatchPair}
-            className="self-start text-xs font-extrabold text-foreground/60"
+            className="flex items-center gap-1 self-start text-xs font-extrabold text-foreground/60"
           >
-            + Add pair
+            <PlusIcon aria-hidden="true" />
+            Add pair
           </button>
         </div>
       ) : (

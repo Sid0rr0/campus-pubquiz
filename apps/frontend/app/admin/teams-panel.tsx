@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
 import type { BonusCategory, TeamView } from '@campus-pubquiz/types';
 import { BonusAwardForm } from '@/app/admin/bonus-award-form';
 
@@ -30,8 +31,12 @@ export function TeamsPanel({
   if (teams.length === 0) {
     return (
       <section className={`flex flex-col gap-2 ${className}`}>
-        <h2 className="text-xs font-extrabold tracking-wide text-background/60">Teams (0)</h2>
-        <p className="text-sm font-bold text-background/50">No teams have joined yet.</p>
+        <h2 className="text-xs font-extrabold tracking-wide text-background/60">
+          Teams (0)
+        </h2>
+        <p className="text-sm font-bold text-background/50">
+          No teams have joined yet.
+        </p>
       </section>
     );
   }
@@ -43,7 +48,8 @@ export function TeamsPanel({
       </h2>
       <ul className="flex flex-col gap-1.5">
         {teams.map((team) => {
-          const hasAnswered = showAnswerStatus && answeredTeamIds.includes(team.teamId);
+          const hasAnswered =
+            showAnswerStatus && answeredTeamIds.includes(team.teamId);
           const isAwarding = awardingTeamId === team.teamId;
           return (
             <li
@@ -56,10 +62,17 @@ export function TeamsPanel({
               className="flex flex-col gap-1.5"
             >
               <div className="flex items-center gap-1.5 text-sm font-bold">
-                <span aria-hidden="true" className={team.isConnected ? 'text-green' : 'text-background/30'}>
+                <span
+                  aria-hidden="true"
+                  className={
+                    team.isConnected ? 'text-green' : 'text-background/30'
+                  }
+                >
                   ●
                 </span>
-                <span className="sr-only">{team.isConnected ? 'Connected' : 'Disconnected'}</span>
+                <span className="sr-only">
+                  {team.isConnected ? 'Connected' : 'Disconnected'}
+                </span>
                 {team.teamName}
                 {hasAnswered && (
                   <span aria-hidden="true" className="ml-1 text-cyan">
@@ -68,16 +81,20 @@ export function TeamsPanel({
                 )}
                 <button
                   type="button"
-                  onClick={() => setAwardingTeamId(isAwarding ? null : team.teamId)}
-                  className="ml-auto text-xs font-extrabold text-cyan underline"
+                  onClick={() =>
+                    setAwardingTeamId(isAwarding ? null : team.teamId)
+                  }
+                  className="ml-auto flex items-center gap-1 text-xs font-extrabold text-cyan underline"
                 >
+                  <StarIcon aria-hidden="true" />
                   Bonus
                 </button>
                 <button
                   type="button"
                   onClick={() => onKickTeam(team.teamId)}
-                  className="text-xs font-extrabold text-magenta underline"
+                  className="flex items-center gap-1 text-xs font-extrabold text-magenta underline"
                 >
+                  <Cross2Icon aria-hidden="true" />
                   Kick
                 </button>
               </div>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { ExitIcon, GearIcon, ListBulletIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/app/lib/use-auth';
 import { Header } from '@/app/components/header';
 
@@ -42,15 +43,28 @@ function SiteHeaderContent({ isHome }: { isHome: boolean }) {
             <span className="text-foreground/60">{auth.user.username}</span>
             {auth.user.role === 'admin' && (
               <>
-                <Link href="/sessions" className="underline">
+                <Link
+                  href="/sessions"
+                  className="flex items-center gap-1 underline"
+                >
+                  <ListBulletIcon aria-hidden="true" />
                   Sessions
                 </Link>
-                <Link href="/admin/users" className="underline">
+                <Link
+                  href="/admin/users"
+                  className="flex items-center gap-1 underline"
+                >
+                  <GearIcon aria-hidden="true" />
                   Users
                 </Link>
               </>
             )}
-            <button type="button" onClick={handleLogout} className="underline">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-1 underline"
+            >
+              <ExitIcon aria-hidden="true" />
               Log out
             </button>
           </>

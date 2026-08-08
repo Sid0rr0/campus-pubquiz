@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { EnterIcon } from '@radix-ui/react-icons';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
 
 interface JoinFormProps {
@@ -38,17 +39,27 @@ export function JoinForm({
   // A stored team code (returning team) or a connection error asking for one
   // (name collision) both mean the field should just be there already —
   // only a fresh join with nothing to say yet starts it collapsed.
-  const showTeamCode = alwaysShowTeamCode || teamCodeRevealed || Boolean(teamCodeInput) || Boolean(connectionError);
+  const showTeamCode =
+    alwaysShowTeamCode ||
+    teamCodeRevealed ||
+    Boolean(teamCodeInput) ||
+    Boolean(connectionError);
 
   return (
     <>
       {connectionError && (
-        <p role="alert" className="mb-3 text-center text-sm font-extrabold text-magenta">
+        <p
+          role="alert"
+          className="mb-3 text-center text-sm font-extrabold text-magenta"
+        >
           {connectionError}
         </p>
       )}
       <form onSubmit={onSubmit} className="flex flex-col gap-2">
-        <label htmlFor="join-team-name" className="text-xs font-extrabold tracking-wide text-foreground/55">
+        <label
+          htmlFor="join-team-name"
+          className="text-xs font-extrabold tracking-wide text-foreground/55"
+        >
           Team name
         </label>
         <input
@@ -58,8 +69,14 @@ export function JoinForm({
           placeholder="The Answer Key"
           className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />
-        <LiveSessionSelect value={codeInput} onSelectSession={onCodeInputChange} />
-        <label htmlFor="join-game-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
+        <LiveSessionSelect
+          value={codeInput}
+          onSelectSession={onCodeInputChange}
+        />
+        <label
+          htmlFor="join-game-code"
+          className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
+        >
           Game code
         </label>
         <input
@@ -74,7 +91,10 @@ export function JoinForm({
         />
         {showTeamCode ? (
           <>
-            <label htmlFor="join-team-code" className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55">
+            <label
+              htmlFor="join-team-code"
+              className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
+            >
               Team code
             </label>
             <input
@@ -99,8 +119,9 @@ export function JoinForm({
         )}
         <button
           type="submit"
-          className="mt-4 min-h-14 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_4px_0_#b8006d]"
+          className="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_4px_0_#b8006d]"
         >
+          <EnterIcon aria-hidden="true" />
           Join the quiz
         </button>
       </form>

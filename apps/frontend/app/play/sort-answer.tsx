@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowDownIcon, ArrowUpIcon } from '@radix-ui/react-icons';
 import { splitPipeList } from '@campus-pubquiz/types';
 
 interface SortAnswerProps {
@@ -47,7 +48,7 @@ export function SortAnswer({
             disabled={itemIndex === 0}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
           >
-            ↑
+            <ArrowUpIcon aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -56,7 +57,7 @@ export function SortAnswer({
             disabled={itemIndex === order.length - 1}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
           >
-            ↓
+            <ArrowDownIcon aria-hidden="true" />
           </button>
         </li>
       ))}

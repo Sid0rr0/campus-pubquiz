@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
 import type { UserRole, UsersListedPayload } from '@campus-pubquiz/types';
 import { approveUser, deactivateUser, fetchUsers } from '@/app/lib/auth-api';
 
 export function UsersPanel() {
   const [users, setUsers] = useState<UsersListedPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [roleSelections, setRoleSelections] = useState<Record<number, UserRole>>({});
+  const [roleSelections, setRoleSelections] = useState<
+    Record<number, UserRole>
+  >({});
   // Bumped on every refetch() call so an in-flight response from a
   // superseded request (e.g. a second Approve click before the first
   // refetch resolves) can be told apart from the latest one and ignored.
@@ -23,7 +26,11 @@ export function UsersPanel() {
       })
       .catch((fetchError: unknown) => {
         if (requestGeneration !== requestGenerationRef.current) return;
-        setError(fetchError instanceof Error ? fetchError.message : 'Could not load users');
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : 'Could not load users',
+        );
       });
   }, []);
 
@@ -37,7 +44,11 @@ export function UsersPanel() {
       await approveUser(userId, role);
       refetch();
     } catch (approveError) {
-      setError(approveError instanceof Error ? approveError.message : 'Could not approve user');
+      setError(
+        approveError instanceof Error
+          ? approveError.message
+          : 'Could not approve user',
+      );
     }
   }
 
@@ -46,7 +57,11 @@ export function UsersPanel() {
       await deactivateUser(userId);
       refetch();
     } catch (deactivateError) {
-      setError(deactivateError instanceof Error ? deactivateError.message : 'Could not deactivate user');
+      setError(
+        deactivateError instanceof Error
+          ? deactivateError.message
+          : 'Could not deactivate user',
+      );
     }
   }
 
@@ -75,7 +90,9 @@ export function UsersPanel() {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg">Pending approval</h2>
-        {users.pending.length === 0 && <p className="text-sm text-foreground/60">No pending accounts.</p>}
+        {users.pending.length === 0 && (
+          <p className="text-sm text-foreground/60">No pending accounts.</p>
+        )}
         <ul className="flex flex-col gap-2">
           {users.pending.map((pendingUser) => (
             <li
@@ -100,8 +117,9 @@ export function UsersPanel() {
               <button
                 type="button"
                 onClick={() => void handleApprove(pendingUser.id)}
-                className="ml-auto rounded-lg bg-magenta px-3 py-1 text-sm font-extrabold text-white"
+                className="ml-auto flex items-center gap-1.5 rounded-lg bg-magenta px-3 py-1 text-sm font-extrabold text-white"
               >
+                <CheckIcon aria-hidden="true" />
                 Approve
               </button>
             </li>
@@ -118,12 +136,15 @@ export function UsersPanel() {
               className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3"
             >
               <span className="font-bold">{activeUser.username}</span>
-              <span className="text-sm text-foreground/60">{activeUser.role}</span>
+              <span className="text-sm text-foreground/60">
+                {activeUser.role}
+              </span>
               <button
                 type="button"
                 onClick={() => void handleDeactivate(activeUser.id)}
-                className="ml-auto rounded-lg border border-magenta px-3 py-1 text-sm font-extrabold text-magenta"
+                className="ml-auto flex items-center gap-1.5 rounded-lg border border-magenta px-3 py-1 text-sm font-extrabold text-magenta"
               >
+                <LockClosedIcon aria-hidden="true" />
                 Deactivate
               </button>
             </li>
@@ -140,7 +161,9 @@ export function UsersPanel() {
               className="flex items-center gap-3 rounded-lg border border-foreground/15 p-3 opacity-60"
             >
               <span className="font-bold">{deactivatedUser.username}</span>
-              <span className="text-sm text-foreground/60">{deactivatedUser.role}</span>
+              <span className="text-sm text-foreground/60">
+                {deactivatedUser.role}
+              </span>
             </li>
           ))}
         </ul>

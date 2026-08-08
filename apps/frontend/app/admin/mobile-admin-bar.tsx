@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
+import {
+  Cross2Icon,
+  ExternalLinkIcon,
+  HamburgerMenuIcon,
+  LoopIcon,
+} from '@radix-ui/react-icons';
 import type { GameAction } from '@campus-pubquiz/types';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
@@ -52,25 +58,25 @@ export function MobileAdminBar({
           <button
             type="button"
             aria-label="Open quiz master menu"
-            className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-foreground/20"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20"
           >
-            <span aria-hidden="true" className="h-0.5 w-5 bg-foreground" />
-            <span aria-hidden="true" className="h-0.5 w-5 bg-foreground" />
-            <span aria-hidden="true" className="h-0.5 w-5 bg-foreground" />
+            <HamburgerMenuIcon aria-hidden="true" />
           </button>
         </Dialog.Trigger>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
           <Dialog.Content className="fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col gap-5 overflow-y-auto bg-foreground p-5 text-background">
             <div className="flex items-center justify-between">
-              <Dialog.Title className="font-display text-lg">Quiz Master</Dialog.Title>
+              <Dialog.Title className="font-display text-lg">
+                Quiz Master
+              </Dialog.Title>
               <Dialog.Close asChild>
                 <button
                   type="button"
                   aria-label="Close menu"
                   className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-background/20 text-lg font-extrabold"
                 >
-                  ×
+                  <Cross2Icon aria-hidden="true" />
                 </button>
               </Dialog.Close>
             </div>
@@ -79,15 +85,26 @@ export function MobileAdminBar({
                 {connectionError}
               </p>
             )}
-            {activeQuizTitle && <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>}
+            {activeQuizTitle && (
+              <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>
+            )}
             <p className="text-sm font-bold">
               Status: {progressStatus} ({joinCode})
             </p>
             <div className="flex gap-3 text-xs font-extrabold underline">
-              <Link href={`/display?code=${joinCode}`} target="_blank" rel="noopener noreferrer">
+              <Link
+                href={`/display?code=${joinCode}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1"
+              >
+                <ExternalLinkIcon aria-hidden="true" />
                 Open display
               </Link>
-              <Link href="/sessions">Switch session</Link>
+              <Link href="/sessions" className="flex items-center gap-1">
+                <LoopIcon aria-hidden="true" />
+                Switch session
+              </Link>
             </div>
             <AdminActions
               canStartQuiz={canStartQuiz}

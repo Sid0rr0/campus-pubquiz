@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
 import type { BonusCategory } from '@campus-pubquiz/types';
 
 interface BonusAwardFormProps {
@@ -26,7 +27,9 @@ export function BonusAwardForm({ onAward, onCancel }: BonusAwardFormProps) {
   const points = Number(pointsInput);
   const isCustom = category === 'custom';
   const canSubmit =
-    Number.isFinite(points) && points !== 0 && (!isCustom || reason.trim().length > 0);
+    Number.isFinite(points) &&
+    points !== 0 &&
+    (!isCustom || reason.trim().length > 0);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -60,7 +63,9 @@ export function BonusAwardForm({ onAward, onCancel }: BonusAwardFormProps) {
           onClick={() => setCategory('custom')}
           aria-pressed={isCustom}
           className={`rounded-full border-2 px-2.5 py-1 font-extrabold ${
-            isCustom ? 'border-cyan bg-cyan text-dark-blue' : 'border-background/30 text-background'
+            isCustom
+              ? 'border-cyan bg-cyan text-dark-blue'
+              : 'border-background/30 text-background'
           }`}
         >
           Custom
@@ -91,15 +96,17 @@ export function BonusAwardForm({ onAward, onCancel }: BonusAwardFormProps) {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="rounded-full bg-magenta px-3 py-1 font-extrabold text-background disabled:opacity-40"
+          className="flex items-center gap-1 rounded-full bg-magenta px-3 py-1 font-extrabold text-background disabled:opacity-40"
         >
+          <StarIcon aria-hidden="true" />
           Award
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full border-2 border-background/30 px-3 py-1 font-bold"
+          className="flex items-center gap-1 rounded-full border-2 border-background/30 px-3 py-1 font-bold"
         >
+          <Cross2Icon aria-hidden="true" />
           Cancel
         </button>
       </div>

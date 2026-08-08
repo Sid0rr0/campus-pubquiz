@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as Dialog from '@radix-ui/react-dialog';
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  Cross2Icon,
+  Pencil1Icon,
+  PlayIcon,
+  PlusIcon,
+} from '@radix-ui/react-icons';
 import type {
   ActiveSessionSummary,
   QuizzesListedPayload,
@@ -147,16 +155,18 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                     <button
                       type="button"
                       onClick={() => void handleClose(session.joinCode)}
-                      className="min-h-10 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
+                      className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
                     >
+                      <Cross2Icon aria-hidden="true" />
                       Close
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => onOpenSession(session.joinCode)}
-                    className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white"
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white"
                   >
+                    <ArrowRightIcon aria-hidden="true" />
                     Open
                   </button>
                 </div>
@@ -169,8 +179,9 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
             <h2 className="font-display text-xl">Start a New Session</h2>
             <Link
               href="/quizzes/new"
-              className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white flex items-center"
+              className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white flex items-center gap-1.5"
             >
+              <PlusIcon aria-hidden="true" />
               New Quiz
             </Link>
           </div>
@@ -192,16 +203,18 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                 <div className="flex gap-2">
                   <Link
                     href={`/quizzes/${quiz.id}`}
-                    className="flex min-h-8 shrink-0 items-center rounded-xl border border-foreground/30 px-2 text-sm font-bold"
+                    className="flex min-h-8 shrink-0 items-center gap-1 rounded-xl border border-foreground/30 px-2 text-sm font-bold"
                   >
+                    <Pencil1Icon aria-hidden="true" />
                     Edit
                   </Link>
 
                   <button
                     disabled={isCreating}
                     onClick={() => setPendingQuizId(quiz.id)}
-                    className="min-h-8 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
+                    className="flex min-h-8 items-center gap-1.5 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
                   >
+                    <PlayIcon aria-hidden="true" />
                     Start
                   </button>
                 </div>
@@ -228,16 +241,18 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                 type="button"
                 disabled={isCreating}
                 onClick={() => setPendingQuizId(null)}
-                className="min-h-10 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold disabled:opacity-40"
+                className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold disabled:opacity-40"
               >
+                <Cross2Icon aria-hidden="true" />
                 Cancel
               </button>
               <button
                 type="button"
                 disabled={isCreating}
                 onClick={() => void handleConfirmCreate()}
-                className="min-h-10 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
+                className="flex min-h-10 items-center gap-1.5 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
               >
+                <CheckIcon aria-hidden="true" />
                 {isCreating ? 'Starting…' : 'Confirm'}
               </button>
             </div>

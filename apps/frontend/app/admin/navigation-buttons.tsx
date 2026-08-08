@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import type { GameAction, GameStatus } from '@campus-pubquiz/types';
 
 interface NavigationButtonsProps {
@@ -50,18 +51,24 @@ export function NavigationButtons({
         <button
           onClick={() => onAction('PREVIOUS')}
           disabled={isLeaderboardVisible}
-          className="min-h-11 flex-1 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
         >
+          <ChevronLeftIcon aria-hidden="true" />
           Previous
         </button>
       )}
       {showAdvanceSlot && (
         <button
-          onClick={() => onAction(hasUnrevealedTeams ? 'REVEAL_NEXT_TEAM' : 'ADVANCE')}
+          onClick={() =>
+            onAction(hasUnrevealedTeams ? 'REVEAL_NEXT_TEAM' : 'ADVANCE')
+          }
           disabled={isLeaderboardVisible && !hasUnrevealedTeams}
-          className="min-h-11 flex-1 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
         >
-          {hasUnrevealedTeams ? 'Show Next Team' : getAdvanceLabel(progressStatus)}
+          {hasUnrevealedTeams
+            ? 'Show Next Team'
+            : getAdvanceLabel(progressStatus)}
+          <ChevronRightIcon aria-hidden="true" />
         </button>
       )}
     </div>

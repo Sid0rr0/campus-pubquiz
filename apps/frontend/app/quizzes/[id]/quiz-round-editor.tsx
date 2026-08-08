@@ -1,6 +1,16 @@
 'use client';
 
-import { makeQuestion, type EditorQuestion, type EditorRound } from '@/app/quizzes/[id]/quiz-draft-state';
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import {
+  makeQuestion,
+  type EditorQuestion,
+  type EditorRound,
+} from '@/app/quizzes/[id]/quiz-draft-state';
 import { QuizQuestionEditor } from '@/app/quizzes/[id]/quiz-question-editor';
 
 interface QuizRoundEditorProps {
@@ -22,7 +32,10 @@ export function QuizRoundEditor({
   onMoveUp,
   onMoveDown,
 }: QuizRoundEditorProps) {
-  function updateQuestion(questionId: string, patch: Partial<EditorQuestion>): void {
+  function updateQuestion(
+    questionId: string,
+    patch: Partial<EditorQuestion>,
+  ): void {
     onChange({
       questions: round.questions.map((question) =>
         question.id === questionId ? { ...question, ...patch } : question,
@@ -31,19 +44,35 @@ export function QuizRoundEditor({
   }
 
   function deleteQuestion(questionId: string): void {
-    onChange({ questions: round.questions.filter((question) => question.id !== questionId) });
+    onChange({
+      questions: round.questions.filter(
+        (question) => question.id !== questionId,
+      ),
+    });
   }
 
   function addQuestion(): void {
-    onChange({ questions: [...round.questions, makeQuestion(crypto.randomUUID())] });
+    onChange({
+      questions: [...round.questions, makeQuestion(crypto.randomUUID())],
+    });
   }
 
   function moveQuestion(questionId: string, direction: -1 | 1): void {
-    const index = round.questions.findIndex((question) => question.id === questionId);
+    const index = round.questions.findIndex(
+      (question) => question.id === questionId,
+    );
     const targetIndex = index + direction;
-    if (index === -1 || targetIndex < 0 || targetIndex >= round.questions.length) return;
+    if (
+      index === -1 ||
+      targetIndex < 0 ||
+      targetIndex >= round.questions.length
+    )
+      return;
     const questions = round.questions.slice();
-    [questions[index], questions[targetIndex]] = [questions[targetIndex], questions[index]];
+    [questions[index], questions[targetIndex]] = [
+      questions[targetIndex],
+      questions[index],
+    ];
     onChange({ questions });
   }
 
@@ -70,26 +99,26 @@ export function QuizRoundEditor({
           onClick={onMoveUp}
           disabled={isFirst}
           aria-label="Move round up"
-          className="h-8 w-8 rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
         >
-          ↑
+          <ArrowUpIcon aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
           aria-label="Move round down"
-          className="h-8 w-8 rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
         >
-          ↓
+          <ArrowDownIcon aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={onDelete}
           aria-label="Delete round"
-          className="h-8 w-8 rounded-lg border-2 border-magenta/30 font-extrabold text-magenta"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta"
         >
-          ×
+          <TrashIcon aria-hidden="true" />
         </button>
       </div>
 
@@ -112,9 +141,10 @@ export function QuizRoundEditor({
       <button
         type="button"
         onClick={addQuestion}
-        className="self-start rounded-lg border-2 border-dashed border-foreground/30 px-4 py-2 text-sm font-extrabold text-foreground"
+        className="flex items-center gap-1.5 self-start rounded-lg border-2 border-dashed border-foreground/30 px-4 py-2 text-sm font-extrabold text-foreground"
       >
-        + Add question
+        <PlusIcon aria-hidden="true" />
+        Add question
       </button>
     </div>
   );

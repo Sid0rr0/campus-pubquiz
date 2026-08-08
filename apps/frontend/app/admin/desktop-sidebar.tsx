@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ExternalLinkIcon, LoopIcon } from '@radix-ui/react-icons';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
 import { TeamsPanel } from '@/app/admin/teams-panel';
@@ -44,15 +45,26 @@ export function DesktopSidebar({
           {connectionError}
         </p>
       )}
-      {activeQuizTitle && <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>}
+      {activeQuizTitle && (
+        <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>
+      )}
       <p className="text-sm font-bold">
         Status: {progressStatus} ({joinCode})
       </p>
       <div className="flex gap-3 text-xs font-extrabold underline">
-        <Link href={`/display?code=${joinCode}`} target="_blank" rel="noopener noreferrer">
+        <Link
+          href={`/display?code=${joinCode}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1"
+        >
+          <ExternalLinkIcon aria-hidden="true" />
           Open display
         </Link>
-        <Link href="/sessions">Switch session</Link>
+        <Link href="/sessions" className="flex items-center gap-1">
+          <LoopIcon aria-hidden="true" />
+          Switch session
+        </Link>
       </div>
       <div className="flex flex-col gap-2">
         <NavigationButtons

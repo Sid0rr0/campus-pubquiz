@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowRightIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
 import { fetchPublicSessions, SessionApiError } from '@/app/lib/sessions-api';
 
@@ -17,7 +18,10 @@ interface DisplaySessionPickerProps {
  * `/sessions/public` endpoint instead of gating on SessionGuard like the
  * admin picker does.
  */
-export function DisplaySessionPicker({ onSelectSession, connectionError }: DisplaySessionPickerProps) {
+export function DisplaySessionPicker({
+  onSelectSession,
+  connectionError,
+}: DisplaySessionPickerProps) {
   const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +43,11 @@ export function DisplaySessionPicker({ onSelectSession, connectionError }: Displ
       })
       .catch((fetchError: unknown) => {
         if (!isMountedRef.current) return;
-        setError(fetchError instanceof SessionApiError ? fetchError.message : 'Could not load sessions');
+        setError(
+          fetchError instanceof SessionApiError
+            ? fetchError.message
+            : 'Could not load sessions',
+        );
       })
       .finally(() => {
         if (isMountedRef.current) setIsLoading(false);
@@ -69,7 +77,9 @@ export function DisplaySessionPicker({ onSelectSession, connectionError }: Displ
         </p>
       )}
       {!isLoading && sessions.length === 0 && !error && (
-        <p className="text-foreground/55">No games running yet — start one from the admin console.</p>
+        <p className="text-foreground/55">
+          No games running yet — start one from the admin console.
+        </p>
       )}
       <ul className="flex w-full max-w-xl flex-col gap-3">
         {sessions.map((session) => (
@@ -82,10 +92,14 @@ export function DisplaySessionPicker({ onSelectSession, connectionError }: Displ
               <span className="flex flex-col">
                 <span className="font-extrabold">{session.quizTitle}</span>
                 <span className="text-xs text-foreground/55">
-                  {session.status} · {session.teamCount} teams · {session.joinCode}
+                  {session.status} · {session.teamCount} teams ·{' '}
+                  {session.joinCode}
                 </span>
               </span>
-              <span className="font-display text-lg text-magenta">Watch →</span>
+              <span className="flex items-center gap-1 font-display text-lg text-magenta">
+                Watch
+                <ArrowRightIcon aria-hidden="true" />
+              </span>
             </button>
           </li>
         ))}
@@ -94,8 +108,9 @@ export function DisplaySessionPicker({ onSelectSession, connectionError }: Displ
         type="button"
         onClick={handleRefreshClick}
         disabled={isLoading}
-        className="text-sm font-extrabold text-foreground/55 underline disabled:opacity-40"
+        className="flex items-center gap-1.5 text-sm font-extrabold text-foreground/55 underline disabled:opacity-40"
       >
+        <ReloadIcon aria-hidden="true" />
         {isLoading ? 'Refreshing…' : 'Refresh'}
       </button>
     </main>
