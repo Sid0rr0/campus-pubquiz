@@ -7,15 +7,21 @@ interface QuestionOpenScreenProps {
   totalTeams: number;
 }
 
-export function QuestionOpenScreen({ question, answeredCount, totalTeams }: QuestionOpenScreenProps) {
+export function QuestionOpenScreen({
+  question,
+  answeredCount,
+  totalTeams,
+}: QuestionOpenScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
       <QuestionDisplay
+        type={question.type}
         prompt={question.prompt}
         mediaUrl={question.mediaUrl}
         mediaStartSeconds={question.mediaStartSeconds}
         mediaEndSeconds={question.mediaEndSeconds}
         options={question.options}
+        matchTargets={question.matchTargets}
         mediaTestIdPrefix="question"
       />
       {totalTeams > 0 && (

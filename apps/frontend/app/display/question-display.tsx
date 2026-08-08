@@ -1,4 +1,8 @@
-import { extractYoutubeVideoId } from '@campus-pubquiz/types';
+import {
+  extractYoutubeVideoId,
+  splitPipeList,
+  type QuestionType,
+} from '@campus-pubquiz/types';
 import { getOptionLetter } from '@/app/lib/option-letters';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
@@ -34,12 +38,15 @@ function buildYoutubeEmbedSrc(
 }
 
 interface QuestionDisplayProps {
+  type: QuestionType;
   prompt: string;
   mediaUrl?: string;
   /** Clip range (seconds) into a YouTube mediaUrl — ignored for non-YouTube media and for answerMediaUrl. */
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
   options?: string[];
+  /** Match only: the right-hand items, in the order shown to players. */
+  matchTargets?: string[];
   /** When set (reveal only), highlights the matching option and shows an answer line. */
   correctAnswer?: string;
   /** Shown alongside the answer during reveal only — independent of the question's own media. */
@@ -50,11 +57,13 @@ interface QuestionDisplayProps {
 // Shared by question_open and reveal so the big screen shows each question
 // the same way it was originally asked, just with the answer added back in.
 export function QuestionDisplay({
+  type,
   prompt,
   mediaUrl,
   mediaStartSeconds,
   mediaEndSeconds,
   options,
+  matchTargets,
   correctAnswer,
   answerMediaUrl,
   mediaTestIdPrefix,
@@ -63,6 +72,16 @@ export function QuestionDisplay({
   // media_url rather than showing both — e.g. a picture round's image gives
   // way to whatever the answer_media_url shows instead.
   const isRevealing = correctAnswer !== undefined;
+  const isSort = type === 'sort';
+  const isMatch = type === 'match';
+  const sortCorrectOrder =
+    isSort && isRevealing && correctAnswer
+      ? splitPipeList(correctAnswer)
+      : undefined;
+  const matchCorrectRights =
+    isMatch && isRevealing && correctAnswer
+      ? splitPipeList(correctAnswer)
+      : undefined;
   const rawQuestionMediaUrl =
     isRevealing && answerMediaUrl ? undefined : mediaUrl;
   const questionMediaUrl =
@@ -120,7 +139,76 @@ export function QuestionDisplay({
             autoPlay
           />
         )}
-      {options && (
+      {isSort && options && !isRevealing && (
+        <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
+          {options.map((item, index) => (
+            <li
+              key={index}
+              className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold"
+            >
+              <span className="font-display text-cyan">{index + 1}</span>
+              <span className="text-foreground">{item}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {isSort && sortCorrectOrder && (
+        <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
+          {sortCorrectOrder.map((item, index) => (
+            <li
+              key={index}
+              className="flex items-center gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold"
+            >
+              <span className="font-display text-green">{index + 1}</span>
+              <span className="text-foreground">{item}</span>
+              <span aria-hidden="true" className="ml-auto text-green">
+                ✓
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {isMatch && options && matchTargets && !isRevealing && (
+        <div className="grid w-full max-w-3xl grid-cols-2 gap-4 text-left">
+          <ul className="flex flex-col gap-3">
+            {options.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+          <ul className="flex flex-col gap-3">
+            {matchTargets.map((item, index) => (
+              <li
+                key={index}
+                className="rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {isMatch && options && matchCorrectRights && (
+        <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
+          {options.map((left, index) => (
+            <li
+              key={index}
+              className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold text-foreground"
+            >
+              <span>{left}</span>
+              <span aria-hidden="true" className="text-green">
+                →
+              </span>
+              <span>{matchCorrectRights[index]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!isSort && !isMatch && options && (
         <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
           {options.map((option, index) => {
             const isCorrect =
@@ -148,7 +236,7 @@ export function QuestionDisplay({
           })}
         </ul>
       )}
-      {isRevealing && (
+      {isRevealing && !isSort && !isMatch && (
         <p className="font-display text-lg text-green">
           <span className="font-body text-sm font-extrabold text-foreground/55">
             ANSWER{' '}

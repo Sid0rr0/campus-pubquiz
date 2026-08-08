@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   extractYoutubeVideoId,
+  isSameMultiset,
+  splitPipeList,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
@@ -57,10 +59,56 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('youtube'),
     ...baseQuestionFields,
-    mediaUrl: httpUrl.refine((url) => extractYoutubeVideoId(url) !== undefined, {
-      error: 'Media URL must be a youtube.com/youtu.be link for type youtube',
-    }),
+    mediaUrl: httpUrl.refine(
+      (url) => extractYoutubeVideoId(url) !== undefined,
+      {
+        error: 'Media URL must be a youtube.com/youtu.be link for type youtube',
+      },
+    ),
   }),
+  z
+    .object({
+      type: z.literal('sort'),
+      ...baseQuestionFields,
+      options: z.array(z.string().min(1)).min(2, 'Provide at least two items'),
+      mediaUrl: httpUrl.optional(),
+    })
+    .refine(
+      (question) =>
+        isSameMultiset(question.options, splitPipeList(question.answer)),
+      {
+        path: ['answer'],
+        error:
+          'Answer must list every option exactly once, in the correct order',
+      },
+    ),
+  z
+    .object({
+      type: z.literal('match'),
+      ...baseQuestionFields,
+      options: z
+        .array(z.string().min(1))
+        .min(2, 'Provide at least two left items'),
+      matchTargets: z
+        .array(z.string().min(1))
+        .min(2, 'Provide at least two right items'),
+      mediaUrl: httpUrl.optional(),
+    })
+    .refine(
+      (question) => question.options.length === question.matchTargets.length,
+      {
+        path: ['matchTargets'],
+        error: 'Left and right lists must have the same number of items',
+      },
+    )
+    .refine(
+      (question) =>
+        isSameMultiset(question.matchTargets, splitPipeList(question.answer)),
+      {
+        path: ['answer'],
+        error: 'Answer must pair every right item to a left item, one each',
+      },
+    ),
 ]);
 
 /**

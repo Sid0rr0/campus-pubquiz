@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
 
@@ -30,7 +35,10 @@ describe('DisplayPage — question display', () => {
 
   it('shows the current question and its options while open', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'question_open' }), currentQuestion: question },
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: question,
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -38,6 +46,55 @@ describe('DisplayPage — question display', () => {
     expect(screen.getByText('Capital of France?')).toBeInTheDocument();
     expect(screen.getByText('Paris')).toBeInTheDocument();
     expect(screen.getByText('London')).toBeInTheDocument();
+  });
+
+  it('shows sort items numbered in display order', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'sort',
+          prompt: 'Order these planets from the sun outward.',
+          options: ['Venus', 'Mercury', 'Earth'],
+          points: 3,
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(
+      screen.getByText('Order these planets from the sun outward.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Venus')).toBeInTheDocument();
+    expect(screen.getByText('Mercury')).toBeInTheDocument();
+    expect(screen.getByText('Earth')).toBeInTheDocument();
+  });
+
+  it('shows both match lists before reveal', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'match',
+          prompt: 'Match the hero to their weapon.',
+          options: ['arthur', 'captain america'],
+          matchTargets: ['shield', 'excalibur'],
+          points: 4,
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('arthur')).toBeInTheDocument();
+    expect(screen.getByText('captain america')).toBeInTheDocument();
+    expect(screen.getByText('shield')).toBeInTheDocument();
+    expect(screen.getByText('excalibur')).toBeInTheDocument();
   });
 
   it('shows how many teams have answered the open question', () => {

@@ -18,6 +18,7 @@ import type {
 
 interface QuestionPayload {
   options?: string[];
+  matchTargets?: string[];
   mediaUrl?: string;
   answerMediaUrl?: string;
   mediaStartSeconds?: number;
@@ -30,6 +31,7 @@ interface QuestionPayload {
 function toViewPayload(payload: unknown): QuestionPayload {
   const {
     options,
+    matchTargets,
     mediaUrl,
     answerMediaUrl,
     mediaStartSeconds,
@@ -37,6 +39,7 @@ function toViewPayload(payload: unknown): QuestionPayload {
   } = payload as QuestionPayload;
   return {
     ...(options !== undefined ? { options } : {}),
+    ...(matchTargets !== undefined ? { matchTargets } : {}),
     ...(mediaUrl !== undefined ? { mediaUrl } : {}),
     ...(answerMediaUrl !== undefined ? { answerMediaUrl } : {}),
     ...(mediaStartSeconds !== undefined ? { mediaStartSeconds } : {}),
@@ -138,6 +141,7 @@ export class SeedService {
           answer: question.answer,
           payload: {
             options: question.options,
+            matchTargets: question.matchTargets,
             mediaUrl: question.mediaUrl,
             answerMediaUrl: question.answerMediaUrl,
           },

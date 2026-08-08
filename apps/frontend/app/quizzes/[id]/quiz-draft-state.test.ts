@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ImportQuestionPreview, ImportRoundPreview } from '@campus-pubquiz/types';
+import type {
+  ImportQuestionPreview,
+  ImportRoundPreview,
+} from '@campus-pubquiz/types';
 import {
+  makeMatchPair,
   makeOption,
   makeQuestion,
   makeRound,
@@ -21,6 +25,8 @@ describe('makeQuestion / makeRound', () => {
       points: 1,
       notes: '',
       options: [makeOption(), makeOption()],
+      sortItems: ['', ''],
+      matchPairs: [makeMatchPair(), makeMatchPair()],
       correctText: '',
       mediaUrl: '',
       answerMediaUrl: '',
@@ -101,6 +107,77 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(preview.answer).toBe('Paris');
   });
 
+  it('reconstructs sortItems in correct order from a saved sort question', () => {
+    const preview: ImportQuestionPreview = {
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      options: ['Venus', 'Mercury', 'Earth'],
+    };
+
+    const question = questionFromPreview('q1', preview);
+
+    expect(question.sortItems).toEqual(['Mercury', 'Venus', 'Earth']);
+    expect(question.correctText).toBe('');
+  });
+
+  it('re-derives a sort answer from sortItems and keeps the option set unchanged (display order may reshuffle)', () => {
+    const question = makeQuestion('q1');
+    question.type = 'sort';
+    question.prompt = 'Order these planets from the sun outward.';
+    question.points = 3;
+    question.sortItems = ['Mercury', 'Venus', 'Earth'];
+
+    const preview = questionToPreview(question);
+
+    expect(preview.answer).toBe('Mercury|Venus|Earth');
+    expect(preview.options).toBeDefined();
+    expect([...(preview.options ?? [])].sort()).toEqual([
+      'Earth',
+      'Mercury',
+      'Venus',
+    ]);
+  });
+
+  it('reconstructs matchPairs from a saved match question, zipping options with the positional answer', () => {
+    const preview: ImportQuestionPreview = {
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+    };
+
+    const question = questionFromPreview('q1', preview);
+
+    expect(question.matchPairs).toEqual([
+      { left: 'arthur', right: 'excalibur' },
+      { left: 'captain america', right: 'shield' },
+    ]);
+  });
+
+  it('derives a positionally-canonical match answer from matchPairs, keeping options as the entered left order', () => {
+    const question = makeQuestion('q1');
+    question.type = 'match';
+    question.prompt = 'Match the hero to their weapon.';
+    question.points = 4;
+    question.matchPairs = [
+      { left: 'arthur', right: 'excalibur' },
+      { left: 'captain america', right: 'shield' },
+    ];
+
+    const preview = questionToPreview(question);
+
+    expect(preview.answer).toBe('excalibur|shield');
+    expect(preview.options).toEqual(['arthur', 'captain america']);
+    expect([...(preview.matchTargets ?? [])].sort()).toEqual([
+      'excalibur',
+      'shield',
+    ]);
+  });
+
   it('omits notes/mediaUrl/answerMediaUrl when left blank', () => {
     const question = makeQuestion('q1');
     question.prompt = 'Largest planet?';
@@ -127,7 +204,11 @@ describe('roundFromPreview', () => {
       ],
     };
 
-    const editorRound = roundFromPreview('r1', round, (index) => `r1-q${index}`);
+    const editorRound = roundFromPreview(
+      'r1',
+      round,
+      (index) => `r1-q${index}`,
+    );
 
     expect(editorRound.questions.map((question) => question.id)).toEqual([
       'r1-q0',
@@ -142,7 +223,12 @@ describe('toSaveRequest', () => {
   it('trims the quiz/round titles and converts every question', () => {
     const round = makeRound('r1', ' History ');
     round.questions = [
-      { ...makeQuestion('q1'), type: 'free_text', prompt: 'Largest planet?', correctText: 'Jupiter' },
+      {
+        ...makeQuestion('q1'),
+        type: 'free_text',
+        prompt: 'Largest planet?',
+        correctText: 'Jupiter',
+      },
     ];
 
     const request = toSaveRequest(' Trivia Night ', [round]);
@@ -154,7 +240,12 @@ describe('toSaveRequest', () => {
           title: 'History',
           breakAfter: false,
           questions: [
-            { type: 'free_text', prompt: 'Largest planet?', answer: 'Jupiter', points: 1 },
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              points: 1,
+            },
           ],
         },
       ],

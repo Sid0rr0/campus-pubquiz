@@ -51,13 +51,23 @@ export type QuestionType =
   | 'multiple_choice'
   | 'picture'
   | 'audio'
-  | 'youtube';
+  | 'youtube'
+  | 'sort'
+  | 'match';
 
 export interface QuestionView {
   id: number;
   type: QuestionType;
   prompt: string;
+  /**
+   * Multiple choice: the choices. Sort: the items, in the order shown to
+   * players (not necessarily correct — see RevealQuestionView.answer for
+   * that). Match: the left-hand items, paired positionally with `answer` at
+   * reveal (left[i] pairs with answer.split('|')[i]).
+   */
   options?: string[];
+  /** Match only: the right-hand items, in the order shown to players. */
+  matchTargets?: string[];
   mediaUrl?: string;
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */
   mediaStartSeconds?: number;
@@ -209,6 +219,7 @@ export interface AdminQuestionContext {
   type: QuestionType;
   prompt: string;
   options?: string[];
+  matchTargets?: string[];
   mediaUrl?: string;
   points: number;
   correctAnswer: string;
@@ -236,6 +247,7 @@ export interface QuizSummaryQuestion {
   type: QuestionType;
   prompt: string;
   options?: string[];
+  matchTargets?: string[];
   answer: string;
 }
 

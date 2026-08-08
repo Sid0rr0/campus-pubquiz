@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
   LeaderboardEntry,
+  QuestionType,
   TeamAnswerView,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
@@ -43,6 +44,12 @@ interface RoundTotalRow {
   total: string | number;
 }
 
+const AUTO_GRADED_TYPES: readonly QuestionType[] = [
+  'multiple_choice',
+  'sort',
+  'match',
+];
+
 @Injectable()
 export class AnswerService {
   constructor(
@@ -63,10 +70,12 @@ export class AnswerService {
     const question = await this.questions.findOneOrFail(questionId, {
       fields: ['type', 'answer', 'points'],
     });
-    // Multiple choice has one exact-match correct option (enforced at
-    // import time), so it can be graded the instant it's submitted — no
-    // admin judgement call needed like free_text/picture/audio require.
-    const isAutoGraded = question.type === 'multiple_choice';
+    // Multiple choice, sort, and match all have one exact-match correct
+    // value (enforced at import/save time — see question-row.schema.ts and
+    // quiz-draft.schema.ts), so they can be graded the instant they're
+    // submitted — no admin judgement call needed like free_text/picture/audio
+    // require.
+    const isAutoGraded = AUTO_GRADED_TYPES.includes(question.type);
     const isCorrect = isAutoGraded && value === question.answer;
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the

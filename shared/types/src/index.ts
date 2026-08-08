@@ -4,3 +4,4 @@ export * from './import';
 export * from './auth';
 export * from './quiz-draft';
 export * from './youtube';
+export * from './sort-match';

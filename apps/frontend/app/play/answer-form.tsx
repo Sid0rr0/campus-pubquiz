@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import type { QuestionView } from '@campus-pubquiz/types';
 import { getOptionLetter } from '@/app/lib/option-letters';
+import { MatchAnswer } from '@/app/play/match-answer';
+import { SortAnswer } from '@/app/play/sort-answer';
 
 interface AnswerFormProps {
   question: QuestionView;
@@ -10,8 +12,33 @@ interface AnswerFormProps {
   onSubmit: (value: string) => void;
 }
 
-export function AnswerForm({ question, initialValue = '', onSubmit }: AnswerFormProps) {
+export function AnswerForm({
+  question,
+  initialValue = '',
+  onSubmit,
+}: AnswerFormProps) {
   const [value, setValue] = useState(initialValue);
+
+  if (question.type === 'sort' && question.options) {
+    return (
+      <SortAnswer
+        options={question.options}
+        initialValue={initialValue}
+        onSubmit={onSubmit}
+      />
+    );
+  }
+
+  if (question.type === 'match' && question.options && question.matchTargets) {
+    return (
+      <MatchAnswer
+        leftItems={question.options}
+        rightItems={question.matchTargets}
+        initialValue={initialValue}
+        onSubmit={onSubmit}
+      />
+    );
+  }
 
   if (question.type === 'multiple_choice' && question.options) {
     return (
@@ -35,7 +62,10 @@ export function AnswerForm({ question, initialValue = '', onSubmit }: AnswerForm
               </span>
               {option}
               {isChosen && (
-                <span aria-hidden="true" className="ml-auto font-display text-magenta">
+                <span
+                  aria-hidden="true"
+                  className="ml-auto font-display text-magenta"
+                >
                   ✓
                 </span>
               )}
@@ -54,7 +84,10 @@ export function AnswerForm({ question, initialValue = '', onSubmit }: AnswerForm
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <label htmlFor="answer-value" className="text-xs font-extrabold tracking-wide text-foreground/55">
+      <label
+        htmlFor="answer-value"
+        className="text-xs font-extrabold tracking-wide text-foreground/55"
+      >
         Your answer
       </label>
       <input
@@ -64,7 +97,9 @@ export function AnswerForm({ question, initialValue = '', onSubmit }: AnswerForm
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
       />
       {initialValue && (
-        <p className="text-xs font-extrabold tracking-wide text-foreground/55">Submitted: {initialValue}</p>
+        <p className="text-xs font-extrabold tracking-wide text-foreground/55">
+          Submitted: {initialValue}
+        </p>
       )}
       <button
         type="submit"

@@ -243,6 +243,124 @@ describe('AnswerService (Postgres integration)', () => {
     expect(answer.pointsAwarded).toBe(2);
   });
 
+  it('auto-grades a correct sort answer on submit, awarding full points', async () => {
+    const sortQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      payload: { options: ['Venus', 'Mercury', 'Earth'] },
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(
+      session.id,
+      sortQuestion.id,
+      team.id,
+      'Mercury|Venus|Earth',
+    );
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      sortQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(3);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades an incorrect sort answer on submit as zero points', async () => {
+    const sortQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      payload: { options: ['Venus', 'Mercury', 'Earth'] },
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(
+      session.id,
+      sortQuestion.id,
+      team.id,
+      'Earth|Venus|Mercury',
+    );
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      sortQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades a correct match answer on submit, awarding full points', async () => {
+    const matchQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america'],
+        matchTargets: ['shield', 'excalibur'],
+      },
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(
+      session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield',
+    );
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      matchQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(4);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades an incorrect match answer on submit as zero points', async () => {
+    const matchQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america'],
+        matchTargets: ['shield', 'excalibur'],
+      },
+    });
+    await em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await answerService.submit(
+      session.id,
+      matchQuestion.id,
+      team.id,
+      'shield|excalibur',
+    );
+
+    const [answer] = await answerService.listForQuestion(
+      session.id,
+      matchQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
   it('leaves free_text answers ungraded on submit (unaffected by multiple choice auto-grading)', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
 

@@ -113,6 +113,9 @@ function toQuestionView(question: RevealQuestionView): QuestionView {
     prompt: question.prompt,
     points: question.points,
     ...(question.options !== undefined ? { options: question.options } : {}),
+    ...(question.matchTargets !== undefined
+      ? { matchTargets: question.matchTargets }
+      : {}),
     ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),
     ...(question.mediaStartSeconds !== undefined
       ? { mediaStartSeconds: question.mediaStartSeconds }
@@ -591,6 +594,9 @@ export class GameStateService implements OnModuleInit {
         prompt: question.prompt,
         ...(question.options !== undefined
           ? { options: question.options }
+          : {}),
+        ...(question.matchTargets !== undefined
+          ? { matchTargets: question.matchTargets }
           : {}),
         ...(question.mediaUrl !== undefined
           ? { mediaUrl: question.mediaUrl }

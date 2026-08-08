@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
 
@@ -71,6 +76,69 @@ describe('DisplayPage — reveal', () => {
     expect(screen.queryByText('Largest planet?')).not.toBeInTheDocument();
   });
 
+  it('shows the correct order for a sort question on reveal', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r1q3',
+            type: 'sort' as const,
+            prompt: 'Order these planets from the sun outward.',
+            options: ['Earth', 'Venus', 'Mercury'],
+            points: 3,
+            answer: 'Mercury|Venus|Earth',
+            roundNumber: 1,
+            questionNumberInRound: 1,
+            roundTitle: 'Space',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const items = screen.getAllByText(/Mercury|Venus|Earth/);
+    expect(items.map((el) => el.textContent)).toEqual([
+      'Mercury',
+      'Venus',
+      'Earth',
+    ]);
+  });
+
+  it('shows the correct pairs for a match question on reveal', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r1q4',
+            type: 'match' as const,
+            prompt: 'Match the hero to their weapon.',
+            options: ['arthur', 'captain america'],
+            matchTargets: ['shield', 'excalibur'],
+            points: 4,
+            answer: 'excalibur|shield',
+            roundNumber: 1,
+            questionNumberInRound: 1,
+            roundTitle: 'Heroes',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('arthur')).toBeInTheDocument();
+    expect(screen.getByText('excalibur')).toBeInTheDocument();
+    expect(screen.getByText('captain america')).toBeInTheDocument();
+    expect(screen.getByText('shield')).toBeInTheDocument();
+  });
+
   it('shows the second reveal question when revealIndex advances', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
@@ -86,14 +154,20 @@ describe('DisplayPage — reveal', () => {
     expect(screen.getByText('Largest planet?')).toBeInTheDocument();
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
     expect(screen.getByText(/round 1/i)).toBeInTheDocument();
-    expect(screen.getByText(/revealing answers.*question 2/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/revealing answers.*question 2/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
   });
 
   it("shows a round intro card with the question's own round title before revealing a new round's answers, even for a block spanning multiple rounds", () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'reveal_intro', roundIndex: 1, revealIndex: 2 }),
+        progress: progress({
+          status: 'reveal_intro',
+          roundIndex: 1,
+          revealIndex: 2,
+        }),
         currentQuestion: null,
         revealQuestions: [
           ...revealQuestions,

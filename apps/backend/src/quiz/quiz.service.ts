@@ -20,14 +20,16 @@ import { validateQuizDraft } from '@/quiz/quiz-draft.schema';
 
 interface QuestionPayload {
   options?: string[];
+  matchTargets?: string[];
   mediaUrl?: string;
   answerMediaUrl?: string;
 }
 
 function toSummaryPayload(payload: unknown): QuestionPayload {
-  const { options } = payload as QuestionPayload;
+  const { options, matchTargets } = payload as QuestionPayload;
   return {
     ...(options !== undefined ? { options } : {}),
+    ...(matchTargets !== undefined ? { matchTargets } : {}),
   };
 }
 
@@ -40,6 +42,7 @@ function toQuestionPreview(question: Question): ImportQuestionPreview {
     points: question.points,
     ...(question.notes ? { notes: question.notes } : {}),
     ...(payload.options ? { options: payload.options } : {}),
+    ...(payload.matchTargets ? { matchTargets: payload.matchTargets } : {}),
     ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}),
     ...(payload.answerMediaUrl
       ? { answerMediaUrl: payload.answerMediaUrl }
@@ -196,6 +199,9 @@ export class QuizService {
             : undefined;
         const payload = {
           ...(question.options ? { options: question.options } : {}),
+          ...(question.matchTargets
+            ? { matchTargets: question.matchTargets }
+            : {}),
           ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
           ...(question.answerMediaUrl
             ? { answerMediaUrl: question.answerMediaUrl }

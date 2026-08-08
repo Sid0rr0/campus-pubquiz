@@ -32,6 +32,8 @@ export interface ImportQuestionPreview {
   notes?: string;
   points: number;
   options?: string[];
+  /** Match only: the right-hand items, in the order shown to players. */
+  matchTargets?: string[];
   mediaUrl?: string;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;

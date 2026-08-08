@@ -1,6 +1,20 @@
 'use client';
 
-import type { AnswerView, AnswersUpdatedPayload, TeamView } from '@campus-pubquiz/types';
+import {
+  splitPipeList,
+  type AnswerView,
+  type AnswersUpdatedPayload,
+  type QuestionType,
+  type TeamView,
+} from '@campus-pubquiz/types';
+
+// sort/match answers are stored/submitted as a `|`-joined string — format it
+// as an arrow chain for graders instead of showing the raw pipe delimiters.
+function formatAnswerValue(value: string, type: QuestionType): string {
+  return type === 'sort' || type === 'match'
+    ? splitPipeList(value).join(' → ')
+    : value;
+}
 
 interface GradeOption {
   display: string;
@@ -19,16 +33,24 @@ function gradeOptions(maxPoints: number): GradeOption[] {
 interface AnswerRowProps {
   teamName: string;
   answer: AnswerView | null;
+  questionType: QuestionType;
   maxPoints: number;
   onGrade: (answerId: number, points: number) => void;
 }
 
-function AnswerRow({ teamName, answer, maxPoints, onGrade }: AnswerRowProps) {
+function AnswerRow({
+  teamName,
+  answer,
+  questionType,
+  maxPoints,
+  onGrade,
+}: AnswerRowProps) {
   const hasAnswered = answer !== null;
   const isGraded = hasAnswered && answer.gradedAt !== null;
   const options = gradeOptions(maxPoints);
   const matchesAGradeOption =
-    hasAnswered && options.some((option) => option.value === answer.pointsAwarded);
+    hasAnswered &&
+    options.some((option) => option.value === answer.pointsAwarded);
 
   return (
     <li
@@ -39,7 +61,11 @@ function AnswerRow({ teamName, answer, maxPoints, onGrade }: AnswerRowProps) {
       }
     >
       <span className="w-40 shrink-0 font-extrabold">{teamName}</span>
-      <span className="flex-1 text-[15px]">{hasAnswered ? answer.value : 'No answer yet'}</span>
+      <span className="flex-1 text-[15px]">
+        {hasAnswered
+          ? formatAnswerValue(answer.value, questionType)
+          : 'No answer yet'}
+      </span>
       {isGraded && !matchesAGradeOption && (
         <span className="sr-only">Awarded {answer.pointsAwarded} points</span>
       )}
@@ -82,17 +108,24 @@ interface AnswersPanelProps {
   nav?: AnswersPanelNav;
 }
 
-export function AnswersPanel({ liveAnswers, teams, onGrade, nav }: AnswersPanelProps) {
+export function AnswersPanel({
+  liveAnswers,
+  teams,
+  onGrade,
+  nav,
+}: AnswersPanelProps) {
   const { question, answers } = liveAnswers;
-  const answersByTeamId = new Map(answers.map((answer) => [answer.teamId, answer]));
+  const answersByTeamId = new Map(
+    answers.map((answer) => [answer.teamId, answer]),
+  );
 
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <p className="text-xs font-extrabold tracking-wide text-foreground/55">
-            Round {question.roundNumber} ({question.roundTitle}) — Q{question.questionNumberInRound}{' '}
-            of {question.totalQuestionsInRound}
+            Round {question.roundNumber} ({question.roundTitle}) — Q
+            {question.questionNumberInRound} of {question.totalQuestionsInRound}
             {nav && ` — Grading ${nav.index + 1} of ${nav.total}`}
           </p>
           {nav && (
@@ -119,7 +152,10 @@ export function AnswersPanel({ liveAnswers, teams, onGrade, nav }: AnswersPanelP
           )}
         </div>
         <h2 className="font-display text-xl">{question.prompt}</h2>
-        <p className="text-sm font-bold text-green">Correct answer: {question.correctAnswer}</p>
+        <p className="text-sm font-bold text-green">
+          Correct answer:{' '}
+          {formatAnswerValue(question.correctAnswer, question.type)}
+        </p>
       </div>
       <ul className="flex flex-col gap-2">
         {teams.map((team) => (
@@ -127,6 +163,7 @@ export function AnswersPanel({ liveAnswers, teams, onGrade, nav }: AnswersPanelP
             key={team.teamId}
             teamName={team.teamName}
             answer={answersByTeamId.get(team.teamId) ?? null}
+            questionType={question.type}
             maxPoints={question.points}
             onGrade={onGrade}
           />

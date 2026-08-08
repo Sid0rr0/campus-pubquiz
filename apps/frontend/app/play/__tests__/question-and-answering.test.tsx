@@ -31,7 +31,12 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
       }),
     );
@@ -46,7 +51,12 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'locking' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
       }),
     );
@@ -103,7 +113,12 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
       }),
     );
@@ -118,14 +133,25 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
     render(<PlayPage />);
 
-    expect(screen.getByRole('textbox', { name: /your answer/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /your answer/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
   });
 
@@ -136,15 +162,27 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
         submitAnswer,
       }),
     );
     render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /your answer/i }), 'Banana');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /your answer/i }),
+      'Banana',
+    );
     await userEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Banana');
@@ -165,7 +203,11 @@ describe('PlayPage — question and answering', () => {
             points: 2,
           },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
         submitAnswer,
       }),
     );
@@ -182,9 +224,18 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
         myAnswers: { r1q1: 'Banana' },
       }),
     );
@@ -199,9 +250,18 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
     render(<PlayPage />);
@@ -223,14 +283,99 @@ describe('PlayPage — question and answering', () => {
             points: 2,
           },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
         myAnswers: { r1q1: 'Paris' },
       }),
     );
     render(<PlayPage />);
 
-    expect(screen.getByRole('button', { name: 'Paris' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'London' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Paris' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'London' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('shows sort items in display order and submits the reordered list on move', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'sort',
+            prompt: 'Order these planets from the sun outward.',
+            options: ['Venus', 'Mercury', 'Earth'],
+            points: 3,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        submitAnswer,
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('Venus')).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Move Venus down' }),
+    );
+
+    expect(submitAnswer).toHaveBeenCalledWith(
+      'r1q1',
+      'team-1',
+      'Mercury|Venus|Earth',
+    );
+  });
+
+  it('shows match left/right lists and submits once every row has a choice', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'match',
+            prompt: 'Match the hero to their weapon.',
+            options: ['arthur', 'captain america'],
+            matchTargets: ['shield', 'excalibur'],
+            points: 4,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        submitAnswer,
+      }),
+    );
+    render(<PlayPage />);
+
+    const [arthurSelect, captainSelect] = screen.getAllByRole('combobox');
+    await userEvent.selectOptions(arthurSelect, 'excalibur');
+    expect(submitAnswer).not.toHaveBeenCalled();
+    await userEvent.selectOptions(captainSelect, 'shield');
+
+    expect(submitAnswer).toHaveBeenCalledWith(
+      'r1q1',
+      'team-1',
+      'excalibur|shield',
+    );
   });
 
   it('does not show an answer form before the team identity has been confirmed', () => {
@@ -239,12 +384,19 @@ describe('PlayPage — question and answering', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
       }),
     );
     render(<PlayPage />);
 
-    expect(screen.queryByRole('textbox', { name: /your answer/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /your answer/i }),
+    ).not.toBeInTheDocument();
   });
 });

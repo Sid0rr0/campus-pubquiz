@@ -3,7 +3,11 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import type { BlockQuestionView, BlockRevealQuestionView, GameProgress } from '@campus-pubquiz/types';
+import type {
+  BlockQuestionView,
+  BlockRevealQuestionView,
+  GameProgress,
+} from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
@@ -32,7 +36,9 @@ interface HeaderContent {
  */
 function getHeaderContent(
   progress: GameProgress,
-  breakQuestion: Pick<BlockQuestionView, 'roundNumber' | 'questionNumberInRound'> | undefined,
+  breakQuestion:
+    | Pick<BlockQuestionView, 'roundNumber' | 'questionNumberInRound'>
+    | undefined,
   revealRoundNumber: number | undefined,
   revealQuestionNumber: number | undefined,
 ): HeaderContent {
@@ -50,7 +56,8 @@ function getHeaderContent(
         badge: `QUESTION ${breakQuestion.questionNumberInRound} (BREAK)`,
       };
     case 'reveal':
-      if (revealRoundNumber === undefined || revealQuestionNumber === undefined) return {};
+      if (revealRoundNumber === undefined || revealQuestionNumber === undefined)
+        return {};
       return {
         label: `ROUND ${revealRoundNumber}`,
         badge: `REVEALING ANSWERS · QUESTION ${revealQuestionNumber}`,
@@ -68,7 +75,9 @@ function getHeaderContent(
  */
 function getScreenKey(
   progress: GameProgress,
-  revealQuestion: Pick<BlockRevealQuestionView, 'roundNumber' | 'questionNumberInRound'> | undefined,
+  revealQuestion:
+    | Pick<BlockRevealQuestionView, 'roundNumber' | 'questionNumberInRound'>
+    | undefined,
 ): string {
   if (progress.isLeaderboardVisible) return 'leaderboard';
 
@@ -100,7 +109,11 @@ function DisplayPageContent() {
   // an implicit "default" session — once more than one game can run at
   // once that would silently point the screen at the wrong game.
   const codeFromUrl = searchParams.get('code') ?? undefined;
-  const { snapshot, connectionError } = useGameSocket('display', Boolean(codeFromUrl), codeFromUrl);
+  const { snapshot, connectionError } = useGameSocket(
+    'display',
+    Boolean(codeFromUrl),
+    codeFromUrl,
+  );
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) still needs the picker's error message on screen, so this only
@@ -117,7 +130,9 @@ function DisplayPageContent() {
     return (
       <DisplaySessionPicker
         connectionError={connectionError}
-        onSelectSession={(joinCode) => router.replace(`/display?code=${joinCode}`)}
+        onSelectSession={(joinCode) =>
+          router.replace(`/display?code=${joinCode}`)
+        }
       />
     );
   }
@@ -179,11 +194,16 @@ function DisplayPageContent() {
               <h1 className="text-center font-display text-4xl">
                 <span className="text-magenta">Leaderboard</span>
               </h1>
-              <Leaderboard entries={leaderboard} revealCount={leaderboardRevealCount} />
+              <Leaderboard
+                entries={leaderboard}
+                revealCount={leaderboardRevealCount}
+              />
             </div>
           ) : (
             <>
-              {progress.status === 'lobby' && <LobbyScreen teams={teams} joinCode={codeFromUrl} />}
+              {progress.status === 'lobby' && (
+                <LobbyScreen teams={teams} joinCode={codeFromUrl} />
+              )}
               {progress.status === 'rules' && (
                 <div className="flex flex-1 items-center justify-center px-16 py-10">
                   <RulesContent quizStructure={quizStructure} />
@@ -194,7 +214,9 @@ function DisplayPageContent() {
                   <p className="text-sm font-extrabold tracking-wide text-foreground/55">
                     ROUND {progress.roundIndex + 1}
                   </p>
-                  <h1 className="text-balance font-display text-6xl text-magenta">{roundTitle}</h1>
+                  <h1 className="text-balance font-display text-6xl text-magenta">
+                    {roundTitle}
+                  </h1>
                 </div>
               )}
               {progress.status === 'question_open' && currentQuestion && (
@@ -206,8 +228,13 @@ function DisplayPageContent() {
               )}
               {progress.status === 'locking' && questionLockAt !== null && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-                  <h1 className="font-display text-4xl">Time&apos;s almost up!</h1>
-                  <QuestionLockCountdown key={questionLockAt} lockAt={questionLockAt} />
+                  <h1 className="font-display text-4xl">
+                    Time&apos;s almost up!
+                  </h1>
+                  <QuestionLockCountdown
+                    key={questionLockAt}
+                    lockAt={questionLockAt}
+                  />
                 </div>
               )}
               {progress.status === 'break_intro' && (
@@ -219,12 +246,13 @@ function DisplayPageContent() {
                 ) : (
                   <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
                 ))}
-              {progress.status === 'break_round_intro' && breakRoundIntroQuestion && (
-                <BreakRoundIntroScreen
-                  roundNumber={breakRoundIntroQuestion.roundNumber}
-                  roundTitle={breakRoundIntroQuestion.roundTitle}
-                />
-              )}
+              {progress.status === 'break_round_intro' &&
+                breakRoundIntroQuestion && (
+                  <BreakRoundIntroScreen
+                    roundNumber={breakRoundIntroQuestion.roundNumber}
+                    roundTitle={breakRoundIntroQuestion.roundTitle}
+                  />
+                )}
               {progress.status === 'reveal_intro' && revealQuestion && (
                 <RevealIntroScreen
                   roundNumber={revealQuestion.roundNumber}
@@ -234,11 +262,13 @@ function DisplayPageContent() {
               {progress.status === 'reveal' && revealQuestion && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                   <QuestionDisplay
+                    type={revealQuestion.type}
                     prompt={revealQuestion.prompt}
                     mediaUrl={revealQuestion.mediaUrl}
                     mediaStartSeconds={revealQuestion.mediaStartSeconds}
                     mediaEndSeconds={revealQuestion.mediaEndSeconds}
                     options={revealQuestion.options}
+                    matchTargets={revealQuestion.matchTargets}
                     correctAnswer={revealQuestion.answer}
                     answerMediaUrl={revealQuestion.answerMediaUrl}
                     mediaTestIdPrefix="reveal"
