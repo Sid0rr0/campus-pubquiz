@@ -114,6 +114,12 @@ function toQuestionView(question: RevealQuestionView): QuestionView {
     points: question.points,
     ...(question.options !== undefined ? { options: question.options } : {}),
     ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),
+    ...(question.mediaStartSeconds !== undefined
+      ? { mediaStartSeconds: question.mediaStartSeconds }
+      : {}),
+    ...(question.mediaEndSeconds !== undefined
+      ? { mediaEndSeconds: question.mediaEndSeconds }
+      : {}),
   };
 }
 

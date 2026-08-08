@@ -3,3 +3,4 @@ export * from './socket-events';
 export * from './import';
 export * from './auth';
 export * from './quiz-draft';
+export * from './youtube';

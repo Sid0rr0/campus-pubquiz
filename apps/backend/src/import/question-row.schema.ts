@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   createImportPreview,
+  extractYoutubeVideoId,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRowIssue,
@@ -13,6 +14,7 @@ const QUESTION_TYPES: readonly QuestionType[] = [
   'multiple_choice',
   'picture',
   'audio',
+  'youtube',
 ];
 
 const DEFAULT_POINTS = 1;
@@ -69,6 +71,14 @@ const questionRowSchema = z.discriminatedUnion('type', [
     type: z.literal('audio'),
     ...baseFields,
     media_url: httpUrl,
+    answer_media_url: httpUrl.optional(),
+  }),
+  z.object({
+    type: z.literal('youtube'),
+    ...baseFields,
+    media_url: httpUrl.refine((url) => extractYoutubeVideoId(url) !== undefined, {
+      error: 'media_url must be a youtube.com/youtu.be link for type youtube',
+    }),
     answer_media_url: httpUrl.optional(),
   }),
 ]);

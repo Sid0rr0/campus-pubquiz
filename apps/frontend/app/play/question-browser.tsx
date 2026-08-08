@@ -1,4 +1,10 @@
-import type { BlockQuestionView, GameProgress, JoinAcceptedPayload, QuestionView } from '@campus-pubquiz/types';
+import {
+  extractYoutubeVideoId,
+  type BlockQuestionView,
+  type GameProgress,
+  type JoinAcceptedPayload,
+  type QuestionView,
+} from '@campus-pubquiz/types';
 import { AnswerForm } from '@/app/play/answer-form';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
@@ -38,7 +44,10 @@ export function QuestionBrowser({
         />
       )}
       <h1 className="text-balance font-display text-2xl leading-tight">{selectedQuestion.prompt}</h1>
-      {(selectedQuestion.type === 'picture' || selectedQuestion.type === 'audio') && (
+      {(selectedQuestion.type === 'picture' ||
+        selectedQuestion.type === 'audio' ||
+        selectedQuestion.type === 'youtube' ||
+        extractYoutubeVideoId(selectedQuestion.mediaUrl ?? '') !== undefined) && (
         <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">👀 Look at the screen</p>
       )}
       {isAnswerable && team && (

@@ -97,4 +97,31 @@ describe('DisplayPage — media rendering', () => {
       'https://example.com/flag.jpg',
     );
   });
+
+  it('renders a YouTube media_url as an embedded iframe with the clip start/end, not an image', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r4q1',
+          type: 'picture',
+          prompt: 'Name this music video.',
+          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+          mediaStartSeconds: 82,
+          mediaEndSeconds: 140,
+          points: 3,
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const iframe = screen.getByTestId('question-youtube');
+    expect(iframe).toHaveAttribute(
+      'src',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&start=82&end=140',
+    );
+    expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
+  });
 });

@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import type {
-  QuizDraftIssue,
-  QuizDraftSaveRequest,
+import {
+  extractYoutubeVideoId,
+  type QuizDraftIssue,
+  type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
 
 const httpUrl = z.url({
@@ -52,6 +53,13 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
     type: z.literal('audio'),
     ...baseQuestionFields,
     mediaUrl: httpUrl,
+  }),
+  z.object({
+    type: z.literal('youtube'),
+    ...baseQuestionFields,
+    mediaUrl: httpUrl.refine((url) => extractYoutubeVideoId(url) !== undefined, {
+      error: 'Media URL must be a youtube.com/youtu.be link for type youtube',
+    }),
   }),
 ]);
 

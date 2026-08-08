@@ -274,6 +274,59 @@ describe('QuizService (Postgres integration)', () => {
 
       await expect(em.find(Quiz, {})).resolves.toEqual([]);
     });
+
+    it('derives a YouTube clip range from notes into the question payload', async () => {
+      const result = await quizService.create('Trivia Night', [
+        {
+          title: 'Music Videos',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'picture',
+              prompt: 'Name this music video.',
+              answer: 'Never Gonna Give You Up',
+              points: 3,
+              notes: '{start: "1:22", end: "2:20"}',
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            },
+          ],
+        },
+      ]);
+
+      const [question] = await em.find(Question, {
+        round: { quiz: result.quizId },
+      });
+      expect(question.payload).toMatchObject({
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        mediaStartSeconds: 82,
+        mediaEndSeconds: 140,
+      });
+    });
+
+    it('does not derive a clip range when notes has no clip syntax', async () => {
+      const result = await quizService.create('Trivia Night', [
+        {
+          title: 'Music Videos',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'picture',
+              prompt: 'Name this music video.',
+              answer: 'Never Gonna Give You Up',
+              points: 3,
+              notes: 'Play the whole thing',
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            },
+          ],
+        },
+      ]);
+
+      const [question] = await em.find(Question, {
+        round: { quiz: result.quizId },
+      });
+      expect(question.payload).not.toHaveProperty('mediaStartSeconds');
+      expect(question.payload).not.toHaveProperty('mediaEndSeconds');
+    });
   });
 
   describe('update', () => {

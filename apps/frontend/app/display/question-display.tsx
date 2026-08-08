@@ -1,3 +1,4 @@
+import { extractYoutubeVideoId } from '@campus-pubquiz/types';
 import { getOptionLetter } from '@/app/lib/option-letters';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
@@ -5,7 +6,7 @@ const HTTP_URL_PATTERN = /^https?:\/\//i;
 
 // Neither media_url nor answer_media_url is tied to the question's `type`
 // (e.g. a free_text question can carry a photo or reveal one), so image vs.
-// audio is inferred from the URL's file extension instead.
+// audio vs. YouTube is inferred from the URL itself instead.
 function isAudioUrl(url: string): boolean {
   return AUDIO_EXTENSION_PATTERN.test(url);
 }
@@ -17,9 +18,23 @@ function isHttpUrl(url: string): boolean {
   return HTTP_URL_PATTERN.test(url);
 }
 
+function buildYoutubeEmbedSrc(
+  videoId: string,
+  startSeconds?: number,
+  endSeconds?: number,
+): string {
+  const params = new URLSearchParams({ autoplay: '1' });
+  if (startSeconds !== undefined) params.set('start', String(startSeconds));
+  if (endSeconds !== undefined) params.set('end', String(endSeconds));
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+}
+
 interface QuestionDisplayProps {
   prompt: string;
   mediaUrl?: string;
+  /** Clip range (seconds) into a YouTube mediaUrl — ignored for non-YouTube media and for answerMediaUrl. */
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
   options?: string[];
   /** When set (reveal only), highlights the matching option and shows an answer line. */
   correctAnswer?: string;
@@ -33,6 +48,8 @@ interface QuestionDisplayProps {
 export function QuestionDisplay({
   prompt,
   mediaUrl,
+  mediaStartSeconds,
+  mediaEndSeconds,
   options,
   correctAnswer,
   answerMediaUrl,
@@ -46,11 +63,25 @@ export function QuestionDisplay({
   const questionMediaUrl =
     rawQuestionMediaUrl && isHttpUrl(rawQuestionMediaUrl) ? rawQuestionMediaUrl : undefined;
   const safeAnswerMediaUrl = answerMediaUrl && isHttpUrl(answerMediaUrl) ? answerMediaUrl : undefined;
+  const questionYoutubeId = questionMediaUrl ? extractYoutubeVideoId(questionMediaUrl) : undefined;
+  const answerYoutubeId = safeAnswerMediaUrl ? extractYoutubeVideoId(safeAnswerMediaUrl) : undefined;
 
   return (
     <>
       <h1 className="text-balance font-display text-4xl leading-snug">{prompt}</h1>
-      {questionMediaUrl && !isAudioUrl(questionMediaUrl) && (
+      {questionMediaUrl && questionYoutubeId && (
+        <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+          <iframe
+            data-testid={`${mediaTestIdPrefix}-youtube`}
+            src={buildYoutubeEmbedSrc(questionYoutubeId, mediaStartSeconds, mediaEndSeconds)}
+            title="Question video"
+            className="h-full w-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        </div>
+      )}
+      {questionMediaUrl && !questionYoutubeId && !isAudioUrl(questionMediaUrl) && (
         // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
         <img
           data-testid={`${mediaTestIdPrefix}-image`}
@@ -59,7 +90,7 @@ export function QuestionDisplay({
           className="max-h-64 rounded-xl"
         />
       )}
-      {questionMediaUrl && isAudioUrl(questionMediaUrl) && (
+      {questionMediaUrl && !questionYoutubeId && isAudioUrl(questionMediaUrl) && (
         <audio
           data-testid={`${mediaTestIdPrefix}-audio`}
           src={questionMediaUrl}
@@ -98,7 +129,19 @@ export function QuestionDisplay({
           {correctAnswer}
         </p>
       )}
-      {isRevealing && safeAnswerMediaUrl && !isAudioUrl(safeAnswerMediaUrl) && (
+      {isRevealing && safeAnswerMediaUrl && answerYoutubeId && (
+        <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+          <iframe
+            data-testid={`${mediaTestIdPrefix}-answer-youtube`}
+            src={buildYoutubeEmbedSrc(answerYoutubeId)}
+            title="Answer video"
+            className="h-full w-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        </div>
+      )}
+      {isRevealing && safeAnswerMediaUrl && !answerYoutubeId && !isAudioUrl(safeAnswerMediaUrl) && (
         // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
         <img
           data-testid={`${mediaTestIdPrefix}-answer-image`}
@@ -107,7 +150,7 @@ export function QuestionDisplay({
           className="max-h-64 rounded-xl"
         />
       )}
-      {isRevealing && safeAnswerMediaUrl && isAudioUrl(safeAnswerMediaUrl) && (
+      {isRevealing && safeAnswerMediaUrl && !answerYoutubeId && isAudioUrl(safeAnswerMediaUrl) && (
         <audio
           data-testid={`${mediaTestIdPrefix}-answer-audio`}
           src={safeAnswerMediaUrl}

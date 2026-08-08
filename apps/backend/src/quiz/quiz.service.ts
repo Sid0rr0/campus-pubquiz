@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type {
-  ImportQuestionPreview,
-  ImportRoundPreview,
-  QuizDraft,
-  QuizDraftIssue,
-  QuizDraftSaveResult,
-  QuizSummary,
+import {
+  extractYoutubeVideoId,
+  parseYoutubeClipFromNotes,
+  type ImportQuestionPreview,
+  type ImportRoundPreview,
+  type QuizDraft,
+  type QuizDraftIssue,
+  type QuizDraftSaveResult,
+  type QuizSummary,
 } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -187,11 +189,21 @@ export class QuizService {
       );
 
       for (const [questionIndex, question] of round.questions.entries()) {
+        const youtubeClip =
+          question.mediaUrl && extractYoutubeVideoId(question.mediaUrl)
+            ? parseYoutubeClipFromNotes(question.notes)
+            : undefined;
         const payload = {
           ...(question.options ? { options: question.options } : {}),
           ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
           ...(question.answerMediaUrl
             ? { answerMediaUrl: question.answerMediaUrl }
+            : {}),
+          ...(youtubeClip?.startSeconds !== undefined
+            ? { mediaStartSeconds: youtubeClip.startSeconds }
+            : {}),
+          ...(youtubeClip?.endSeconds !== undefined
+            ? { mediaEndSeconds: youtubeClip.endSeconds }
             : {}),
         };
         const questionNow = new Date();

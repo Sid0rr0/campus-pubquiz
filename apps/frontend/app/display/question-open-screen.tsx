@@ -13,6 +13,8 @@ export function QuestionOpenScreen({ question, answeredCount, totalTeams }: Ques
       <QuestionDisplay
         prompt={question.prompt}
         mediaUrl={question.mediaUrl}
+        mediaStartSeconds={question.mediaStartSeconds}
+        mediaEndSeconds={question.mediaEndSeconds}
         options={question.options}
         mediaTestIdPrefix="question"
       />

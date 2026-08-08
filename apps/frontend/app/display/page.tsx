@@ -236,6 +236,8 @@ function DisplayPageContent() {
                   <QuestionDisplay
                     prompt={revealQuestion.prompt}
                     mediaUrl={revealQuestion.mediaUrl}
+                    mediaStartSeconds={revealQuestion.mediaStartSeconds}
+                    mediaEndSeconds={revealQuestion.mediaEndSeconds}
                     options={revealQuestion.options}
                     correctAnswer={revealQuestion.answer}
                     answerMediaUrl={revealQuestion.answerMediaUrl}

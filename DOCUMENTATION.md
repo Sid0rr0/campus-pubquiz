@@ -270,22 +270,42 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
 ```
 
-`type` is one of `free_text`, `multiple_choice`, `picture`, `audio`.
+`type` is one of `free_text`, `multiple_choice`, `picture`, `audio`, `youtube`.
 `options` is pipe-separated and required (≥2) for `multiple_choice`.
-`media_url` is required for `picture`/`audio`, optional otherwise.
+`media_url` is required for `picture`/`audio`/`youtube` (for `youtube` it must
+resolve to a `youtube.com`/`youtu.be` video id — enforced by both the CSV
+import schema and the manual editor's save validation), optional otherwise.
 `answer_media_url` is optional on any type (shown alongside the correct answer
 during reveal). `break_after` is `''`/`0`/`1`; the **last round's break is
 always forced on** regardless of its cells, since the state machine has no
 other way to ever reveal it.
+
+**YouTube embeds**: the display renders a YouTube `media_url` as an embedded
+iframe instead of `<img>`/`<audio>`. `type: youtube` is the intended way to
+author one — the manual editor's type picker offers it, requires `media_url`,
+and shows dedicated Clip start/Clip end inputs. Under the hood display
+rendering is actually keyed off `media_url` itself (`youtube.com`/`youtu.be`),
+not the `type` value, matching how image vs. audio already works — so a
+`picture`/`free_text`/etc. row with a YouTube `media_url` still embeds too,
+for quizzes authored before this type existed. A clip's start/end (seconds
+into the video) is best-effort parsed out of that question's `notes` cell,
+e.g. `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
+parse). This isn't strict JSON — it's a regex looking for `start`/`end`
+keywords — so `notes` without that syntax is left untouched as a normal
+free-text note. Parsing happens once, in `QuizService.syncRoundsAndQuestions`
+(shared by CSV import and the manual editor's Save), which derives
+`mediaStartSeconds`/`mediaEndSeconds` into the question's JSON `payload`
+alongside `mediaUrl`. `answer_media_url` never gets clip times (no notes
+channel of its own) — a YouTube answer video always renders full-length.
 
 ## Persistence and Restart Resilience
 
 Postgres via MikroORM. Two halves of the schema:
 
 - **Authoring time**: `quizzes → rounds → questions`. Questions have a `type`
-  (`free_text`, `multiple_choice`, `picture`, `audio`) plus a JSON payload for
-  type-specific data (options, media URL), so new question types don't need
-  migrations.
+  (`free_text`, `multiple_choice`, `picture`, `audio`, `youtube`) plus a JSON
+  payload for type-specific data (options, media URL), so new question types
+  don't need migrations.
 - **Runtime**: `game_sessions → teams → answers`, plus `bonus_awards` and the
   `game_session_teams` roster join table. A session row stores the join code
   and the live progress columns (`status`, `currentRoundIndex`,

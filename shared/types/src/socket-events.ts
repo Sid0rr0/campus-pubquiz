@@ -41,7 +41,7 @@ export function sessionRoom(code: string, role: SocketRoomName): string {
   return `${role}:${code}`;
 }
 
-export type QuestionType = 'free_text' | 'multiple_choice' | 'picture' | 'audio';
+export type QuestionType = 'free_text' | 'multiple_choice' | 'picture' | 'audio' | 'youtube';
 
 export interface QuestionView {
   id: number;
@@ -49,6 +49,9 @@ export interface QuestionView {
   prompt: string;
   options?: string[];
   mediaUrl?: string;
+  /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
   points: number;
 }
 

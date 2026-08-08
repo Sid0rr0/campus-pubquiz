@@ -17,6 +17,8 @@ export function BreakReviewScreen({ question }: BreakReviewScreenProps) {
       <QuestionDisplay
         prompt={question.prompt}
         mediaUrl={question.mediaUrl}
+        mediaStartSeconds={question.mediaStartSeconds}
+        mediaEndSeconds={question.mediaEndSeconds}
         options={question.options}
         mediaTestIdPrefix="break"
       />

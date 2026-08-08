@@ -85,6 +85,102 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue('Jupiter');
   });
 
+  it('selecting the YouTube video type shows the clip inputs and requires a media url', async () => {
+    const user = userEvent.setup();
+    render(<QuizEditorPanel quizId="new" />);
+    await user.click(screen.getByRole('button', { name: /start from scratch/i }));
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+
+    expect(screen.queryByLabelText(/clip start/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^youtube video$/i }));
+
+    expect(screen.getByLabelText(/media url \(required\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/clip start/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/clip end/i)).toBeInTheDocument();
+  });
+
+  it('shows dedicated clip start/end inputs for a YouTube media url, pre-filled from notes', async () => {
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'Music Videos',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'picture',
+              prompt: 'Name this music video.',
+              answer: 'Never Gonna Give You Up',
+              points: 3,
+              notes: 'Play the chorus\nYouTube clip: {start: "1:22", end: "2:20"}',
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            },
+          ],
+        },
+      ],
+    });
+
+    render(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    expect(screen.getByLabelText(/clip start/i)).toHaveValue('1:22');
+    expect(screen.getByLabelText(/clip end/i)).toHaveValue('2:20');
+    expect(screen.getByLabelText(/^notes$/i)).toHaveValue('Play the chorus');
+  });
+
+  it('recomposes notes when a clip end time is edited', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'Music Videos',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'picture',
+              prompt: 'Name this music video.',
+              answer: 'Never Gonna Give You Up',
+              points: 3,
+              notes: 'YouTube clip: {start: "1:22", end: "2:20"}',
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            },
+          ],
+        },
+      ],
+    });
+    mockUpdateQuiz.mockResolvedValue({ quizId: 5, roundCount: 1, questionCount: 1 });
+
+    render(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    const endInput = screen.getByLabelText(/clip end/i);
+    await user.clear(endInput);
+    await user.type(endInput, '3:00');
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuiz).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({
+              questions: [
+                expect.objectContaining({
+                  notes: 'YouTube clip: {start: "1:22", end: "3:00"}',
+                }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    );
+  });
+
   it('reorders questions within a round via the move up/down buttons', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({

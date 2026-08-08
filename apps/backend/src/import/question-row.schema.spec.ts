@@ -162,6 +162,42 @@ describe('parseQuestionRow', () => {
     }
   });
 
+  it('accepts a youtube row with a youtube.com/youtu.be media url', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'youtube',
+        question: 'Name this music video.',
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        answer: 'Never Gonna Give You Up',
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.question).toEqual(
+        expect.objectContaining({
+          type: 'youtube',
+          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        }),
+      );
+    }
+  });
+
+  it('rejects a youtube row missing a media url or pointing at a non-YouTube url', () => {
+    const missing = parseQuestionRow(makeRow({ type: 'youtube', mediaUrl: '' }));
+    const nonYoutube = parseQuestionRow(
+      makeRow({ type: 'youtube', mediaUrl: 'https://example.com/video.mp4' }),
+    );
+
+    expect(missing.ok).toBe(false);
+    expect(nonYoutube.ok).toBe(false);
+    if (!nonYoutube.ok) {
+      expect(nonYoutube.issues).toContainEqual(
+        expect.objectContaining({ field: 'media_url' }),
+      );
+    }
+  });
+
   it('accepts an optional answer_media_url on any question type, independent of media_url', () => {
     const result = parseQuestionRow(
       makeRow({

@@ -20,17 +20,27 @@ interface QuestionPayload {
   options?: string[];
   mediaUrl?: string;
   answerMediaUrl?: string;
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
 }
 
 // Picks only the player-safe payload fields: imported questions also carry
 // the correct answer in their payload, which must never reach a QuestionView
 // (snapshots go to every connected phone and the big screen).
 function toViewPayload(payload: unknown): QuestionPayload {
-  const { options, mediaUrl, answerMediaUrl } = payload as QuestionPayload;
+  const {
+    options,
+    mediaUrl,
+    answerMediaUrl,
+    mediaStartSeconds,
+    mediaEndSeconds,
+  } = payload as QuestionPayload;
   return {
     ...(options !== undefined ? { options } : {}),
     ...(mediaUrl !== undefined ? { mediaUrl } : {}),
     ...(answerMediaUrl !== undefined ? { answerMediaUrl } : {}),
+    ...(mediaStartSeconds !== undefined ? { mediaStartSeconds } : {}),
+    ...(mediaEndSeconds !== undefined ? { mediaEndSeconds } : {}),
   };
 }
 

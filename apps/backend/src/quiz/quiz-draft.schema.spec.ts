@@ -61,6 +61,11 @@ describe('validateQuizDraft', () => {
               mediaUrl: 'https://example.com/song.mp3',
               answerMediaUrl: 'https://example.com/cover.jpg',
             }),
+            makeQuestion({
+              type: 'youtube',
+              answer: 'Never Gonna Give You Up',
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            }),
           ],
         }),
       ],
@@ -223,6 +228,35 @@ describe('validateQuizDraft', () => {
         }),
       );
     }
+  });
+
+  it('reports a youtube question missing a media url or pointing at a non-YouTube url', () => {
+    const missing = validateQuizDraft(
+      makeRequest({
+        rounds: [makeRound({ questions: [makeQuestion({ type: 'youtube' })] })],
+      }),
+    );
+    const nonYoutube = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'youtube',
+                mediaUrl: 'https://example.com/video.mp4',
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(missing).toContainEqual(
+      expect.objectContaining({ roundIndex: 0, questionIndex: 0, field: 'mediaUrl' }),
+    );
+    expect(nonYoutube).toContainEqual(
+      expect.objectContaining({ roundIndex: 0, questionIndex: 0, field: 'mediaUrl' }),
+    );
   });
 
   it('reports an invalid answer media url on any question type', () => {
