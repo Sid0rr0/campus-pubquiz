@@ -76,9 +76,12 @@ const questionRowSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('youtube'),
     ...baseFields,
-    media_url: httpUrl.refine((url) => extractYoutubeVideoId(url) !== undefined, {
-      error: 'media_url must be a youtube.com/youtu.be link for type youtube',
-    }),
+    media_url: httpUrl.refine(
+      (url) => extractYoutubeVideoId(url) !== undefined,
+      {
+        error: 'media_url must be a youtube.com/youtu.be link for type youtube',
+      },
+    ),
     answer_media_url: httpUrl.optional(),
   }),
 ]);

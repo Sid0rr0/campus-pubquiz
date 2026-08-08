@@ -184,7 +184,9 @@ describe('parseQuestionRow', () => {
   });
 
   it('rejects a youtube row missing a media url or pointing at a non-YouTube url', () => {
-    const missing = parseQuestionRow(makeRow({ type: 'youtube', mediaUrl: '' }));
+    const missing = parseQuestionRow(
+      makeRow({ type: 'youtube', mediaUrl: '' }),
+    );
     const nonYoutube = parseQuestionRow(
       makeRow({ type: 'youtube', mediaUrl: 'https://example.com/video.mp4' }),
     );
