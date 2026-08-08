@@ -23,7 +23,11 @@ function buildYoutubeEmbedSrc(
   startSeconds?: number,
   endSeconds?: number,
 ): string {
-  const params = new URLSearchParams({ autoplay: '1' });
+  const params = new URLSearchParams({
+    autoplay: '1',
+    controls: '0',
+    modestbranding: '1',
+  });
   if (startSeconds !== undefined) params.set('start', String(startSeconds));
   if (endSeconds !== undefined) params.set('end', String(endSeconds));
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
@@ -59,49 +63,68 @@ export function QuestionDisplay({
   // media_url rather than showing both — e.g. a picture round's image gives
   // way to whatever the answer_media_url shows instead.
   const isRevealing = correctAnswer !== undefined;
-  const rawQuestionMediaUrl = isRevealing && answerMediaUrl ? undefined : mediaUrl;
+  const rawQuestionMediaUrl =
+    isRevealing && answerMediaUrl ? undefined : mediaUrl;
   const questionMediaUrl =
-    rawQuestionMediaUrl && isHttpUrl(rawQuestionMediaUrl) ? rawQuestionMediaUrl : undefined;
-  const safeAnswerMediaUrl = answerMediaUrl && isHttpUrl(answerMediaUrl) ? answerMediaUrl : undefined;
-  const questionYoutubeId = questionMediaUrl ? extractYoutubeVideoId(questionMediaUrl) : undefined;
-  const answerYoutubeId = safeAnswerMediaUrl ? extractYoutubeVideoId(safeAnswerMediaUrl) : undefined;
+    rawQuestionMediaUrl && isHttpUrl(rawQuestionMediaUrl)
+      ? rawQuestionMediaUrl
+      : undefined;
+  const safeAnswerMediaUrl =
+    answerMediaUrl && isHttpUrl(answerMediaUrl) ? answerMediaUrl : undefined;
+  const questionYoutubeId = questionMediaUrl
+    ? extractYoutubeVideoId(questionMediaUrl)
+    : undefined;
+  const answerYoutubeId = safeAnswerMediaUrl
+    ? extractYoutubeVideoId(safeAnswerMediaUrl)
+    : undefined;
 
   return (
     <>
-      <h1 className="text-balance font-display text-4xl leading-snug">{prompt}</h1>
+      <h1 className="text-balance font-display text-4xl leading-snug">
+        {prompt}
+      </h1>
       {questionMediaUrl && questionYoutubeId && (
-        <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+        <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
           <iframe
             data-testid={`${mediaTestIdPrefix}-youtube`}
-            src={buildYoutubeEmbedSrc(questionYoutubeId, mediaStartSeconds, mediaEndSeconds)}
+            src={buildYoutubeEmbedSrc(
+              questionYoutubeId,
+              mediaStartSeconds,
+              mediaEndSeconds,
+            )}
             title="Question video"
-            className="h-full w-full"
+            className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
             allow="autoplay; encrypted-media"
             allowFullScreen
           />
         </div>
       )}
-      {questionMediaUrl && !questionYoutubeId && !isAudioUrl(questionMediaUrl) && (
-        // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-        <img
-          data-testid={`${mediaTestIdPrefix}-image`}
-          src={questionMediaUrl}
-          alt="Question image"
-          className="max-h-64 rounded-xl"
-        />
-      )}
-      {questionMediaUrl && !questionYoutubeId && isAudioUrl(questionMediaUrl) && (
-        <audio
-          data-testid={`${mediaTestIdPrefix}-audio`}
-          src={questionMediaUrl}
-          controls
-          autoPlay
-        />
-      )}
+      {questionMediaUrl &&
+        !questionYoutubeId &&
+        !isAudioUrl(questionMediaUrl) && (
+          // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+          <img
+            data-testid={`${mediaTestIdPrefix}-image`}
+            src={questionMediaUrl}
+            alt="Question image"
+            className="max-h-64 rounded-xl"
+          />
+        )}
+      {questionMediaUrl &&
+        !questionYoutubeId &&
+        isAudioUrl(questionMediaUrl) && (
+          <audio
+            data-testid={`${mediaTestIdPrefix}-audio`}
+            src={questionMediaUrl}
+            controls
+            autoPlay
+          />
+        )}
       {options && (
         <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
           {options.map((option, index) => {
-            const isCorrect = correctAnswer !== undefined && option === correctAnswer;
+            const isCorrect =
+              correctAnswer !== undefined && option === correctAnswer;
             return (
               <li
                 key={index}
@@ -109,7 +132,9 @@ export function QuestionDisplay({
                   isCorrect ? 'border-green' : 'border-foreground/30'
                 }`}
               >
-                <span className={`font-display ${isCorrect ? 'text-green' : 'text-cyan'}`}>
+                <span
+                  className={`font-display ${isCorrect ? 'text-green' : 'text-cyan'}`}
+                >
                   {getOptionLetter(index)}
                 </span>
                 <span className="text-foreground">{option}</span>
@@ -125,39 +150,47 @@ export function QuestionDisplay({
       )}
       {isRevealing && (
         <p className="font-display text-lg text-green">
-          <span className="font-body text-sm font-extrabold text-foreground/55">ANSWER </span>
+          <span className="font-body text-sm font-extrabold text-foreground/55">
+            ANSWER{' '}
+          </span>
           {correctAnswer}
         </p>
       )}
       {isRevealing && safeAnswerMediaUrl && answerYoutubeId && (
-        <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+        <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
           <iframe
             data-testid={`${mediaTestIdPrefix}-answer-youtube`}
             src={buildYoutubeEmbedSrc(answerYoutubeId)}
             title="Answer video"
-            className="h-full w-full"
+            className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
             allow="autoplay; encrypted-media"
             allowFullScreen
           />
         </div>
       )}
-      {isRevealing && safeAnswerMediaUrl && !answerYoutubeId && !isAudioUrl(safeAnswerMediaUrl) && (
-        // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-        <img
-          data-testid={`${mediaTestIdPrefix}-answer-image`}
-          src={safeAnswerMediaUrl}
-          alt="Answer image"
-          className="max-h-64 rounded-xl"
-        />
-      )}
-      {isRevealing && safeAnswerMediaUrl && !answerYoutubeId && isAudioUrl(safeAnswerMediaUrl) && (
-        <audio
-          data-testid={`${mediaTestIdPrefix}-answer-audio`}
-          src={safeAnswerMediaUrl}
-          controls
-          autoPlay
-        />
-      )}
+      {isRevealing &&
+        safeAnswerMediaUrl &&
+        !answerYoutubeId &&
+        !isAudioUrl(safeAnswerMediaUrl) && (
+          // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+          <img
+            data-testid={`${mediaTestIdPrefix}-answer-image`}
+            src={safeAnswerMediaUrl}
+            alt="Answer image"
+            className="max-h-64 rounded-xl"
+          />
+        )}
+      {isRevealing &&
+        safeAnswerMediaUrl &&
+        !answerYoutubeId &&
+        isAudioUrl(safeAnswerMediaUrl) && (
+          <audio
+            data-testid={`${mediaTestIdPrefix}-answer-audio`}
+            src={safeAnswerMediaUrl}
+            controls
+            autoPlay
+          />
+        )}
     </>
   );
 }

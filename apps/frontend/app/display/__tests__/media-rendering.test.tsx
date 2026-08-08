@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
 
@@ -120,7 +125,7 @@ describe('DisplayPage — media rendering', () => {
     const iframe = screen.getByTestId('question-youtube');
     expect(iframe).toHaveAttribute(
       'src',
-      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&start=82&end=140',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&controls=0&modestbranding=1&start=82&end=140',
     );
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
