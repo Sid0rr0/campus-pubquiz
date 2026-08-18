@@ -438,6 +438,31 @@ describe('AnswerService (Postgres integration)', () => {
     expect(answer.pointsAwarded).toBe(0.5);
   });
 
+  it('re-grading an already-graded answer overwrites the previous points and gradedAt', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await answerService.submit(
+      session.id,
+      question.id,
+      team.id,
+      'Banana',
+    );
+
+    await answerService.grade(session.id, submitted.answerId, 2);
+    const [firstGrade] = await answerService.listForQuestion(
+      session.id,
+      question.id,
+    );
+
+    await answerService.grade(session.id, submitted.answerId, 0);
+    const [secondGrade] = await answerService.listForQuestion(
+      session.id,
+      question.id,
+    );
+
+    expect(secondGrade.pointsAwarded).toBe(0);
+    expect(secondGrade.gradedAt).not.toBe(firstGrade.gradedAt);
+  });
+
   it('computes a leaderboard summing graded points per team, sorted descending', async () => {
     const question2 = em.create(Question, {
       round,

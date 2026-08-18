@@ -77,7 +77,7 @@ function AnswerRow({
             <button
               key={display}
               type="button"
-              disabled={!hasAnswered || isGraded}
+              disabled={!hasAnswered}
               aria-label={`Grade ${teamName} ${ariaSuffix}`}
               onClick={() => hasAnswered && onGrade(answer.answerId, value)}
               className={

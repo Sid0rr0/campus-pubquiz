@@ -259,7 +259,7 @@ describe('AdminPage — grading', () => {
     expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 1);
   });
 
-  it('shows the awarded grade as a disabled, checked quick button for an already-graded answer', () => {
+  it('shows the awarded grade as a checked quick button that stays enabled for an already-graded answer', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         joinCode: 'TESTCODE',
@@ -304,13 +304,63 @@ describe('AdminPage — grading', () => {
       name: /grade the quizzards full points/i,
     });
     expect(fullPointsButton).toHaveTextContent('✓ 2');
-    expect(fullPointsButton).toBeDisabled();
+    expect(fullPointsButton).toBeEnabled();
     expect(
       screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
       screen.getByRole('button', { name: /grade the quizzards half points/i }),
-    ).toBeDisabled();
+    ).toBeEnabled();
+  });
+
+  it('lets the admin change an already-graded answer to a different point value', async () => {
+    const user = userEvent.setup();
+    const gradeAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        joinCode: 'TESTCODE',
+        progress: progress({ status: 'break' }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
+        ],
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      setLiveAnswers: vi.fn(),
+      liveAnswers: {
+        questionId: 'r1q1',
+        question: {
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 2,
+          correctAnswer: 'Banana',
+          roundTitle: 'Round 1',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [
+          {
+            answerId: 'answer-1',
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            value: 'Banana',
+            pointsAwarded: 2,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+      gradeAnswer,
+    });
+    render(<AdminPage />);
+
+    await user.click(
+      screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
+    );
+
+    expect(gradeAnswer).toHaveBeenCalledWith('answer-1', 0);
   });
 
   it('requests and shows the first block question answers during the grading break', async () => {

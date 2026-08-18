@@ -159,7 +159,7 @@ describe('AnswersPanel', () => {
     expect(onGrade).toHaveBeenCalledWith(41, 2);
   });
 
-  it('shows the awarded grade as a disabled, checked button once graded', () => {
+  it('shows the awarded grade as a checked button once graded, but keeps it enabled', () => {
     render(
       <AnswersPanel
         liveAnswers={liveAnswers({
@@ -183,7 +183,36 @@ describe('AnswersPanel', () => {
       name: /grade the quizzards full points/i,
     });
     expect(fullPointsButton).toHaveTextContent('✓ 2');
-    expect(fullPointsButton).toBeDisabled();
+    expect(fullPointsButton).toBeEnabled();
+  });
+
+  it('allows changing an already-graded answer to a different point value', async () => {
+    const user = userEvent.setup();
+    const onGrade = vi.fn();
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: 'Paris',
+              pointsAwarded: 2,
+              gradedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={onGrade}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
+    );
+
+    expect(onGrade).toHaveBeenCalledWith(41, 0);
   });
 
   it('omits the previous/next controls when no nav is given', () => {
