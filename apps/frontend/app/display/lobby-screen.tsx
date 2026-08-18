@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
 import type { TeamView } from '@campus-pubquiz/types';
-import { ScatteredTeamNames } from '@/app/display/scattered-team-names';
+import { TeamRoster } from '@/app/display/team-roster';
 
 const QR_SIZE_PX = 220;
 
@@ -12,7 +12,7 @@ interface LobbyScreenProps {
 export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
-      <ScatteredTeamNames teams={teams} />
+      <TeamRoster teams={teams} />
       <h1 className="font-display text-4xl">Waiting for the quiz to start…</h1>
       {joinCode && (
         <div className="flex flex-col items-center gap-4">

@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
 
@@ -29,14 +34,22 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('shows a connecting message before the first snapshot arrives', () => {
-    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
     render(<DisplayPage />);
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 
   it('passes the ?code= query parameter to the socket handshake', () => {
     searchParamsRef.current = new URLSearchParams('code=GHIJKL');
-    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
     render(<DisplayPage />);
 
     expect(mockUseGameSocket).toHaveBeenCalledWith('display', true, 'GHIJKL');
@@ -44,7 +57,10 @@ describe('DisplayPage — lobby', () => {
 
   it('shows a waiting message in the lobby', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -91,7 +107,7 @@ describe('DisplayPage — lobby', () => {
     expect(screen.getByText('GHIJKL')).toBeInTheDocument();
   });
 
-  it('shows the connected team names scattered across the lobby screen', () => {
+  it('shows the connected team names at the bottom of the lobby screen with a join count', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'lobby' }),
@@ -107,12 +123,25 @@ describe('DisplayPage — lobby', () => {
     });
     render(<DisplayPage />);
 
-    const first = screen.getByText('The Quizzards');
-    expect(first).toBeInTheDocument();
+    expect(screen.getByText('The Quizzards')).toBeInTheDocument();
     expect(screen.getByText('Beer Necessities')).toBeInTheDocument();
-    // scattered = absolutely positioned with per-team inline coordinates
-    expect(first.style.left).toMatch(/%$/);
-    expect(first.style.top).toMatch(/%$/);
+    expect(screen.getByText('2 TEAMS JOINED')).toBeInTheDocument();
+  });
+
+  it('uses the singular "TEAM" when exactly one team has joined', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'ABCDEF',
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('1 TEAM JOINED')).toBeInTheDocument();
   });
 
   it('does not show the connected team names outside the lobby', () => {
