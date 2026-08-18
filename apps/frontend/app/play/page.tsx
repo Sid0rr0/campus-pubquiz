@@ -202,6 +202,7 @@ function PlayPageContent() {
         isAnswerable={isAnswerable}
         quizStructure={quizStructure}
         roundTitle={roundTitle}
+        joinCode={snapshot.joinCode}
       />
       {showBlockBrowser && selectedQuestion && (
         <QuestionBrowser

@@ -33,7 +33,11 @@ describe('PlayPage — pre-game screens', () => {
           currentQuestion: null,
           quizStructure: { blockCount: 2, topicsPerBlock: 3 },
         },
-        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          teamToken: 'token-1',
+        },
       }),
     );
     render(<PlayPage />);
@@ -51,7 +55,11 @@ describe('PlayPage — pre-game screens', () => {
           currentQuestion: null,
           roundTitle: 'Picture Round',
         },
-        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          teamToken: 'token-1',
+        },
       }),
     );
     render(<PlayPage />);
@@ -60,7 +68,7 @@ describe('PlayPage — pre-game screens', () => {
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
   });
 
-  it("stays on the block browser, not the round intro card, when Previous re-enters an already-open round", () => {
+  it('stays on the block browser, not the round intro card, when Previous re-enters an already-open round', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     const q1 = {
       id: 'r1q1',
@@ -78,7 +86,11 @@ describe('PlayPage — pre-game screens', () => {
           roundTitle: 'Picture Round',
           blockQuestions: [q1],
         },
-        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          teamToken: 'token-1',
+        },
       }),
     );
     render(<PlayPage />);
@@ -91,15 +103,22 @@ describe('PlayPage — pre-game screens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseGameSocket.mockReturnValue(
       socketResult({
-        snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
-        team: { teamId: 'team-1', teamName: 'The Quizzards', teamToken: 'token-1' },
+        snapshot: {
+          progress: progress({ status: 'lobby' }),
+          currentQuestion: null,
+          joinCode: 'ABCDEF',
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          teamToken: 'token-1',
+        },
       }),
     );
     render(<PlayPage />);
 
-    expect(screen.getByRole('link', { name: /read the rules/i })).toHaveAttribute(
-      'href',
-      '/rules',
-    );
+    expect(
+      screen.getByRole('link', { name: /read the rules/i }),
+    ).toHaveAttribute('href', '/rules?code=ABCDEF');
   });
 });

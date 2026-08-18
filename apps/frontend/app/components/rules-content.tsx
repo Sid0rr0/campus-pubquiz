@@ -1,14 +1,18 @@
 import type { QuizStructureSummary } from '@campus-pubquiz/types';
 
 interface RulesContentProps {
-  quizStructure: QuizStructureSummary;
+  /** Omitted when shown standalone with no live game session to read the structure from. */
+  quizStructure?: QuizStructureSummary;
 }
 
 function pluralize(count: number, singular: string): string {
   return count === 1 ? singular : `${singular}s`;
 }
 
-function structureSentence({ blockCount, topicsPerBlock }: QuizStructureSummary): string {
+function structureSentence({
+  blockCount,
+  topicsPerBlock,
+}: QuizStructureSummary): string {
   const rounds = `${blockCount} ${pluralize(blockCount, 'round')}`;
   if (topicsPerBlock === null) {
     return `There will be ${rounds}, with a break in between.`;
@@ -31,7 +35,11 @@ export function RulesContent({ quizStructure }: RulesContentProps) {
       <h1 className="font-display text-3xl">
         <span className="text-magenta">Rules</span>
       </h1>
-      <p className="text-balance font-display text-xl">{structureSentence(quizStructure)}</p>
+      {quizStructure && (
+        <p className="text-balance font-display text-xl">
+          {structureSentence(quizStructure)}
+        </p>
+      )}
       <ul className="mx-auto flex max-w-xl flex-col gap-3 text-left">
         {RULES.map((rule) => (
           <li key={rule} className="flex items-start gap-3 text-lg font-bold">
