@@ -1,24 +1,28 @@
-import type { Metadata } from "next";
-import { Caprasimo, Nunito_Sans } from "next/font/google";
-import { SiteHeader } from "@/app/components/site-header";
-import { AuthProvider } from "@/app/lib/use-auth";
-import "./globals.css";
+import type { Metadata } from 'next';
+import localFont from 'next/font/local';
+import { SiteHeader } from '@/app/components/site-header';
+import { AuthProvider } from '@/app/lib/use-auth';
+import './globals.css';
 
-const caprasimo = Caprasimo({
-  weight: "400",
-  variable: "--font-caprasimo",
-  subsets: ["latin"],
-});
-
-const nunitoSans = Nunito_Sans({
-  weight: ["400", "600", "700", "800"],
-  variable: "--font-nunito-sans",
-  subsets: ["latin"],
+const technika = localFont({
+  src: [
+    {
+      path: './fonts/Technika-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: './fonts/Technika-Italic.ttf',
+      weight: '400',
+      style: 'italic',
+    },
+  ],
+  variable: '--font-technika',
 });
 
 export const metadata: Metadata = {
-  title: "Campus Pub Quiz",
-  description: "Live pub quiz for campus events",
+  title: 'Campus Pub Quiz',
+  description: 'Live pub quiz for campus events',
 };
 
 export default function RootLayout({
@@ -27,10 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${caprasimo.variable} ${nunitoSans.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${technika.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground font-body">
         <AuthProvider>
           <SiteHeader />

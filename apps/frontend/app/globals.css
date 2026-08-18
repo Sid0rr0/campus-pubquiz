@@ -13,8 +13,8 @@
   --color-cyan: #00aeef;
   --color-dark-blue: #2e3192;
   --color-orange: #f47b20;
-  --font-display: var(--font-caprasimo);
-  --font-body: var(--font-nunito-sans);
+  --font-display: var(--font-technika);
+  --font-body: var(--font-technika);
 }
 
 body {
