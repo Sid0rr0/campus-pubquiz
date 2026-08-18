@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon } from '@radix-ui/react-icons';
+import type { GameStatus } from '@campus-pubquiz/types';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { QuestionBrowser } from '@/app/play/question-browser';
@@ -45,11 +46,27 @@ function PlayPageContent() {
     setBrowsedQuestionId(null);
   }, [currentQuestionId]);
 
+  const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
-    // Back in the lobby means the admin may have started a fresh game session,
-    // which invalidates the team registration. Re-joining is idempotent for
-    // the same session and re-registers the team under a new one.
-    if (gameStatus !== 'lobby' || !teamName) return;
+    const previousGameStatus = previousGameStatusRef.current;
+    previousGameStatusRef.current = gameStatus;
+    // A transition *into* lobby from some other status means the admin
+    // restarted the game session, which invalidates the team registration —
+    // re-joining re-registers the team under the new session. Skip the very
+    // first status this effect sees (whether from a fresh connect or a
+    // page refresh that happens to land back in lobby): use-team-join.ts's
+    // own reconnect join already covers that case, and firing a second join
+    // here too would race it against the old socket's still-pending
+    // disconnect cleanup and can wrongly bounce a refresh with "already
+    // connected".
+    if (
+      gameStatus !== 'lobby' ||
+      !teamName ||
+      previousGameStatus === undefined ||
+      previousGameStatus === 'lobby'
+    ) {
+      return;
+    }
     joinTeam(teamName, storedJoinOptions());
   }, [gameStatus, teamName, joinTeam]);
 

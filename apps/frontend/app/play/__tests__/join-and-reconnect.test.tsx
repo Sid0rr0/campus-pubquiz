@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, mockFetchPublicSessions, searchParamsRef, routerRef } = vi.hoisted(() => ({
+const {
+  mockUseGameSocket,
+  mockFetchPublicSessions,
+  searchParamsRef,
+  routerRef,
+} = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
   mockFetchPublicSessions: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
@@ -21,7 +26,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app/lib/sessions-api')>();
+  const actual =
+    await importOriginal<typeof import('@/app/lib/sessions-api')>();
   return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
 });
 
@@ -38,19 +44,33 @@ describe('PlayPage — join and reconnect', () => {
 
   it('shows a join form asking for a team name and a game code', () => {
     render(<PlayPage />);
-    expect(screen.getByRole('textbox', { name: /team name/i })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /game code/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /team name/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /game code/i }),
+    ).toBeInTheDocument();
   });
 
   it('stores the team name and game code and switches to the game view after joining', async () => {
     render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
-    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'ABCDEF');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /team name/i }),
+      'The Quizzards',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /game code/i }),
+      'ABCDEF',
+    );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('The Quizzards');
-    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBe('ABCDEF');
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
+      'The Quizzards',
+    );
+    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBe(
+      'ABCDEF',
+    );
     expect(screen.getByText(/playing as the quizzards/i)).toBeInTheDocument();
   });
 
@@ -59,11 +79,19 @@ describe('PlayPage — join and reconnect', () => {
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), '  The Quizzards  ');
-    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), ' abcdef ');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /team name/i }),
+      '  The Quizzards  ',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /game code/i }),
+      ' abcdef ',
+    );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', { joinCode: 'ABCDEF' });
+    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
+      joinCode: 'ABCDEF',
+    });
   });
 
   it('does not join when the game code is empty', async () => {
@@ -71,7 +99,10 @@ describe('PlayPage — join and reconnect', () => {
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /team name/i }),
+      'The Quizzards',
+    );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
     expect(joinTeam).not.toHaveBeenCalled();
@@ -81,37 +112,62 @@ describe('PlayPage — join and reconnect', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<PlayPage />);
 
-    expect(screen.getByRole('textbox', { name: /game code/i })).toHaveValue('ABCDEF');
+    expect(screen.getByRole('textbox', { name: /game code/i })).toHaveValue(
+      'ABCDEF',
+    );
   });
 
   it('passes the ?code= query parameter to the socket handshake', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<PlayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenCalledWith('players', true, 'ABCDEF', 0);
+    expect(mockUseGameSocket).toHaveBeenCalledWith(
+      'players',
+      true,
+      'ABCDEF',
+      0,
+    );
   });
 
   it('does not connect the socket until a join code is known', () => {
     render(<PlayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenCalledWith('players', false, undefined, 0);
+    expect(mockUseGameSocket).toHaveBeenCalledWith(
+      'players',
+      false,
+      undefined,
+      0,
+    );
   });
 
   it('connects the socket once a code is submitted through the join form', async () => {
     render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
-    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'abcdef');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /team name/i }),
+      'The Quizzards',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /game code/i }),
+      'abcdef',
+    );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('players', true, 'ABCDEF', 1);
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
+      'players',
+      true,
+      'ABCDEF',
+      1,
+    );
   });
 
   it('skips the join form when a team name is already stored (reconnect)', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     render(<PlayPage />);
 
-    expect(screen.queryByRole('textbox', { name: /team name/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /team name/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText(/playing as returning team/i)).toBeInTheDocument();
   });
 
@@ -135,17 +191,29 @@ describe('PlayPage — join and reconnect', () => {
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     const { rerender } = render(<PlayPage />);
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team name/i }), 'The Quizzards');
-    await userEvent.type(screen.getByRole('textbox', { name: /game code/i }), 'abcdef');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /team name/i }),
+      'The Quizzards',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /game code/i }),
+      'abcdef',
+    );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
     mockUseGameSocket.mockReturnValue(
-      socketResult({ joinTeam, connectionError: 'Team name taken — enter its team code' }),
+      socketResult({
+        joinTeam,
+        connectionError: 'Team name taken — enter its team code',
+      }),
     );
     rerender(<PlayPage />);
     joinTeam.mockClear();
 
-    await userEvent.type(screen.getByRole('textbox', { name: /team code/i }), 'quick-jade-fox');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /team code/i }),
+      'quick-jade-fox',
+    );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
     expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
@@ -167,7 +235,10 @@ describe('PlayPage — join and reconnect', () => {
     };
     mockUseGameSocket.mockReturnValue(
       socketResult({
-        snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+        snapshot: {
+          progress: progress({ status: 'ended' }),
+          currentQuestion: null,
+        },
         team: joinedTeam,
         joinTeam,
       }),
@@ -177,7 +248,10 @@ describe('PlayPage — join and reconnect', () => {
 
     mockUseGameSocket.mockReturnValue(
       socketResult({
-        snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null },
+        snapshot: {
+          progress: progress({ status: 'lobby' }),
+          currentQuestion: null,
+        },
         team: joinedTeam,
         joinTeam,
       }),
@@ -191,19 +265,49 @@ describe('PlayPage — join and reconnect', () => {
     });
   });
 
+  it('does not double-join when a page load/refresh lands directly on a lobby snapshot', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+    const joinTeam = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'lobby' }),
+          currentQuestion: null,
+        },
+        joinTeam,
+      }),
+    );
+
+    render(<PlayPage />);
+
+    // A duplicate JOIN_PLAYERS here would race the old socket's disconnect
+    // cleanup server-side and can wrongly bounce a refresh with "already
+    // connected" — see apps/backend game.gateway.ts's one-connection-per-team
+    // check.
+    expect(joinTeam).toHaveBeenCalledTimes(1);
+  });
+
   it('clears the session token and redirects to /play when the admin closes the session', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
     window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
     window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    mockUseGameSocket.mockReturnValue(socketResult({ sessionClosed: 'ABCDEF' }));
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ sessionClosed: 'ABCDEF' }),
+    );
 
     render(<PlayPage />);
 
     // Team name/code survive so the team can join another game without
     // retyping — only this session's token and join code are cleared.
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe('Returning Team');
-    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe('QUICK-JADE-FOX');
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
+      'Returning Team',
+    );
+    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe(
+      'QUICK-JADE-FOX',
+    );
     expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
     expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
     expect(routerRef.push).toHaveBeenCalledWith('/play');
