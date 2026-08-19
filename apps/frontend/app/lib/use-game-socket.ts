@@ -90,27 +90,37 @@ export function useGameSocket(
   const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
-  const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(null);
+  const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(
+    null,
+  );
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
+  // A fresh connect (first mount, or `role`/`joinCode`/`retryKey` identity
+  // change) starts from a clean slate — otherwise the previous identity's
+  // data stays on screen until the new STATE_SYNC arrives. Adjusted during
+  // render rather than in the connect Effect below, keyed the same way its
+  // dependency array is.
+  const identityKey = `${enabled}|${role}|${joinCode ?? ''}|${retryKey}`;
+  const [prevIdentityKey, setPrevIdentityKey] = useState(identityKey);
+  if (identityKey !== prevIdentityKey) {
+    setPrevIdentityKey(identityKey);
+    if (enabled) {
+      setSnapshot(null);
+      setConnectionError(null);
+      setTeam(null);
+      setLiveAnswers(null);
+      setMyAnswers({});
+      setSessionClosed(null);
+    }
+  }
+
   useEffect(() => {
     if (!enabled) {
       return;
     }
-
-    // A fresh connect (first mount, or `role`/`joinCode` identity change)
-    // starts from a clean slate — otherwise the previous identity's data
-    // stays on screen until the new STATE_SYNC arrives.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSnapshot(null);
-    setConnectionError(null);
-    setTeam(null);
-    setLiveAnswers(null);
-    setMyAnswers({});
-    setSessionClosed(null);
 
     const socket = io(getBackendUrl(), {
       query: joinCode ? { role, code: joinCode } : { role },
@@ -135,18 +145,30 @@ export function useGameSocket(
       setTeam(payload);
       setMyAnswers(
         Object.fromEntries(
-          (payload.answers ?? []).map((answer) => [answer.questionId, answer.value]),
+          (payload.answers ?? []).map((answer) => [
+            answer.questionId,
+            answer.value,
+          ]),
         ),
       );
     });
 
-    socket.on(SOCKET_EVENTS.ANSWER_RECEIVED, (payload: AnswerReceivedPayload) => {
-      setMyAnswers((current) => ({ ...current, [payload.questionId]: payload.value }));
-    });
+    socket.on(
+      SOCKET_EVENTS.ANSWER_RECEIVED,
+      (payload: AnswerReceivedPayload) => {
+        setMyAnswers((current) => ({
+          ...current,
+          [payload.questionId]: payload.value,
+        }));
+      },
+    );
 
-    socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload: AnswersUpdatedPayload) => {
-      setLiveAnswers(payload);
-    });
+    socket.on(
+      SOCKET_EVENTS.ANSWERS_UPDATED,
+      (payload: AnswersUpdatedPayload) => {
+        setLiveAnswers(payload);
+      },
+    );
 
     socket.on(SOCKET_EVENTS.SESSION_CLOSED, (payload: SessionClosedPayload) => {
       setSessionClosed(payload.joinCode);
@@ -158,7 +180,9 @@ export function useGameSocket(
 
     socket.on('disconnect', (reason: string) => {
       if (reason !== 'io client disconnect') {
-        setConnectionError((currentError) => currentError ?? `Disconnected: ${reason}`);
+        setConnectionError(
+          (currentError) => currentError ?? `Disconnected: ${reason}`,
+        );
       }
     });
 
@@ -176,15 +200,18 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.ADMIN_ACTION, payload);
   }, []);
 
-  const joinTeam = useCallback((teamName: string, options: JoinTeamOptions = {}) => {
-    const payload: JoinPlayersPayload = {
-      teamName,
-      teamToken: options.teamToken,
-      teamCode: options.teamCode,
-      joinCode: options.joinCode,
-    };
-    socketRef.current?.emit(SOCKET_EVENTS.JOIN_PLAYERS, payload);
-  }, []);
+  const joinTeam = useCallback(
+    (teamName: string, options: JoinTeamOptions = {}) => {
+      const payload: JoinPlayersPayload = {
+        teamName,
+        teamToken: options.teamToken,
+        teamCode: options.teamCode,
+        joinCode: options.joinCode,
+      };
+      socketRef.current?.emit(SOCKET_EVENTS.JOIN_PLAYERS, payload);
+    },
+    [],
+  );
 
   const submitAnswer = useCallback(
     (questionId: number, teamId: number, value: string) => {
@@ -205,7 +232,12 @@ export function useGameSocket(
   }, []);
 
   const awardBonus = useCallback(
-    (teamId: number, category: BonusCategory, points: number, reason?: string) => {
+    (
+      teamId: number,
+      category: BonusCategory,
+      points: number,
+      reason?: string,
+    ) => {
       const payload: AwardBonusPayload = { teamId, category, points, reason };
       socketRef.current?.emit(SOCKET_EVENTS.AWARD_BONUS, payload);
     },

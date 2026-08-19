@@ -48,7 +48,6 @@ function AdminPageContent() {
   const [connectJoinCode, setConnectJoinCode] = useState<string | null>(
     sessionCode,
   );
-  const connectedJoinCodeRef = useRef<string | null>(null);
 
   const {
     snapshot,
@@ -65,19 +64,20 @@ function AdminPageContent() {
     isAuthenticated && Boolean(connectJoinCode),
     connectJoinCode ?? undefined,
   );
+  const connectedJoinCode = snapshot?.joinCode;
 
-  useEffect(() => {
-    if (snapshot) {
-      connectedJoinCodeRef.current = snapshot.joinCode;
-    }
-  }, [snapshot]);
-
-  useEffect(() => {
-    if (sessionCode && sessionCode !== connectedJoinCodeRef.current) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Adopts a new ?code= only when it points at a session the socket doesn't
+  // already know about (see `connectJoinCode` above) — adjusted during
+  // render rather than in an Effect, keyed off sessionCode the same way the
+  // old Effect's dependency array was. Compares against `connectedJoinCode`
+  // (plain state, not a ref) since refs can't be read during render.
+  const [prevSessionCode, setPrevSessionCode] = useState(sessionCode);
+  if (sessionCode !== prevSessionCode) {
+    setPrevSessionCode(sessionCode);
+    if (sessionCode && sessionCode !== connectedJoinCode) {
       setConnectJoinCode(sessionCode);
     }
-  }, [sessionCode]);
+  }
 
   useEffect(() => {
     // Keeps the URL's ?code= in sync with whatever session the socket is
@@ -115,7 +115,6 @@ function AdminPageContent() {
   }, [auth.status, router]);
 
   const gameStatus = snapshot?.progress.status;
-  const connectedJoinCode = snapshot?.joinCode;
 
   const lastFetchedStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
@@ -159,12 +158,14 @@ function AdminPageContent() {
     };
   }, [gameStatus, connectedJoinCode]);
 
-  useEffect(() => {
-    // A newly selected/restarted quiz invalidates any question id picked
-    // under the previous session.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // A newly selected/restarted quiz invalidates any question id picked under
+  // the previous session. Adjusted during render rather than in an Effect.
+  const [prevConnectedJoinCode, setPrevConnectedJoinCode] =
+    useState(connectedJoinCode);
+  if (connectedJoinCode !== prevConnectedJoinCode) {
+    setPrevConnectedJoinCode(connectedJoinCode);
     setSelectedQuestionId(null);
-  }, [snapshot?.joinCode]);
+  }
 
   const revealIndex = snapshot?.progress.revealIndex ?? 0;
   // Which question the audience is actually looking at right now: the open
@@ -211,12 +212,17 @@ function AdminPageContent() {
       : null;
   // Grading defaults to whatever's on display, but a manual pick from the
   // browser sticks — until Prev/Advance brings the displayed question back
-  // around to match it, at which point the sync effect below drops the
+  // around to match it, at which point the sync check below drops the
   // override so the two keep moving together again instead of the pick
   // going stale. Outside display statuses, grading still needs *something*
   // to default to, so it falls back to the block's first question —
   // naturally null wherever blockQuestions is empty (e.g. round_intro).
   const defaultBlockQuestionId = snapshot?.blockQuestions?.[0]?.id ?? null;
+  // Adjusted during render rather than in an Effect — once selectedQuestionId
+  // is nulled, this condition is false on the next render, so it can't loop.
+  if (selectedQuestionId !== null && selectedQuestionId === displayQuestionId) {
+    setSelectedQuestionId(null);
+  }
   const effectiveQuestionId =
     selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
 
@@ -246,20 +252,6 @@ function AdminPageContent() {
       cancelled = true;
     };
   }, [snapshot?.joinCode, effectiveQuestionId, setLiveAnswers, reconnectedAt]);
-
-  useEffect(() => {
-    // Once the admin's manual pick coincides with the question actually on
-    // /display (either because they picked the displayed question, or
-    // Prev/Advance brought the display back around to it), drop the
-    // override so grading resumes following the display automatically.
-    if (
-      selectedQuestionId !== null &&
-      selectedQuestionId === displayQuestionId
-    ) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedQuestionId(null);
-    }
-  }, [selectedQuestionId, displayQuestionId]);
 
   const activeQuizId = quizzes?.activeQuizId ?? null;
   const activeQuizTitle =

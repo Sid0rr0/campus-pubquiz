@@ -40,21 +40,24 @@ function PlayPageContent() {
   const gameStatus = snapshot?.progress.status;
   const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
   const revealIndex = snapshot?.progress.revealIndex ?? null;
+  // Only changes while actively revealing (currentQuestionId stays null
+  // throughout break/reveal), so this alone can key the reveal-walk sync.
+  const revealSyncKey = gameStatus === 'reveal' ? revealIndex : null;
 
-  useEffect(() => {
-    // Snap back to the newest question whenever the quiz master reveals one.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Snap back to the newest question whenever the quiz master reveals a new
+  // question, or steps through the reveal walk. Adjusted during render
+  // rather than in an Effect, per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevQuestionId, setPrevQuestionId] = useState(currentQuestionId);
+  const [prevRevealSyncKey, setPrevRevealSyncKey] = useState(revealSyncKey);
+  if (
+    currentQuestionId !== prevQuestionId ||
+    revealSyncKey !== prevRevealSyncKey
+  ) {
+    setPrevQuestionId(currentQuestionId);
+    setPrevRevealSyncKey(revealSyncKey);
     setBrowsedQuestionId(null);
-  }, [currentQuestionId]);
-
-  useEffect(() => {
-    // Follow the big screen through the answer reveal step by step, the same
-    // snap-back as above but keyed to revealIndex since currentQuestionId
-    // stays null throughout break/reveal.
-    if (gameStatus !== 'reveal') return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setBrowsedQuestionId(null);
-  }, [gameStatus, revealIndex]);
+  }
 
   const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {

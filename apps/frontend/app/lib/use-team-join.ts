@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGameSocket, type UseGameSocketResult } from '@/app/lib/use-game-socket';
+import {
+  useGameSocket,
+  type UseGameSocketResult,
+} from '@/app/lib/use-game-socket';
 import {
   JOIN_CODE_STORAGE_KEY,
   TEAM_CODE_STORAGE_KEY,
@@ -38,7 +41,9 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
   const [codeInput, setCodeInput] = useState(codeFromUrl);
   const [teamCodeInput, setTeamCodeInput] = useState('');
   const [hasStoredIdentity, setHasStoredIdentity] = useState(false);
-  const [activeJoinCode, setActiveJoinCode] = useState<string | null>(codeFromUrl || null);
+  const [activeJoinCode, setActiveJoinCode] = useState<string | null>(
+    codeFromUrl || null,
+  );
   // Bumped on every form submission so the join effect below re-fires even
   // when the submitted name/code are unchanged from the last attempt — e.g.
   // retrying after a name-collision error with only the team code field
@@ -72,7 +77,9 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     const storedName = window.localStorage.getItem(TEAM_NAME_STORAGE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamName(storedName);
-    setHasStoredIdentity(Boolean(window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY)));
+    setHasStoredIdentity(
+      Boolean(window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY)),
+    );
     if (storedName) {
       const storedOptions = storedJoinOptions();
       // Pre-fills the join form in case this reconnect attempt fails and we
@@ -82,7 +89,9 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
         setCodeInput(storedOptions.joinCode);
         // Only fills the gap when the URL didn't already pin a code — the URL
         // is the stronger signal (e.g. a fresh QR scan for a different game).
-        setActiveJoinCode((current) => current ?? storedOptions.joinCode ?? null);
+        setActiveJoinCode(
+          (current) => current ?? storedOptions.joinCode ?? null,
+        );
       }
       if (storedOptions.teamCode) {
         setTeamCodeInput(storedOptions.teamCode);
@@ -115,30 +124,44 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     if (team) {
       window.localStorage.setItem(TEAM_TOKEN_STORAGE_KEY, team.teamToken);
       window.localStorage.setItem(TEAM_CODE_STORAGE_KEY, team.teamCode);
-      // A fresh join (no team code typed in) only just learned its team code
-      // from the server — mirror it into the field now, the same way the
-      // mount-time prefill already keeps nameInput in sync with storage, so
-      // the form shows it correctly if it ever reappears (log out, retry).
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTeamCodeInput(team.teamCode);
     }
   }, [team]);
+
+  // A fresh join (no team code typed in) only just learned its team code
+  // from the server — mirror it into the field now, the same way the
+  // mount-time prefill already keeps nameInput in sync with storage, so the
+  // form shows it correctly if it ever reappears (log out, retry). Adjusted
+  // during render rather than in an Effect.
+  const [prevTeam, setPrevTeam] = useState(team);
+  if (team !== prevTeam) {
+    setPrevTeam(team);
+    if (team) {
+      setTeamCodeInput(team.teamCode);
+    }
+  }
 
   useEffect(() => {
     // The admin closed this session server-side — its token/join code are now
     // stale, so drop them and send the team back to a fresh /play join screen
     // rather than letting the next action surface an opaque server error.
-    // Team name and team code deliberately survive so the form stays
-    // prefilled for joining another game as this same team.
     if (!sessionClosed) return;
     clearStoredSession();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTeamName(null);
-    setCodeInput('');
-    setHasStoredIdentity(false);
-    setActiveJoinCode(null);
     router.push('/play');
   }, [sessionClosed, router]);
+
+  // Team name and team code deliberately survive so the form stays prefilled
+  // for joining another game as this same team. Adjusted during render
+  // rather than in an Effect.
+  const [prevSessionClosed, setPrevSessionClosed] = useState(sessionClosed);
+  if (sessionClosed !== prevSessionClosed) {
+    setPrevSessionClosed(sessionClosed);
+    if (sessionClosed) {
+      setTeamName(null);
+      setCodeInput('');
+      setHasStoredIdentity(false);
+      setActiveJoinCode(null);
+    }
+  }
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
