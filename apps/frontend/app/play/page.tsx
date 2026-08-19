@@ -33,6 +33,7 @@ function PlayPageContent() {
     joinTeam,
     submitAnswer,
     myAnswers = {},
+    myAnswerGrades = {},
     seenQuestions = {},
     handleJoin,
     handleLogOut,
@@ -208,12 +209,26 @@ function PlayPageContent() {
   const showBlockBrowser =
     Boolean(selectedQuestion) &&
     (isAnswerable || (!progress.isLeaderboardVisible && isBreakOrReveal));
-  const openedQuestions = buildOpenedQuestions(seenQuestions, myAnswers);
+  const openedQuestions = buildOpenedQuestions(
+    seenQuestions,
+    myAnswers,
+    myAnswerGrades,
+    team?.teamName ?? null,
+    {
+      status: progress.status,
+      revealIndex: progress.revealIndex,
+      revealQuestions,
+    },
+  );
   // Only the active block's questions can actually be jumped to in the
   // browser above — older, already-closed blocks aren't rendered there.
   const jumpableQuestionIds = showBlockBrowser
     ? new Set(blockQuestions.map((question) => question.id))
     : new Set<number>();
+  const selectedQuestionPoints = selectedQuestion
+    ? (openedQuestions.find((entry) => entry.id === selectedQuestion.id)
+        ?.pointsAwarded ?? null)
+    : null;
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
@@ -257,6 +272,7 @@ function PlayPageContent() {
               revealQuestion={revealQuestion}
               closestGuessRevealStep={closestGuessRevealStep}
               myAnswers={myAnswers}
+              myAnswerPoints={selectedQuestionPoints}
               onSelectQuestion={setBrowsedQuestionId}
               onSubmitAnswer={submitAnswer}
             />

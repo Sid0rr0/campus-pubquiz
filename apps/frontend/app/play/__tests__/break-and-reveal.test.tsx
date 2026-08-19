@@ -189,6 +189,41 @@ describe('PlayPage — break and reveal', () => {
     expect(screen.getByText('Mango')).toBeInTheDocument();
   });
 
+  it('shows points awarded next to YOUR ANSWER during reveal once graded', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+          revealQuestions: [{ ...q1, answer: 'Banana' }],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Mango' },
+        myAnswerGrades: {
+          r1q1: { pointsAwarded: 0, gradedAt: '2024-01-01T00:00:00.000Z' },
+        },
+        seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('0 / 5 points')).toBeInTheDocument();
+  });
+
   it('formats YOUR ANSWER for a sort/match question during reveal instead of showing the raw pipe-joined value', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {

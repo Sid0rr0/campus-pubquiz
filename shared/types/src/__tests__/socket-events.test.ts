@@ -19,6 +19,7 @@ describe('SOCKET_EVENTS', () => {
       ANSWER_RECEIVED: 'game:answer_received',
       JOIN_ACCEPTED: 'game:join_accepted',
       ANSWERS_UPDATED: 'game:answers_updated',
+      TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
       SESSION_CLOSED: 'game:session_closed',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
@@ -130,10 +131,14 @@ describe('block answering payloads', () => {
       teamToken: 'token-1',
       teamCode: 'ABC234',
       teamName: 'Quizzards',
-      answers: [{ questionId: 1, value: '42' }],
+      answers: [
+        { questionId: 1, value: '42', pointsAwarded: 0, gradedAt: null },
+      ],
     };
 
-    expect(joined.answers).toEqual([{ questionId: 1, value: '42' }]);
+    expect(joined.answers).toEqual([
+      { questionId: 1, value: '42', pointsAwarded: 0, gradedAt: null },
+    ]);
   });
 });
 

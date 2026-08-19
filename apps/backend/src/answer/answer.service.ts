@@ -20,6 +20,8 @@ export interface SubmittedAnswer {
   teamId: number;
   teamName: string;
   value: string;
+  pointsAwarded: number;
+  gradedAt: string | null;
 }
 
 export interface GradedAnswer {
@@ -108,6 +110,8 @@ export class AnswerService {
       teamId,
       teamName: team.name,
       value: answer.value,
+      pointsAwarded: answer.pointsAwarded,
+      gradedAt: answer.gradedAt?.toISOString() ?? null,
     };
   }
 
@@ -140,6 +144,8 @@ export class AnswerService {
     return rows.map((row) => ({
       questionId: row.question.id,
       value: row.value,
+      pointsAwarded: row.pointsAwarded,
+      gradedAt: row.gradedAt?.toISOString() ?? null,
     }));
   }
 

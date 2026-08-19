@@ -16,6 +16,7 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
   type AnswersUpdatedPayload,
+  type GameStatus,
   type SocketRoomName,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
@@ -163,6 +164,7 @@ export class GameGateway
       `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
     );
 
+    const previousStatus = this.gameState.getSnapshot(joinCode).progress.status;
     let snapshot: StateSnapshotPayload;
     try {
       snapshot = await this.gameState.applyAction(joinCode, payload.action);
@@ -186,6 +188,12 @@ export class GameGateway
       snapshot = this.gameState.getSnapshot(joinCode);
     }
 
+    await this.syncTeamAnswersOnRevealEntry(
+      joinCode,
+      previousStatus,
+      snapshot.progress.status,
+    );
+
     this.broadcastState(joinCode, snapshot);
     this.rearmQuestionLockTimer(joinCode);
   }
@@ -201,6 +209,7 @@ export class GameGateway
   ): Promise<void> {
     this.questionLockTimers.delete(joinCode);
 
+    const previousStatus = this.gameState.getSnapshot(joinCode).progress.status;
     let snapshot: StateSnapshotPayload;
     try {
       snapshot = await this.gameState.applyAction(joinCode, 'ADVANCE');
@@ -211,8 +220,51 @@ export class GameGateway
       return;
     }
 
+    await this.syncTeamAnswersOnRevealEntry(
+      joinCode,
+      previousStatus,
+      snapshot.progress.status,
+    );
+
     this.broadcastState(joinCode, snapshot);
     this.rearmQuestionLockTimer(joinCode);
+  }
+
+  /**
+   * Pushes each currently-connected team its own up-to-date graded answers
+   * the moment the block they answered first reaches 'reveal_intro' — by
+   * then every answer should be graded (auto-graded at submit, or manually
+   * by the admin sometime during the break screens beforehand), so this is
+   * the one moment a connected team's local state needs refreshing to show
+   * accurate points once reveal renders them. Fires once per entry into
+   * reveal, not on every ADVANCE while already revealing.
+   */
+  private async syncTeamAnswersOnRevealEntry(
+    joinCode: string,
+    previousStatus: GameStatus,
+    newStatus: GameStatus,
+  ): Promise<void> {
+    if (previousStatus === 'reveal_intro' || newStatus !== 'reveal_intro') {
+      return;
+    }
+
+    const gameSessionId = this.gameState.getGameSessionId(joinCode);
+    const { teams } = this.gameState.getSnapshot(joinCode);
+    for (const team of teams) {
+      if (!team.isConnected) continue;
+      const socketId = this.gameState.getConnectedSocketId(
+        joinCode,
+        team.teamId,
+      );
+      if (!socketId) continue;
+      const answers = await this.answerService.listForTeam(
+        gameSessionId,
+        team.teamId,
+      );
+      this.server
+        .to(socketId)
+        .emit(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers });
+    }
   }
 
   /** (Re)arms this session's auto-lock timer to match GameStateService's current deadline, clearing any stale one first. */
@@ -366,6 +418,8 @@ export class GameGateway
       teamId: submitted.teamId,
       teamName: submitted.teamName,
       value: submitted.value,
+      pointsAwarded: submitted.pointsAwarded,
+      gradedAt: submitted.gradedAt,
     });
 
     const answers = await this.answerService.listForQuestion(

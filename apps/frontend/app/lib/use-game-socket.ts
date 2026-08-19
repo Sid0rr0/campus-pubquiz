@@ -19,6 +19,8 @@ import {
   type SessionClosedPayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
+  type TeamAnswerView,
+  type TeamAnswersSyncedPayload,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 
@@ -28,6 +30,12 @@ export interface JoinTeamOptions {
   teamToken?: string;
   teamCode?: string;
   joinCode?: string;
+}
+
+/** A team's own graded answer to one question — absent from the map entirely until grading happens (instantly for auto-graded types, on admin grading for the rest). */
+export interface MyAnswerGrade {
+  pointsAwarded: number;
+  gradedAt: string;
 }
 
 export interface UseGameSocketResult {
@@ -48,6 +56,8 @@ export interface UseGameSocketResult {
   ) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
+  /** The team's own points awarded by question id, present only once that question's answer is graded (players only). */
+  myAnswerGrades: Record<number, MyAnswerGrade>;
   /**
    * Every question this socket has seen open or revealed so far, keyed by
    * id — accumulated across blocks/rounds, since `snapshot.blockQuestions`/
@@ -99,6 +109,28 @@ function mergeSeenQuestions(
   return next;
 }
 
+function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
+  return Object.fromEntries(
+    answers.map((answer) => [answer.questionId, answer.value]),
+  );
+}
+
+function buildMyAnswerGrades(
+  answers: TeamAnswerView[],
+): Record<number, MyAnswerGrade> {
+  return Object.fromEntries(
+    answers
+      .filter((answer) => answer.gradedAt !== null)
+      .map((answer) => [
+        answer.questionId,
+        {
+          pointsAwarded: answer.pointsAwarded,
+          gradedAt: answer.gradedAt as string,
+        },
+      ]),
+  );
+}
+
 function getExceptionMessage(payload: unknown): string {
   if (typeof payload === 'string') return payload;
   if (payload && typeof payload === 'object' && 'message' in payload) {
@@ -127,6 +159,9 @@ export function useGameSocket(
     null,
   );
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
+  const [myAnswerGrades, setMyAnswerGrades] = useState<
+    Record<number, MyAnswerGrade>
+  >({});
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
@@ -147,6 +182,7 @@ export function useGameSocket(
       setTeam(null);
       setLiveAnswers(null);
       setMyAnswers({});
+      setMyAnswerGrades({});
       setSeenQuestions({});
       setSessionClosed(null);
     }
@@ -180,14 +216,8 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
       setTeam(payload);
-      setMyAnswers(
-        Object.fromEntries(
-          (payload.answers ?? []).map((answer) => [
-            answer.questionId,
-            answer.value,
-          ]),
-        ),
-      );
+      setMyAnswers(buildMyAnswers(payload.answers ?? []));
+      setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
     });
 
     socket.on(
@@ -197,6 +227,27 @@ export function useGameSocket(
           ...current,
           [payload.questionId]: payload.value,
         }));
+        if (payload.gradedAt !== null) {
+          setMyAnswerGrades((current) => ({
+            ...current,
+            [payload.questionId]: {
+              pointsAwarded: payload.pointsAwarded,
+              gradedAt: payload.gradedAt as string,
+            },
+          }));
+        }
+      },
+    );
+
+    // Pushed once the block a team answered reaches reveal_intro — carries
+    // that team's complete, freshly-graded answer set (same shape as
+    // JOIN_ACCEPTED.answers), so both maps are replaced wholesale rather
+    // than merged, same as a reconnect would produce.
+    socket.on(
+      SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+      (payload: TeamAnswersSyncedPayload) => {
+        setMyAnswers(buildMyAnswers(payload.answers));
+        setMyAnswerGrades(buildMyAnswerGrades(payload.answers));
       },
     );
 
@@ -293,6 +344,7 @@ export function useGameSocket(
     kickTeam,
     awardBonus,
     myAnswers,
+    myAnswerGrades,
     seenQuestions,
     setLiveAnswers,
     reconnectedAt,

@@ -74,6 +74,151 @@ describe('PlayPage — answered questions history', () => {
     expect(screen.getByText('No answer submitted')).toBeInTheDocument();
   });
 
+  it('shows points awarded for a graded question in the history panel once it is revealed', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+      answer: 'Banana',
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal' }),
+          currentQuestion: null,
+          blockQuestions: [],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 1: 'Banana' },
+        myAnswerGrades: {
+          1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
+        },
+        seenQuestions: { 1: q1 },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('3 / 5')).toBeInTheDocument();
+  });
+
+  it('reveals points in the history panel one question at a time as the display steps through the reveal walk', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+      answer: 'Banana',
+    };
+    const q2 = {
+      id: 2,
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+      roundTitle: 'Round 1',
+      answer: 'Mars',
+    };
+    const myAnswerGrades = {
+      1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
+      2: { pointsAwarded: 5, gradedAt: '2024-01-01T00:00:00.000Z' },
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1, q2],
+          revealQuestions: [q1, q2],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 1: 'Banana', 2: 'Mars' },
+        myAnswerGrades,
+        seenQuestions: { 1: q1, 2: q2 },
+      }),
+    );
+    const { rerender } = render(<PlayPage />);
+
+    expect(screen.getByText('3 / 5')).toBeInTheDocument();
+    expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
+
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 1 }),
+          currentQuestion: null,
+          blockQuestions: [q1, q2],
+          revealQuestions: [q1, q2],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 1: 'Banana', 2: 'Mars' },
+        myAnswerGrades,
+        seenQuestions: { 1: q1, 2: q2 },
+      }),
+    );
+    rerender(<PlayPage />);
+
+    expect(screen.getByText('3 / 5')).toBeInTheDocument();
+    expect(screen.getByText('5 / 5')).toBeInTheDocument();
+  });
+
+  it('does not show points in the history panel before the question is revealed, even if already graded', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'break' }),
+          currentQuestion: null,
+          blockQuestions: [],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 1: 'Banana' },
+        myAnswerGrades: {
+          1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
+        },
+        seenQuestions: { 1: q1 },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.queryByText('3 / 5')).not.toBeInTheDocument();
+    expect(screen.queryByText(/points/i)).not.toBeInTheDocument();
+  });
+
   it('pairs left items with right-hand values for a revealed match question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const revealedMatch = {

@@ -45,7 +45,14 @@ describe('GameGateway — join players', () => {
       teamName: 'The Quizzards',
       teamToken: 'team-token-1',
       teamCode: 'team-code-1',
-      answers: [{ questionId: 21, value: 'Banana' }],
+      answers: [
+        {
+          questionId: 21,
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+        },
+      ],
     });
     expect(answerService.listForTeam).toHaveBeenCalledWith(101, 31);
   });

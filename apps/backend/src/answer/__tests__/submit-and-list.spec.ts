@@ -109,8 +109,18 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     expect(answers).toHaveLength(2);
     expect(answers).toEqual(
       expect.arrayContaining([
-        { questionId: state.question.id, value: 'Banana' },
-        { questionId: question2.id, value: 'Carrot' },
+        {
+          questionId: state.question.id,
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+        },
+        {
+          questionId: question2.id,
+          value: 'Carrot',
+          pointsAwarded: 0,
+          gradedAt: null,
+        },
       ]),
     );
   });

@@ -25,6 +25,8 @@ interface QuestionBrowserProps {
   /** closest_guess only — which reveal sub-step to show, 0 for every other type. */
   closestGuessRevealStep: number;
   myAnswers: Record<number, string>;
+  /** Points awarded for the selected question's answer, null until graded. */
+  myAnswerPoints: number | null;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
   onSubmitAnswer: (
     questionId: BlockQuestionView['id'],
@@ -44,6 +46,7 @@ export function QuestionBrowser({
   revealQuestion,
   closestGuessRevealStep,
   myAnswers,
+  myAnswerPoints,
   onSelectQuestion,
   onSubmitAnswer,
 }: QuestionBrowserProps) {
@@ -93,6 +96,11 @@ export function QuestionBrowser({
                 )
               : 'No answer submitted'}
           </p>
+          {myAnswerPoints !== null && (
+            <p className="font-body text-sm font-extrabold text-foreground/55">
+              {myAnswerPoints} / {revealQuestion.points} points
+            </p>
+          )}
         </div>
       ) : (
         <>

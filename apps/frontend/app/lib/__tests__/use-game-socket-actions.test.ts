@@ -214,11 +214,105 @@ describe('useGameSocket — admin and player actions', () => {
         teamId: 'team-1',
         teamName: 'The Quizzards',
         value: 'Carrot',
+        pointsAwarded: 0,
+        gradedAt: null,
       });
     });
 
     await waitFor(() =>
       expect(result.current.myAnswers).toEqual({ r1q2: 'Carrot' }),
     );
+  });
+
+  it('seeds myAnswerGrades from an already-graded answer on JOIN_ACCEPTED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+        answers: [
+          {
+            questionId: 'r1q1',
+            value: 'Banana',
+            pointsAwarded: 3,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            questionId: 'r1q2',
+            value: 'Carrot',
+            pointsAwarded: 0,
+            gradedAt: null,
+          },
+        ],
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.myAnswerGrades).toEqual({
+        r1q1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
+      }),
+    );
+  });
+
+  it('records points instantly for an auto-graded answer on ANSWER_RECEIVED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWER_RECEIVED, {
+        questionId: 'r1q3',
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        value: 'Paris',
+        pointsAwarded: 2,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.myAnswerGrades).toEqual({
+        r1q3: { pointsAwarded: 2, gradedAt: '2024-01-01T00:00:00.000Z' },
+      }),
+    );
+  });
+
+  it('replaces myAnswers and myAnswerGrades with the freshly-synced set on TEAM_ANSWERS_SYNCED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    // Seed some stale prior state first — the sync should replace it wholesale.
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWER_RECEIVED, {
+        questionId: 'r1q1',
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        value: 'Stale',
+        pointsAwarded: 0,
+        gradedAt: null,
+      });
+    });
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, {
+        answers: [
+          {
+            questionId: 'r1q4',
+            value: 'Banana',
+            pointsAwarded: 4,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.myAnswers).toEqual({ r1q4: 'Banana' });
+      expect(result.current.myAnswerGrades).toEqual({
+        r1q4: { pointsAwarded: 4, gradedAt: '2024-01-01T00:00:00.000Z' },
+      });
+    });
   });
 });

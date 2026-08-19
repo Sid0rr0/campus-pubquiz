@@ -47,6 +47,14 @@ export function AnsweredQuestionsList({
                 )}
               </p>
             )}
+            {entry.pointsAwarded !== null && (
+              <p className="text-sm">
+                <span className="font-extrabold text-foreground/55">
+                  Points:{' '}
+                </span>
+                {entry.pointsAwarded} / {entry.maxPoints}
+              </p>
+            )}
           </>
         );
 

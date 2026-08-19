@@ -11,6 +11,7 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     liveAnswers: null,
     gradeAnswer: vi.fn(),
     myAnswers: {},
+    myAnswerGrades: {},
     ...overrides,
   };
 }

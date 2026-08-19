@@ -86,6 +86,8 @@ describe('GameGateway — submit answer', () => {
       teamId: 31,
       teamName: 'The Quizzards',
       value: 'Banana',
+      pointsAwarded: 0,
+      gradedAt: null,
     });
   });
 

@@ -242,6 +242,8 @@ export function createFakeAnswerService() {
       teamId: 31,
       teamName: 'The Quizzards',
       value: 'Banana',
+      pointsAwarded: 0,
+      gradedAt: null,
     }),
     listForQuestion: jest.fn().mockResolvedValue([
       {
@@ -253,9 +255,14 @@ export function createFakeAnswerService() {
         gradedAt: null,
       },
     ]),
-    listForTeam: jest
-      .fn()
-      .mockResolvedValue([{ questionId: 21, value: 'Banana' }]),
+    listForTeam: jest.fn().mockResolvedValue([
+      {
+        questionId: 21,
+        value: 'Banana',
+        pointsAwarded: 0,
+        gradedAt: null,
+      },
+    ]),
     grade: jest.fn().mockResolvedValue({ questionId: 21 }),
     // Default: no closest_guess submissions — irrelevant to every fixture
     // that doesn't seed a closest_guess question. Override per-test with
@@ -376,10 +383,13 @@ export interface TestGateway {
   gameStateService: GameStateService;
 }
 
-/** Builds a GameGateway wired to fresh fake services/mock server, seeded with
- * FIXTURE_SEEDED_GAME (game session 101, join code ABCDEF, round 1 / q21). */
-export async function createTestGateway(): Promise<TestGateway> {
-  const seedService = createFakeSeedService();
+/** Builds a GameGateway wired to fresh fake services/mock server, seeded by
+ * default with FIXTURE_SEEDED_GAME (game session 101, join code ABCDEF,
+ * round 1 / q21) — pass e.g. createFakeGameStateSeedService() instead for
+ * tests that need a game that can legally reach reveal (a breakAfter round). */
+export async function createTestGateway(
+  seedService: MockSeedService = createFakeSeedService(),
+): Promise<TestGateway> {
   const answerService = createFakeAnswerService();
   const gameStateService = new GameStateService(
     asSeedService(seedService),
