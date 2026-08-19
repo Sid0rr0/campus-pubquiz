@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   CheckIcon,
   FilePlusIcon,
@@ -50,7 +51,6 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveIssues, setSaveIssues] = useState<QuizDraftIssue[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +93,6 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     if (!file) return;
 
     setImportError(null);
-    setImportNotice(null);
     const text = await file.text();
 
     try {
@@ -120,10 +119,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
               .join('; '),
         );
       } else {
-        setImportNotice(
+        toast.success(
           `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${questionCount} question${questionCount === 1 ? '' : 's'} — review and edit below.`,
         );
-        setTimeout(() => setImportNotice(null), 5000);
       }
     } catch (error) {
       setImportError(
@@ -181,6 +179,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       }
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1600);
+      toast.success('Quiz saved');
     } catch (error) {
       if (error instanceof QuizDraftApiError) {
         setSaveError(error.message);
@@ -299,11 +298,6 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           className="bg-white px-5 py-3 font-extrabold text-magenta"
         >
           {importError}
-        </p>
-      )}
-      {importNotice && (
-        <p className="bg-white px-5 py-2 text-sm font-extrabold text-green">
-          {importNotice}
         </p>
       )}
       {saveError && (

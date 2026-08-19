@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
 
@@ -260,15 +261,20 @@ describe('SessionPickerPanel', () => {
     mockCreateSession.mockRejectedValue(
       new SessionApiError('Could not start session', 500),
     );
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    render(
+      <>
+        <SessionPickerPanel onOpenSession={vi.fn()} />
+        <Toaster />
+      </>,
+    );
 
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /could not start session/i,
-    );
+    expect(
+      await screen.findByText(/could not start session/i),
+    ).toBeInTheDocument();
   });
 });

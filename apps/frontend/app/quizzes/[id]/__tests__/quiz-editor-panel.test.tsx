@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
 import { ImportApiError } from '@/app/lib/import-api';
@@ -339,7 +340,12 @@ describe('QuizEditorPanel', () => {
       questionCount: 0,
     });
 
-    render(<QuizEditorPanel quizId="5" />);
+    render(
+      <>
+        <QuizEditorPanel quizId="5" />
+        <Toaster />
+      </>,
+    );
     await screen.findByDisplayValue('Trivia Night');
 
     await user.click(screen.getByRole('button', { name: /save quiz/i }));
@@ -353,6 +359,7 @@ describe('QuizEditorPanel', () => {
     expect(
       await screen.findByRole('button', { name: /saved/i }),
     ).toBeInTheDocument();
+    expect(await screen.findByText(/quiz saved/i)).toBeInTheDocument();
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
 

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   getBlockStartRoundIndex,
   type GameStatus,
@@ -30,11 +31,6 @@ function AdminPageContent() {
     null,
   );
   const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
-  const [quizzesError, setQuizzesError] = useState<string | null>(null);
-  const [answersError, setAnswersError] = useState<string | null>(null);
-  const [closeSessionError, setCloseSessionError] = useState<string | null>(
-    null,
-  );
 
   const isAuthenticated = auth.status === 'authenticated';
 
@@ -150,11 +146,10 @@ function AdminPageContent() {
       .then((payload) => {
         if (cancelled) return;
         setQuizzes(payload);
-        setQuizzesError(null);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setQuizzesError(
+        toast.error(
           error instanceof QuizApiError
             ? error.message
             : 'Could not load quizzes',
@@ -245,11 +240,10 @@ function AdminPageContent() {
       .then((payload) => {
         if (cancelled) return;
         setLiveAnswers(payload);
-        setAnswersError(null);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setAnswersError(
+        toast.error(
           error instanceof AnswerApiError
             ? error.message
             : 'Could not load answers',
@@ -273,13 +267,12 @@ function AdminPageContent() {
 
   function handleCloseSession(): void {
     if (!snapshot) return;
-    setCloseSessionError(null);
     closeSession(snapshot.joinCode)
       .then(() => {
         router.push('/sessions');
       })
       .catch((error: unknown) => {
-        setCloseSessionError(
+        toast.error(
           error instanceof SessionApiError
             ? error.message
             : 'Could not close session',
@@ -441,21 +434,6 @@ function AdminPageContent() {
         onAwardBonus={awardBonus}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
-        {closeSessionError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {closeSessionError}
-          </p>
-        )}
-        {quizzesError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {quizzesError}
-          </p>
-        )}
-        {answersError && (
-          <p role="alert" className="font-extrabold text-magenta">
-            {answersError}
-          </p>
-        )}
         <QuestionBrowserPanel
           rounds={activeQuizRounds}
           currentRoundIndex={progress.roundIndex}

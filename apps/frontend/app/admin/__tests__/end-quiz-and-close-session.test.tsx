@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
@@ -127,15 +128,20 @@ describe('AdminPage — end quiz and close session', () => {
     mockCloseSession.mockRejectedValue(
       new SessionApiError('still the default session', 409),
     );
-    render(<AdminPage />);
+    render(
+      <>
+        <AdminPage />
+        <Toaster />
+      </>,
+    );
 
     await userEvent.click(
       screen.getByRole('button', { name: /close session/i }),
     );
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /still the default session/i,
-    );
+    expect(
+      await screen.findByText(/still the default session/i),
+    ).toBeInTheDocument();
     expect(routerRef.push).not.toHaveBeenCalledWith('/sessions');
   });
 });

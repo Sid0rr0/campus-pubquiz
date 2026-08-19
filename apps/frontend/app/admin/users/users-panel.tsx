@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
 import type { UserRole, UsersListedPayload } from '@campus-pubquiz/types';
 import { approveUser, deactivateUser, fetchUsers } from '@/app/lib/auth-api';
@@ -44,7 +45,7 @@ export function UsersPanel() {
       await approveUser(userId, role);
       refetch();
     } catch (approveError) {
-      setError(
+      toast.error(
         approveError instanceof Error
           ? approveError.message
           : 'Could not approve user',
@@ -57,7 +58,7 @@ export function UsersPanel() {
       await deactivateUser(userId);
       refetch();
     } catch (deactivateError) {
-      setError(
+      toast.error(
         deactivateError instanceof Error
           ? deactivateError.message
           : 'Could not deactivate user',

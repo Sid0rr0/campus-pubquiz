@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   ArrowRightIcon,
@@ -88,13 +89,12 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   async function handleConfirmCreate() {
     if (pendingQuizId === null) return;
     setIsCreating(true);
-    setError(null);
     try {
       const session = await createSession(pendingQuizId);
       onOpenSession(session.joinCode);
     } catch (createError) {
       if (!isMountedRef.current) return;
-      setError(
+      toast.error(
         createError instanceof SessionApiError
           ? createError.message
           : 'Could not start session',
@@ -108,13 +108,12 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   }
 
   async function handleClose(joinCode: string) {
-    setError(null);
     try {
       await closeSession(joinCode);
       refresh();
     } catch (closeError) {
       if (!isMountedRef.current) return;
-      setError(
+      toast.error(
         closeError instanceof SessionApiError
           ? closeError.message
           : 'Could not close session',
