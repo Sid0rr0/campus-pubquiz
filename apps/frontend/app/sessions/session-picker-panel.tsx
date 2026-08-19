@@ -23,6 +23,7 @@ import {
   SessionApiError,
 } from '@/app/lib/sessions-api';
 import { RoundsList } from '@/app/components/rounds-list';
+import { CopyButton } from '@/app/components/copy-button';
 
 interface SessionPickerPanelProps {
   /** Navigates the browser into the console for a specific session's code — owned by the page since only it holds the router. */
@@ -145,9 +146,10 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
               >
                 <div className="flex flex-col">
                   <span className="font-extrabold">{session.quizTitle}</span>
-                  <span className="text-xs text-foreground/55">
+                  <span className="flex items-center gap-1 text-xs text-foreground/55">
                     {session.status} · {session.teamCount} teams ·{' '}
                     {session.joinCode}
+                    <CopyButton value={session.joinCode} />
                   </span>
                 </div>
                 <div className="flex shrink-0 gap-2">

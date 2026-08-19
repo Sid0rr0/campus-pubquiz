@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import type { TeamView } from '@campus-pubquiz/types';
 import { TeamRoster } from '@/app/display/team-roster';
+import { CopyButton } from '@/app/components/copy-button';
 
 const QR_SIZE_PX = 220;
 
@@ -26,8 +27,11 @@ export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
           <p className="text-sm font-extrabold tracking-wide text-foreground/55">
             SCAN TO JOIN — OR GO TO /PLAY AND ENTER THE CODE
           </p>
-          <p className="font-display max-w-3xl text-3xl tracking-widest text-magenta wrap-break-word">
-            {joinCode}
+          <p className="flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center">
+            <span className="font-display text-3xl tracking-widest text-magenta wrap-break-word">
+              {joinCode}
+            </span>
+            <CopyButton value={joinCode} className="text-2xl text-magenta" />
           </p>
         </div>
       )}

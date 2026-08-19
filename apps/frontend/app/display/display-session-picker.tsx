@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRightIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
 import { fetchPublicSessions, SessionApiError } from '@/app/lib/sessions-api';
+import { CopyButton } from '@/app/components/copy-button';
 
 interface DisplaySessionPickerProps {
   onSelectSession: (joinCode: string) => void;
@@ -83,11 +84,14 @@ export function DisplaySessionPicker({
       )}
       <ul className="flex w-full max-w-xl flex-col gap-3">
         {sessions.map((session) => (
-          <li key={session.joinCode}>
+          <li
+            key={session.joinCode}
+            className="flex min-h-16 items-center gap-2 rounded-2xl border-2 border-foreground/15 bg-white pl-5 pr-3"
+          >
             <button
               type="button"
               onClick={() => onSelectSession(session.joinCode)}
-              className="flex min-h-16 w-full items-center justify-between rounded-2xl border-2 border-foreground/15 bg-white px-5 text-left"
+              className="flex flex-1 items-center justify-between py-3 text-left"
             >
               <span className="flex flex-col">
                 <span className="font-extrabold">{session.quizTitle}</span>
@@ -101,6 +105,7 @@ export function DisplaySessionPicker({
                 <ArrowRightIcon aria-hidden="true" />
               </span>
             </button>
+            <CopyButton value={session.joinCode} />
           </li>
         ))}
       </ul>

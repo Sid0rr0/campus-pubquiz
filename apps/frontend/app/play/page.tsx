@@ -6,6 +6,7 @@ import { ExitIcon } from '@radix-ui/react-icons';
 import type { GameStatus } from '@campus-pubquiz/types';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
+import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { useTeamJoin } from '@/app/lib/use-team-join';
@@ -220,9 +221,10 @@ function PlayPageContent() {
         </button>
       </div>
       {team && (
-        <p className="mb-4 text-xs text-foreground/45">
-          Team code: {team.teamCode} — save it to play as this team another
-          night.
+        <p className="mb-4 flex flex-wrap items-center gap-1 text-xs text-foreground/45">
+          Team code: {team.teamCode}
+          <CopyButton value={team.teamCode} /> — save it to play as this team
+          another night.
         </p>
       )}
       <GameStatusScreens
