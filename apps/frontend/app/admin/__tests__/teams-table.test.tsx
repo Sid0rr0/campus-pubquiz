@@ -35,18 +35,38 @@ const LEADERBOARD: LeaderboardEntry[] = [
 
 describe('TeamsTable', () => {
   it('renders a header row with Team, numbered round columns, Bonus, and Total', () => {
-    render(<TeamsTable teams={TEAMS} leaderboard={LEADERBOARD} roundTitles={ROUND_TITLES} />);
+    render(
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+      />,
+    );
 
-    expect(screen.getByRole('columnheader', { name: 'Team' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Team' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '1' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '2' })).toBeInTheDocument();
-    expect(screen.queryByRole('columnheader', { name: 'Animals' })).not.toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Bonus' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: 'Animals' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Bonus' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Total' }),
+    ).toBeInTheDocument();
   });
 
   it('shows every team with its per-round points, bonus points, and total', () => {
-    render(<TeamsTable teams={TEAMS} leaderboard={LEADERBOARD} roundTitles={ROUND_TITLES} />);
+    render(
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+      />,
+    );
 
     const quizzardsRow = screen.getByText('The Quizzards').closest('tr')!;
     expect(within(quizzardsRow).getByText('4')).toBeInTheDocument(); // round 1
@@ -60,7 +80,9 @@ describe('TeamsTable', () => {
   });
 
   it('shows a joined team with zeros when the leaderboard has not been computed for it yet', () => {
-    render(<TeamsTable teams={TEAMS} leaderboard={[]} roundTitles={ROUND_TITLES} />);
+    render(
+      <TeamsTable teams={TEAMS} leaderboard={[]} roundTitles={ROUND_TITLES} />,
+    );
 
     const quizzardsRow = screen.getByText('The Quizzards').closest('tr')!;
     expect(within(quizzardsRow).getAllByText('0')).toHaveLength(4); // round 1, round 2, bonus, total
@@ -70,9 +92,30 @@ describe('TeamsTable', () => {
   });
 
   it('always renders the table, showing a placeholder row when no teams have joined', () => {
-    render(<TeamsTable teams={[]} leaderboard={[]} roundTitles={ROUND_TITLES} />);
+    render(
+      <TeamsTable teams={[]} leaderboard={[]} roundTitles={ROUND_TITLES} />,
+    );
 
     expect(screen.getByRole('columnheader', { name: '1' })).toBeInTheDocument();
     expect(screen.getByText(/no teams have joined yet/i)).toBeInTheDocument();
+  });
+
+  it('reflects a freshly graded answer immediately when the leaderboard prop updates', () => {
+    const { rerender } = render(
+      <TeamsTable teams={TEAMS} leaderboard={[]} roundTitles={ROUND_TITLES} />,
+    );
+    const quizzardsRowBefore = screen.getByText('The Quizzards').closest('tr')!;
+    expect(within(quizzardsRowBefore).getAllByText('0')).toHaveLength(4);
+
+    rerender(
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+      />,
+    );
+
+    const quizzardsRowAfter = screen.getByText('The Quizzards').closest('tr')!;
+    expect(within(quizzardsRowAfter).getByText('12')).toBeInTheDocument(); // total
   });
 });

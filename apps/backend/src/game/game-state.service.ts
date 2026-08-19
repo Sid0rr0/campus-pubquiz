@@ -341,7 +341,16 @@ export class GameStateService implements OnModuleInit {
         [question.id]: summarizeClosestGuess(graded),
       };
     }
-    return { ...session, closestGuessSummaries: summaries };
+
+    // closest_guess questions are graded automatically right here rather
+    // than through GRADE_ANSWER/AWARD_BONUS (the only other two places that
+    // refresh session.leaderboard) — without this, the points just written
+    // above wouldn't show up in the team table until the next explicit grade
+    // or a leaderboard toggle.
+    const leaderboard = await this.answerService.computeLeaderboard(
+      session.seededGame.gameSessionId,
+    );
+    return { ...session, closestGuessSummaries: summaries, leaderboard };
   }
 
   private getSession(joinCode: string): SessionState {

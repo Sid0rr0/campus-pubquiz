@@ -119,6 +119,42 @@ describe('GameStateService — closest_guess reveal-step gating', () => {
     expect(answerService.gradeClosestGuess).toHaveBeenCalledTimes(1);
   });
 
+  it('refreshes the leaderboard as soon as the closest_guess question is auto-graded', async () => {
+    const answerService = createFakeAnswerService();
+    answerService.gradeClosestGuess.mockResolvedValueOnce(GRADED_ANSWERS);
+    answerService.computeLeaderboard.mockResolvedValueOnce([
+      {
+        teamId: 32,
+        teamName: 'Team B',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+    ]);
+    const service = await buildService(answerService);
+
+    // break_intro is where ensureBlockGraded runs gradeClosestGuess — the
+    // leaderboard must already reflect the new points on this very snapshot,
+    // not just after a later GRADE_ANSWER/TOGGLE_LEADERBOARD action.
+    await service.applyAction(joinCode, 'START_QUIZ');
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> q1 (closest_guess)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> q2 (free_text)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> locking
+    const graded = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
+
+    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
+    expect(graded.leaderboard).toEqual([
+      {
+        teamId: 32,
+        teamName: 'Team B',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+    ]);
+  });
+
   it('walks ADVANCE through all 5 cumulative reveal steps before moving to the next question', async () => {
     const answerService = createFakeAnswerService();
     answerService.gradeClosestGuess.mockResolvedValueOnce(GRADED_ANSWERS);
