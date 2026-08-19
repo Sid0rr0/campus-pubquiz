@@ -14,6 +14,7 @@ laptop. This document describes the system as currently built.
 - [Answer Lifecycle](#answer-lifecycle)
 - [Teams: Join, Reconnect, and Kick](#teams-join-reconnect-and-kick)
 - [Quiz Authoring and CSV Import](#quiz-authoring-and-csv-import)
+- [Question Types](#question-types)
 - [Persistence and Restart Resilience](#persistence-and-restart-resilience)
 - [Authentication](#authentication)
 - [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
@@ -48,7 +49,7 @@ is a cache that can be rebuilt after a restart.
 | ---------- | -------------------- | ----------------------------------------------------------------------------------- |
 | `/display` | Big screen (TV)      | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
 | `/admin`   | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards |
-| `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers |
+| `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far |
 
 ## Other Routes: Auth, Sessions, and Quiz Authoring
 
@@ -110,7 +111,13 @@ lobby → rules → round_intro → question_open → locking → break
   would either reopen a locked round for answers or leak an unrevealed one.
 - `reveal_intro` / `reveal` — grading finished; the admin talks through the
   answers. `ADVANCE` moves to the next block's `round_intro`, or to `ended`
-  after the final round.
+  after the final round. For a `closest_guess` question with at least one
+  submitted guess, `ADVANCE`/`PREVIOUS` first walk a 5-step cumulative reveal
+  on that one question (smallest guess → highest guess → correct answer →
+  closest team(s)) before falling through to the normal forward/backward
+  transition — see [Question Types](#question-types) below. This sub-walk is
+  ephemeral (`closestGuessRevealStep` on the snapshot), not part of
+  `GameProgress`.
 - `ended` — final state; the admin can toggle the leaderboard or select a new
   quiz.
 
@@ -208,7 +215,9 @@ itself — the display and other players just see counts.
 4. **Grade** — during `break`, the admin browses the locked block
    question-by-question and awards 0 / half / full points per answer. Grades
    are written to the answer row; grading an answer twice is prevented in the
-   UI.
+   UI. Exception: `closest_guess` answers are graded automatically once the
+   block locks and reject a manual `GRADE_ANSWER` — see
+   [Question Types](#question-types).
 5. **Bonus points** — separately from per-question grading, the admin can
    award ad-hoc bonus points (`AWARD_BONUS`; categories like `shot`, `selfie`,
    `custom`) to a team at any time, also folded into the leaderboard.
@@ -270,15 +279,16 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
 ```
 
-`type` is one of `free_text`, `multiple_choice`, `picture`, `audio`, `youtube`.
-`options` is pipe-separated and required (≥2) for `multiple_choice`.
-`media_url` is required for `picture`/`audio`/`youtube` (for `youtube` it must
-resolve to a `youtube.com`/`youtu.be` video id — enforced by both the CSV
-import schema and the manual editor's save validation), optional otherwise.
-`answer_media_url` is optional on any type (shown alongside the correct answer
-during reveal). `break_after` is `''`/`0`/`1`; the **last round's break is
-always forced on** regardless of its cells, since the state machine has no
-other way to ever reveal it.
+`type` is one of `free_text`, `multiple_choice`, `picture`, `audio`,
+`youtube`, `sort`, `match`, `closest_guess` — see
+[Question Types](#question-types) for what each one needs in `options` and
+`answer`. `media_url` is required for `picture`/`audio`/`youtube` (for
+`youtube` it must resolve to a `youtube.com`/`youtu.be` video id — enforced by
+both the CSV import schema and the manual editor's save validation), optional
+otherwise. `answer_media_url` is optional on any type (shown alongside the
+correct answer during reveal). `break_after` is `''`/`0`/`1`; the **last
+round's break is always forced on** regardless of its cells, since the state
+machine has no other way to ever reveal it.
 
 **YouTube embeds**: the display renders a YouTube `media_url` as an embedded
 iframe instead of `<img>`/`<audio>`. `type: youtube` is the intended way to
@@ -297,6 +307,42 @@ free-text note. Parsing happens once, in `QuizService.syncRoundsAndQuestions`
 `mediaStartSeconds`/`mediaEndSeconds` into the question's JSON `payload`
 alongside `mediaUrl`. `answer_media_url` never gets clip times (no notes
 channel of its own) — a YouTube answer video always renders full-length.
+
+## Question Types
+
+Beyond `free_text`, `multiple_choice`, `picture`, `audio`, and `youtube`
+(covered above), three types have their own submission format and grading
+behavior:
+
+- **`sort`** — players drag `options` into what they think is the correct
+  order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
+  submitted value is the reordered pipe-list. The CSV `answer` cell must
+  contain the same items as `options`, just reordered — validated as a
+  multiset match at import time.
+- **`match`** — players pair each left-hand item with a right-hand item
+  (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
+  carries the two lists separately as `options` (left) and `matchTargets`
+  (right). In the CSV, both lists are packed into one `options` cell, joined
+  by a single `+`: `left1|left2+right1|right2`. The `answer` cell lists
+  correct pairs as `left+right`, pipe-separated, in any order (e.g.
+  `arthur+excalibur|robin hood+bow`) — import canonicalizes it into `left`'s
+  order so it's directly comparable to a submission, which is built the same
+  positional way.
+- **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
+  a number); players type a guess in a `type="number"` input. It is
+  **auto-graded**, not manually graded during `break` — `AnswerService`
+  rejects a manual `GRADE_ANSWER` on one of these with an error. Once the
+  block locks, `GameStateService` batch-grades every submission, awarding
+  full points to whichever team(s) are numerically closest to the answer
+  (ties share full points) and 0 to everyone else, caching the result per
+  question (`closestGuessSummaries`) since it only needs computing once.
+  During `reveal`, a `closest_guess` question with at least one submission
+  gets a 5-step cumulative walk instead of the usual single-shot reveal —
+  `ADVANCE`/`PREVIOUS` step through smallest guess → highest guess → correct
+  answer → closest team(s), each step adding a line without replacing what's
+  already shown (`ClosestGuessRevealScreen`, shared by `/display` and
+  `/play`). A question with zero submissions collapses back to the normal
+  single-shot reveal, since there's nothing to walk through.
 
 ## Persistence and Restart Resilience
 
@@ -375,13 +421,28 @@ emitters for each client→server event. Pages are thin renderers over the
 snapshot:
 
 - **PlayPage** — join form → question view with a numbered navigator over the
-  open block (✓ = answered, prefilled/highlighted saved answers).
+  open block (✓ = answered, prefilled/highlighted saved answers) plus an
+  answer-history panel (sticky sidebar on wide screens, a bottom-sheet drawer
+  on mobile) listing every question the team has seen open so far, across
+  rounds — each with the team's own answer and the correct answer once
+  revealed. This is backed by a `seenQuestions` accumulator in
+  `useGameSocket`, since `blockQuestions`/`revealQuestions` on the snapshot
+  only ever cover the _current_ block; clicking a row from the active block
+  jumps the question navigator to it. Media (images/audio/YouTube embeds) is
+  never rendered on `/play`, during either `question_open` or reveal — teams
+  are pointed at the big screen instead, matching the "Look at the screen"
+  hint already shown for media questions.
 - **AdminPage** — sidebar of game actions, a teams roster (with kick) and
   live answers while a question is open, a prev/next grading browser during
   breaks, and bonus-award controls; binds to a session via `?code=`.
 - **DisplayPage** — session picker (if no `?code=`), then per-status screens:
   lobby QR, rules, round intro, current question with media/options, the
   answered counter, and the leaderboard overlay.
+
+A shared `CopyButton` component (`apps/frontend/app/components/copy-button.tsx`)
+sits next to every join/team code shown anywhere in the app — the admin
+sidebar/drawer, the display lobby screen, session pickers, and `/play`'s team
+code — so quiz masters and teams can copy a code instead of retyping it.
 
 Both apps import shared code via the `@/*` path alias and the
 `@campus-pubquiz/types` workspace package — never relative `../` paths.
