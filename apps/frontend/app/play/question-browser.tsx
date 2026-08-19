@@ -59,13 +59,9 @@ export function QuestionBrowser({
           <QuestionDisplay
             type={revealQuestion.type}
             prompt={revealQuestion.prompt}
-            mediaUrl={revealQuestion.mediaUrl}
-            mediaStartSeconds={revealQuestion.mediaStartSeconds}
-            mediaEndSeconds={revealQuestion.mediaEndSeconds}
             options={revealQuestion.options}
             matchTargets={revealQuestion.matchTargets}
             correctAnswer={revealQuestion.answer}
-            answerMediaUrl={revealQuestion.answerMediaUrl}
             mediaTestIdPrefix="play-reveal"
           />
           <p className="font-display text-lg text-magenta">
