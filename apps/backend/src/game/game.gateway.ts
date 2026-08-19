@@ -438,6 +438,11 @@ export class GameGateway
       payload.questionId,
       answers.map((answer) => answer.teamId),
     );
+    this.gameState.setQuestionGradedStatus(
+      joinCode,
+      payload.questionId,
+      answers.some((answer) => answer.gradedAt === null),
+    );
     this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 
@@ -486,6 +491,11 @@ export class GameGateway
     const leaderboard =
       await this.answerService.computeLeaderboard(gameSessionId);
     this.gameState.setLeaderboard(joinCode, leaderboard);
+    this.gameState.setQuestionGradedStatus(
+      joinCode,
+      questionId,
+      answers.some((answer) => answer.gradedAt === null),
+    );
 
     this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }

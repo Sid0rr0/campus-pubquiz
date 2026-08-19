@@ -39,6 +39,16 @@ export interface SessionState {
   closestGuessRevealStep: number;
   /** Cached per-question closest_guess grading/summary, keyed by questionId — computed once when a block locks, ephemeral like leaderboardRevealCount. */
   closestGuessSummaries: Record<number, ClosestGuessRevealData>;
+  /**
+   * Current-block question IDs known to have at least one ungraded answer —
+   * bulk-recomputed from the DB whenever applyAction enters a grading-status
+   * (see GameStateService.refreshUngradedQuestionIds), and patched
+   * per-question by the gateway after each SUBMIT_ANSWER/GRADE_ANSWER so it
+   * stays live while the admin works through one break screen. Ephemeral
+   * like answeredTeamIdsByQuestion — resets on restart, self-heals from the
+   * next bulk recompute.
+   */
+  ungradedQuestionIds: number[];
 }
 
 export function freshSessionState(
@@ -56,6 +66,7 @@ export function freshSessionState(
     connectedTeamSockets: {},
     closestGuessRevealStep: 0,
     closestGuessSummaries: {},
+    ungradedQuestionIds: [],
   };
 }
 

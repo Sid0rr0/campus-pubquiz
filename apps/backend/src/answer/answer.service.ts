@@ -133,6 +133,27 @@ export class AnswerService {
     }));
   }
 
+  /**
+   * IDs among `questionIds` that have at least one submitted answer still
+   * missing `gradedAt` — the source of truth behind the "not yet graded"
+   * gate/dot. `questionIds` is expected to already exclude closest_guess
+   * questions (they grade themselves automatically); this method doesn't
+   * care about type, it just reports what's ungraded.
+   */
+  async listUngradedQuestionIds(
+    gameSessionId: number,
+    questionIds: number[],
+  ): Promise<number[]> {
+    if (questionIds.length === 0) return [];
+    const knex = this.answers.getKnex();
+    const rows = (await knex('answers')
+      .where('game_session_id', gameSessionId)
+      .whereIn('question_id', questionIds)
+      .whereNull('graded_at')
+      .distinct('question_id')) as { question_id: number }[];
+    return rows.map((row) => row.question_id);
+  }
+
   async listForTeam(
     gameSessionId: number,
     teamId: number,

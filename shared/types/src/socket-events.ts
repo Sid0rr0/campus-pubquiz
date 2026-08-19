@@ -172,6 +172,15 @@ export interface StateSnapshotPayload {
   upcomingQuestions: QuestionPosition[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
   revealQuestions: BlockRevealQuestionView[];
+  /**
+   * IDs of current-block questions (from `blockQuestions`) that still have
+   * at least one submitted answer with `gradedAt === null` — closest_guess
+   * excluded, since it grades itself automatically and never needs an admin
+   * to act. Drives the "not yet graded" dot in the admin question browser;
+   * ADVANCE out of the break/grading screens is rejected server-side while
+   * this is non-empty.
+   */
+  ungradedQuestionIds: number[];
   /** Teams that have answered the current question. Empty when none is open. */
   answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];

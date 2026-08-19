@@ -5,10 +5,12 @@ import {
   sessionRoom,
 } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
+import type { GameStateService } from '@/game/game-state.service';
 import {
   TEST_SESSION_TOKEN,
   createMockSocket,
   createTestGateway,
+  openFirstQuestion,
   asSocket,
   type MockServer,
   type MockAnswerService,
@@ -18,9 +20,11 @@ describe('GameGateway — grading', () => {
   let gateway: GameGateway;
   let server: MockServer;
   let answerService: MockAnswerService;
+  let gameStateService: GameStateService;
 
   beforeEach(async () => {
-    ({ gateway, server, answerService } = await createTestGateway());
+    ({ gateway, server, answerService, gameStateService } =
+      await createTestGateway());
   });
 
   it('grades an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
@@ -107,5 +111,55 @@ describe('GameGateway — grading', () => {
       }),
     ).rejects.toThrow(WsException);
     expect(answerService.grade).not.toHaveBeenCalled();
+  });
+
+  it('marks the question ungraded once a manually-graded answer is submitted', async () => {
+    await openFirstQuestion(gateway, server);
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
+
+    await gateway.handleSubmitAnswer(asSocket(player), {
+      questionId: 21,
+      teamId: 31,
+      value: 'Banana',
+    });
+
+    expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual([
+      21,
+    ]);
+  });
+
+  it('clears the ungraded-question cache once every submitted answer for that question is graded', async () => {
+    gameStateService.setQuestionGradedStatus('ABCDEF', 21, true);
+    expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual([
+      21,
+    ]);
+
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+    answerService.listForQuestion.mockResolvedValueOnce([
+      {
+        answerId: 41,
+        teamId: 31,
+        teamName: 'The Quizzards',
+        value: 'Banana',
+        pointsAwarded: 2,
+        gradedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    await gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: 41,
+      pointsAwarded: 2,
+    });
+
+    expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual(
+      [],
+    );
   });
 });

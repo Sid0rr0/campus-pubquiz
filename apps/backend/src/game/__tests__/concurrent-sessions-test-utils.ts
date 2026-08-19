@@ -139,6 +139,7 @@ export function createSessionAwareAnswerService() {
       const questionId = answerId === 701 ? 501 : 502;
       return Promise.resolve({ questionId });
     }),
+    listUngradedQuestionIds: jest.fn().mockResolvedValue([]),
     gradeClosestGuess: jest.fn().mockResolvedValue([]),
     computeLeaderboard: jest.fn((gameSessionId: number) => {
       const answer = answersBySession[gameSessionId];

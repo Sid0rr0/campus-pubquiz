@@ -38,9 +38,18 @@ import {
   getGameContext,
   type SessionState,
 } from '@/game/session-state';
+import { UngradedAnswersError } from '@/game/ungraded-answers.error';
 import type { TeamRosterEntry } from '@/team/team.service';
 
 export { SessionCloseBlockedError } from '@/game/session-close-blocked.error';
+export { UngradedAnswersError } from '@/game/ungraded-answers.error';
+
+/** Statuses in which the break/grading screens are actively reviewing the just-locked block — the window where ungradedQuestionIds is kept fresh. */
+const GRADING_STATUSES: GameStatus[] = [
+  'break_intro',
+  'break',
+  'break_round_intro',
+];
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -231,6 +240,7 @@ export class GameStateService implements OnModuleInit {
       blockQuestions: getBlockQuestions(session),
       upcomingQuestions: getUpcomingQuestionPositions(session),
       revealQuestions: getRevealQuestions(session),
+      ungradedQuestionIds: session.ungradedQuestionIds,
       answeredTeamIds: getAnsweredTeamIds(session),
       leaderboard: session.leaderboard,
       leaderboardRevealCount: session.leaderboardRevealCount,
@@ -276,21 +286,42 @@ export class GameStateService implements OnModuleInit {
       action,
       getGameContext(session),
     );
+
+    // Committing out of the break/grading screens into reveal — the one
+    // moment this must be DB-authoritative rather than relying on the
+    // (possibly stale, e.g. post-restart) ungradedQuestionIds cache below.
+    if (
+      action === 'ADVANCE' &&
+      (session.progress.status === 'break_intro' ||
+        session.progress.status === 'break') &&
+      progress.status === 'reveal_intro'
+    ) {
+      const ungradedQuestionIds =
+        await this.getUngradedBlockQuestionIds(session);
+      if (ungradedQuestionIds.length > 0) {
+        throw new UngradedAnswersError(ungradedQuestionIds);
+      }
+    }
+
     const gradedSession = await this.ensureBlockGraded(session, progress);
-    const closestGuessRevealStep = computeInitialRevealStep(
+    const sessionWithGradingStatus = await this.refreshUngradedQuestionIds(
       gradedSession,
+      progress,
+    );
+    const closestGuessRevealStep = computeInitialRevealStep(
+      sessionWithGradingStatus,
       progress,
       action,
     );
     const updated: SessionState = {
-      ...gradedSession,
+      ...sessionWithGradingStatus,
       progress,
       questionLockAt: computeQuestionLockAt(progress),
       leaderboardRevealCount: computeLeaderboardRevealCount(
         action,
         progress,
-        gradedSession.leaderboard,
-        gradedSession.leaderboardRevealCount,
+        sessionWithGradingStatus.leaderboard,
+        sessionWithGradingStatus.leaderboardRevealCount,
       ),
       closestGuessRevealStep,
     };
@@ -351,6 +382,56 @@ export class GameStateService implements OnModuleInit {
       session.seededGame.gameSessionId,
     );
     return { ...session, closestGuessSummaries: summaries, leaderboard };
+  }
+
+  /** Current-block question IDs (closest_guess excluded) with at least one ungraded submitted answer, read fresh from the DB. */
+  private async getUngradedBlockQuestionIds(
+    session: SessionState,
+  ): Promise<number[]> {
+    const questionIds = getBlockSeededQuestions(session)
+      .filter((question) => question.type !== 'closest_guess')
+      .map((question) => question.id);
+    return this.answerService.listUngradedQuestionIds(
+      session.seededGame.gameSessionId,
+      questionIds,
+    );
+  }
+
+  /**
+   * Bulk-recomputes ungradedQuestionIds from the DB whenever the block just
+   * entered (or is still within) a grading status — the authoritative
+   * baseline the gateway's per-question setQuestionGradedStatus patches
+   * build on between these recomputes. A no-op outside GRADING_STATUSES,
+   * since nothing there can be graded and the cached value can't go stale.
+   */
+  private async refreshUngradedQuestionIds(
+    session: SessionState,
+    newProgress: GameProgress,
+  ): Promise<SessionState> {
+    if (!GRADING_STATUSES.includes(newProgress.status)) return session;
+    const ungradedQuestionIds = await this.getUngradedBlockQuestionIds({
+      ...session,
+      progress: newProgress,
+    });
+    return { ...session, ungradedQuestionIds };
+  }
+
+  /** Incrementally patches the ungraded-question cache for one questionId — called by the gateway right after SUBMIT_ANSWER/GRADE_ANSWER, which grade individual answers without going through applyAction's bulk refresh. */
+  setQuestionGradedStatus(
+    joinCode: string,
+    questionId: number,
+    hasUngradedAnswers: boolean,
+  ): void {
+    const session = this.getSession(joinCode);
+    const withoutQuestion = session.ungradedQuestionIds.filter(
+      (id) => id !== questionId,
+    );
+    this.sessions.set(joinCode, {
+      ...session,
+      ungradedQuestionIds: hasUngradedAnswers
+        ? [...withoutQuestion, questionId]
+        : withoutQuestion,
+    });
   }
 
   private getSession(joinCode: string): SessionState {

@@ -100,10 +100,17 @@ function AdminPageContent() {
 
   const codeFromUrl = searchParams.get('code') ?? undefined;
   useEffect(() => {
-    if (codeFromUrl && connectionError) {
+    // Only bounces back to the picker for a session that never connected in
+    // the first place (e.g. an unknown/invalid ?code=) — handleConnection
+    // disconnects before ever sending STATE_SYNC in that case, so snapshot
+    // stays null. Once a snapshot exists, a later WsException (illegal
+    // transition, the ungraded-answers gate, kick/bonus validation, …) is an
+    // action-level rejection on an otherwise-live session — it should render
+    // inline via the existing connectionError banner, not redirect away.
+    if (codeFromUrl && connectionError && !snapshot) {
       router.replace('/sessions');
     }
-  }, [codeFromUrl, connectionError, router]);
+  }, [codeFromUrl, connectionError, snapshot, router]);
 
   useEffect(() => {
     // Login/register/pending-approval now live at /login and /register —
@@ -377,6 +384,7 @@ function AdminPageContent() {
     leaderboard = [],
     teams = [],
     answeredTeamIds = [],
+    ungradedQuestionIds = [],
   } = snapshot;
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
@@ -461,6 +469,7 @@ function AdminPageContent() {
           teams={teams}
           onGrade={gradeAnswer}
           fallbackQuestions={fallbackQuestions}
+          ungradedQuestionIds={ungradedQuestionIds}
         />
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Teams</h2>

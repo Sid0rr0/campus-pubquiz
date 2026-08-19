@@ -264,6 +264,10 @@ export function createFakeAnswerService() {
       },
     ]),
     grade: jest.fn().mockResolvedValue({ questionId: 21 }),
+    // Default: nothing ungraded — the mock DB isn't stateful, so this is
+    // independent of what submit()/grade() were "called" with. Override per
+    // test with .mockResolvedValueOnce([...]) to exercise the ADVANCE gate.
+    listUngradedQuestionIds: jest.fn().mockResolvedValue([]),
     // Default: no closest_guess submissions — irrelevant to every fixture
     // that doesn't seed a closest_guess question. Override per-test with
     // .mockResolvedValueOnce(...) for tests that do.
