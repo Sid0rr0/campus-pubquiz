@@ -257,6 +257,10 @@ export function createFakeAnswerService() {
       .fn()
       .mockResolvedValue([{ questionId: 21, value: 'Banana' }]),
     grade: jest.fn().mockResolvedValue({ questionId: 21 }),
+    // Default: no closest_guess submissions — irrelevant to every fixture
+    // that doesn't seed a closest_guess question. Override per-test with
+    // .mockResolvedValueOnce(...) for tests that do.
+    gradeClosestGuess: jest.fn().mockResolvedValue([]),
     computeLeaderboard: jest.fn().mockResolvedValue([
       {
         teamId: 31,
@@ -376,14 +380,15 @@ export interface TestGateway {
  * FIXTURE_SEEDED_GAME (game session 101, join code ABCDEF, round 1 / q21). */
 export async function createTestGateway(): Promise<TestGateway> {
   const seedService = createFakeSeedService();
+  const answerService = createFakeAnswerService();
   const gameStateService = new GameStateService(
     asSeedService(seedService),
     asGameProgressRepository(createFakeGameProgressRepository()),
     createFakeOrm(),
+    asAnswerService(answerService),
   );
   await gameStateService.onModuleInit();
   const teamService = createFakeTeamService();
-  const answerService = createFakeAnswerService();
   const bonusService = createFakeBonusService();
   const sessionService = createFakeSessionService();
   const gateway = new GameGateway(

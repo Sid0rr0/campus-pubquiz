@@ -69,6 +69,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       asSeedService(localSeedService),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await gameStateService.onModuleInit();
     const localGateway = new GameGateway(

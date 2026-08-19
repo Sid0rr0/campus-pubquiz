@@ -53,7 +53,8 @@ export type QuestionType =
   | 'audio'
   | 'youtube'
   | 'sort'
-  | 'match';
+  | 'match'
+  | 'closest_guess';
 
 export interface QuestionView {
   id: number;
@@ -79,6 +80,29 @@ export interface RevealQuestionView extends QuestionView {
   answer: string;
   /** Shown alongside the answer during reveal only — never sent before the question is revealed. */
   answerMediaUrl?: string;
+  /** closest_guess only — undefined for every other type. */
+  closestGuess?: ClosestGuessRevealData;
+}
+
+/**
+ * closest_guess only — numeric-guess stats for the cumulative reveal sequence.
+ * Present on RevealQuestionView only when the question's type is
+ * 'closest_guess'; undefined for every other type.
+ */
+export interface ClosestGuessRevealData {
+  /** False when zero teams submitted a guess — reveal collapses to the correct-answer step only. */
+  hasSubmissions: boolean;
+  /** Smallest submitted guess (step 1), as a string — undefined when !hasSubmissions. */
+  minGuess?: string;
+  /** Highest submitted guess (step 2) — undefined when !hasSubmissions. */
+  maxGuess?: string;
+  /**
+   * Team(s) tied for closest (step 4), each with their OWN guessed value —
+   * ties can be asymmetric (e.g. correct=100, guesses of 90 and 110 are
+   * equally close but not equal), so this is not a single shared value.
+   * Empty when !hasSubmissions.
+   */
+  closestGuesses: { teamName: string; value: string }[];
 }
 
 /** Where a question sits in the quiz, for headers on the block/reveal/break screens. */
@@ -160,6 +184,13 @@ export interface StateSnapshotPayload {
   teams: TeamView[];
   /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */
   questionLockAt: number | null;
+  /**
+   * closest_guess only — which reveal sub-step (0-indexed) is shown for the
+   * question currently at revealIndex. Ephemeral, like leaderboardRevealCount:
+   * not part of GameProgress, not persisted, meaningless for every other
+   * status/type. 0 whenever the current reveal question isn't closest_guess.
+   */
+  closestGuessRevealStep: number;
 }
 
 export interface AdminActionPayload {

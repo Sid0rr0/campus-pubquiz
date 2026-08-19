@@ -67,6 +67,13 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
           answer: 'Bohemian Rhapsody',
           points: 3,
         },
+        {
+          id: 6,
+          type: 'closest_guess',
+          prompt: 'How many students attend this university?',
+          answer: '1000',
+          points: 5,
+        },
       ],
     },
   ],

@@ -3,8 +3,10 @@ import {
   createFakeOrm,
   createFakeGameProgressRepository,
   createFakeGameStateSeedService,
+  createFakeAnswerService,
   asSeedService,
   asGameProgressRepository,
+  asAnswerService,
   type MockGameProgressRepository,
 } from './test-utils';
 
@@ -19,6 +21,7 @@ describe('GameStateService — core snapshot', () => {
       asSeedService(createFakeGameStateSeedService()),
       asGameProgressRepository(progressRepository),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';
@@ -29,6 +32,7 @@ describe('GameStateService — core snapshot', () => {
       asSeedService(createFakeGameStateSeedService()),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await expect(
       uninitialized.applyAction('ABCDEF', 'START_QUIZ'),

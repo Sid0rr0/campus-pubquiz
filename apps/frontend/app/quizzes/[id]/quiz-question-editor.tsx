@@ -36,6 +36,7 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'youtube', label: 'YouTube video' },
   { value: 'sort', label: 'Sort / order' },
   { value: 'match', label: 'Match pairs' },
+  { value: 'closest_guess', label: 'Closest guess' },
 ];
 
 function typeButtonClass(isActive: boolean): string {
@@ -394,6 +395,7 @@ export function QuizQuestionEditor({
         <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
           Correct answer
           <input
+            type={question.type === 'closest_guess' ? 'number' : 'text'}
             value={question.correctText}
             onChange={(event) => onChange({ correctText: event.target.value })}
             placeholder="Accepted answer"

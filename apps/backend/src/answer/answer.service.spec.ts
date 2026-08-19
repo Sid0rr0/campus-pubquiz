@@ -589,6 +589,168 @@ describe('AnswerService (Postgres integration)', () => {
     ]);
   });
 
+  it('gradeClosestGuess awards full points to the single closest guess', async () => {
+    const guessQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many students attend this university?',
+      answer: '1000',
+      points: 5,
+    });
+    await em.flush();
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    const teamC = await insertTeam('Team C', 'token-c');
+    await answerService.submit(session.id, guessQuestion.id, teamA.id, '900');
+    await answerService.submit(session.id, guessQuestion.id, teamB.id, '950');
+    await answerService.submit(session.id, guessQuestion.id, teamC.id, '2000');
+
+    const graded = await answerService.gradeClosestGuess(
+      session.id,
+      guessQuestion.id,
+      guessQuestion.answer,
+      guessQuestion.points,
+    );
+
+    expect(graded.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(5);
+    expect(graded.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(0);
+    expect(graded.find((a) => a.teamId === teamC.id)?.pointsAwarded).toBe(0);
+    expect(graded.every((a) => a.gradedAt !== null)).toBe(true);
+  });
+
+  it('gradeClosestGuess awards full (unsplit) points to every team tied for closest', async () => {
+    const guessQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'What year was this built?',
+      answer: '1000',
+      points: 10,
+    });
+    await em.flush();
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    await answerService.submit(session.id, guessQuestion.id, teamA.id, '990');
+    await answerService.submit(session.id, guessQuestion.id, teamB.id, '1010');
+
+    const graded = await answerService.gradeClosestGuess(
+      session.id,
+      guessQuestion.id,
+      guessQuestion.answer,
+      guessQuestion.points,
+    );
+
+    expect(graded.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(10);
+    expect(graded.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(10);
+  });
+
+  it('gradeClosestGuess returns an empty list when nobody answered', async () => {
+    const guessQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many?',
+      answer: '1000',
+      points: 5,
+    });
+    await em.flush();
+
+    const graded = await answerService.gradeClosestGuess(
+      session.id,
+      guessQuestion.id,
+      guessQuestion.answer,
+      guessQuestion.points,
+    );
+
+    expect(graded).toEqual([]);
+  });
+
+  it('gradeClosestGuess treats an unparseable guess as never winning', async () => {
+    const guessQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many?',
+      answer: '1000',
+      points: 5,
+    });
+    await em.flush();
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    await answerService.submit(
+      session.id,
+      guessQuestion.id,
+      teamA.id,
+      'not a number',
+    );
+    await answerService.submit(session.id, guessQuestion.id, teamB.id, '900');
+
+    const graded = await answerService.gradeClosestGuess(
+      session.id,
+      guessQuestion.id,
+      guessQuestion.answer,
+      guessQuestion.points,
+    );
+
+    expect(graded.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(0);
+    expect(graded.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(5);
+  });
+
+  it('gradeClosestGuess is idempotent when called again after the guesses are unchanged', async () => {
+    const guessQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many?',
+      answer: '1000',
+      points: 5,
+    });
+    await em.flush();
+    const teamA = await insertTeam('Team A', 'token-a');
+    await answerService.submit(session.id, guessQuestion.id, teamA.id, '900');
+
+    await answerService.gradeClosestGuess(
+      session.id,
+      guessQuestion.id,
+      guessQuestion.answer,
+      guessQuestion.points,
+    );
+    const second = await answerService.gradeClosestGuess(
+      session.id,
+      guessQuestion.id,
+      guessQuestion.answer,
+      guessQuestion.points,
+    );
+
+    expect(second.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(5);
+  });
+
+  it('rejects manually grading a closest_guess answer via grade()', async () => {
+    const guessQuestion = em.create(Question, {
+      round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many?',
+      answer: '1000',
+      points: 5,
+    });
+    await em.flush();
+    const team = await insertTeam('Team A', 'token-a');
+    const submitted = await answerService.submit(
+      session.id,
+      guessQuestion.id,
+      team.id,
+      '900',
+    );
+
+    await expect(
+      answerService.grade(session.id, submitted.answerId, 5),
+    ).rejects.toThrow(
+      'closest_guess answers are graded automatically and cannot be graded manually',
+    );
+  });
+
   it('subtracts a negative bonus (penalty) from the leaderboard total', async () => {
     const teamA = await insertTeam('Team A', 'token-a');
     const teamB = await insertTeam('Team B', 'token-b');

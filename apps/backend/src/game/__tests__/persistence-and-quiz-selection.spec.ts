@@ -3,8 +3,10 @@ import {
   createFakeOrm,
   createFakeGameProgressRepository,
   createFakeGameStateSeedService,
+  createFakeAnswerService,
   asSeedService,
   asGameProgressRepository,
+  asAnswerService,
   type MockGameProgressRepository,
   type MockSeedService,
 } from './test-utils';
@@ -22,6 +24,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       asSeedService(seedService),
       asGameProgressRepository(progressRepository),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';
@@ -53,6 +56,7 @@ describe('GameStateService — persistence and quiz selection', () => {
       asSeedService(createFakeGameStateSeedService()),
       asGameProgressRepository(rehydratingRepository),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await rehydratedService.onModuleInit();
     const rehydratedJoinCode = 'ABCDEF';

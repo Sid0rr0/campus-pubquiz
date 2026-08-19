@@ -3,8 +3,10 @@ import {
   createFakeOrm,
   createFakeGameProgressRepository,
   createFakeGameStateSeedService,
+  createFakeAnswerService,
   asSeedService,
   asGameProgressRepository,
+  asAnswerService,
 } from './test-utils';
 
 describe('GameStateService — getAdminQuestionContext', () => {
@@ -16,6 +18,7 @@ describe('GameStateService — getAdminQuestionContext', () => {
       asSeedService(createFakeGameStateSeedService()),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

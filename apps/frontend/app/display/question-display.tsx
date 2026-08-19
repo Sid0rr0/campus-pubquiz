@@ -37,6 +37,55 @@ function buildYoutubeEmbedSrc(
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
 
+interface AnswerMediaProps {
+  url?: string;
+  mediaTestIdPrefix: string;
+}
+
+// Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
+// correct-answer step — same image/audio/YouTube inference and http(s)-only
+// guard (media_url/answer_media_url come from an admin-imported spreadsheet,
+// not a trusted author).
+export function AnswerMedia({ url, mediaTestIdPrefix }: AnswerMediaProps) {
+  const safeUrl = url && isHttpUrl(url) ? url : undefined;
+  const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
+  if (!safeUrl) return null;
+
+  if (youtubeId) {
+    return (
+      <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+        <iframe
+          data-testid={`${mediaTestIdPrefix}-answer-youtube`}
+          src={buildYoutubeEmbedSrc(youtubeId)}
+          title="Answer video"
+          className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  if (isAudioUrl(safeUrl)) {
+    return (
+      <audio
+        data-testid={`${mediaTestIdPrefix}-answer-audio`}
+        src={safeUrl}
+        controls
+        autoPlay
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+    <img
+      data-testid={`${mediaTestIdPrefix}-answer-image`}
+      src={safeUrl}
+      alt="Answer image"
+      className="max-h-64 rounded-xl"
+    />
+  );
+}
+
 interface QuestionDisplayProps {
   type: QuestionType;
   prompt: string;
@@ -88,13 +137,8 @@ export function QuestionDisplay({
     rawQuestionMediaUrl && isHttpUrl(rawQuestionMediaUrl)
       ? rawQuestionMediaUrl
       : undefined;
-  const safeAnswerMediaUrl =
-    answerMediaUrl && isHttpUrl(answerMediaUrl) ? answerMediaUrl : undefined;
   const questionYoutubeId = questionMediaUrl
     ? extractYoutubeVideoId(questionMediaUrl)
-    : undefined;
-  const answerYoutubeId = safeAnswerMediaUrl
-    ? extractYoutubeVideoId(safeAnswerMediaUrl)
     : undefined;
 
   return (
@@ -244,41 +288,12 @@ export function QuestionDisplay({
           {correctAnswer}
         </p>
       )}
-      {isRevealing && safeAnswerMediaUrl && answerYoutubeId && (
-        <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
-          <iframe
-            data-testid={`${mediaTestIdPrefix}-answer-youtube`}
-            src={buildYoutubeEmbedSrc(answerYoutubeId)}
-            title="Answer video"
-            className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
-        </div>
+      {isRevealing && (
+        <AnswerMedia
+          url={answerMediaUrl}
+          mediaTestIdPrefix={mediaTestIdPrefix}
+        />
       )}
-      {isRevealing &&
-        safeAnswerMediaUrl &&
-        !answerYoutubeId &&
-        !isAudioUrl(safeAnswerMediaUrl) && (
-          // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-          <img
-            data-testid={`${mediaTestIdPrefix}-answer-image`}
-            src={safeAnswerMediaUrl}
-            alt="Answer image"
-            className="max-h-64 rounded-xl"
-          />
-        )}
-      {isRevealing &&
-        safeAnswerMediaUrl &&
-        !answerYoutubeId &&
-        isAudioUrl(safeAnswerMediaUrl) && (
-          <audio
-            data-testid={`${mediaTestIdPrefix}-answer-audio`}
-            src={safeAnswerMediaUrl}
-            controls
-            autoPlay
-          />
-        )}
     </>
   );
 }

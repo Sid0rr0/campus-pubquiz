@@ -66,6 +66,16 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
       },
     ),
   }),
+  z.object({
+    type: z.literal('closest_guess'),
+    ...baseQuestionFields,
+    answer: z
+      .string()
+      .refine((value) => value !== '' && Number.isFinite(Number(value)), {
+        error: 'Answer must be a number',
+      }),
+    mediaUrl: httpUrl.optional(),
+  }),
   z
     .object({
       type: z.literal('sort'),

@@ -19,6 +19,7 @@ const QUESTION_TYPES: readonly QuestionType[] = [
   'youtube',
   'sort',
   'match',
+  'closest_guess',
 ];
 
 const DEFAULT_POINTS = 1;
@@ -86,6 +87,17 @@ const questionRowSchema = z.discriminatedUnion('type', [
         error: 'media_url must be a youtube.com/youtu.be link for type youtube',
       },
     ),
+    answer_media_url: httpUrl.optional(),
+  }),
+  z.object({
+    type: z.literal('closest_guess'),
+    ...baseFields,
+    answer: z
+      .string()
+      .refine((value) => value !== '' && Number.isFinite(Number(value)), {
+        error: 'Answer must be a number',
+      }),
+    media_url: httpUrl.optional(),
     answer_media_url: httpUrl.optional(),
   }),
   z

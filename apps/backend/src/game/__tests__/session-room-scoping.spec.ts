@@ -190,6 +190,7 @@ describe('GameGateway — session room scoping', () => {
       asSeedService(localSeedService),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await localGameState.onModuleInit();
     const localGateway = new GameGateway(

@@ -10,6 +10,7 @@ import {
   TEST_SESSION_TOKEN,
   createFakeOrm,
   createFakeGameProgressRepository,
+  createFakeAnswerService,
   createFakeBonusService,
   createFakeSessionService,
   createMockSocket,
@@ -141,6 +142,7 @@ function createSessionAwareAnswerService() {
       const questionId = answerId === 701 ? 501 : 502;
       return Promise.resolve({ questionId });
     }),
+    gradeClosestGuess: jest.fn().mockResolvedValue([]),
     computeLeaderboard: jest.fn((gameSessionId: number) => {
       const answer = answersBySession[gameSessionId];
       return Promise.resolve([
@@ -174,6 +176,7 @@ describe('GameGateway — concurrent sessions (phase 6 verification)', () => {
       asSeedService(seedService),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await gameStateService.onModuleInit();
 

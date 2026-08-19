@@ -77,12 +77,32 @@ describe('validateQuizDraft', () => {
               options: ['arthur', 'captain america'],
               matchTargets: ['shield', 'excalibur'],
             }),
+            makeQuestion({
+              type: 'closest_guess',
+              answer: '1000',
+            }),
           ],
         }),
       ],
     });
 
     expect(validateQuizDraft(request)).toEqual([]);
+  });
+
+  it('reports a closest_guess question with a non-numeric answer', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({ type: 'closest_guess', answer: 'a lot' }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({ field: 'answer' }));
   });
 
   it('reports a sort question whose answer is not a permutation of the options', () => {

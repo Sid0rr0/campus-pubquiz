@@ -7,11 +7,14 @@ import {
   getRoundAndQuestionForBlockPosition,
   type ActiveSessionSummary,
   type AdminQuestionContext,
+  type AnswerView,
   type BlockQuestionView,
   type BlockRevealQuestionView,
+  type ClosestGuessRevealData,
   type GameAction,
   type GameContext,
   type GameProgress,
+  type GameStatus,
   type LeaderboardEntry,
   type QuestionPosition,
   type QuestionView,
@@ -19,6 +22,7 @@ import {
   type StateSnapshotPayload,
   type TeamView,
 } from '@campus-pubquiz/types';
+import { AnswerService } from '@/answer/answer.service';
 import { SeedService } from '@/db/seed.service';
 import type { SeededGame } from '@/db/seed.types';
 import { GameProgressRepository } from '@/game/game-progress.repository';
@@ -52,6 +56,10 @@ interface SessionState {
   answeredTeamIdsByQuestion: Record<number, number[]>;
   /** teamId -> socket.id of the one device currently connected as that team. */
   connectedTeamSockets: Record<number, string>;
+  /** closest_guess reveal-step counter for the question at progress.revealIndex — ephemeral, not persisted. */
+  closestGuessRevealStep: number;
+  /** Cached per-question closest_guess grading/summary, keyed by questionId — computed once when a block locks, ephemeral like leaderboardRevealCount. */
+  closestGuessSummaries: Record<number, ClosestGuessRevealData>;
 }
 
 function freshSessionState(
@@ -67,6 +75,27 @@ function freshSessionState(
     teams: [],
     answeredTeamIdsByQuestion: {},
     connectedTeamSockets: {},
+    closestGuessRevealStep: 0,
+    closestGuessSummaries: {},
+  };
+}
+
+/** Summarizes a graded closest_guess question's answers into the display/play-facing reveal shape — pointsAwarded > 0 reliably identifies the tied-closest rows, since gradeClosestGuess awards full points to exactly those rows and 0 to everyone else. */
+function summarizeClosestGuess(answers: AnswerView[]): ClosestGuessRevealData {
+  const numeric = answers
+    .map((answer) => ({ ...answer, parsed: Number(answer.value) }))
+    .filter((answer) => Number.isFinite(answer.parsed));
+  if (numeric.length === 0)
+    return { hasSubmissions: false, closestGuesses: [] };
+  const min = numeric.reduce((m, a) => (a.parsed < m.parsed ? a : m));
+  const max = numeric.reduce((m, a) => (a.parsed > m.parsed ? a : m));
+  return {
+    hasSubmissions: true,
+    minGuess: min.value,
+    maxGuess: max.value,
+    closestGuesses: answers
+      .filter((answer) => answer.pointsAwarded > 0)
+      .map((answer) => ({ teamName: answer.teamName, value: answer.value })),
   };
 }
 
@@ -157,6 +186,7 @@ export class GameStateService implements OnModuleInit {
     private readonly seedService: SeedService,
     private readonly progressRepository: GameProgressRepository,
     private readonly orm: MikroORM,
+    private readonly answerService: AnswerService,
   ) {}
 
   // onModuleInit runs at bootstrap, before any HTTP/socket request has
@@ -348,6 +378,7 @@ export class GameStateService implements OnModuleInit {
         }),
       ),
       questionLockAt: session.questionLockAt,
+      closestGuessRevealStep: session.closestGuessRevealStep,
     };
   }
 
@@ -361,21 +392,43 @@ export class GameStateService implements OnModuleInit {
     action: GameAction,
   ): Promise<StateSnapshotPayload> {
     const session = this.getSession(joinCode);
+
+    // Mid-reveal-sequence intercept for closest_guess questions — never
+    // reaches getNextGameState, GameProgress untouched, nothing persisted.
+    // See tryStepClosestGuessReveal for why this stays entirely ephemeral.
+    if (
+      (action === 'ADVANCE' || action === 'PREVIOUS') &&
+      session.progress.status === 'reveal'
+    ) {
+      const stepped = this.tryStepClosestGuessReveal(session, action);
+      if (stepped) {
+        this.sessions.set(joinCode, stepped);
+        return this.getSnapshot(joinCode);
+      }
+    }
+
     const progress = getNextGameState(
       session.progress,
       action,
       this.getContext(session),
     );
+    const gradedSession = await this.ensureBlockGraded(session, progress);
+    const closestGuessRevealStep = this.computeInitialRevealStep(
+      gradedSession,
+      progress,
+      action,
+    );
     const updated: SessionState = {
-      ...session,
+      ...gradedSession,
       progress,
       questionLockAt: computeQuestionLockAt(progress),
       leaderboardRevealCount: computeLeaderboardRevealCount(
         action,
         progress,
-        session.leaderboard,
-        session.leaderboardRevealCount,
+        gradedSession.leaderboard,
+        gradedSession.leaderboardRevealCount,
       ),
+      closestGuessRevealStep,
     };
     this.sessions.set(joinCode, updated);
     await this.progressRepository.save(
@@ -383,6 +436,118 @@ export class GameStateService implements OnModuleInit {
       progress,
     );
     return this.getSnapshot(joinCode);
+  }
+
+  /** Resolves the seeded question a block-relative revealIndex points at, given roundIndex. */
+  private getRevealTargetQuestion(
+    session: SessionState,
+    roundIndex: number,
+    revealIndex: number,
+  ): RevealQuestionView | undefined {
+    const context = this.getContext(session);
+    const blockStart = getBlockStartRoundIndex(roundIndex, context);
+    const { roundIndex: targetRound, questionIndex } =
+      getRoundAndQuestionForBlockPosition(blockStart, revealIndex, context);
+    return session.seededGame.rounds[targetRound]?.questions[questionIndex];
+  }
+
+  /**
+   * How many reveal sub-steps this question has. closest_guess with
+   * submissions gets 5, cumulatively building up on one screen: (0) just the
+   * question, (1) +smallest guess, (2) +highest guess, (3) +correct answer,
+   * (4) +closest team(s) — each step keeps everything shown at the previous
+   * step and adds one more line, it never replaces. Every other type, and
+   * closest_guess with zero submissions, keeps today's single-shot behavior
+   * (1 step: question + answer together immediately).
+   */
+  private getRevealStepCount(
+    question: RevealQuestionView | undefined,
+    session: SessionState,
+  ): number {
+    if (!question || question.type !== 'closest_guess') return 1;
+    const summary = session.closestGuessSummaries[question.id];
+    return summary?.hasSubmissions ? 5 : 1;
+  }
+
+  /** ADVANCE/PREVIOUS while mid-sequence on the current reveal question — null when there's nothing to gate (not closest_guess, single-step, or already at a boundary), signaling the caller to fall through to getNextGameState. */
+  private tryStepClosestGuessReveal(
+    session: SessionState,
+    action: 'ADVANCE' | 'PREVIOUS',
+  ): SessionState | null {
+    const question = this.getRevealTargetQuestion(
+      session,
+      session.progress.roundIndex,
+      session.progress.revealIndex,
+    );
+    const totalSteps = this.getRevealStepCount(question, session);
+    if (totalSteps <= 1) return null;
+
+    const step = session.closestGuessRevealStep;
+    if (action === 'ADVANCE' && step < totalSteps - 1) {
+      return { ...session, closestGuessRevealStep: step + 1 };
+    }
+    if (action === 'PREVIOUS' && step > 0) {
+      return { ...session, closestGuessRevealStep: step - 1 };
+    }
+    return null;
+  }
+
+  /** Initializes the step counter whenever a (possibly new) question lands on 'reveal': 0 arriving forward (ADVANCE), last step arriving backward (PREVIOUS) — mirrors how PREVIOUS already resumes any other type fully revealed. */
+  private computeInitialRevealStep(
+    session: SessionState,
+    progress: GameProgress,
+    action: GameAction,
+  ): number {
+    if (progress.status !== 'reveal') return 0;
+    const question = this.getRevealTargetQuestion(
+      session,
+      progress.roundIndex,
+      progress.revealIndex,
+    );
+    const totalSteps = this.getRevealStepCount(question, session);
+    return action === 'PREVIOUS' ? totalSteps - 1 : 0;
+  }
+
+  /** Batch-grades every closest_guess question in the block once it reaches a graded status, caching the result — safe to call every applyAction since it skips questions already in closestGuessSummaries. */
+  private async ensureBlockGraded(
+    session: SessionState,
+    newProgress: GameProgress,
+  ): Promise<SessionState> {
+    const GRADED_STATUSES: GameStatus[] = [
+      'break_intro',
+      'break',
+      'break_round_intro',
+      'reveal_intro',
+      'reveal',
+      'ended',
+    ];
+    if (!GRADED_STATUSES.includes(newProgress.status)) return session;
+
+    const blockQuestions = this.getBlockSeededQuestions({
+      ...session,
+      progress: newProgress,
+    });
+    const ungraded = blockQuestions.filter(
+      (question) =>
+        question.type === 'closest_guess' &&
+        session.closestGuessSummaries[question.id] === undefined,
+    );
+    if (ungraded.length === 0) return session;
+
+    let summaries = session.closestGuessSummaries;
+    for (const question of ungraded) {
+      const graded = await this.answerService.gradeClosestGuess(
+        session.seededGame.gameSessionId,
+        question.id,
+        question.answer,
+        question.points,
+      );
+      summaries = {
+        ...summaries,
+        [question.id]: summarizeClosestGuess(graded),
+      };
+    }
+    return { ...session, closestGuessSummaries: summaries };
   }
 
   private getSession(joinCode: string): SessionState {
@@ -489,6 +654,14 @@ export class GameStateService implements OnModuleInit {
           : round.questions;
         return questions.map((question, questionOffset) => ({
           ...question,
+          ...(question.type === 'closest_guess'
+            ? {
+                closestGuess: session.closestGuessSummaries[question.id] ?? {
+                  hasSubmissions: false,
+                  closestGuesses: [],
+                },
+              }
+            : {}),
           roundNumber: currentRoundIndex + 1,
           questionNumberInRound: questionOffset + 1,
           roundTitle: round.title,

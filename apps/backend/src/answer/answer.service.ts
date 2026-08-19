@@ -148,14 +148,75 @@ export class AnswerService {
     answerId: number,
     pointsAwarded: number,
   ): Promise<GradedAnswer> {
-    const answer = await this.answers.findOneOrFail({
-      id: answerId,
-      gameSession: gameSessionId,
-    });
+    const answer = await this.answers.findOneOrFail(
+      { id: answerId, gameSession: gameSessionId },
+      { populate: ['question'] },
+    );
+    if (answer.question.type === 'closest_guess') {
+      throw new Error(
+        'closest_guess answers are graded automatically and cannot be graded manually',
+      );
+    }
     answer.pointsAwarded = pointsAwarded;
     answer.gradedAt = new Date();
     await this.answers.getEntityManager().flush();
     return { questionId: answer.question.id };
+  }
+
+  /**
+   * Batch-grades every submitted guess for a closest_guess question against
+   * the correct numeric answer: every team tied for the smallest distance
+   * gets full question points (no splitting), everyone else gets zero. Can
+   * only run once all teams are done answering (needs every guess to know
+   * who's closest), unlike the exact-match types graded at submit() time.
+   * Safe to call more than once for the same question — unconditionally
+   * recomputes and overwrites, same "recompute is idempotent" convention as
+   * computeLeaderboard.
+   */
+  async gradeClosestGuess(
+    gameSessionId: number,
+    questionId: number,
+    correctAnswer: string,
+    questionPoints: number,
+  ): Promise<AnswerView[]> {
+    const rows = await this.answers.find(
+      { gameSession: gameSessionId, question: questionId },
+      { populate: ['team'] },
+    );
+    if (rows.length === 0) return [];
+
+    const target = Number(correctAnswer);
+    const distances = rows.map((row) => {
+      const parsed = Number(row.value);
+      return {
+        row,
+        distance: Number.isFinite(parsed)
+          ? Math.abs(parsed - target)
+          : Infinity,
+      };
+    });
+    const minDistance = Math.min(...distances.map((d) => d.distance));
+
+    const now = new Date();
+    for (const { row, distance } of distances) {
+      row.pointsAwarded =
+        Number.isFinite(distance) && distance === minDistance
+          ? questionPoints
+          : 0;
+      row.gradedAt = now;
+    }
+    await this.answers.getEntityManager().flush();
+
+    return rows
+      .map((row) => ({
+        answerId: row.id,
+        teamId: row.team.id,
+        teamName: row.team.name,
+        value: row.value,
+        pointsAwarded: row.pointsAwarded,
+        gradedAt: row.gradedAt!.toISOString(),
+      }))
+      .sort((a, b) => a.teamName.localeCompare(b.teamName));
   }
 
   async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {

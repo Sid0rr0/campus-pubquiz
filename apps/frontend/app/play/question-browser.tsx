@@ -7,6 +7,7 @@ import {
   type QuestionView,
 } from '@campus-pubquiz/types';
 import { QuestionDisplay } from '@/app/display/question-display';
+import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { AnswerForm } from '@/app/play/answer-form';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
@@ -20,6 +21,8 @@ interface QuestionBrowserProps {
   selectedQuestion: QuestionView | BlockQuestionView;
   /** selectedQuestion with its correct answer attached — set only while reveal is showing this question. */
   revealQuestion?: BlockRevealQuestionView;
+  /** closest_guess only — which reveal sub-step to show, 0 for every other type. */
+  closestGuessRevealStep: number;
   myAnswers: Record<number, string>;
   onSelectQuestion: (questionId: BlockQuestionView['id']) => void;
   onSubmitAnswer: (
@@ -38,6 +41,7 @@ export function QuestionBrowser({
   totalPickerSlots,
   selectedQuestion,
   revealQuestion,
+  closestGuessRevealStep,
   myAnswers,
   onSelectQuestion,
   onSubmitAnswer,
@@ -56,14 +60,26 @@ export function QuestionBrowser({
       )}
       {progress.status === 'reveal' && revealQuestion ? (
         <div className="flex flex-col items-center gap-6 text-center">
-          <QuestionDisplay
-            type={revealQuestion.type}
-            prompt={revealQuestion.prompt}
-            options={revealQuestion.options}
-            matchTargets={revealQuestion.matchTargets}
-            correctAnswer={revealQuestion.answer}
-            mediaTestIdPrefix="play-reveal"
-          />
+          {revealQuestion.type === 'closest_guess' &&
+          revealQuestion.closestGuess ? (
+            <ClosestGuessRevealScreen
+              prompt={revealQuestion.prompt}
+              step={closestGuessRevealStep}
+              correctAnswer={revealQuestion.answer}
+              answerMediaUrl={revealQuestion.answerMediaUrl}
+              closestGuess={revealQuestion.closestGuess}
+              mediaTestIdPrefix="play-reveal"
+            />
+          ) : (
+            <QuestionDisplay
+              type={revealQuestion.type}
+              prompt={revealQuestion.prompt}
+              options={revealQuestion.options}
+              matchTargets={revealQuestion.matchTargets}
+              correctAnswer={revealQuestion.answer}
+              mediaTestIdPrefix="play-reveal"
+            />
+          )}
           <p className="font-display text-lg text-magenta">
             <span className="font-body text-sm font-extrabold text-foreground/55">
               YOUR ANSWER{' '}

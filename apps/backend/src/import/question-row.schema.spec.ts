@@ -428,6 +428,50 @@ describe('parseQuestionRow', () => {
     }
   });
 
+  it('accepts a valid closest_guess row with a numeric answer', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'closest_guess',
+        question: 'How many students attend this university?',
+        answer: '1000',
+        points: '5',
+      }),
+    );
+
+    expect(result).toEqual({
+      ok: true,
+      roundTitle: 'Round 1',
+      roundBreakAfter: false,
+      question: {
+        type: 'closest_guess',
+        prompt: 'How many students attend this university?',
+        answer: '1000',
+        points: 5,
+      },
+    });
+  });
+
+  it('rejects a closest_guess row with a non-numeric answer', () => {
+    const result = parseQuestionRow(
+      makeRow({ type: 'closest_guess', answer: 'a lot' }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({ field: 'answer' }),
+      );
+    }
+  });
+
+  it('rejects a closest_guess row with a blank answer', () => {
+    const result = parseQuestionRow(
+      makeRow({ type: 'closest_guess', answer: '' }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
   it('collects multiple issues from one broken row', () => {
     const result = parseQuestionRow(
       makeRow({ question: '', answer: '', points: 'many' }),

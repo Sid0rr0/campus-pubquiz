@@ -58,6 +58,7 @@ function snapshot(
     joinCode: 'GHIJKL',
     teams: [],
     questionLockAt: null,
+    closestGuessRevealStep: 0,
     ...overrides,
   };
 }

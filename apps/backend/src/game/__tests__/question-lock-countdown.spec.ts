@@ -3,8 +3,10 @@ import {
   createFakeOrm,
   createFakeGameProgressRepository,
   createFakeGameStateSeedService,
+  createFakeAnswerService,
   asSeedService,
   asGameProgressRepository,
+  asAnswerService,
 } from './test-utils';
 
 describe('GameStateService — question lock countdown', () => {
@@ -16,6 +18,7 @@ describe('GameStateService — question lock countdown', () => {
       asSeedService(createFakeGameStateSeedService()),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';
@@ -143,6 +146,7 @@ describe('GameStateService — question lock countdown', () => {
       asSeedService(createFakeGameStateSeedService()),
       asGameProgressRepository(rehydratingRepository),
       createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
     );
     await rehydratedService.onModuleInit();
 

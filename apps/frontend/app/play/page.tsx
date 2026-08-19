@@ -159,6 +159,7 @@ function PlayPageContent() {
     revealQuestions = [],
     quizStructure = { blockCount: 0, topicsPerBlock: null },
     roundTitle = '',
+    closestGuessRevealStep = 0,
   } = snapshot;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
@@ -254,6 +255,7 @@ function PlayPageContent() {
               totalPickerSlots={totalPickerSlots}
               selectedQuestion={selectedQuestion}
               revealQuestion={revealQuestion}
+              closestGuessRevealStep={closestGuessRevealStep}
               myAnswers={myAnswers}
               onSelectQuestion={setBrowsedQuestionId}
               onSubmitAnswer={submitAnswer}

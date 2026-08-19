@@ -91,6 +91,8 @@ export function AnswerForm({
       </label>
       <input
         id="answer-value"
+        type={question.type === 'closest_guess' ? 'number' : 'text'}
+        inputMode={question.type === 'closest_guess' ? 'decimal' : undefined}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"

@@ -215,6 +215,44 @@ describe('AnswersPanel', () => {
     expect(onGrade).toHaveBeenCalledWith(41, 0);
   });
 
+  it('shows a read-only auto-graded badge instead of grade buttons for closest_guess', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          question: {
+            type: 'closest_guess',
+            prompt: 'How many students attend this university?',
+            points: 5,
+            correctAnswer: '1000',
+            roundTitle: 'Estimates',
+            roundNumber: 1,
+            questionNumberInRound: 1,
+            totalQuestionsInRound: 1,
+          },
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: '950',
+              pointsAwarded: 5,
+              gradedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('5 pts (auto-graded)')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: /grade the quizzards full points/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it('omits the previous/next controls when no nav is given', () => {
     render(
       <AnswersPanel

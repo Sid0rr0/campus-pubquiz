@@ -28,6 +28,8 @@ interface AnswerRowProps {
   answer: AnswerView | null;
   questionType: QuestionType;
   maxPoints: number;
+  /** closest_guess is graded automatically — show its computed result instead of grade buttons, and never call onGrade. */
+  readOnly: boolean;
   onGrade: (answerId: number, points: number) => void;
 }
 
@@ -36,6 +38,7 @@ function AnswerRow({
   answer,
   questionType,
   maxPoints,
+  readOnly,
   onGrade,
 }: AnswerRowProps) {
   const hasAnswered = answer !== null;
@@ -59,30 +62,40 @@ function AnswerRow({
           ? formatAnswerValue(answer.value, questionType)
           : 'No answer yet'}
       </span>
-      {isGraded && !matchesAGradeOption && (
-        <span className="sr-only">Awarded {answer.pointsAwarded} points</span>
+      {readOnly ? (
+        <span className="text-sm font-extrabold text-foreground/55">
+          {hasAnswered ? `${answer.pointsAwarded} pts (auto-graded)` : ''}
+        </span>
+      ) : (
+        <>
+          {isGraded && !matchesAGradeOption && (
+            <span className="sr-only">
+              Awarded {answer.pointsAwarded} points
+            </span>
+          )}
+          <div className="flex gap-1.5">
+            {options.map(({ display, ariaSuffix, value }) => {
+              const isSelected = isGraded && answer.pointsAwarded === value;
+              return (
+                <button
+                  key={display}
+                  type="button"
+                  disabled={!hasAnswered}
+                  aria-label={`Grade ${teamName} ${ariaSuffix}`}
+                  onClick={() => hasAnswered && onGrade(answer.answerId, value)}
+                  className={
+                    isSelected
+                      ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green font-extrabold text-white'
+                      : 'flex h-9 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40'
+                  }
+                >
+                  {isSelected ? `✓ ${value}` : display}
+                </button>
+              );
+            })}
+          </div>
+        </>
       )}
-      <div className="flex gap-1.5">
-        {options.map(({ display, ariaSuffix, value }) => {
-          const isSelected = isGraded && answer.pointsAwarded === value;
-          return (
-            <button
-              key={display}
-              type="button"
-              disabled={!hasAnswered}
-              aria-label={`Grade ${teamName} ${ariaSuffix}`}
-              onClick={() => hasAnswered && onGrade(answer.answerId, value)}
-              className={
-                isSelected
-                  ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green font-extrabold text-white'
-                  : 'flex h-9 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40'
-              }
-            >
-              {isSelected ? `✓ ${value}` : display}
-            </button>
-          );
-        })}
-      </div>
     </li>
   );
 }
@@ -111,6 +124,7 @@ export function AnswersPanel({
   const answersByTeamId = new Map(
     answers.map((answer) => [answer.teamId, answer]),
   );
+  const readOnly = question.type === 'closest_guess';
 
   return (
     <section className="flex flex-col gap-3">
@@ -158,6 +172,7 @@ export function AnswersPanel({
             answer={answersByTeamId.get(team.teamId) ?? null}
             questionType={question.type}
             maxPoints={question.points}
+            readOnly={readOnly}
             onGrade={onGrade}
           />
         ))}

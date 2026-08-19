@@ -9,6 +9,7 @@ import type {
   GameProgress,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
@@ -78,6 +79,7 @@ function getScreenKey(
   revealQuestion:
     | Pick<BlockRevealQuestionView, 'roundNumber' | 'questionNumberInRound'>
     | undefined,
+  closestGuessRevealStep: number,
 ): string {
   if (progress.isLeaderboardVisible) return 'leaderboard';
 
@@ -94,8 +96,9 @@ function getScreenKey(
     case 'break_round_intro':
       return `break_round_intro-${progress.revealIndex}`;
     case 'reveal_intro':
+      return `reveal_intro-${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
     case 'reveal':
-      return `${progress.status}-${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
+      return `reveal-${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}-${closestGuessRevealStep}`;
     default:
       return progress.status;
   }
@@ -157,6 +160,7 @@ function DisplayPageContent() {
     revealQuestions = [],
     roundTitle = '',
     questionLockAt = null,
+    closestGuessRevealStep = 0,
   } = snapshot;
 
   const revealQuestion = revealQuestions[progress.revealIndex];
@@ -175,7 +179,11 @@ function DisplayPageContent() {
     revealQuestion?.questionNumberInRound,
   );
 
-  const screenKey = getScreenKey(progress, revealQuestion);
+  const screenKey = getScreenKey(
+    progress,
+    revealQuestion,
+    closestGuessRevealStep,
+  );
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -259,22 +267,36 @@ function DisplayPageContent() {
                   roundTitle={revealQuestion.roundTitle}
                 />
               )}
-              {progress.status === 'reveal' && revealQuestion && (
-                <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                  <QuestionDisplay
-                    type={revealQuestion.type}
-                    prompt={revealQuestion.prompt}
-                    mediaUrl={revealQuestion.mediaUrl}
-                    mediaStartSeconds={revealQuestion.mediaStartSeconds}
-                    mediaEndSeconds={revealQuestion.mediaEndSeconds}
-                    options={revealQuestion.options}
-                    matchTargets={revealQuestion.matchTargets}
-                    correctAnswer={revealQuestion.answer}
-                    answerMediaUrl={revealQuestion.answerMediaUrl}
-                    mediaTestIdPrefix="reveal"
-                  />
-                </div>
-              )}
+              {progress.status === 'reveal' &&
+                revealQuestion &&
+                (revealQuestion.type === 'closest_guess' &&
+                revealQuestion.closestGuess ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+                    <ClosestGuessRevealScreen
+                      prompt={revealQuestion.prompt}
+                      step={closestGuessRevealStep}
+                      correctAnswer={revealQuestion.answer}
+                      answerMediaUrl={revealQuestion.answerMediaUrl}
+                      closestGuess={revealQuestion.closestGuess}
+                      mediaTestIdPrefix="reveal"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+                    <QuestionDisplay
+                      type={revealQuestion.type}
+                      prompt={revealQuestion.prompt}
+                      mediaUrl={revealQuestion.mediaUrl}
+                      mediaStartSeconds={revealQuestion.mediaStartSeconds}
+                      mediaEndSeconds={revealQuestion.mediaEndSeconds}
+                      options={revealQuestion.options}
+                      matchTargets={revealQuestion.matchTargets}
+                      correctAnswer={revealQuestion.answer}
+                      answerMediaUrl={revealQuestion.answerMediaUrl}
+                      mediaTestIdPrefix="reveal"
+                    />
+                  </div>
+                ))}
               {progress.status === 'ended' && (
                 <div className="flex flex-1 items-center justify-center px-16 text-center">
                   <h1 className="font-display text-4xl">Quiz complete!</h1>
