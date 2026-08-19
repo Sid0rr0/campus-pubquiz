@@ -67,4 +67,26 @@ describe('buildOpenedQuestions', () => {
   it('returns an empty list when no questions have been seen', () => {
     expect(buildOpenedQuestions({}, {})).toEqual([]);
   });
+
+  it('carries the question options through, for match display pairing', () => {
+    const matchQuestion = {
+      id: 1,
+      type: 'match' as const,
+      prompt: 'Match the hero to their weapon.',
+      points: 4,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Heroes',
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+      answer: 'excalibur|shield',
+    };
+
+    const entries = buildOpenedQuestions(
+      { 1: matchQuestion },
+      { 1: 'shield|excalibur' },
+    );
+
+    expect(entries[0].options).toEqual(['arthur', 'captain america']);
+  });
 });

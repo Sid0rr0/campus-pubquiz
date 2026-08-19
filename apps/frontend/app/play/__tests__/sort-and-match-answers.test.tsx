@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -88,7 +88,16 @@ describe('PlayPage — sort and match answers', () => {
     );
     render(<PlayPage />);
 
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+
     const [arthurSelect, captainSelect] = screen.getAllByRole('combobox');
+    expect(
+      within(arthurSelect).getByRole('option', { name: 'a. shield' }),
+    ).toBeInTheDocument();
+    expect(
+      within(arthurSelect).getByRole('option', { name: 'b. excalibur' }),
+    ).toBeInTheDocument();
     await userEvent.selectOptions(arthurSelect, 'excalibur');
     expect(submitAnswer).not.toHaveBeenCalled();
     await userEvent.selectOptions(captainSelect, 'shield');

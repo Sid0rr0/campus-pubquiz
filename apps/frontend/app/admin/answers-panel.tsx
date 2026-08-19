@@ -27,6 +27,8 @@ interface AnswerRowProps {
   teamName: string;
   answer: AnswerView | null;
   questionType: QuestionType;
+  /** match only: the left-hand items, so the team's right-hand picks can be paired back to them for display. */
+  questionOptions?: string[];
   maxPoints: number;
   /** closest_guess is graded automatically — show its computed result instead of grade buttons, and never call onGrade. */
   readOnly: boolean;
@@ -37,6 +39,7 @@ function AnswerRow({
   teamName,
   answer,
   questionType,
+  questionOptions,
   maxPoints,
   readOnly,
   onGrade,
@@ -59,7 +62,7 @@ function AnswerRow({
       <span className="w-40 shrink-0 font-extrabold">{teamName}</span>
       <span className="flex-1 text-[15px]">
         {hasAnswered
-          ? formatAnswerValue(answer.value, questionType)
+          ? formatAnswerValue(answer.value, questionType, questionOptions)
           : 'No answer yet'}
       </span>
       {readOnly ? (
@@ -161,7 +164,11 @@ export function AnswersPanel({
         <h2 className="font-display text-xl">{question.prompt}</h2>
         <p className="text-sm font-bold text-green">
           Correct answer:{' '}
-          {formatAnswerValue(question.correctAnswer, question.type)}
+          {formatAnswerValue(
+            question.correctAnswer,
+            question.type,
+            question.options,
+          )}
         </p>
       </div>
       <ul className="flex flex-col gap-2">
@@ -171,6 +178,7 @@ export function AnswersPanel({
             teamName={team.teamName}
             answer={answersByTeamId.get(team.teamId) ?? null}
             questionType={question.type}
+            questionOptions={question.options}
             maxPoints={question.points}
             readOnly={readOnly}
             onGrade={onGrade}

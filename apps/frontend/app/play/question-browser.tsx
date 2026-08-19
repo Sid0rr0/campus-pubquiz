@@ -11,6 +11,7 @@ import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-
 import { AnswerForm } from '@/app/play/answer-form';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
+import { formatAnswerValue } from '@/app/lib/format-answer-value';
 
 interface QuestionBrowserProps {
   progress: GameProgress;
@@ -84,7 +85,13 @@ export function QuestionBrowser({
             <span className="font-body text-sm font-extrabold text-foreground/55">
               YOUR ANSWER{' '}
             </span>
-            {myAnswer ?? 'No answer submitted'}
+            {myAnswer
+              ? formatAnswerValue(
+                  myAnswer,
+                  revealQuestion.type,
+                  revealQuestion.options,
+                )
+              : 'No answer submitted'}
           </p>
         </div>
       ) : (

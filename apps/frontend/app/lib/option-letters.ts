@@ -9,3 +9,8 @@ export function getOptionLetter(index: number): string {
   } while (n >= 0);
   return letters;
 }
+
+/** Lowercase variant, used to label match questions' right-hand list (a, b, c, ...) distinctly from the left-hand list's numbers (1, 2, 3, ...). */
+export function getLowerOptionLetter(index: number): string {
+  return getOptionLetter(index).toLowerCase();
+}

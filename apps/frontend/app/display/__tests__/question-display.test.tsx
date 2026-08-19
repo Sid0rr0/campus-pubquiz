@@ -95,6 +95,10 @@ describe('DisplayPage — question display', () => {
     expect(screen.getByText('captain america')).toBeInTheDocument();
     expect(screen.getByText('shield')).toBeInTheDocument();
     expect(screen.getByText('excalibur')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(screen.getByText('b')).toBeInTheDocument();
   });
 
   it('shows how many teams have answered the open question', () => {

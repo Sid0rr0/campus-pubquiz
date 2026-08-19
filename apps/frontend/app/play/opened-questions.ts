@@ -14,6 +14,8 @@ export interface OpenedQuestionEntry {
   myAnswer: string | null;
   /** Set once this question has been revealed, null otherwise. */
   correctAnswer: string | null;
+  /** match only: the left-hand items, so myAnswer/correctAnswer can be paired back to them for display. */
+  options?: string[];
 }
 
 function isRevealed(
@@ -37,6 +39,7 @@ export function buildOpenedQuestions(
       questionNumberInRound: question.questionNumberInRound,
       myAnswer: myAnswers[question.id] ?? null,
       correctAnswer: isRevealed(question) ? question.answer : null,
+      options: question.options,
     }))
     .sort((a, b) =>
       a.roundNumber !== b.roundNumber

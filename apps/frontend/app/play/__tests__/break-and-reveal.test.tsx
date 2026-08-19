@@ -189,6 +189,39 @@ describe('PlayPage — break and reveal', () => {
     expect(screen.getByText('Mango')).toBeInTheDocument();
   });
 
+  it('formats YOUR ANSWER for a sort/match question during reveal instead of showing the raw pipe-joined value', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'sort' as const,
+      prompt: 'Order these circuits by season.',
+      points: 3,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      options: ['Imola', 'Spa', 'Silverstone'],
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+          revealQuestions: [{ ...q1, answer: 'Silverstone|Imola|Spa' }],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Imola|Spa|Silverstone' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('Imola → Spa → Silverstone')).toBeInTheDocument();
+    expect(screen.queryByText('Imola|Spa|Silverstone')).not.toBeInTheDocument();
+  });
+
   it('tells the team they submitted nothing when reveal shows a question they never answered', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {

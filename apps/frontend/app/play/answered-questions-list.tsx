@@ -32,7 +32,7 @@ export function AnsweredQuestionsList({
             <p className="mt-1 text-sm">
               <span className="font-extrabold text-foreground/55">You: </span>
               {entry.myAnswer
-                ? formatAnswerValue(entry.myAnswer, entry.type)
+                ? formatAnswerValue(entry.myAnswer, entry.type, entry.options)
                 : 'No answer submitted'}
             </p>
             {entry.correctAnswer !== null && (
@@ -40,7 +40,11 @@ export function AnsweredQuestionsList({
                 <span className="font-extrabold text-foreground/55">
                   Correct:{' '}
                 </span>
-                {formatAnswerValue(entry.correctAnswer, entry.type)}
+                {formatAnswerValue(
+                  entry.correctAnswer,
+                  entry.type,
+                  entry.options,
+                )}
               </p>
             )}
           </>

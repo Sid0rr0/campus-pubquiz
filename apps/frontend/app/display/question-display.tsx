@@ -3,7 +3,10 @@ import {
   splitPipeList,
   type QuestionType,
 } from '@campus-pubquiz/types';
-import { getOptionLetter } from '@/app/lib/option-letters';
+import {
+  getLowerOptionLetter,
+  getOptionLetter,
+} from '@/app/lib/option-letters';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 const HTTP_URL_PATTERN = /^https?:\/\//i;
@@ -218,9 +221,10 @@ export function QuestionDisplay({
             {options.map((item, index) => (
               <li
                 key={index}
-                className="rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
+                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
               >
-                {item}
+                <span className="font-display text-cyan">{index + 1}</span>
+                <span>{item}</span>
               </li>
             ))}
           </ul>
@@ -228,9 +232,12 @@ export function QuestionDisplay({
             {matchTargets.map((item, index) => (
               <li
                 key={index}
-                className="rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
+                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
               >
-                {item}
+                <span className="font-display text-cyan">
+                  {getLowerOptionLetter(index)}
+                </span>
+                <span>{item}</span>
               </li>
             ))}
           </ul>
@@ -238,18 +245,32 @@ export function QuestionDisplay({
       )}
       {isMatch && options && matchCorrectRights && (
         <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
-          {options.map((left, index) => (
-            <li
-              key={index}
-              className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold text-foreground"
-            >
-              <span>{left}</span>
-              <span aria-hidden="true" className="text-green">
-                →
-              </span>
-              <span>{matchCorrectRights[index]}</span>
-            </li>
-          ))}
+          {options.map((left, index) => {
+            const right = matchCorrectRights[index];
+            const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
+            return (
+              <li
+                key={index}
+                className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold text-foreground"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="font-display text-green">{index + 1}</span>
+                  <span>{left}</span>
+                </span>
+                <span aria-hidden="true" className="text-green">
+                  →
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="font-display text-green">
+                    {getLowerOptionLetter(
+                      rightLetterIndex >= 0 ? rightLetterIndex : index,
+                    )}
+                  </span>
+                  <span>{right}</span>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
       {!isSort && !isMatch && options && (

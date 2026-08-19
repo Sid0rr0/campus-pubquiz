@@ -91,6 +91,47 @@ describe('AnswersPanel', () => {
     expect(screen.getByText('Earth → Venus → Mercury')).toBeInTheDocument();
   });
 
+  it('pairs each left item with its right-hand value for match questions, for both the correct answer and team answers', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          question: {
+            type: 'match',
+            prompt: 'Match the hero to their weapon.',
+            points: 4,
+            correctAnswer: 'excalibur|shield',
+            options: ['arthur', 'captain america'],
+            roundTitle: 'Heroes',
+            roundNumber: 1,
+            questionNumberInRound: 1,
+            totalQuestionsInRound: 1,
+          },
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: 'shield|excalibur',
+              pointsAwarded: 0,
+              gradedAt: new Date().toISOString(),
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Correct answer: arthur → excalibur, captain america → shield',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('arthur → shield, captain america → excalibur'),
+    ).toBeInTheDocument();
+  });
+
   it('lists every team, even one that has not answered yet', () => {
     render(
       <AnswersPanel

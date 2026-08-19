@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { splitPipeList } from '@campus-pubquiz/types';
+import { getLowerOptionLetter } from '@/app/lib/option-letters';
 
 interface MatchAnswerProps {
   leftItems: string[];
@@ -50,6 +51,9 @@ export function MatchAnswer({
             key={left}
             className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold"
           >
+            <span aria-hidden="true" className="font-display text-cyan">
+              {itemIndex + 1}
+            </span>
             <span className="flex-1 text-foreground">{left}</span>
             <select
               aria-label={`Match for ${left}`}
@@ -58,13 +62,13 @@ export function MatchAnswer({
               className="min-w-0 rounded-lg border-2 border-foreground/25 bg-white px-2 py-1.5 text-base font-bold text-foreground"
             >
               <option value="">Choose…</option>
-              {rightItems.map((right) => (
+              {rightItems.map((right, rightIndex) => (
                 <option
                   key={right}
                   value={right}
                   disabled={usedElsewhere.has(right)}
                 >
-                  {right}
+                  {getLowerOptionLetter(rightIndex)}. {right}
                 </option>
               ))}
             </select>

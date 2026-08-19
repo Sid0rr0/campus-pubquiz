@@ -137,6 +137,12 @@ describe('DisplayPage — reveal', () => {
     expect(screen.getByText('excalibur')).toBeInTheDocument();
     expect(screen.getByText('captain america')).toBeInTheDocument();
     expect(screen.getByText('shield')).toBeInTheDocument();
+    // arthur is left #1, paired to excalibur which is right list letter b (index 1);
+    // captain america is left #2, paired to shield which is right list letter a (index 0).
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('a')).toBeInTheDocument();
+    expect(screen.getByText('b')).toBeInTheDocument();
   });
 
   it('shows the second reveal question when revealIndex advances', () => {

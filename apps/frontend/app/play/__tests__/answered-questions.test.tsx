@@ -74,6 +74,46 @@ describe('PlayPage — answered questions history', () => {
     expect(screen.getByText('No answer submitted')).toBeInTheDocument();
   });
 
+  it('pairs left items with right-hand values for a revealed match question', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const revealedMatch = {
+      id: 1,
+      type: 'match' as const,
+      prompt: 'Match the hero to their weapon.',
+      points: 4,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Heroes',
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+      answer: 'excalibur|shield',
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'break' }),
+          currentQuestion: null,
+          blockQuestions: [],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 1: 'shield|excalibur' },
+        seenQuestions: { 1: revealedMatch },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(
+      screen.getByText('arthur → shield, captain america → excalibur'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('arthur → excalibur, captain america → shield'),
+    ).toBeInTheDocument();
+  });
+
   it('opens the mobile drawer with the same history when its trigger is clicked', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {
