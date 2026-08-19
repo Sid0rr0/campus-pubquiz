@@ -188,10 +188,10 @@ describe('GameStateService — leaderboard', () => {
 
     expect(snapshot.progress.status).toBe('ended');
     expect(snapshot.progress.isLeaderboardVisible).toBe(true);
-    // The very ADVANCE that crosses into 'ended' also counts as this
-    // leaderboard's first reveal step, same as any other ADVANCE while the
-    // board is visible.
-    expect(snapshot.leaderboardRevealCount).toBe(1);
+    // Unlike a mid-game TOGGLE_LEADERBOARD reveal, crossing into 'ended'
+    // starts the final leaderboard empty rather than counting itself as the
+    // first reveal step — same as the explicit End Quiz button.
+    expect(snapshot.leaderboardRevealCount).toBe(0);
   });
 
   it('starts with an empty leaderboard', () => {

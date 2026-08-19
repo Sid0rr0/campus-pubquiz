@@ -18,6 +18,16 @@ export function computeLeaderboardRevealCount(
   if (action === 'TOGGLE_LEADERBOARD') {
     return 0;
   }
+  // Entering the final leaderboard — whether via the last question's ADVANCE
+  // or the admin's explicit End Quiz button — always starts from empty, same
+  // as any other TOGGLE_LEADERBOARD: it must never inherit a stale or
+  // partial count left over from an earlier mid-game reveal.
+  if (
+    newProgress.status === 'ended' &&
+    (action === 'ADVANCE' || action === 'END_QUIZ')
+  ) {
+    return 0;
+  }
   if (
     (action === 'ADVANCE' || action === 'REVEAL_NEXT_TEAM') &&
     newProgress.isLeaderboardVisible
