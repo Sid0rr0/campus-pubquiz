@@ -1,21 +1,13 @@
 'use client';
 
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
-import {
-  splitPipeList,
-  type AnswerView,
-  type AnswersUpdatedPayload,
-  type QuestionType,
-  type TeamView,
+import type {
+  AnswerView,
+  AnswersUpdatedPayload,
+  QuestionType,
+  TeamView,
 } from '@campus-pubquiz/types';
-
-// sort/match answers are stored/submitted as a `|`-joined string — format it
-// as an arrow chain for graders instead of showing the raw pipe delimiters.
-function formatAnswerValue(value: string, type: QuestionType): string {
-  return type === 'sort' || type === 'match'
-    ? splitPipeList(value).join(' → ')
-    : value;
-}
+import { formatAnswerValue } from '@/app/lib/format-answer-value';
 
 interface GradeOption {
   display: string;

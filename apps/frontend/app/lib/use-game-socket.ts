@@ -8,6 +8,8 @@ import {
   type AnswerReceivedPayload,
   type AnswersUpdatedPayload,
   type AwardBonusPayload,
+  type BlockQuestionView,
+  type BlockRevealQuestionView,
   type BonusCategory,
   type GameAction,
   type GradeAnswerPayload,
@@ -47,6 +49,13 @@ export interface UseGameSocketResult {
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
   /**
+   * Every question this socket has seen open or revealed so far, keyed by
+   * id — accumulated across blocks/rounds, since `snapshot.blockQuestions`/
+   * `revealQuestions` only ever cover the *current* block. Lets /play show a
+   * running history of the whole quiz rather than just the latest block.
+   */
+  seenQuestions: Record<number, BlockQuestionView | BlockRevealQuestionView>;
+  /**
    * Lets the admin page fold a REST-fetched `AnswersUpdatedPayload` (the
    * initial/on-question-change load, now a GET rather than a round-tripped
    * socket request) into the same state slot that live ANSWERS_UPDATED
@@ -64,6 +73,30 @@ export interface UseGameSocketResult {
   reconnectedAt: number | null;
   /** The joinCode of this session once its admin closes it, or null otherwise — players-room consumers use this to drop their identity and return to the join screen. */
   sessionClosed: string | null;
+}
+
+type SeenQuestions = Record<
+  number,
+  BlockQuestionView | BlockRevealQuestionView
+>;
+
+/** Folds a snapshot's block/reveal questions into the running seen-questions map — later sightings of the same id (e.g. once it's revealed) overwrite earlier ones so the richer view wins. */
+function mergeSeenQuestions(
+  current: SeenQuestions,
+  payload: StateSnapshotPayload,
+): SeenQuestions {
+  const additions = [
+    ...(payload.blockQuestions ?? []),
+    ...(payload.revealQuestions ?? []),
+  ];
+  if (additions.length === 0) {
+    return current;
+  }
+  const next = { ...current };
+  for (const question of additions) {
+    next[question.id] = question;
+  }
+  return next;
 }
 
 function getExceptionMessage(payload: unknown): string {
@@ -94,6 +127,7 @@ export function useGameSocket(
     null,
   );
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
+  const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -113,6 +147,7 @@ export function useGameSocket(
       setTeam(null);
       setLiveAnswers(null);
       setMyAnswers({});
+      setSeenQuestions({});
       setSessionClosed(null);
     }
   }
@@ -134,11 +169,13 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateSnapshotPayload) => {
       setSnapshot(payload);
+      setSeenQuestions((current) => mergeSeenQuestions(current, payload));
       setConnectionError(null);
     });
 
     socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateSnapshotPayload) => {
       setSnapshot(payload);
+      setSeenQuestions((current) => mergeSeenQuestions(current, payload));
     });
 
     socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
@@ -256,6 +293,7 @@ export function useGameSocket(
     kickTeam,
     awardBonus,
     myAnswers,
+    seenQuestions,
     setLiveAnswers,
     reconnectedAt,
     sessionClosed,

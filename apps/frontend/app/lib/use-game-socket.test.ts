@@ -32,7 +32,8 @@ vi.mock('socket.io-client', () => ({
 }));
 
 function getFakeSocket() {
-  return mockIo.mock.results[mockIo.mock.results.length - 1]?.value as ReturnType<typeof createFakeSocket>;
+  return mockIo.mock.results[mockIo.mock.results.length - 1]
+    ?.value as ReturnType<typeof createFakeSocket>;
 }
 
 describe('useGameSocket', () => {
@@ -72,7 +73,8 @@ describe('useGameSocket', () => {
 
   it('reconnects with a new handshake query when the join code changes', () => {
     const { rerender } = renderHook(
-      ({ joinCode }: { joinCode: string }) => useGameSocket('display', true, joinCode),
+      ({ joinCode }: { joinCode: string }) =>
+        useGameSocket('display', true, joinCode),
       { initialProps: { joinCode: 'AAAAAA' } },
     );
     const firstSocket = getFakeSocket();
@@ -89,7 +91,15 @@ describe('useGameSocket', () => {
   it('adopts the snapshot sent on STATE_SYNC', async () => {
     const { result } = renderHook(() => useGameSocket('display'));
     const fakeSocket = getFakeSocket();
-    const snapshot = { progress: { status: 'lobby', roundIndex: 0, questionIndex: 0, isLeaderboardVisible: false }, currentQuestion: null };
+    const snapshot = {
+      progress: {
+        status: 'lobby',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+      },
+      currentQuestion: null,
+    };
 
     act(() => {
       fakeSocket.trigger(SOCKET_EVENTS.STATE_SYNC, snapshot);
@@ -102,8 +112,18 @@ describe('useGameSocket', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
     const fakeSocket = getFakeSocket();
     const snapshot = {
-      progress: { status: 'question_open', roundIndex: 0, questionIndex: 0, isLeaderboardVisible: false },
-      currentQuestion: { id: 'r1q1', type: 'free_text' as const, prompt: 'Q?', points: 1 },
+      progress: {
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+      },
+      currentQuestion: {
+        id: 'r1q1',
+        type: 'free_text' as const,
+        prompt: 'Q?',
+        points: 1,
+      },
     };
 
     act(() => {
@@ -118,11 +138,15 @@ describe('useGameSocket', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      fakeSocket.trigger('exception', { message: 'Only admin clients may perform game actions' });
+      fakeSocket.trigger('exception', {
+        message: 'Only admin clients may perform game actions',
+      });
     });
 
     await waitFor(() =>
-      expect(result.current.connectionError).toBe('Only admin clients may perform game actions'),
+      expect(result.current.connectionError).toBe(
+        'Only admin clients may perform game actions',
+      ),
     );
   });
 
@@ -131,10 +155,14 @@ describe('useGameSocket', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
-      fakeSocket.trigger('connect_error', { message: 'Invalid admin password' });
+      fakeSocket.trigger('connect_error', {
+        message: 'Invalid admin password',
+      });
     });
 
-    await waitFor(() => expect(result.current.connectionError).toBe('Invalid admin password'));
+    await waitFor(() =>
+      expect(result.current.connectionError).toBe('Invalid admin password'),
+    );
   });
 
   it('surfaces a server disconnect as a connection error', async () => {
@@ -146,7 +174,9 @@ describe('useGameSocket', () => {
     });
 
     await waitFor(() =>
-      expect(result.current.connectionError).toBe('Disconnected: io server disconnect'),
+      expect(result.current.connectionError).toBe(
+        'Disconnected: io server disconnect',
+      ),
     );
   });
 
@@ -159,7 +189,9 @@ describe('useGameSocket', () => {
       fakeSocket.trigger('disconnect', 'io server disconnect');
     });
 
-    await waitFor(() => expect(result.current.connectionError).toBe('Invalid admin password'));
+    await waitFor(() =>
+      expect(result.current.connectionError).toBe('Invalid admin password'),
+    );
   });
 
   it('sendAction emits an ADMIN_ACTION event with the action payload', () => {
@@ -170,7 +202,9 @@ describe('useGameSocket', () => {
       result.current.sendAction('START_QUIZ');
     });
 
-    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ADMIN_ACTION, { action: 'START_QUIZ' });
+    expect(fakeSocket.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ADMIN_ACTION, {
+      action: 'START_QUIZ',
+    });
   });
 
   it('disconnects the socket on unmount', () => {
@@ -325,7 +359,9 @@ describe('useGameSocket', () => {
       });
     });
 
-    await waitFor(() => expect(result.current.myAnswers).toEqual({ r1q1: 'Banana' }));
+    await waitFor(() =>
+      expect(result.current.myAnswers).toEqual({ r1q1: 'Banana' }),
+    );
   });
 
   it('records the acknowledged answer on ANSWER_RECEIVED', async () => {
@@ -341,7 +377,114 @@ describe('useGameSocket', () => {
       });
     });
 
-    await waitFor(() => expect(result.current.myAnswers).toEqual({ r1q2: 'Carrot' }));
+    await waitFor(() =>
+      expect(result.current.myAnswers).toEqual({ r1q2: 'Carrot' }),
+    );
   });
 
+  it('accumulates block questions into seenQuestions across snapshots', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+    const q1 = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+    };
+    const q2 = {
+      id: 2,
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+      roundTitle: 'Round 1',
+    };
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_SYNC, {
+        progress: {
+          status: 'question_open',
+          roundIndex: 0,
+          questionIndex: 0,
+          isLeaderboardVisible: false,
+        },
+        currentQuestion: q1,
+        blockQuestions: [q1],
+        revealQuestions: [],
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.seenQuestions).toEqual({ 1: q1 }),
+    );
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_UPDATED, {
+        progress: {
+          status: 'question_open',
+          roundIndex: 0,
+          questionIndex: 1,
+          isLeaderboardVisible: false,
+        },
+        currentQuestion: q2,
+        blockQuestions: [q1, q2],
+        revealQuestions: [],
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.seenQuestions).toEqual({ 1: q1, 2: q2 }),
+    );
+  });
+
+  it('upgrades a seen question with its revealed answer once reveal arrives', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+    const q1 = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+    };
+    const revealedQ1 = { ...q1, answer: 'Banana' };
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_SYNC, {
+        progress: {
+          status: 'question_open',
+          roundIndex: 0,
+          questionIndex: 0,
+          isLeaderboardVisible: false,
+        },
+        currentQuestion: q1,
+        blockQuestions: [q1],
+        revealQuestions: [],
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.seenQuestions).toEqual({ 1: q1 }),
+    );
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_UPDATED, {
+        progress: {
+          status: 'reveal',
+          roundIndex: 0,
+          questionIndex: 0,
+          isLeaderboardVisible: false,
+        },
+        currentQuestion: null,
+        blockQuestions: [],
+        revealQuestions: [revealedQ1],
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.seenQuestions).toEqual({ 1: revealedQ1 }),
+    );
+  });
 });

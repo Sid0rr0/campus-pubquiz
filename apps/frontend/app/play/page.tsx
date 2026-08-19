@@ -8,6 +8,8 @@ import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
+import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
+import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { storedJoinOptions } from '@/app/lib/team-storage';
@@ -31,6 +33,7 @@ function PlayPageContent() {
     joinTeam,
     submitAnswer,
     myAnswers = {},
+    seenQuestions = {},
     handleJoin,
     handleLogOut,
   } = useTeamJoin(codeFromUrl);
@@ -204,6 +207,12 @@ function PlayPageContent() {
   const showBlockBrowser =
     Boolean(selectedQuestion) &&
     (isAnswerable || (!progress.isLeaderboardVisible && isBreakOrReveal));
+  const openedQuestions = buildOpenedQuestions(seenQuestions, myAnswers);
+  // Only the active block's questions can actually be jumped to in the
+  // browser above — older, already-closed blocks aren't rendered there.
+  const jumpableQuestionIds = showBlockBrowser
+    ? new Set(blockQuestions.map((question) => question.id))
+    : new Set<number>();
 
   return (
     <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
@@ -234,20 +243,31 @@ function PlayPageContent() {
         roundTitle={roundTitle}
         joinCode={snapshot.joinCode}
       />
-      {showBlockBrowser && selectedQuestion && (
-        <QuestionBrowser
-          progress={progress}
-          isAnswerable={isAnswerable}
-          team={team}
-          pickerRounds={pickerRounds}
-          totalPickerSlots={totalPickerSlots}
-          selectedQuestion={selectedQuestion}
-          revealQuestion={revealQuestion}
-          myAnswers={myAnswers}
-          onSelectQuestion={setBrowsedQuestionId}
-          onSubmitAnswer={submitAnswer}
-        />
-      )}
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+        {showBlockBrowser && selectedQuestion && (
+          <div className="md:min-w-0 md:flex-1">
+            <QuestionBrowser
+              progress={progress}
+              isAnswerable={isAnswerable}
+              team={team}
+              pickerRounds={pickerRounds}
+              totalPickerSlots={totalPickerSlots}
+              selectedQuestion={selectedQuestion}
+              revealQuestion={revealQuestion}
+              myAnswers={myAnswers}
+              onSelectQuestion={setBrowsedQuestionId}
+              onSubmitAnswer={submitAnswer}
+            />
+          </div>
+        )}
+        {openedQuestions.length > 0 && (
+          <AnsweredQuestionsPanel
+            entries={openedQuestions}
+            jumpableIds={jumpableQuestionIds}
+            onSelectQuestion={setBrowsedQuestionId}
+          />
+        )}
+      </div>
     </main>
   );
 }
