@@ -39,12 +39,22 @@ function PlayPageContent() {
   );
   const gameStatus = snapshot?.progress.status;
   const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
+  const revealIndex = snapshot?.progress.revealIndex ?? null;
 
   useEffect(() => {
     // Snap back to the newest question whenever the quiz master reveals one.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setBrowsedQuestionId(null);
   }, [currentQuestionId]);
+
+  useEffect(() => {
+    // Follow the big screen through the answer reveal step by step, the same
+    // snap-back as above but keyed to revealIndex since currentQuestionId
+    // stays null throughout break/reveal.
+    if (gameStatus !== 'reveal') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBrowsedQuestionId(null);
+  }, [gameStatus, revealIndex]);
 
   const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
@@ -139,20 +149,35 @@ function PlayPageContent() {
     currentQuestion,
     blockQuestions = [],
     upcomingQuestions = [],
+    revealQuestions = [],
     quizStructure = { blockCount: 0, topicsPerBlock: null },
     roundTitle = '',
   } = snapshot;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
+  // During reveal, the big screen walks one question at a time via
+  // revealIndex — teams should see the same one, not stay pinned to the
+  // block's last question the way question_open/break does.
+  const revealDisplayQuestion =
+    progress.status === 'reveal'
+      ? blockQuestions[progress.revealIndex]
+      : undefined;
   // Defaults to the block's last (furthest-ever-opened) question rather than
   // currentQuestion, which tracks the display's literal position - stepping
   // the display backward with PREVIOUS must not drag /play's default view
   // back with it, since teams should keep answering the newest question.
   const selectedQuestion =
     blockQuestions.find((question) => question.id === browsedQuestionId) ??
+    revealDisplayQuestion ??
     blockQuestions[blockQuestions.length - 1] ??
     currentQuestion ??
     null;
+  // The same question with its correct answer attached, for showing "your
+  // answer" alongside it while reveal is up.
+  const revealQuestion =
+    progress.status === 'reveal' && selectedQuestion
+      ? revealQuestions.find((question) => question.id === selectedQuestion.id)
+      : undefined;
   // Answering stays available even while the leaderboard is toggled on for
   // the big screen — only a real lock (status leaving question_open/locking)
   // should stop teams from answering. round_intro also stays answerable when
@@ -212,6 +237,7 @@ function PlayPageContent() {
           pickerRounds={pickerRounds}
           totalPickerSlots={totalPickerSlots}
           selectedQuestion={selectedQuestion}
+          revealQuestion={revealQuestion}
           myAnswers={myAnswers}
           onSelectQuestion={setBrowsedQuestionId}
           onSubmitAnswer={submitAnswer}
