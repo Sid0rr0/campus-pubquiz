@@ -1,14 +1,16 @@
+import { BONUS_CATEGORIES } from '@campus-pubquiz/types';
 import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import type { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
-function createFakeBonusAwardRepository() {
+function createFakeBonusAwardRepository(awardedCount = 0) {
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
   const create = jest.fn((data: Record<string, unknown>) => data);
   return {
     create,
     getEntityManager: jest.fn(() => ({ persistAndFlush })),
     persistAndFlush,
+    countAwards: jest.fn().mockResolvedValue(awardedCount),
   };
 }
 
@@ -23,8 +25,8 @@ function createFakeGameSessionTeamRepository(isOnRoster = true) {
 }
 
 describe('BonusService', () => {
-  function createService(isOnRoster = true) {
-    const repo = createFakeBonusAwardRepository();
+  function createService(isOnRoster = true, awardedCount = 0) {
+    const repo = createFakeBonusAwardRepository(awardedCount);
     const gameSessionTeams = createFakeGameSessionTeamRepository(isOnRoster);
     const service = new BonusService(
       repo as unknown as BonusAwardRepository,
@@ -145,6 +147,53 @@ describe('BonusService', () => {
 
     expect(repo.create).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'shot' }),
+    );
+  });
+
+  it('allows the award that reaches the per-category award-count cap', async () => {
+    const { service, repo } = createService(true, 1);
+
+    await service.award(101, 31, 'shot', 1, undefined, BONUS_CATEGORIES, {
+      shot: 2,
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'shot', points: 1 }),
+    );
+  });
+
+  it('rejects an award once the team has already hit the per-category award-count cap', async () => {
+    const { service, repo } = createService(true, 2);
+
+    await expect(
+      service.award(101, 31, 'shot', 1, undefined, BONUS_CATEGORIES, {
+        shot: 2,
+      }),
+    ).rejects.toThrow(InvalidBonusAwardError);
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it('ignores the cap for a category with no entry in maxAwardsPerCategory', async () => {
+    const { service, repo } = createService(true, 5);
+
+    await service.award(101, 31, 'selfie', 1, undefined, BONUS_CATEGORIES, {
+      shot: 2,
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'selfie' }),
+    );
+  });
+
+  it('counts a single award as one toward the cap regardless of its point value', async () => {
+    const { service, repo } = createService(true, 1);
+
+    await service.award(101, 31, 'custom', 10, 'Big prize', BONUS_CATEGORIES, {
+      custom: 2,
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'custom', points: 10 }),
     );
   });
 });

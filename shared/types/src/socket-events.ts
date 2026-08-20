@@ -372,22 +372,29 @@ export interface SessionSettings {
   autoplayMedia: boolean;
   /** One entry per rendered /rules bullet line — display text only, no enforcement. */
   rules: string[];
+  /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
+  maxBonusAwardsPerCategory: Partial<Record<BonusCategory, number>>;
 }
 
-// Frozen (including its two array fields) so no code path can ever mutate
-// this shared singleton in place: every session created with default
+// Frozen (including its array and map fields) so no code path can ever
+// mutate this shared singleton in place: every session created with default
 // settings (GameSession's entity default, SeedService.createSession's
 // default param, resolveSessionSettings) holds this exact reference until
-// something explicitly overrides it, so an accidental .push()/.splice()
-// here would silently corrupt every other session's rules/categories for
-// the life of the process. Spreading/mapping/filtering — the only
-// operations any call site actually performs — all still work unchanged.
+// something explicitly overrides it, so an accidental .push()/.splice()/
+// key-assignment here would silently corrupt every other session's
+// rules/categories/caps for the life of the process. Spreading/mapping/
+// filtering — the only operations any call site actually performs — all
+// still work unchanged.
 export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   lockGraceSeconds: 60,
   enabledBonusCategories: Object.freeze([
     ...BONUS_CATEGORIES,
   ]) as BonusCategory[],
   autoplayMedia: true,
+  maxBonusAwardsPerCategory: Object.freeze({
+    shot: 2,
+    selfie: 1,
+  }) as Partial<Record<BonusCategory, number>>,
   rules: Object.freeze([
     'Max 6 players per team — every additional player costs the team −2 points.',
     'No cheating.',

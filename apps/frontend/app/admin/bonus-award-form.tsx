@@ -16,7 +16,8 @@ const PREDEFINED_CATEGORIES: Array<{ value: BonusCategory; label: string }> = [
   { value: 'selfie', label: 'Selfie' },
 ];
 
-const DEFAULT_POINTS = 1;
+/** Point value a predefined-category award starts at (editable per award) — also shown next to each category in SessionSettingsForm's award-count caps. */
+export const DEFAULT_BONUS_POINTS = 1;
 
 /** Inline award form shown per-team in TeamsPanel — predefined categories default to 1 point (editable); custom requires a typed-in reason. */
 export function BonusAwardForm({
@@ -33,7 +34,7 @@ export function BonusAwardForm({
   );
   // Held as the raw typed string (not a number) so an in-progress "-" isn't
   // wiped out by re-rendering through Number("-") === NaN on every keystroke.
-  const [pointsInput, setPointsInput] = useState(String(DEFAULT_POINTS));
+  const [pointsInput, setPointsInput] = useState(String(DEFAULT_BONUS_POINTS));
   const [reason, setReason] = useState('');
 
   const points = Number(pointsInput);

@@ -83,6 +83,49 @@ describe('sessionSettingsPartialSchema', () => {
       sessionSettingsPartialSchema.safeParse({ autoplayMedia: 'yes' }).success,
     ).toBe(false);
   });
+
+  it('accepts a partial maxBonusAwardsPerCategory map', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
+    });
+  });
+
+  it('accepts an empty maxBonusAwardsPerCategory map', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ maxBonusAwardsPerCategory: {} })
+        .success,
+    ).toBe(true);
+  });
+
+  it('rejects a non-positive maxBonusAwardsPerCategory value', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        maxBonusAwardsPerCategory: { shot: 0 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a non-integer maxBonusAwardsPerCategory value', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        maxBonusAwardsPerCategory: { shot: 1.5 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('strips an unknown category key from maxBonusAwardsPerCategory', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      maxBonusAwardsPerCategory: { jackpot: 1 },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ maxBonusAwardsPerCategory: {} });
+  });
 });
 
 describe('resolveSessionSettings', () => {
@@ -110,5 +153,19 @@ describe('resolveSessionSettings', () => {
     );
     expect(resolved.rules).toEqual(DEFAULT_SESSION_SETTINGS.rules);
     expect(resolved.autoplayMedia).toBe(false);
+    expect(resolved.maxBonusAwardsPerCategory).toEqual(
+      DEFAULT_SESSION_SETTINGS.maxBonusAwardsPerCategory,
+    );
+  });
+
+  it('overrides maxBonusAwardsPerCategory when present in the partial', () => {
+    const resolved = resolveSessionSettings({
+      maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
+    });
+
+    expect(resolved.maxBonusAwardsPerCategory).toEqual({
+      shot: 2,
+      selfie: 1,
+    });
   });
 });

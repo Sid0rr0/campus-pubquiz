@@ -33,6 +33,7 @@ export class BonusService {
     points: number,
     reason?: string,
     enabledCategories: readonly BonusCategory[] = BONUS_CATEGORIES,
+    maxAwardsPerCategory: Partial<Record<BonusCategory, number>> = {},
   ): Promise<AwardedBonus> {
     if (!Number.isFinite(points) || points === 0) {
       throw new InvalidBonusAwardError(
@@ -57,6 +58,20 @@ export class BonusService {
     });
     if (!isOnRoster) {
       throw new InvalidBonusAwardError('Team is not part of this game session');
+    }
+
+    const cap = maxAwardsPerCategory[category];
+    if (cap !== undefined) {
+      const awardedCount = await this.bonusAwards.countAwards(
+        gameSessionId,
+        teamId,
+        category,
+      );
+      if (awardedCount >= cap) {
+        throw new InvalidBonusAwardError(
+          `This team has already been awarded the "${category}" bonus the maximum ${cap} time(s)`,
+        );
+      }
     }
 
     const bonusAward = this.bonusAwards.create({

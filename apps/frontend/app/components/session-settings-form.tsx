@@ -4,6 +4,7 @@ import {
   type BonusCategory,
   type SessionSettings,
 } from '@campus-pubquiz/types';
+import { DEFAULT_BONUS_POINTS } from '@/app/admin/bonus-award-form';
 
 interface SessionSettingsFormProps {
   value: SessionSettings;
@@ -16,7 +17,7 @@ const BONUS_CATEGORY_LABELS: Record<BonusCategory, string> = {
   custom: 'Custom',
 };
 
-/** Pure controlled form for the four SessionSettings fields — shared by the creation confirm dialog and the lobby settings panel so the fields aren't duplicated in two screens. */
+/** Pure controlled form for the SessionSettings fields — shared by the creation confirm dialog and the lobby settings panel so the fields aren't duplicated in two screens. */
 export function SessionSettingsForm({
   value,
   onChange,
@@ -28,6 +29,18 @@ export function SessionSettingsForm({
       ? value.enabledBonusCategories.filter((c) => c !== category)
       : [...value.enabledBonusCategories, category];
     onChange({ ...value, enabledBonusCategories });
+  }
+
+  function updateMaxBonusAwards(category: BonusCategory, raw: string): void {
+    const trimmed = raw.trim();
+    const maxBonusAwardsPerCategory = { ...value.maxBonusAwardsPerCategory };
+    const parsed = Number(trimmed);
+    if (trimmed === '' || !Number.isFinite(parsed)) {
+      delete maxBonusAwardsPerCategory[category];
+    } else {
+      maxBonusAwardsPerCategory[category] = parsed;
+    }
+    onChange({ ...value, maxBonusAwardsPerCategory });
   }
 
   function updateRule(index: number, text: string): void {
@@ -78,7 +91,41 @@ export function SessionSettingsForm({
               }`}
             >
               {BONUS_CATEGORY_LABELS[category]}
+              <span className="ml-1 font-normal opacity-70">
+                ({DEFAULT_BONUS_POINTS} pt)
+              </span>
             </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-extrabold">
+          Max times awarded per team
+        </span>
+        <div className="flex flex-wrap gap-3">
+          {value.enabledBonusCategories.map((category) => (
+            <label
+              key={category}
+              className="flex items-center gap-2 text-xs font-bold"
+            >
+              {BONUS_CATEGORY_LABELS[category]}
+              <span className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  placeholder="No limit"
+                  value={value.maxBonusAwardsPerCategory[category] ?? ''}
+                  onChange={(event) =>
+                    updateMaxBonusAwards(category, event.target.value)
+                  }
+                  aria-label={`Max ${BONUS_CATEGORY_LABELS[category]} awards`}
+                  className="w-24 min-h-9 rounded-lg border border-foreground/20 px-2 text-sm font-normal"
+                />
+                <span className="font-normal text-foreground/50">times</span>
+              </span>
+            </label>
           ))}
         </div>
       </div>

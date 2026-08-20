@@ -253,6 +253,7 @@ describe('SessionSettings defaults', () => {
       lockGraceSeconds: 60,
       enabledBonusCategories: ['shot', 'selfie', 'custom'],
       autoplayMedia: true,
+      maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       rules: [
         'Max 6 players per team — every additional player costs the team −2 points.',
         'No cheating.',
@@ -269,6 +270,9 @@ describe('SessionSettings defaults', () => {
       Object.isFrozen(DEFAULT_SESSION_SETTINGS.enabledBonusCategories),
     ).toBe(true);
     expect(Object.isFrozen(DEFAULT_SESSION_SETTINGS.rules)).toBe(true);
+    expect(
+      Object.isFrozen(DEFAULT_SESSION_SETTINGS.maxBonusAwardsPerCategory),
+    ).toBe(true);
     expect(() => {
       (DEFAULT_SESSION_SETTINGS.enabledBonusCategories as BonusCategory[]).push(
         'shot',

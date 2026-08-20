@@ -46,6 +46,7 @@ describe('GameGateway — award bonus', () => {
       1,
       undefined,
       ['shot', 'selfie', 'custom'],
+      { shot: 2, selfie: 1 },
     );
     expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
     expect(server.to).toHaveBeenCalledWith(
@@ -92,6 +93,7 @@ describe('GameGateway — award bonus', () => {
       3,
       'Best team name',
       ['shot', 'selfie', 'custom'],
+      { shot: 2, selfie: 1 },
     );
   });
 

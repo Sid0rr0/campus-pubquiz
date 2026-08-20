@@ -54,12 +54,63 @@ describe('SessionSettingsForm', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: /^selfie$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^selfie/i }));
 
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_SESSION_SETTINGS,
       enabledBonusCategories: ['shot', 'custom'],
     });
+  });
+
+  it('sets a max award-count cap for a category', async () => {
+    const onChange = vi.fn();
+    renderControlled(
+      { ...DEFAULT_SESSION_SETTINGS, maxBonusAwardsPerCategory: {} },
+      onChange,
+    );
+
+    const input = screen.getByLabelText(/max shot awards/i);
+    await userEvent.type(input, '2');
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      maxBonusAwardsPerCategory: { shot: 2 },
+    });
+  });
+
+  it('clears a max award-count cap when the input is emptied', async () => {
+    const onChange = vi.fn();
+    renderControlled(
+      {
+        ...DEFAULT_SESSION_SETTINGS,
+        maxBonusAwardsPerCategory: { shot: 2 },
+      },
+      onChange,
+    );
+
+    const input = screen.getByLabelText(/max shot awards/i);
+    await userEvent.clear(input);
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      maxBonusAwardsPerCategory: {},
+    });
+  });
+
+  it('shows the default point value next to each bonus category', () => {
+    render(
+      <SessionSettingsForm
+        value={DEFAULT_SESSION_SETTINGS}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /^shot.*1 pt/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^selfie.*1 pt/i }),
+    ).toBeInTheDocument();
   });
 
   it('toggles autoplayMedia off', async () => {

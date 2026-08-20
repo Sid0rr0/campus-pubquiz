@@ -9,6 +9,17 @@ import {
 const RULE_MAX_LENGTH = 500;
 const MAX_RULES = 50;
 
+const maxBonusAwardsPerCategorySchema = z
+  .object(
+    Object.fromEntries(
+      BONUS_CATEGORIES.map((category) => [
+        category,
+        z.number().int().positive(),
+      ]),
+    ) as Record<BonusCategory, z.ZodNumber>,
+  )
+  .partial();
+
 export const sessionSettingsPartialSchema = z
   .object({
     lockGraceSeconds: z.number().int().positive(),
@@ -19,6 +30,7 @@ export const sessionSettingsPartialSchema = z
     rules: z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),
+    maxBonusAwardsPerCategory: maxBonusAwardsPerCategorySchema,
   })
   .partial();
 

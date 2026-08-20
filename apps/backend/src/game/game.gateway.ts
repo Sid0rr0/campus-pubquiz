@@ -572,6 +572,7 @@ export class GameGateway
         payload.points,
         payload.reason,
         this.gameState.getSessionSettings(joinCode).enabledBonusCategories,
+        this.gameState.getSessionSettings(joinCode).maxBonusAwardsPerCategory,
       );
     } catch (error) {
       if (error instanceof InvalidBonusAwardError) {
