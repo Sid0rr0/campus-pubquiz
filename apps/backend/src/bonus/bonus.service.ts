@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { BONUS_CATEGORIES, type BonusCategory } from '@campus-pubquiz/types';
+import {
+  BONUS_CATEGORIES,
+  type BonusCategory,
+  type TeamBonusAwardView,
+} from '@campus-pubquiz/types';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
@@ -84,5 +88,17 @@ export class BonusService {
     await this.bonusAwards.getEntityManager().persistAndFlush(bonusAward);
 
     return { teamId };
+  }
+
+  async listForTeam(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<TeamBonusAwardView[]> {
+    const awards = await this.bonusAwards.listForTeam(gameSessionId, teamId);
+    return awards.map((award) => ({
+      category: award.category,
+      points: award.points,
+      reason: award.reason,
+    }));
   }
 }

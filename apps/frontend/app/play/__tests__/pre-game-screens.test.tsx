@@ -53,7 +53,10 @@ describe('PlayPage — pre-game screens', () => {
         snapshot: {
           progress: progress({ status: 'rules' }),
           currentQuestion: null,
-          settings: { rules: ['Custom team-phone rule.'] },
+          settings: {
+            rules: ['Custom team-phone rule.'],
+            enabledBonusCategories: [],
+          },
         },
         team: {
           teamId: 'team-1',

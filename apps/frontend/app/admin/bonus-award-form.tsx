@@ -3,6 +3,10 @@
 import { useState, type FormEvent } from 'react';
 import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
 import type { BonusCategory } from '@campus-pubquiz/types';
+import {
+  BONUS_CATEGORY_LABELS,
+  DEFAULT_BONUS_POINTS,
+} from '@/app/lib/bonus-categories';
 
 interface BonusAwardFormProps {
   onAward: (category: BonusCategory, points: number, reason?: string) => void;
@@ -12,12 +16,9 @@ interface BonusAwardFormProps {
 }
 
 const PREDEFINED_CATEGORIES: Array<{ value: BonusCategory; label: string }> = [
-  { value: 'shot', label: 'Shot' },
-  { value: 'selfie', label: 'Selfie' },
+  { value: 'shot', label: BONUS_CATEGORY_LABELS.shot },
+  { value: 'selfie', label: BONUS_CATEGORY_LABELS.selfie },
 ];
-
-/** Point value a predefined-category award starts at (editable per award) — also shown next to each category in SessionSettingsForm's award-count caps. */
-export const DEFAULT_BONUS_POINTS = 1;
 
 /** Inline award form shown per-team in TeamsPanel — predefined categories default to 1 point (editable); custom requires a typed-in reason. */
 export function BonusAwardForm({

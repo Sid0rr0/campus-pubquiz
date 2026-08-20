@@ -219,6 +219,7 @@ function DisplayPageContent() {
                   <RulesContent
                     quizStructure={quizStructure}
                     rules={settings.rules}
+                    enabledBonusCategories={settings.enabledBonusCategories}
                   />
                 </div>
               )}

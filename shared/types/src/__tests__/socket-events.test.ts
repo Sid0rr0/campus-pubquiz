@@ -24,6 +24,7 @@ describe('SOCKET_EVENTS', () => {
       JOIN_ACCEPTED: 'game:join_accepted',
       ANSWERS_UPDATED: 'game:answers_updated',
       TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
+      BONUS_AWARDED: 'game:bonus_awarded',
       SESSION_CLOSED: 'game:session_closed',
       TEAM_KICKED: 'game:team_kicked',
       ADMIN_ACTION: 'game:admin_action',
@@ -139,11 +140,13 @@ describe('block answering payloads', () => {
       answers: [
         { questionId: 1, value: '42', pointsAwarded: 0, gradedAt: null },
       ],
+      bonusAwards: [{ category: 'shot', points: 1 }],
     };
 
     expect(joined.answers).toEqual([
       { questionId: 1, value: '42', pointsAwarded: 0, gradedAt: null },
     ]);
+    expect(joined.bonusAwards).toEqual([{ category: 'shot', points: 1 }]);
   });
 });
 

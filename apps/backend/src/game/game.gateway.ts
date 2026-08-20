@@ -368,12 +368,17 @@ export class GameGateway
         this.gameState.getGameSessionId(joinCode),
         team.id,
       );
+      const savedBonusAwards = await this.bonusService.listForTeam(
+        this.gameState.getGameSessionId(joinCode),
+        team.id,
+      );
       client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
         teamId: team.id,
         teamName: team.name,
         teamToken: team.token,
         teamCode: team.code,
         answers: savedAnswers,
+        bonusAwards: savedBonusAwards,
       });
 
       const teams = await this.teamService.listForSession(
@@ -579,6 +584,18 @@ export class GameGateway
         throw new WsException(error.message);
       }
       throw error;
+    }
+
+    const awardedTeamSocketId = this.gameState.getConnectedSocketId(
+      joinCode,
+      payload.teamId,
+    );
+    if (awardedTeamSocketId) {
+      this.server.to(awardedTeamSocketId).emit(SOCKET_EVENTS.BONUS_AWARDED, {
+        category: payload.category,
+        points: payload.points,
+        reason: payload.reason,
+      });
     }
 
     const leaderboard = await this.answerService.computeLeaderboard(

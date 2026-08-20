@@ -298,6 +298,7 @@ export function asAnswerService(mock: MockAnswerService): AnswerService {
 export function createFakeBonusService() {
   return {
     award: jest.fn().mockResolvedValue({ teamId: 31 }),
+    listForTeam: jest.fn().mockResolvedValue([]),
   };
 }
 

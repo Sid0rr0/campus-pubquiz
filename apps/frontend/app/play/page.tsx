@@ -12,6 +12,7 @@ import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
+import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { useTeamJoin } from '@/app/lib/use-team-join';
@@ -37,6 +38,7 @@ function PlayPageContent() {
     submitAnswer,
     myAnswers = {},
     myAnswerGrades = {},
+    myBonusAwards = [],
     seenQuestions = {},
     handleJoin,
     handleLogOut,
@@ -233,9 +235,17 @@ function PlayPageContent() {
     ? (openedQuestions.find((entry) => entry.id === selectedQuestion.id)
         ?.pointsAwarded ?? null)
     : null;
+  // The mobile bonus bar is fixed to the viewport bottom (see
+  // BonusProgressPanel), so the page needs matching bottom padding on mobile
+  // or its bar would cover the last bit of inline content underneath it.
+  const hasBonusPanel = settings.enabledBonusCategories.length > 0;
 
   return (
-    <main className="flex min-h-screen flex-col bg-background px-5 py-5 text-foreground">
+    <main
+      className={`flex min-h-screen flex-col bg-background px-5 pt-5 text-foreground ${
+        hasBonusPanel ? 'pb-24 md:pb-5' : 'pb-5'
+      }`}
+    >
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">
           Playing as {teamName}
@@ -263,6 +273,7 @@ function PlayPageContent() {
         roundTitle={roundTitle}
         joinCode={snapshot.joinCode}
         rules={settings.rules}
+        enabledBonusCategories={settings.enabledBonusCategories}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         {showBlockBrowser && selectedQuestion && (
@@ -288,6 +299,13 @@ function PlayPageContent() {
             entries={openedQuestions}
             jumpableIds={jumpableQuestionIds}
             onSelectQuestion={setBrowsedQuestionId}
+          />
+        )}
+        {hasBonusPanel && (
+          <BonusProgressPanel
+            enabledCategories={settings.enabledBonusCategories}
+            maxAwardsPerCategory={settings.maxBonusAwardsPerCategory}
+            myBonusAwards={myBonusAwards}
           />
         )}
       </div>

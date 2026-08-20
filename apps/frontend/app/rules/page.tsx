@@ -41,6 +41,9 @@ function RulesPageContent() {
       <RulesContent
         quizStructure={snapshot?.quizStructure}
         rules={snapshot?.settings?.rules}
+        enabledBonusCategories={
+          snapshot?.settings?.enabledBonusCategories ?? []
+        }
       />
     </main>
   );

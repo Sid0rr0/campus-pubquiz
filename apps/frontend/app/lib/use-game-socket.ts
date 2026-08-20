@@ -10,6 +10,7 @@ import {
   type AwardBonusPayload,
   type BlockQuestionView,
   type BlockRevealQuestionView,
+  type BonusAwardedPayload,
   type BonusCategory,
   type GameAction,
   type GradeAnswerPayload,
@@ -21,6 +22,7 @@ import {
   type SubmitAnswerPayload,
   type TeamAnswerView,
   type TeamAnswersSyncedPayload,
+  type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 
@@ -58,6 +60,8 @@ export interface UseGameSocketResult {
   myAnswers: Record<number, string>;
   /** The team's own points awarded by question id, present only once that question's answer is graded (players only). */
   myAnswerGrades: Record<number, MyAnswerGrade>;
+  /** Every bonus award this team has received so far this session, in award order (players only). */
+  myBonusAwards: TeamBonusAwardView[];
   /**
    * Every question this socket has seen open or revealed so far, keyed by
    * id — accumulated across blocks/rounds, since `snapshot.blockQuestions`/
@@ -164,6 +168,7 @@ export function useGameSocket(
   const [myAnswerGrades, setMyAnswerGrades] = useState<
     Record<number, MyAnswerGrade>
   >({});
+  const [myBonusAwards, setMyBonusAwards] = useState<TeamBonusAwardView[]>([]);
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
@@ -186,6 +191,7 @@ export function useGameSocket(
       setLiveAnswers(null);
       setMyAnswers({});
       setMyAnswerGrades({});
+      setMyBonusAwards([]);
       setSeenQuestions({});
       setSessionClosed(null);
       setKicked(false);
@@ -222,6 +228,7 @@ export function useGameSocket(
       setTeam(payload);
       setMyAnswers(buildMyAnswers(payload.answers ?? []));
       setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
+      setMyBonusAwards(payload.bonusAwards ?? []);
     });
 
     socket.on(
@@ -261,6 +268,10 @@ export function useGameSocket(
         setLiveAnswers(payload);
       },
     );
+
+    socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload: BonusAwardedPayload) => {
+      setMyBonusAwards((current) => [...current, payload]);
+    });
 
     socket.on(SOCKET_EVENTS.SESSION_CLOSED, (payload: SessionClosedPayload) => {
       setSessionClosed(payload.joinCode);
@@ -354,6 +365,7 @@ export function useGameSocket(
     awardBonus,
     myAnswers,
     myAnswerGrades,
+    myBonusAwards,
     seenQuestions,
     setLiveAnswers,
     reconnectedAt,

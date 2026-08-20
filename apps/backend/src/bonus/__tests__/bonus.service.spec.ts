@@ -3,7 +3,10 @@ import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import type { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
-function createFakeBonusAwardRepository(awardedCount = 0) {
+function createFakeBonusAwardRepository(
+  awardedCount = 0,
+  teamAwards: Array<{ category: string; points: number; reason?: string }> = [],
+) {
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
   const create = jest.fn((data: Record<string, unknown>) => data);
   return {
@@ -11,6 +14,7 @@ function createFakeBonusAwardRepository(awardedCount = 0) {
     getEntityManager: jest.fn(() => ({ persistAndFlush })),
     persistAndFlush,
     countAwards: jest.fn().mockResolvedValue(awardedCount),
+    listForTeam: jest.fn().mockResolvedValue(teamAwards),
   };
 }
 
@@ -195,5 +199,25 @@ describe('BonusService', () => {
     expect(repo.create).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'custom', points: 10 }),
     );
+  });
+
+  it("maps a team's stored awards to its team-facing view", async () => {
+    const repo = createFakeBonusAwardRepository(0, [
+      { category: 'shot', points: 1 },
+      { category: 'custom', points: 3, reason: 'Best team name' },
+    ]);
+    const gameSessionTeams = createFakeGameSessionTeamRepository();
+    const service = new BonusService(
+      repo as unknown as BonusAwardRepository,
+      gameSessionTeams as unknown as GameSessionTeamRepository,
+    );
+
+    const awards = await service.listForTeam(101, 31);
+
+    expect(repo.listForTeam).toHaveBeenCalledWith(101, 31);
+    expect(awards).toEqual([
+      { category: 'shot', points: 1, reason: undefined },
+      { category: 'custom', points: 3, reason: 'Best team name' },
+    ]);
   });
 });

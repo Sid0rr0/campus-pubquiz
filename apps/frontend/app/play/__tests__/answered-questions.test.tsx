@@ -216,7 +216,7 @@ describe('PlayPage — answered questions history', () => {
     render(<PlayPage />);
 
     expect(screen.queryByText('3 / 5')).not.toBeInTheDocument();
-    expect(screen.queryByText(/points/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Points:/i)).not.toBeInTheDocument();
   });
 
   it('pairs left items with right-hand values for a revealed match question', () => {

@@ -97,6 +97,51 @@ describe('GameGateway — award bonus', () => {
     );
   });
 
+  it('pushes the award privately to the awarded team’s own connected socket', async () => {
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-player');
+    await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+    server.to.mockClear();
+    server.emit.mockClear();
+
+    await gateway.handleAwardBonus(asSocket(admin), {
+      teamId: 31,
+      category: 'selfie',
+      points: 1,
+    });
+
+    expect(server.to).toHaveBeenCalledWith('socket-player');
+    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.BONUS_AWARDED, {
+      category: 'selfie',
+      points: 1,
+      reason: undefined,
+    });
+  });
+
+  it('does not try to push the award to a team that is not currently connected', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleAwardBonus(asSocket(admin), {
+      teamId: 31,
+      category: 'shot',
+      points: 1,
+    });
+
+    expect(server.emit).not.toHaveBeenCalledWith(
+      SOCKET_EVENTS.BONUS_AWARDED,
+      expect.anything(),
+    );
+  });
+
   it('rejects AWARD_BONUS from a non-admin client', async () => {
     const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
     await gateway.handleConnection(asSocket(player));

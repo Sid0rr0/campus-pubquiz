@@ -279,6 +279,59 @@ describe('useGameSocket — admin and player actions', () => {
     );
   });
 
+  it('seeds myBonusAwards from JOIN_ACCEPTED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+        bonusAwards: [
+          { category: 'shot', points: 1 },
+          { category: 'custom', points: 3, reason: 'Best team name' },
+        ],
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.myBonusAwards).toEqual([
+        { category: 'shot', points: 1 },
+        { category: 'custom', points: 3, reason: 'Best team name' },
+      ]),
+    );
+  });
+
+  it('appends the new award to myBonusAwards on BONUS_AWARDED', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 'team-1',
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+        bonusAwards: [{ category: 'shot', points: 1 }],
+      });
+    });
+    await waitFor(() => expect(result.current.myBonusAwards).toHaveLength(1));
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.BONUS_AWARDED, {
+        category: 'selfie',
+        points: 1,
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.myBonusAwards).toEqual([
+        { category: 'shot', points: 1 },
+        { category: 'selfie', points: 1 },
+      ]),
+    );
+  });
+
   it('replaces myAnswers and myAnswerGrades with the freshly-synced set on TEAM_ANSWERS_SYNCED', async () => {
     const { result } = renderHook(() => useGameSocket('players'));
     const fakeSocket = getFakeSocket();

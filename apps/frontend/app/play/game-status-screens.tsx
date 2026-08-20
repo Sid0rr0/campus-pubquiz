@@ -1,4 +1,8 @@
-import type { GameProgress, QuizStructureSummary } from '@campus-pubquiz/types';
+import type {
+  BonusCategory,
+  GameProgress,
+  QuizStructureSummary,
+} from '@campus-pubquiz/types';
 import { RulesContent } from '@/app/components/rules-content';
 
 interface GameStatusScreensProps {
@@ -8,6 +12,7 @@ interface GameStatusScreensProps {
   roundTitle: string;
   joinCode: string;
   rules: string[];
+  enabledBonusCategories: BonusCategory[];
 }
 
 /** The non-block-browser screens: leaderboard overlay, lobby, rules, round intro, and ended — whichever applies to the current status. Renders nothing when the block browser should be shown instead. */
@@ -18,6 +23,7 @@ export function GameStatusScreens({
   roundTitle,
   joinCode,
   rules,
+  enabledBonusCategories,
 }: GameStatusScreensProps) {
   return (
     <>
@@ -44,7 +50,11 @@ export function GameStatusScreens({
       )}
       {!progress.isLeaderboardVisible && progress.status === 'rules' && (
         <div className="mt-6">
-          <RulesContent quizStructure={quizStructure} rules={rules} />
+          <RulesContent
+            quizStructure={quizStructure}
+            rules={rules}
+            enabledBonusCategories={enabledBonusCategories}
+          />
         </div>
       )}
       {/* Only for a genuinely fresh round (nothing opened yet) - if Previous

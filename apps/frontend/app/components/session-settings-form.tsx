@@ -4,18 +4,15 @@ import {
   type BonusCategory,
   type SessionSettings,
 } from '@campus-pubquiz/types';
-import { DEFAULT_BONUS_POINTS } from '@/app/admin/bonus-award-form';
+import {
+  BONUS_CATEGORY_LABELS,
+  DEFAULT_BONUS_POINTS,
+} from '@/app/lib/bonus-categories';
 
 interface SessionSettingsFormProps {
   value: SessionSettings;
   onChange: (next: SessionSettings) => void;
 }
-
-const BONUS_CATEGORY_LABELS: Record<BonusCategory, string> = {
-  shot: 'Shot',
-  selfie: 'Selfie',
-  custom: 'Custom',
-};
 
 /** Pure controlled form for the SessionSettings fields — shared by the creation confirm dialog and the lobby settings panel so the fields aren't duplicated in two screens. */
 export function SessionSettingsForm({

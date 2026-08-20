@@ -24,4 +24,12 @@ export class BonusAwardRepository extends EntityRepository<BonusAward> {
       .first()) as CountRow | undefined;
     return Number(row?.total ?? 0);
   }
+
+  /** Every bonus award a team has received this session, for its own team-facing view. */
+  async listForTeam(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<BonusAward[]> {
+    return this.find({ gameSession: gameSessionId, team: teamId });
+  }
 }

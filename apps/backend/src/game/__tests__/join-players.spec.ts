@@ -13,6 +13,7 @@ import {
   type MockServer,
   type MockTeamService,
   type MockAnswerService,
+  type MockBonusService,
 } from './test-utils';
 
 describe('GameGateway — join players', () => {
@@ -20,9 +21,10 @@ describe('GameGateway — join players', () => {
   let server: MockServer;
   let teamService: MockTeamService;
   let answerService: MockAnswerService;
+  let bonusService: MockBonusService;
 
   beforeEach(async () => {
-    ({ gateway, server, teamService, answerService } =
+    ({ gateway, server, teamService, answerService, bonusService } =
       await createTestGateway());
   });
 
@@ -53,8 +55,10 @@ describe('GameGateway — join players', () => {
           gradedAt: null,
         },
       ],
+      bonusAwards: [],
     });
     expect(answerService.listForTeam).toHaveBeenCalledWith(101, 31);
+    expect(bonusService.listForTeam).toHaveBeenCalledWith(101, 31);
   });
 
   it('passes the team code through to TeamService.join when the player supplies one', async () => {

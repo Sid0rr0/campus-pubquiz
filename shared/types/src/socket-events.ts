@@ -13,6 +13,7 @@ export const SOCKET_EVENTS = {
   JOIN_ACCEPTED: 'game:join_accepted',
   ANSWERS_UPDATED: 'game:answers_updated',
   TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
+  BONUS_AWARDED: 'game:bonus_awarded',
   SESSION_CLOSED: 'game:session_closed',
   TEAM_KICKED: 'game:team_kicked',
   // client -> server
@@ -249,6 +250,8 @@ export interface JoinAcceptedPayload {
   teamName: string;
   /** The team's saved answers in this session, so reconnects restore them. */
   answers: TeamAnswerView[];
+  /** The team's own bonus awards so far this session, so reconnects restore them. */
+  bonusAwards: TeamBonusAwardView[];
 }
 
 export interface AnswerView {
@@ -411,6 +414,17 @@ export interface AwardBonusPayload {
   reason?: string;
   points: number;
 }
+
+/** One bonus award a team has actually received — the team-facing view used by both JoinAcceptedPayload.bonusAwards and BONUS_AWARDED. */
+export interface TeamBonusAwardView {
+  category: BonusCategory;
+  points: number;
+  /** Present only for category "custom". */
+  reason?: string;
+}
+
+/** Pushed privately to a team's own connected socket the moment the admin awards it a bonus — mirrors ANSWER_RECEIVED's single-item, append-don't-replace shape. */
+export type BonusAwardedPayload = TeamBonusAwardView;
 
 /** Broadcast to a session's players room once its admin closes it — the session no longer exists server-side, so the client should drop its identity and return to the join screen. */
 export interface SessionClosedPayload {
