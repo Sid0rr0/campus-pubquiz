@@ -38,8 +38,6 @@ export function MobileAdminBar({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
-  onAwardBonus,
-  enabledBonusCategories,
   user,
   onLogout,
 }: MobileAdminBarProps) {
@@ -110,8 +108,6 @@ export function MobileAdminBar({
               showAnswerStatus={showAnswerStatus}
               answeredTeamIds={answeredTeamIds}
               onKickTeam={onKickTeam}
-              onAwardBonus={onAwardBonus}
-              enabledBonusCategories={enabledBonusCategories}
               className="mt-auto border-t border-background/20 pt-4"
             />
           </Dialog.Content>

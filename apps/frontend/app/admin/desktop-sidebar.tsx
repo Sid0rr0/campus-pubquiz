@@ -26,8 +26,6 @@ export function DesktopSidebar({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
-  onAwardBonus,
-  enabledBonusCategories,
 }: AdminSidebarProps) {
   return (
     <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-foreground p-5 text-background md:sticky md:top-(--site-header-height) md:flex md:h-[calc(100vh-var(--site-header-height))]">
@@ -64,8 +62,6 @@ export function DesktopSidebar({
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={onKickTeam}
-        onAwardBonus={onAwardBonus}
-        enabledBonusCategories={enabledBonusCategories}
         className="mt-auto border-t border-background/20 pt-4"
       />
     </aside>

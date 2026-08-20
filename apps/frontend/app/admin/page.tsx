@@ -418,8 +418,6 @@ function AdminPageContent() {
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
-        onAwardBonus={awardBonus}
-        enabledBonusCategories={settings.enabledBonusCategories}
         user={auth.user}
         onLogout={handleLogout}
       />
@@ -444,8 +442,6 @@ function AdminPageContent() {
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
-        onAwardBonus={awardBonus}
-        enabledBonusCategories={settings.enabledBonusCategories}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
         {progress.status === 'lobby' && (
@@ -477,6 +473,8 @@ function AdminPageContent() {
                 teams={teams}
                 leaderboard={leaderboard}
                 roundTitles={roundTitles}
+                onAwardBonus={awardBonus}
+                enabledBonusCategories={settings.enabledBonusCategories}
               />
             </section>
           </>

@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import type { LeaderboardEntry, TeamView } from '@campus-pubquiz/types';
 import { TeamsTable } from '@/app/admin/teams-table';
 
@@ -33,13 +34,26 @@ const LEADERBOARD: LeaderboardEntry[] = [
   },
 ];
 
+const ENABLED_BONUS_CATEGORIES = ['shot', 'selfie', 'custom'] as const;
+
+async function openBonusModalFor(teamName: string): Promise<void> {
+  await userEvent.click(
+    screen.getByRole('button', { name: `Actions for ${teamName}` }),
+  );
+  await userEvent.click(
+    await screen.findByRole('menuitem', { name: /award bonus/i }),
+  );
+}
+
 describe('TeamsTable', () => {
-  it('renders a header row with Team, numbered round columns, Bonus, and Total', () => {
+  it('renders a header row with Team, numbered round columns, Bonus, Total, and Actions', () => {
     render(
       <TeamsTable
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
 
@@ -57,6 +71,9 @@ describe('TeamsTable', () => {
     expect(
       screen.getByRole('columnheader', { name: 'Total' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Actions' }),
+    ).toBeInTheDocument();
   });
 
   it('shows every team with its per-round points, bonus points, and total', () => {
@@ -65,6 +82,8 @@ describe('TeamsTable', () => {
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
 
@@ -81,7 +100,13 @@ describe('TeamsTable', () => {
 
   it('shows a joined team with zeros when the leaderboard has not been computed for it yet', () => {
     render(
-      <TeamsTable teams={TEAMS} leaderboard={[]} roundTitles={ROUND_TITLES} />,
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={[]}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
     );
 
     const quizzardsRow = screen.getByText('The Quizzards').closest('tr')!;
@@ -93,7 +118,13 @@ describe('TeamsTable', () => {
 
   it('always renders the table, showing a placeholder row when no teams have joined', () => {
     render(
-      <TeamsTable teams={[]} leaderboard={[]} roundTitles={ROUND_TITLES} />,
+      <TeamsTable
+        teams={[]}
+        leaderboard={[]}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
     );
 
     expect(screen.getByRole('columnheader', { name: '1' })).toBeInTheDocument();
@@ -102,7 +133,13 @@ describe('TeamsTable', () => {
 
   it('reflects a freshly graded answer immediately when the leaderboard prop updates', () => {
     const { rerender } = render(
-      <TeamsTable teams={TEAMS} leaderboard={[]} roundTitles={ROUND_TITLES} />,
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={[]}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
     );
     const quizzardsRowBefore = screen.getByText('The Quizzards').closest('tr')!;
     expect(within(quizzardsRowBefore).getAllByText('0')).toHaveLength(4);
@@ -112,10 +149,56 @@ describe('TeamsTable', () => {
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
 
     const quizzardsRowAfter = screen.getByText('The Quizzards').closest('tr')!;
     expect(within(quizzardsRowAfter).getByText('12')).toBeInTheDocument(); // total
+  });
+
+  it('opens a bonus award modal for a team from its actions menu and awards a predefined-category bonus', async () => {
+    const onAwardBonus = vi.fn();
+    render(
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={onAwardBonus}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    await openBonusModalFor('The Quizzards');
+
+    expect(
+      screen.getByRole('dialog', { name: /award bonus.*the quizzards/i }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /^selfie$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+    expect(onAwardBonus).toHaveBeenCalledWith(1, 'selfie', 1, undefined);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('cancels the bonus modal without awarding', async () => {
+    const onAwardBonus = vi.fn();
+    render(
+      <TeamsTable
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={onAwardBonus}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    await openBonusModalFor('Second Place');
+    await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onAwardBonus).not.toHaveBeenCalled();
   });
 });

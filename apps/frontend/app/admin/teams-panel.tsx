@@ -1,22 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
-import type { BonusCategory, TeamView } from '@campus-pubquiz/types';
-import { BonusAwardForm } from '@/app/admin/bonus-award-form';
+import { Cross2Icon } from '@radix-ui/react-icons';
+import type { TeamView } from '@campus-pubquiz/types';
 
 interface TeamsPanelProps {
   teams: TeamView[];
   showAnswerStatus: boolean;
   answeredTeamIds: number[];
   onKickTeam: (teamId: number) => void;
-  onAwardBonus: (
-    teamId: number,
-    category: BonusCategory,
-    points: number,
-    reason?: string,
-  ) => void;
-  enabledBonusCategories: BonusCategory[];
   className?: string;
 }
 
@@ -25,11 +16,8 @@ export function TeamsPanel({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
-  onAwardBonus,
-  enabledBonusCategories,
   className = '',
 }: TeamsPanelProps) {
-  const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
   if (teams.length === 0) {
     return (
       <section className={`flex flex-col gap-2 ${className}`}>
@@ -52,7 +40,6 @@ export function TeamsPanel({
         {teams.map((team) => {
           const hasAnswered =
             showAnswerStatus && answeredTeamIds.includes(team.teamId);
-          const isAwarding = awardingTeamId === team.teamId;
           return (
             <li
               key={team.teamId}
@@ -61,7 +48,6 @@ export function TeamsPanel({
                   ? `${team.teamName} ${hasAnswered ? 'has answered' : 'has not answered yet'}`
                   : undefined
               }
-              className="flex flex-col gap-1.5"
             >
               <div className="flex items-center gap-1.5 text-sm font-bold">
                 <span
@@ -83,33 +69,13 @@ export function TeamsPanel({
                 )}
                 <button
                   type="button"
-                  onClick={() =>
-                    setAwardingTeamId(isAwarding ? null : team.teamId)
-                  }
-                  className="ml-auto flex items-center gap-1 text-xs font-extrabold text-cyan underline"
-                >
-                  <StarIcon aria-hidden="true" />
-                  Bonus
-                </button>
-                <button
-                  type="button"
                   onClick={() => onKickTeam(team.teamId)}
-                  className="flex items-center gap-1 text-xs font-extrabold text-magenta underline"
+                  className="ml-auto flex items-center gap-1 text-xs font-extrabold text-magenta underline"
                 >
                   <Cross2Icon aria-hidden="true" />
                   Kick
                 </button>
               </div>
-              {isAwarding && (
-                <BonusAwardForm
-                  enabledCategories={enabledBonusCategories}
-                  onAward={(category, points, reason) => {
-                    onAwardBonus(team.teamId, category, points, reason);
-                    setAwardingTeamId(null);
-                  }}
-                  onCancel={() => setAwardingTeamId(null)}
-                />
-              )}
             </li>
           );
         })}
