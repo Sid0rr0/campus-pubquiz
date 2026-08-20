@@ -12,9 +12,11 @@ import {
   PlayIcon,
   PlusIcon,
 } from '@radix-ui/react-icons';
-import type {
-  ActiveSessionSummary,
-  QuizzesListedPayload,
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type ActiveSessionSummary,
+  type QuizzesListedPayload,
+  type SessionSettings,
 } from '@campus-pubquiz/types';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import {
@@ -24,6 +26,7 @@ import {
   SessionApiError,
 } from '@/app/lib/sessions-api';
 import { RoundsList } from '@/app/components/rounds-list';
+import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { CopyButton } from '@/app/components/copy-button';
 
 interface SessionPickerPanelProps {
@@ -38,6 +41,17 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
+  const [settings, setSettings] = useState<SessionSettings>(
+    DEFAULT_SESSION_SETTINGS,
+  );
+  // Resets the settings form back to defaults whenever a different (or no)
+  // quiz becomes pending — adjusted during render rather than in an Effect,
+  // same pattern AdminPageContent uses for its own pendingQuizId-driven reset.
+  const [prevPendingQuizId, setPrevPendingQuizId] = useState(pendingQuizId);
+  if (pendingQuizId !== prevPendingQuizId) {
+    setPrevPendingQuizId(pendingQuizId);
+    setSettings(DEFAULT_SESSION_SETTINGS);
+  }
   // Guards state updates from requests that resolve after this panel has
   // unmounted (e.g. the admin clicks "Open" on a session before the initial
   // refresh finishes) — skips the update instead of setting state on a
@@ -90,7 +104,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
     if (pendingQuizId === null) return;
     setIsCreating(true);
     try {
-      const session = await createSession(pendingQuizId);
+      const session = await createSession(pendingQuizId, settings);
       onOpenSession(session.joinCode);
     } catch (createError) {
       if (!isMountedRef.current) return;
@@ -237,6 +251,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
               Start &quot;{pendingQuiz?.title}&quot;?
             </Dialog.Title>
             {pendingQuiz && <RoundsList rounds={pendingQuiz.rounds} />}
+            <SessionSettingsForm value={settings} onChange={setSettings} />
             <div className="flex justify-end gap-2">
               <button
                 type="button"

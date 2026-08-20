@@ -5,6 +5,7 @@ import {
   fetchPublicSessions,
   fetchSessions,
   SessionApiError,
+  updateSessionSettings,
 } from '@/app/lib/sessions-api';
 
 const originalFetch = global.fetch;
@@ -136,6 +137,69 @@ describe('sessions-api', () => {
       expect(error).toBeInstanceOf(SessionApiError);
       expect((error as SessionApiError).message).toBe('quizId is required');
       expect((error as SessionApiError).status).toBe(400);
+    });
+
+    it('includes a partial settings override in the POST body when given', async () => {
+      const payload = {
+        joinCode: 'GHIJKL',
+        quizId: 2,
+        quizTitle: 'Imported Quiz',
+        status: 'lobby',
+        teamCount: 0,
+      };
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(payload),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await createSession(2, { lockGraceSeconds: 15 });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/sessions',
+        expect.objectContaining({
+          body: JSON.stringify({
+            quizId: 2,
+            settings: { lockGraceSeconds: 15 },
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('updateSessionSettings', () => {
+    it('patches /sessions/:joinCode/settings with the session cookie', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await updateSessionSettings('ABCDEF', { lockGraceSeconds: 15 });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/sessions/ABCDEF/settings',
+        expect.objectContaining({
+          method: 'PATCH',
+          credentials: 'include',
+          body: JSON.stringify({ lockGraceSeconds: 15 }),
+        }),
+      );
+    });
+
+    it('throws SessionApiError when the update is rejected', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () => Promise.resolve({ message: 'Session already started' }),
+      }) as unknown as typeof fetch;
+
+      const error = await updateSessionSettings('ABCDEF', {
+        lockGraceSeconds: 15,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(SessionApiError);
+      expect((error as SessionApiError).message).toBe(
+        'Session already started',
+      );
+      expect((error as SessionApiError).status).toBe(409);
     });
   });
 

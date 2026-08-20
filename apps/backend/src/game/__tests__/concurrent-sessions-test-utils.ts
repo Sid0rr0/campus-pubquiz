@@ -1,4 +1,4 @@
-import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { DEFAULT_SESSION_SETTINGS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/game-state.service';
@@ -45,6 +45,7 @@ export const SESSION_A_GAME: SeededGame = {
       ],
     },
   ],
+  settings: DEFAULT_SESSION_SETTINGS,
 };
 
 export const SESSION_B_GAME: SeededGame = {
@@ -67,6 +68,7 @@ export const SESSION_B_GAME: SeededGame = {
       ],
     },
   ],
+  settings: DEFAULT_SESSION_SETTINGS,
 };
 
 /** teamService.join/listForSession keyed by gameSessionId, so session A and B
@@ -191,6 +193,7 @@ export function setupConcurrentSessionsTest(): ConcurrentSessionsTestContext {
       createSession: jest
         .fn()
         .mockResolvedValue({ gameSessionId: 302, joinCode: 'BBBBBB' }),
+      updateSettings: jest.fn(),
     };
     state.gameStateService = new GameStateService(
       asSeedService(seedService),

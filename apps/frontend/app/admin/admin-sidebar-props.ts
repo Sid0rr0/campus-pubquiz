@@ -31,4 +31,5 @@ export interface AdminSidebarProps {
     points: number,
     reason?: string,
   ) => void;
+  enabledBonusCategories: BonusCategory[];
 }

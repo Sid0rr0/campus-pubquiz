@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
@@ -55,6 +56,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
         ],
       },
     ],
+    settings: DEFAULT_SESSION_SETTINGS,
   };
 
   async function createGatewayWithBreakAfterGame() {
@@ -64,6 +66,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       createSession: jest
         .fn()
         .mockResolvedValue({ gameSessionId: 103, joinCode: 'ZZZZZZ' }),
+      updateSettings: jest.fn(),
     };
     const gameStateService = new GameStateService(
       asSeedService(localSeedService),

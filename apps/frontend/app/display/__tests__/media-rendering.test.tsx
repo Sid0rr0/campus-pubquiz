@@ -129,4 +129,51 @@ describe('DisplayPage — media rendering', () => {
     );
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
+
+  it('does not autoplay an audio question when the session disables autoplayMedia', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r2q2',
+          type: 'audio',
+          prompt: 'Name this song.',
+          mediaUrl: 'https://example.com/song.mp3',
+          points: 3,
+        },
+        settings: { autoplayMedia: false },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const audio = screen.getByTestId('question-audio');
+    expect(audio).toHaveAttribute('src', 'https://example.com/song.mp3');
+    expect(audio).not.toHaveAttribute('autoplay');
+  });
+
+  it('sets the YouTube embed autoplay param to 0 when the session disables autoplayMedia', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r4q1',
+          type: 'picture',
+          prompt: 'Name this music video.',
+          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+          points: 3,
+        },
+        settings: { autoplayMedia: false },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('question-youtube')).toHaveAttribute(
+      'src',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0&controls=0&modestbranding=1',
+    );
+  });
 });

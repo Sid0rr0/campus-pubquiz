@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
+  DEFAULT_SESSION_SETTINGS,
   getBlockStartRoundIndex,
   type GameStatus,
   type QuizSummaryRound,
@@ -18,6 +19,7 @@ import { TeamsTable } from '@/app/admin/teams-table';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
+import { SessionSettingsPanel } from '@/app/admin/session-settings-panel';
 import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
@@ -378,6 +380,7 @@ function AdminPageContent() {
     teams = [],
     answeredTeamIds = [],
     ungradedQuestionIds = [],
+    settings = DEFAULT_SESSION_SETTINGS,
   } = snapshot;
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
@@ -409,6 +412,7 @@ function AdminPageContent() {
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
         onAwardBonus={awardBonus}
+        enabledBonusCategories={settings.enabledBonusCategories}
       />
       <DesktopSidebar
         progressStatus={progress.status}
@@ -432,8 +436,15 @@ function AdminPageContent() {
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
         onAwardBonus={awardBonus}
+        enabledBonusCategories={settings.enabledBonusCategories}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+        {progress.status === 'lobby' && (
+          <SessionSettingsPanel
+            joinCode={snapshot.joinCode}
+            settings={settings}
+          />
+        )}
         <QuestionBrowserPanel
           rounds={activeQuizRounds}
           currentRoundIndex={progress.roundIndex}

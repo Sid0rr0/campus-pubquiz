@@ -27,11 +27,12 @@ function isHttpUrl(url: string): boolean {
 
 function buildYoutubeEmbedSrc(
   videoId: string,
+  autoplay: boolean,
   startSeconds?: number,
   endSeconds?: number,
 ): string {
   const params = new URLSearchParams({
-    autoplay: '1',
+    autoplay: autoplay ? '1' : '0',
     controls: '0',
     modestbranding: '1',
   });
@@ -43,13 +44,19 @@ function buildYoutubeEmbedSrc(
 interface AnswerMediaProps {
   url?: string;
   mediaTestIdPrefix: string;
+  /** Controls <audio autoPlay> and YouTube's autoplay param — defaults to true, matching the pre-settings hardcoded behavior. */
+  autoplayMedia?: boolean;
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
 // correct-answer step — same image/audio/YouTube inference and http(s)-only
 // guard (media_url/answer_media_url come from an admin-imported spreadsheet,
 // not a trusted author).
-export function AnswerMedia({ url, mediaTestIdPrefix }: AnswerMediaProps) {
+export function AnswerMedia({
+  url,
+  mediaTestIdPrefix,
+  autoplayMedia = true,
+}: AnswerMediaProps) {
   const safeUrl = url && isHttpUrl(url) ? url : undefined;
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
   if (!safeUrl) return null;
@@ -59,7 +66,7 @@ export function AnswerMedia({ url, mediaTestIdPrefix }: AnswerMediaProps) {
       <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
         <iframe
           data-testid={`${mediaTestIdPrefix}-answer-youtube`}
-          src={buildYoutubeEmbedSrc(youtubeId)}
+          src={buildYoutubeEmbedSrc(youtubeId, autoplayMedia)}
           title="Answer video"
           className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
           allow="autoplay; encrypted-media"
@@ -74,7 +81,7 @@ export function AnswerMedia({ url, mediaTestIdPrefix }: AnswerMediaProps) {
         data-testid={`${mediaTestIdPrefix}-answer-audio`}
         src={safeUrl}
         controls
-        autoPlay
+        autoPlay={autoplayMedia}
       />
     );
   }
@@ -104,6 +111,8 @@ interface QuestionDisplayProps {
   /** Shown alongside the answer during reveal only — independent of the question's own media. */
   answerMediaUrl?: string;
   mediaTestIdPrefix: string;
+  /** Controls <audio autoPlay> and YouTube's autoplay param — defaults to true, matching the pre-settings hardcoded behavior. */
+  autoplayMedia?: boolean;
 }
 
 // Shared by question_open and reveal so the big screen shows each question
@@ -119,6 +128,7 @@ export function QuestionDisplay({
   correctAnswer,
   answerMediaUrl,
   mediaTestIdPrefix,
+  autoplayMedia = true,
 }: QuestionDisplayProps) {
   // On reveal, answer_media_url (when set) replaces the question's own
   // media_url rather than showing both — e.g. a picture round's image gives
@@ -155,6 +165,7 @@ export function QuestionDisplay({
             data-testid={`${mediaTestIdPrefix}-youtube`}
             src={buildYoutubeEmbedSrc(
               questionYoutubeId,
+              autoplayMedia,
               mediaStartSeconds,
               mediaEndSeconds,
             )}
@@ -183,7 +194,7 @@ export function QuestionDisplay({
             data-testid={`${mediaTestIdPrefix}-audio`}
             src={questionMediaUrl}
             controls
-            autoPlay
+            autoPlay={autoplayMedia}
           />
         )}
       {isSort && options && !isRevealing && (
@@ -313,6 +324,7 @@ export function QuestionDisplay({
         <AnswerMedia
           url={answerMediaUrl}
           mediaTestIdPrefix={mediaTestIdPrefix}
+          autoplayMedia={autoplayMedia}
         />
       )}
     </>

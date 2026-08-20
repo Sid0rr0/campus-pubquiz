@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type { BonusCategory } from '@campus-pubquiz/types';
+import { BONUS_CATEGORIES, type BonusCategory } from '@campus-pubquiz/types';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
@@ -32,10 +32,17 @@ export class BonusService {
     category: BonusCategory,
     points: number,
     reason?: string,
+    enabledCategories: readonly BonusCategory[] = BONUS_CATEGORIES,
   ): Promise<AwardedBonus> {
     if (!Number.isFinite(points) || points === 0) {
       throw new InvalidBonusAwardError(
         'Bonus points must be a non-zero number',
+      );
+    }
+
+    if (!enabledCategories.includes(category)) {
+      throw new InvalidBonusAwardError(
+        `"${category}" is not enabled for this session`,
       );
     }
 

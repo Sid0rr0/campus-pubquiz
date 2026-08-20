@@ -3,15 +3,17 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import type {
-  ActiveSessionSummary,
-  StateSnapshotPayload,
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type ActiveSessionSummary,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import type { GameGateway } from '@/game/game.gateway';
 import {
   SessionCloseBlockedError,
+  SessionSettingsUpdateBlockedError,
   type GameStateService,
 } from '@/game/game-state.service';
 import type { QuizService } from '@/quiz/quiz.service';
@@ -23,9 +25,13 @@ function makeController() {
     createSession: jest.fn(),
     hasSession: jest.fn(),
     closeSession: jest.fn(),
+    updateSessionSettings: jest.fn(),
   };
   const quizService = { findTitles: jest.fn() };
-  const gameGateway = { notifySessionClosed: jest.fn() };
+  const gameGateway = {
+    notifySessionClosed: jest.fn(),
+    notifySettingsUpdated: jest.fn(),
+  };
   const controller = new SessionsController(
     gameState as unknown as GameStateService,
     quizService as unknown as QuizService,
@@ -60,6 +66,7 @@ function snapshot(
     teams: [],
     questionLockAt: null,
     closestGuessRevealStep: 0,
+    settings: DEFAULT_SESSION_SETTINGS,
     ...overrides,
   };
 }
@@ -72,8 +79,13 @@ function methodGuards(propertyKey: keyof SessionsController): unknown[] {
 }
 
 describe('SessionsController', () => {
-  it('protects list, create, and close with SessionGuard + RolesGuard', () => {
-    for (const method of ['list', 'create', 'close'] as const) {
+  it('protects list, create, close, and updateSettings with SessionGuard + RolesGuard', () => {
+    for (const method of [
+      'list',
+      'create',
+      'close',
+      'updateSettings',
+    ] as const) {
       const guards = methodGuards(method);
       expect(guards).toContain(SessionGuard);
       expect(guards).toContain(RolesGuard);
@@ -171,7 +183,10 @@ describe('SessionsController', () => {
 
       const result = await controller.create({ quizId: 2 });
 
-      expect(gameState.createSession).toHaveBeenCalledWith(2);
+      expect(gameState.createSession).toHaveBeenCalledWith(
+        2,
+        DEFAULT_SESSION_SETTINGS,
+      );
       expect(result).toEqual<ActiveSessionSummary>({
         joinCode: 'GHIJKL',
         quizId: 2,
@@ -181,12 +196,85 @@ describe('SessionsController', () => {
       });
     });
 
+    it('resolves a partial settings override over the defaults', async () => {
+      const { controller, gameState, quizService } = makeController();
+      gameState.createSession.mockResolvedValue(
+        snapshot({ joinCode: 'GHIJKL' }),
+      );
+      quizService.findTitles.mockResolvedValue(new Map([[2, 'Imported Quiz']]));
+
+      await controller.create({
+        quizId: 2,
+        settings: { lockGraceSeconds: 15 },
+      });
+
+      expect(gameState.createSession).toHaveBeenCalledWith(2, {
+        ...DEFAULT_SESSION_SETTINGS,
+        lockGraceSeconds: 15,
+      });
+    });
+
+    it('rejects an invalid settings override', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.create({ quizId: 2, settings: { lockGraceSeconds: -5 } }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('rejects a body without a numeric quizId', async () => {
       const { controller } = makeController();
 
       await expect(controller.create({} as { quizId: number })).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('updateSettings', () => {
+    it('updates settings and notifies clients while in the lobby', async () => {
+      const { controller, gameState, gameGateway } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      await controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 });
+
+      expect(gameState.updateSessionSettings).toHaveBeenCalledWith('GHIJKL', {
+        lockGraceSeconds: 15,
+      });
+      expect(gameGateway.notifySettingsUpdated).toHaveBeenCalledWith('GHIJKL');
+    });
+
+    it('404s for an unknown join code', async () => {
+      const { controller, gameState } = makeController();
+      gameState.hasSession.mockReturnValue(false);
+
+      await expect(
+        controller.updateSettings('NOPE12', { lockGraceSeconds: 15 }),
+      ).rejects.toThrow(NotFoundException);
+      expect(gameState.updateSessionSettings).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invalid settings body before calling GameStateService', async () => {
+      const { controller, gameState } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+
+      await expect(
+        controller.updateSettings('GHIJKL', { lockGraceSeconds: 0 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(gameState.updateSessionSettings).not.toHaveBeenCalled();
+    });
+
+    it('maps a blocked update (game already started) to 409 without notifying clients', async () => {
+      const { controller, gameState, gameGateway } = makeController();
+      gameState.hasSession.mockReturnValue(true);
+      gameState.updateSessionSettings.mockRejectedValue(
+        new SessionSettingsUpdateBlockedError('GHIJKL', 'already started'),
+      );
+
+      await expect(
+        controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 }),
+      ).rejects.toThrow(ConflictException);
+      expect(gameGateway.notifySettingsUpdated).not.toHaveBeenCalled();
     });
   });
 

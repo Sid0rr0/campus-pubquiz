@@ -1,8 +1,13 @@
-import type { QuizStructureSummary } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type QuizStructureSummary,
+} from '@campus-pubquiz/types';
 
 interface RulesContentProps {
   /** Omitted when shown standalone with no live game session to read the structure from. */
   quizStructure?: QuizStructureSummary;
+  /** One entry per rendered bullet line — defaults to DEFAULT_SESSION_SETTINGS.rules when no live session's settings are available. */
+  rules?: string[];
 }
 
 function pluralize(count: number, singular: string): string {
@@ -21,15 +26,10 @@ function structureSentence({
   return `There will be ${rounds} of ${topics} with a break in between.`;
 }
 
-const RULES = [
-  'Max 6 players per team — every additional player costs the team −2 points.',
-  'No cheating.',
-  'Please write your answers in English (Czech and Slovak also accepted if necessary).',
-  'In case of disagreements, the organizers have the final word.',
-  'Want to contest something? Come with a credible source.',
-];
-
-export function RulesContent({ quizStructure }: RulesContentProps) {
+export function RulesContent({
+  quizStructure,
+  rules = DEFAULT_SESSION_SETTINGS.rules,
+}: RulesContentProps) {
   return (
     <div className="flex flex-col gap-6 text-center">
       <h1 className="font-display text-3xl">
@@ -41,7 +41,7 @@ export function RulesContent({ quizStructure }: RulesContentProps) {
         </p>
       )}
       <ul className="mx-auto flex max-w-xl flex-col gap-3 text-left">
-        {RULES.map((rule) => (
+        {rules.map((rule) => (
           <li key={rule} className="flex items-start gap-3 text-lg font-bold">
             <span aria-hidden="true" className="text-cyan">
               •

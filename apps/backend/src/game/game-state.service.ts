@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
+  DEFAULT_SESSION_SETTINGS,
   getNextGameState,
   getQuizStructureSummary,
   type ActiveSessionSummary,
@@ -9,6 +10,7 @@ import {
   type GameProgress,
   type GameStatus,
   type LeaderboardEntry,
+  type SessionSettings,
   type StateSnapshotPayload,
   type TeamView,
 } from '@campus-pubquiz/types';
@@ -31,6 +33,7 @@ import {
 } from '@/game/block-questions.util';
 import { computeLeaderboardRevealCount } from '@/game/leaderboard-reveal.util';
 import { SessionCloseBlockedError } from '@/game/session-close-blocked.error';
+import { SessionSettingsUpdateBlockedError } from '@/game/session-settings-update-blocked.error';
 import {
   LOBBY_PROGRESS,
   computeQuestionLockAt,
@@ -42,6 +45,7 @@ import { UngradedAnswersError } from '@/game/ungraded-answers.error';
 import type { TeamRosterEntry } from '@/team/team.service';
 
 export { SessionCloseBlockedError } from '@/game/session-close-blocked.error';
+export { SessionSettingsUpdateBlockedError } from '@/game/session-settings-update-blocked.error';
 export { UngradedAnswersError } from '@/game/ungraded-answers.error';
 
 /** Statuses in which the break/grading screens are actively reviewing the just-locked block — the window where ungradedQuestionIds is kept fresh. */
@@ -128,8 +132,11 @@ export class GameStateService implements OnModuleInit {
    * progress — `POST /sessions` lets an admin start additional concurrent
    * games regardless of how far along any other session is.
    */
-  async createSession(quizId: number): Promise<StateSnapshotPayload> {
-    const created = await this.seedService.createSession(quizId);
+  async createSession(
+    quizId: number,
+    settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
+  ): Promise<StateSnapshotPayload> {
+    const created = await this.seedService.createSession(quizId, settings);
     const seededGame = await this.seedService.loadGame(
       quizId,
       created.gameSessionId,
@@ -253,12 +260,45 @@ export class GameStateService implements OnModuleInit {
       ),
       questionLockAt: session.questionLockAt,
       closestGuessRevealStep: session.closestGuessRevealStep,
+      settings: session.seededGame.settings,
     };
   }
 
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   getQuestionLockAt(joinCode: string): number | null {
     return this.getSession(joinCode).questionLockAt;
+  }
+
+  /** This session's current settings — used by the gateway to filter enabled bonus categories. */
+  getSessionSettings(joinCode: string): SessionSettings {
+    return this.getSession(joinCode).seededGame.settings;
+  }
+
+  /**
+   * Merges `partial` over the session's current settings, lobby-only — the
+   * admin can keep adjusting settings freely up until START_QUIZ, at which
+   * point the values in effect must stop moving under the game.
+   */
+  async updateSessionSettings(
+    joinCode: string,
+    partial: Partial<SessionSettings>,
+  ): Promise<void> {
+    const session = this.getSession(joinCode);
+    if (session.progress.status !== 'lobby') {
+      throw new SessionSettingsUpdateBlockedError(
+        joinCode,
+        `already started (status: "${session.progress.status}")`,
+      );
+    }
+    const settings = { ...session.seededGame.settings, ...partial };
+    await this.seedService.updateSettings(
+      session.seededGame.gameSessionId,
+      settings,
+    );
+    this.sessions.set(joinCode, {
+      ...session,
+      seededGame: { ...session.seededGame, settings },
+    });
   }
 
   async applyAction(
@@ -316,7 +356,10 @@ export class GameStateService implements OnModuleInit {
     const updated: SessionState = {
       ...sessionWithGradingStatus,
       progress,
-      questionLockAt: computeQuestionLockAt(progress),
+      questionLockAt: computeQuestionLockAt(
+        progress,
+        sessionWithGradingStatus.seededGame.settings.lockGraceSeconds * 1000,
+      ),
       leaderboardRevealCount: computeLeaderboardRevealCount(
         action,
         progress,

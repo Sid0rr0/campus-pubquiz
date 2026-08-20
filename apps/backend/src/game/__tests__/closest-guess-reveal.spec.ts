@@ -1,3 +1,4 @@
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
 import { GameStateService } from '@/game/game-state.service';
 import {
@@ -37,6 +38,7 @@ const CLOSEST_GUESS_GAME: SeededGame = {
       ],
     },
   ],
+  settings: DEFAULT_SESSION_SETTINGS,
 };
 
 const GRADED_ANSWERS = [
@@ -74,6 +76,7 @@ async function buildService(
     seed: jest.fn().mockResolvedValue(game),
     loadGame: jest.fn(),
     createSession: jest.fn(),
+    updateSettings: jest.fn(),
   };
   const service = new GameStateService(
     asSeedService(seedService),

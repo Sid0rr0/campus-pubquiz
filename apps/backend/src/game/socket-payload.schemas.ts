@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { WsException } from '@nestjs/websockets';
-import type { GameAction } from '@campus-pubquiz/types';
+import {
+  BONUS_CATEGORIES,
+  type BonusCategory,
+  type GameAction,
+} from '@campus-pubquiz/types';
 
 // Every @SubscribeMessage handler in game.gateway.ts validates its raw,
 // client-controlled payload against one of these before touching game
@@ -17,8 +21,6 @@ const GAME_ACTIONS: readonly GameAction[] = [
   'TOGGLE_LEADERBOARD',
   'REVEAL_NEXT_TEAM',
 ];
-
-const BONUS_CATEGORIES = ['shot', 'selfie', 'custom'] as const;
 
 const ANSWER_VALUE_MAX_LENGTH = 2000;
 const TEAM_NAME_MAX_LENGTH = 100;
@@ -56,7 +58,7 @@ export const kickTeamPayloadSchema = z.object({
 
 export const awardBonusPayloadSchema = z.object({
   teamId: positiveInt,
-  category: z.enum(BONUS_CATEGORIES),
+  category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),
   reason: z.string().max(BONUS_REASON_MAX_LENGTH).optional(),
   points: finiteNumber,
 });

@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type SessionSettings,
+} from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -73,13 +77,27 @@ export class SeedService {
     return this.createSeededGame();
   }
 
-  async createSession(quizId: number): Promise<CreatedGameSession> {
+  async createSession(
+    quizId: number,
+    settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
+  ): Promise<CreatedGameSession> {
     const session = this.gameSessions.create({
       quiz: quizId,
       joinCode: generateJoinCode(),
+      settings,
     });
     await this.gameSessions.getEntityManager().persistAndFlush(session);
     return { gameSessionId: session.id, joinCode: session.joinCode };
+  }
+
+  /** Merges the given settings into an existing session's row — the lobby-settings-update flow's persistence step. */
+  async updateSettings(
+    gameSessionId: number,
+    settings: SessionSettings,
+  ): Promise<void> {
+    const gameSessionRow = await this.gameSessions.findOneOrFail(gameSessionId);
+    gameSessionRow.settings = settings;
+    await this.gameSessions.getEntityManager().persistAndFlush(gameSessionRow);
   }
 
   async loadGame(
@@ -87,6 +105,7 @@ export class SeedService {
     gameSessionId: number,
     joinCode: string,
   ): Promise<SeededGame> {
+    const gameSessionRow = await this.gameSessions.findOneOrFail(gameSessionId);
     const roundRows = await this.rounds.find(
       { quiz: quizId },
       { orderBy: { orderIndex: 'asc' } },
@@ -114,7 +133,13 @@ export class SeedService {
       });
     }
 
-    return { quizId, gameSessionId, joinCode, rounds };
+    return {
+      quizId,
+      gameSessionId,
+      joinCode,
+      rounds,
+      settings: gameSessionRow.settings,
+    };
   }
 
   private async createSeededGame(): Promise<SeededGame> {
@@ -174,6 +199,7 @@ export class SeedService {
       gameSessionId: session.gameSessionId,
       joinCode: session.joinCode,
       rounds,
+      settings: DEFAULT_SESSION_SETTINGS,
     };
   }
 }

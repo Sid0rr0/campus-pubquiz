@@ -1,5 +1,9 @@
 import { Entity, ManyToOne, OptionalProps, Property } from '@mikro-orm/core';
-import type { GameStatus } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type GameStatus,
+  type SessionSettings,
+} from '@campus-pubquiz/types';
 import { BaseEntity } from '@/db/entities/base.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -14,7 +18,8 @@ export class GameSession extends BaseEntity {
     | 'currentQuestionIndex'
     | 'revealIndex'
     | 'furthestOpenIndex'
-    | 'isLeaderboardVisible';
+    | 'isLeaderboardVisible'
+    | 'settings';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
   quiz!: Quiz;
@@ -39,4 +44,7 @@ export class GameSession extends BaseEntity {
 
   @Property({ default: false })
   isLeaderboardVisible: boolean = false;
+
+  @Property({ type: 'json' })
+  settings: SessionSettings = DEFAULT_SESSION_SETTINGS;
 }

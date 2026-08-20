@@ -118,4 +118,33 @@ describe('BonusService', () => {
     });
     expect(repo.create).not.toHaveBeenCalled();
   });
+
+  it('defaults to allowing every BonusCategory when no enabledCategories is passed', async () => {
+    const { service, repo } = createService();
+
+    await service.award(101, 31, 'selfie', 1);
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'selfie' }),
+    );
+  });
+
+  it('rejects a category not in the session-specific enabledCategories list', async () => {
+    const { service, repo } = createService();
+
+    await expect(
+      service.award(101, 31, 'selfie', 1, undefined, ['shot']),
+    ).rejects.toThrow(InvalidBonusAwardError);
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it('allows a category present in the session-specific enabledCategories list', async () => {
+    const { service, repo } = createService();
+
+    await service.award(101, 31, 'shot', 1, undefined, ['shot']);
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'shot' }),
+    );
+  });
 });

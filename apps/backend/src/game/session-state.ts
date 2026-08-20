@@ -16,9 +16,6 @@ export const LOBBY_PROGRESS: GameProgress = {
   furthestOpenIndex: -1,
 };
 
-/** How long the 'locking' countdown runs before auto-advancing into the break. */
-export const QUESTION_LOCK_DURATION_MS = 60_000;
-
 /** Everything GameStateService tracks for one concurrently-running GameSession, keyed by its joinCode. */
 export interface SessionState {
   seededGame: SeededGame;
@@ -58,7 +55,10 @@ export function freshSessionState(
   return {
     seededGame,
     progress,
-    questionLockAt: computeQuestionLockAt(progress),
+    questionLockAt: computeQuestionLockAt(
+      progress,
+      seededGame.settings.lockGraceSeconds * 1000,
+    ),
     leaderboard: [],
     leaderboardRevealCount: 0,
     teams: [],
@@ -75,10 +75,11 @@ export function freshSessionState(
  * in the 'locking' countdown, so a gateway timer can advance into the break
  * automatically without the admin clicking Advance.
  */
-export function computeQuestionLockAt(progress: GameProgress): number | null {
-  return progress.status === 'locking'
-    ? Date.now() + QUESTION_LOCK_DURATION_MS
-    : null;
+export function computeQuestionLockAt(
+  progress: GameProgress,
+  lockDurationMs: number,
+): number | null {
+  return progress.status === 'locking' ? Date.now() + lockDurationMs : null;
 }
 
 export function getGameContext(session: SessionState): GameContext {

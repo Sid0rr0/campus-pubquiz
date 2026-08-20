@@ -3,10 +3,11 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import type {
-  BlockQuestionView,
-  BlockRevealQuestionView,
-  GameProgress,
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type BlockQuestionView,
+  type BlockRevealQuestionView,
+  type GameProgress,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
@@ -161,6 +162,7 @@ function DisplayPageContent() {
     roundTitle = '',
     questionLockAt = null,
     closestGuessRevealStep = 0,
+    settings = DEFAULT_SESSION_SETTINGS,
   } = snapshot;
 
   const revealQuestion = revealQuestions[progress.revealIndex];
@@ -214,7 +216,10 @@ function DisplayPageContent() {
               )}
               {progress.status === 'rules' && (
                 <div className="flex flex-1 items-center justify-center px-16 py-10">
-                  <RulesContent quizStructure={quizStructure} />
+                  <RulesContent
+                    quizStructure={quizStructure}
+                    rules={settings.rules}
+                  />
                 </div>
               )}
               {progress.status === 'round_intro' && (
@@ -232,6 +237,7 @@ function DisplayPageContent() {
                   question={currentQuestion}
                   answeredCount={answeredTeamIds.length}
                   totalTeams={teams.length}
+                  autoplayMedia={settings.autoplayMedia}
                 />
               )}
               {progress.status === 'locking' && questionLockAt !== null && (
@@ -250,7 +256,10 @@ function DisplayPageContent() {
               )}
               {progress.status === 'break' &&
                 (breakReviewQuestion ? (
-                  <BreakReviewScreen question={breakReviewQuestion} />
+                  <BreakReviewScreen
+                    question={breakReviewQuestion}
+                    autoplayMedia={settings.autoplayMedia}
+                  />
                 ) : (
                   <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
                 ))}
@@ -279,6 +288,7 @@ function DisplayPageContent() {
                       answerMediaUrl={revealQuestion.answerMediaUrl}
                       closestGuess={revealQuestion.closestGuess}
                       mediaTestIdPrefix="reveal"
+                      autoplayMedia={settings.autoplayMedia}
                     />
                   </div>
                 ) : (
@@ -294,6 +304,7 @@ function DisplayPageContent() {
                       correctAnswer={revealQuestion.answer}
                       answerMediaUrl={revealQuestion.answerMediaUrl}
                       mediaTestIdPrefix="reveal"
+                      autoplayMedia={settings.autoplayMedia}
                     />
                   </div>
                 ))}

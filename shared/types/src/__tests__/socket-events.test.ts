@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BONUS_CATEGORIES,
+  DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
   type ActiveSessionSummary,
+  type BonusCategory,
   type CreateSessionPayload,
   type GameSocketHandshakeQuery,
   type JoinAcceptedPayload,
   type QuizzesListedPayload,
+  type SessionSettings,
   type StateSnapshotPayload,
 } from '../socket-events';
 
@@ -215,6 +219,15 @@ describe('session lifecycle payloads', () => {
     expect(payload.quizId).toBe(5);
   });
 
+  it('CreateSessionPayload optionally carries a partial settings override', () => {
+    const payload: CreateSessionPayload = {
+      quizId: 5,
+      settings: { lockGraceSeconds: 15 },
+    };
+
+    expect(payload.settings).toEqual({ lockGraceSeconds: 15 });
+  });
+
   it('ActiveSessionSummary describes one running session for the admin session picker', () => {
     const summary: ActiveSessionSummary = {
       joinCode: 'ABC234',
@@ -226,5 +239,39 @@ describe('session lifecycle payloads', () => {
 
     expect(summary.joinCode).toBe('ABC234');
     expect(summary.teamCount).toBe(3);
+  });
+});
+
+describe('SessionSettings defaults', () => {
+  it('BONUS_CATEGORIES lists exactly the three BonusCategory values', () => {
+    expect(BONUS_CATEGORIES).toEqual(['shot', 'selfie', 'custom']);
+  });
+
+  it('DEFAULT_SESSION_SETTINGS matches the pre-existing hardcoded behavior', () => {
+    expect(DEFAULT_SESSION_SETTINGS).toEqual<SessionSettings>({
+      lockGraceSeconds: 60,
+      enabledBonusCategories: ['shot', 'selfie', 'custom'],
+      autoplayMedia: true,
+      rules: [
+        'Max 6 players per team — every additional player costs the team −2 points.',
+        'No cheating.',
+        'Please write your answers in English (Czech and Slovak also accepted if necessary).',
+        'In case of disagreements, the organizers have the final word.',
+        'Want to contest something? Come with a credible source.',
+      ],
+    });
+  });
+
+  it('is deeply frozen, so no code path can accidentally corrupt the shared default for every session', () => {
+    expect(Object.isFrozen(DEFAULT_SESSION_SETTINGS)).toBe(true);
+    expect(
+      Object.isFrozen(DEFAULT_SESSION_SETTINGS.enabledBonusCategories),
+    ).toBe(true);
+    expect(Object.isFrozen(DEFAULT_SESSION_SETTINGS.rules)).toBe(true);
+    expect(() => {
+      (DEFAULT_SESSION_SETTINGS.enabledBonusCategories as BonusCategory[]).push(
+        'shot',
+      );
+    }).toThrow();
   });
 });

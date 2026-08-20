@@ -9,6 +9,7 @@ interface ClosestGuessRevealScreenProps {
   answerMediaUrl?: string;
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
+  autoplayMedia?: boolean;
 }
 
 // Shared by /display and /play so both surfaces build up the same reveal in
@@ -23,6 +24,7 @@ export function ClosestGuessRevealScreen({
   answerMediaUrl,
   closestGuess,
   mediaTestIdPrefix,
+  autoplayMedia,
 }: ClosestGuessRevealScreenProps) {
   const { hasSubmissions } = closestGuess;
   const showSmallest = hasSubmissions && step >= 1;
@@ -66,6 +68,7 @@ export function ClosestGuessRevealScreen({
           <AnswerMedia
             url={answerMediaUrl}
             mediaTestIdPrefix={mediaTestIdPrefix}
+            autoplayMedia={autoplayMedia}
           />
         </>
       )}

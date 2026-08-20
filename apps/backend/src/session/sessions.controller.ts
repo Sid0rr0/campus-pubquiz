@@ -7,12 +7,14 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import type {
   ActiveSessionSummary,
   CreateSessionPayload,
+  SessionSettings,
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
@@ -20,8 +22,13 @@ import { GameGateway } from '@/game/game.gateway';
 import {
   GameStateService,
   SessionCloseBlockedError,
+  SessionSettingsUpdateBlockedError,
 } from '@/game/game-state.service';
 import { QuizService } from '@/quiz/quiz.service';
+import {
+  resolveSessionSettings,
+  sessionSettingsPartialSchema,
+} from '@/session/session-settings.schema';
 
 const UNKNOWN_QUIZ_TITLE = 'Unknown quiz';
 
@@ -30,6 +37,15 @@ function requireQuizId(body: Partial<CreateSessionPayload>): number {
     throw new BadRequestException('quizId is required');
   }
   return body.quizId;
+}
+
+function parseSettingsPartial(raw: unknown): Partial<SessionSettings> {
+  const parsed = sessionSettingsPartialSchema.safeParse(raw ?? {});
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new BadRequestException(issue?.message ?? 'Invalid settings');
+  }
+  return parsed.data;
 }
 
 @Controller('sessions')
@@ -64,7 +80,10 @@ export class SessionsController {
     @Body() body: Partial<CreateSessionPayload>,
   ): Promise<ActiveSessionSummary> {
     const quizId = requireQuizId(body);
-    const snapshot = await this.gameState.createSession(quizId);
+    const settings = resolveSessionSettings(
+      parseSettingsPartial(body.settings),
+    );
+    const snapshot = await this.gameState.createSession(quizId, settings);
     const titles = await this.quizService.findTitles([quizId]);
     return {
       joinCode: snapshot.joinCode,
@@ -73,6 +92,27 @@ export class SessionsController {
       status: snapshot.progress.status,
       teamCount: snapshot.teams.length,
     };
+  }
+
+  @Patch(':joinCode/settings')
+  @UseGuards(SessionGuard, RolesGuard)
+  async updateSettings(
+    @Param('joinCode') joinCode: string,
+    @Body() body: unknown,
+  ): Promise<void> {
+    if (!this.gameState.hasSession(joinCode)) {
+      throw new NotFoundException(`Unknown session "${joinCode}"`);
+    }
+    const partial = parseSettingsPartial(body);
+    try {
+      await this.gameState.updateSessionSettings(joinCode, partial);
+    } catch (error) {
+      if (error instanceof SessionSettingsUpdateBlockedError) {
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
+    this.gameGateway.notifySettingsUpdated(joinCode);
   }
 
   @Delete(':joinCode')

@@ -19,6 +19,7 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={vi.fn()}
         onAwardBonus={onAwardBonus}
+        enabledBonusCategories={['shot', 'selfie', 'custom']}
       />,
     );
 
@@ -40,6 +41,7 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={vi.fn()}
         onAwardBonus={onAwardBonus}
+        enabledBonusCategories={['shot', 'selfie', 'custom']}
       />,
     );
 
@@ -69,6 +71,7 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={vi.fn()}
         onAwardBonus={onAwardBonus}
+        enabledBonusCategories={['shot', 'selfie', 'custom']}
       />,
     );
 
@@ -97,6 +100,7 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={vi.fn()}
         onAwardBonus={onAwardBonus}
+        enabledBonusCategories={['shot', 'selfie', 'custom']}
       />,
     );
 
@@ -111,6 +115,31 @@ describe('TeamsPanel', () => {
     expect(onAwardBonus).not.toHaveBeenCalled();
   });
 
+  it('hides predefined and Custom buttons for categories not enabled this session', async () => {
+    render(
+      <TeamsPanel
+        teams={TEAMS}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={vi.fn()}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={['shot']}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getAllByRole('button', { name: /^bonus$/i })[0],
+    );
+
+    expect(screen.getByRole('button', { name: /^shot$/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^selfie$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^custom$/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it('allows kicking a disconnected team', async () => {
     const onKickTeam = vi.fn();
     render(
@@ -120,6 +149,7 @@ describe('TeamsPanel', () => {
         answeredTeamIds={[]}
         onKickTeam={onKickTeam}
         onAwardBonus={vi.fn()}
+        enabledBonusCategories={['shot', 'selfie', 'custom']}
       />,
     );
 

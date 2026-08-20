@@ -200,8 +200,8 @@ export class GameGateway
 
   /**
    * Fires when the last question of a breakAfter round has been open for
-   * QUESTION_LOCK_DURATION_MS with no admin action — auto-advances exactly
-   * as if the admin had clicked "Advance" themselves.
+   * the session's settings.lockGraceSeconds with no admin action —
+   * auto-advances exactly as if the admin had clicked "Advance" themselves.
    */
   @CreateRequestContext()
   private async handleQuestionLockTimerExpired(
@@ -310,6 +310,16 @@ export class GameGateway
     this.server
       .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
       .emit(SOCKET_EVENTS.SESSION_CLOSED, { joinCode });
+  }
+
+  /**
+   * Called by SessionsController once it has persisted new settings (`PATCH
+   * /sessions/:joinCode/settings`) — a full state re-broadcast (unlike
+   * notifySessionClosed's narrow one-off emit) so /display, /admin, and
+   * /rules?code= all pick up the change immediately.
+   */
+  notifySettingsUpdated(joinCode: string): void {
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 
   @SubscribeMessage(SOCKET_EVENTS.JOIN_PLAYERS)
@@ -564,6 +574,7 @@ export class GameGateway
         payload.category,
         payload.points,
         payload.reason,
+        this.gameState.getSessionSettings(joinCode).enabledBonusCategories,
       );
     } catch (error) {
       if (error instanceof InvalidBonusAwardError) {

@@ -7,6 +7,8 @@ import type { BonusCategory } from '@campus-pubquiz/types';
 interface BonusAwardFormProps {
   onAward: (category: BonusCategory, points: number, reason?: string) => void;
   onCancel: () => void;
+  /** This session's enabled bonus categories — hides any predefined button not in the list, and the "Custom" button unless 'custom' is included. */
+  enabledCategories: BonusCategory[];
 }
 
 const PREDEFINED_CATEGORIES: Array<{ value: BonusCategory; label: string }> = [
@@ -17,8 +19,18 @@ const PREDEFINED_CATEGORIES: Array<{ value: BonusCategory; label: string }> = [
 const DEFAULT_POINTS = 1;
 
 /** Inline award form shown per-team in TeamsPanel — predefined categories default to 1 point (editable); custom requires a typed-in reason. */
-export function BonusAwardForm({ onAward, onCancel }: BonusAwardFormProps) {
-  const [category, setCategory] = useState<BonusCategory>('shot');
+export function BonusAwardForm({
+  onAward,
+  onCancel,
+  enabledCategories,
+}: BonusAwardFormProps) {
+  const availablePredefined = PREDEFINED_CATEGORIES.filter((option) =>
+    enabledCategories.includes(option.value),
+  );
+  const isCustomEnabled = enabledCategories.includes('custom');
+  const [category, setCategory] = useState<BonusCategory>(
+    availablePredefined[0]?.value ?? (isCustomEnabled ? 'custom' : 'shot'),
+  );
   // Held as the raw typed string (not a number) so an in-progress "-" isn't
   // wiped out by re-rendering through Number("-") === NaN on every keystroke.
   const [pointsInput, setPointsInput] = useState(String(DEFAULT_POINTS));
@@ -43,7 +55,7 @@ export function BonusAwardForm({ onAward, onCancel }: BonusAwardFormProps) {
       className="flex flex-col gap-2 rounded-lg border border-background/20 bg-background/5 p-2.5 text-xs"
     >
       <div className="flex flex-wrap gap-1">
-        {PREDEFINED_CATEGORIES.map((option) => (
+        {availablePredefined.map((option) => (
           <button
             key={option.value}
             type="button"
@@ -58,18 +70,20 @@ export function BonusAwardForm({ onAward, onCancel }: BonusAwardFormProps) {
             {option.label}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => setCategory('custom')}
-          aria-pressed={isCustom}
-          className={`rounded-full border-2 px-2.5 py-1 font-extrabold ${
-            isCustom
-              ? 'border-cyan bg-cyan text-dark-blue'
-              : 'border-background/30 text-background'
-          }`}
-        >
-          Custom
-        </button>
+        {isCustomEnabled && (
+          <button
+            type="button"
+            onClick={() => setCategory('custom')}
+            aria-pressed={isCustom}
+            className={`rounded-full border-2 px-2.5 py-1 font-extrabold ${
+              isCustom
+                ? 'border-cyan bg-cyan text-dark-blue'
+                : 'border-background/30 text-background'
+            }`}
+          >
+            Custom
+          </button>
+        )}
       </div>
       {isCustom && (
         <input

@@ -16,6 +16,7 @@ interface TeamsPanelProps {
     points: number,
     reason?: string,
   ) => void;
+  enabledBonusCategories: BonusCategory[];
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export function TeamsPanel({
   answeredTeamIds,
   onKickTeam,
   onAwardBonus,
+  enabledBonusCategories,
   className = '',
 }: TeamsPanelProps) {
   const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
@@ -100,6 +102,7 @@ export function TeamsPanel({
               </div>
               {isAwarding && (
                 <BonusAwardForm
+                  enabledCategories={enabledBonusCategories}
                   onAward={(category, points, reason) => {
                     onAwardBonus(team.teamId, category, points, reason);
                     setAwardingTeamId(null);

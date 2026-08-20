@@ -7,6 +7,7 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  GAME_STATE_FIXTURE_SEEDED_GAME,
 } from './test-utils';
 
 describe('GameStateService — question lock countdown', () => {
@@ -153,5 +154,35 @@ describe('GameStateService — question lock countdown', () => {
     expect(rehydratedService.getQuestionLockAt('ABCDEF')).toBe(
       Date.now() + 60_000,
     );
+  });
+
+  it('arms the lock deadline using the session-specific lockGraceSeconds instead of the 60s default', async () => {
+    const customSeedService = createFakeGameStateSeedService();
+    customSeedService.seed.mockResolvedValue({
+      ...GAME_STATE_FIXTURE_SEEDED_GAME,
+      settings: {
+        ...GAME_STATE_FIXTURE_SEEDED_GAME.settings,
+        lockGraceSeconds: 15,
+      },
+    });
+    const customService = new GameStateService(
+      asSeedService(customSeedService),
+      asGameProgressRepository(createFakeGameProgressRepository()),
+      createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
+    );
+    await customService.onModuleInit();
+
+    await customService.applyAction(joinCode, 'START_QUIZ');
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> r1q1
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> r1q2
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> r2q1
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> r2q2
+    const locking = await customService.applyAction(joinCode, 'ADVANCE'); // -> locking
+
+    expect(locking.progress.status).toBe('locking');
+    expect(customService.getQuestionLockAt(joinCode)).toBe(Date.now() + 15_000);
   });
 });

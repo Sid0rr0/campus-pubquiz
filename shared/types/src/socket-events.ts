@@ -201,6 +201,8 @@ export interface StateSnapshotPayload {
    * status/type. 0 whenever the current reveal question isn't closest_guess.
    */
   closestGuessRevealStep: number;
+  /** This session's configurable settings — see SessionSettings. */
+  settings: SessionSettings;
 }
 
 export interface AdminActionPayload {
@@ -333,6 +335,8 @@ export interface QuizzesListedPayload {
 /** Request body for POST /sessions — start a new concurrent GameSession for a quiz. */
 export interface CreateSessionPayload {
   quizId: number;
+  /** Any fields omitted are filled in from DEFAULT_SESSION_SETTINGS by the server. */
+  settings?: Partial<SessionSettings>;
 }
 
 /** One running GameSession, as listed by GET /sessions for the admin session picker. */
@@ -350,6 +354,47 @@ export interface KickTeamPayload {
 
 /** "shot"/"selfie" are the predefined quick-award categories; "custom" requires a `reason`. */
 export type BonusCategory = 'shot' | 'selfie' | 'custom';
+
+export const BONUS_CATEGORIES: readonly BonusCategory[] = [
+  'shot',
+  'selfie',
+  'custom',
+];
+
+/** Per-session configuration, set at creation and editable in the lobby before START_QUIZ. */
+export interface SessionSettings {
+  /** Replaces the hardcoded 60s post-block auto-lock grace period. */
+  lockGraceSeconds: number;
+  /** Subset of BONUS_CATEGORIES the admin may award during this session. */
+  enabledBonusCategories: BonusCategory[];
+  /** Controls <audio autoPlay> and YouTube's autoplay=1 on /display. */
+  autoplayMedia: boolean;
+  /** One entry per rendered /rules bullet line — display text only, no enforcement. */
+  rules: string[];
+}
+
+// Frozen (including its two array fields) so no code path can ever mutate
+// this shared singleton in place: every session created with default
+// settings (GameSession's entity default, SeedService.createSession's
+// default param, resolveSessionSettings) holds this exact reference until
+// something explicitly overrides it, so an accidental .push()/.splice()
+// here would silently corrupt every other session's rules/categories for
+// the life of the process. Spreading/mapping/filtering — the only
+// operations any call site actually performs — all still work unchanged.
+export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
+  lockGraceSeconds: 60,
+  enabledBonusCategories: Object.freeze([
+    ...BONUS_CATEGORIES,
+  ]) as BonusCategory[],
+  autoplayMedia: true,
+  rules: Object.freeze([
+    'Max 6 players per team — every additional player costs the team −2 points.',
+    'No cheating.',
+    'Please write your answers in English (Czech and Slovak also accepted if necessary).',
+    'In case of disagreements, the organizers have the final word.',
+    'Want to contest something? Come with a credible source.',
+  ]) as string[],
+});
 
 export interface AwardBonusPayload {
   teamId: number;

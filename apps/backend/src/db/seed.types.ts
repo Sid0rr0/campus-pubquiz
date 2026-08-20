@@ -1,4 +1,7 @@
-import type { RevealQuestionView } from '@campus-pubquiz/types';
+import type {
+  RevealQuestionView,
+  SessionSettings,
+} from '@campus-pubquiz/types';
 
 export interface SeededRound {
   id: number;
@@ -14,6 +17,7 @@ export interface SeededGame {
   gameSessionId: number;
   joinCode: string;
   rounds: SeededRound[];
+  settings: SessionSettings;
 }
 
 export interface CreatedGameSession {

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
 
 const {
@@ -221,8 +222,36 @@ describe('SessionPickerPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
-    expect(mockCreateSession).toHaveBeenCalledWith(2);
+    expect(mockCreateSession).toHaveBeenCalledWith(2, DEFAULT_SESSION_SETTINGS);
     await waitFor(() => expect(onOpenSession).toHaveBeenCalledWith('GHIJKL'));
+  });
+
+  it('passes the confirm dialog form edits through to createSession', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    mockCreateSession.mockResolvedValue({
+      joinCode: 'GHIJKL',
+      quizId: 2,
+      quizTitle: 'Imported Quiz',
+      status: 'lobby',
+      teamCount: 0,
+    });
+    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+    const lockGraceInput = screen.getByLabelText(/lock grace period/i);
+    await userEvent.clear(lockGraceInput);
+    await userEvent.type(lockGraceInput, '15');
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+
+    expect(mockCreateSession).toHaveBeenCalledWith(2, {
+      ...DEFAULT_SESSION_SETTINGS,
+      lockGraceSeconds: 15,
+    });
   });
 
   it('does not create a session when the confirmation modal is cancelled', async () => {

@@ -3,7 +3,10 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon } from '@radix-ui/react-icons';
-import type { GameStatus } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type GameStatus,
+} from '@campus-pubquiz/types';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
@@ -161,6 +164,7 @@ function PlayPageContent() {
     quizStructure = { blockCount: 0, topicsPerBlock: null },
     roundTitle = '',
     closestGuessRevealStep = 0,
+    settings = DEFAULT_SESSION_SETTINGS,
   } = snapshot;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
@@ -258,6 +262,7 @@ function PlayPageContent() {
         quizStructure={quizStructure}
         roundTitle={roundTitle}
         joinCode={snapshot.joinCode}
+        rules={settings.rules}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         {showBlockBrowser && selectedQuestion && (

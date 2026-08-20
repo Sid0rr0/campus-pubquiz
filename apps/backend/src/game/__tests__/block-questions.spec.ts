@@ -1,3 +1,4 @@
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
 import { GameStateService } from '@/game/game-state.service';
 import {
@@ -230,6 +231,7 @@ describe('GameStateService — block questions and upcoming questions', () => {
           ],
         },
       ],
+      settings: DEFAULT_SESSION_SETTINGS,
     };
     const customSeedService = {
       seed: jest.fn().mockResolvedValue(threeQuestionRoundGame),

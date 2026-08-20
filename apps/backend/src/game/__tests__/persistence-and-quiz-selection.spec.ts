@@ -1,3 +1,4 @@
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { GameStateService } from '@/game/game-state.service';
 import {
   createFakeOrm,
@@ -83,7 +84,10 @@ describe('GameStateService — persistence and quiz selection', () => {
     const snapshot = await service.createSession(2);
 
     expect(snapshot.joinCode).toBe('GHIJKL');
-    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    expect(seedService.createSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+    );
     // The original session keeps running untouched by the new one.
     expect(service.getSnapshot(joinCode).progress.status).toBe('rules');
   });
@@ -101,7 +105,10 @@ describe('GameStateService — persistence and quiz selection', () => {
       revealIndex: 0,
       furthestOpenIndex: -1,
     });
-    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    expect(seedService.createSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+    );
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
   });
 
@@ -118,7 +125,10 @@ describe('GameStateService — persistence and quiz selection', () => {
 
     const snapshot = await service.createSession(2);
 
-    expect(seedService.createSession).toHaveBeenCalledWith(2);
+    expect(seedService.createSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+    );
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
     expect(snapshot.progress).toEqual({
       status: 'lobby',

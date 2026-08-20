@@ -1,6 +1,7 @@
 import { MikroORM } from '@mikro-orm/core';
 import type { Server, Socket } from 'socket.io';
 import {
+  DEFAULT_SESSION_SETTINGS,
   SOCKET_ROOMS,
   type AuthUser,
   type GameProgress,
@@ -87,6 +88,7 @@ export const FIXTURE_SEEDED_GAME: SeededGame = {
       ],
     },
   ],
+  settings: DEFAULT_SESSION_SETTINGS,
 };
 
 export const IMPORTED_QUIZ_GAME: SeededGame = {
@@ -109,6 +111,7 @@ export const IMPORTED_QUIZ_GAME: SeededGame = {
       ],
     },
   ],
+  settings: DEFAULT_SESSION_SETTINGS,
 };
 
 export function createFakeSeedService() {
@@ -118,6 +121,7 @@ export function createFakeSeedService() {
     createSession: jest
       .fn()
       .mockResolvedValue({ gameSessionId: 102, joinCode: 'GHIJKL' }),
+    updateSettings: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -181,6 +185,7 @@ export const GAME_STATE_FIXTURE_SEEDED_GAME: SeededGame = {
       ],
     },
   ],
+  settings: DEFAULT_SESSION_SETTINGS,
 };
 
 /** Same shape as createFakeSeedService, but seeded with GAME_STATE_FIXTURE_SEEDED_GAME
@@ -192,6 +197,7 @@ export function createFakeGameStateSeedService() {
     createSession: jest
       .fn()
       .mockResolvedValue({ gameSessionId: 102, joinCode: 'GHIJKL' }),
+    updateSettings: jest.fn().mockResolvedValue(undefined),
   };
 }
 

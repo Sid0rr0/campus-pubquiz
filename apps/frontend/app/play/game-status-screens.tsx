@@ -7,6 +7,7 @@ interface GameStatusScreensProps {
   quizStructure: QuizStructureSummary;
   roundTitle: string;
   joinCode: string;
+  rules: string[];
 }
 
 /** The non-block-browser screens: leaderboard overlay, lobby, rules, round intro, and ended — whichever applies to the current status. Renders nothing when the block browser should be shown instead. */
@@ -16,6 +17,7 @@ export function GameStatusScreens({
   quizStructure,
   roundTitle,
   joinCode,
+  rules,
 }: GameStatusScreensProps) {
   return (
     <>
@@ -42,7 +44,7 @@ export function GameStatusScreens({
       )}
       {!progress.isLeaderboardVisible && progress.status === 'rules' && (
         <div className="mt-6">
-          <RulesContent quizStructure={quizStructure} />
+          <RulesContent quizStructure={quizStructure} rules={rules} />
         </div>
       )}
       {/* Only for a genuinely fresh round (nothing opened yet) - if Previous

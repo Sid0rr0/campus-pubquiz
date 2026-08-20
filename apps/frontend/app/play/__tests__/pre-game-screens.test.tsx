@@ -46,6 +46,28 @@ describe('PlayPage — pre-game screens', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
+  it('shows the session-specific rules instead of the hardcoded defaults', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'rules' }),
+          currentQuestion: null,
+          settings: { rules: ['Custom team-phone rule.'] },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          teamToken: 'token-1',
+        },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText('Custom team-phone rule.')).toBeInTheDocument();
+    expect(screen.queryByText(/no cheating/i)).not.toBeInTheDocument();
+  });
+
   it('shows the round name and a "look at the screen" hint on a fresh round intro card', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseGameSocket.mockReturnValue(

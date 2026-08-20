@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
@@ -178,6 +179,7 @@ describe('GameGateway — session room scoping', () => {
           ],
         },
       ],
+      settings: DEFAULT_SESSION_SETTINGS,
     };
     const localSeedService = {
       seed: jest.fn().mockResolvedValue(BREAK_AFTER_GAME),
@@ -185,6 +187,7 @@ describe('GameGateway — session room scoping', () => {
       createSession: jest
         .fn()
         .mockResolvedValue({ gameSessionId: 103, joinCode: 'ZZZZZZ' }),
+      updateSettings: jest.fn(),
     };
     const localGameState = new GameStateService(
       asSeedService(localSeedService),

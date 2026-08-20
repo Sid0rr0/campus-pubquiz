@@ -3,6 +3,7 @@ import { QuestionDisplay } from '@/app/display/question-display';
 
 interface BreakReviewScreenProps {
   question: BlockQuestionView;
+  autoplayMedia?: boolean;
 }
 
 /**
@@ -11,7 +12,10 @@ interface BreakReviewScreenProps {
  * question_open, minus the "teams answered" count (the block is already
  * closed to new answers) and minus the correct answer (not revealed yet).
  */
-export function BreakReviewScreen({ question }: BreakReviewScreenProps) {
+export function BreakReviewScreen({
+  question,
+  autoplayMedia,
+}: BreakReviewScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
       <QuestionDisplay
@@ -23,6 +27,7 @@ export function BreakReviewScreen({ question }: BreakReviewScreenProps) {
         options={question.options}
         matchTargets={question.matchTargets}
         mediaTestIdPrefix="break"
+        autoplayMedia={autoplayMedia}
       />
     </div>
   );
