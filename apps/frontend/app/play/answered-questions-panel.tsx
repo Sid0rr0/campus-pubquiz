@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog } from 'radix-ui';
 import { Cross2Icon, ListBulletIcon } from '@radix-ui/react-icons';
 import { AnsweredQuestionsList } from '@/app/play/answered-questions-list';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';

@@ -35,7 +35,7 @@ describe('SessionSettingsForm', () => {
     const onChange = vi.fn();
     renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
 
-    const input = screen.getByLabelText(/lock grace period/i);
+    const input = screen.getByLabelText(/lock round after/i);
     await userEvent.clear(input);
     await userEvent.type(input, '15');
 

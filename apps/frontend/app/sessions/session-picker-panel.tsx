@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, Tabs } from 'radix-ui';
 import {
   ArrowRightIcon,
   CheckIcon,
@@ -246,12 +246,32 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       >
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex max-h-[85vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl bg-white p-5">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex max-h-[85vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl bg-white p-5">
             <Dialog.Title className="font-display text-xl">
               Start &quot;{pendingQuiz?.title}&quot;?
             </Dialog.Title>
-            {pendingQuiz && <RoundsList rounds={pendingQuiz.rounds} />}
-            <SessionSettingsForm value={settings} onChange={setSettings} />
+            <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
+              <Tabs.List className="flex gap-1 border-b border-foreground/15">
+                <Tabs.Trigger
+                  value="overview"
+                  className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+                >
+                  Overview
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value="settings"
+                  className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
+                >
+                  Settings
+                </Tabs.Trigger>
+              </Tabs.List>
+              <Tabs.Content value="overview">
+                {pendingQuiz && <RoundsList rounds={pendingQuiz.rounds} />}
+              </Tabs.Content>
+              <Tabs.Content value="settings">
+                <SessionSettingsForm value={settings} onChange={setSettings} />
+              </Tabs.Content>
+            </Tabs.Root>
             <div className="flex justify-end gap-2">
               <button
                 type="button"

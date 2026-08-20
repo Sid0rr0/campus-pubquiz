@@ -46,7 +46,7 @@ export function SessionSettingsForm({
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm font-extrabold">
-        Lock grace period (seconds)
+        Lock round after (seconds)
         <input
           type="number"
           min={1}
@@ -91,7 +91,7 @@ export function SessionSettingsForm({
             onChange({ ...value, autoplayMedia: event.target.checked })
           }
         />
-        Autoplay media on /display
+        Autoplay media
       </label>
 
       <div className="flex flex-col gap-1.5">

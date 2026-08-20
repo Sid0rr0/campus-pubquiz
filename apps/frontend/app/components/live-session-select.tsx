@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as Select from '@radix-ui/react-select';
+import { Select } from 'radix-ui';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
 import { fetchPublicSessions, SessionApiError } from '@/app/lib/sessions-api';
 
@@ -17,7 +17,10 @@ interface LiveSessionSelectProps {
  * it — picking an option fills that field but doesn't otherwise gate typing
  * a code manually (e.g. one not yet reflected in this list).
  */
-export function LiveSessionSelect({ value, onSelectSession }: LiveSessionSelectProps) {
+export function LiveSessionSelect({
+  value,
+  onSelectSession,
+}: LiveSessionSelectProps) {
   const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Guards state updates from a fetch that resolves after this control has
@@ -38,7 +41,11 @@ export function LiveSessionSelect({ value, onSelectSession }: LiveSessionSelectP
       })
       .catch((fetchError: unknown) => {
         if (!isMountedRef.current) return;
-        setError(fetchError instanceof SessionApiError ? fetchError.message : 'Could not load live games');
+        setError(
+          fetchError instanceof SessionApiError
+            ? fetchError.message
+            : 'Could not load live games',
+        );
       });
   }, []);
 
@@ -48,7 +55,9 @@ export function LiveSessionSelect({ value, onSelectSession }: LiveSessionSelectP
 
   // Controlled value only reflects a code this list actually knows about —
   // a manually typed or QR-prefilled code shouldn't show as "selected" here.
-  const selectValue = sessions.some((session) => session.joinCode === value) ? value : '';
+  const selectValue = sessions.some((session) => session.joinCode === value)
+    ? value
+    : '';
 
   if (sessions.length === 0 && !error) return null;
 

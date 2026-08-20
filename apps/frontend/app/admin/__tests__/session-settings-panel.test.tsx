@@ -29,7 +29,7 @@ describe('SessionSettingsPanel', () => {
       />,
     );
 
-    const input = screen.getByLabelText(/lock grace period/i);
+    const input = screen.getByLabelText(/lock round after/i);
     await userEvent.clear(input);
     await userEvent.type(input, '15');
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
@@ -55,7 +55,7 @@ describe('SessionSettingsPanel', () => {
       />,
     );
 
-    expect(screen.getByLabelText(/lock grace period/i)).toHaveValue(30);
+    expect(screen.getByLabelText(/lock round after/i)).toHaveValue(30);
   });
 
   it('shows an error toast when saving fails', async () => {

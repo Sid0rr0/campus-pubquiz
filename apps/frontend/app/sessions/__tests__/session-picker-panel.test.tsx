@@ -202,6 +202,30 @@ describe('SessionPickerPanel', () => {
     expect(screen.getByText('(free_text) Name a fruit')).toBeInTheDocument();
   });
 
+  it('splits the confirm dialog into an Overview tab (rounds) and a Settings tab', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+
+    expect(
+      screen.getByRole('tab', { name: /overview/i, selected: true }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /settings/i })).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/lock round after/i),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('tab', { name: /settings/i }));
+
+    expect(screen.getByLabelText(/lock round after/i)).toBeInTheDocument();
+  });
+
   it('creates a new session for the chosen quiz and opens it once confirmed', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
@@ -243,7 +267,8 @@ describe('SessionPickerPanel', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
     );
-    const lockGraceInput = screen.getByLabelText(/lock grace period/i);
+    await userEvent.click(screen.getByRole('tab', { name: /settings/i }));
+    const lockGraceInput = screen.getByLabelText(/lock round after/i);
     await userEvent.clear(lockGraceInput);
     await userEvent.type(lockGraceInput, '15');
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
