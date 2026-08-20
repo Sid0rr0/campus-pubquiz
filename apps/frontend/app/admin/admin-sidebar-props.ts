@@ -5,9 +5,11 @@ import type {
   TeamView,
 } from '@campus-pubquiz/types';
 
-/** Shared by DesktopSidebar and MobileAdminBar — the two panels present the same quiz-master actions in different layouts. */
+/** Shared by DesktopSidebar and MobileAdminBar — the two panels present the same quiz-master info and actions in different layouts. */
 export interface AdminSidebarProps {
   progressStatus: GameStatus;
+  roundIndex: number;
+  questionIndex: number;
   joinCode: string;
   activeQuizTitle: string | null;
   connectionError: string | null;

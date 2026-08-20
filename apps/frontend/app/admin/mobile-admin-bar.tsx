@@ -1,26 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Dialog } from 'radix-ui';
-import {
-  Cross2Icon,
-  ExternalLinkIcon,
-  HamburgerMenuIcon,
-  LoopIcon,
-} from '@radix-ui/react-icons';
-import type { GameAction } from '@campus-pubquiz/types';
+import { Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import type { AuthUser, GameAction } from '@campus-pubquiz/types';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
 import { TeamsPanel } from '@/app/admin/teams-panel';
+import { SessionStatusPanel } from '@/app/admin/session-status-panel';
 import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
-import { CopyButton } from '@/app/components/copy-button';
+import { AccountMenuLinks } from '@/app/components/account-menu-links';
 
-type MobileAdminBarProps = AdminSidebarProps;
+interface MobileAdminBarProps extends AdminSidebarProps {
+  user: AuthUser | null;
+  onLogout: () => void;
+}
 
-/** Sticky Previous/Advance bar + hamburger drawer for everything else — mobile only. */
+/** Sticky Previous/Advance bar + hamburger drawer for everything else — mobile only. Also carries the account nav (Users/Log out) the site header would otherwise show, since that header is hidden on mobile here. */
 export function MobileAdminBar({
   progressStatus,
+  roundIndex,
+  questionIndex,
   joinCode,
   activeQuizTitle,
   connectionError,
@@ -40,6 +40,8 @@ export function MobileAdminBar({
   onKickTeam,
   onAwardBonus,
   enabledBonusCategories,
+  user,
+  onLogout,
 }: MobileAdminBarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -82,33 +84,19 @@ export function MobileAdminBar({
                 </button>
               </Dialog.Close>
             </div>
-            {connectionError && (
-              <p role="alert" className="font-extrabold text-magenta">
-                {connectionError}
-              </p>
+            {user && (
+              <div className="flex flex-col items-center gap-4 font-extrabold text-background pb-2 border-b">
+                <AccountMenuLinks user={user} onLogout={onLogout} />
+              </div>
             )}
-            {activeQuizTitle && (
-              <p className="text-sm font-bold">Quiz: {activeQuizTitle}</p>
-            )}
-            <p className="flex items-center gap-1 text-sm font-bold">
-              Status: {progressStatus} ({joinCode})
-              {joinCode && <CopyButton value={joinCode} />}
-            </p>
-            <div className="flex gap-3 text-xs font-extrabold underline">
-              <Link
-                href={`/display?code=${joinCode}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1"
-              >
-                <ExternalLinkIcon aria-hidden="true" />
-                Open display
-              </Link>
-              <Link href="/sessions" className="flex items-center gap-1">
-                <LoopIcon aria-hidden="true" />
-                Switch session
-              </Link>
-            </div>
+            <SessionStatusPanel
+              progressStatus={progressStatus}
+              roundIndex={roundIndex}
+              questionIndex={questionIndex}
+              joinCode={joinCode}
+              activeQuizTitle={activeQuizTitle}
+              connectionError={connectionError}
+            />
             <AdminActions
               canStartQuiz={canStartQuiz}
               canEndQuiz={canEndQuiz}

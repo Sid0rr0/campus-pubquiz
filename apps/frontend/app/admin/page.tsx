@@ -282,6 +282,11 @@ function AdminPageContent() {
       });
   }
 
+  function handleLogout(): void {
+    auth.logout();
+    router.push('/');
+  }
+
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
@@ -394,6 +399,8 @@ function AdminPageContent() {
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
       <MobileAdminBar
         progressStatus={progress.status}
+        roundIndex={progress.roundIndex}
+        questionIndex={progress.questionIndex}
         joinCode={snapshot.joinCode}
         activeQuizTitle={activeQuizTitle}
         connectionError={connectionError}
@@ -413,6 +420,8 @@ function AdminPageContent() {
         onKickTeam={kickTeam}
         onAwardBonus={awardBonus}
         enabledBonusCategories={settings.enabledBonusCategories}
+        user={auth.user}
+        onLogout={handleLogout}
       />
       <DesktopSidebar
         progressStatus={progress.status}
@@ -445,29 +454,33 @@ function AdminPageContent() {
             settings={settings}
           />
         )}
-        <QuestionBrowserPanel
-          rounds={activeQuizRounds}
-          currentRoundIndex={progress.roundIndex}
-          activeBlockStartIndex={activeBlockStartIndex}
-          selectedQuestionId={effectiveQuestionId}
-          displayQuestionId={displayQuestionId}
-          displayTitleRoundIndex={displayTitleRoundIndex}
-          displayBreakRoundIndex={displayBreakRoundIndex}
-          onSelectQuestion={setSelectedQuestionId}
-          liveAnswers={liveAnswers}
-          teams={teams}
-          onGrade={gradeAnswer}
-          fallbackQuestions={fallbackQuestions}
-          ungradedQuestionIds={ungradedQuestionIds}
-        />
-        <section className="flex flex-col gap-3">
-          <h2 className="font-display text-xl">Teams</h2>
-          <TeamsTable
-            teams={teams}
-            leaderboard={leaderboard}
-            roundTitles={roundTitles}
-          />
-        </section>
+        {progress.status !== 'lobby' && (
+          <>
+            <QuestionBrowserPanel
+              rounds={activeQuizRounds}
+              currentRoundIndex={progress.roundIndex}
+              activeBlockStartIndex={activeBlockStartIndex}
+              selectedQuestionId={effectiveQuestionId}
+              displayQuestionId={displayQuestionId}
+              displayTitleRoundIndex={displayTitleRoundIndex}
+              displayBreakRoundIndex={displayBreakRoundIndex}
+              onSelectQuestion={setSelectedQuestionId}
+              liveAnswers={liveAnswers}
+              teams={teams}
+              onGrade={gradeAnswer}
+              fallbackQuestions={fallbackQuestions}
+              ungradedQuestionIds={ungradedQuestionIds}
+            />
+            <section className="flex flex-col gap-3">
+              <h2 className="font-display text-xl">Teams</h2>
+              <TeamsTable
+                teams={teams}
+                leaderboard={leaderboard}
+                roundTitles={roundTitles}
+              />
+            </section>
+          </>
+        )}
       </div>
     </main>
   );

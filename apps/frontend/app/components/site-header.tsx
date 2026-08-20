@@ -1,10 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ExitIcon, GearIcon, ListBulletIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/app/lib/use-auth';
 import { Header } from '@/app/components/header';
+import { AccountMenuLinks } from '@/app/components/account-menu-links';
 
 /**
  * Shared top bar rendered once from the root layout — same "🍺 Trivia Night"
@@ -18,16 +17,24 @@ import { Header } from '@/app/components/header';
  * (TriviaHeader, with the round/question badge) for the screens that want
  * one — merging the two isn't simple since the round/question data lives in
  * DisplayPage's socket state, not anything the root layout has access to.
+ *
+ * Also hidden below md on /admin itself: that page's own mobile drawer
+ * (MobileAdminBar) already surfaces the same AccountMenuLinks, so a second
+ * copy pinned above it would just eat screen space on a phone.
  */
 export function SiteHeader() {
   const pathname = usePathname();
   if (pathname.startsWith('/display')) {
     return null;
   }
-  return <SiteHeaderContent />;
+  return <SiteHeaderContent isHiddenOnMobile={pathname === '/admin'} />;
 }
 
-function SiteHeaderContent() {
+function SiteHeaderContent({
+  isHiddenOnMobile,
+}: {
+  isHiddenOnMobile: boolean;
+}) {
   const auth = useAuth();
   const router = useRouter();
 
@@ -37,38 +44,10 @@ function SiteHeaderContent() {
   }
 
   return (
-    <Header>
+    <Header isHiddenOnMobile={isHiddenOnMobile}>
       <nav className="flex items-center gap-4 text-sm font-extrabold tracking-wide">
         {auth.status === 'authenticated' && auth.user && (
-          <>
-            <span className="text-foreground/60">{auth.user.username}</span>
-            {auth.user.role === 'admin' && (
-              <>
-                <Link
-                  href="/sessions"
-                  className="flex items-center gap-1 underline"
-                >
-                  <ListBulletIcon aria-hidden="true" />
-                  Sessions
-                </Link>
-                <Link
-                  href="/admin/users"
-                  className="flex items-center gap-1 underline"
-                >
-                  <GearIcon aria-hidden="true" />
-                  Users
-                </Link>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex items-center gap-1 underline"
-            >
-              <ExitIcon aria-hidden="true" />
-              Log out
-            </button>
-          </>
+          <AccountMenuLinks user={auth.user} onLogout={handleLogout} />
         )}
       </nav>
     </Header>

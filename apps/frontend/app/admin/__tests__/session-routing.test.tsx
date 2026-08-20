@@ -132,7 +132,7 @@ describe('AdminPage — session routing', () => {
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
 
-  it('renders a switch-session link and an open-display link scoped to the current session', () => {
+  it('renders an open-display link scoped to the current session', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseGameSocket.mockReturnValue({
       snapshot: {
@@ -149,9 +149,5 @@ describe('AdminPage — session routing', () => {
       name: /open display/i,
     });
     expect(displayLink).toHaveAttribute('href', '/display?code=ABCDEF');
-    const [switchLink] = screen.getAllByRole('link', {
-      name: /switch session/i,
-    });
-    expect(switchLink).toHaveAttribute('href', '/sessions');
   });
 });
