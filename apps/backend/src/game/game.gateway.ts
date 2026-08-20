@@ -532,10 +532,7 @@ export class GameGateway
     );
     if (socketId) {
       const targetSocket = this.server.sockets.sockets.get(socketId);
-      targetSocket?.emit(
-        'exception',
-        'You were removed from this team by the quiz master',
-      );
+      targetSocket?.emit(SOCKET_EVENTS.TEAM_KICKED);
       targetSocket?.disconnect(true);
       this.gameState.clearTeamConnectionBySocketId(joinCode, socketId);
     }

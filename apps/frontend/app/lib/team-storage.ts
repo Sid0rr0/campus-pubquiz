@@ -23,7 +23,11 @@ export function storedJoinOptions(): JoinTeamOptions {
  * survive so the join form stays prefilled for playing as this team again,
  * another night or another game.
  */
-export function clearStoredSession(): void {
+export function clearStoredSession(clearAll: boolean = false): void {
   window.localStorage.removeItem(TEAM_TOKEN_STORAGE_KEY);
   window.localStorage.removeItem(JOIN_CODE_STORAGE_KEY);
+  if (clearAll) {
+    window.localStorage.removeItem(TEAM_NAME_STORAGE_KEY);
+    window.localStorage.removeItem(TEAM_CODE_STORAGE_KEY);
+  }
 }

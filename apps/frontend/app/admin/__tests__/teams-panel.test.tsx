@@ -10,7 +10,7 @@ const TEAMS: TeamView[] = [
 ];
 
 describe('TeamsPanel', () => {
-  it('allows kicking a disconnected team', async () => {
+  it('asks for confirmation before kicking a team', async () => {
     const onKickTeam = vi.fn();
     render(
       <TeamsPanel
@@ -34,6 +34,53 @@ describe('TeamsPanel', () => {
 
     await userEvent.click(kickButton);
 
+    expect(onKickTeam).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('alertdialog', {
+      name: /kick beer necessities\?/i,
+    });
+    const confirmButton = within(dialog).getByRole('button', {
+      name: /^kick$/i,
+    });
+
+    await userEvent.click(confirmButton);
+
     expect(onKickTeam).toHaveBeenCalledWith(2);
+  });
+
+  it('does not kick a team when the confirmation is cancelled', async () => {
+    const onKickTeam = vi.fn();
+    render(
+      <TeamsPanel
+        teams={TEAMS}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={onKickTeam}
+      />,
+    );
+
+    const disconnectedTeamItem = screen
+      .getByText('Beer Necessities')
+      .closest('li');
+    const kickButton = within(disconnectedTeamItem as HTMLElement).getByRole(
+      'button',
+      {
+        name: /^kick$/i,
+      },
+    );
+
+    await userEvent.click(kickButton);
+    const dialog = screen.getByRole('alertdialog', {
+      name: /kick beer necessities\?/i,
+    });
+    const cancelButton = within(dialog).getByRole('button', {
+      name: /^cancel$/i,
+    });
+
+    await userEvent.click(cancelButton);
+
+    expect(onKickTeam).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('alertdialog', { name: /kick beer necessities\?/i }),
+    ).not.toBeInTheDocument();
   });
 });

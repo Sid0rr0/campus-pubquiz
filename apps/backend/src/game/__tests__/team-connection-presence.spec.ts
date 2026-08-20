@@ -136,10 +136,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
     await gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
 
-    expect(playerA.emit).toHaveBeenCalledWith(
-      'exception',
-      'You were removed from this team by the quiz master',
-    );
+    expect(playerA.emit).toHaveBeenCalledWith(SOCKET_EVENTS.TEAM_KICKED);
     expect(playerA.disconnect).toHaveBeenCalledWith(true);
   });
 

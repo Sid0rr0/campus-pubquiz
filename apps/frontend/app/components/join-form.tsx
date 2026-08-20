@@ -66,6 +66,7 @@ export function JoinForm({
           id="join-team-name"
           value={nameInput}
           onChange={(event) => onNameInputChange(event.target.value)}
+          autoComplete="off"
           placeholder="The Answer Key"
           className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
         />

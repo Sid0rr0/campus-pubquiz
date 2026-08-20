@@ -68,7 +68,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     activeJoinCode ?? undefined,
     joinAttempt,
   );
-  const { team, joinTeam, sessionClosed } = socket;
+  const { team, joinTeam, sessionClosed, kicked } = socket;
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -162,6 +162,32 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
       setActiveJoinCode(null);
     }
   }
+
+  useEffect(() => {
+    // The admin kicked this team — its token/join code are now stale (kicking
+    // deletes the roster row server-side), so drop them and send the team
+    // back to a fresh /play join screen instead of leaving it stuck on a
+    // frozen game view. Clearing the join code (not just the token) also
+    // stops the reconnect-on-mount effect above from silently rejoining on
+    // the next refresh — the team has to go through the join form again,
+    // same as the admin intended by kicking it. clearStoredSession(true)
+    // wipes the stored name/team code too (unlike logout/session-closed,
+    // which deliberately keep them), so the form fields reset here as well
+    // rather than showing the now-kicked team's stale values. Resetting
+    // state in the effect itself (not the render-adjustment pattern used
+    // elsewhere in this file) so it still runs when a component mounts
+    // already kicked, not only on a live false→true transition.
+    if (!kicked) return;
+    clearStoredSession(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTeamName(null);
+    setCodeInput('');
+    setHasStoredIdentity(false);
+    setActiveJoinCode(null);
+    setNameInput('');
+    setTeamCodeInput('');
+    router.push('/play');
+  }, [kicked, router]);
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

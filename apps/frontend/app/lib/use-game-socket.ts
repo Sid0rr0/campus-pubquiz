@@ -83,6 +83,8 @@ export interface UseGameSocketResult {
   reconnectedAt: number | null;
   /** The joinCode of this session once its admin closes it, or null otherwise — players-room consumers use this to drop their identity and return to the join screen. */
   sessionClosed: string | null;
+  /** True once this team's own socket has been kicked by the admin — players-room consumers use this to drop their identity and return to the join screen with a notice. */
+  kicked: boolean;
 }
 
 type SeenQuestions = Record<
@@ -165,6 +167,7 @@ export function useGameSocket(
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
+  const [kicked, setKicked] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   // A fresh connect (first mount, or `role`/`joinCode`/`retryKey` identity
@@ -185,6 +188,7 @@ export function useGameSocket(
       setMyAnswerGrades({});
       setSeenQuestions({});
       setSessionClosed(null);
+      setKicked(false);
     }
   }
 
@@ -260,6 +264,11 @@ export function useGameSocket(
 
     socket.on(SOCKET_EVENTS.SESSION_CLOSED, (payload: SessionClosedPayload) => {
       setSessionClosed(payload.joinCode);
+    });
+
+    socket.on(SOCKET_EVENTS.TEAM_KICKED, () => {
+      setKicked(true);
+      setConnectionError('You were removed from this team by the quiz master');
     });
 
     socket.on('connect_error', (payload: unknown) => {
@@ -349,5 +358,6 @@ export function useGameSocket(
     setLiveAnswers,
     reconnectedAt,
     sessionClosed,
+    kicked,
   };
 }

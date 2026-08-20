@@ -25,6 +25,7 @@ describe('SOCKET_EVENTS', () => {
       ANSWERS_UPDATED: 'game:answers_updated',
       TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
       SESSION_CLOSED: 'game:session_closed',
+      TEAM_KICKED: 'game:team_kicked',
       ADMIN_ACTION: 'game:admin_action',
       SUBMIT_ANSWER: 'game:submit_answer',
       JOIN_PLAYERS: 'game:join_players',

@@ -1,5 +1,6 @@
 'use client';
 
+import { AlertDialog } from 'radix-ui';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import type { TeamView } from '@campus-pubquiz/types';
 
@@ -67,14 +68,48 @@ export function TeamsPanel({
                     ✓
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => onKickTeam(team.teamId)}
-                  className="ml-auto flex items-center gap-1 text-xs font-extrabold text-magenta underline"
-                >
-                  <Cross2Icon aria-hidden="true" />
-                  Kick
-                </button>
+                <AlertDialog.Root>
+                  <AlertDialog.Trigger asChild>
+                    <button
+                      type="button"
+                      className="ml-auto flex items-center gap-1 text-xs font-extrabold text-magenta underline"
+                    >
+                      <Cross2Icon aria-hidden="true" />
+                      Kick
+                    </button>
+                  </AlertDialog.Trigger>
+                  <AlertDialog.Portal>
+                    <AlertDialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
+                    <AlertDialog.Content className="fixed left-1/2 top-1/2 z-40 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-3 rounded-xl bg-foreground p-5 text-background">
+                      <AlertDialog.Title className="font-display text-lg">
+                        Kick {team.teamName}?
+                      </AlertDialog.Title>
+                      <AlertDialog.Description className="text-sm font-bold text-background/70">
+                        They&apos;ll be removed from the session and can rejoin
+                        with the join code.
+                      </AlertDialog.Description>
+                      <div className="flex justify-end gap-2">
+                        <AlertDialog.Cancel asChild>
+                          <button
+                            type="button"
+                            className="rounded-lg px-3 py-1.5 text-sm font-bold text-background/70"
+                          >
+                            Cancel
+                          </button>
+                        </AlertDialog.Cancel>
+                        <AlertDialog.Action asChild>
+                          <button
+                            type="button"
+                            onClick={() => onKickTeam(team.teamId)}
+                            className="rounded-lg bg-magenta px-3 py-1.5 text-sm font-extrabold text-background"
+                          >
+                            Kick
+                          </button>
+                        </AlertDialog.Action>
+                      </div>
+                    </AlertDialog.Content>
+                  </AlertDialog.Portal>
+                </AlertDialog.Root>
               </div>
             </li>
           );

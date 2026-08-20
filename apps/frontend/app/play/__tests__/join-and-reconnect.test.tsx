@@ -312,4 +312,37 @@ describe('PlayPage — join and reconnect', () => {
     expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
     expect(routerRef.push).toHaveBeenCalledWith('/play');
   });
+
+  it('clears the session token, shows a notice and redirects to /play when the admin kicks the team', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        kicked: true,
+        connectionError: 'You were removed from this team by the quiz master',
+      }),
+    );
+
+    render(<PlayPage />);
+
+    // Unlike a closed session, a kick deletes the roster row server-side —
+    // team name and team code are wiped too (not just the token/join code),
+    // so the team must fully rejoin through the form rather than silently
+    // reconnecting with a now-stale identity.
+    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
+    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBeNull();
+    expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
+    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
+    expect(routerRef.push).toHaveBeenCalledWith('/play');
+    expect(
+      screen.getByText(/removed from this team by the quiz master/i),
+    ).toBeInTheDocument();
+
+    const nameField = screen.getByLabelText(/team name/i);
+    const teamCodeField = screen.getByLabelText(/team code/i);
+    expect(nameField).toHaveValue('');
+    expect(teamCodeField).toHaveValue('');
+  });
 });
