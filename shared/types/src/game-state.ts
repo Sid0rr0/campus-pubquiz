@@ -38,6 +38,18 @@ export interface QuizStructureSummary {
   blockCount: number;
   /** Rounds ("topics") per block, or null when blocks don't all have the same count. */
   topicsPerBlock: number | null;
+  /**
+   * 1-based round number of every block boundary, in order — e.g. [2, 5, 7]
+   * for blocks of size 2, 3, 2. The last entry is the total round count.
+   */
+  breakRoundNumbers: number[];
+  /** Fewest questions in any round. 0 when the quiz has no rounds. */
+  minQuestionsPerTopic: number;
+  /**
+   * Most questions in any round. Equal to minQuestionsPerTopic when every
+   * round has the same count (or the quiz has no rounds).
+   */
+  maxQuestionsPerTopic: number;
 }
 
 /** Sizes (round counts) of every block, in order — a block ends at each breakAfter round. */
@@ -63,9 +75,21 @@ export function getQuizStructureSummary(
 ): QuizStructureSummary {
   const blockSizes = getBlockSizes(context);
   const isUniform = blockSizes.every((size) => size === blockSizes[0]);
+  const breakRoundNumbers: number[] = [];
+  let roundNumber = 0;
+  for (const size of blockSizes) {
+    roundNumber += size;
+    breakRoundNumbers.push(roundNumber);
+  }
+  const questionCounts = context.rounds.map((round) => round.questionCount);
   return {
     blockCount: blockSizes.length,
     topicsPerBlock: isUniform ? (blockSizes[0] ?? null) : null,
+    breakRoundNumbers,
+    minQuestionsPerTopic:
+      questionCounts.length > 0 ? Math.min(...questionCounts) : 0,
+    maxQuestionsPerTopic:
+      questionCounts.length > 0 ? Math.max(...questionCounts) : 0,
   };
 }
 

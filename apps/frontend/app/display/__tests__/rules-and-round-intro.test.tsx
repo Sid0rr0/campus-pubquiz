@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
 
@@ -33,14 +38,24 @@ describe('DisplayPage — rules and round intro', () => {
       snapshot: {
         progress: progress({ status: 'rules' }),
         currentQuestion: null,
-        quizStructure: { blockCount: 2, topicsPerBlock: 3 },
+        quizStructure: {
+          blockCount: 2,
+          topicsPerBlock: 3,
+          breakRoundNumbers: [3, 6],
+          minQuestionsPerTopic: 4,
+          maxQuestionsPerTopic: 4,
+        },
       },
       connectionError: null,
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
 
-    expect(screen.getByText(/2 rounds of 3 topics/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /6 topics, 4 questions each, with a break after every 3 rounds/i,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 

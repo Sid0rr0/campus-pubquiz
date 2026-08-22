@@ -31,7 +31,13 @@ describe('PlayPage — pre-game screens', () => {
         snapshot: {
           progress: progress({ status: 'rules' }),
           currentQuestion: null,
-          quizStructure: { blockCount: 2, topicsPerBlock: 3 },
+          quizStructure: {
+            blockCount: 2,
+            topicsPerBlock: 3,
+            breakRoundNumbers: [3, 6],
+            minQuestionsPerTopic: 4,
+            maxQuestionsPerTopic: 4,
+          },
         },
         team: {
           teamId: 'team-1',
@@ -42,7 +48,11 @@ describe('PlayPage — pre-game screens', () => {
     );
     render(<PlayPage />);
 
-    expect(screen.getByText(/2 rounds of 3 topics/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /6 topics, 4 questions each, with a break after every 3 rounds/i,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 

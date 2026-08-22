@@ -47,7 +47,13 @@ describe('block answering payloads', () => {
         isLeaderboardVisible: false,
         revealIndex: 0,
       },
-      quizStructure: { blockCount: 1, topicsPerBlock: 1 },
+      quizStructure: {
+        blockCount: 1,
+        topicsPerBlock: 1,
+        breakRoundNumbers: [1],
+        minQuestionsPerTopic: 2,
+        maxQuestionsPerTopic: 2,
+      },
       roundTitle: 'Round 1',
       currentQuestion: {
         id: 2,
@@ -97,7 +103,13 @@ describe('block answering payloads', () => {
         isLeaderboardVisible: false,
         revealIndex: 0,
       },
-      quizStructure: { blockCount: 1, topicsPerBlock: 1 },
+      quizStructure: {
+        blockCount: 1,
+        topicsPerBlock: 1,
+        breakRoundNumbers: [1],
+        minQuestionsPerTopic: 2,
+        maxQuestionsPerTopic: 2,
+      },
       roundTitle: 'Round 1',
       currentQuestion: null,
       blockQuestions: [],
@@ -258,11 +270,12 @@ describe('SessionSettings defaults', () => {
       autoplayMedia: true,
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       rules: [
-        'Max 6 players per team — every additional player costs the team −2 points.',
+        'Max 6 players per team, every additional player costs the team −2 points.',
         'No cheating.',
-        'Please write your answers in English (Czech and Slovak also accepted if necessary).',
+        'Please write your answers in English.',
         'In case of disagreements, the organizers have the final word.',
         'Want to contest something? Come with a credible source.',
+        'In case of no correct answers, the moderator CAN award a bonus point to the team with the funniest answer.',
       ],
     });
   });

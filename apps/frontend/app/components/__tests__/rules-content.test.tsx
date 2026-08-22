@@ -47,7 +47,7 @@ describe('RulesContent', () => {
 
     expect(screen.getByText(/Shot bonus:/)).toBeInTheDocument();
     expect(
-      screen.getByText(/order and drink that many shots/i),
+      screen.getByText(/at minimum more than half your player count/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Selfie bonus:/)).not.toBeInTheDocument();
   });
@@ -69,5 +69,147 @@ describe('RulesContent', () => {
 
     expect(screen.queryByText(/Shot bonus:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Selfie bonus:/)).not.toBeInTheDocument();
+  });
+
+  it('states the break interval when blocks are evenly spaced', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 3,
+          topicsPerBlock: 2,
+          breakRoundNumbers: [2, 4, 6],
+          minQuestionsPerTopic: 5,
+          maxQuestionsPerTopic: 5,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/6 topics.*break after every 2 rounds/i),
+    ).toBeInTheDocument();
+  });
+
+  it('says "each round" instead of "every 1 rounds" when every round breaks', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 3,
+          topicsPerBlock: 1,
+          breakRoundNumbers: [1, 2, 3],
+          minQuestionsPerTopic: 5,
+          maxQuestionsPerTopic: 5,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/3 topics.*break after each round/i),
+    ).toBeInTheDocument();
+  });
+
+  it('lists the specific round numbers when blocks are unevenly spaced', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 3,
+          topicsPerBlock: null,
+          breakRoundNumbers: [2, 5, 7],
+          minQuestionsPerTopic: 5,
+          maxQuestionsPerTopic: 5,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/7 topics.*break after round 2, 5 and 7/i),
+    ).toBeInTheDocument();
+  });
+
+  it('joins a two-entry uneven list with "and" and no comma', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 2,
+          topicsPerBlock: null,
+          breakRoundNumbers: [1, 3],
+          minQuestionsPerTopic: 5,
+          maxQuestionsPerTopic: 5,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/break after round 1 and 3/i)).toBeInTheDocument();
+  });
+
+  it('states a single question count when every topic has the same number of questions', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 1,
+          topicsPerBlock: 4,
+          breakRoundNumbers: [4],
+          minQuestionsPerTopic: 5,
+          maxQuestionsPerTopic: 5,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/4 topics, 5 questions each, with a break/i),
+    ).toBeInTheDocument();
+  });
+
+  it('says "1 question each" (singular) when every topic has exactly one question', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 1,
+          topicsPerBlock: 4,
+          breakRoundNumbers: [4],
+          minQuestionsPerTopic: 1,
+          maxQuestionsPerTopic: 1,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/4 topics, 1 question each, with a break/i),
+    ).toBeInTheDocument();
+  });
+
+  it('states a question count range when topics have differing question counts', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 1,
+          topicsPerBlock: 4,
+          breakRoundNumbers: [4],
+          minQuestionsPerTopic: 3,
+          maxQuestionsPerTopic: 7,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/4 topics, 3 to 7 questions each, with a break/i),
+    ).toBeInTheDocument();
+  });
+
+  it('omits the question count clause when there are no rounds', () => {
+    render(
+      <RulesContent
+        quizStructure={{
+          blockCount: 0,
+          topicsPerBlock: null,
+          breakRoundNumbers: [],
+          minQuestionsPerTopic: 0,
+          maxQuestionsPerTopic: 0,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText('There will be 0 topics, with a break in between.'),
+    ).toBeInTheDocument();
   });
 });

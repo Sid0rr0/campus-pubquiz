@@ -52,6 +52,9 @@ describe('GameStateService — core snapshot', () => {
     expect(service.getSnapshot(joinCode).quizStructure).toEqual({
       blockCount: 1,
       topicsPerBlock: 2,
+      breakRoundNumbers: [2],
+      minQuestionsPerTopic: 2,
+      maxQuestionsPerTopic: 2,
     });
   });
 

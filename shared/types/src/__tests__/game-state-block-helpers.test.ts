@@ -81,6 +81,9 @@ describe('getQuizStructureSummary', () => {
     expect(getQuizStructureSummary(twoRoundsWithBreakAfterSecond)).toEqual({
       blockCount: 1,
       topicsPerBlock: 2,
+      breakRoundNumbers: [2],
+      minQuestionsPerTopic: 2,
+      maxQuestionsPerTopic: 2,
     });
   });
 
@@ -98,6 +101,9 @@ describe('getQuizStructureSummary', () => {
     expect(getQuizStructureSummary(threeBlocksOfTwo)).toEqual({
       blockCount: 3,
       topicsPerBlock: 2,
+      breakRoundNumbers: [2, 4, 6],
+      minQuestionsPerTopic: 1,
+      maxQuestionsPerTopic: 1,
     });
   });
 
@@ -112,6 +118,9 @@ describe('getQuizStructureSummary', () => {
     expect(getQuizStructureSummary(unevenBlocks)).toEqual({
       blockCount: 2,
       topicsPerBlock: null,
+      breakRoundNumbers: [1, 3],
+      minQuestionsPerTopic: 1,
+      maxQuestionsPerTopic: 1,
     });
   });
 
@@ -125,6 +134,35 @@ describe('getQuizStructureSummary', () => {
     expect(getQuizStructureSummary(trailingOpenBlock)).toEqual({
       blockCount: 2,
       topicsPerBlock: 1,
+      breakRoundNumbers: [1, 2],
+      minQuestionsPerTopic: 1,
+      maxQuestionsPerTopic: 1,
+    });
+  });
+
+  it('reports differing min/max question counts when rounds are not uniform', () => {
+    const unevenQuestionCounts: GameContext = {
+      rounds: [
+        { questionCount: 3, breakAfter: false },
+        { questionCount: 5, breakAfter: true },
+      ],
+    };
+    expect(getQuizStructureSummary(unevenQuestionCounts)).toEqual({
+      blockCount: 1,
+      topicsPerBlock: 2,
+      breakRoundNumbers: [2],
+      minQuestionsPerTopic: 3,
+      maxQuestionsPerTopic: 5,
+    });
+  });
+
+  it('reports min and max as 0 for a quiz with no rounds', () => {
+    expect(getQuizStructureSummary({ rounds: [] })).toEqual({
+      blockCount: 0,
+      topicsPerBlock: null,
+      breakRoundNumbers: [],
+      minQuestionsPerTopic: 0,
+      maxQuestionsPerTopic: 0,
     });
   });
 });

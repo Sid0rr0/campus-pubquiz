@@ -58,12 +58,24 @@ describe('RulesPage', () => {
   it('renders the rules with the active quiz structure filled in once connected', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseGameSocket.mockReturnValue({
-      snapshot: { quizStructure: { blockCount: 2, topicsPerBlock: 3 } },
+      snapshot: {
+        quizStructure: {
+          blockCount: 2,
+          topicsPerBlock: 3,
+          breakRoundNumbers: [3, 6],
+          minQuestionsPerTopic: 4,
+          maxQuestionsPerTopic: 4,
+        },
+      },
       connectionError: null,
     });
     render(<RulesPage />);
 
-    expect(screen.getByText(/2 rounds of 3 topics/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /6 topics, 4 questions each, with a break after every 3 rounds/i,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 

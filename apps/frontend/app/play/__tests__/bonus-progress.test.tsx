@@ -58,7 +58,7 @@ describe('PlayPage — bonus points panel', () => {
     expect(screen.getByText('Shot')).toBeInTheDocument();
     expect(screen.getByText('Selfie')).toBeInTheDocument();
     expect(
-      screen.getByText(/order and drink that many shots/i),
+      screen.getByText(/at minimum more than half your player count/i),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/tag @esn\.cut and @isc_hub\.cz/i),

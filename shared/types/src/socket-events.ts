@@ -399,11 +399,12 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
     selfie: 1,
   }) as Partial<Record<BonusCategory, number>>,
   rules: Object.freeze([
-    'Max 6 players per team — every additional player costs the team −2 points.',
+    'Max 6 players per team, every additional player costs the team −2 points.',
     'No cheating.',
-    'Please write your answers in English (Czech and Slovak also accepted if necessary).',
+    'Please write your answers in English.',
     'In case of disagreements, the organizers have the final word.',
     'Want to contest something? Come with a credible source.',
+    'In case of no correct answers, the moderator CAN award a bonus point to the team with the funniest answer.',
   ]) as string[],
 });
 

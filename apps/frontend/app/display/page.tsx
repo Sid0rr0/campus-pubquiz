@@ -152,7 +152,13 @@ function DisplayPageContent() {
   const {
     progress,
     currentQuestion,
-    quizStructure = { blockCount: 0, topicsPerBlock: null },
+    quizStructure = {
+      blockCount: 0,
+      topicsPerBlock: null,
+      breakRoundNumbers: [],
+      minQuestionsPerTopic: 0,
+      maxQuestionsPerTopic: 0,
+    },
     leaderboard = [],
     leaderboardRevealCount = 0,
     teams = [],
