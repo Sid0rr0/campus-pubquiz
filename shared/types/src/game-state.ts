@@ -58,7 +58,9 @@ function getBlockSizes(context: GameContext): number[] {
 }
 
 /** Summarizes a quiz's round/break shape for display on the rules screen. */
-export function getQuizStructureSummary(context: GameContext): QuizStructureSummary {
+export function getQuizStructureSummary(
+  context: GameContext,
+): QuizStructureSummary {
   const blockSizes = getBlockSizes(context);
   const isUniform = blockSizes.every((size) => size === blockSizes[0]);
   return {
@@ -122,7 +124,10 @@ function illegal(status: GameStatus, action: GameAction): never {
  * nearest earlier breakAfter round, or round 0. A breakAfter round closes its
  * own block, so it belongs to the block that starts after the previous break.
  */
-export function getBlockStartRoundIndex(roundIndex: number, context: GameContext): number {
+export function getBlockStartRoundIndex(
+  roundIndex: number,
+  context: GameContext,
+): number {
   for (let index = roundIndex - 1; index >= 0; index -= 1) {
     if (context.rounds[index].breakAfter) {
       return index + 1;
@@ -140,9 +145,13 @@ export function isLastQuestionOfBreakAfterRound(
   return round.breakAfter && progress.questionIndex + 1 >= round.questionCount;
 }
 
-function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): GameProgress {
+function advanceFromQuestionOpen(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   const round = context.rounds[progress.roundIndex];
-  const isLastQuestionInRound = progress.questionIndex + 1 >= round.questionCount;
+  const isLastQuestionInRound =
+    progress.questionIndex + 1 >= round.questionCount;
 
   if (!isLastQuestionInRound) {
     const questionIndex = progress.questionIndex + 1;
@@ -152,7 +161,11 @@ function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): 
       questionIndex,
       furthestOpenIndex: Math.max(
         progress.furthestOpenIndex,
-        getBlockPositionForQuestion(progress.roundIndex, questionIndex, context),
+        getBlockPositionForQuestion(
+          progress.roundIndex,
+          questionIndex,
+          context,
+        ),
       ),
     };
   }
@@ -168,7 +181,12 @@ function advanceFromQuestionOpen(progress: GameProgress, context: GameContext): 
     );
   }
 
-  return { ...progress, status: 'round_intro', roundIndex: progress.roundIndex + 1, questionIndex: 0 };
+  return {
+    ...progress,
+    status: 'round_intro',
+    roundIndex: progress.roundIndex + 1,
+    questionIndex: 0,
+  };
 }
 
 /**
@@ -190,7 +208,10 @@ function previousFromQuestionOpen(progress: GameProgress): GameProgress {
  * same open block (no break), or the previous block's last reveal question
  * if a break/reveal already ran.
  */
-function previousFromRoundIntro(progress: GameProgress, context: GameContext): GameProgress {
+function previousFromRoundIntro(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   if (progress.roundIndex === 0) {
     return { ...progress, status: 'rules', questionIndex: 0, revealIndex: 0 };
   }
@@ -211,7 +232,10 @@ function previousFromRoundIntro(progress: GameProgress, context: GameContext): G
 }
 
 /** Total questions across the block containing `roundIndex` (all rounds since the last break, inclusive). */
-function getBlockQuestionCount(roundIndex: number, context: GameContext): number {
+function getBlockQuestionCount(
+  roundIndex: number,
+  context: GameContext,
+): number {
   const blockStart = getBlockStartRoundIndex(roundIndex, context);
   let count = 0;
   for (let index = blockStart; index <= roundIndex; index += 1) {
@@ -226,7 +250,10 @@ function getBlockQuestionCount(roundIndex: number, context: GameContext): number
  * already aired live, so re-entering it re-shows them rather than reopening
  * anything for (re-)answering. Illegal when there is no earlier block.
  */
-function enterPreviousBlockReveal(progress: GameProgress, context: GameContext): GameProgress {
+function enterPreviousBlockReveal(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
   if (blockStart === 0) {
     illegal(progress.status, 'PREVIOUS');
@@ -239,7 +266,8 @@ function enterPreviousBlockReveal(progress: GameProgress, context: GameContext):
     status: 'reveal',
     roundIndex: previousBlockLastRoundIndex,
     questionIndex: previousRound.questionCount - 1,
-    revealIndex: getBlockQuestionCount(previousBlockLastRoundIndex, context) - 1,
+    revealIndex:
+      getBlockQuestionCount(previousBlockLastRoundIndex, context) - 1,
   };
 }
 
@@ -264,7 +292,11 @@ export function getRoundAndQuestionForBlockPosition(
   position: number,
   context: GameContext,
 ): { roundIndex: number; questionIndex: number } {
-  const roundIndex = getRoundIndexForBlockPosition(blockStartRoundIndex, position, context);
+  const roundIndex = getRoundIndexForBlockPosition(
+    blockStartRoundIndex,
+    position,
+    context,
+  );
   let consumed = 0;
   for (let index = blockStartRoundIndex; index < roundIndex; index += 1) {
     consumed += context.rounds[index].questionCount;
@@ -299,15 +331,25 @@ function isFirstQuestionOfItsRound(
   );
 }
 
-function advanceFromReveal(progress: GameProgress, context: GameContext): GameProgress {
+function advanceFromReveal(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
-  const blockQuestionCount = getBlockQuestionCount(progress.roundIndex, context);
+  const blockQuestionCount = getBlockQuestionCount(
+    progress.roundIndex,
+    context,
+  );
   if (progress.revealIndex + 1 < blockQuestionCount) {
     const nextRevealIndex = progress.revealIndex + 1;
     // Crossing into a new round within the same block: show that round's
     // name before its answers, same as round_intro before its questions.
     if (isFirstQuestionOfItsRound(blockStart, nextRevealIndex, context)) {
-      return { ...progress, status: 'reveal_intro', revealIndex: nextRevealIndex };
+      return {
+        ...progress,
+        status: 'reveal_intro',
+        revealIndex: nextRevealIndex,
+      };
     }
     return { ...progress, revealIndex: nextRevealIndex };
   }
@@ -317,11 +359,20 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
     // Advancing past the last reveal question ends the quiz the same way
     // the admin's explicit "End Quiz" button does — the final leaderboard
     // shouldn't need a second click to appear.
-    return { ...progress, status: 'ended', revealIndex: 0, isLeaderboardVisible: true };
+    return {
+      ...progress,
+      status: 'ended',
+      revealIndex: 0,
+      isLeaderboardVisible: true,
+    };
   }
 
   // A new block starts here — its questions haven't been opened yet, so the
   // previous block's furthest-open watermark must not leak forward into it.
+  // The just-finished block's standings show first, same as the final
+  // leaderboard on 'ended' — the admin closes it (TOGGLE_LEADERBOARD) once
+  // teams have seen where they stand, which reveals the round_intro card
+  // already sitting underneath.
   return {
     ...progress,
     status: 'round_intro',
@@ -329,6 +380,7 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
     questionIndex: 0,
     revealIndex: 0,
     furthestOpenIndex: -1,
+    isLeaderboardVisible: true,
   };
 }
 
@@ -338,7 +390,10 @@ function advanceFromReveal(progress: GameProgress, context: GameContext): GamePr
  * lands on that round's first question — including the block's very first
  * question, so round 1's title stays reachable purely by walking Previous.
  */
-function previousFromBlockReview(progress: GameProgress, context: GameContext): GameProgress {
+function previousFromBlockReview(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
   if (isFirstQuestionOfItsRound(blockStart, progress.revealIndex, context)) {
     return { ...progress, status: 'break_round_intro' };
@@ -353,11 +408,18 @@ function previousFromBlockReview(progress: GameProgress, context: GameContext): 
  * crosses into the previous block's reveal instead of rejecting, so a whole
  * quiz's worth of already-locked questions stays reachable by Previous.
  */
-function previousFromBreakRoundIntro(progress: GameProgress, context: GameContext): GameProgress {
+function previousFromBreakRoundIntro(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   if (progress.revealIndex === 0) {
     return enterPreviousBlockReveal(progress, context);
   }
-  return { ...progress, status: 'break', revealIndex: progress.revealIndex - 1 };
+  return {
+    ...progress,
+    status: 'break',
+    revealIndex: progress.revealIndex - 1,
+  };
 }
 
 /**
@@ -365,7 +427,10 @@ function previousFromBreakRoundIntro(progress: GameProgress, context: GameContex
  * it's the first question of that round (mirroring previousFromQuestionOpen)
  * — otherwise just the previous reveal question in the same round.
  */
-function previousFromReveal(progress: GameProgress, context: GameContext): GameProgress {
+function previousFromReveal(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
   if (isFirstQuestionOfItsRound(blockStart, progress.revealIndex, context)) {
     return { ...progress, status: 'reveal_intro' };
@@ -381,7 +446,10 @@ function previousFromReveal(progress: GameProgress, context: GameContext): GameP
  * happens by continuing Previous from within that break review, once it's
  * walked all the way back to the block's first question.
  */
-function previousFromRevealIntro(progress: GameProgress, context: GameContext): GameProgress {
+function previousFromRevealIntro(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
   if (progress.revealIndex === 0) {
     return {
       ...progress,
@@ -389,7 +457,11 @@ function previousFromRevealIntro(progress: GameProgress, context: GameContext): 
       revealIndex: getBlockQuestionCount(progress.roundIndex, context) - 1,
     };
   }
-  return { ...progress, status: 'reveal', revealIndex: progress.revealIndex - 1 };
+  return {
+    ...progress,
+    status: 'reveal',
+    revealIndex: progress.revealIndex - 1,
+  };
 }
 
 export function getNextGameState(
@@ -398,7 +470,10 @@ export function getNextGameState(
   context: GameContext,
 ): GameProgress {
   if (action === 'TOGGLE_LEADERBOARD') {
-    return { ...progress, isLeaderboardVisible: !progress.isLeaderboardVisible };
+    return {
+      ...progress,
+      isLeaderboardVisible: !progress.isLeaderboardVisible,
+    };
   }
 
   // Reveal progress itself isn't part of GameProgress (it's ephemeral,
@@ -422,11 +497,23 @@ export function getNextGameState(
   switch (action) {
     case 'START_QUIZ':
       if (progress.status !== 'lobby') illegal(progress.status, action);
-      return { ...progress, status: 'rules', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
+      return {
+        ...progress,
+        status: 'rules',
+        roundIndex: 0,
+        questionIndex: 0,
+        revealIndex: 0,
+      };
 
     case 'ADVANCE':
       if (progress.status === 'rules') {
-        return { ...progress, status: 'round_intro', roundIndex: 0, questionIndex: 0, revealIndex: 0 };
+        return {
+          ...progress,
+          status: 'round_intro',
+          roundIndex: 0,
+          questionIndex: 0,
+          revealIndex: 0,
+        };
       }
       if (progress.status === 'round_intro') {
         return {
@@ -439,7 +526,8 @@ export function getNextGameState(
           ),
         };
       }
-      if (progress.status === 'question_open') return advanceFromQuestionOpen(progress, context);
+      if (progress.status === 'question_open')
+        return advanceFromQuestionOpen(progress, context);
       if (progress.status === 'locking') {
         return {
           ...progress,
@@ -463,22 +551,33 @@ export function getNextGameState(
       }
       // Resumes into the specific question that was paused on, same as
       // reveal_intro resuming into 'reveal' at the same revealIndex.
-      if (progress.status === 'break_round_intro') return { ...progress, status: 'break' };
-      if (progress.status === 'reveal_intro') return { ...progress, status: 'reveal' };
-      if (progress.status === 'reveal') return advanceFromReveal(progress, context);
+      if (progress.status === 'break_round_intro')
+        return { ...progress, status: 'break' };
+      if (progress.status === 'reveal_intro')
+        return { ...progress, status: 'reveal' };
+      if (progress.status === 'reveal')
+        return advanceFromReveal(progress, context);
       return illegal(progress.status, action);
 
     case 'PREVIOUS':
-      if (progress.status === 'round_intro') return previousFromRoundIntro(progress, context);
-      if (progress.status === 'question_open') return previousFromQuestionOpen(progress);
-      if (progress.status === 'locking') return { ...progress, status: 'question_open' };
+      if (progress.status === 'round_intro')
+        return previousFromRoundIntro(progress, context);
+      if (progress.status === 'question_open')
+        return previousFromQuestionOpen(progress);
+      if (progress.status === 'locking')
+        return { ...progress, status: 'question_open' };
       // Reveals the specific just-locked question at the same revealIndex —
       // never decrements, so it's never silently skipped past.
-      if (progress.status === 'break_intro') return { ...progress, status: 'break' };
-      if (progress.status === 'break') return previousFromBlockReview(progress, context);
-      if (progress.status === 'break_round_intro') return previousFromBreakRoundIntro(progress, context);
-      if (progress.status === 'reveal_intro') return previousFromRevealIntro(progress, context);
-      if (progress.status === 'reveal') return previousFromReveal(progress, context);
+      if (progress.status === 'break_intro')
+        return { ...progress, status: 'break' };
+      if (progress.status === 'break')
+        return previousFromBlockReview(progress, context);
+      if (progress.status === 'break_round_intro')
+        return previousFromBreakRoundIntro(progress, context);
+      if (progress.status === 'reveal_intro')
+        return previousFromRevealIntro(progress, context);
+      if (progress.status === 'reveal')
+        return previousFromReveal(progress, context);
       return illegal(progress.status, action);
   }
 }

@@ -57,6 +57,31 @@ describe('useAdminKeyboardShortcuts', () => {
     expect(sendAction).not.toHaveBeenCalledWith('ADVANCE');
   });
 
+  it('sends TOGGLE_LEADERBOARD on ArrowRight once every team has been revealed, instead of ADVANCE', async () => {
+    const { sendAction } = renderShortcuts({
+      canAdvance: true,
+      isLeaderboardVisible: true,
+      hasUnrevealedTeams: false,
+    });
+
+    await userEvent.keyboard('{ArrowRight}');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
+    expect(sendAction).not.toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it('ignores ArrowRight while the leaderboard is visible with nothing left to advance to', async () => {
+    const { sendAction } = renderShortcuts({
+      canAdvance: false,
+      isLeaderboardVisible: true,
+      hasUnrevealedTeams: false,
+    });
+
+    await userEvent.keyboard('{ArrowRight}');
+
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+
   it('sends TOGGLE_LEADERBOARD on ArrowUp only while the leaderboard is hidden', async () => {
     const { sendAction } = renderShortcuts({ isLeaderboardVisible: false });
 

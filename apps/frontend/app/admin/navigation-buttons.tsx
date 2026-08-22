@@ -36,14 +36,29 @@ export function NavigationButtons({
   className = '',
 }: NavigationButtonsProps) {
   // While the board is up, Advance takes over revealing teams one at a time;
-  // once every team has been shown it reverts to its normal role.
+  // once every team has been shown, it hides the board instead of sitting
+  // disabled — the underlying status (e.g. a round's title card) has already
+  // advanced and is just waiting to be uncovered by a further press.
   const hasUnrevealedTeams =
     isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
+  const shouldHideLeaderboard =
+    isLeaderboardVisible && !hasUnrevealedTeams && canAdvance;
   const showAdvanceSlot = canAdvance || hasUnrevealedTeams;
 
   if (!canGoToPreviousQuestion && !showAdvanceSlot) {
     return null;
   }
+
+  const advanceSlotAction: GameAction = hasUnrevealedTeams
+    ? 'REVEAL_NEXT_TEAM'
+    : shouldHideLeaderboard
+      ? 'TOGGLE_LEADERBOARD'
+      : 'ADVANCE';
+  const advanceSlotLabel = hasUnrevealedTeams
+    ? 'Show Next Team'
+    : shouldHideLeaderboard
+      ? 'Hide Leaderboard'
+      : getAdvanceLabel(progressStatus);
 
   return (
     <div className={`flex gap-2 ${className}`}>
@@ -59,15 +74,10 @@ export function NavigationButtons({
       )}
       {showAdvanceSlot && (
         <button
-          onClick={() =>
-            onAction(hasUnrevealedTeams ? 'REVEAL_NEXT_TEAM' : 'ADVANCE')
-          }
-          disabled={isLeaderboardVisible && !hasUnrevealedTeams}
+          onClick={() => onAction(advanceSlotAction)}
           className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
         >
-          {hasUnrevealedTeams
-            ? 'Show Next Team'
-            : getAdvanceLabel(progressStatus)}
+          {advanceSlotLabel}
           <ChevronRightIcon aria-hidden="true" />
         </button>
       )}

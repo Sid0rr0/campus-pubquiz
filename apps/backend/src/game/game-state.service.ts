@@ -362,6 +362,7 @@ export class GameStateService implements OnModuleInit {
       ),
       leaderboardRevealCount: computeLeaderboardRevealCount(
         action,
+        session.progress.isLeaderboardVisible,
         progress,
         sessionWithGradingStatus.leaderboard,
         sessionWithGradingStatus.leaderboardRevealCount,

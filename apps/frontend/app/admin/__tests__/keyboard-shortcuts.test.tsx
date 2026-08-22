@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
-  mockFetchQuizzes: vi.fn(),
-  mockUseAuth: vi.fn(),
-  searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
-}));
+const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
+  vi.hoisted(() => ({
+    mockUseGameSocket: vi.fn(),
+    mockFetchQuizzes: vi.fn(),
+    mockUseAuth: vi.fn(),
+    searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
+  }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
@@ -41,7 +42,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends ADVANCE when ArrowRight is pressed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'question_open' }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: null,
+      },
       connectionError: null,
       sendAction,
     });
@@ -57,8 +61,15 @@ describe('AdminPage — keyboard shortcuts', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-        blockQuestions: [{ id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 }],
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        ],
       },
       connectionError: null,
       sendAction,
@@ -87,7 +98,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_LEADERBOARD when ArrowDown is pressed and the leaderboard is visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ isLeaderboardVisible: true }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+      },
       connectionError: null,
       sendAction,
     });
@@ -101,7 +115,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('ignores ArrowUp when the leaderboard is already visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ isLeaderboardVisible: true }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+      },
       connectionError: null,
       sendAction,
     });
@@ -119,8 +136,18 @@ describe('AdminPage — keyboard shortcuts', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 },
-          { teamId: 2, teamName: 'Beer Necessities', totalPoints: 5, bonusPoints: 0 },
+          {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            totalPoints: 10,
+            bonusPoints: 0,
+          },
+          {
+            teamId: 2,
+            teamName: 'Beer Necessities',
+            totalPoints: 5,
+            bonusPoints: 0,
+          },
         ],
         leaderboardRevealCount: 0,
       },
@@ -134,10 +161,43 @@ describe('AdminPage — keyboard shortcuts', () => {
     expect(sendAction).toHaveBeenCalledWith('REVEAL_NEXT_TEAM');
   });
 
+  it('sends TOGGLE_LEADERBOARD on ArrowRight once every team has been revealed', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isLeaderboardVisible: true,
+        }),
+        currentQuestion: null,
+        leaderboard: [
+          {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            totalPoints: 10,
+            bonusPoints: 0,
+          },
+        ],
+        leaderboardRevealCount: 1,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.keyboard('{ArrowRight}');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
+  });
+
   it('does not trigger a shortcut while typing in a text field', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'lobby' }), currentQuestion: null, joinCode: 'TESTCODE' },
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'TESTCODE',
+      },
       connectionError: null,
       sendAction,
     });

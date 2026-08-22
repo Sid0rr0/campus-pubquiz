@@ -11,6 +11,7 @@ import type {
  */
 export function computeLeaderboardRevealCount(
   action: GameAction,
+  wasLeaderboardVisible: boolean,
   newProgress: GameProgress,
   leaderboard: LeaderboardEntry[],
   currentRevealCount: number,
@@ -18,14 +19,11 @@ export function computeLeaderboardRevealCount(
   if (action === 'TOGGLE_LEADERBOARD') {
     return 0;
   }
-  // Entering the final leaderboard — whether via the last question's ADVANCE
-  // or the admin's explicit End Quiz button — always starts from empty, same
-  // as any other TOGGLE_LEADERBOARD: it must never inherit a stale or
-  // partial count left over from an earlier mid-game reveal.
-  if (
-    newProgress.status === 'ended' &&
-    (action === 'ADVANCE' || action === 'END_QUIZ')
-  ) {
+  // Any auto-triggered transition that newly shows the board — ending the
+  // quiz, or finishing a mid-quiz reveal block — starts from empty, same as
+  // an explicit TOGGLE_LEADERBOARD: it must never inherit a stale or partial
+  // count left over from an earlier reveal.
+  if (!wasLeaderboardVisible && newProgress.isLeaderboardVisible) {
     return 0;
   }
   if (

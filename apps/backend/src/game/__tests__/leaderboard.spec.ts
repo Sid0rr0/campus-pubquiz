@@ -8,6 +8,7 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  GAME_STATE_FIXTURE_SEEDED_GAME,
 } from './test-utils';
 
 describe('GameStateService — leaderboard', () => {
@@ -192,6 +193,84 @@ describe('GameStateService — leaderboard', () => {
     // starts the final leaderboard empty rather than counting itself as the
     // first reveal step — same as the explicit End Quiz button.
     expect(snapshot.leaderboardRevealCount).toBe(0);
+  });
+
+  it('shows the leaderboard between reveal blocks, before the next round intro card is revealed', async () => {
+    const customSeedService = createFakeGameStateSeedService();
+    customSeedService.seed.mockResolvedValue({
+      ...GAME_STATE_FIXTURE_SEEDED_GAME,
+      rounds: [
+        {
+          id: 31,
+          title: 'Round A',
+          breakAfter: true,
+          questions: [
+            {
+              id: 41,
+              type: 'free_text',
+              prompt: 'Q1',
+              points: 1,
+              answer: 'A1',
+            },
+          ],
+        },
+        {
+          id: 32,
+          title: 'Round B',
+          breakAfter: true,
+          questions: [
+            {
+              id: 42,
+              type: 'free_text',
+              prompt: 'Q2',
+              points: 1,
+              answer: 'A2',
+            },
+          ],
+        },
+      ],
+    });
+    const customService = new GameStateService(
+      asSeedService(customSeedService),
+      asGameProgressRepository(createFakeGameProgressRepository()),
+      createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
+    );
+    await customService.onModuleInit();
+
+    customService.setLeaderboard(joinCode, [
+      {
+        teamId: 1,
+        teamName: 'First',
+        totalPoints: 10,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+    ]);
+
+    await customService.applyAction(joinCode, 'START_QUIZ');
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> r1q1
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> locking (round A breakAfter)
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> break_intro
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
+    await customService.applyAction(joinCode, 'ADVANCE'); // -> reveal (revealIndex 0)
+    const afterReveal = await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1), board up
+
+    expect(afterReveal.progress.status).toBe('round_intro');
+    expect(afterReveal.progress.roundIndex).toBe(1);
+    expect(afterReveal.progress.isLeaderboardVisible).toBe(true);
+    // A fresh mid-quiz reveal, same as the final leaderboard on 'ended' —
+    // never inherits a stale count from an earlier reveal.
+    expect(afterReveal.leaderboardRevealCount).toBe(0);
+
+    const afterClose = await customService.applyAction(
+      joinCode,
+      'TOGGLE_LEADERBOARD',
+    );
+    expect(afterClose.progress.status).toBe('round_intro');
+    expect(afterClose.progress.roundIndex).toBe(1);
+    expect(afterClose.progress.isLeaderboardVisible).toBe(false);
   });
 
   it('starts with an empty leaderboard', () => {

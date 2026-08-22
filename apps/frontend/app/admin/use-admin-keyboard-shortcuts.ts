@@ -22,10 +22,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Left/Right step through Previous/Advance (or reveal leaderboard teams one
- * at a time once the board is up); Up/Down show/hide the leaderboard. Ignored
- * while focus is in a form field so typing a password or a grade isn't
- * hijacked.
+ * Left/Right step through Previous/Advance (reveal leaderboard teams one at a
+ * time once the board is up, then hide it again once every team's shown);
+ * Up/Down show/hide the leaderboard. Ignored while focus is in a form field
+ * so typing a password or a grade isn't hijacked.
  */
 export function useAdminKeyboardShortcuts({
   canAdvance,
@@ -50,7 +50,12 @@ export function useAdminKeyboardShortcuts({
         if (hasUnrevealedTeams) {
           event.preventDefault();
           sendAction('REVEAL_NEXT_TEAM');
-        } else if (canAdvance && !isLeaderboardVisible) {
+        } else if (isLeaderboardVisible) {
+          if (canAdvance) {
+            event.preventDefault();
+            sendAction('TOGGLE_LEADERBOARD');
+          }
+        } else if (canAdvance) {
           event.preventDefault();
           sendAction('ADVANCE');
         }
@@ -71,5 +76,11 @@ export function useAdminKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canAdvance, canGoToPreviousQuestion, hasUnrevealedTeams, isLeaderboardVisible, sendAction]);
+  }, [
+    canAdvance,
+    canGoToPreviousQuestion,
+    hasUnrevealedTeams,
+    isLeaderboardVisible,
+    sendAction,
+  ]);
 }

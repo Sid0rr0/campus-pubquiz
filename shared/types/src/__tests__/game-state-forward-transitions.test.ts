@@ -282,7 +282,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
     expect(next.isLeaderboardVisible).toBe(true);
   });
 
-  it("shows the next round's intro card from reveal once the last question of the finished block has been shown", () => {
+  it("shows the next round's intro card from reveal once the last question of the finished block has been shown, with the leaderboard up first", () => {
     const threeRounds: GameContext = {
       rounds: [
         { questionCount: 1, breakAfter: true },
@@ -303,7 +303,9 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       status: 'round_intro',
       roundIndex: 1,
       questionIndex: 0,
-      isLeaderboardVisible: false,
+      // Standings show first, same as the final leaderboard on 'ended' —
+      // TOGGLE_LEADERBOARD reveals the round_intro card underneath.
+      isLeaderboardVisible: true,
       revealIndex: 0,
       furthestOpenIndex: -1,
     });

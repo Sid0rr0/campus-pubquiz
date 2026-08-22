@@ -2,14 +2,19 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
-import { authenticatedAuthResult, getDesktopButton, progress } from './test-utils';
+import {
+  authenticatedAuthResult,
+  getDesktopButton,
+  progress,
+} from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
-  mockFetchQuizzes: vi.fn(),
-  mockUseAuth: vi.fn(),
-  searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
-}));
+const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
+  vi.hoisted(() => ({
+    mockUseGameSocket: vi.fn(),
+    mockFetchQuizzes: vi.fn(),
+    mockUseAuth: vi.fn(),
+    searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
+  }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
@@ -47,7 +52,9 @@ describe('AdminPage — leaderboard', () => {
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /open leaderboard/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /open leaderboard/i }),
+    );
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
@@ -55,13 +62,18 @@ describe('AdminPage — leaderboard', () => {
   it('shows "Close Leaderboard" and sends TOGGLE_LEADERBOARD when visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ isLeaderboardVisible: true }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+      },
       connectionError: null,
       sendAction,
     });
     render(<AdminPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /close leaderboard/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /close leaderboard/i }),
+    );
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
@@ -69,11 +81,25 @@ describe('AdminPage — leaderboard', () => {
   it('disables Previous while the leaderboard is visible', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'question_open', questionIndex: 1, isLeaderboardVisible: true }),
-        currentQuestion: { id: 'r1q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+        progress: progress({
+          status: 'question_open',
+          questionIndex: 1,
+          isLeaderboardVisible: true,
+        }),
+        currentQuestion: {
+          id: 'r1q2',
+          type: 'free_text',
+          prompt: 'Name a vegetable',
+          points: 1,
+        },
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-          { id: 'r1q2', type: 'free_text', prompt: 'Name a vegetable', points: 1 },
+          {
+            id: 'r1q2',
+            type: 'free_text',
+            prompt: 'Name a vegetable',
+            points: 1,
+          },
         ],
       },
       connectionError: null,
@@ -91,8 +117,18 @@ describe('AdminPage — leaderboard', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 },
-          { teamId: 2, teamName: 'Beer Necessities', totalPoints: 5, bonusPoints: 0 },
+          {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            totalPoints: 10,
+            bonusPoints: 0,
+          },
+          {
+            teamId: 2,
+            teamName: 'Beer Necessities',
+            totalPoints: 5,
+            bonusPoints: 0,
+          },
         ],
         leaderboardRevealCount: 0,
       },
@@ -101,36 +137,69 @@ describe('AdminPage — leaderboard', () => {
     });
     render(<AdminPage />);
 
-    expect(screen.queryByRole('button', { name: /^advance$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^advance$/i }),
+    ).not.toBeInTheDocument();
     await userEvent.click(getDesktopButton(/show next team/i));
 
     expect(sendAction).toHaveBeenCalledWith('REVEAL_NEXT_TEAM');
   });
 
-  it('reverts Advance to its normal (but disabled) label once every team is revealed', () => {
+  it('swaps Advance for "Hide Leaderboard" once every team is revealed', async () => {
+    const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'question_open', isLeaderboardVisible: true }),
+        progress: progress({
+          status: 'question_open',
+          isLeaderboardVisible: true,
+        }),
         currentQuestion: null,
-        leaderboard: [{ teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 }],
+        leaderboard: [
+          {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            totalPoints: 10,
+            bonusPoints: 0,
+          },
+        ],
         leaderboardRevealCount: 1,
       },
       connectionError: null,
-      sendAction: vi.fn(),
+      sendAction,
     });
     render(<AdminPage />);
 
-    expect(screen.queryByRole('button', { name: /show next team/i })).not.toBeInTheDocument();
-    expect(getDesktopButton(/^advance$/i)).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: /show next team/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^advance$/i }),
+    ).not.toBeInTheDocument();
+
+    const hideButton = getDesktopButton(/hide leaderboard/i);
+    expect(hideButton).not.toBeDisabled();
+    await userEvent.click(hideButton);
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
 
   it('re-enables Advance once the leaderboard is closed after a full reveal', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'question_open', isLeaderboardVisible: false }),
+        progress: progress({
+          status: 'question_open',
+          isLeaderboardVisible: false,
+        }),
         currentQuestion: null,
-        leaderboard: [{ teamId: 1, teamName: 'The Quizzards', totalPoints: 10, bonusPoints: 0 }],
+        leaderboard: [
+          {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            totalPoints: 10,
+            bonusPoints: 0,
+          },
+        ],
         leaderboardRevealCount: 1,
       },
       connectionError: null,
@@ -155,8 +224,20 @@ describe('AdminPage — leaderboard', () => {
           { teamId: 'team-2', teamName: 'Second Place', isConnected: true },
         ],
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0, roundPoints: [] },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0, roundPoints: [] },
+          {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            totalPoints: 5,
+            bonusPoints: 0,
+            roundPoints: [],
+          },
+          {
+            teamId: 'team-2',
+            teamName: 'Second Place',
+            totalPoints: 3,
+            bonusPoints: 0,
+            roundPoints: [],
+          },
         ],
       },
       connectionError: null,
@@ -167,11 +248,15 @@ describe('AdminPage — leaderboard', () => {
     render(<AdminPage />);
 
     const teamsTable = screen.getByRole('table');
-    const quizzardsRow = within(teamsTable).getByText('The Quizzards').closest('tr');
+    const quizzardsRow = within(teamsTable)
+      .getByText('The Quizzards')
+      .closest('tr');
     expect(quizzardsRow).not.toBeNull();
     expect(within(quizzardsRow!).getByText('5')).toBeInTheDocument(); // Total column
 
-    const secondPlaceRow = within(teamsTable).getByText('Second Place').closest('tr');
+    const secondPlaceRow = within(teamsTable)
+      .getByText('Second Place')
+      .closest('tr');
     expect(secondPlaceRow).not.toBeNull();
     expect(within(secondPlaceRow!).getByText('3')).toBeInTheDocument(); // Total column
   });
