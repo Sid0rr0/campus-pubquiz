@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
@@ -31,7 +31,34 @@ vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
   return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
 });
 
+const LIVE_SESSION = {
+  joinCode: 'ABCDEF',
+  quizId: 1,
+  quizTitle: 'Campus Pub Quiz Night',
+  status: 'lobby' as const,
+  teamCount: 0,
+};
+
+/** /play hides the raw game code input and offers only the live-session select — picking a game exercises the same codeInput state a typed value would. */
+async function pickLiveSession() {
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('combobox', { name: /pick the quiz/i }),
+  );
+  await user.click(
+    await screen.findByRole('option', { name: /campus pub quiz night/i }),
+  );
+}
+
 describe('PlayPage — join and reconnect', () => {
+  beforeAll(() => {
+    // Radix Select needs these pointer-capture APIs stubbed under jsdom.
+    window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
+    window.HTMLElement.prototype.setPointerCapture = vi.fn();
+    window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
@@ -42,27 +69,29 @@ describe('PlayPage — join and reconnect', () => {
     mockFetchPublicSessions.mockResolvedValue([]);
   });
 
-  it('shows a join form asking for a team name and a game code', () => {
+  it('shows a join form asking for a team name and a live game to join, with no raw game code field', async () => {
+    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     render(<PlayPage />);
     expect(
       screen.getByRole('textbox', { name: /team name/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('textbox', { name: /game code/i }),
+      await screen.findByRole('combobox', { name: /pick the quiz/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /game code/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('stores the team name and game code and switches to the game view after joining', async () => {
+    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     render(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
       'The Quizzards',
     );
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /game code/i }),
-      'ABCDEF',
-    );
+    await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
     expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
@@ -72,26 +101,6 @@ describe('PlayPage — join and reconnect', () => {
       'ABCDEF',
     );
     expect(screen.getByText(/playing as the quizzards/i)).toBeInTheDocument();
-  });
-
-  it('calls joinTeam with the trimmed name and normalized game code when submitting', async () => {
-    const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
-    render(<PlayPage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      '  The Quizzards  ',
-    );
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /game code/i }),
-      ' abcdef ',
-    );
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-
-    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
-      joinCode: 'ABCDEF',
-    });
   });
 
   it('does not join when the game code is empty', async () => {
@@ -108,13 +117,14 @@ describe('PlayPage — join and reconnect', () => {
     expect(joinTeam).not.toHaveBeenCalled();
   });
 
-  it('prefills the game code from the ?code= query parameter (QR scan)', () => {
+  it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
+    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<PlayPage />);
 
-    expect(screen.getByRole('textbox', { name: /game code/i })).toHaveValue(
-      'ABCDEF',
-    );
+    expect(
+      await screen.findByRole('combobox', { name: /pick the quiz/i }),
+    ).toHaveTextContent(/campus pub quiz night/i);
   });
 
   it('passes the ?code= query parameter to the socket handshake', () => {
@@ -141,16 +151,14 @@ describe('PlayPage — join and reconnect', () => {
   });
 
   it('connects the socket once a code is submitted through the join form', async () => {
+    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     render(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
       'The Quizzards',
     );
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /game code/i }),
-      'abcdef',
-    );
+    await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
     expect(mockUseGameSocket).toHaveBeenLastCalledWith(
@@ -189,16 +197,14 @@ describe('PlayPage — join and reconnect', () => {
   it('resends joinTeam with a corrected team code when retrying with the same name and game code', async () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     const { rerender } = render(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
       'The Quizzards',
     );
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /game code/i }),
-      'abcdef',
-    );
+    await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
     mockUseGameSocket.mockReturnValue(

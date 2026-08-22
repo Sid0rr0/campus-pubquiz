@@ -52,7 +52,9 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
         {isForm && (
           <>
             <h2 className="mb-1 font-display text-2xl">Join the quiz</h2>
-            <p className="mb-5 text-sm font-semibold text-foreground/55">Takes about ten seconds.</p>
+            <p className="mb-5 text-sm font-semibold text-foreground/55">
+              Takes about ten seconds.
+            </p>
             <JoinForm
               nameInput={nameInput}
               onNameInputChange={setNameInput}
@@ -62,6 +64,7 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
               onTeamCodeInputChange={setTeamCodeInput}
               connectionError={connectionError}
               onSubmit={onSubmit}
+              hideGameCodeInput
             />
           </>
         )}
@@ -69,7 +72,9 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
         {isConnecting && (
           <div className="flex flex-col items-center gap-3.5 py-8">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-foreground/15 border-t-magenta" />
-            <p className="text-[15px] font-extrabold">Connecting to the table…</p>
+            <p className="text-[15px] font-extrabold">
+              Connecting to the table…
+            </p>
           </div>
         )}
 
@@ -78,7 +83,9 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green text-lg text-white">
               ✓
             </div>
-            <p className="text-[15px] font-extrabold">You&apos;re in, {teamName}! Heading to the game…</p>
+            <p className="text-[15px] font-extrabold">
+              You&apos;re in, {teamName}! Heading to the game…
+            </p>
           </div>
         )}
       </div>

@@ -15,6 +15,8 @@ interface JoinFormProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   /** /play shows the team code field from the start — it's the reconnect/direct-visit fallback, where "played before?" is the common case rather than the exception the home page's collapsed toggle assumes. */
   alwaysShowTeamCode?: boolean;
+  /** /play hides the manual game code field — a team landing there already has a code (QR scan) or picks a running game from the select above it, so the raw input is just clutter. */
+  hideGameCodeInput?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function JoinForm({
   connectionError,
   onSubmit,
   alwaysShowTeamCode = false,
+  hideGameCodeInput = false,
 }: JoinFormProps) {
   const [teamCodeRevealed, setTeamCodeRevealed] = useState(false);
   // A stored team code (returning team) or a connection error asking for one
@@ -74,29 +77,33 @@ export function JoinForm({
           value={codeInput}
           onSelectSession={onCodeInputChange}
         />
-        <label
-          htmlFor="join-game-code"
-          className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
-        >
-          Game code
-        </label>
-        <input
-          id="join-game-code"
-          value={codeInput}
-          onChange={(event) => onCodeInputChange(event.target.value)}
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="e.g. BOLD-AMBER-OTTER"
-          className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
-        />
+        {!hideGameCodeInput && (
+          <>
+            <label
+              htmlFor="join-game-code"
+              className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
+            >
+              Game code
+            </label>
+            <input
+              id="join-game-code"
+              value={codeInput}
+              onChange={(event) => onCodeInputChange(event.target.value)}
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="e.g. BOLD-AMBER-OTTER"
+              className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold uppercase tracking-widest"
+            />
+          </>
+        )}
         {showTeamCode ? (
           <>
             <label
               htmlFor="join-team-code"
               className="mt-2 text-xs font-extrabold tracking-wide text-foreground/55"
             >
-              Team code
+              Team code (for returning teams)
             </label>
             <input
               id="join-team-code"
