@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { CheckIcon } from '@radix-ui/react-icons';
-import type { QuestionView } from '@campus-pubquiz/types';
+import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
+import { IDK_ANSWER_VALUE, type QuestionView } from '@campus-pubquiz/types';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
 import { SortAnswer } from '@/app/play/sort-answer';
@@ -13,31 +13,67 @@ interface AnswerFormProps {
   onSubmit: (value: string) => void;
 }
 
+interface IdkButtonProps {
+  isChosen: boolean;
+  onClick: () => void;
+}
+
+/** Submits the IDK_ANSWER_VALUE sentinel — shown under every question type's answer input so a team can register "we don't know" instead of leaving the question untouched. */
+function IdkButton({ isChosen, onClick }: IdkButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isChosen}
+      onClick={onClick}
+      className={
+        isChosen
+          ? 'flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-magenta bg-white px-4 text-base font-extrabold text-magenta'
+          : 'flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-foreground/35 bg-transparent px-4 text-base font-extrabold text-foreground/55'
+      }
+    >
+      <QuestionMarkCircledIcon aria-hidden="true" />I don&apos;t know
+      {isChosen && (
+        <CheckIcon aria-hidden="true" className="ml-auto text-magenta" />
+      )}
+    </button>
+  );
+}
+
 export function AnswerForm({
   question,
   initialValue = '',
   onSubmit,
 }: AnswerFormProps) {
   const [value, setValue] = useState(initialValue);
+  const isIdk = initialValue === IDK_ANSWER_VALUE;
+  const idkButton = (
+    <IdkButton isChosen={isIdk} onClick={() => onSubmit(IDK_ANSWER_VALUE)} />
+  );
 
   if (question.type === 'sort' && question.options) {
     return (
-      <SortAnswer
-        options={question.options}
-        initialValue={initialValue}
-        onSubmit={onSubmit}
-      />
+      <div className="flex flex-col gap-3">
+        <SortAnswer
+          options={question.options}
+          initialValue={initialValue}
+          onSubmit={onSubmit}
+        />
+        {idkButton}
+      </div>
     );
   }
 
   if (question.type === 'match' && question.options && question.matchTargets) {
     return (
-      <MatchAnswer
-        leftItems={question.options}
-        rightItems={question.matchTargets}
-        initialValue={initialValue}
-        onSubmit={onSubmit}
-      />
+      <div className="flex flex-col gap-3">
+        <MatchAnswer
+          leftItems={question.options}
+          rightItems={question.matchTargets}
+          initialValue={initialValue}
+          onSubmit={onSubmit}
+        />
+        {idkButton}
+      </div>
     );
   }
 
@@ -71,6 +107,7 @@ export function AnswerForm({
             </button>
           );
         })}
+        {idkButton}
       </div>
     );
   }
@@ -97,7 +134,7 @@ export function AnswerForm({
         onChange={(event) => setValue(event.target.value)}
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
       />
-      {initialValue && (
+      {initialValue && !isIdk && (
         <p className="text-xs font-extrabold tracking-wide text-foreground/55">
           Submitted: {initialValue}
         </p>
@@ -109,6 +146,7 @@ export function AnswerForm({
         <CheckIcon aria-hidden="true" />
         Submit
       </button>
+      {idkButton}
     </form>
   );
 }

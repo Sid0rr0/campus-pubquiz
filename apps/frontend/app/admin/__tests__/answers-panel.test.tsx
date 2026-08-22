@@ -132,6 +132,31 @@ describe('AnswersPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a friendly label for a team that submitted the IDK sentinel', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: '__idk__',
+              pointsAwarded: 0,
+              gradedAt: null,
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("🤷 I don't know")).toBeInTheDocument();
+    const answeredRow = screen.getByText("🤷 I don't know").closest('li');
+    expect(answeredRow).not.toHaveClass('opacity-40');
+  });
+
   it('lists every team, even one that has not answered yet', () => {
     render(
       <AnswersPanel

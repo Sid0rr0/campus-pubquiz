@@ -108,4 +108,69 @@ describe('PlayPage — sort and match answers', () => {
       'excalibur|shield',
     );
   });
+
+  it('submits the IDK sentinel from the sort question\'s "I don\'t know" button', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'sort',
+            prompt: 'Order these planets from the sun outward.',
+            options: ['Venus', 'Mercury', 'Earth'],
+            points: 3,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        submitAnswer,
+      }),
+    );
+    render(<PlayPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /i don't know/i }),
+    );
+
+    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
+  });
+
+  it('submits the IDK sentinel from the match question\'s "I don\'t know" button', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'match',
+            prompt: 'Match the hero to their weapon.',
+            options: ['arthur', 'captain america'],
+            matchTargets: ['shield', 'excalibur'],
+            points: 4,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        submitAnswer,
+      }),
+    );
+    render(<PlayPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /i don't know/i }),
+    );
+
+    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
+  });
 });

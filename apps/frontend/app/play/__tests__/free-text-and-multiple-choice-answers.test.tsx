@@ -201,6 +201,70 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     );
   });
 
+  it('submits the IDK sentinel when the free-text "I don\'t know" button is pressed', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        submitAnswer,
+      }),
+    );
+    render(<PlayPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /i don't know/i }),
+    );
+
+    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
+  });
+
+  it('shows the IDK button as pressed once submitted, on both free-text and multiple-choice', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'multiple_choice',
+            prompt: 'Capital of France?',
+            options: ['Paris', 'London', 'Berlin', 'Rome'],
+            points: 2,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: '__idk__' },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(
+      screen.getByRole('button', { name: /i don't know/i }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Paris' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
   it('does not show an answer form before the team identity has been confirmed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(

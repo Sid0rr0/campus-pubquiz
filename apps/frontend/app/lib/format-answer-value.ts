@@ -1,4 +1,8 @@
-import { splitPipeList, type QuestionType } from '@campus-pubquiz/types';
+import {
+  IDK_ANSWER_VALUE,
+  splitPipeList,
+  type QuestionType,
+} from '@campus-pubquiz/types';
 
 /**
  * sort/match answers are stored/submitted as a `|`-joined string.
@@ -16,6 +20,7 @@ export function formatAnswerValue(
   type: QuestionType,
   leftItems?: string[],
 ): string {
+  if (value === IDK_ANSWER_VALUE) return "🤷 I don't know";
   if (type === 'sort') return splitPipeList(value).join(' → ');
   if (type === 'match') {
     const rightItems = splitPipeList(value);

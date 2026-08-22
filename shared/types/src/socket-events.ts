@@ -217,6 +217,19 @@ export interface SubmitAnswerPayload {
   value: string;
 }
 
+/**
+ * Sentinel `SubmitAnswerPayload.value` a team can submit instead of a real
+ * answer, meaning "we don't know" rather than leaving the question
+ * untouched. Still counts as a real submission everywhere a submitted
+ * answer does — `answeredTeamIds`, the admin's per-team answer list, grading
+ * — since no server-side code branches on it; only `formatAnswerValue`
+ * (frontend) recognizes it, to render a friendly label instead of the raw
+ * sentinel. Never equals a real correct answer, so it's auto-graded 0 for
+ * multiple_choice/sort/match/closest_guess exactly like any other wrong
+ * answer, and free_text/picture/audio still fall to the admin to grade.
+ */
+export const IDK_ANSWER_VALUE = '__idk__';
+
 export interface AnswerReceivedPayload {
   questionId: number;
   teamId: number;
