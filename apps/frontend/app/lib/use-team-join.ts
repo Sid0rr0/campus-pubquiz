@@ -68,7 +68,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     activeJoinCode ?? undefined,
     joinAttempt,
   );
-  const { team, joinTeam, sessionClosed, kicked } = socket;
+  const { team, joinTeam, sessionClosed, kicked, reconnectedAt } = socket;
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -109,8 +109,15 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     // and again on every joinAttempt bump, so resubmitting the form with the
     // same name/code (e.g. only the team code field corrected after a
     // collision error) still re-sends the join instead of being a no-op.
-    // Deliberately excludes teamCodeInput itself from its deps (read via a
-    // ref instead) so retyping the team code alone doesn't re-fire this join.
+    // Also re-fires on every `reconnectedAt` change: the server only
+    // associates a socket with a team while handling JOIN_PLAYERS, and drops
+    // that association on disconnect — a transport-level auto-reconnect
+    // (network blip, phone waking up) gets a fresh socket id that the server
+    // has never seen, so without resending JOIN_PLAYERS here the team would
+    // silently be unable to submit answers until a full page reload forced
+    // this same effect to run again from scratch. Deliberately excludes
+    // teamCodeInput itself from its deps (read via a ref instead) so
+    // retyping the team code alone doesn't re-fire this join.
     if (!teamName || !activeJoinCode) return;
     const storedOptions = storedJoinOptions();
     joinTeam(teamName, {
@@ -118,7 +125,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
       teamCode: teamCodeInputRef.current.trim() || storedOptions.teamCode,
       joinCode: activeJoinCode,
     });
-  }, [teamName, activeJoinCode, joinAttempt, joinTeam]);
+  }, [teamName, activeJoinCode, joinAttempt, reconnectedAt, joinTeam]);
 
   useEffect(() => {
     if (team) {

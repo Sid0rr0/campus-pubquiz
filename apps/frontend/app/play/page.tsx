@@ -273,6 +273,11 @@ function PlayPageContent() {
           another night.
         </p>
       )}
+      {connectionError && (
+        <p role="alert" className="mb-4 font-extrabold text-magenta">
+          {connectionError}
+        </p>
+      )}
       <GameStatusScreens
         progress={progress}
         isAnswerable={isAnswerable}
