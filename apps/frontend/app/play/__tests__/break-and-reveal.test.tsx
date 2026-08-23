@@ -113,6 +113,88 @@ describe('PlayPage — break and reveal', () => {
     expect(screen.getByText(/answering is locked/i)).toBeInTheDocument();
   });
 
+  it('shows a "look at the screen" title card for the round reveal is crossing into, not the stale top-level round title', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const r1q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'General Knowledge',
+    };
+    const r2q1 = {
+      id: 'r2q1',
+      type: 'free_text' as const,
+      prompt: 'Tallest mountain?',
+      points: 1,
+      roundNumber: 2,
+      questionNumberInRound: 1,
+      roundTitle: 'Geography',
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          // progress.roundIndex stays pinned to the block's last round
+          // (the breakAfter round) throughout reveal — roundTitle here
+          // deliberately mismatches revealQuestions[revealIndex] so the
+          // test fails if the screen ever falls back to that stale prop.
+          progress: progress({ status: 'reveal_intro', revealIndex: 1 }),
+          currentQuestion: null,
+          roundTitle: 'Geography',
+          blockQuestions: [r1q1, r2q1],
+          revealQuestions: [r1q1, r2q1],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Geography' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a "look at the screen" title card for a round\'s own title while stepping back through break review', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const r1q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'General Knowledge',
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'break_round_intro', revealIndex: 0 }),
+          currentQuestion: null,
+          roundTitle: 'Geography',
+          blockQuestions: [r1q1],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+      }),
+    );
+    render(<PlayPage />);
+
+    expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'General Knowledge' }),
+    ).toBeInTheDocument();
+  });
+
   it('still shows the block question picker during reveal', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {

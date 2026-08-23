@@ -10,6 +10,8 @@ interface GameStatusScreensProps {
   isAnswerable: boolean;
   quizStructure: QuizStructureSummary;
   roundTitle: string;
+  revealIntroRoundTitle?: string;
+  breakRoundIntroRoundTitle?: string;
   joinCode: string;
   rules: string[];
   enabledBonusCategories: BonusCategory[];
@@ -21,6 +23,8 @@ export function GameStatusScreens({
   isAnswerable,
   quizStructure,
   roundTitle,
+  revealIntroRoundTitle,
+  breakRoundIntroRoundTitle,
   joinCode,
   rules,
   enabledBonusCategories,
@@ -69,6 +73,34 @@ export function GameStatusScreens({
               👀 Look at the screen
             </p>
             <h1 className="font-display text-2xl">{roundTitle}</h1>
+          </div>
+        )}
+      {/* Reveal crossing into a new round within the same block, or Previous
+          stepping back through break to a round's own title card — same
+          "look at the screen" treatment as round_intro, but sourced from the
+          block/reveal question at revealIndex rather than the top-level
+          roundTitle, since progress.roundIndex stays pinned to the block's
+          last round throughout break/reveal. */}
+      {!progress.isLeaderboardVisible &&
+        progress.status === 'reveal_intro' &&
+        revealIntroRoundTitle && (
+          <div className="mt-16 flex flex-col items-center gap-2 text-center">
+            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+            <h1 className="font-display text-2xl">{revealIntroRoundTitle}</h1>
+          </div>
+        )}
+      {!progress.isLeaderboardVisible &&
+        progress.status === 'break_round_intro' &&
+        breakRoundIntroRoundTitle && (
+          <div className="mt-16 flex flex-col items-center gap-2 text-center">
+            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+            <h1 className="font-display text-2xl">
+              {breakRoundIntroRoundTitle}
+            </h1>
           </div>
         )}
       {!progress.isLeaderboardVisible && progress.status === 'ended' && (

@@ -216,6 +216,19 @@ function PlayPageContent() {
     progress.status === 'break_round_intro' ||
     progress.status === 'reveal_intro' ||
     progress.status === 'reveal';
+  // Same "look at the screen" round title card as round_intro, shown when
+  // reveal crosses into a new round within the block, or PREVIOUS steps back
+  // through break to a round's own title — sourced from the block/reveal
+  // question at revealIndex, since progress.roundIndex stays pinned to the
+  // block's last round throughout break/reveal (see display/page.tsx).
+  const revealIntroRoundTitle =
+    progress.status === 'reveal_intro'
+      ? revealQuestions[progress.revealIndex]?.roundTitle
+      : undefined;
+  const breakRoundIntroRoundTitle =
+    progress.status === 'break_round_intro'
+      ? blockQuestions[progress.revealIndex]?.roundTitle
+      : undefined;
   // The block browser (question picker + prompt) stays up through break/reveal
   // too, so teams can review the block they just answered — unless the
   // leaderboard overlay is toggled on, which takes over the screen instead.
@@ -283,6 +296,8 @@ function PlayPageContent() {
         isAnswerable={isAnswerable}
         quizStructure={quizStructure}
         roundTitle={roundTitle}
+        revealIntroRoundTitle={revealIntroRoundTitle}
+        breakRoundIntroRoundTitle={breakRoundIntroRoundTitle}
         joinCode={snapshot.joinCode}
         rules={settings.rules}
         enabledBonusCategories={settings.enabledBonusCategories}
