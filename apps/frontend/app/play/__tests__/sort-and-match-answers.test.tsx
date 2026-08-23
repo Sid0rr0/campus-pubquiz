@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -51,6 +51,9 @@ describe('PlayPage — sort and match answers', () => {
     render(<PlayPage />);
 
     expect(screen.getByText('Venus')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Drag to reorder Venus' }),
+    ).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole('button', { name: 'Move Venus down' }),
     );
@@ -62,7 +65,7 @@ describe('PlayPage — sort and match answers', () => {
     );
   });
 
-  it('shows match left/right lists and submits once every row has a choice', async () => {
+  it('shows a fixed left column beside a reorderable right column', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue(
@@ -88,25 +91,17 @@ describe('PlayPage — sort and match answers', () => {
     );
     render(<PlayPage />);
 
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-
-    const [arthurSelect, captainSelect] = screen.getAllByRole('combobox');
+    expect(screen.getByText('arthur')).toBeInTheDocument();
+    expect(screen.getByText('captain america')).toBeInTheDocument();
+    expect(screen.getByText('shield')).toBeInTheDocument();
+    expect(screen.getByText('excalibur')).toBeInTheDocument();
     expect(
-      within(arthurSelect).getByRole('option', { name: 'a. shield' }),
+      screen.getByRole('button', { name: 'Drag to reorder shield' }),
     ).toBeInTheDocument();
     expect(
-      within(arthurSelect).getByRole('option', { name: 'b. excalibur' }),
+      screen.getByRole('button', { name: 'Drag to reorder excalibur' }),
     ).toBeInTheDocument();
-    await userEvent.selectOptions(arthurSelect, 'excalibur');
-    expect(submitAnswer).not.toHaveBeenCalled();
-    await userEvent.selectOptions(captainSelect, 'shield');
-
-    expect(submitAnswer).toHaveBeenCalledWith(
-      'r1q1',
-      'team-1',
-      'excalibur|shield',
-    );
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('submits the IDK sentinel from the sort question\'s "I don\'t know" button', async () => {
