@@ -17,6 +17,7 @@ import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { storedJoinOptions } from '@/app/lib/team-storage';
+import { usePublishPlayerMenu } from '@/app/lib/player-menu-context';
 
 function PlayPageContent() {
   const router = useRouter();
@@ -43,6 +44,9 @@ function PlayPageContent() {
     handleJoin,
     handleLogOut,
   } = useTeamJoin(codeFromUrl);
+  // Publishes the team's identity/Log out into the shared app header so its
+  // mobile hamburger can surface them — see player-menu-context.tsx.
+  usePublishPlayerMenu(teamName, team, handleLogOut);
   // null = follow the question currently shown on the big screen.
   const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(
     null,
@@ -273,14 +277,14 @@ function PlayPageContent() {
         <button
           type="button"
           onClick={handleLogOut}
-          className="flex items-center gap-1 text-xs font-extrabold text-foreground/45 underline"
+          className="hidden items-center gap-1 text-xs font-extrabold text-foreground/45 underline md:flex"
         >
           <ExitIcon aria-hidden="true" />
           Log out
         </button>
       </div>
       {team && (
-        <p className="mb-4 flex flex-wrap items-center gap-1 text-xs text-foreground/45">
+        <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">
           Team code: {team.teamCode}
           <CopyButton value={team.teamCode} /> — save it to play as this team
           another night.

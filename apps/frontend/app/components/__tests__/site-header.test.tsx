@@ -1,17 +1,24 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthUser } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
+import type { PlayerMenuState } from '@/app/lib/player-menu-context';
 import { SiteHeader } from '@/app/components/site-header';
 
-const { mockUseAuth, mockPush, pathnameRef } = vi.hoisted(() => ({
-  mockUseAuth: vi.fn(),
-  mockPush: vi.fn(),
-  pathnameRef: { current: '/sessions' },
-}));
+const { mockUseAuth, mockUsePlayerMenu, mockPush, pathnameRef } = vi.hoisted(
+  () => ({
+    mockUseAuth: vi.fn(),
+    mockUsePlayerMenu: vi.fn(),
+    mockPush: vi.fn(),
+    pathnameRef: { current: '/sessions' },
+  }),
+);
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
+vi.mock('@/app/lib/player-menu-context', () => ({
+  usePlayerMenu: mockUsePlayerMenu,
+}));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => pathnameRef.current,
@@ -44,11 +51,22 @@ function authResult(overrides: Partial<UseAuthResult> = {}): UseAuthResult {
   };
 }
 
+function playerMenu(overrides: Partial<PlayerMenuState> = {}): PlayerMenuState {
+  return {
+    teamName: 'The Quizzards',
+    team: null,
+    onLogOut: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe('SiteHeader', () => {
   beforeEach(() => {
     pathnameRef.current = '/sessions';
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authResult());
+    mockUsePlayerMenu.mockReset();
+    mockUsePlayerMenu.mockReturnValue(null);
     mockPush.mockReset();
   });
 
@@ -146,5 +164,69 @@ describe('SiteHeader', () => {
 
     expect(container).toBeEmptyDOMElement();
     expect(mockUseAuth).not.toHaveBeenCalled();
+  });
+
+  it('shows no mobile hamburger when neither an account nor a team is present', () => {
+    render(<SiteHeader />);
+
+    expect(
+      screen.queryByRole('button', { name: /open menu/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('reveals the admin account links from the mobile hamburger in the app header', async () => {
+    const logout = vi.fn();
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: ADMIN_USER, logout }),
+    );
+    render(<SiteHeader />);
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /open menu/i }));
+    const drawer = screen.getByRole('dialog');
+
+    expect(
+      within(drawer).getByRole('link', { name: /^users$/i }),
+    ).toBeInTheDocument();
+
+    await userEvent
+      .setup()
+      .click(within(drawer).getByRole('button', { name: /log out/i }));
+
+    expect(logout).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/');
+  });
+
+  it('shows the team code and a working Log out button from the mobile hamburger on /play', async () => {
+    pathnameRef.current = '/play';
+    const onLogOut = vi.fn();
+    mockUsePlayerMenu.mockReturnValue(
+      playerMenu({
+        team: {
+          teamId: 1,
+          teamToken: 'token-1',
+          teamCode: 'QUICK-JADE-FOX',
+          teamName: 'The Quizzards',
+          answers: [],
+          bonusAwards: [],
+        },
+        onLogOut,
+      }),
+    );
+    render(<SiteHeader />);
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /open menu/i }));
+    const drawer = screen.getByRole('dialog');
+
+    expect(within(drawer).getByText(/QUICK-JADE-FOX/)).toBeInTheDocument();
+
+    await userEvent
+      .setup()
+      .click(within(drawer).getByRole('button', { name: /log out/i }));
+
+    expect(onLogOut).toHaveBeenCalled();
   });
 });

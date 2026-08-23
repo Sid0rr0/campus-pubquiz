@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import { Toaster } from 'sonner';
 import { SiteHeader } from '@/app/components/site-header';
 import { AuthProvider } from '@/app/lib/use-auth';
+import { PlayerMenuProvider } from '@/app/lib/player-menu-context';
 import './globals.css';
 
 const technika = localFont({
@@ -35,8 +36,10 @@ export default function RootLayout({
     <html lang="en" className={`${technika.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground font-body">
         <AuthProvider>
-          <SiteHeader />
-          {children}
+          <PlayerMenuProvider>
+            <SiteHeader />
+            {children}
+          </PlayerMenuProvider>
         </AuthProvider>
         <Toaster
           position="top-right"

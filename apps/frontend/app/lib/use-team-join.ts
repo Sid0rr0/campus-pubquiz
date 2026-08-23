@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import {
   useGameSocket,
@@ -208,7 +214,10 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     setJoinAttempt((count) => count + 1);
   }
 
-  function handleLogOut() {
+  // Stable across renders (unlike a plain function redeclared on every call)
+  // since SiteHeader's PlayerMenuProvider bridge depends on this reference
+  // to avoid re-publishing on every unrelated re-render of this hook.
+  const handleLogOut = useCallback(() => {
     // Team name and team code deliberately survive logout — only the token
     // and join code (this specific game session) are cleared, so the join
     // form stays prefilled for playing as this team again another night.
@@ -217,7 +226,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     setCodeInput(codeFromUrl);
     setHasStoredIdentity(false);
     setActiveJoinCode(codeFromUrl || null);
-  }
+  }, [codeFromUrl]);
 
   return {
     ...socket,
