@@ -135,11 +135,6 @@ export function AnswerForm({
         onChange={(event) => setValue(event.target.value)}
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
       />
-      {initialValue && !isIdk && (
-        <p className="text-xs font-extrabold tracking-wide text-foreground/55">
-          Submitted: {initialValue}
-        </p>
-      )}
       <Button
         type="submit"
         variant="solid"

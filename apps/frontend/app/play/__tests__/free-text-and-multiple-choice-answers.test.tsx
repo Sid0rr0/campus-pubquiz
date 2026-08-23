@@ -116,7 +116,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
   });
 
-  it('shows the previously submitted free-text answer below the text box', () => {
+  it('shows the previously submitted free-text answer below the question prompt', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(
       socketResult({

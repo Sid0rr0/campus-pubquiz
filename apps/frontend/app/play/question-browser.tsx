@@ -107,6 +107,16 @@ export function QuestionBrowser({
           <h1 className="text-balance font-display text-2xl leading-tight">
             {selectedQuestion.prompt}
           </h1>
+          {myAnswer && (
+            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+              Submitted:{' '}
+              {formatAnswerValue(
+                myAnswer,
+                selectedQuestion.type,
+                selectedQuestion.options,
+              )}
+            </p>
+          )}
           {(selectedQuestion.type === 'picture' ||
             selectedQuestion.type === 'audio' ||
             selectedQuestion.type === 'youtube' ||
