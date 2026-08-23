@@ -175,6 +175,15 @@ export interface StateSnapshotPayload {
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
   revealQuestions: BlockRevealQuestionView[];
   /**
+   * Every question from blocks that finished before the current one, with
+   * correct answers — a block can only be left behind once its own
+   * break+reveal has completed, so these are always safe to share. Lets a
+   * client that (re)connects mid-game (a phone that slept through a round,
+   * a page refresh) rebuild its full answer history across every round
+   * played so far, not just the current block.
+   */
+  pastRevealedQuestions: BlockRevealQuestionView[];
+  /**
    * IDs of current-block questions (from `blockQuestions`) that still have
    * at least one submitted answer with `gradedAt === null` — closest_guess
    * excluded, since it grades itself automatically and never needs an admin

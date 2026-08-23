@@ -5,9 +5,33 @@ import {
   type BlockRevealQuestionView,
   type QuestionPosition,
   type QuestionView,
+  type RevealQuestionView,
 } from '@campus-pubquiz/types';
 import { toBlockQuestionView, toQuestionView } from '@/game/game-state-views';
 import { getGameContext, type SessionState } from '@/game/session-state';
+
+/** Pairs a round's questions with their round-relative labels and (for closest_guess) cached summary — shared by getBlockSeededQuestions and getPastRevealedQuestions. */
+function toRevealQuestionViews(
+  questions: RevealQuestionView[],
+  roundNumber: number,
+  roundTitle: string,
+  session: SessionState,
+): BlockRevealQuestionView[] {
+  return questions.map((question, questionOffset) => ({
+    ...question,
+    ...(question.type === 'closest_guess'
+      ? {
+          closestGuess: session.closestGuessSummaries[question.id] ?? {
+            hasSubmissions: false,
+            closestGuesses: [],
+          },
+        }
+      : {}),
+    roundNumber,
+    questionNumberInRound: questionOffset + 1,
+    roundTitle,
+  }));
+}
 
 export function getCurrentRoundTitle(session: SessionState): string {
   return session.seededGame.rounds[session.progress.roundIndex]?.title ?? '';
@@ -87,21 +111,37 @@ export function getBlockSeededQuestions(
       const questions = isPartiallyRevealed
         ? round.questions.slice(0, revealBoundary.questionIndex + 1)
         : round.questions;
-      return questions.map((question, questionOffset) => ({
-        ...question,
-        ...(question.type === 'closest_guess'
-          ? {
-              closestGuess: session.closestGuessSummaries[question.id] ?? {
-                hasSubmissions: false,
-                closestGuesses: [],
-              },
-            }
-          : {}),
-        roundNumber: currentRoundIndex + 1,
-        questionNumberInRound: questionOffset + 1,
-        roundTitle: round.title,
-      }));
+      return toRevealQuestionViews(
+        questions,
+        currentRoundIndex + 1,
+        round.title,
+        session,
+      );
     });
+}
+
+/**
+ * Every question from blocks that finished before the current one — every
+ * round strictly before the current block's start. A block can only be left
+ * behind once its own break+reveal has completed (see getNextGameState), so
+ * these are always safe to return with their correct answers regardless of
+ * the current status. Gives a (re)connecting client (a phone that slept
+ * through a round, a page refresh) the full answer history across every
+ * already-finished round in one shot, rather than just the current block.
+ */
+export function getPastRevealedQuestions(
+  session: SessionState,
+): BlockRevealQuestionView[] {
+  const context = getGameContext(session);
+  const blockStart = getBlockStartRoundIndex(
+    session.progress.roundIndex,
+    context,
+  );
+  return session.seededGame.rounds
+    .slice(0, blockStart)
+    .flatMap((round, index) =>
+      toRevealQuestionViews(round.questions, index + 1, round.title, session),
+    );
 }
 
 /**

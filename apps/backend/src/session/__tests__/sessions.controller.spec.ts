@@ -64,6 +64,7 @@ function snapshot(
     blockQuestions: [],
     upcomingQuestions: [],
     revealQuestions: [],
+    pastRevealedQuestions: [],
     ungradedQuestionIds: [],
     answeredTeamIds: [],
     leaderboard: [],

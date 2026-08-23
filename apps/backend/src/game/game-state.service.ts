@@ -28,6 +28,7 @@ import {
   getBlockSeededQuestions,
   getCurrentQuestion,
   getCurrentRoundTitle,
+  getPastRevealedQuestions,
   getRevealQuestions,
   getUpcomingQuestionPositions,
 } from '@/game/block-questions.util';
@@ -247,6 +248,7 @@ export class GameStateService implements OnModuleInit {
       blockQuestions: getBlockQuestions(session),
       upcomingQuestions: getUpcomingQuestionPositions(session),
       revealQuestions: getRevealQuestions(session),
+      pastRevealedQuestions: getPastRevealedQuestions(session),
       ungradedQuestionIds: session.ungradedQuestionIds,
       answeredTeamIds: getAnsweredTeamIds(session),
       leaderboard: session.leaderboard,

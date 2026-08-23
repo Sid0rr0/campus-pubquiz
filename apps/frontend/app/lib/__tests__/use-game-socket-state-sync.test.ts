@@ -191,4 +191,65 @@ describe('useGameSocket — state sync', () => {
       expect(result.current.seenQuestions).toEqual({ 1: revealedQ1 }),
     );
   });
+
+  it('seeds seenQuestions from already-finished blocks on a fresh STATE_SYNC, not just the current block', async () => {
+    // Reproduces a team reconnecting (e.g. a page refresh) mid-round-3: the
+    // very first STATE_SYNC this client ever sees only carries round 3 in
+    // blockQuestions, but pastRevealedQuestions carries every earlier
+    // finished round's answers — both must land in seenQuestions together.
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+    const round1Q = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+      answer: 'Banana',
+    };
+    const round2Q = {
+      id: 2,
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 2,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 2',
+      answer: 'Jupiter',
+    };
+    const round3Q = {
+      id: 3,
+      type: 'free_text' as const,
+      prompt: 'Name a country',
+      points: 1,
+      roundNumber: 3,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 3',
+    };
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_SYNC, {
+        progress: {
+          status: 'question_open',
+          roundIndex: 2,
+          questionIndex: 0,
+          isLeaderboardVisible: false,
+        },
+        currentQuestion: round3Q,
+        blockQuestions: [round3Q],
+        revealQuestions: [],
+        pastRevealedQuestions: [round1Q, round2Q],
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.seenQuestions).toEqual({
+        1: round1Q,
+        2: round2Q,
+        3: round3Q,
+      }),
+    );
+  });
 });

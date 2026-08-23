@@ -104,6 +104,7 @@ function mergeSeenQuestions(
   const additions = [
     ...(payload.blockQuestions ?? []),
     ...(payload.revealQuestions ?? []),
+    ...(payload.pastRevealedQuestions ?? []),
   ];
   if (additions.length === 0) {
     return current;
