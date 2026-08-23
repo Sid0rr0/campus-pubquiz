@@ -111,4 +111,55 @@ describe('Leaderboard', () => {
 
     expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
   });
+
+  it('shows a shared rank range for teams tied on points', () => {
+    const TIED: LeaderboardEntry[] = [
+      {
+        teamId: 1,
+        teamName: 'Sole Leader',
+        totalPoints: 30,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Tied A',
+        totalPoints: 20,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 3,
+        teamName: 'Tied B',
+        totalPoints: 20,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 4,
+        teamName: 'Tied C',
+        totalPoints: 20,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 5,
+        teamName: 'Last Place',
+        totalPoints: 5,
+        bonusPoints: 0,
+        roundPoints: [],
+      },
+    ];
+    render(<Leaderboard entries={TIED} />);
+
+    expect(screen.getByText('Sole Leader').closest('li')).toHaveTextContent(
+      '1.',
+    );
+    for (const name of ['Tied A', 'Tied B', 'Tied C']) {
+      expect(screen.getByText(name).closest('li')).toHaveTextContent('2.–4.');
+    }
+    expect(screen.getByText('Last Place').closest('li')).toHaveTextContent(
+      '5.',
+    );
+  });
 });
