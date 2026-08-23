@@ -1,5 +1,6 @@
 import { CheckIcon } from '@radix-ui/react-icons';
 import type { BlockQuestionView } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 
 interface QuestionPickerProps {
@@ -34,7 +35,7 @@ export function QuestionPicker({
             {round.slots.map((slot) => {
               if (!slot.question) {
                 return (
-                  <button
+                  <Button
                     key={slot.key}
                     type="button"
                     disabled
@@ -42,14 +43,14 @@ export function QuestionPicker({
                     className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-dashed border-foreground/20 bg-white/40 font-extrabold text-foreground/30"
                   >
                     {slot.questionNumberInRound}
-                  </button>
+                  </Button>
                 );
               }
               const question = slot.question;
               const isAnswered = question.id in myAnswers;
               const isSelected = question.id === selectedQuestionId;
               return (
-                <button
+                <Button
                   key={slot.key}
                   type="button"
                   aria-label={`Question ${slot.questionNumberInRound}${isAnswered ? ' (answered)' : ''}`}
@@ -64,7 +65,7 @@ export function QuestionPicker({
                   {isAnswered && (
                     <CheckIcon aria-hidden="true" className="ml-1 text-green" />
                   )}
-                </button>
+                </Button>
               );
             })}
           </nav>

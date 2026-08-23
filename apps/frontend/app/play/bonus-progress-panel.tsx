@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
 import type { BonusCategory, TeamBonusAwardView } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import { BonusProgressList } from '@/app/play/bonus-progress-list';
 
 interface BonusProgressPanelProps {
@@ -44,13 +45,14 @@ export function BonusProgressPanel({
       <div className="fixed inset-x-0 bottom-0 z-20 border-t-2 border-foreground/10 bg-background px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
         <Dialog.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <Dialog.Trigger asChild>
-            <button
+            <Button
               type="button"
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-foreground/20 text-sm font-extrabold tracking-wide"
+              variant="outline-muted"
+              className="flex min-h-11 w-full items-center justify-center gap-2 text-sm"
             >
               <StarIcon aria-hidden="true" />
               Bonus points ({myBonusAwards.length})
-            </button>
+            </Button>
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
@@ -60,13 +62,14 @@ export function BonusProgressPanel({
                   Bonus points
                 </Dialog.Title>
                 <Dialog.Close asChild>
-                  <button
+                  <Button
                     type="button"
+                    variant="icon"
+                    size="icon-lg"
                     aria-label="Close bonus points"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-foreground/20"
                   >
                     <Cross2Icon aria-hidden="true" />
-                  </button>
+                  </Button>
                 </Dialog.Close>
               </div>
               <BonusProgressList

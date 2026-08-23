@@ -8,6 +8,7 @@ import type {
   TeamView,
 } from '@campus-pubquiz/types';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
+import { Button } from '@/app/components/button';
 
 interface GradeOption {
   display: string;
@@ -80,20 +81,21 @@ function AnswerRow({
             {options.map(({ display, ariaSuffix, value }) => {
               const isSelected = isGraded && answer.pointsAwarded === value;
               return (
-                <button
+                <Button
                   key={display}
                   type="button"
                   disabled={!hasAnswered}
+                  variant={isSelected ? undefined : 'outline-muted'}
                   aria-label={`Grade ${teamName} ${ariaSuffix}`}
                   onClick={() => hasAnswered && onGrade(answer.answerId, value)}
                   className={
                     isSelected
                       ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green font-extrabold text-white'
-                      : 'flex h-9 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40'
+                      : 'flex h-9 min-w-11 items-center justify-center'
                   }
                 >
                   {isSelected ? `✓ ${value}` : display}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -140,24 +142,26 @@ export function AnswersPanel({
           </p>
           {nav && (
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline-muted"
                 aria-label="Previous question"
                 disabled={nav.index === 0}
                 onClick={nav.onPrevious}
-                className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
+                className="flex h-10 min-w-11 items-center justify-center"
               >
                 <ChevronLeftIcon aria-hidden="true" />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline-muted"
                 aria-label="Next question"
                 disabled={nav.index >= nav.total - 1}
                 onClick={nav.onNext}
-                className="flex h-10 min-w-11 items-center justify-center rounded-lg border-1.5 border-foreground/30 font-extrabold disabled:opacity-40"
+                className="flex h-10 min-w-11 items-center justify-center"
               >
                 <ChevronRightIcon aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           )}
         </div>

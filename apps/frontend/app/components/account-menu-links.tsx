@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ExitIcon, GearIcon, ListBulletIcon } from '@radix-ui/react-icons';
 import type { AuthUser } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 
 interface AccountMenuLinksProps {
   user: AuthUser;
@@ -28,14 +29,14 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
           </Link>
         </>
       )}
-      <button
+      <Button
         type="button"
         onClick={onLogout}
         className="flex items-center gap-1 underline"
       >
         <ExitIcon aria-hidden="true" />
         Log out
-      </button>
+      </Button>
     </>
   );
 }

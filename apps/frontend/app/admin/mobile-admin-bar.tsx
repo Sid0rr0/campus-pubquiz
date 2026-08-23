@@ -10,6 +10,7 @@ import { TeamsPanel } from '@/app/admin/teams-panel';
 import { SessionStatusPanel } from '@/app/admin/session-status-panel';
 import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
 import { AccountMenuLinks } from '@/app/components/account-menu-links';
+import { Button } from '@/app/components/button';
 
 interface MobileAdminBarProps extends AdminSidebarProps {
   user: AuthUser | null;
@@ -57,13 +58,14 @@ export function MobileAdminBar({
     <div className="sticky top-0 z-20 flex items-center gap-2 border-b-2 border-foreground/10 bg-background p-3 md:hidden">
       <Dialog.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <Dialog.Trigger asChild>
-          <button
+          <Button
             type="button"
+            variant="icon"
             aria-label="Open quiz master menu"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20"
+            className="flex h-11 w-11 shrink-0 items-center justify-center"
           >
             <HamburgerMenuIcon aria-hidden="true" />
-          </button>
+          </Button>
         </Dialog.Trigger>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
@@ -73,13 +75,14 @@ export function MobileAdminBar({
                 Quiz Master
               </Dialog.Title>
               <Dialog.Close asChild>
-                <button
+                <Button
                   type="button"
+                  size="icon-lg"
                   aria-label="Close menu"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-background/20 text-lg font-extrabold"
+                  className="rounded-lg border-2 border-background/20 text-lg font-extrabold"
                 >
                   <Cross2Icon aria-hidden="true" />
-                </button>
+                </Button>
               </Dialog.Close>
             </div>
             {user && (

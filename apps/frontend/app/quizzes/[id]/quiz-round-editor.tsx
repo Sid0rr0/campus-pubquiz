@@ -6,6 +6,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
+import { Button } from '@/app/components/button';
 import {
   makeQuestion,
   type EditorQuestion,
@@ -94,32 +95,35 @@ export function QuizRoundEditor({
           />
           Break after
         </label>
-        <button
+        <Button
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
+          variant="icon"
+          size="icon-md"
           aria-label="Move round up"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
         >
           <ArrowUpIcon aria-hidden="true" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
+          variant="icon"
+          size="icon-md"
           aria-label="Move round down"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
         >
           <ArrowDownIcon aria-hidden="true" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onDelete}
+          variant="icon-danger"
+          size="icon-md"
           aria-label="Delete round"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta"
         >
           <TrashIcon aria-hidden="true" />
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -138,14 +142,16 @@ export function QuizRoundEditor({
         ))}
       </div>
 
-      <button
+      <Button
         type="button"
         onClick={addQuestion}
-        className="flex items-center gap-1.5 self-start rounded-lg border-2 border-dashed border-foreground/30 px-4 py-2 text-sm font-extrabold text-foreground"
+        variant="outline-dashed"
+        size="xs"
+        className="self-start"
       >
         <PlusIcon aria-hidden="true" />
         Add question
-      </button>
+      </Button>
     </div>
   );
 }

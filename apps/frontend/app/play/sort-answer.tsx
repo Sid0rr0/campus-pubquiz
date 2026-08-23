@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowDownIcon, ArrowUpIcon } from '@radix-ui/react-icons';
 import { splitPipeList } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 
 interface SortAnswerProps {
   options: string[];
@@ -41,24 +42,26 @@ export function SortAnswer({
             {itemIndex + 1}
           </span>
           <span className="flex-1 text-foreground">{item}</span>
-          <button
+          <Button
             type="button"
             aria-label={`Move ${item} up`}
             onClick={() => move(itemIndex, -1)}
             disabled={itemIndex === 0}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+            variant="icon"
+            size="icon-lg"
           >
             <ArrowUpIcon aria-hidden="true" />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             aria-label={`Move ${item} down`}
             onClick={() => move(itemIndex, 1)}
             disabled={itemIndex === order.length - 1}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+            variant="icon"
+            size="icon-lg"
           >
             <ArrowDownIcon aria-hidden="true" />
-          </button>
+          </Button>
         </li>
       ))}
     </ol>

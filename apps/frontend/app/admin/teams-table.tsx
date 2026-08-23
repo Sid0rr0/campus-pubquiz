@@ -12,6 +12,7 @@ import type {
   TeamView,
 } from '@campus-pubquiz/types';
 import { BonusAwardForm } from '@/app/admin/bonus-award-form';
+import { Button } from '@/app/components/button';
 
 interface TeamsTableProps {
   /** Every team that has joined the session — always present, even before any points are recorded. */
@@ -103,13 +104,14 @@ export function TeamsTable({
             return (
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
-                  <button
+                  <Button
                     type="button"
+                    size="icon-md"
                     aria-label={`Actions for ${entry.teamName}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-dark-blue/15 text-dark-blue/70"
+                    className="rounded-lg border-2 border-dark-blue/15 text-dark-blue/70"
                   >
                     <DotsVerticalIcon aria-hidden="true" />
-                  </button>
+                  </Button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { EnterIcon } from '@radix-ui/react-icons';
+import { Button } from '@/app/components/button';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
 
 interface JoinFormProps {
@@ -117,21 +118,22 @@ export function JoinForm({
             />
           </>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={() => setTeamCodeRevealed(true)}
             className="mt-2 self-start text-[13px] font-extrabold text-foreground/55 underline"
           >
             Played before? Enter your team code
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
-          className="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_4px_0_#b8006d]"
+          variant="solid"
+          className="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
         >
           <EnterIcon aria-hidden="true" />
           Join the quiz
-        </button>
+        </Button>
       </form>
     </>
   );

@@ -2,6 +2,7 @@
 
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import type { GameAction, GameStatus } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 
 interface NavigationButtonsProps {
   progressStatus: GameStatus;
@@ -63,23 +64,27 @@ export function NavigationButtons({
   return (
     <div className={`flex gap-2 ${className}`}>
       {canGoToPreviousQuestion && (
-        <button
+        <Button
+          variant="outline"
+          size="lg"
           onClick={() => onAction('PREVIOUS')}
           disabled={isLeaderboardVisible}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
+          className="flex-1 disabled:opacity-40"
         >
           <ChevronLeftIcon aria-hidden="true" />
           Previous
-        </button>
+        </Button>
       )}
       {showAdvanceSlot && (
-        <button
+        <Button
+          variant="outline"
+          size="lg"
           onClick={() => onAction(advanceSlotAction)}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan disabled:opacity-40"
+          className="flex-1 disabled:opacity-40"
         >
           {advanceSlotLabel}
           <ChevronRightIcon aria-hidden="true" />
-        </button>
+        </Button>
       )}
     </div>
   );

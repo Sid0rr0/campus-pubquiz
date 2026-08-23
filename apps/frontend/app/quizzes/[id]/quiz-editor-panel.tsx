@@ -10,6 +10,7 @@ import {
   UploadIcon,
 } from '@radix-ui/react-icons';
 import type { QuizDraftIssue } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import { ImportApiError, previewImport } from '@/app/lib/import-api';
 import {
   createQuiz,
@@ -224,14 +225,14 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-4">
-          <button
+          <Button
             type="button"
             onClick={startFromScratch}
-            className="flex min-h-16 min-w-56 items-center justify-center gap-2 rounded-2xl bg-magenta px-6 font-display text-lg text-white"
+            className="flex min-h-16 min-w-56 items-center justify-center gap-2 px-6 text-lg rounded-2xl bg-magenta font-display text-white"
           >
             <FilePlusIcon aria-hidden="true" />
             Start from scratch
-          </button>
+          </Button>
           <label className="flex min-h-16 min-w-56 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-foreground bg-white px-6 font-display text-lg text-foreground">
             <UploadIcon aria-hidden="true" />
             Import CSV
@@ -281,15 +282,16 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             className="hidden"
           />
         </label>
-        <button
+        <Button
           type="button"
           onClick={() => void handleSave()}
           disabled={isSaving}
-          className="flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-xl bg-green px-5 text-xs font-extrabold text-white disabled:opacity-50"
+          size="md"
+          className="rounded-xl bg-green text-xs font-extrabold text-white whitespace-nowrap disabled:opacity-50"
         >
           <CheckIcon aria-hidden="true" />
           {savedFlash ? 'Saved ✓' : isSaving ? 'Saving…' : 'Save quiz'}
-        </button>
+        </Button>
       </div>
 
       {importError && (
@@ -329,14 +331,14 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             onMoveDown={() => moveRound(round.id, 1)}
           />
         ))}
-        <button
+        <Button
           type="button"
           onClick={addRound}
           className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background"
         >
           <PlusIcon aria-hidden="true" />
           Add round
-        </button>
+        </Button>
       </div>
     </main>
   );

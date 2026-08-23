@@ -25,6 +25,7 @@ import {
   fetchSessions,
   SessionApiError,
 } from '@/app/lib/sessions-api';
+import { Button } from '@/app/components/button';
 import { RoundsList } from '@/app/components/rounds-list';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { CopyButton } from '@/app/components/copy-button';
@@ -167,23 +168,25 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                 </div>
                 <div className="flex shrink-0 gap-2">
                   {session.status === 'ended' && (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline-muted"
+                      size="md"
                       onClick={() => void handleClose(session.joinCode)}
-                      className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
                     >
                       <Cross2Icon aria-hidden="true" />
                       Close
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
                     type="button"
+                    variant="solid-flat"
+                    size="md"
                     onClick={() => onOpenSession(session.joinCode)}
-                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white"
                   >
                     <ArrowRightIcon aria-hidden="true" />
                     Open
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
@@ -224,14 +227,15 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                     Edit
                   </Link>
 
-                  <button
+                  <Button
                     disabled={isCreating}
+                    variant="solid-flat"
                     onClick={() => setPendingQuizId(quiz.id)}
-                    className="flex min-h-8 items-center gap-1.5 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
+                    className="flex min-h-8 items-center gap-1.5 px-4 disabled:opacity-40"
                   >
                     <PlayIcon aria-hidden="true" />
                     Start
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
@@ -273,24 +277,27 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
               </Tabs.Content>
             </Tabs.Root>
             <div className="flex justify-end gap-2">
-              <button
+              <Button
                 type="button"
                 disabled={isCreating}
+                variant="outline-muted"
+                size="md"
                 onClick={() => setPendingQuizId(null)}
-                className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold disabled:opacity-40"
               >
                 <Cross2Icon aria-hidden="true" />
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 disabled={isCreating}
+                variant="solid-flat"
+                size="md"
                 onClick={() => void handleConfirmCreate()}
-                className="flex min-h-10 items-center gap-1.5 rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
+                className="disabled:opacity-40"
               >
                 <CheckIcon aria-hidden="true" />
                 {isCreating ? 'Starting…' : 'Confirm'}
-              </button>
+              </Button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

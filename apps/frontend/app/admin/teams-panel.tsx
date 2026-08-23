@@ -3,6 +3,7 @@
 import { AlertDialog } from 'radix-ui';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import type { TeamView } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 
 interface TeamsPanelProps {
   teams: TeamView[];
@@ -70,13 +71,13 @@ export function TeamsPanel({
                 )}
                 <AlertDialog.Root>
                   <AlertDialog.Trigger asChild>
-                    <button
+                    <Button
                       type="button"
                       className="ml-auto flex items-center gap-1 text-xs font-extrabold text-magenta underline"
                     >
                       <Cross2Icon aria-hidden="true" />
                       Kick
-                    </button>
+                    </Button>
                   </AlertDialog.Trigger>
                   <AlertDialog.Portal>
                     <AlertDialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
@@ -90,21 +91,23 @@ export function TeamsPanel({
                       </AlertDialog.Description>
                       <div className="flex justify-end gap-2">
                         <AlertDialog.Cancel asChild>
-                          <button
+                          <Button
                             type="button"
-                            className="rounded-lg px-3 py-1.5 text-sm font-bold text-background/70"
+                            size="sm"
+                            className="rounded-lg font-bold text-background/70"
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </AlertDialog.Cancel>
                         <AlertDialog.Action asChild>
-                          <button
+                          <Button
                             type="button"
+                            variant="solid-flat"
+                            size="sm"
                             onClick={() => onKickTeam(team.teamId)}
-                            className="rounded-lg bg-magenta px-3 py-1.5 text-sm font-extrabold text-background"
                           >
                             Kick
-                          </button>
+                          </Button>
                         </AlertDialog.Action>
                       </div>
                     </AlertDialog.Content>

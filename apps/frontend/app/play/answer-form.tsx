@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import { IDK_ANSWER_VALUE, type QuestionView } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
 import { SortAnswer } from '@/app/play/sort-answer';
@@ -21,7 +22,7 @@ interface IdkButtonProps {
 /** Submits the IDK_ANSWER_VALUE sentinel — shown under every question type's answer input so a team can register "we don't know" instead of leaving the question untouched. */
 function IdkButton({ isChosen, onClick }: IdkButtonProps) {
   return (
-    <button
+    <Button
       type="button"
       aria-pressed={isChosen}
       onClick={onClick}
@@ -35,7 +36,7 @@ function IdkButton({ isChosen, onClick }: IdkButtonProps) {
       {isChosen && (
         <CheckIcon aria-hidden="true" className="ml-auto text-magenta" />
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -83,7 +84,7 @@ export function AnswerForm({
         {question.options.map((option, index) => {
           const isChosen = option === initialValue;
           return (
-            <button
+            <Button
               key={index}
               type="button"
               aria-pressed={isChosen}
@@ -104,7 +105,7 @@ export function AnswerForm({
                   className="ml-auto text-magenta"
                 />
               )}
-            </button>
+            </Button>
           );
         })}
         {idkButton}
@@ -139,13 +140,14 @@ export function AnswerForm({
           Submitted: {initialValue}
         </p>
       )}
-      <button
+      <Button
         type="submit"
-        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
+        variant="solid"
+        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
       >
         <CheckIcon aria-hidden="true" />
         Submit
-      </button>
+      </Button>
       {idkButton}
     </form>
   );

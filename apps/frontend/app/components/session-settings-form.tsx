@@ -8,6 +8,7 @@ import {
   BONUS_CATEGORY_LABELS,
   DEFAULT_BONUS_POINTS,
 } from '@/app/lib/bonus-categories';
+import { Button } from '@/app/components/button';
 
 interface SessionSettingsFormProps {
   value: SessionSettings;
@@ -76,7 +77,7 @@ export function SessionSettingsForm({
         <span className="text-sm font-extrabold">Bonus categories</span>
         <div className="flex flex-wrap gap-2">
           {BONUS_CATEGORIES.map((category) => (
-            <button
+            <Button
               key={category}
               type="button"
               onClick={() => toggleBonusCategory(category)}
@@ -91,7 +92,7 @@ export function SessionSettingsForm({
               <span className="ml-1 font-normal opacity-70">
                 ({DEFAULT_BONUS_POINTS} pt)
               </span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -150,25 +151,28 @@ export function SessionSettingsForm({
                 aria-label={`Rule ${index + 1}`}
                 className="min-h-9 flex-1 rounded-lg border border-foreground/20 px-2 text-sm"
               />
-              <button
+              <Button
                 type="button"
+                size="icon-md"
                 onClick={() => removeRule(index)}
                 aria-label={`Remove rule ${index + 1}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-foreground/20"
+                className="rounded-lg border border-foreground/20"
               >
                 <Cross2Icon aria-hidden="true" />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
-        <button
+        <Button
           type="button"
           onClick={addRule}
-          className="flex min-h-9 w-fit items-center gap-1.5 rounded-lg border border-foreground/20 px-3 text-xs font-extrabold"
+          variant="outline-dashed"
+          size="xs"
+          className="w-fit"
         >
           <PlusIcon aria-hidden="true" />
           Add rule
-        </button>
+        </Button>
       </div>
     </div>
   );

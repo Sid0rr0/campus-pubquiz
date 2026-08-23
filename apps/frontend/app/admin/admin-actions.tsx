@@ -7,6 +7,7 @@ import {
   StopIcon,
 } from '@radix-ui/react-icons';
 import type { GameAction } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 
 interface AdminActionsProps {
   canStartQuiz: boolean;
@@ -31,38 +32,42 @@ export function AdminActions({
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       {canStartQuiz && (
-        <button
+        <Button
+          variant="outline"
+          size="lg"
           onClick={() => onAction('START_QUIZ')}
-          className="flex min-h-11 items-center justify-center gap-2 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
         >
           <PlayIcon aria-hidden="true" />
           Start Quiz
-        </button>
+        </Button>
       )}
-      <button
+      <Button
+        variant="outline"
+        size="lg"
         onClick={() => onAction('TOGGLE_LEADERBOARD')}
-        className="flex min-h-11 items-center justify-center gap-2 rounded-lg border-2 border-cyan text-sm font-extrabold text-cyan"
       >
         <BarChartIcon aria-hidden="true" />
         {isLeaderboardVisible ? 'Close Leaderboard' : 'Open Leaderboard'}
-      </button>
+      </Button>
       {canEndQuiz && (
-        <button
+        <Button
+          size="lg"
           onClick={() => onAction('END_QUIZ')}
-          className="flex min-h-11 items-center justify-center gap-2 rounded-lg border-2 border-background/25 text-sm font-extrabold text-background/60"
+          className="rounded-lg border-2 border-background/25 font-extrabold text-background/60"
         >
           <StopIcon aria-hidden="true" />
           End Quiz
-        </button>
+        </Button>
       )}
       {canCloseSession && (
-        <button
+        <Button
+          size="lg"
           onClick={onCloseSession}
-          className="flex min-h-11 items-center justify-center gap-2 rounded-lg border-2 border-magenta text-sm font-extrabold text-magenta"
+          className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
         >
           <Cross2Icon aria-hidden="true" />
           Close Session
-        </button>
+        </Button>
       )}
     </div>
   );

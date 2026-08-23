@@ -7,6 +7,7 @@ import {
   BONUS_CATEGORY_LABELS,
   DEFAULT_BONUS_POINTS,
 } from '@/app/lib/bonus-categories';
+import { Button } from '@/app/components/button';
 
 interface BonusAwardFormProps {
   onAward: (category: BonusCategory, points: number, reason?: string) => void;
@@ -58,7 +59,7 @@ export function BonusAwardForm({
     >
       <div className="flex flex-wrap gap-1">
         {availablePredefined.map((option) => (
-          <button
+          <Button
             key={option.value}
             type="button"
             onClick={() => setCategory(option.value)}
@@ -70,10 +71,10 @@ export function BonusAwardForm({
             }`}
           >
             {option.label}
-          </button>
+          </Button>
         ))}
         {isCustomEnabled && (
-          <button
+          <Button
             type="button"
             onClick={() => setCategory('custom')}
             aria-pressed={isCustom}
@@ -84,7 +85,7 @@ export function BonusAwardForm({
             }`}
           >
             Custom
-          </button>
+          </Button>
         )}
       </div>
       {isCustom && (
@@ -109,22 +110,22 @@ export function BonusAwardForm({
         />
       </label>
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
           disabled={!canSubmit}
-          className="flex items-center gap-1 rounded-full bg-magenta px-3 py-1 font-extrabold text-background disabled:opacity-40"
+          className="flex items-center gap-1 px-3 py-1 rounded-full bg-magenta font-extrabold text-background disabled:opacity-40"
         >
           <StarIcon aria-hidden="true" />
           Award
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1 rounded-full border-2 border-background/30 px-3 py-1 font-bold"
+          className="flex items-center gap-1 px-3 py-1 rounded-full border-2 border-background/30 font-bold"
         >
           <Cross2Icon aria-hidden="true" />
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

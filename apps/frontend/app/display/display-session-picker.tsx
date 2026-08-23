@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRightIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
 import { fetchPublicSessions, SessionApiError } from '@/app/lib/sessions-api';
+import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
 
 interface DisplaySessionPickerProps {
@@ -88,7 +89,7 @@ export function DisplaySessionPicker({
             key={session.joinCode}
             className="flex min-h-16 items-center gap-2 rounded-2xl border-2 border-foreground/15 bg-white pl-5 pr-3"
           >
-            <button
+            <Button
               type="button"
               onClick={() => onSelectSession(session.joinCode)}
               className="flex flex-1 items-center justify-between py-3 text-left"
@@ -104,20 +105,21 @@ export function DisplaySessionPicker({
                 Watch
                 <ArrowRightIcon aria-hidden="true" />
               </span>
-            </button>
+            </Button>
             <CopyButton value={session.joinCode} />
           </li>
         ))}
       </ul>
-      <button
+      <Button
         type="button"
         onClick={handleRefreshClick}
         disabled={isLoading}
-        className="flex items-center gap-1.5 text-sm font-extrabold text-foreground/55 underline disabled:opacity-40"
+        variant="text-quiet"
+        className="flex disabled:opacity-40"
       >
         <ReloadIcon aria-hidden="true" />
         {isLoading ? 'Refreshing…' : 'Refresh'}
-      </button>
+      </Button>
     </main>
   );
 }

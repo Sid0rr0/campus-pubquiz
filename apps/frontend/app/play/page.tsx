@@ -7,6 +7,7 @@ import {
   DEFAULT_SESSION_SETTINGS,
   type GameStatus,
 } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
@@ -130,14 +131,15 @@ function PlayPageContent() {
           hideGameCodeInput
         />
         {hasStoredIdentity && (
-          <button
+          <Button
             type="button"
+            variant="text-quiet"
             onClick={handleLogOut}
-            className="mx-auto flex items-center gap-1 text-xs font-extrabold text-foreground/45 underline"
+            className="mx-auto flex"
           >
             <ExitIcon aria-hidden="true" />
             Log out
-          </button>
+          </Button>
         )}
       </main>
     );
@@ -150,14 +152,15 @@ function PlayPageContent() {
           Playing as {teamName}
         </p>
         <p className="font-display text-xl">Connecting…</p>
-        <button
+        <Button
           type="button"
+          variant="text-quiet"
           onClick={handleLogOut}
-          className="flex items-center gap-1 text-xs font-extrabold text-foreground/45 underline"
+          className="flex"
         >
           <ExitIcon aria-hidden="true" />
           Log out
-        </button>
+        </Button>
       </main>
     );
   }
@@ -274,14 +277,15 @@ function PlayPageContent() {
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">
           Playing as {teamName}
         </p>
-        <button
+        <Button
           type="button"
+          variant="text-quiet"
           onClick={handleLogOut}
-          className="hidden items-center gap-1 text-xs font-extrabold text-foreground/45 underline md:flex"
+          className="hidden md:flex"
         >
           <ExitIcon aria-hidden="true" />
           Log out
-        </button>
+        </Button>
       </div>
       {team && (
         <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">

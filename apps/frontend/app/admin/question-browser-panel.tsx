@@ -7,6 +7,7 @@ import type {
   TeamView,
 } from '@campus-pubquiz/types';
 import { AnswersPanel } from '@/app/admin/answers-panel';
+import { Button } from '@/app/components/button';
 
 interface QuestionBrowserPanelProps {
   rounds: QuizSummaryRound[];
@@ -136,7 +137,7 @@ export function QuestionBrowserPanel({
                     const label = `Grade question ${questionIndex + 1} of ${round.title}${isOnDisplay ? ' (live on display)' : ''}${isUngraded ? ' (not yet graded)' : ''}`;
                     return (
                       <span key={question.id} className="relative inline-flex">
-                        <button
+                        <Button
                           type="button"
                           aria-label={label}
                           aria-pressed={isSelected}
@@ -148,7 +149,7 @@ export function QuestionBrowserPanel({
                           )}
                         >
                           {questionIndex + 1}
-                        </button>
+                        </Button>
                         {isUngraded && (
                           <span
                             aria-hidden="true"

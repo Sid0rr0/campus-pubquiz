@@ -11,6 +11,7 @@ import {
   extractYoutubeVideoId,
   type QuestionType,
 } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import {
   makeMatchPair,
   makeOption,
@@ -196,45 +197,51 @@ export function QuizQuestionEditor({
           rows={2}
           className="min-w-0 flex-1 resize-y rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-bold text-foreground"
         />
-        <button
+        <Button
           type="button"
           onClick={onMoveUp}
           disabled={isFirst}
+          variant="icon"
+          size="icon-sm"
           aria-label="Move question up"
-          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+          className="mt-1"
         >
           <ArrowUpIcon aria-hidden="true" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onMoveDown}
           disabled={isLast}
+          variant="icon"
+          size="icon-sm"
           aria-label="Move question down"
-          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
+          className="mt-1"
         >
           <ArrowDownIcon aria-hidden="true" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onDelete}
+          variant="icon-danger"
+          size="icon-sm"
           aria-label="Delete question"
-          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta"
+          className="mt-1"
         >
           <TrashIcon aria-hidden="true" />
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex overflow-hidden rounded-lg border-2 border-foreground/20">
           {QUESTION_TYPES.map((option) => (
-            <button
+            <Button
               key={option.value}
               type="button"
               onClick={() => onChange({ type: option.value })}
               className={typeButtonClass(question.type === option.value)}
             >
               {option.label}
-            </button>
+            </Button>
           ))}
         </div>
         <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
@@ -269,25 +276,28 @@ export function QuizQuestionEditor({
                 placeholder="Option text"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
               />
-              <button
+              <Button
                 type="button"
                 onClick={() => removeOption(optionIndex)}
                 disabled={question.options.length <= 2}
+                variant="icon-danger"
+                size="icon-sm"
                 aria-label={`Remove option ${optionIndex + 1}`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
               >
                 <Cross2Icon aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           ))}
-          <button
+          <Button
             type="button"
             onClick={addOption}
-            className="flex items-center gap-1 self-start text-xs font-extrabold text-foreground/60"
+            variant="outline-dashed"
+            size="xs"
+            className="self-start"
           >
             <PlusIcon aria-hidden="true" />
             Add option
-          </button>
+          </Button>
         </div>
       ) : isSort ? (
         <div className="flex flex-col gap-2">
@@ -307,43 +317,48 @@ export function QuizQuestionEditor({
                 placeholder="Item text"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
               />
-              <button
+              <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, -1)}
                 disabled={itemIndex === 0}
+                variant="icon"
+                size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} up`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
               >
                 <ArrowUpIcon aria-hidden="true" />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, 1)}
                 disabled={itemIndex === question.sortItems.length - 1}
+                variant="icon"
+                size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} down`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-foreground/20 font-extrabold disabled:opacity-30"
               >
                 <ArrowDownIcon aria-hidden="true" />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => removeSortItem(itemIndex)}
                 disabled={question.sortItems.length <= 2}
+                variant="icon-danger"
+                size="icon-sm"
                 aria-label={`Remove item ${itemIndex + 1}`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
               >
                 <Cross2Icon aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           ))}
-          <button
+          <Button
             type="button"
             onClick={addSortItem}
-            className="flex items-center gap-1 self-start text-xs font-extrabold text-foreground/60"
+            variant="outline-dashed"
+            size="xs"
+            className="self-start"
           >
             <PlusIcon aria-hidden="true" />
             Add item
-          </button>
+          </Button>
         </div>
       ) : isMatch ? (
         <div className="flex flex-col gap-2">
@@ -371,25 +386,28 @@ export function QuizQuestionEditor({
                 placeholder="Right item"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
               />
-              <button
+              <Button
                 type="button"
                 onClick={() => removeMatchPair(pairIndex)}
                 disabled={question.matchPairs.length <= 2}
+                variant="icon-danger"
+                size="icon-sm"
                 aria-label={`Remove pair ${pairIndex + 1}`}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-magenta/30 font-extrabold text-magenta disabled:opacity-30"
               >
                 <Cross2Icon aria-hidden="true" />
-              </button>
+              </Button>
             </div>
           ))}
-          <button
+          <Button
             type="button"
             onClick={addMatchPair}
-            className="flex items-center gap-1 self-start text-xs font-extrabold text-foreground/60"
+            variant="outline-dashed"
+            size="xs"
+            className="self-start"
           >
             <PlusIcon aria-hidden="true" />
             Add pair
-          </button>
+          </Button>
         </div>
       ) : (
         <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">

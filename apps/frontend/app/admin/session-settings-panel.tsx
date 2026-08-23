@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { SessionSettings } from '@campus-pubquiz/types';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { SessionApiError, updateSessionSettings } from '@/app/lib/sessions-api';
+import { Button } from '@/app/components/button';
 
 interface SessionSettingsPanelProps {
   joinCode: string;
@@ -51,14 +52,16 @@ export function SessionSettingsPanel({
     <section className="flex flex-col gap-3 rounded-xl border border-foreground/15 bg-white p-4">
       <h2 className="font-display text-xl">Session Settings</h2>
       <SessionSettingsForm value={value} onChange={setValue} />
-      <button
+      <Button
         type="button"
         disabled={isSaving}
+        variant="solid-flat"
+        size="md"
         onClick={handleSave}
-        className="flex min-h-10 w-fit items-center gap-1.5 self-end rounded-lg bg-magenta px-4 text-sm font-extrabold text-white disabled:opacity-40"
+        className="w-fit self-end disabled:opacity-40"
       >
         {isSaving ? 'Saving…' : 'Save'}
-      </button>
+      </Button>
     </section>
   );
 }

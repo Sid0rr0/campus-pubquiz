@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { Cross2Icon, ListBulletIcon } from '@radix-ui/react-icons';
+import { Button } from '@/app/components/button';
 import { AnsweredQuestionsList } from '@/app/play/answered-questions-list';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
@@ -47,13 +48,14 @@ export function AnsweredQuestionsPanel({
       <div className="md:hidden">
         <Dialog.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <Dialog.Trigger asChild>
-            <button
+            <Button
               type="button"
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-foreground/20 text-sm font-extrabold tracking-wide"
+              variant="outline-muted"
+              className="flex min-h-11 w-full items-center justify-center gap-2 text-sm"
             >
               <ListBulletIcon aria-hidden="true" />
               Answer history ({entries.length})
-            </button>
+            </Button>
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
@@ -63,13 +65,14 @@ export function AnsweredQuestionsPanel({
                   Answer history
                 </Dialog.Title>
                 <Dialog.Close asChild>
-                  <button
+                  <Button
                     type="button"
+                    variant="icon"
+                    size="icon-lg"
                     aria-label="Close answer history"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-foreground/20"
                   >
                     <Cross2Icon aria-hidden="true" />
-                  </button>
+                  </Button>
                 </Dialog.Close>
               </div>
               <AnsweredQuestionsList

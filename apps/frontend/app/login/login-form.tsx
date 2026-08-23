@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { EnterIcon } from '@radix-ui/react-icons';
+import { Button } from '@/app/components/button';
 import { PasswordInput } from '@/app/components/password-input';
 
 interface LoginFormProps {
@@ -52,13 +53,14 @@ export function LoginForm({
         onChange={onPasswordInputChange}
         autoComplete="current-password"
       />
-      <button
+      <Button
         type="submit"
-        className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-magenta font-display text-lg text-white shadow-[0_3px_0_#b8006d]"
+        variant="solid"
+        className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-xl text-lg"
       >
         <EnterIcon aria-hidden="true" />
         Log in
-      </button>
+      </Button>
       <Link href="/register" className="mt-1 text-sm font-bold underline">
         Need an account? Register
       </Link>

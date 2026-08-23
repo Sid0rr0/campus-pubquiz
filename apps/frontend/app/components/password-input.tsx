@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { EyeClosedIcon, EyeOpenIcon } from '@radix-ui/react-icons';
+import { Button } from '@/app/components/button';
 
 interface PasswordInputProps {
   id: string;
@@ -28,7 +29,7 @@ export function PasswordInput({
         autoComplete={autoComplete}
         className="min-h-12 w-full rounded-xl border-2 border-foreground/35 bg-white px-4 pr-16 text-lg font-bold"
       />
-      <button
+      <Button
         type="button"
         onClick={() => setIsVisible((current) => !current)}
         aria-label={isVisible ? 'Hide password' : 'Show password'}
@@ -39,7 +40,7 @@ export function PasswordInput({
         ) : (
           <EyeOpenIcon aria-hidden="true" />
         )}
-      </button>
+      </Button>
     </div>
   );
 }

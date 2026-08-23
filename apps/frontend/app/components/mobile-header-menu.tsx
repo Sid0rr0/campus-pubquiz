@@ -5,6 +5,7 @@ import { Dialog } from 'radix-ui';
 import { Cross2Icon, ExitIcon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { AccountMenuLinks } from '@/app/components/account-menu-links';
+import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
 import type { PlayerMenuState } from '@/app/lib/player-menu-context';
 
@@ -42,13 +43,14 @@ export function MobileHeaderMenu({
     <div className="md:hidden">
       <Dialog.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <Dialog.Trigger asChild>
-          <button
+          <Button
             type="button"
+            variant="icon"
+            size="icon-lg"
             aria-label="Open menu"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-foreground/20"
           >
             <HamburgerMenuIcon aria-hidden="true" />
-          </button>
+          </Button>
         </Dialog.Trigger>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
@@ -59,13 +61,14 @@ export function MobileHeaderMenu({
                 {accountUser ? 'Menu' : (playerMenu?.teamName ?? 'Menu')}
               </Dialog.Title>
               <Dialog.Close asChild>
-                <button
+                <Button
                   type="button"
+                  size="icon-lg"
                   aria-label="Close menu"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-background/20 text-lg font-extrabold"
+                  className="rounded-lg border-2 border-background/20 text-lg font-extrabold"
                 >
                   <Cross2Icon aria-hidden="true" />
-                </button>
+                </Button>
               </Dialog.Close>
             </div>
             {accountUser && (
@@ -85,14 +88,14 @@ export function MobileHeaderMenu({
                     play as this team another night.
                   </p>
                 )}
-                <button
+                <Button
                   type="button"
                   onClick={handlePlayerLogOut}
                   className="flex items-center gap-1 text-sm font-extrabold underline"
                 >
                   <ExitIcon aria-hidden="true" />
                   Log out
-                </button>
+                </Button>
               </div>
             )}
           </Dialog.Content>

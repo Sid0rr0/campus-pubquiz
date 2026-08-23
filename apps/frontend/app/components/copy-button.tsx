@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
+import { Button } from '@/app/components/button';
 
 const COPIED_FEEDBACK_MS = 1500;
 
@@ -31,7 +32,7 @@ export function CopyButton({
   }
 
   return (
-    <button
+    <Button
       type="button"
       onClick={() => void handleClick()}
       aria-label={isCopied ? 'Copied' : label}
@@ -42,6 +43,6 @@ export function CopyButton({
       ) : (
         <CopyIcon aria-hidden="true" />
       )}
-    </button>
+    </Button>
   );
 }

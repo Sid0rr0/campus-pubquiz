@@ -1,3 +1,4 @@
+import { Button } from '@/app/components/button';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
@@ -71,13 +72,13 @@ export function AnsweredQuestionsList({
 
         return (
           <li key={entry.id}>
-            <button
+            <Button
               type="button"
               onClick={() => onSelectQuestion(entry.id)}
               className="w-full rounded-xl border border-foreground/15 bg-white px-4 py-3 text-left transition hover:border-magenta"
             >
               {body}
-            </button>
+            </Button>
           </li>
         );
       })}

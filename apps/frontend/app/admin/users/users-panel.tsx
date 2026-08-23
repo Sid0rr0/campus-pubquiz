@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
 import type { UserRole, UsersListedPayload } from '@campus-pubquiz/types';
 import { approveUser, deactivateUser, fetchUsers } from '@/app/lib/auth-api';
+import { Button } from '@/app/components/button';
 
 export function UsersPanel() {
   const [users, setUsers] = useState<UsersListedPayload | null>(null);
@@ -115,14 +116,16 @@ export function UsersPanel() {
                 <option value="moderator">Moderator</option>
                 <option value="admin">Admin</option>
               </select>
-              <button
+              <Button
                 type="button"
+                variant="solid-flat"
+                size="sm"
                 onClick={() => void handleApprove(pendingUser.id)}
-                className="ml-auto flex items-center gap-1.5 rounded-lg bg-magenta px-3 py-1 text-sm font-extrabold text-white"
+                className="ml-auto"
               >
                 <CheckIcon aria-hidden="true" />
                 Approve
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -140,14 +143,15 @@ export function UsersPanel() {
               <span className="text-sm text-foreground/60">
                 {activeUser.role}
               </span>
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => void handleDeactivate(activeUser.id)}
-                className="ml-auto flex items-center gap-1.5 rounded-lg border border-magenta px-3 py-1 text-sm font-extrabold text-magenta"
+                className="ml-auto rounded-lg border-2 border-magenta font-extrabold text-magenta"
               >
                 <LockClosedIcon aria-hidden="true" />
                 Deactivate
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
