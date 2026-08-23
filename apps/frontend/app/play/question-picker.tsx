@@ -63,7 +63,7 @@ export function QuestionPicker({
                 >
                   {slot.questionNumberInRound}
                   {isAnswered && (
-                    <CheckIcon aria-hidden="true" className="ml-1 text-green" />
+                    <CheckIcon aria-hidden="true" className="ml-1" />
                   )}
                 </Button>
               );
