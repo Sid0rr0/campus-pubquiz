@@ -317,10 +317,11 @@ export class GameGateway
 
   @SubscribeMessage(SOCKET_EVENTS.SET_BREAK_END_TIME)
   @CreateRequestContext()
-  handleSetBreakEndTime(
+  // eslint-disable-next-line @typescript-eslint/require-await -- @CreateRequestContext() wraps this in a Promise at runtime regardless of the body, so the declared type must stay Promise<void> for callers (and tests) that await it
+  async handleSetBreakEndTime(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): void {
+  ): Promise<void> {
     const payload = parseSocketPayload(
       setBreakEndTimePayloadSchema,
       rawPayload,
