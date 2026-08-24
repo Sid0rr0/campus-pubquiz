@@ -24,9 +24,16 @@ export function LiveSessionSelect({
   const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Guards state updates from a fetch that resolves after this control has
-  // unmounted (e.g. the team joins before the request settles).
+  // unmounted (e.g. the team joins before the request settles). Reset to
+  // true on setup, not just via the initializer — React 18 Strict Mode's
+  // dev-only mount→cleanup→mount cycle otherwise leaves this pinned to
+  // false after the simulated cleanup, silently dropping every future
+  // fetch response and leaving "Pick the quiz" empty for the rest of this
+  // component's real lifetime (e.g. every mount after a player logs out
+  // and the join form remounts).
   const isMountedRef = useRef(true);
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
