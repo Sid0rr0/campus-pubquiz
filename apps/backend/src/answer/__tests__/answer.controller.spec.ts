@@ -4,7 +4,7 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { AnswerController } from '@/answer/answer.controller';
 import type { AnswerService } from '@/answer/answer.service';
-import type { GameStateService } from '@/game/game-state.service';
+import type { GameStateService } from '@/game/state/game-state.service';
 
 function makeController() {
   const answerService = { listForQuestion: jest.fn() };

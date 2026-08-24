@@ -15,7 +15,7 @@ import {
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
   type GameStateService,
-} from '@/game/game-state.service';
+} from '@/game/state/game-state.service';
 import type { QuizService } from '@/quiz/quiz.service';
 import { SessionsController } from '@/session/sessions.controller';
 

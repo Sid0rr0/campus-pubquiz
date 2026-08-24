@@ -23,7 +23,7 @@ import {
   GameStateService,
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
-} from '@/game/game-state.service';
+} from '@/game/state/game-state.service';
 import { QuizService } from '@/quiz/quiz.service';
 import {
   resolveSessionSettings,

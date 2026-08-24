@@ -1,7 +1,7 @@
 import {
   GameStateService,
   SessionCloseBlockedError,
-} from '@/game/game-state.service';
+} from '@/game/state/game-state.service';
 import {
   createFakeOrm,
   createFakeGameProgressRepository,

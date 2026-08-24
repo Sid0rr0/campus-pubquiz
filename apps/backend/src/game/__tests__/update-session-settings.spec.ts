@@ -2,7 +2,7 @@ import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import {
   GameStateService,
   SessionSettingsUpdateBlockedError,
-} from '@/game/game-state.service';
+} from '@/game/state/game-state.service';
 import {
   createFakeOrm,
   createFakeGameProgressRepository,

@@ -1,5 +1,5 @@
 import { IllegalGameTransitionError } from '@campus-pubquiz/types';
-import { GameStateService } from '@/game/game-state.service';
+import { GameStateService } from '@/game/state/game-state.service';
 import {
   createFakeOrm,
   createFakeGameProgressRepository,

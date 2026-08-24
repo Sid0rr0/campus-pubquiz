@@ -7,7 +7,7 @@ import {
   type GameProgress,
   type RevealQuestionView,
 } from '@campus-pubquiz/types';
-import { getGameContext, type SessionState } from '@/game/session-state';
+import { getGameContext, type SessionState } from '@/game/state/session-state';
 
 /** Summarizes a graded closest_guess question's answers into the display/play-facing reveal shape — pointsAwarded > 0 reliably identifies the tied-closest rows, since gradeClosestGuess awards full points to exactly those rows and 0 to everyone else. */
 export function summarizeClosestGuess(

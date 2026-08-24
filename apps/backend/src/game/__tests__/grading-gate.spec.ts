@@ -1,5 +1,5 @@
-import { GameStateService } from '@/game/game-state.service';
-import { UngradedAnswersError } from '@/game/ungraded-answers.error';
+import { GameStateService } from '@/game/state/game-state.service';
+import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import {
   createFakeOrm,
   createFakeGameProgressRepository,

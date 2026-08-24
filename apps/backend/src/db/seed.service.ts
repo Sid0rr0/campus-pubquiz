@@ -13,7 +13,7 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
 import { generateJoinCode } from '@/db/join-code.util';
-import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
+import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
 import type {
   CreatedGameSession,
   SeededGame,

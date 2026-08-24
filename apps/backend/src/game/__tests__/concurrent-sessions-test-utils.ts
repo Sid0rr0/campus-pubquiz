@@ -1,7 +1,7 @@
 import { DEFAULT_SESSION_SETTINGS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
 import { GameGateway } from '@/game/game.gateway';
-import { GameStateService } from '@/game/game-state.service';
+import { GameStateService } from '@/game/state/game-state.service';
 import {
   TEST_SESSION_TOKEN,
   createFakeOrm,

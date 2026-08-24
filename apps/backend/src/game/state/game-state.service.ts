@@ -20,8 +20,8 @@ import {
   computeInitialRevealStep,
   summarizeClosestGuess,
   tryStepClosestGuessReveal,
-} from '@/game/closest-guess-reveal.util';
-import { GameProgressRepository } from '@/game/game-progress.repository';
+} from '@/game/state/closest-guess-reveal.util';
+import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import {
   getAnsweredTeamIds,
   getBlockQuestions,
@@ -31,23 +31,23 @@ import {
   getPastRevealedQuestions,
   getRevealQuestions,
   getUpcomingQuestionPositions,
-} from '@/game/block-questions.util';
-import { computeLeaderboardRevealCount } from '@/game/leaderboard-reveal.util';
-import { SessionCloseBlockedError } from '@/game/session-close-blocked.error';
-import { SessionSettingsUpdateBlockedError } from '@/game/session-settings-update-blocked.error';
+} from '@/game/state/block-questions.util';
+import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
+import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
+import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import {
   LOBBY_PROGRESS,
   computeQuestionLockAt,
   freshSessionState,
   getGameContext,
   type SessionState,
-} from '@/game/session-state';
-import { UngradedAnswersError } from '@/game/ungraded-answers.error';
+} from '@/game/state/session-state';
+import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import type { TeamRosterEntry } from '@/team/team.service';
 
-export { SessionCloseBlockedError } from '@/game/session-close-blocked.error';
-export { SessionSettingsUpdateBlockedError } from '@/game/session-settings-update-blocked.error';
-export { UngradedAnswersError } from '@/game/ungraded-answers.error';
+export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
+export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
+export { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 
 /** Statuses in which the break/grading screens are actively reviewing the just-locked block — the window where ungradedQuestionIds is kept fresh. */
 const GRADING_STATUSES: GameStatus[] = [

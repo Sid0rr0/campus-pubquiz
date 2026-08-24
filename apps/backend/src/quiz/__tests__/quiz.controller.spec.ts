@@ -11,7 +11,7 @@ import {
   QuizNotFoundError,
   type QuizService,
 } from '@/quiz/quiz.service';
-import type { GameStateService } from '@/game/game-state.service';
+import type { GameStateService } from '@/game/state/game-state.service';
 
 function makeController() {
   const quizService = {

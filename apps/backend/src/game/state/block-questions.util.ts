@@ -7,8 +7,11 @@ import {
   type QuestionView,
   type RevealQuestionView,
 } from '@campus-pubquiz/types';
-import { toBlockQuestionView, toQuestionView } from '@/game/game-state-views';
-import { getGameContext, type SessionState } from '@/game/session-state';
+import {
+  toBlockQuestionView,
+  toQuestionView,
+} from '@/game/state/game-state-views';
+import { getGameContext, type SessionState } from '@/game/state/session-state';
 
 /** Pairs a round's questions with their round-relative labels and (for closest_guess) cached summary — shared by getBlockSeededQuestions and getPastRevealedQuestions. */
 function toRevealQuestionViews(

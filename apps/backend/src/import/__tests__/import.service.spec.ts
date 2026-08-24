@@ -12,7 +12,7 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
-import type { GameStateService } from '@/game/game-state.service';
+import type { GameStateService } from '@/game/state/game-state.service';
 import {
   ImportBlockedError,
   ImportLockedError,

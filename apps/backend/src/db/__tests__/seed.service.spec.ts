@@ -3,7 +3,7 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
-import { HARDCODED_QUIZ } from '@/game/hardcoded-quiz.fixture';
+import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';

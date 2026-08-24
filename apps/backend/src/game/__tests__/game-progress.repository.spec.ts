@@ -6,7 +6,7 @@ import { MikroORM } from '@mikro-orm/postgresql';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
-import { GameProgressRepository } from '@/game/game-progress.repository';
+import { GameProgressRepository } from '@/game/state/game-progress.repository';
 
 describe('GameProgressRepository (Postgres integration)', () => {
   let container: StartedPostgreSqlContainer;

@@ -10,7 +10,7 @@ import type { AnswersUpdatedPayload } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { AnswerService } from '@/answer/answer.service';
-import { GameStateService } from '@/game/game-state.service';
+import { GameStateService } from '@/game/state/game-state.service';
 
 @Controller('sessions/:joinCode/answers')
 @UseGuards(SessionGuard, RolesGuard)

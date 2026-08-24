@@ -7,7 +7,7 @@ import {
 } from '@campus-pubquiz/types';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { GameStateService } from '@/game/game-state.service';
+import { GameStateService } from '@/game/state/game-state.service';
 import { assembleImportPreview } from '@/import/question-row.schema';
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
 import { QuizService } from '@/quiz/quiz.service';

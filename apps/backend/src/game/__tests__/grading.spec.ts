@@ -5,7 +5,7 @@ import {
   sessionRoom,
 } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
-import type { GameStateService } from '@/game/game-state.service';
+import type { GameStateService } from '@/game/state/game-state.service';
 import {
   TEST_SESSION_TOKEN,
   createMockSocket,

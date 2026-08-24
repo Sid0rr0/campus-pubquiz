@@ -1,6 +1,6 @@
 import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
-import { GameStateService } from '@/game/game-state.service';
+import { GameStateService } from '@/game/state/game-state.service';
 import {
   createFakeOrm,
   createFakeGameProgressRepository,

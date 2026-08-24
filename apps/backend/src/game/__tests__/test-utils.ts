@@ -13,9 +13,9 @@ import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
 import type { AnswerService } from '@/answer/answer.service';
 import type { BonusService } from '@/bonus/bonus.service';
-import type { GameProgressRepository } from '@/game/game-progress.repository';
+import type { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameGateway } from '@/game/game.gateway';
-import { GameStateService } from '@/game/game-state.service';
+import { GameStateService } from '@/game/state/game-state.service';
 
 // GameStateService.onModuleInit and every DB-touching GameGateway handler
 // are wrapped in @CreateRequestContext(), which requires a real MikroORM
