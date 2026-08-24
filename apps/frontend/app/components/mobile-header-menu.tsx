@@ -84,8 +84,11 @@ export function MobileHeaderMenu({
                 {playerMenu.team && (
                   <p className="flex flex-wrap items-center gap-1 text-xs text-background/70">
                     Team code: {playerMenu.team.teamCode}
-                    <CopyButton value={playerMenu.team.teamCode} /> — save it to
-                    play as this team another night.
+                    <CopyButton
+                      value={playerMenu.team.teamCode}
+                      text={true}
+                    />{' '}
+                    (save it to play as this team another night)
                   </p>
                 )}
                 <Button
@@ -94,7 +97,7 @@ export function MobileHeaderMenu({
                   className="flex items-center gap-1 text-sm font-extrabold underline"
                 >
                   <ExitIcon aria-hidden="true" />
-                  Log out
+                  Change team
                 </Button>
               </div>
             )}

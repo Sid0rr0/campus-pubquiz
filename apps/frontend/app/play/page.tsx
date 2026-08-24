@@ -269,7 +269,7 @@ function PlayPageContent() {
 
   return (
     <main
-      className={`flex min-h-screen flex-col bg-background px-5 pt-5 text-foreground ${
+      className={`flex min-h-screen flex-col bg-background px-5 pt-1 text-foreground ${
         hasBonusPanel ? 'pb-24 md:pb-5' : 'pb-5'
       }`}
     >
