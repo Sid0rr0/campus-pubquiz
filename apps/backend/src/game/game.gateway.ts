@@ -556,10 +556,10 @@ export class GameGateway
 
   @SubscribeMessage(SOCKET_EVENTS.SET_BREAK_END_TIME)
   @CreateRequestContext()
-  async handleSetBreakEndTime(
+  handleSetBreakEndTime(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
+  ): void {
     const payload = parseSocketPayload(
       setBreakEndTimePayloadSchema,
       rawPayload,
