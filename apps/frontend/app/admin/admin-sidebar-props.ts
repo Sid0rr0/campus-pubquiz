@@ -22,4 +22,6 @@ export interface AdminSidebarProps {
   showAnswerStatus: boolean;
   answeredTeamIds: number[];
   onKickTeam: (teamId: number) => void;
+  breakEndsAt: number | null;
+  onSetBreakEndTime: (breakEndsAt: number | null) => void;
 }

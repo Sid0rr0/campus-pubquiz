@@ -35,6 +35,7 @@ import {
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
   parseSocketPayload,
+  setBreakEndTimePayloadSchema,
   submitAnswerPayloadSchema,
 } from '@/game/socket-payload.schemas';
 
@@ -550,6 +551,29 @@ export class GameGateway
 
     const teams = await this.teamService.listForSession(gameSessionId);
     this.gameState.setTeams(joinCode, teams);
+    this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.SET_BREAK_END_TIME)
+  @CreateRequestContext()
+  async handleSetBreakEndTime(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<void> {
+    const payload = parseSocketPayload(
+      setBreakEndTimePayloadSchema,
+      rawPayload,
+    );
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+      throw new WsException('Only admin clients may set the break end time');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.SET_BREAK_END_TIME} from ${client.id}: breakEndsAt=${payload.breakEndsAt}`,
+    );
+
+    this.gameState.setBreakEndTime(joinCode, payload.breakEndsAt);
     this.broadcastState(joinCode, this.gameState.getSnapshot(joinCode));
   }
 

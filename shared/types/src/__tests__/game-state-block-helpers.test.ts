@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   getBlockStartRoundIndex,
+  getBreakNumber,
   getQuizStructureSummary,
   isLastQuestionOfBreakAfterRound,
+  isShowingLastBreak,
   type GameContext,
   type GameProgress,
 } from '../game-state';
@@ -73,6 +75,114 @@ describe('getBlockStartRoundIndex', () => {
   it('starts a new block on the round following a breakAfter round', () => {
     expect(getBlockStartRoundIndex(2, fourRounds)).toBe(2);
     expect(getBlockStartRoundIndex(3, fourRounds)).toBe(2);
+  });
+});
+
+describe('getBreakNumber', () => {
+  it('returns 0 for a round that is not a block-ending round', () => {
+    expect(
+      getBreakNumber(0, {
+        blockCount: 0,
+        topicsPerBlock: null,
+        breakRoundNumbers: [],
+        minQuestionsPerTopic: 0,
+        maxQuestionsPerTopic: 0,
+      }),
+    ).toBe(0);
+  });
+
+  it('numbers each break in order, starting from 1', () => {
+    const threeBlocksSummary = getQuizStructureSummary({
+      rounds: [
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+        { questionCount: 1, breakAfter: false },
+        { questionCount: 1, breakAfter: true },
+      ],
+    });
+    // roundIndex 1 (round "2") ends the first break.
+    expect(getBreakNumber(1, threeBlocksSummary)).toBe(1);
+    // roundIndex 3 (round "4") ends the second break.
+    expect(getBreakNumber(3, threeBlocksSummary)).toBe(2);
+    // roundIndex 5 (round "6") ends the third break.
+    expect(getBreakNumber(5, threeBlocksSummary)).toBe(3);
+  });
+
+  it('numbers a single-block quiz’s only break as 1', () => {
+    expect(
+      getBreakNumber(1, getQuizStructureSummary(twoRoundsWithBreakAfterSecond)),
+    ).toBe(1);
+  });
+});
+
+describe('isShowingLastBreak', () => {
+  const threeBlocksSummary = getQuizStructureSummary({
+    rounds: [
+      { questionCount: 1, breakAfter: false },
+      { questionCount: 1, breakAfter: true },
+      { questionCount: 1, breakAfter: false },
+      { questionCount: 1, breakAfter: true },
+      { questionCount: 1, breakAfter: false },
+      { questionCount: 1, breakAfter: true },
+    ],
+  });
+
+  function progressAt(
+    status: GameProgress['status'],
+    roundIndex: number,
+  ): GameProgress {
+    return {
+      status,
+      roundIndex,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+  }
+
+  it('is false outside a break-related status, even during the last break’s round', () => {
+    expect(
+      isShowingLastBreak(progressAt('reveal', 5), threeBlocksSummary),
+    ).toBe(false);
+    expect(
+      isShowingLastBreak(progressAt('question_open', 5), threeBlocksSummary),
+    ).toBe(false);
+  });
+
+  it('is false during an earlier break, even in a break-related status', () => {
+    expect(
+      isShowingLastBreak(progressAt('break_intro', 1), threeBlocksSummary),
+    ).toBe(false);
+    expect(isShowingLastBreak(progressAt('break', 3), threeBlocksSummary)).toBe(
+      false,
+    );
+  });
+
+  it('is true for every break-related status during the quiz’s last break', () => {
+    expect(
+      isShowingLastBreak(progressAt('break_intro', 5), threeBlocksSummary),
+    ).toBe(true);
+    expect(isShowingLastBreak(progressAt('break', 5), threeBlocksSummary)).toBe(
+      true,
+    );
+    expect(
+      isShowingLastBreak(
+        progressAt('break_round_intro', 5),
+        threeBlocksSummary,
+      ),
+    ).toBe(true);
+  });
+
+  it('is true for a single-block quiz’s only break, since it is also the last one', () => {
+    expect(
+      isShowingLastBreak(
+        progressAt('break_intro', 1),
+        getQuizStructureSummary(twoRoundsWithBreakAfterSecond),
+      ),
+    ).toBe(true);
   });
 });
 

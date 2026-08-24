@@ -1,5 +1,6 @@
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
+import { BreakEndTimeControl } from '@/app/admin/break-end-time-control';
 import { TeamsPanel } from '@/app/admin/teams-panel';
 import { SessionStatusPanel } from '@/app/admin/session-status-panel';
 import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
@@ -26,6 +27,8 @@ export function DesktopSidebar({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
+  breakEndsAt,
+  onSetBreakEndTime,
 }: AdminSidebarProps) {
   return (
     <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-foreground p-5 text-background md:sticky md:top-(--site-header-height) md:flex md:h-[calc(100vh-var(--site-header-height))]">
@@ -37,6 +40,11 @@ export function DesktopSidebar({
         joinCode={joinCode}
         activeQuizTitle={activeQuizTitle}
         connectionError={connectionError}
+      />
+      <BreakEndTimeControl
+        progressStatus={progressStatus}
+        breakEndsAt={breakEndsAt}
+        onSetBreakEndTime={onSetBreakEndTime}
       />
       <div className="flex flex-col gap-2">
         <NavigationButtons

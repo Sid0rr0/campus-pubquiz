@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon } from '@radix-ui/react-icons';
 import {
   DEFAULT_SESSION_SETTINGS,
+  isShowingLastBreak,
   type GameStatus,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -266,6 +267,7 @@ function PlayPageContent() {
   // BonusProgressPanel), so the page needs matching bottom padding on mobile
   // or its bar would cover the last bit of inline content underneath it.
   const hasBonusPanel = settings.enabledBonusCategories.length > 0;
+  const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
 
   return (
     <main
@@ -341,6 +343,8 @@ function PlayPageContent() {
             enabledCategories={settings.enabledBonusCategories}
             maxAwardsPerCategory={settings.maxBonusAwardsPerCategory}
             myBonusAwards={myBonusAwards}
+            quizStructure={quizStructure}
+            showAvailability={showBonusAvailability}
           />
         )}
       </div>

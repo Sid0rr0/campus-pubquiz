@@ -22,6 +22,8 @@ export interface SessionState {
   progress: GameProgress;
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   questionLockAt: number | null;
+  /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
+  breakEndsAt: number | null;
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
@@ -59,6 +61,7 @@ export function freshSessionState(
       progress,
       seededGame.settings.lockGraceSeconds * 1000,
     ),
+    breakEndsAt: null,
     leaderboard: [],
     leaderboardRevealCount: 0,
     teams: [],

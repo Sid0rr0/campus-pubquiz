@@ -23,6 +23,7 @@ export const SOCKET_EVENTS = {
   GRADE_ANSWER: 'game:grade_answer',
   KICK_TEAM: 'game:kick_team',
   AWARD_BONUS: 'game:award_bonus',
+  SET_BREAK_END_TIME: 'game:set_break_end_time',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -212,6 +213,13 @@ export interface StateSnapshotPayload {
    * status/type. 0 whenever the current reveal question isn't closest_guess.
    */
   closestGuessRevealStep: number;
+  /**
+   * Epoch-ms time the admin expects the break to end, or null when unset —
+   * shown as a "back at HH:MM" line on the display's break screen. Ephemeral
+   * (not persisted) and admin-editable via SET_BREAK_END_TIME; reset to null
+   * whenever a fresh break starts (entering 'break_intro' from 'locking').
+   */
+  breakEndsAt: number | null;
   /** This session's configurable settings — see SessionSettings. */
   settings: SessionSettings;
 }
@@ -376,6 +384,11 @@ export interface ActiveSessionSummary {
 
 export interface KickTeamPayload {
   teamId: number;
+}
+
+/** Admin-set/clear the display's break-end-time line — null clears it back to unset. */
+export interface SetBreakEndTimePayload {
+  breakEndsAt: number | null;
 }
 
 /** "shot"/"selfie" are the predefined quick-award categories; "custom" requires a `reason`. */

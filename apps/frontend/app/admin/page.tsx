@@ -55,6 +55,7 @@ function AdminPageContent() {
     gradeAnswer,
     kickTeam,
     awardBonus,
+    setBreakEndTime,
     setLiveAnswers = () => {},
     reconnectedAt,
   } = useGameSocket(
@@ -385,6 +386,7 @@ function AdminPageContent() {
     teams = [],
     answeredTeamIds = [],
     ungradedQuestionIds = [],
+    breakEndsAt = null,
     settings = DEFAULT_SESSION_SETTINGS,
   } = snapshot;
   const fallbackQuestions = currentQuestion
@@ -418,6 +420,8 @@ function AdminPageContent() {
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
+        breakEndsAt={breakEndsAt}
+        onSetBreakEndTime={setBreakEndTime}
         user={auth.user}
         onLogout={handleLogout}
       />
@@ -442,6 +446,8 @@ function AdminPageContent() {
         showAnswerStatus={showAnswerStatus}
         answeredTeamIds={answeredTeamIds}
         onKickTeam={kickTeam}
+        breakEndsAt={breakEndsAt}
+        onSetBreakEndTime={setBreakEndTime}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
         {progress.status === 'lobby' && (

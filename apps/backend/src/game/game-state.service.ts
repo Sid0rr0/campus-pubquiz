@@ -262,6 +262,7 @@ export class GameStateService implements OnModuleInit {
       ),
       questionLockAt: session.questionLockAt,
       closestGuessRevealStep: session.closestGuessRevealStep,
+      breakEndsAt: session.breakEndsAt,
       settings: session.seededGame.settings,
     };
   }
@@ -269,6 +270,12 @@ export class GameStateService implements OnModuleInit {
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   getQuestionLockAt(joinCode: string): number | null {
     return this.getSession(joinCode).questionLockAt;
+  }
+
+  /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
+  setBreakEndTime(joinCode: string, breakEndsAt: number | null): void {
+    const session = this.getSession(joinCode);
+    this.sessions.set(joinCode, { ...session, breakEndsAt });
   }
 
   /** This session's current settings — used by the gateway to filter enabled bonus categories. */
@@ -362,6 +369,16 @@ export class GameStateService implements OnModuleInit {
         progress,
         sessionWithGradingStatus.seededGame.settings.lockGraceSeconds * 1000,
       ),
+      // A fresh break starting (the only path into 'break_intro') clears any
+      // end-time left over from a previous break, so the admin sets a new
+      // one rather than the display showing a stale/past time. Navigating
+      // within the same break (break_intro/break/break_round_intro) via
+      // Previous/Advance leaves it untouched.
+      breakEndsAt:
+        session.progress.status === 'locking' &&
+        progress.status === 'break_intro'
+          ? null
+          : sessionWithGradingStatus.breakEndsAt,
       leaderboardRevealCount: computeLeaderboardRevealCount(
         action,
         session.progress.isLeaderboardVisible,

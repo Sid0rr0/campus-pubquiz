@@ -73,6 +73,7 @@ function snapshot(
     teams: [],
     questionLockAt: null,
     closestGuessRevealStep: 0,
+    breakEndsAt: null,
     settings: DEFAULT_SESSION_SETTINGS,
     ...overrides,
   };

@@ -19,9 +19,24 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
+
+// roundIndex 1 (round "2") is this fixture's only break — breakRoundNumbers
+// is what getBreakNumber (display/page.tsx) reads to number "BREAK N".
+const breakAfterRoundTwo = {
+  blockCount: 1,
+  topicsPerBlock: 2,
+  breakRoundNumbers: [2],
+  minQuestionsPerTopic: 1,
+  maxQuestionsPerTopic: 1,
+};
 
 describe('DisplayPage — break', () => {
   beforeEach(() => {
@@ -30,13 +45,17 @@ describe('DisplayPage — break', () => {
 
   it('shows a "BREAK" title card once a round locks (break_intro)', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'break_intro', roundIndex: 1 }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ status: 'break_intro', roundIndex: 1 }),
+        currentQuestion: null,
+        quizStructure: breakAfterRoundTwo,
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
 
-    expect(screen.getByText('BREAK')).toBeInTheDocument();
+    expect(screen.getByText('BREAK 1')).toBeInTheDocument();
     expect(screen.getByText(/round 2/i)).toBeInTheDocument();
   });
 
@@ -65,16 +84,21 @@ describe('DisplayPage — break', () => {
   it('keeps showing the generic BREAK card for break_intro even once block questions have loaded, never showing Q5 itself', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'break_intro', roundIndex: 1, revealIndex: 1 }),
+        progress: progress({
+          status: 'break_intro',
+          roundIndex: 1,
+          revealIndex: 1,
+        }),
         currentQuestion: null,
         blockQuestions: twoQuestionBlock,
+        quizStructure: breakAfterRoundTwo,
       },
       connectionError: null,
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
 
-    expect(screen.getByText('BREAK')).toBeInTheDocument();
+    expect(screen.getByText('BREAK 1')).toBeInTheDocument();
     expect(screen.queryByText('Name this flag.')).not.toBeInTheDocument();
   });
 
@@ -118,7 +142,11 @@ describe('DisplayPage — break', () => {
   it("shows the round's own title card once Previous crosses a round boundary during break review", () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'break_round_intro', roundIndex: 1, revealIndex: 0 }),
+        progress: progress({
+          status: 'break_round_intro',
+          roundIndex: 1,
+          revealIndex: 0,
+        }),
         currentQuestion: null,
         blockQuestions: twoQuestionBlock,
       },

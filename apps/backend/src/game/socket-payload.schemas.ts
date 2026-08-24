@@ -56,6 +56,10 @@ export const kickTeamPayloadSchema = z.object({
   teamId: positiveInt,
 });
 
+export const setBreakEndTimePayloadSchema = z.object({
+  breakEndsAt: finiteNumber.nullable(),
+});
+
 export const awardBonusPayloadSchema = z.object({
   teamId: positiveInt,
   category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),

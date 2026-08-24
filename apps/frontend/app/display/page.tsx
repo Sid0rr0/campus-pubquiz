@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   DEFAULT_SESSION_SETTINGS,
+  getBreakNumber,
+  isShowingLastBreak,
   type BlockQuestionView,
   type BlockRevealQuestionView,
   type GameProgress,
@@ -168,6 +170,7 @@ function DisplayPageContent() {
     roundTitle = '',
     questionLockAt = null,
     closestGuessRevealStep = 0,
+    breakEndsAt = null,
     settings = DEFAULT_SESSION_SETTINGS,
   } = snapshot;
 
@@ -192,6 +195,8 @@ function DisplayPageContent() {
     revealQuestion,
     closestGuessRevealStep,
   );
+  const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
+  const showBonusList = !isShowingLastBreak(progress, quizStructure);
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -259,7 +264,14 @@ function DisplayPageContent() {
                 </div>
               )}
               {progress.status === 'break_intro' && (
-                <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
+                <BreakIntroScreen
+                  roundNumber={progress.roundIndex + 1}
+                  breakNumber={breakNumber}
+                  enabledBonusCategories={settings.enabledBonusCategories}
+                  breakEndsAt={breakEndsAt}
+                  quizStructure={quizStructure}
+                  showBonusList={showBonusList}
+                />
               )}
               {progress.status === 'break' &&
                 (breakReviewQuestion ? (
@@ -268,7 +280,14 @@ function DisplayPageContent() {
                     autoplayMedia={settings.autoplayMedia}
                   />
                 ) : (
-                  <BreakIntroScreen roundNumber={progress.roundIndex + 1} />
+                  <BreakIntroScreen
+                    roundNumber={progress.roundIndex + 1}
+                    breakNumber={breakNumber}
+                    enabledBonusCategories={settings.enabledBonusCategories}
+                    breakEndsAt={breakEndsAt}
+                    quizStructure={quizStructure}
+                    showBonusList={showBonusList}
+                  />
                 ))}
               {progress.status === 'break_round_intro' &&
                 breakRoundIntroQuestion && (

@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { Dialog } from 'radix-ui';
 import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
-import type { BonusCategory, TeamBonusAwardView } from '@campus-pubquiz/types';
+import type {
+  BonusCategory,
+  QuizStructureSummary,
+  TeamBonusAwardView,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { BonusProgressList } from '@/app/play/bonus-progress-list';
 
@@ -11,6 +15,10 @@ interface BonusProgressPanelProps {
   enabledCategories: BonusCategory[];
   maxAwardsPerCategory: Partial<Record<BonusCategory, number>>;
   myBonusAwards: TeamBonusAwardView[];
+  /** Drives the "can be earned until the end of break X" caption's break number. */
+  quizStructure: QuizStructureSummary;
+  /** False while showing the quiz's last break — bonuses have already closed by then, so there's nothing left to show as available. */
+  showAvailability: boolean;
 }
 
 /**
@@ -23,6 +31,8 @@ export function BonusProgressPanel({
   enabledCategories,
   maxAwardsPerCategory,
   myBonusAwards,
+  quizStructure,
+  showAvailability,
 }: BonusProgressPanelProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -35,6 +45,8 @@ export function BonusProgressPanel({
             enabledCategories={enabledCategories}
             maxAwardsPerCategory={maxAwardsPerCategory}
             myBonusAwards={myBonusAwards}
+            quizStructure={quizStructure}
+            showAvailability={showAvailability}
           />
         </div>
       </div>
@@ -76,6 +88,8 @@ export function BonusProgressPanel({
                 enabledCategories={enabledCategories}
                 maxAwardsPerCategory={maxAwardsPerCategory}
                 myBonusAwards={myBonusAwards}
+                quizStructure={quizStructure}
+                showAvailability={showAvailability}
               />
             </Dialog.Content>
           </Dialog.Portal>

@@ -18,6 +18,7 @@ import {
   type JoinPlayersPayload,
   type KickTeamPayload,
   type SessionClosedPayload,
+  type SetBreakEndTimePayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
   type TeamAnswerView,
@@ -56,6 +57,8 @@ export interface UseGameSocketResult {
     points: number,
     reason?: string,
   ) => void;
+  /** Admin-only: sets/clears the epoch-ms time shown as "back at HH:MM" on the display's break screen — null clears it. */
+  setBreakEndTime: (breakEndsAt: number | null) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
   /** The team's own points awarded by question id, present only once that question's answer is graded (players only). */
@@ -353,6 +356,11 @@ export function useGameSocket(
     [],
   );
 
+  const setBreakEndTime = useCallback((breakEndsAt: number | null) => {
+    const payload: SetBreakEndTimePayload = { breakEndsAt };
+    socketRef.current?.emit(SOCKET_EVENTS.SET_BREAK_END_TIME, payload);
+  }, []);
+
   return {
     snapshot,
     connectionError,
@@ -364,6 +372,7 @@ export function useGameSocket(
     gradeAnswer,
     kickTeam,
     awardBonus,
+    setBreakEndTime,
     myAnswers,
     myAnswerGrades,
     myBonusAwards,

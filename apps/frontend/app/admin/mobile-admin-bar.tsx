@@ -6,6 +6,7 @@ import { Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
 import type { AuthUser, GameAction } from '@campus-pubquiz/types';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
+import { BreakEndTimeControl } from '@/app/admin/break-end-time-control';
 import { TeamsPanel } from '@/app/admin/teams-panel';
 import { SessionStatusPanel } from '@/app/admin/session-status-panel';
 import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
@@ -39,6 +40,8 @@ export function MobileAdminBar({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
+  breakEndsAt,
+  onSetBreakEndTime,
   user,
   onLogout,
 }: MobileAdminBarProps) {
@@ -97,6 +100,11 @@ export function MobileAdminBar({
               joinCode={joinCode}
               activeQuizTitle={activeQuizTitle}
               connectionError={connectionError}
+            />
+            <BreakEndTimeControl
+              progressStatus={progressStatus}
+              breakEndsAt={breakEndsAt}
+              onSetBreakEndTime={onSetBreakEndTime}
             />
             <AdminActions
               canStartQuiz={canStartQuiz}

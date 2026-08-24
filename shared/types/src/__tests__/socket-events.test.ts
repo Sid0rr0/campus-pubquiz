@@ -33,6 +33,7 @@ describe('SOCKET_EVENTS', () => {
       GRADE_ANSWER: 'game:grade_answer',
       KICK_TEAM: 'game:kick_team',
       AWARD_BONUS: 'game:award_bonus',
+      SET_BREAK_END_TIME: 'game:set_break_end_time',
     });
   });
 });

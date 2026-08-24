@@ -52,6 +52,23 @@ export interface QuizStructureSummary {
   maxQuestionsPerTopic: number;
 }
 
+/**
+ * 1-based ordinal of the break that follows the round at `roundIndex`
+ * (0-based) — 1 for the quiz's first break, 2 for its second, and so on.
+ * `roundIndex` stays pinned to the block's last round throughout
+ * break/reveal (see GameProgress.revealIndex), so this is safe to call
+ * directly with `progress.roundIndex` during a break status. Returns 0 if
+ * `roundIndex` isn't a block-ending round, which shouldn't happen while
+ * actually in a break status.
+ */
+export function getBreakNumber(
+  roundIndex: number,
+  quizStructure: QuizStructureSummary,
+): number {
+  const index = quizStructure.breakRoundNumbers.indexOf(roundIndex + 1);
+  return index === -1 ? 0 : index + 1;
+}
+
 /** Sizes (round counts) of every block, in order — a block ends at each breakAfter round. */
 function getBlockSizes(context: GameContext): number[] {
   const sizes: number[] = [];
@@ -167,6 +184,28 @@ export function isLastQuestionOfBreakAfterRound(
 ): boolean {
   const round = context.rounds[progress.roundIndex];
   return round.breakAfter && progress.questionIndex + 1 >= round.questionCount;
+}
+
+const BREAK_SCREEN_STATUSES: GameStatus[] = [
+  'break_intro',
+  'break',
+  'break_round_intro',
+];
+
+/**
+ * True while `progress` is showing a break-related screen (break_intro,
+ * break, or break_round_intro) for the quiz's *last* break — the one after
+ * bonus categories have already stopped being awardable (see
+ * getBonusEarnDeadlineText in the frontend's bonus-categories.ts), so
+ * there's nothing left to earn.
+ */
+export function isShowingLastBreak(
+  progress: GameProgress,
+  quizStructure: QuizStructureSummary,
+): boolean {
+  if (!BREAK_SCREEN_STATUSES.includes(progress.status)) return false;
+  const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
+  return breakNumber > 0 && breakNumber === quizStructure.blockCount;
 }
 
 function advanceFromQuestionOpen(
