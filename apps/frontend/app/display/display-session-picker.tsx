@@ -29,8 +29,15 @@ export function DisplaySessionPicker({
   const [isLoading, setIsLoading] = useState(true);
   // Guards state updates from a refresh that resolves after this picker has
   // unmounted (e.g. the operator picks a session before the fetch settles).
+  // Reset to true on every mount, not just at ref-creation — React Strict
+  // Mode (on by default for the App Router, see next.config.ts) mounts,
+  // cleans up, then remounts every effect once in dev, so without the reset
+  // here the flag would be stuck false after that first synthetic cleanup,
+  // permanently skipping setIsLoading(false) and leaving the Refresh button
+  // stuck disabled.
   const isMountedRef = useRef(true);
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
