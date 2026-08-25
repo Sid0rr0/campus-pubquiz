@@ -198,7 +198,7 @@ describe('SiteHeader', () => {
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
-  it('shows the team code and a working Log out button from the mobile hamburger on /play', async () => {
+  it('shows the team code and a working Change team button from the mobile hamburger on /play', async () => {
     pathnameRef.current = '/play';
     const onLogOut = vi.fn();
     mockUsePlayerMenu.mockReturnValue(
@@ -225,7 +225,7 @@ describe('SiteHeader', () => {
 
     await userEvent
       .setup()
-      .click(within(drawer).getByRole('button', { name: /log out/i }));
+      .click(within(drawer).getByRole('button', { name: /change team/i }));
 
     expect(onLogOut).toHaveBeenCalled();
   });
