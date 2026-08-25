@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
 import { LoginForm } from '@/app/login/login-form';
@@ -17,7 +17,7 @@ export default function LoginPage() {
     }
   }, [auth.status, router]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
     // auth.error already surfaces the failure message — this catch only
     // exists so the rejection auth.login() rethrows doesn't go unhandled.

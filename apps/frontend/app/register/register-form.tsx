@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import Link from 'next/link';
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Button } from '@/app/components/button';
@@ -11,7 +11,7 @@ interface RegisterFormProps {
   onUsernameInputChange: (value: string) => void;
   onPasswordInputChange: (value: string) => void;
   onConfirmPasswordInputChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   error?: string | null;
 }
 

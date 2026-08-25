@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Cross2Icon, StarIcon } from '@radix-ui/react-icons';
 import type { BonusCategory } from '@campus-pubquiz/types';
 import {
@@ -46,7 +46,7 @@ export function BonusAwardForm({
     points !== 0 &&
     (!isCustom || reason.trim().length > 0);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!canSubmit) return;
     onAward(category, points, isCustom ? reason.trim() : undefined);

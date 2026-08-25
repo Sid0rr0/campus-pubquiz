@@ -5,7 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
-  type FormEvent,
+  type SubmitEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -31,7 +31,7 @@ export interface UseTeamJoinResult extends UseGameSocketResult {
   teamCodeInput: string;
   setTeamCodeInput: (value: string) => void;
   hasStoredIdentity: boolean;
-  handleJoin: (event: FormEvent<HTMLFormElement>) => void;
+  handleJoin: (event: SubmitEvent<HTMLFormElement>) => void;
   handleLogOut: () => void;
 }
 
@@ -228,7 +228,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     router.push('/play');
   }, [kicked, router]);
 
-  function handleJoin(event: FormEvent<HTMLFormElement>) {
+  function handleJoin(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (joinInFlightRef.current) return;
     const trimmedName = nameInput.trim();

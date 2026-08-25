@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { socketResult } from '@/app/play/__tests__/test-utils';
 
@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 function fakeSubmitEvent() {
-  return { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>;
+  return { preventDefault: vi.fn() } as unknown as SubmitEvent<HTMLFormElement>;
 }
 
 describe('useTeamJoin — double-submit guard', () => {

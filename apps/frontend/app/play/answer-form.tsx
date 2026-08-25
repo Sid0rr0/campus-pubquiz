@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import { IDK_ANSWER_VALUE, type QuestionView } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -113,7 +113,7 @@ export function AnswerForm({
     );
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!value.trim()) return;
     onSubmit(value.trim());

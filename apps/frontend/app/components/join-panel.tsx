@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, type FormEvent } from 'react';
+import { useEffect, type SubmitEvent } from 'react';
 import { JoinForm } from '@/app/components/join-form';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 
@@ -42,7 +42,7 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     }
   }, [isJoined, snapshot, router]);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     handleJoin(event);
   }
 

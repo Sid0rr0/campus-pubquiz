@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { EnterIcon } from '@radix-ui/react-icons';
 import { Button } from '@/app/components/button';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
@@ -13,7 +13,7 @@ interface JoinFormProps {
   teamCodeInput: string;
   onTeamCodeInputChange: (value: string) => void;
   connectionError: string | null;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   /** /play shows the team code field from the start — it's the reconnect/direct-visit fallback, where "played before?" is the common case rather than the exception the home page's collapsed toggle assumes. */
   alwaysShowTeamCode?: boolean;
   /** /play hides the manual game code field — a team landing there already has a code (QR scan) or picks a running game from the select above it, so the raw input is just clutter. */

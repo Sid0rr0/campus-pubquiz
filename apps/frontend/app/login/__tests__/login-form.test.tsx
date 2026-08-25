@@ -11,7 +11,7 @@ function renderForm(
     passwordInput: '',
     onUsernameInputChange: vi.fn(),
     onPasswordInputChange: vi.fn(),
-    onSubmit: vi.fn((event: React.FormEvent<HTMLFormElement>) =>
+    onSubmit: vi.fn((event: React.SubmitEvent<HTMLFormElement>) =>
       event.preventDefault(),
     ),
     ...overrides,

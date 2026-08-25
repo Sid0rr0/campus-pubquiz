@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
 import { RegisterForm } from '@/app/register/register-form';
@@ -20,7 +20,7 @@ export default function RegisterPage() {
     }
   }, [auth.status, router]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  function handleSubmit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (passwordInput !== confirmPasswordInput) {
       setValidationError('Passwords do not match');
