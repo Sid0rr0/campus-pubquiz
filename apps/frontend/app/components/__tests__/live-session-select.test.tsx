@@ -8,7 +8,8 @@ const { mockFetchPublicSessions } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app/lib/sessions-api')>();
+  const actual =
+    await importOriginal<typeof import('@/app/lib/sessions-api')>();
   return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
 });
 
@@ -27,32 +28,52 @@ describe('LiveSessionSelect', () => {
     mockFetchPublicSessions.mockResolvedValue([]);
   });
 
-  it('renders nothing while no games are running', async () => {
-    const { container } = render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
+  it('shows a disabled picker with a placeholder while no games are running', async () => {
+    render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
 
     await vi.waitFor(() => expect(mockFetchPublicSessions).toHaveBeenCalled());
-    expect(container).toBeEmptyDOMElement();
+    const trigger = screen.getByRole('combobox', { name: /pick the quiz/i });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveTextContent(/no games running yet/i);
   });
 
   it('lists running sessions once loaded', async () => {
     mockFetchPublicSessions.mockResolvedValue([
-      { joinCode: 'ABCDEF', quizId: 1, quizTitle: 'Campus Pub Quiz Night', status: 'lobby', teamCount: 3 },
+      {
+        joinCode: 'ABCDEF',
+        quizId: 1,
+        quizTitle: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 3,
+      },
     ]);
     render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
 
-    expect(await screen.findByRole('combobox', { name: /pick the quiz/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('combobox', { name: /pick the quiz/i }),
+    ).toBeInTheDocument();
   });
 
   it('calls onSelectSession with the join code when an option is picked', async () => {
     mockFetchPublicSessions.mockResolvedValue([
-      { joinCode: 'ABCDEF', quizId: 1, quizTitle: 'Campus Pub Quiz Night', status: 'lobby', teamCount: 3 },
+      {
+        joinCode: 'ABCDEF',
+        quizId: 1,
+        quizTitle: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 3,
+      },
     ]);
     const onSelectSession = vi.fn();
     const user = userEvent.setup();
     render(<LiveSessionSelect value="" onSelectSession={onSelectSession} />);
 
-    await user.click(await screen.findByRole('combobox', { name: /pick the quiz/i }));
-    await user.click(await screen.findByRole('option', { name: /campus pub quiz night/i }));
+    await user.click(
+      await screen.findByRole('combobox', { name: /pick the quiz/i }),
+    );
+    await user.click(
+      await screen.findByRole('option', { name: /campus pub quiz night/i }),
+    );
 
     expect(onSelectSession).toHaveBeenCalledWith('ABCDEF');
   });
@@ -61,6 +82,8 @@ describe('LiveSessionSelect', () => {
     mockFetchPublicSessions.mockRejectedValue(new Error('network down'));
     render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/could not load live games/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /could not load live games/i,
+    );
   });
 });
