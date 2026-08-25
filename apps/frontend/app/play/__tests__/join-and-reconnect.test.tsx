@@ -319,6 +319,50 @@ describe('PlayPage — join and reconnect', () => {
     expect(routerRef.push).toHaveBeenCalledWith('/play');
   });
 
+  it('does not re-append the closed session code to the URL after redirecting to /play', () => {
+    // Reproduces a real closed-session socket: use-game-socket.ts only clears
+    // its `snapshot` state when the socket re-enables under a *new* identity
+    // (see the `if (enabled)` guard in its identity-key reset), so a live
+    // session-closed transition leaves `snapshot.joinCode` stale rather than
+    // null. Without the teamName guard on the ?code= sync effect, once the
+    // URL actually lands on a bare /play (searchParams update following
+    // routerRef.push('/play')), that stale snapshot would make the effect
+    // immediately re-append `?code=ABCDEF`. Three render phases, matching
+    // real timing: (1) steady-state connected with ?code= already in the URL
+    // — no sync needed; (2) the admin closes the session — push('/play')
+    // fires, but the URL hasn't actually changed yet in this render, so
+    // codeFromUrl still equals the stale snapshot's code and no mismatch is
+    // visible yet; (3) the URL catches up to the pushed /play (no code) —
+    // this is the render where the stale snapshot and the now-absent
+    // codeFromUrl disagree, and only the teamName guard (already nulled by
+    // phase 2's render-adjustment) stops the re-append.
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+    const staleSnapshot = {
+      joinCode: 'ABCDEF',
+      progress: progress({ status: 'question_open' }),
+      currentQuestion: null,
+    };
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ sessionClosed: null, snapshot: staleSnapshot }),
+    );
+    const { rerender } = render(<PlayPage />);
+    expect(routerRef.replace).not.toHaveBeenCalled();
+
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ sessionClosed: 'ABCDEF', snapshot: staleSnapshot }),
+    );
+    rerender(<PlayPage />);
+    expect(routerRef.push).toHaveBeenCalledWith('/play');
+
+    searchParamsRef.current = new URLSearchParams();
+    rerender(<PlayPage />);
+
+    expect(routerRef.replace).not.toHaveBeenCalled();
+  });
+
   it('clears the session token, shows a notice and redirects to /play when the admin kicks the team', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');

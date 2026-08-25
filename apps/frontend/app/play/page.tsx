@@ -104,11 +104,15 @@ function PlayPageContent() {
     // socket actually landed on — covers arriving here without a code (e.g.
     // the home page's post-join redirect, or a restored localStorage
     // identity) so the URL is always shareable/bookmarkable for this game,
-    // never a stale or absent one.
-    if (snapshot?.joinCode && snapshot.joinCode !== codeFromUrl) {
+    // never a stale or absent one. Gated on teamName: once a session closes
+    // or a team is kicked, use-team-join.ts resets teamName to null but the
+    // socket's own snapshot (disabled, not torn down) still holds the old
+    // joinCode — without this guard, this effect would re-append that stale
+    // code right after the redirect back to a bare /play clears it.
+    if (teamName && snapshot?.joinCode && snapshot.joinCode !== codeFromUrl) {
       router.replace(`/play?code=${snapshot.joinCode}`);
     }
-  }, [snapshot, codeFromUrl, router]);
+  }, [teamName, snapshot, codeFromUrl, router]);
 
   if (!teamName || (connectionError && !team)) {
     return (
