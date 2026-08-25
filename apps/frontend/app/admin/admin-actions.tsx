@@ -8,6 +8,7 @@ import {
 } from '@radix-ui/react-icons';
 import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 interface AdminActionsProps {
   canStartQuiz: boolean;
@@ -50,24 +51,38 @@ export function AdminActions({
         {isLeaderboardVisible ? 'Close Leaderboard' : 'Open Leaderboard'}
       </Button>
       {canEndQuiz && (
-        <Button
-          size="lg"
-          onClick={() => onAction('END_QUIZ')}
-          className="rounded-lg border-2 border-background/25 font-extrabold text-background/60"
-        >
-          <StopIcon aria-hidden="true" />
-          End Quiz
-        </Button>
+        <ConfirmDialog
+          trigger={
+            <Button
+              size="lg"
+              className="rounded-lg border-2 border-background/25 font-extrabold text-background/60"
+            >
+              <StopIcon aria-hidden="true" />
+              End Quiz
+            </Button>
+          }
+          title="End this quiz?"
+          description="This immediately ends the quiz for everyone and shows the final leaderboard. This can't be undone."
+          confirmLabel="End Quiz"
+          onConfirm={() => onAction('END_QUIZ')}
+        />
       )}
       {canCloseSession && (
-        <Button
-          size="lg"
-          onClick={onCloseSession}
-          className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
-        >
-          <Cross2Icon aria-hidden="true" />
-          Close Session
-        </Button>
+        <ConfirmDialog
+          trigger={
+            <Button
+              size="lg"
+              className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
+            >
+              <Cross2Icon aria-hidden="true" />
+              Close Session
+            </Button>
+          }
+          title="Close this session?"
+          description="This removes it from the active sessions list for everyone. This can't be undone."
+          confirmLabel="Close Session"
+          onConfirm={onCloseSession}
+        />
       )}
     </div>
   );

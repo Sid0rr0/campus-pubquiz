@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -57,7 +57,7 @@ describe('AdminPage — end quiz and close session', () => {
     mockCloseSession.mockReset();
   });
 
-  it('sends END_QUIZ when the End Quiz button is clicked', async () => {
+  it('asks for confirmation before ending the quiz', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
@@ -70,6 +70,58 @@ describe('AdminPage — end quiz and close session', () => {
     render(<AdminPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
+
+    expect(
+      screen.getByRole('alertdialog', { name: /end this quiz\?/i }),
+    ).toBeInTheDocument();
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+
+  it('does not end the quiz when the confirmation is cancelled', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
+    const dialog = screen.getByRole('alertdialog', {
+      name: /end this quiz\?/i,
+    });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /^cancel$/i }),
+    );
+
+    expect(
+      screen.queryByRole('alertdialog', { name: /end this quiz\?/i }),
+    ).not.toBeInTheDocument();
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+
+  it('sends END_QUIZ once the confirmation dialog is confirmed', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
+    const dialog = screen.getByRole('alertdialog', {
+      name: /end this quiz\?/i,
+    });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /end quiz/i }),
+    );
 
     expect(sendAction).toHaveBeenCalledWith('END_QUIZ');
   });
@@ -91,7 +143,57 @@ describe('AdminPage — end quiz and close session', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('closes the session and redirects to /sessions when the Close Session button is clicked', async () => {
+  it('asks for confirmation before closing the session', async () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'ended' }),
+        currentQuestion: null,
+        joinCode: 'TESTCODE',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /close session/i }),
+    );
+
+    expect(
+      screen.getByRole('alertdialog', { name: /close this session\?/i }),
+    ).toBeInTheDocument();
+    expect(mockCloseSession).not.toHaveBeenCalled();
+  });
+
+  it('does not close the session when the confirmation is cancelled', async () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'ended' }),
+        currentQuestion: null,
+        joinCode: 'TESTCODE',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<AdminPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /close session/i }),
+    );
+    const dialog = screen.getByRole('alertdialog', {
+      name: /close this session\?/i,
+    });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /^cancel$/i }),
+    );
+
+    expect(
+      screen.queryByRole('alertdialog', { name: /close this session\?/i }),
+    ).not.toBeInTheDocument();
+    expect(mockCloseSession).not.toHaveBeenCalled();
+  });
+
+  it('closes the session and redirects to /sessions once the confirmation dialog is confirmed', async () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'ended' }),
@@ -106,6 +208,12 @@ describe('AdminPage — end quiz and close session', () => {
 
     await userEvent.click(
       screen.getByRole('button', { name: /close session/i }),
+    );
+    const dialog = screen.getByRole('alertdialog', {
+      name: /close this session\?/i,
+    });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /close session/i }),
     );
 
     expect(mockCloseSession).toHaveBeenCalledWith('TESTCODE');
@@ -137,6 +245,12 @@ describe('AdminPage — end quiz and close session', () => {
 
     await userEvent.click(
       screen.getByRole('button', { name: /close session/i }),
+    );
+    const dialog = screen.getByRole('alertdialog', {
+      name: /close this session\?/i,
+    });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /close session/i }),
     );
 
     expect(
