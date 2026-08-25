@@ -196,7 +196,9 @@ describe('PlayPage — join and reconnect', () => {
 
   it('resends joinTeam with a corrected team code when retrying with the same name and game code', async () => {
     const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 1 }),
+    );
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     const { rerender } = render(<PlayPage />);
 
@@ -207,9 +209,12 @@ describe('PlayPage — join and reconnect', () => {
     await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
+    // Same connection, the server just rejects the name — reconnectedAt is
+    // unchanged.
     mockUseGameSocket.mockReturnValue(
       socketResult({
         joinTeam,
+        reconnectedAt: 1,
         connectionError: 'Team name taken — enter its team code',
       }),
     );
@@ -221,6 +226,14 @@ describe('PlayPage — join and reconnect', () => {
       'quick-jade-fox',
     );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
+
+    // Retrying forces a brand-new socket (see useTeamJoin's joinAttempt
+    // comment) — simulate its connect landing, same as the real hook would
+    // produce, with a fresh reconnectedAt.
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 2 }),
+    );
+    rerender(<PlayPage />);
 
     expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
       joinCode: 'ABCDEF',

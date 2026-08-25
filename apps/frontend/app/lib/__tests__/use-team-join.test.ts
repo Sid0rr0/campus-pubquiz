@@ -52,7 +52,9 @@ describe('useTeamJoin — double-submit guard', () => {
 
   it('allows a fresh submission once the prior attempt fails', () => {
     const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 1 }),
+    );
 
     const { result, rerender } = renderHook(() => useTeamJoin(''));
 
@@ -65,9 +67,12 @@ describe('useTeamJoin — double-submit guard', () => {
     });
     expect(joinTeam).toHaveBeenCalledTimes(1);
 
+    // Same connection, the server just rejects the name — reconnectedAt is
+    // unchanged.
     mockUseGameSocket.mockReturnValue(
       socketResult({
         joinTeam,
+        reconnectedAt: 1,
         connectionError: 'Team name "The Quizzards" is already registered',
       }),
     );
@@ -79,6 +84,15 @@ describe('useTeamJoin — double-submit guard', () => {
     act(() => {
       result.current.handleJoin(fakeSubmitEvent());
     });
+    expect(joinTeam).toHaveBeenCalledTimes(1);
+
+    // Retrying forces a brand-new socket (see useTeamJoin's joinAttempt
+    // comment) — simulate its connect landing, same as the real hook would
+    // produce, with a fresh reconnectedAt.
+    mockUseGameSocket.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 2 }),
+    );
+    rerender();
 
     expect(joinTeam).toHaveBeenCalledTimes(2);
   });

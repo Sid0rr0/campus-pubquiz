@@ -133,6 +133,11 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     // storage (see the effect below for the full explanation).
   }, []);
 
+  // Tracks the `reconnectedAt` value a join has already been sent for, so a
+  // single connection only ever sends one JOIN_PLAYERS — see the effect
+  // below for why this is needed.
+  const sentForReconnectedAtRef = useRef<number | null>(null);
+
   useEffect(() => {
     // Fires once this connection's identity (team name + session code) is
     // known, whichever of the join form / stored identity / URL supplied it —
@@ -148,7 +153,25 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     // this same effect to run again from scratch. Deliberately excludes
     // teamCodeInput itself from its deps (read via a ref instead) so
     // retyping the team code alone doesn't re-fire this join.
+    //
+    // A fresh join (identity just became known) and this same socket's own
+    // 'connect' event (which bumps reconnectedAt) both land within moments
+    // of each other on a brand-new socket — without the dedupe below, both
+    // would independently fire this effect and send two JOIN_PLAYERS
+    // requests for the same brand-new team name; the second loses the race
+    // against the first's just-created row and comes back "already
+    // registered" even though the name was genuinely new. reconnectedAt is
+    // only non-null once the socket has actually connected (real
+    // useGameSocket usage — some tests mock it as undefined and skip this
+    // gate entirely, sending as soon as identity is known), and it gets a
+    // fresh value on every connect (first-time or reconnect), so gating on
+    // "already sent for this exact reconnectedAt" collapses both triggers
+    // into a single send per connection while still resending on a genuine
+    // transport reconnect.
     if (!teamName || !activeJoinCode) return;
+    if (reconnectedAt === null) return;
+    if (sentForReconnectedAtRef.current === reconnectedAt) return;
+    sentForReconnectedAtRef.current = reconnectedAt;
     const storedOptions = storedJoinOptions();
     joinTeam(teamName, {
       teamToken: storedOptions.teamToken,

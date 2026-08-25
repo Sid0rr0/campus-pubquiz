@@ -27,6 +27,13 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     myAnswerGrades: {},
     myBonusAwards: [],
     seenQuestions: {},
+    // A fixed "already connected" marker — useTeamJoin's join effect only
+    // sends once this is non-null (it mirrors useGameSocket's real
+    // post-connect timestamp), so tests that don't care about reconnect
+    // timing need a stand-in value here to still see an immediate joinTeam
+    // call. Tests exercising an actual second connection (retry, reconnect)
+    // should override this with a distinct value of their own.
+    reconnectedAt: 1,
     ...overrides,
   };
 }
