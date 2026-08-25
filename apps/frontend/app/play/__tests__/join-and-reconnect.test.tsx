@@ -169,14 +169,31 @@ describe('PlayPage — join and reconnect', () => {
     );
   });
 
-  it('skips the join form when a team name is already stored (reconnect)', () => {
+  it('skips the join form when a team name and join code are already stored (reconnect)', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
     render(<PlayPage />);
 
     expect(
       screen.queryByRole('textbox', { name: /team name/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/playing as returning team/i)).toBeInTheDocument();
+  });
+
+  it('shows the join form instead of hanging on "Connecting…" when a team name survives a closed session but its join code was cleared', () => {
+    // Reproduces a refresh right after the admin closes the session:
+    // clearStoredSession() deliberately keeps the team name (so the join
+    // form stays prefilled) but clears the join code. Without the
+    // canReachSnapshot guard in page.tsx, the restored teamName alone would
+    // skip straight past the join form to the "Connecting…" screen and hang
+    // there forever, since there is no join code left to open a socket with.
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    render(<PlayPage />);
+
+    expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue(
+      'Returning Team',
+    );
+    expect(screen.queryByText(/connecting…/i)).not.toBeInTheDocument();
   });
 
   it('calls joinTeam with the stored name, token and join code on reconnect', () => {

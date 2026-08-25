@@ -31,6 +31,8 @@ export interface UseTeamJoinResult extends UseGameSocketResult {
   teamCodeInput: string;
   setTeamCodeInput: (value: string) => void;
   hasStoredIdentity: boolean;
+  /** The join code this socket is actually connecting/connected with, or null when none is known yet — lets consumers tell "genuinely mid-connection" apart from "no session to reconnect to" even while teamName is already restored from storage. */
+  activeJoinCode: string | null;
   handleJoin: (event: SubmitEvent<HTMLFormElement>) => void;
   handleLogOut: () => void;
 }
@@ -290,6 +292,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     teamCodeInput,
     setTeamCodeInput,
     hasStoredIdentity,
+    activeJoinCode,
     handleJoin,
     handleLogOut,
   };

@@ -22,13 +22,20 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     connectionError,
     team,
     snapshot,
+    activeJoinCode,
     handleJoin,
   } = useTeamJoin(codeFromUrl);
 
   // Mirrors /play's join gate: teamName (local state, cleared by "log out")
   // is the source of truth, not team (socket state, which the mocked/real
-  // hook never explicitly resets once a join has been accepted).
-  const isForm = !teamName || Boolean(connectionError && !team);
+  // hook never explicitly resets once a join has been accepted). Also
+  // mirrors /play's canReachSnapshot guard — a closed session's stored team
+  // name survives (see clearStoredSession) with its join code cleared, so
+  // without this a refresh could restore teamName with nothing left to
+  // connect to and hang on "Connecting to the table…" forever.
+  const canReachSnapshot = Boolean(activeJoinCode) || Boolean(snapshot);
+  const isForm =
+    !teamName || !canReachSnapshot || Boolean(connectionError && !team);
   const isJoined = !isForm && Boolean(team);
   const isConnecting = !isForm && !team;
 
