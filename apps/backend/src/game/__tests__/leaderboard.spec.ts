@@ -129,7 +129,7 @@ describe('GameStateService — leaderboard', () => {
     expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(0);
   });
 
-  it('shows the leaderboard screen immediately when the quiz ends, teams still revealed one at a time', async () => {
+  it('shows "Quiz complete!" rather than the leaderboard when the End Quiz button ends the quiz, until the admin reveals it', async () => {
     service.setLeaderboard(joinCode, [
       {
         teamId: 1,
@@ -150,8 +150,16 @@ describe('GameStateService — leaderboard', () => {
 
     const ended = await service.applyAction(joinCode, 'END_QUIZ');
 
-    expect(ended.progress.isLeaderboardVisible).toBe(true);
+    expect(ended.progress.status).toBe('ended');
+    expect(ended.progress.isLeaderboardVisible).toBe(false);
     expect(ended.leaderboardRevealCount).toBe(0);
+
+    const withLeaderboard = await service.applyAction(
+      joinCode,
+      'TOGGLE_LEADERBOARD',
+    );
+    expect(withLeaderboard.progress.isLeaderboardVisible).toBe(true);
+    expect(withLeaderboard.leaderboardRevealCount).toBe(0);
 
     const afterFirstReveal = await service.applyAction(
       joinCode,

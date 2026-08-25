@@ -53,10 +53,10 @@ export function getNextGameState(
     if (progress.status === 'ended') {
       illegal(progress.status, action);
     }
-    // Ending the quiz shows the final leaderboard immediately — the admin
-    // shouldn't need a separate TOGGLE_LEADERBOARD action to reveal the
-    // result teams have been waiting for.
-    return { ...progress, status: 'ended', isLeaderboardVisible: true };
+    // Ending the quiz shows the "Quiz complete!" screen first, not the
+    // leaderboard — the admin reveals it afterward via TOGGLE_LEADERBOARD,
+    // same as at any other break.
+    return { ...progress, status: 'ended', isLeaderboardVisible: false };
   }
 
   switch (action) {

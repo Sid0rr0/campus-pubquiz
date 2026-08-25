@@ -116,7 +116,7 @@ describe('getNextGameState — leaderboard visibility and REVEAL_NEXT_TEAM', () 
     expect(next.status).toBe('ended');
   });
 
-  it('shows the leaderboard immediately when the quiz ends', () => {
+  it('shows the "Quiz complete!" screen, not the leaderboard, when the quiz ends', () => {
     const grading: GameProgress = {
       status: 'break',
       roundIndex: 0,
@@ -130,7 +130,24 @@ describe('getNextGameState — leaderboard visibility and REVEAL_NEXT_TEAM', () 
       'END_QUIZ',
       twoRoundsWithBreakAfterSecond,
     );
-    expect(next.isLeaderboardVisible).toBe(true);
+    expect(next.isLeaderboardVisible).toBe(false);
+  });
+
+  it('hides an already-open leaderboard when the quiz ends', () => {
+    const gradingWithLeaderboardOpen: GameProgress = {
+      status: 'break',
+      roundIndex: 0,
+      questionIndex: 1,
+      isLeaderboardVisible: true,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      gradingWithLeaderboardOpen,
+      'END_QUIZ',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isLeaderboardVisible).toBe(false);
   });
 });
 
