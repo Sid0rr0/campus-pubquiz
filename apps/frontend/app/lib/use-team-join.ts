@@ -62,6 +62,14 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
   useEffect(() => {
     teamCodeInputRef.current = teamCodeInput;
   });
+  // Guards against a double-tap on the join button sending two JOIN_PLAYERS
+  // requests before React re-renders past the form: for a brand-new team
+  // name, the second request loses the race against the first's just-created
+  // row and comes back "already registered" even though the first request
+  // succeeded — leaving the error banner up over an otherwise-connected
+  // game view. A ref (not state) so the very next synchronous click, before
+  // any re-render, still sees the guard.
+  const joinInFlightRef = useRef(false);
 
   // Passing joinAttempt as the retry key forces a brand-new socket on every
   // resubmission, even when the join code text is unchanged (e.g. a
@@ -74,7 +82,23 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     activeJoinCode ?? undefined,
     joinAttempt,
   );
-  const { team, joinTeam, sessionClosed, kicked, reconnectedAt } = socket;
+  const {
+    team,
+    joinTeam,
+    sessionClosed,
+    kicked,
+    reconnectedAt,
+    connectionError,
+  } = socket;
+
+  useEffect(() => {
+    // A join attempt has settled — either the team is confirmed (JOIN_ACCEPTED)
+    // or the server rejected it (an 'exception', surfaced as connectionError).
+    // Either way the next tap should be able to send a fresh request.
+    if (team || connectionError) {
+      joinInFlightRef.current = false;
+    }
+  }, [team, connectionError]);
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -158,6 +182,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     // stale, so drop them and send the team back to a fresh /play join screen
     // rather than letting the next action surface an opaque server error.
     if (!sessionClosed) return;
+    joinInFlightRef.current = false;
     clearStoredSession();
     router.push('/play');
   }, [sessionClosed, router]);
@@ -191,6 +216,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     // elsewhere in this file) so it still runs when a component mounts
     // already kicked, not only on a live false→true transition.
     if (!kicked) return;
+    joinInFlightRef.current = false;
     clearStoredSession(true);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamName(null);
@@ -204,9 +230,11 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (joinInFlightRef.current) return;
     const trimmedName = nameInput.trim();
     const normalizedCode = normalizeJoinCode(codeInput);
     if (!trimmedName || !normalizedCode) return;
+    joinInFlightRef.current = true;
     window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, trimmedName);
     window.localStorage.setItem(JOIN_CODE_STORAGE_KEY, normalizedCode);
     setTeamName(trimmedName);
@@ -222,6 +250,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     // and join code (this specific game session) are cleared, so the join
     // form stays prefilled for playing as this team again another night.
     clearStoredSession();
+    joinInFlightRef.current = false;
     setTeamName(null);
     setCodeInput(codeFromUrl);
     setHasStoredIdentity(false);

@@ -100,4 +100,38 @@ describe('useGameSocket — connection errors', () => {
       expect(result.current.connectionError).toBe('Invalid admin password'),
     );
   });
+
+  it('clears a stale join error once JOIN_ACCEPTED confirms the team', async () => {
+    // Reproduces a double-tapped join button: the first JOIN_PLAYERS request
+    // wins and creates the team, but a second, near-simultaneous request for
+    // the same brand-new name loses the race and comes back "already
+    // registered". Without clearing the error here, that stale banner stays
+    // up forever even though the team is now fully connected.
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      fakeSocket.trigger('exception', {
+        message:
+          'Team name "The Quizzards" is already registered — enter its team code to play as this team, or choose a different name',
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.connectionError).toContain('already registered'),
+    );
+
+    act(() => {
+      fakeSocket.trigger('game:join_accepted', {
+        teamId: 1,
+        teamName: 'The Quizzards',
+        teamToken: 'token-1',
+        teamCode: 'QUICK-JADE-FOX',
+        answers: [],
+        bonusAwards: [],
+      });
+    });
+
+    await waitFor(() => expect(result.current.team).not.toBeNull());
+    expect(result.current.connectionError).toBeNull();
+  });
 });

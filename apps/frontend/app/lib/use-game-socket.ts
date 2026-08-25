@@ -233,6 +233,10 @@ export function useGameSocket(
       setMyAnswers(buildMyAnswers(payload.answers ?? []));
       setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
       setMyBonusAwards(payload.bonusAwards ?? []);
+      // A confirmed join supersedes any earlier join-related error (e.g. a
+      // losing duplicate request's "already registered") — without this the
+      // stale banner stays up over an otherwise-successfully-connected game.
+      setConnectionError(null);
     });
 
     socket.on(
