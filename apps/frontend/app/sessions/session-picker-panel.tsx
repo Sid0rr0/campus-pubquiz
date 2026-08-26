@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Dialog, Tabs } from 'radix-ui';
@@ -43,6 +43,7 @@ interface SessionPickerPanelProps {
 
 /** Landing screen shown when the admin hasn't pinned a specific session via `?code=` yet — lists every session currently running in the process and offers to start a new one. */
 export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
+  const queryClient = useQueryClient();
   const sessionsQuery = useQuery({
     queryKey: queryKeys.sessions.list(),
     queryFn: fetchSessions,
@@ -64,7 +65,6 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
     ) ??
     apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes');
 
-  const [isCreating, setIsCreating] = useState(false);
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
   const [settings, setSettings] = useState<SessionSettings>(
     DEFAULT_SESSION_SETTINGS,
@@ -80,35 +80,45 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
 
   const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
 
-  async function handleConfirmCreate() {
-    if (pendingQuizId === null) return;
-    setIsCreating(true);
-    try {
-      const session = await createSession(pendingQuizId, settings);
+  const createMutation = useMutation({
+    mutationFn: (variables: { quizId: number; settings: SessionSettings }) =>
+      createSession(variables.quizId, variables.settings),
+    onSuccess: (session) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
       onOpenSession(session.joinCode);
-    } catch (createError) {
+    },
+    onError: (createError) =>
       toast.error(
-        createError instanceof SessionApiError
-          ? createError.message
-          : 'Could not start session',
-      );
-    } finally {
-      setIsCreating(false);
-      setPendingQuizId(null);
-    }
+        apiErrorMessage(
+          createError,
+          SessionApiError,
+          'Could not start session',
+        ) ?? 'Could not start session',
+      ),
+    onSettled: () => setPendingQuizId(null),
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (joinCode: string) => closeSession(joinCode),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all }),
+    onError: (closeError) =>
+      toast.error(
+        apiErrorMessage(
+          closeError,
+          SessionApiError,
+          'Could not close session',
+        ) ?? 'Could not close session',
+      ),
+  });
+
+  function handleConfirmCreate(): void {
+    if (pendingQuizId === null) return;
+    createMutation.mutate({ quizId: pendingQuizId, settings });
   }
 
-  async function handleClose(joinCode: string) {
-    try {
-      await closeSession(joinCode);
-      void sessionsQuery.refetch();
-    } catch (closeError) {
-      toast.error(
-        closeError instanceof SessionApiError
-          ? closeError.message
-          : 'Could not close session',
-      );
-    }
+  function handleClose(joinCode: string): void {
+    closeMutation.mutate(joinCode);
   }
 
   return (
@@ -147,7 +157,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                       type="button"
                       variant="outline-muted"
                       size="md"
-                      onClick={() => void handleClose(session.joinCode)}
+                      onClick={() => handleClose(session.joinCode)}
                     >
                       <Cross2Icon aria-hidden="true" />
                       Close
@@ -203,7 +213,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                   </Link>
 
                   <Button
-                    disabled={isCreating}
+                    disabled={createMutation.isPending}
                     variant="solid-flat"
                     onClick={() => setPendingQuizId(quiz.id)}
                     className="flex min-h-8 items-center gap-1.5 px-4 disabled:opacity-40"
@@ -220,7 +230,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       <Dialog.Root
         open={pendingQuizId !== null}
         onOpenChange={(open) => {
-          if (!open && !isCreating) setPendingQuizId(null);
+          if (!open && !createMutation.isPending) setPendingQuizId(null);
         }}
       >
         <Dialog.Portal>
@@ -254,7 +264,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
-                disabled={isCreating}
+                disabled={createMutation.isPending}
                 variant="outline-muted"
                 size="md"
                 onClick={() => setPendingQuizId(null)}
@@ -264,14 +274,14 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
               </Button>
               <Button
                 type="button"
-                disabled={isCreating}
+                disabled={createMutation.isPending}
                 variant="solid-flat"
                 size="md"
-                onClick={() => void handleConfirmCreate()}
+                onClick={() => handleConfirmCreate()}
                 className="disabled:opacity-40"
               >
                 <CheckIcon aria-hidden="true" />
-                {isCreating ? 'Starting…' : 'Confirm'}
+                {createMutation.isPending ? 'Starting…' : 'Confirm'}
               </Button>
             </div>
           </Dialog.Content>
