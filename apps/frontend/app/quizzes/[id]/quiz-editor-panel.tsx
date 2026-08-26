@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   CheckIcon,
@@ -35,6 +35,9 @@ interface QuizEditorPanelProps {
 
 type Phase = 'empty' | 'editor';
 
+const EMPTY_ISSUES: QuizDraftIssue[] = [];
+const SAVED_FLASH_MS = 1600;
+
 function issueLabel(issue: QuizDraftIssue): string {
   if (issue.roundIndex === -1) return `Quiz (${issue.field}): ${issue.message}`;
   const questionLabel =
@@ -44,6 +47,7 @@ function issueLabel(issue: QuizDraftIssue): string {
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const numericQuizId = quizId === 'new' ? null : Number(quizId);
 
   const draftQuery = useQuery({
@@ -71,15 +75,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
   const [importError, setImportError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveIssues, setSaveIssues] = useState<QuizDraftIssue[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
-  useEffect(() => {
-    // Runs exactly once per quizId: staleTime Infinity means `data` never
-    // changes identity after the first success.
-    if (!draftQuery.data) return;
+  // Copies the draft into editable local state exactly once, when the
+  // query's data first arrives — adjusted during render rather than in an
+  // Effect, the same idiom used elsewhere in this codebase (e.g.
+  // AdminPageContent's session-switch resets). staleTime Infinity on the
+  // query means `data` never changes identity after that first success, so
+  // this only ever fires once per quizId.
+  const [copiedDraft, setCopiedDraft] = useState(draftQuery.data);
+  if (draftQuery.data && draftQuery.data !== copiedDraft) {
+    setCopiedDraft(draftQuery.data);
     setQuizTitle(draftQuery.data.title);
     setRounds(
       draftQuery.data.rounds.map((round) =>
@@ -87,25 +93,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       ),
     );
     setPhase('editor');
-  }, [draftQuery.data]);
+  }
 
   function startFromScratch(): void {
     setRounds([makeRound(crypto.randomUUID(), 'Round 1')]);
     setPhase('editor');
   }
 
-  async function handleCsvFile(
-    event: ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-
-    setImportError(null);
-    const text = await file.text();
-
-    try {
-      const preview = await previewImport(text, quizTitle.trim() || undefined);
+  const previewMutation = useMutation({
+    mutationFn: (csvText: string) =>
+      previewImport(csvText, quizTitle.trim() || undefined),
+    onSuccess: (preview) => {
       const newRounds = preview.rounds.map((round) =>
         roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
       );
@@ -132,13 +130,24 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${questionCount} question${questionCount === 1 ? '' : 's'} — review and edit below.`,
         );
       }
-    } catch (error) {
+    },
+    onError: (error) =>
       setImportError(
-        error instanceof ImportApiError
-          ? error.message
-          : 'Could not read that CSV.',
-      );
-    }
+        apiErrorMessage(error, ImportApiError, 'Could not read that CSV.') ??
+          'Could not read that CSV.',
+      ),
+  });
+
+  async function handleCsvFile(
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setImportError(null);
+    const text = await file.text();
+    previewMutation.mutate(text);
   }
 
   function updateRound(roundId: string, patch: Partial<EditorRound>): void {
@@ -172,33 +181,34 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     ]);
   }
 
-  async function handleSave(): Promise<void> {
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveIssues([]);
-    const request = toSaveRequest(quizTitle, rounds);
-
-    try {
+  const saveMutation = useMutation({
+    mutationFn: (request: ReturnType<typeof toSaveRequest>) =>
+      savedQuizId === null
+        ? createQuiz(request)
+        : updateQuiz(savedQuizId, request),
+    onSuccess: (result) => {
       if (savedQuizId === null) {
-        const result = await createQuiz(request);
         setSavedQuizId(result.quizId);
         router.replace(`/quizzes/${result.quizId}`);
-      } else {
-        await updateQuiz(savedQuizId, request);
       }
       setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 1600);
+      setTimeout(() => setSavedFlash(false), SAVED_FLASH_MS);
       toast.success('Quiz saved');
-    } catch (error) {
-      if (error instanceof QuizDraftApiError) {
-        setSaveError(error.message);
-        setSaveIssues(error.issues);
-      } else {
-        setSaveError('Could not save the quiz.');
-      }
-    } finally {
-      setIsSaving(false);
-    }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
+    },
+  });
+  const saveError = apiErrorMessage(
+    saveMutation.error,
+    QuizDraftApiError,
+    'Could not save the quiz.',
+  );
+  const saveIssues =
+    saveMutation.error instanceof QuizDraftApiError
+      ? saveMutation.error.issues
+      : EMPTY_ISSUES;
+
+  function handleSave(): void {
+    saveMutation.mutate(toSaveRequest(quizTitle, rounds));
   }
 
   if (numericQuizId !== null && draftQuery.isPending) {
@@ -292,13 +302,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         </label>
         <Button
           type="button"
-          onClick={() => void handleSave()}
-          disabled={isSaving}
+          onClick={() => handleSave()}
+          disabled={saveMutation.isPending}
           size="md"
           className="rounded-xl bg-green text-xs font-extrabold text-white whitespace-nowrap disabled:opacity-50"
         >
           <CheckIcon aria-hidden="true" />
-          {savedFlash ? 'Saved ✓' : isSaving ? 'Saving…' : 'Save quiz'}
+          {savedFlash
+            ? 'Saved ✓'
+            : saveMutation.isPending
+              ? 'Saving…'
+              : 'Save quiz'}
         </Button>
       </div>
 
