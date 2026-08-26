@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { AuthApiError } from '@/app/lib/auth-api';
-import { AuthProvider } from '@/app/lib/use-auth';
+import { QueryAuthWrapper } from '@/test-utils/query';
 import { progress } from './test-utils';
 
 const {
@@ -50,8 +50,16 @@ vi.mock('@/app/lib/auth-api', async (importOriginal) => {
   };
 });
 
-const AUTH_USER = { id: 1, username: 'alice', role: 'admin' as const, status: 'active' as const };
-const NO_SESSION_ERROR = new AuthApiError('Missing or invalid session cookie', 401);
+const AUTH_USER = {
+  id: 1,
+  username: 'alice',
+  role: 'admin' as const,
+  status: 'active' as const,
+};
+const NO_SESSION_ERROR = new AuthApiError(
+  'Missing or invalid session cookie',
+  401,
+);
 
 describe('AdminPage — connection', () => {
   beforeEach(() => {
@@ -69,29 +77,45 @@ describe('AdminPage — connection', () => {
   });
 
   it('redirects to /login before authenticating — login/register now live there', async () => {
-    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
     render(
-      <AuthProvider>
+      <QueryAuthWrapper>
         <AdminPage />
-      </AuthProvider>,
+      </QueryAuthWrapper>,
     );
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/login'));
+    await waitFor(() =>
+      expect(routerRef.replace).toHaveBeenCalledWith('/login'),
+    );
   });
 
   it('restores an existing session after a refresh and reconnects automatically', async () => {
     mockFetchMe.mockReset();
     mockFetchMe.mockResolvedValue({ user: AUTH_USER });
-    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
 
     render(
-      <AuthProvider>
+      <QueryAuthWrapper>
         <AdminPage />
-      </AuthProvider>,
+      </QueryAuthWrapper>,
     );
 
-    await waitFor(() => expect(screen.getByText(/connecting…/i)).toBeInTheDocument());
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true, 'TESTCODE');
+    await waitFor(() =>
+      expect(screen.getByText(/connecting…/i)).toBeInTheDocument(),
+    );
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
+      'admin',
+      true,
+      'TESTCODE',
+    );
   });
 
   it('surfaces a connection error before the first snapshot arrives', async () => {
@@ -104,13 +128,15 @@ describe('AdminPage — connection', () => {
     });
 
     render(
-      <AuthProvider>
+      <QueryAuthWrapper>
         <AdminPage />
-      </AuthProvider>,
+      </QueryAuthWrapper>,
     );
 
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/invalid or expired session/i),
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /invalid or expired session/i,
+      ),
     );
   });
 
@@ -123,13 +149,15 @@ describe('AdminPage — connection', () => {
       sendAction: vi.fn(),
     });
     render(
-      <AuthProvider>
+      <QueryAuthWrapper>
         <AdminPage />
-      </AuthProvider>,
+      </QueryAuthWrapper>,
     );
 
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/only admin clients/i),
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /only admin clients/i,
+      ),
     );
   });
 });

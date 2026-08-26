@@ -1,7 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApiError } from '@/app/lib/auth-api';
-import { AuthProvider, useAuth } from '@/app/lib/use-auth';
+import { useAuth } from '@/app/lib/use-auth';
+import { QueryAuthWrapper } from '@/test-utils/query';
 
 const { mockFetchMe, mockLogin, mockRegister, mockLogout } = vi.hoisted(() => ({
   mockFetchMe: vi.fn(),
@@ -48,7 +49,9 @@ describe('useAuth', () => {
       new AuthApiError('Missing or invalid session cookie', 401),
     );
 
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
 
     await waitFor(() => expect(result.current.status).toBe('unauthenticated'));
     expect(result.current.user).toBeNull();
@@ -57,7 +60,9 @@ describe('useAuth', () => {
   it('rehydrates from a valid session cookie by calling /auth/me', async () => {
     mockFetchMe.mockResolvedValue({ user: authUser });
 
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
 
     await waitFor(() => expect(result.current.status).toBe('authenticated'));
     expect(result.current.user).toEqual(authUser);
@@ -68,7 +73,9 @@ describe('useAuth', () => {
       new AuthApiError('Missing or invalid session cookie', 401),
     );
     mockLogin.mockResolvedValue({ user: authUser });
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
     await waitFor(() => expect(result.current.status).toBe('unauthenticated'));
 
     await act(async () => {
@@ -86,14 +93,21 @@ describe('useAuth', () => {
     mockLogin.mockRejectedValue(
       new AuthApiError('Invalid username or password', 401),
     );
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
     await waitFor(() => expect(result.current.status).toBe('unauthenticated'));
 
     await act(async () => {
       await expect(result.current.login('alice', 'wrong')).rejects.toThrow();
     });
 
-    expect(result.current.error).toBe('Invalid username or password');
+    // React Query's notifyManager batches observer notifications onto a
+    // microtask, so the mutation's error is not guaranteed to be reflected
+    // in `result.current` the instant `mutateAsync`'s promise settles.
+    await waitFor(() =>
+      expect(result.current.error).toBe('Invalid username or password'),
+    );
     expect(result.current.status).toBe('unauthenticated');
   });
 
@@ -104,19 +118,23 @@ describe('useAuth', () => {
     mockLogin.mockRejectedValue(
       new AuthApiError('Invalid username or password', 401),
     );
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
     await waitFor(() => expect(result.current.status).toBe('unauthenticated'));
 
     await act(async () => {
       await expect(result.current.login('alice', 'wrong')).rejects.toThrow();
     });
-    expect(result.current.error).toBe('Invalid username or password');
+    await waitFor(() =>
+      expect(result.current.error).toBe('Invalid username or password'),
+    );
 
     act(() => {
       result.current.clearError();
     });
 
-    expect(result.current.error).toBeNull();
+    await waitFor(() => expect(result.current.error).toBeNull());
   });
 
   it('register moves to pending status on success', async () => {
@@ -124,7 +142,9 @@ describe('useAuth', () => {
       new AuthApiError('Missing or invalid session cookie', 401),
     );
     mockRegister.mockResolvedValue({ status: 'pending' });
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
     await waitFor(() => expect(result.current.status).toBe('unauthenticated'));
 
     await act(async () => {
@@ -137,14 +157,20 @@ describe('useAuth', () => {
   it('logout clears local state and revokes the server-side session', async () => {
     mockFetchMe.mockResolvedValue({ user: authUser });
     mockLogout.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
     await waitFor(() => expect(result.current.status).toBe('authenticated'));
 
     act(() => {
       result.current.logout();
     });
 
-    expect(mockLogout).toHaveBeenCalledWith();
+    // `mutate()` returns immediately without awaiting `execute()` past its
+    // first internal `await`, so the mutationFn call is a microtask away —
+    // synchronous state (setQueryData/removeQueries) is already flushed,
+    // but this needs to poll.
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledWith());
     expect(result.current.status).toBe('unauthenticated');
     expect(result.current.user).toBeNull();
   });
@@ -154,7 +180,9 @@ describe('useAuth', () => {
     mockLogout.mockRejectedValue(
       new AuthApiError('Invalid or expired session', 401),
     );
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: QueryAuthWrapper,
+    });
     await waitFor(() => expect(result.current.status).toBe('authenticated'));
 
     act(() => {
