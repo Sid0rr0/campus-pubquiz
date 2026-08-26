@@ -487,6 +487,7 @@ function AdminPageContent() {
             <section className="flex flex-col gap-3">
               <h2 className="font-display text-xl">Teams</h2>
               <TeamsTable
+                joinCode={snapshot.joinCode}
                 teams={teams}
                 leaderboard={leaderboard}
                 roundTitles={roundTitles}

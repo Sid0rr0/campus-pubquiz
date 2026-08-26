@@ -1,9 +1,21 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardEntry, TeamView } from '@campus-pubquiz/types';
 import { TeamsTable } from '@/app/admin/teams-table';
+import { renderWithQuery } from '@/test-utils/query';
 
+const { mockFetchBonusAwards } = vi.hoisted(() => ({
+  mockFetchBonusAwards: vi.fn(),
+}));
+
+vi.mock('@/app/lib/bonus-award-api', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/app/lib/bonus-award-api')>();
+  return { ...actual, fetchBonusAwards: mockFetchBonusAwards };
+});
+
+const JOIN_CODE = 'ABCDEF';
 const ROUND_TITLES = ['Animals', 'History'];
 
 const TEAMS: TeamView[] = [
@@ -45,10 +57,25 @@ async function openBonusModalFor(teamName: string): Promise<void> {
   );
 }
 
+async function openBonusAwardsListFor(teamName: string): Promise<void> {
+  await userEvent.click(
+    screen.getByRole('button', { name: `Actions for ${teamName}` }),
+  );
+  await userEvent.click(
+    await screen.findByRole('menuitem', { name: /^bonus awards$/i }),
+  );
+}
+
 describe('TeamsTable', () => {
+  beforeEach(() => {
+    mockFetchBonusAwards.mockReset();
+    mockFetchBonusAwards.mockResolvedValue({ teamId: 1, awards: [] });
+  });
+
   it('renders a header row with Team, numbered round columns, Bonus, Total, and Actions', () => {
-    render(
+    renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
@@ -77,8 +104,9 @@ describe('TeamsTable', () => {
   });
 
   it('shows every team with its per-round points, bonus points, and total', () => {
-    render(
+    renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
@@ -99,8 +127,9 @@ describe('TeamsTable', () => {
   });
 
   it('shows a joined team with zeros when the leaderboard has not been computed for it yet', () => {
-    render(
+    renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={[]}
         roundTitles={ROUND_TITLES}
@@ -117,8 +146,9 @@ describe('TeamsTable', () => {
   });
 
   it('always renders the table, showing a placeholder row when no teams have joined', () => {
-    render(
+    renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={[]}
         leaderboard={[]}
         roundTitles={ROUND_TITLES}
@@ -132,8 +162,9 @@ describe('TeamsTable', () => {
   });
 
   it('reflects a freshly graded answer immediately when the leaderboard prop updates', () => {
-    const { rerender } = render(
+    const { rerender } = renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={[]}
         roundTitles={ROUND_TITLES}
@@ -146,6 +177,7 @@ describe('TeamsTable', () => {
 
     rerender(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
@@ -160,8 +192,9 @@ describe('TeamsTable', () => {
 
   it('opens a bonus award modal for a team from its actions menu and awards a predefined-category bonus', async () => {
     const onAwardBonus = vi.fn();
-    render(
+    renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
@@ -185,8 +218,9 @@ describe('TeamsTable', () => {
 
   it('cancels the bonus modal without awarding', async () => {
     const onAwardBonus = vi.fn();
-    render(
+    renderWithQuery(
       <TeamsTable
+        joinCode={JOIN_CODE}
         teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
@@ -200,5 +234,30 @@ describe('TeamsTable', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(onAwardBonus).not.toHaveBeenCalled();
+  });
+
+  it('opens the bonus awards list modal for a team from its actions menu', async () => {
+    mockFetchBonusAwards.mockResolvedValue({
+      teamId: 1,
+      awards: [{ id: 9, category: 'shot', points: 1, createdAt: '2026-01-01T00:00:00.000Z' }],
+    });
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    await openBonusAwardsListFor('The Quizzards');
+
+    expect(
+      screen.getByRole('dialog', { name: /bonus awards.*the quizzards/i }),
+    ).toBeInTheDocument();
+    expect(mockFetchBonusAwards).toHaveBeenCalledWith(JOIN_CODE, 1);
+    expect(await screen.findByText(/shot/i)).toBeInTheDocument();
   });
 });

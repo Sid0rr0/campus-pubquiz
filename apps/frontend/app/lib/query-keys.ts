@@ -46,4 +46,11 @@ export const queryKeys = {
     forQuestion: (joinCode: string, questionId: number) =>
       ['answers', joinCode, questionId] as const,
   },
+  // Same reasoning as `answers`: transient per-session data that shouldn't
+  // be invalidated by unrelated teams/sessions mutations.
+  bonusAwards: {
+    all: ['bonusAwards'] as const,
+    forTeam: (joinCode: string, teamId: number) =>
+      ['bonusAwards', joinCode, teamId] as const,
+  },
 } as const;

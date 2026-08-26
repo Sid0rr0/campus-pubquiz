@@ -5,16 +5,22 @@ import {
   useTable,
 } from '@tanstack/react-table';
 import { Dialog, DropdownMenu } from 'radix-ui';
-import { DotsVerticalIcon, StarIcon } from '@radix-ui/react-icons';
+import {
+  DotsVerticalIcon,
+  ListBulletIcon,
+  StarIcon,
+} from '@radix-ui/react-icons';
 import type {
   BonusCategory,
   LeaderboardEntry,
   TeamView,
 } from '@campus-pubquiz/types';
 import { BonusAwardForm } from '@/app/admin/bonus-award-form';
+import { BonusAwardsListModal } from '@/app/admin/bonus-awards-list-modal';
 import { Button } from '@/app/components/button';
 
 interface TeamsTableProps {
+  joinCode: string;
   /** Every team that has joined the session — always present, even before any points are recorded. */
   teams: TeamView[];
   /** Points data, populated once grading/bonuses/leaderboard-toggle have run for at least one team. */
@@ -71,6 +77,7 @@ function buildEntries(
 }
 
 export function TeamsTable({
+  joinCode,
   teams,
   leaderboard,
   roundTitles,
@@ -78,12 +85,17 @@ export function TeamsTable({
   enabledBonusCategories,
 }: TeamsTableProps) {
   const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
+  const [viewingAwardsTeamId, setViewingAwardsTeamId] = useState<
+    number | null
+  >(null);
   const entries = useMemo(
     () => buildEntries(teams, leaderboard, roundTitles),
     [teams, leaderboard, roundTitles],
   );
   const awardingTeam =
     entries.find((entry) => entry.teamId === awardingTeamId) ?? null;
+  const viewingAwardsTeam =
+    entries.find((entry) => entry.teamId === viewingAwardsTeamId) ?? null;
   const columns = useMemo(
     () =>
       helper.columns([
@@ -124,6 +136,13 @@ export function TeamsTable({
                     >
                       <StarIcon aria-hidden="true" />
                       Award bonus
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => setViewingAwardsTeamId(entry.teamId)}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-dark-blue outline-none data-highlighted:bg-dark-blue/10"
+                    >
+                      <ListBulletIcon aria-hidden="true" />
+                      Bonus awards
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
@@ -214,6 +233,14 @@ export function TeamsTable({
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      <BonusAwardsListModal
+        joinCode={joinCode}
+        teamId={viewingAwardsTeamId}
+        teamName={viewingAwardsTeam?.teamName ?? ''}
+        onOpenChange={(open) => {
+          if (!open) setViewingAwardsTeamId(null);
+        }}
+      />
     </div>
   );
 }

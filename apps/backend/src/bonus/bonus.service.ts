@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   BONUS_CATEGORIES,
+  type BonusAwardAdminView,
   type BonusCategory,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
@@ -17,8 +18,26 @@ export class InvalidBonusAwardError extends Error {
   }
 }
 
+/** Thrown by update()/remove() when the awardId doesn't exist, or exists under a different session — the session id is the security boundary, so the two cases are deliberately indistinguishable to the caller. */
+export class BonusAwardNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BonusAwardNotFoundError';
+  }
+}
+
 export interface AwardedBonus {
   teamId: number;
+}
+
+function toAdminView(award: BonusAward): BonusAwardAdminView {
+  return {
+    id: award.id,
+    category: award.category,
+    points: award.points,
+    reason: award.reason,
+    createdAt: award.createdAt.toISOString(),
+  };
 }
 
 @Injectable()
@@ -100,5 +119,61 @@ export class BonusService {
       points: award.points,
       reason: award.reason,
     }));
+  }
+
+  /** Admin view of a team's awards — includes the id/timestamp listForTeam's team-facing view omits, needed to edit/delete a specific award. */
+  async listForTeamAdmin(
+    gameSessionId: number,
+    teamId: number,
+  ): Promise<BonusAwardAdminView[]> {
+    const awards = await this.bonusAwards.listForTeam(gameSessionId, teamId);
+    return awards.map(toAdminView);
+  }
+
+  private async findOwnedAward(
+    gameSessionId: number,
+    awardId: number,
+  ): Promise<BonusAward> {
+    const award = await this.bonusAwards.findOne({
+      id: awardId,
+      gameSession: gameSessionId,
+    });
+    if (!award) {
+      throw new BonusAwardNotFoundError(
+        `Bonus award ${awardId} not found in this session`,
+      );
+    }
+    return award;
+  }
+
+  /** Edits an existing award's points/reason. Category is not editable — see UpdateBonusAwardRequest. */
+  async update(
+    gameSessionId: number,
+    awardId: number,
+    points: number,
+    reason?: string,
+  ): Promise<BonusAwardAdminView> {
+    const award = await this.findOwnedAward(gameSessionId, awardId);
+
+    if (!Number.isFinite(points) || points === 0) {
+      throw new InvalidBonusAwardError(
+        'Bonus points must be a non-zero number',
+      );
+    }
+    const trimmedReason = reason?.trim();
+    if (award.category === 'custom' && !trimmedReason) {
+      throw new InvalidBonusAwardError('A custom bonus needs a reason');
+    }
+
+    award.points = points;
+    award.reason = award.category === 'custom' ? trimmedReason : undefined;
+    await this.bonusAwards.getEntityManager().flush();
+
+    return toAdminView(award);
+  }
+
+  async remove(gameSessionId: number, awardId: number): Promise<void> {
+    const award = await this.findOwnedAward(gameSessionId, awardId);
+    await this.bonusAwards.getEntityManager().removeAndFlush(award);
   }
 }

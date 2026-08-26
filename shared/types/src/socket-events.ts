@@ -459,6 +459,24 @@ export interface TeamBonusAwardView {
   reason?: string;
 }
 
+/** Admin-only view of one bonus award — adds the id/timestamp a team-facing TeamBonusAwardView doesn't need. */
+export interface BonusAwardAdminView extends TeamBonusAwardView {
+  id: number;
+  createdAt: string;
+}
+
+/** Response for GET /sessions/:joinCode/teams/:teamId/bonus-awards. */
+export interface BonusAwardsListedPayload {
+  teamId: number;
+  awards: BonusAwardAdminView[];
+}
+
+/** Request body for PATCH /sessions/:joinCode/bonus-awards/:awardId. Category is intentionally not editable — changing it could invalidate the reason requirement for "custom". */
+export interface UpdateBonusAwardRequest {
+  points: number;
+  reason?: string;
+}
+
 /** Pushed privately to a team's own connected socket the moment the admin awards it a bonus — mirrors ANSWER_RECEIVED's single-item, append-don't-replace shape. */
 export type BonusAwardedPayload = TeamBonusAwardView;
 

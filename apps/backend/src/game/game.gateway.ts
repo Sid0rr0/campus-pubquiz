@@ -203,6 +203,28 @@ export class GameGateway
     );
   }
 
+  /**
+   * Called by BonusAwardMutationsController after editing/deleting a bonus
+   * award via REST — recomputes the leaderboard and rebroadcasts, same as
+   * awardTeamBonus's socket-handler tail, so /display and /admin never show
+   * a stale bonus total after an out-of-band edit. No @CreateRequestContext()
+   * needed: invoked synchronously from inside a REST controller method,
+   * already covered by @mikro-orm/nestjs's HTTP-request-context middleware
+   * (unlike socket handlers, which fork their own context — see
+   * handleAdminAction above).
+   */
+  async notifyBonusAwardsChanged(joinCode: string): Promise<void> {
+    const gameSessionId = this.gameState.getGameSessionId(joinCode);
+    const leaderboard =
+      await this.answerService.computeLeaderboard(gameSessionId);
+    this.gameState.setLeaderboard(joinCode, leaderboard);
+    broadcastGameState(
+      this.server,
+      joinCode,
+      this.gameState.getSnapshot(joinCode),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENTS.JOIN_PLAYERS)
   @CreateRequestContext()
   async handleJoinPlayers(

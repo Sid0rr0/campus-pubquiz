@@ -1,20 +1,40 @@
 import { BONUS_CATEGORIES } from '@campus-pubquiz/types';
-import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
+import {
+  BonusAwardNotFoundError,
+  BonusService,
+  InvalidBonusAwardError,
+} from '@/bonus/bonus.service';
 import type { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 
 function createFakeBonusAwardRepository(
   awardedCount = 0,
-  teamAwards: Array<{ category: string; points: number; reason?: string }> = [],
+  teamAwards: Array<{
+    id?: number;
+    category: string;
+    points: number;
+    reason?: string;
+    createdAt?: Date;
+  }> = [],
+  foundAward: Record<string, unknown> | null = null,
 ) {
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
+  const flush = jest.fn().mockResolvedValue(undefined);
+  const removeAndFlush = jest.fn().mockResolvedValue(undefined);
   const create = jest.fn((data: Record<string, unknown>) => data);
   return {
     create,
-    getEntityManager: jest.fn(() => ({ persistAndFlush })),
+    getEntityManager: jest.fn(() => ({
+      persistAndFlush,
+      flush,
+      removeAndFlush,
+    })),
     persistAndFlush,
+    flush,
+    removeAndFlush,
     countAwards: jest.fn().mockResolvedValue(awardedCount),
     listForTeam: jest.fn().mockResolvedValue(teamAwards),
+    findOne: jest.fn().mockResolvedValue(foundAward),
   };
 }
 
@@ -219,5 +239,159 @@ describe('BonusService', () => {
       { category: 'shot', points: 1, reason: undefined },
       { category: 'custom', points: 3, reason: 'Best team name' },
     ]);
+  });
+
+  it("maps a team's stored awards to its admin view, including id and createdAt", async () => {
+    const createdAt = new Date('2026-01-01T00:00:00.000Z');
+    const repo = createFakeBonusAwardRepository(0, [
+      { id: 9, category: 'shot', points: 1, createdAt },
+    ]);
+    const gameSessionTeams = createFakeGameSessionTeamRepository();
+    const service = new BonusService(
+      repo as unknown as BonusAwardRepository,
+      gameSessionTeams as unknown as GameSessionTeamRepository,
+    );
+
+    const awards = await service.listForTeamAdmin(101, 31);
+
+    expect(repo.listForTeam).toHaveBeenCalledWith(101, 31);
+    expect(awards).toEqual([
+      {
+        id: 9,
+        category: 'shot',
+        points: 1,
+        reason: undefined,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+  });
+
+  describe('update', () => {
+    function createServiceWithAward(award: Record<string, unknown> | null) {
+      const repo = createFakeBonusAwardRepository(0, [], award);
+      const gameSessionTeams = createFakeGameSessionTeamRepository();
+      const service = new BonusService(
+        repo as unknown as BonusAwardRepository,
+        gameSessionTeams as unknown as GameSessionTeamRepository,
+      );
+      return { service, repo };
+    }
+
+    it('updates points for a predefined-category award', async () => {
+      const award = {
+        id: 9,
+        category: 'shot',
+        points: 1,
+        reason: undefined,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      const { service, repo } = createServiceWithAward(award);
+
+      const result = await service.update(101, 9, 3);
+
+      expect(repo.findOne).toHaveBeenCalledWith({ id: 9, gameSession: 101 });
+      expect(award.points).toBe(3);
+      expect(repo.flush).toHaveBeenCalled();
+      expect(result).toEqual({
+        id: 9,
+        category: 'shot',
+        points: 3,
+        reason: undefined,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      });
+    });
+
+    it('trims and stores an updated reason for a custom-category award', async () => {
+      const award = {
+        id: 10,
+        category: 'custom',
+        points: 3,
+        reason: 'Old reason',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      };
+      const { service } = createServiceWithAward(award);
+
+      const result = await service.update(101, 10, 5, '  New reason  ');
+
+      expect(award.reason).toBe('New reason');
+      expect(result.reason).toBe('New reason');
+    });
+
+    it('rejects an update with zero or non-finite points', async () => {
+      const award = {
+        id: 9,
+        category: 'shot',
+        points: 1,
+        reason: undefined,
+        createdAt: new Date(),
+      };
+      const { service, repo } = createServiceWithAward(award);
+
+      await expect(service.update(101, 9, 0)).rejects.toThrow(
+        InvalidBonusAwardError,
+      );
+      expect(repo.flush).not.toHaveBeenCalled();
+    });
+
+    it('rejects an update to a custom-category award with a blank reason', async () => {
+      const award = {
+        id: 10,
+        category: 'custom',
+        points: 3,
+        reason: 'Old reason',
+        createdAt: new Date(),
+      };
+      const { service, repo } = createServiceWithAward(award);
+
+      await expect(service.update(101, 10, 5, '   ')).rejects.toThrow(
+        InvalidBonusAwardError,
+      );
+      expect(repo.flush).not.toHaveBeenCalled();
+    });
+
+    it('rejects updating an award that does not exist in this session', async () => {
+      const { service, repo } = createServiceWithAward(null);
+
+      await expect(service.update(101, 999, 3)).rejects.toThrow(
+        BonusAwardNotFoundError,
+      );
+      expect(repo.flush).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('remove', () => {
+    it('deletes an existing award scoped to the session', async () => {
+      const award = {
+        id: 9,
+        category: 'shot',
+        points: 1,
+        createdAt: new Date(),
+      };
+      const repo = createFakeBonusAwardRepository(0, [], award);
+      const gameSessionTeams = createFakeGameSessionTeamRepository();
+      const service = new BonusService(
+        repo as unknown as BonusAwardRepository,
+        gameSessionTeams as unknown as GameSessionTeamRepository,
+      );
+
+      await service.remove(101, 9);
+
+      expect(repo.findOne).toHaveBeenCalledWith({ id: 9, gameSession: 101 });
+      expect(repo.removeAndFlush).toHaveBeenCalledWith(award);
+    });
+
+    it('rejects deleting an award that does not exist in this session', async () => {
+      const repo = createFakeBonusAwardRepository(0, [], null);
+      const gameSessionTeams = createFakeGameSessionTeamRepository();
+      const service = new BonusService(
+        repo as unknown as BonusAwardRepository,
+        gameSessionTeams as unknown as GameSessionTeamRepository,
+      );
+
+      await expect(service.remove(101, 999)).rejects.toThrow(
+        BonusAwardNotFoundError,
+      );
+      expect(repo.removeAndFlush).not.toHaveBeenCalled();
+    });
   });
 });

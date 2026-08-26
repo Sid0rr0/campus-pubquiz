@@ -14,6 +14,10 @@ import { TeamService } from '@/team/team.service';
 import { TeamsController } from '@/team/teams.controller';
 import { AnswerController } from '@/answer/answer.controller';
 import { AnswerService } from '@/answer/answer.service';
+import {
+  BonusAwardMutationsController,
+  BonusAwardsController,
+} from '@/bonus/bonus-awards.controller';
 import { BonusService } from '@/bonus/bonus.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { QuizController } from '@/quiz/quiz.controller';
@@ -39,6 +43,8 @@ import { SessionsController } from '@/session/sessions.controller';
     SessionsController,
     AnswerController,
     TeamsController,
+    BonusAwardsController,
+    BonusAwardMutationsController,
   ],
   providers: [
     AppService,
