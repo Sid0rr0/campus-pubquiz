@@ -54,10 +54,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     queryKey: queryKeys.quizzes.draft(numericQuizId ?? -1),
     queryFn: () => fetchQuizDraft(numericQuizId as number),
     enabled: numericQuizId !== null,
-    // The draft is copied once into editable local state below (see the
-    // effect). A background refetch returning new data would silently
-    // clobber unsaved edits, so never refetch while mounted — and drop it on
-    // unmount so leaving and coming back reloads fresh.
+    // The draft is copied once into editable local state below. A background
+    // refetch returning new data would silently clobber unsaved edits, so
+    // never refetch while mounted — and drop it on unmount so leaving and
+    // coming back reloads fresh.
     staleTime: Infinity,
     gcTime: 0,
   });
@@ -68,8 +68,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   );
 
   // For an existing quiz, the isPending early return below blocks every
-  // render until the effect flips this to 'editor', so this initial value
-  // is inert for that case — 'empty' only actually renders for a new quiz.
+  // render until the adjustment below flips this to 'editor', so this
+  // initial value is inert for that case — 'empty' only actually renders
+  // for a new quiz.
   const [phase, setPhase] = useState<Phase>('empty');
   const [quizTitle, setQuizTitle] = useState('');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
