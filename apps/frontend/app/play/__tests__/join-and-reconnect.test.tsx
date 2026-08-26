@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
+import { renderWithQuery } from '@/test-utils/query';
 import { progress, socketResult } from './test-utils';
 
 const {
@@ -71,7 +72,7 @@ describe('PlayPage — join and reconnect', () => {
 
   it('shows a join form asking for a team name and a live game to join, with no raw game code field', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
     expect(
       screen.getByRole('textbox', { name: /team name/i }),
     ).toBeInTheDocument();
@@ -85,7 +86,7 @@ describe('PlayPage — join and reconnect', () => {
 
   it('stores the team name and game code and switches to the game view after joining', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -106,7 +107,7 @@ describe('PlayPage — join and reconnect', () => {
   it('does not join when the game code is empty', async () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -120,16 +121,21 @@ describe('PlayPage — join and reconnect', () => {
   it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
-    expect(
-      await screen.findByRole('combobox', { name: /pick the quiz/i }),
-    ).toHaveTextContent(/campus pub quiz night/i);
+    // The combobox exists (with a placeholder) before the session list
+    // query resolves, so findByRole alone would resolve on that first
+    // render — wait for the resolved list's text specifically.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('combobox', { name: /pick the quiz/i }),
+      ).toHaveTextContent(/campus pub quiz night/i),
+    );
   });
 
   it('passes the ?code= query parameter to the socket handshake', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(mockUseGameSocket).toHaveBeenCalledWith(
       'players',
@@ -140,7 +146,7 @@ describe('PlayPage — join and reconnect', () => {
   });
 
   it('does not connect the socket until a join code is known', () => {
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(mockUseGameSocket).toHaveBeenCalledWith(
       'players',
@@ -152,7 +158,7 @@ describe('PlayPage — join and reconnect', () => {
 
   it('connects the socket once a code is submitted through the join form', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -172,7 +178,7 @@ describe('PlayPage — join and reconnect', () => {
   it('skips the join form when a team name and join code are already stored (reconnect)', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('textbox', { name: /team name/i }),
@@ -188,7 +194,7 @@ describe('PlayPage — join and reconnect', () => {
     // skip straight past the join form to the "Connecting…" screen and hang
     // there forever, since there is no join code left to open a socket with.
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue(
       'Returning Team',
@@ -203,7 +209,7 @@ describe('PlayPage — join and reconnect', () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
 
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(joinTeam).toHaveBeenCalledWith('Returning Team', {
       teamToken: 'stored-token',
@@ -217,7 +223,7 @@ describe('PlayPage — join and reconnect', () => {
       socketResult({ joinTeam, reconnectedAt: 1 }),
     );
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -279,7 +285,7 @@ describe('PlayPage — join and reconnect', () => {
         joinTeam,
       }),
     );
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
     joinTeam.mockClear();
 
     mockUseGameSocket.mockReturnValue(
@@ -316,7 +322,7 @@ describe('PlayPage — join and reconnect', () => {
       }),
     );
 
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     // A duplicate JOIN_PLAYERS here would race the old socket's disconnect
     // cleanup server-side and can wrongly bounce a refresh with "already
@@ -334,7 +340,7 @@ describe('PlayPage — join and reconnect', () => {
       socketResult({ sessionClosed: 'ABCDEF' }),
     );
 
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     // Team name/code survive so the team can join another game without
     // retyping — only this session's token and join code are cleared.
@@ -378,7 +384,7 @@ describe('PlayPage — join and reconnect', () => {
     mockUseGameSocket.mockReturnValue(
       socketResult({ sessionClosed: null, snapshot: staleSnapshot }),
     );
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
     expect(routerRef.replace).not.toHaveBeenCalled();
 
     mockUseGameSocket.mockReturnValue(
@@ -405,7 +411,7 @@ describe('PlayPage — join and reconnect', () => {
       }),
     );
 
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     // Unlike a closed session, a kick deletes the roster row server-side —
     // team name and team code are wiped too (not just the token/join code),

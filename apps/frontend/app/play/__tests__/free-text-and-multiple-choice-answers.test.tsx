@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -45,7 +46,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('textbox', { name: /your answer/i }),
@@ -75,7 +76,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /your answer/i }),
@@ -109,7 +110,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
 
@@ -137,7 +138,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         myAnswers: { r1q1: 'Banana' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Submitted: Banana')).toBeInTheDocument();
   });
@@ -162,7 +163,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.queryByText(/submitted:/i)).not.toBeInTheDocument();
   });
@@ -189,7 +190,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         myAnswers: { r1q1: 'Paris' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByRole('button', { name: 'Paris' })).toHaveAttribute(
       'aria-pressed',
@@ -223,7 +224,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /i don't know/i }),
@@ -254,7 +255,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         myAnswers: { r1q1: '__idk__' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('button', { name: /i don't know/i }),
@@ -280,7 +281,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('textbox', { name: /your answer/i }),

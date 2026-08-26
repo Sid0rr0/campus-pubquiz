@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -62,7 +63,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: q1, 2: revealedQ2 },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('heading', { name: /answer history/i }),
@@ -105,7 +106,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: q1 },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('3 / 5')).toBeInTheDocument();
   });
@@ -154,7 +155,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: q1, 2: q2 },
       }),
     );
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('3 / 5')).toBeInTheDocument();
     expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
@@ -213,7 +214,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: q1 },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.queryByText('3 / 5')).not.toBeInTheDocument();
     expect(screen.queryByText(/^Points:/i)).not.toBeInTheDocument();
@@ -249,7 +250,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: revealedMatch },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByText('arthur → shield, captain america → excalibur'),
@@ -286,7 +287,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: q1 },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /answer history \(1\)/i }),
@@ -333,7 +334,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: q1, 2: q2 },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Name a planet' }),
@@ -375,7 +376,7 @@ describe('PlayPage — answered questions history', () => {
         seenQuestions: { 1: oldQuestion },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('button', { name: /name a fruit/i }),
@@ -399,7 +400,7 @@ describe('PlayPage — answered questions history', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('heading', { name: /answer history/i }),

@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -50,14 +51,22 @@ describe('PlayPage — question navigator', () => {
           currentQuestion: q2,
           blockQuestions: [q1, q2],
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
         myAnswers: { r1q1: 'Banana' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
-    expect(screen.getByRole('button', { name: /question 1 \(answered\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^question 2$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /question 1 \(answered\)/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^question 2$/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
 
@@ -82,16 +91,26 @@ describe('PlayPage — question navigator', () => {
             { roundNumber: 1, questionNumberInRound: 3 },
           ],
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
-    const upcomingButton2 = screen.getByRole('button', { name: /question 2 \(not open yet\)/i });
-    const upcomingButton3 = screen.getByRole('button', { name: /question 3 \(not open yet\)/i });
+    const upcomingButton2 = screen.getByRole('button', {
+      name: /question 2 \(not open yet\)/i,
+    });
+    const upcomingButton3 = screen.getByRole('button', {
+      name: /question 3 \(not open yet\)/i,
+    });
     expect(upcomingButton2).toBeDisabled();
     expect(upcomingButton3).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^question 1$/i })).not.toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /^question 1$/i }),
+    ).not.toBeDisabled();
   });
 
   it('restarts question numbering from 1 for each round in the picker', () => {
@@ -127,16 +146,28 @@ describe('PlayPage — question navigator', () => {
           currentQuestion: r2q1,
           blockQuestions: [r1q1, r1q2, r2q1],
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
-    expect(screen.getByRole('navigation', { name: /round 1 questions/i })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: /round 2 questions/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: /round 1 questions/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: /round 2 questions/i }),
+    ).toBeInTheDocument();
     // Two separate "Question 1" buttons — one per round, each numbered from 1.
-    expect(screen.getAllByRole('button', { name: /^question 1$/i })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: /^question 2$/i })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: /^question 1$/i }),
+    ).toHaveLength(2);
+    expect(
+      screen.getByRole('button', { name: /^question 2$/i }),
+    ).toBeInTheDocument();
   });
 
   it('lets the team browse back to an earlier open question and revise its answer', async () => {
@@ -165,20 +196,33 @@ describe('PlayPage — question navigator', () => {
           currentQuestion: q2,
           blockQuestions: [q1, q2],
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
         submitAnswer,
         myAnswers: { r1q1: 'Banana' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /question 1 \(answered\)/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /question 1 \(answered\)/i }),
+    );
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /your answer/i })).toHaveValue('Banana');
+    expect(screen.getByRole('textbox', { name: /your answer/i })).toHaveValue(
+      'Banana',
+    );
 
-    await userEvent.clear(screen.getByRole('textbox', { name: /your answer/i }));
-    await userEvent.type(screen.getByRole('textbox', { name: /your answer/i }), 'Apple');
+    await userEvent.clear(
+      screen.getByRole('textbox', { name: /your answer/i }),
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /your answer/i }),
+      'Apple',
+    );
     await userEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Apple');
@@ -208,14 +252,22 @@ describe('PlayPage — question navigator', () => {
         // back to q1, but furthestOpenIndex (and so blockQuestions) still
         // reflects q2 as the latest question ever opened.
         snapshot: {
-          progress: progress({ status: 'question_open', questionIndex: 0, furthestOpenIndex: 1 }),
+          progress: progress({
+            status: 'question_open',
+            questionIndex: 0,
+            furthestOpenIndex: 1,
+          }),
           currentQuestion: q1,
           blockQuestions: [q1, q2],
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
     expect(screen.queryByText('Name a fruit')).not.toBeInTheDocument();

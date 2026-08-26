@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
+import { renderWithQuery } from '@/test-utils/query';
 import { progress, socketResult } from './test-utils';
 
 const { mockUseGameSocket, mockFetchPublicSessions, searchParamsRef } =
@@ -69,7 +70,7 @@ describe('PlayPage — logout and errors', () => {
     mockUseGameSocket.mockReturnValue(
       socketResult({ connectionError: 'Invalid join code' }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText(/invalid join code/i)).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue(
@@ -99,7 +100,7 @@ describe('PlayPage — logout and errors', () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -144,7 +145,7 @@ describe('PlayPage — logout and errors', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /log out/i }));
 
@@ -163,7 +164,7 @@ describe('PlayPage — logout and errors', () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),

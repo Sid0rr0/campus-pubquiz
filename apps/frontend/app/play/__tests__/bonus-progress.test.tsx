@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -50,7 +51,7 @@ describe('PlayPage — bonus points panel', () => {
         myBonusAwards: [{ category: 'shot', points: 1 }],
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('heading', { name: /bonus points/i }),
@@ -91,7 +92,7 @@ describe('PlayPage — bonus points panel', () => {
         ],
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Best team name')).toBeInTheDocument();
     expect(screen.getByText('+3 pt')).toBeInTheDocument();
@@ -118,7 +119,7 @@ describe('PlayPage — bonus points panel', () => {
         myBonusAwards: [],
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.queryByText('Custom')).not.toBeInTheDocument();
     expect(screen.queryByText(/\+\d+ pt$/)).not.toBeInTheDocument();
@@ -145,7 +146,7 @@ describe('PlayPage — bonus points panel', () => {
         myBonusAwards: [],
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /bonus points \(0\)/i }),
@@ -175,7 +176,7 @@ describe('PlayPage — bonus points panel', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('heading', { name: /bonus points/i }),

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
+import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchPublicSessions } = vi.hoisted(() => ({
   mockFetchPublicSessions: vi.fn(),
@@ -29,7 +30,7 @@ describe('LiveSessionSelect', () => {
   });
 
   it('shows a disabled picker with a placeholder while no games are running', async () => {
-    render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
+    renderWithQuery(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
 
     await vi.waitFor(() => expect(mockFetchPublicSessions).toHaveBeenCalled());
     const trigger = screen.getByRole('combobox', { name: /pick the quiz/i });
@@ -47,7 +48,7 @@ describe('LiveSessionSelect', () => {
         teamCount: 3,
       },
     ]);
-    render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
+    renderWithQuery(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
 
     expect(
       await screen.findByRole('combobox', { name: /pick the quiz/i }),
@@ -66,7 +67,9 @@ describe('LiveSessionSelect', () => {
     ]);
     const onSelectSession = vi.fn();
     const user = userEvent.setup();
-    render(<LiveSessionSelect value="" onSelectSession={onSelectSession} />);
+    renderWithQuery(
+      <LiveSessionSelect value="" onSelectSession={onSelectSession} />,
+    );
 
     await user.click(
       await screen.findByRole('combobox', { name: /pick the quiz/i }),
@@ -80,7 +83,7 @@ describe('LiveSessionSelect', () => {
 
   it('shows an error when the session list cannot be loaded, but does not block manual entry', async () => {
     mockFetchPublicSessions.mockRejectedValue(new Error('network down'));
-    render(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
+    renderWithQuery(<LiveSessionSelect value="" onSelectSession={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /could not load live games/i,

@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
@@ -39,7 +40,7 @@ describe('PlayPage — question visibility', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
@@ -59,7 +60,7 @@ describe('PlayPage — question visibility', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
@@ -80,7 +81,7 @@ describe('PlayPage — question visibility', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
   });
@@ -101,7 +102,7 @@ describe('PlayPage — question visibility', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
   });
@@ -121,7 +122,7 @@ describe('PlayPage — question visibility', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.queryByText(/look at the screen/i)).not.toBeInTheDocument();
   });

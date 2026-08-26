@@ -1,8 +1,9 @@
 import { StrictMode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
+import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchPublicSessions } = vi.hoisted(() => ({
   mockFetchPublicSessions: vi.fn(),
@@ -21,7 +22,7 @@ describe('DisplaySessionPicker', () => {
   });
 
   it('shows a message when no sessions are running', async () => {
-    render(<DisplaySessionPicker onSelectSession={vi.fn()} />);
+    renderWithQuery(<DisplaySessionPicker onSelectSession={vi.fn()} />);
 
     expect(
       await screen.findByText(/no games running yet/i),
@@ -38,7 +39,7 @@ describe('DisplaySessionPicker', () => {
         teamCount: 3,
       },
     ]);
-    render(<DisplaySessionPicker onSelectSession={vi.fn()} />);
+    renderWithQuery(<DisplaySessionPicker onSelectSession={vi.fn()} />);
 
     expect(
       await screen.findByText('Campus Pub Quiz Night'),
@@ -57,7 +58,7 @@ describe('DisplaySessionPicker', () => {
       },
     ]);
     const onSelectSession = vi.fn();
-    render(<DisplaySessionPicker onSelectSession={onSelectSession} />);
+    renderWithQuery(<DisplaySessionPicker onSelectSession={onSelectSession} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /campus pub quiz night/i }),
@@ -68,7 +69,7 @@ describe('DisplaySessionPicker', () => {
 
   it('shows an error when the session list cannot be loaded', async () => {
     mockFetchPublicSessions.mockRejectedValue(new Error('network down'));
-    render(<DisplaySessionPicker onSelectSession={vi.fn()} />);
+    renderWithQuery(<DisplaySessionPicker onSelectSession={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /could not load sessions/i,
@@ -76,7 +77,7 @@ describe('DisplaySessionPicker', () => {
   });
 
   it('surfaces a connectionError prop from a stale/unknown code', () => {
-    render(
+    renderWithQuery(
       <DisplaySessionPicker
         onSelectSession={vi.fn()}
         connectionError="Unknown game session code"
@@ -90,7 +91,7 @@ describe('DisplaySessionPicker', () => {
 
   it('refreshes the list on demand', async () => {
     mockFetchPublicSessions.mockResolvedValue([]);
-    render(<DisplaySessionPicker onSelectSession={vi.fn()} />);
+    renderWithQuery(<DisplaySessionPicker onSelectSession={vi.fn()} />);
     await screen.findByText(/no games running yet/i);
     mockFetchPublicSessions.mockClear();
 
@@ -102,25 +103,24 @@ describe('DisplaySessionPicker', () => {
   it('re-enables the Refresh button under Strict Mode double-mounted effects', async () => {
     // The App Router defaults reactStrictMode to true (see next.config.ts),
     // so `next dev` mounts, cleans up, and remounts every effect once. This
-    // reproduces that here to guard against the isMountedRef flag getting
-    // stuck false after the synthetic cleanup and permanently skipping
-    // setIsLoading(false), which left the button stuck on "Refreshing…".
+    // reproduces that here to guard against the query staying stuck on
+    // isFetching after the synthetic cleanup+remount, which would leave the
+    // button stuck on "Refreshing…".
     mockFetchPublicSessions.mockResolvedValue([]);
-    render(
+    renderWithQuery(
       <StrictMode>
         <DisplaySessionPicker onSelectSession={vi.fn()} />
       </StrictMode>,
     );
 
-    const refreshButton = await screen.findByRole('button', {
-      name: /refresh/i,
-    });
-    expect(refreshButton).toBeEnabled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /refresh/i })).toBeEnabled(),
+    );
 
-    await userEvent.click(refreshButton);
+    await userEvent.click(screen.getByRole('button', { name: /refresh/i }));
 
-    expect(
-      await screen.findByRole('button', { name: /^refresh$/i }),
-    ).toBeEnabled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^refresh$/i })).toBeEnabled(),
+    );
   });
 });

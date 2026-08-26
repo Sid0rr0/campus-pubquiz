@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
@@ -46,7 +47,7 @@ describe('PlayPage — pre-game screens', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByText(
@@ -75,7 +76,7 @@ describe('PlayPage — pre-game screens', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Custom team-phone rule.')).toBeInTheDocument();
     expect(screen.queryByText(/no cheating/i)).not.toBeInTheDocument();
@@ -97,7 +98,7 @@ describe('PlayPage — pre-game screens', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Picture Round')).toBeInTheDocument();
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
@@ -128,7 +129,7 @@ describe('PlayPage — pre-game screens', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.queryByText('Picture Round')).not.toBeInTheDocument();
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
@@ -150,7 +151,7 @@ describe('PlayPage — pre-game screens', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('link', { name: /read the rules/i }),

@@ -1,9 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Select } from 'radix-ui';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
 import { fetchPublicSessions, SessionApiError } from '@/app/lib/sessions-api';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { queryKeys } from '@/app/lib/query-keys';
+
+const EMPTY_SESSIONS: ActiveSessionSummary[] = [];
 
 interface LiveSessionSelectProps {
   value: string;
@@ -23,44 +27,16 @@ export function LiveSessionSelect({
   value,
   onSelectSession,
 }: LiveSessionSelectProps) {
-  const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  // Guards state updates from a fetch that resolves after this control has
-  // unmounted (e.g. the team joins before the request settles). Reset to
-  // true on setup, not just via the initializer — React 18 Strict Mode's
-  // dev-only mount→cleanup→mount cycle otherwise leaves this pinned to
-  // false after the simulated cleanup, silently dropping every future
-  // fetch response and leaving "Pick the quiz" empty for the rest of this
-  // component's real lifetime (e.g. every mount after a player logs out
-  // and the join form remounts).
-  const isMountedRef = useRef(true);
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(() => {
-    fetchPublicSessions()
-      .then((result) => {
-        if (!isMountedRef.current) return;
-        setSessions(result);
-        setError(null);
-      })
-      .catch((fetchError: unknown) => {
-        if (!isMountedRef.current) return;
-        setError(
-          fetchError instanceof SessionApiError
-            ? fetchError.message
-            : 'Could not load live games',
-        );
-      });
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const sessionsQuery = useQuery({
+    queryKey: queryKeys.sessions.public(),
+    queryFn: fetchPublicSessions,
+  });
+  const sessions = sessionsQuery.data ?? EMPTY_SESSIONS;
+  const error = apiErrorMessage(
+    sessionsQuery.error,
+    SessionApiError,
+    'Could not load live games',
+  );
 
   // Controlled value only reflects a code this list actually knows about —
   // a manually typed or QR-prefilled code shouldn't show as "selected" here.

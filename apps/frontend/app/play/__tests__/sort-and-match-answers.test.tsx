@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -48,7 +49,7 @@ describe('PlayPage — sort and match answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Venus')).toBeInTheDocument();
     expect(
@@ -89,7 +90,7 @@ describe('PlayPage — sort and match answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('arthur')).toBeInTheDocument();
     expect(screen.getByText('captain america')).toBeInTheDocument();
@@ -127,7 +128,7 @@ describe('PlayPage — sort and match answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /i don't know/i }),
@@ -160,7 +161,7 @@ describe('PlayPage — sort and match answers', () => {
         submitAnswer,
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /i don't know/i }),

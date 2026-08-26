@@ -1,11 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
 import { fetchPublicSessions, SessionApiError } from '@/app/lib/sessions-api';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
+
+const EMPTY_SESSIONS: ActiveSessionSummary[] = [];
 
 interface DisplaySessionPickerProps {
   onSelectSession: (joinCode: string) => void;
@@ -24,52 +28,23 @@ export function DisplaySessionPicker({
   onSelectSession,
   connectionError,
 }: DisplaySessionPickerProps) {
-  const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  // Guards state updates from a refresh that resolves after this picker has
-  // unmounted (e.g. the operator picks a session before the fetch settles).
-  // Reset to true on every mount, not just at ref-creation — React Strict
-  // Mode (on by default for the App Router, see next.config.ts) mounts,
-  // cleans up, then remounts every effect once in dev, so without the reset
-  // here the flag would be stuck false after that first synthetic cleanup,
-  // permanently skipping setIsLoading(false) and leaving the Refresh button
-  // stuck disabled.
-  const isMountedRef = useRef(true);
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(() => {
-    fetchPublicSessions()
-      .then((result) => {
-        if (!isMountedRef.current) return;
-        setSessions(result);
-        setError(null);
-      })
-      .catch((fetchError: unknown) => {
-        if (!isMountedRef.current) return;
-        setError(
-          fetchError instanceof SessionApiError
-            ? fetchError.message
-            : 'Could not load sessions',
-        );
-      })
-      .finally(() => {
-        if (isMountedRef.current) setIsLoading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const sessionsQuery = useQuery({
+    queryKey: queryKeys.sessions.public(),
+    queryFn: fetchPublicSessions,
+  });
+  const sessions = sessionsQuery.data ?? EMPTY_SESSIONS;
+  const error = apiErrorMessage(
+    sessionsQuery.error,
+    SessionApiError,
+    'Could not load sessions',
+  );
+  // isFetching (not isLoading) so the button also reads "Refreshing…" during
+  // a manual refetch that already has cached data, matching the old manual
+  // isLoading flag which covered both the first load and every refresh.
+  const isLoading = sessionsQuery.isFetching;
 
   function handleRefreshClick() {
-    setIsLoading(true);
-    refresh();
+    void sessionsQuery.refetch();
   }
 
   return (

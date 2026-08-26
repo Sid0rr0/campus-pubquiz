@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
@@ -41,10 +42,14 @@ describe('PlayPage — leaderboard overlay', () => {
           currentQuestion: null,
           blockQuestions: [q1],
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.queryByText('Name a fruit')).not.toBeInTheDocument();
     expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
@@ -54,10 +59,13 @@ describe('PlayPage — leaderboard overlay', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(
       socketResult({
-        snapshot: { progress: progress({ isLeaderboardVisible: true }), currentQuestion: null },
+        snapshot: {
+          progress: progress({ isLeaderboardVisible: true }),
+          currentQuestion: null,
+        },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
   });
@@ -67,16 +75,30 @@ describe('PlayPage — leaderboard overlay', () => {
     mockUseGameSocket.mockReturnValue(
       socketResult({
         snapshot: {
-          progress: progress({ status: 'question_open', isLeaderboardVisible: true }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          progress: progress({
+            status: 'question_open',
+            isLeaderboardVisible: true,
+          }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
-        team: { teamId: 'team-1', teamName: 'Returning Team', teamToken: 'team-token-1' },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /your answer/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /your answer/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/leaderboard/i)).not.toBeInTheDocument();
   });
 
@@ -86,11 +108,16 @@ describe('PlayPage — leaderboard overlay', () => {
       socketResult({
         snapshot: {
           progress: progress({ status: 'locking', isLeaderboardVisible: true }),
-          currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });

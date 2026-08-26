@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
@@ -50,7 +51,7 @@ describe('PlayPage — break and reveal', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('textbox', { name: /your answer/i }),
@@ -91,7 +92,7 @@ describe('PlayPage — break and reveal', () => {
         myAnswers: { r1q1: 'Banana', r1q2: 'Mars' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     // Defaults to the block's last question, with the picker showing both.
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
@@ -153,7 +154,7 @@ describe('PlayPage — break and reveal', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
     expect(
@@ -187,7 +188,7 @@ describe('PlayPage — break and reveal', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
     expect(
@@ -227,7 +228,7 @@ describe('PlayPage — break and reveal', () => {
         },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(
       screen.getByRole('button', { name: /^question 1$/i }),
@@ -264,7 +265,7 @@ describe('PlayPage — break and reveal', () => {
         myAnswers: { r1q1: 'Mango' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Banana')).toBeInTheDocument();
     expect(screen.getByText(/your answer/i)).toBeInTheDocument();
@@ -301,7 +302,7 @@ describe('PlayPage — break and reveal', () => {
         seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('0 / 5 points')).toBeInTheDocument();
   });
@@ -333,7 +334,7 @@ describe('PlayPage — break and reveal', () => {
         myAnswers: { r1q1: 'Imola|Spa|Silverstone' },
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Imola → Spa → Silverstone')).toBeInTheDocument();
     expect(screen.queryByText('Imola|Spa|Silverstone')).not.toBeInTheDocument();
@@ -365,7 +366,7 @@ describe('PlayPage — break and reveal', () => {
         myAnswers: {},
       }),
     );
-    render(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Banana')).toBeInTheDocument();
     expect(screen.getByText(/no answer submitted/i)).toBeInTheDocument();
@@ -411,7 +412,7 @@ describe('PlayPage — break and reveal', () => {
         },
       }),
     );
-    const { rerender } = render(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
 
     // Defaults to the question at revealIndex, not the block's last question.
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();

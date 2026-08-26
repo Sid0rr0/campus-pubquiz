@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import HomePage from '@/app/page';
+import { renderWithQuery } from '@/test-utils/query';
 import { socketResult } from './test-utils';
 
 const {
@@ -69,7 +70,7 @@ describe('HomePage', () => {
   });
 
   it('shows the hero heading and the how-it-works steps', () => {
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     expect(
       screen.getByRole('heading', { name: /campus pub quiz/i }),
@@ -81,7 +82,7 @@ describe('HomePage', () => {
 
   it('shows a join form asking for a team name and a live game to join, with no raw game code field', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     expect(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -95,7 +96,7 @@ describe('HomePage', () => {
   });
 
   it('links to the admin login in the footer', () => {
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     expect(
       screen.getByRole('link', { name: /quiz master login/i }),
@@ -103,7 +104,7 @@ describe('HomePage', () => {
   });
 
   it('hides the team code field until "Played before?" is clicked', async () => {
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     expect(
       screen.queryByRole('textbox', { name: /team code/i }),
@@ -123,7 +124,7 @@ describe('HomePage', () => {
       socketResult({ connectionError: 'Session expired' }),
     );
 
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     expect(screen.getByRole('textbox', { name: /team code/i })).toHaveValue(
       'QUICK-JADE-FOX',
@@ -133,16 +134,21 @@ describe('HomePage', () => {
   it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
-    expect(
-      await screen.findByRole('combobox', { name: /pick the quiz/i }),
-    ).toHaveTextContent(/campus pub quiz night/i);
+    // The combobox exists (with a placeholder) before the session list
+    // query resolves, so findByRole alone would resolve on that first
+    // render — wait for the resolved list's text specifically.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('combobox', { name: /pick the quiz/i }),
+      ).toHaveTextContent(/campus pub quiz night/i),
+    );
   });
 
   it('shows a connecting state after submitting the join form', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -160,7 +166,7 @@ describe('HomePage', () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    render(<HomePage />);
+    renderWithQuery(<HomePage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -188,7 +194,7 @@ describe('HomePage', () => {
     const joinTeam = vi.fn();
     mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = render(<HomePage />);
+    const { rerender } = renderWithQuery(<HomePage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
