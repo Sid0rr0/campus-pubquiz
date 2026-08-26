@@ -24,4 +24,5 @@ export interface AdminSidebarProps {
   onKickTeam: (teamId: number) => void;
   breakEndsAt: number | null;
   onSetBreakEndTime: (breakEndsAt: number | null) => void;
+  isLastQuestionBeforeBreak: boolean;
 }

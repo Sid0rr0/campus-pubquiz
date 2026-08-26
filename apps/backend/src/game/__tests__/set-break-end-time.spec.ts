@@ -175,4 +175,20 @@ describe('GameStateService — breakEndsAt reset on a fresh break', () => {
     expect(secondBreak.progress.status).toBe('break_intro');
     expect(secondBreak.breakEndsAt).toBeNull();
   });
+
+  it('keeps a future end-time the admin set in advance, while still on the last question, once the break actually starts', async () => {
+    await service.applyAction(joinCode, 'START_QUIZ'); // -> rules
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1 (question_open)
+    const locking = await service.applyAction(joinCode, 'ADVANCE'); // -> locking (last q, breakAfter)
+    expect(locking.progress.status).toBe('locking');
+
+    const futureEndsAt = Date.now() + 10 * 60 * 1000;
+    service.setBreakEndTime(joinCode, futureEndsAt);
+    expect(service.getSnapshot(joinCode).breakEndsAt).toBe(futureEndsAt);
+
+    const firstBreak = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
+    expect(firstBreak.progress.status).toBe('break_intro');
+    expect(firstBreak.breakEndsAt).toBe(futureEndsAt);
+  });
 });

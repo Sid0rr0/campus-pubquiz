@@ -29,6 +29,7 @@ export function DesktopSidebar({
   onKickTeam,
   breakEndsAt,
   onSetBreakEndTime,
+  isLastQuestionBeforeBreak,
 }: AdminSidebarProps) {
   return (
     <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-foreground p-5 text-background md:sticky md:top-(--site-header-height) md:flex md:h-[calc(100vh-var(--site-header-height))]">
@@ -40,11 +41,6 @@ export function DesktopSidebar({
         joinCode={joinCode}
         activeQuizTitle={activeQuizTitle}
         connectionError={connectionError}
-      />
-      <BreakEndTimeControl
-        progressStatus={progressStatus}
-        breakEndsAt={breakEndsAt}
-        onSetBreakEndTime={onSetBreakEndTime}
       />
       <div className="flex flex-col gap-2">
         <NavigationButtons
@@ -63,6 +59,12 @@ export function DesktopSidebar({
           isLeaderboardVisible={isLeaderboardVisible}
           onAction={onAction}
           onCloseSession={onCloseSession}
+        />
+        <BreakEndTimeControl
+          progressStatus={progressStatus}
+          breakEndsAt={breakEndsAt}
+          onSetBreakEndTime={onSetBreakEndTime}
+          isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
         />
       </div>
       <TeamsPanel

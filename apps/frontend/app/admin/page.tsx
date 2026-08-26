@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBlockStartRoundIndex,
+  isLastQuestionOfBreakAfterRound,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
@@ -299,17 +300,18 @@ function AdminPageContent() {
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
+  const gameContext = {
+    rounds: activeQuizRounds.map((round) => ({
+      questionCount: round.questions.length,
+      breakAfter: round.breakAfter,
+    })),
+  };
   // Rounds before the active block are already locked and graded; guard on
   // rounds.length so a stale/incomplete quiz list can never index past its
   // own array inside getBlockStartRoundIndex.
   const activeBlockStartIndex =
     activeQuizRounds.length > roundIndex
-      ? getBlockStartRoundIndex(roundIndex, {
-          rounds: activeQuizRounds.map((round) => ({
-            questionCount: round.questions.length,
-            breakAfter: round.breakAfter,
-          })),
-        })
+      ? getBlockStartRoundIndex(roundIndex, gameContext)
       : 0;
   const canStartQuiz = gameStatus === 'lobby';
   const canAdvance =
@@ -407,6 +409,13 @@ function AdminPageContent() {
     progress.status === 'question_open' || progress.status === 'locking';
   const canEndQuiz = progress.status !== 'ended';
   const canCloseSession = progress.status === 'ended';
+  // Lets the admin pre-set the break end-time while still on the block's
+  // last question, so it's already in place once the break screen appears —
+  // see BreakEndTimeControl.
+  const isLastQuestionBeforeBreak =
+    activeQuizRounds.length > roundIndex &&
+    showAnswerStatus &&
+    isLastQuestionOfBreakAfterRound(progress, gameContext);
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
@@ -433,6 +442,7 @@ function AdminPageContent() {
         onKickTeam={kickTeam}
         breakEndsAt={breakEndsAt}
         onSetBreakEndTime={setBreakEndTime}
+        isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
         user={auth.user}
         onLogout={handleLogout}
       />
@@ -459,6 +469,7 @@ function AdminPageContent() {
         onKickTeam={kickTeam}
         breakEndsAt={breakEndsAt}
         onSetBreakEndTime={setBreakEndTime}
+        isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
         {progress.status === 'lobby' && (

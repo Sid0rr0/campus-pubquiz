@@ -301,14 +301,18 @@ export class GameStateService implements OnModuleInit {
         progress,
         sessionWithGradingStatus.seededGame.settings.lockGraceSeconds * 1000,
       ),
-      // A fresh break starting (the only path into 'break_intro') clears any
-      // end-time left over from a previous break, so the admin sets a new
-      // one rather than the display showing a stale/past time. Navigating
-      // within the same break (break_intro/break/break_round_intro) via
-      // Previous/Advance leaves it untouched.
+      // A fresh break starting (the only path into 'break_intro') clears a
+      // *stale* end-time left over from a previous break, so the display
+      // never shows a past time. It does NOT clear one the admin set in
+      // advance while still on the block's last question (BreakEndTimeControl
+      // now allows this) — that value is still in the future, so it's kept.
+      // Navigating within the same break (break_intro/break/break_round_intro)
+      // via Previous/Advance always leaves it untouched regardless.
       breakEndsAt:
         session.progress.status === 'locking' &&
-        progress.status === 'break_intro'
+        progress.status === 'break_intro' &&
+        sessionWithGradingStatus.breakEndsAt !== null &&
+        sessionWithGradingStatus.breakEndsAt <= Date.now()
           ? null
           : sessionWithGradingStatus.breakEndsAt,
       leaderboardRevealCount: computeLeaderboardRevealCount(

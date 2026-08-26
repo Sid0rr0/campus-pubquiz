@@ -42,6 +42,7 @@ export function MobileAdminBar({
   onKickTeam,
   breakEndsAt,
   onSetBreakEndTime,
+  isLastQuestionBeforeBreak,
   user,
   onLogout,
 }: MobileAdminBarProps) {
@@ -101,11 +102,6 @@ export function MobileAdminBar({
               activeQuizTitle={activeQuizTitle}
               connectionError={connectionError}
             />
-            <BreakEndTimeControl
-              progressStatus={progressStatus}
-              breakEndsAt={breakEndsAt}
-              onSetBreakEndTime={onSetBreakEndTime}
-            />
             <AdminActions
               canStartQuiz={canStartQuiz}
               canEndQuiz={canEndQuiz}
@@ -113,6 +109,12 @@ export function MobileAdminBar({
               isLeaderboardVisible={isLeaderboardVisible}
               onAction={handleDrawerAction}
               onCloseSession={handleDrawerCloseSession}
+            />
+            <BreakEndTimeControl
+              progressStatus={progressStatus}
+              breakEndsAt={breakEndsAt}
+              onSetBreakEndTime={onSetBreakEndTime}
+              isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
             />
             <TeamsPanel
               teams={teams}

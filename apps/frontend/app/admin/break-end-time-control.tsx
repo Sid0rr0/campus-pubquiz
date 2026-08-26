@@ -8,6 +8,7 @@ interface BreakEndTimeControlProps {
   progressStatus: GameStatus;
   breakEndsAt: number | null;
   onSetBreakEndTime: (breakEndsAt: number | null) => void;
+  isLastQuestionBeforeBreak: boolean;
   className?: string;
 }
 
@@ -49,15 +50,18 @@ function parseTimeInputValue(value: string): number | null {
 
 /**
  * Lets the admin set/clear the "back at HH:MM" line shown on the display's
- * break screen — visible only during the break/grading statuses, since it's
- * meaningless anywhere else. Uncontrolled-ish: the input tracks its own text
- * while typing, seeded from `breakEndsAt` whenever that prop changes
- * (another admin tab, or a fresh break resetting it to null).
+ * break screen — visible during the break/grading statuses, and also while
+ * still on the block's last question (`isLastQuestionBeforeBreak`) so the
+ * admin can set it in advance and have it ready the moment the break starts.
+ * Uncontrolled-ish: the input tracks its own text while typing, seeded from
+ * `breakEndsAt` whenever that prop changes (another admin tab, or a fresh
+ * break resetting it to null).
  */
 export function BreakEndTimeControl({
   progressStatus,
   breakEndsAt,
   onSetBreakEndTime,
+  isLastQuestionBeforeBreak,
   className = '',
 }: BreakEndTimeControlProps) {
   const [inputValue, setInputValue] = useState(
@@ -70,7 +74,8 @@ export function BreakEndTimeControl({
     setInputValue(breakEndsAt !== null ? toTimeInputValue(breakEndsAt) : '');
   }
 
-  if (!BREAK_STATUSES.includes(progressStatus)) {
+  const isDuringBreak = BREAK_STATUSES.includes(progressStatus);
+  if (!isDuringBreak && !isLastQuestionBeforeBreak) {
     return null;
   }
 
@@ -91,6 +96,9 @@ export function BreakEndTimeControl({
       <label className="text-sm font-extrabold" htmlFor="break-end-time">
         Break ends at
       </label>
+      {!isDuringBreak && (
+        <p className="text-xs opacity-70">Sets the upcoming break</p>
+      )}
       <div className="flex items-center gap-2">
         <input
           id="break-end-time"
