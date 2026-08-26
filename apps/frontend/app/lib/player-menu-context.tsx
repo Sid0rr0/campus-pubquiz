@@ -13,6 +13,7 @@ export interface PlayerMenuState {
   teamName: string;
   team: JoinAcceptedPayload | null;
   onLogOut: () => void;
+  onOpenSettings: () => void;
 }
 
 type PublishPlayerMenu = (state: PlayerMenuState | null) => void;
@@ -58,10 +59,11 @@ export function usePublishPlayerMenu(
   teamName: string | null,
   team: JoinAcceptedPayload | null,
   onLogOut: () => void,
+  onOpenSettings: () => void,
 ): void {
   const publish = useContext(PublishPlayerMenuContext);
   useEffect(() => {
-    publish(teamName ? { teamName, team, onLogOut } : null);
+    publish(teamName ? { teamName, team, onLogOut, onOpenSettings } : null);
     return () => publish(null);
-  }, [teamName, team, onLogOut, publish]);
+  }, [teamName, team, onLogOut, onOpenSettings, publish]);
 }

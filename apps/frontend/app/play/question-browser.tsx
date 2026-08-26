@@ -8,10 +8,18 @@ import {
 } from '@campus-pubquiz/types';
 import { QuestionDisplay } from '@/app/display/question-display';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
+import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
+
+export interface QuestionNavigation {
+  canGoBack: boolean;
+  canGoForward: boolean;
+  onBack: () => void;
+  onForward: () => void;
+}
 
 interface QuestionBrowserProps {
   progress: GameProgress;
@@ -33,6 +41,8 @@ interface QuestionBrowserProps {
     teamId: number,
     value: string,
   ) => void;
+  /** Set only when the team has turned off auto-advance — renders Prev/Next controls bounded to questions already opened. */
+  navigation?: QuestionNavigation;
 }
 
 /** The block question picker + prompt + answer form, shown while a question is open and, unless the leaderboard overlay is on, through break/reveal so teams can browse back. */
@@ -49,11 +59,34 @@ export function QuestionBrowser({
   myAnswerPoints,
   onSelectQuestion,
   onSubmitAnswer,
+  navigation,
 }: QuestionBrowserProps) {
   const myAnswer = myAnswers[selectedQuestion.id];
 
   return (
     <div className="flex flex-col gap-6">
+      {navigation && (
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline-muted"
+            size="sm"
+            disabled={!navigation.canGoBack}
+            onClick={navigation.onBack}
+          >
+            ← Prev
+          </Button>
+          <Button
+            type="button"
+            variant="outline-muted"
+            size="sm"
+            disabled={!navigation.canGoForward}
+            onClick={navigation.onForward}
+          >
+            Next →
+          </Button>
+        </div>
+      )}
       {totalPickerSlots > 1 && (
         <QuestionPicker
           pickerRounds={pickerRounds}

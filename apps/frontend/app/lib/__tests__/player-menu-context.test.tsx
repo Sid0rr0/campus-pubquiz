@@ -14,11 +14,13 @@ function Reader() {
 function Publisher({
   teamName,
   onLogOut,
+  onOpenSettings = () => {},
 }: {
   teamName: string | null;
   onLogOut: () => void;
+  onOpenSettings?: () => void;
 }) {
-  usePublishPlayerMenu(teamName, null, onLogOut);
+  usePublishPlayerMenu(teamName, null, onLogOut, onOpenSettings);
   return null;
 }
 

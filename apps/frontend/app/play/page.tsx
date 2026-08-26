@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ExitIcon } from '@radix-ui/react-icons';
+import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import {
   DEFAULT_SESSION_SETTINGS,
   isShowingLastBreak,
@@ -15,10 +15,15 @@ import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
+import { SettingsModal } from '@/app/play/settings-modal';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { storedJoinOptions } from '@/app/lib/team-storage';
+import {
+  readAutoAdvanceSetting,
+  writeAutoAdvanceSetting,
+} from '@/app/lib/player-settings-storage';
 import { usePublishPlayerMenu } from '@/app/lib/player-menu-context';
 
 function PlayPageContent() {
@@ -47,13 +52,37 @@ function PlayPageContent() {
     handleJoin,
     handleLogOut,
   } = useTeamJoin(codeFromUrl);
-  // Publishes the team's identity/Log out into the shared app header so its
-  // mobile hamburger can surface them — see player-menu-context.tsx.
-  usePublishPlayerMenu(teamName, team, handleLogOut);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Stable reference (like handleLogOut) so the publish effect below doesn't
+  // re-fire on every unrelated re-render.
+  const openSettings = useCallback(
+    () => setIsSettingsOpen(true),
+    [setIsSettingsOpen],
+  );
+  // Publishes the team's identity/Log out/Settings into the shared app
+  // header so its mobile hamburger can surface them — see
+  // player-menu-context.tsx.
+  usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
+  // Starts true (today's always-follow behavior) and is corrected once
+  // localStorage is readable post-mount — see the teamName restore effect
+  // in use-team-join.ts for the same SSR-safe pattern.
+  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAutoAdvanceEnabled(readAutoAdvanceSetting());
+  }, []);
   // null = follow the question currently shown on the big screen.
   const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(
     null,
   );
+  function handleAutoAdvanceChange(enabled: boolean): void {
+    writeAutoAdvanceSetting(enabled);
+    setAutoAdvanceEnabled(enabled);
+    if (enabled) {
+      // Resume following the newest question immediately.
+      setBrowsedQuestionId(null);
+    }
+  }
   const gameStatus = snapshot?.progress.status;
   const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
   const revealIndex = snapshot?.progress.revealIndex ?? null;
@@ -62,8 +91,10 @@ function PlayPageContent() {
   const revealSyncKey = gameStatus === 'reveal' ? revealIndex : null;
 
   // Snap back to the newest question whenever the quiz master reveals a new
-  // question, or steps through the reveal walk. Adjusted during render
-  // rather than in an Effect, per
+  // question, or steps through the reveal walk — unless the team has turned
+  // off auto-advance, in which case their view stays put (see the
+  // selectedQuestion re-pin below for how it's held/self-heals instead).
+  // Adjusted during render rather than in an Effect, per
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const [prevQuestionId, setPrevQuestionId] = useState(currentQuestionId);
   const [prevRevealSyncKey, setPrevRevealSyncKey] = useState(revealSyncKey);
@@ -73,7 +104,9 @@ function PlayPageContent() {
   ) {
     setPrevQuestionId(currentQuestionId);
     setPrevRevealSyncKey(revealSyncKey);
-    setBrowsedQuestionId(null);
+    if (autoAdvanceEnabled) {
+      setBrowsedQuestionId(null);
+    }
   }
 
   const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
@@ -216,6 +249,39 @@ function PlayPageContent() {
     blockQuestions[blockQuestions.length - 1] ??
     currentQuestion ??
     null;
+  // With auto-advance off, freeze the view on whatever's currently
+  // resolved above — both the instant the setting turns off (browsedQuestionId
+  // is still null, so nothing above matched it) and any time the pin stops
+  // resolving (e.g. a new block replaced blockQuestions entirely): either
+  // way selectedQuestion.id won't equal browsedQuestionId, so re-adopt it as
+  // the new pin rather than silently auto-following forever. Adjusted during
+  // render, same idiom as the reset-on-new-content block above.
+  if (
+    !autoAdvanceEnabled &&
+    selectedQuestion &&
+    browsedQuestionId !== selectedQuestion.id
+  ) {
+    setBrowsedQuestionId(selectedQuestion.id);
+  }
+  // Prev/Next bounds for manual-advance mode — stepping within the current
+  // block only, same array QuestionPicker already treats as "opened so far".
+  const blockQuestionIndex = blockQuestions.findIndex(
+    (question) => question.id === selectedQuestion?.id,
+  );
+  const canGoBackToQuestion = blockQuestionIndex > 0;
+  const canGoForwardToQuestion =
+    blockQuestionIndex !== -1 &&
+    blockQuestionIndex < blockQuestions.length - 1;
+  function goToPreviousQuestion(): void {
+    if (blockQuestionIndex > 0) {
+      setBrowsedQuestionId(blockQuestions[blockQuestionIndex - 1].id);
+    }
+  }
+  function goToNextQuestion(): void {
+    if (canGoForwardToQuestion) {
+      setBrowsedQuestionId(blockQuestions[blockQuestionIndex + 1].id);
+    }
+  }
   // The same question with its correct answer attached, for showing "your
   // answer" alongside it while reveal is up.
   const revealQuestion =
@@ -293,15 +359,20 @@ function PlayPageContent() {
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">
           Playing as {teamName}
         </p>
-        <Button
-          type="button"
-          variant="text-quiet"
-          onClick={handleLogOut}
-          className="hidden md:flex"
-        >
-          <ExitIcon aria-hidden="true" />
-          Log out
-        </Button>
+        <div className="hidden items-center gap-2 md:flex">
+          <Button
+            type="button"
+            variant="text-quiet"
+            onClick={openSettings}
+          >
+            <GearIcon aria-hidden="true" />
+            Settings
+          </Button>
+          <Button type="button" variant="text-quiet" onClick={handleLogOut}>
+            <ExitIcon aria-hidden="true" />
+            Log out
+          </Button>
+        </div>
       </div>
       {team && (
         <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">
@@ -342,6 +413,16 @@ function PlayPageContent() {
               myAnswerPoints={selectedQuestionPoints}
               onSelectQuestion={setBrowsedQuestionId}
               onSubmitAnswer={submitAnswer}
+              navigation={
+                autoAdvanceEnabled
+                  ? undefined
+                  : {
+                      canGoBack: canGoBackToQuestion,
+                      canGoForward: canGoForwardToQuestion,
+                      onBack: goToPreviousQuestion,
+                      onForward: goToNextQuestion,
+                    }
+              }
             />
           </div>
         )}
@@ -362,6 +443,12 @@ function PlayPageContent() {
           />
         )}
       </div>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        autoAdvanceEnabled={autoAdvanceEnabled}
+        onAutoAdvanceChange={handleAutoAdvanceChange}
+      />
     </main>
   );
 }

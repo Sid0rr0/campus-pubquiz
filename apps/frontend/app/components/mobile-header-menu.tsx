@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { Dialog } from 'radix-ui';
-import { Cross2Icon, ExitIcon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import {
+  Cross2Icon,
+  ExitIcon,
+  GearIcon,
+  HamburgerMenuIcon,
+} from '@radix-ui/react-icons';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { AccountMenuLinks } from '@/app/components/account-menu-links';
 import { Button } from '@/app/components/button';
@@ -36,6 +41,11 @@ export function MobileHeaderMenu({
 
   function handlePlayerLogOut(): void {
     playerMenu?.onLogOut();
+    setIsDrawerOpen(false);
+  }
+
+  function handleOpenSettings(): void {
+    playerMenu?.onOpenSettings();
     setIsDrawerOpen(false);
   }
 
@@ -91,6 +101,14 @@ export function MobileHeaderMenu({
                     (save it to play as this team another night)
                   </p>
                 )}
+                <Button
+                  type="button"
+                  onClick={handleOpenSettings}
+                  className="flex items-center gap-1 text-sm font-extrabold underline"
+                >
+                  <GearIcon aria-hidden="true" />
+                  Settings
+                </Button>
                 <Button
                   type="button"
                   onClick={handlePlayerLogOut}

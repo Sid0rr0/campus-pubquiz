@@ -56,6 +56,7 @@ function playerMenu(overrides: Partial<PlayerMenuState> = {}): PlayerMenuState {
     teamName: 'The Quizzards',
     team: null,
     onLogOut: vi.fn(),
+    onOpenSettings: vi.fn(),
     ...overrides,
   };
 }
@@ -228,5 +229,24 @@ describe('SiteHeader', () => {
       .click(within(drawer).getByRole('button', { name: /change team/i }));
 
     expect(onLogOut).toHaveBeenCalled();
+  });
+
+  it('calls onOpenSettings and closes the drawer when Settings is clicked from the mobile hamburger on /play', async () => {
+    pathnameRef.current = '/play';
+    const onOpenSettings = vi.fn();
+    mockUsePlayerMenu.mockReturnValue(playerMenu({ onOpenSettings }));
+    render(<SiteHeader />);
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: /open menu/i }));
+    const drawer = screen.getByRole('dialog');
+
+    await userEvent
+      .setup()
+      .click(within(drawer).getByRole('button', { name: /settings/i }));
+
+    expect(onOpenSettings).toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
