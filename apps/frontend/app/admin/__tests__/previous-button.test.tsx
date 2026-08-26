@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -78,7 +79,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 
@@ -96,7 +97,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 
@@ -127,7 +128,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 
@@ -150,7 +151,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 
@@ -176,7 +177,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 
@@ -201,7 +202,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       screen.queryByRole('button', { name: /^previous$/i }),
@@ -256,7 +257,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await waitFor(() =>
       expect(getDesktopButton(/^previous$/i)).toBeInTheDocument(),
@@ -284,7 +285,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
   });
@@ -332,7 +333,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await waitFor(() =>
       expect(getDesktopButton(/^previous$/i)).toBeInTheDocument(),
@@ -348,7 +349,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(getDesktopButton(/^previous$/i)).toBeInTheDocument();
   });
@@ -363,7 +364,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 
@@ -380,7 +381,7 @@ describe('AdminPage — previous button', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^previous$/i));
 

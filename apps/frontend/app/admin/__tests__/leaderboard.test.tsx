@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -50,7 +51,7 @@ describe('AdminPage — leaderboard', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /open leaderboard/i }),
@@ -69,7 +70,7 @@ describe('AdminPage — leaderboard', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /close leaderboard/i }),
@@ -105,7 +106,7 @@ describe('AdminPage — leaderboard', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(getDesktopButton(/^previous$/i)).toBeDisabled();
   });
@@ -135,7 +136,7 @@ describe('AdminPage — leaderboard', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       screen.queryByRole('button', { name: /^advance$/i }),
@@ -167,7 +168,7 @@ describe('AdminPage — leaderboard', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       screen.queryByRole('button', { name: /show next team/i }),
@@ -205,7 +206,7 @@ describe('AdminPage — leaderboard', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     const advanceButton = getDesktopButton(/^advance$/i);
     expect(advanceButton).not.toBeDisabled();
@@ -245,7 +246,7 @@ describe('AdminPage — leaderboard', () => {
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     const teamsTable = screen.getByRole('table');
     const quizzardsRow = within(teamsTable)

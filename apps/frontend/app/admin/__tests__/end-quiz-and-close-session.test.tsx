@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -67,7 +68,7 @@ describe('AdminPage — end quiz and close session', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
 
@@ -87,7 +88,7 @@ describe('AdminPage — end quiz and close session', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
     const dialog = screen.getByRole('alertdialog', {
@@ -113,7 +114,7 @@ describe('AdminPage — end quiz and close session', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /end quiz/i }));
     const dialog = screen.getByRole('alertdialog', {
@@ -136,7 +137,7 @@ describe('AdminPage — end quiz and close session', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       screen.queryByRole('button', { name: /close session/i }),
@@ -153,7 +154,7 @@ describe('AdminPage — end quiz and close session', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /close session/i }),
@@ -175,7 +176,7 @@ describe('AdminPage — end quiz and close session', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /close session/i }),
@@ -204,7 +205,7 @@ describe('AdminPage — end quiz and close session', () => {
       sendAction: vi.fn(),
     });
     mockCloseSession.mockResolvedValue(undefined);
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /close session/i }),
@@ -236,7 +237,7 @@ describe('AdminPage — end quiz and close session', () => {
     mockCloseSession.mockRejectedValue(
       new SessionApiError('still the default session', 409),
     );
-    render(
+    renderWithQuery(
       <>
         <AdminPage />
         <Toaster />

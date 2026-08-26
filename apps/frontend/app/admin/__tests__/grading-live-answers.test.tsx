@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
@@ -92,7 +93,7 @@ describe('AdminPage — grading live answers', () => {
       },
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(screen.getAllByText('The Quizzards').length).toBeGreaterThan(0);
     expect(screen.getByText('Banana')).toBeInTheDocument();
@@ -142,7 +143,7 @@ describe('AdminPage — grading live answers', () => {
       },
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(screen.getByText(/round 2 \(fruit & veg\)/i)).toHaveTextContent(
       'Q3 of 4',

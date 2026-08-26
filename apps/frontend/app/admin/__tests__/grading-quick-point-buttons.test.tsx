@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -92,7 +93,7 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       gradeAnswer,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /grade the quizzards full points/i }),
@@ -141,7 +142,7 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       gradeAnswer,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       screen.getByRole('button', { name: /grade the quizzards half points/i }),
@@ -189,7 +190,7 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     const fullPointsButton = screen.getByRole('button', {
       name: /grade the quizzards full points/i,
@@ -245,7 +246,7 @@ describe('AdminPage — grading quick point buttons', () => {
       },
       gradeAnswer,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await user.click(
       screen.getByRole('button', { name: /grade the quizzards 0 points/i }),

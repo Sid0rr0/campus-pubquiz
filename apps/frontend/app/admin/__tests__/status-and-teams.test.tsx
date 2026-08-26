@@ -1,14 +1,16 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
-  mockFetchQuizzes: vi.fn(),
-  mockUseAuth: vi.fn(),
-  searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
-}));
+const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
+  vi.hoisted(() => ({
+    mockUseGameSocket: vi.fn(),
+    mockFetchQuizzes: vi.fn(),
+    mockUseAuth: vi.fn(),
+    searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
+  }));
 
 vi.mock('@/app/lib/use-game-socket', () => ({
   useGameSocket: mockUseGameSocket,
@@ -41,7 +43,12 @@ describe('AdminPage — status and teams', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -61,7 +68,7 @@ describe('AdminPage — status and teams', () => {
       },
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
     expect(screen.getByText(/question_open/i)).toBeInTheDocument();
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
@@ -79,7 +86,7 @@ describe('AdminPage — status and teams', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     const sidebar = screen.getByRole('complementary');
     expect(sidebar).toHaveTextContent(/teams \(2\)/i);
@@ -91,7 +98,12 @@ describe('AdminPage — status and teams', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
-        currentQuestion: { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
         teams: [
           { teamId: 'team-1', teamName: 'The Quizzards' },
           { teamId: 'team-2', teamName: 'Beer Necessities' },
@@ -101,11 +113,15 @@ describe('AdminPage — status and teams', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
-    expect(screen.getByRole('listitem', { name: /the quizzards has answered/i })).toBeInTheDocument();
     expect(
-      screen.getByRole('listitem', { name: /beer necessities has not answered yet/i }),
+      screen.getByRole('listitem', { name: /the quizzards has answered/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('listitem', {
+        name: /beer necessities has not answered yet/i,
+      }),
     ).toBeInTheDocument();
   });
 });

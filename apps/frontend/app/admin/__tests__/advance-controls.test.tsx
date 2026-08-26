@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -70,7 +71,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /start quiz/i }));
 
@@ -87,7 +88,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/advance/i));
 
@@ -104,7 +105,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/begin quiz/i));
 
@@ -122,7 +123,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/start round/i));
 
@@ -145,7 +146,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^advance$/i));
 
@@ -161,7 +162,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       screen.queryByRole('button', { name: /lock answers/i }),
@@ -178,7 +179,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^advance$/i));
 
@@ -195,7 +196,7 @@ describe('AdminPage — advance controls', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(getDesktopButton(/^advance$/i));
 

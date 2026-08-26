@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
 import { authenticatedAuthResult, progress } from './test-utils';
@@ -38,7 +39,7 @@ describe('AdminPage — session routing', () => {
   });
 
   it('redirects to /sessions when no ?code= is in the URL', async () => {
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await waitFor(() =>
       expect(routerRef.replace).toHaveBeenCalledWith('/sessions'),
@@ -52,7 +53,7 @@ describe('AdminPage — session routing', () => {
       connectionError: 'Unknown game session code',
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await waitFor(() =>
       expect(routerRef.replace).toHaveBeenCalledWith('/sessions'),
@@ -71,7 +72,7 @@ describe('AdminPage — session routing', () => {
         'Cannot reveal yet: 1 question(s) still have ungraded answers.',
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       await screen.findByText(
@@ -82,7 +83,7 @@ describe('AdminPage — session routing', () => {
   });
 
   it('does not connect the socket until a session code is known', () => {
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(mockUseGameSocket).toHaveBeenLastCalledWith(
       'admin',
@@ -93,7 +94,7 @@ describe('AdminPage — session routing', () => {
 
   it('connects the socket for the session code once present in the URL', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true, 'ABCDEF');
   });
@@ -109,7 +110,7 @@ describe('AdminPage — session routing', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await waitFor(() =>
       expect(routerRef.replace).toHaveBeenCalledWith('/admin?code=GHIJKL'),
@@ -127,7 +128,7 @@ describe('AdminPage — session routing', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
@@ -143,7 +144,7 @@ describe('AdminPage — session routing', () => {
       connectionError: null,
       sendAction: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     const [displayLink] = screen.getAllByRole('link', {
       name: /open display/i,

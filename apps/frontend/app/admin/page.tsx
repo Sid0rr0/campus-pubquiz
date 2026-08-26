@@ -2,19 +2,22 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBlockStartRoundIndex,
   type GameStatus,
   type QuizSummaryRound,
-  type QuizzesListedPayload,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { useAuth } from '@/app/lib/use-auth';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { queryKeys } from '@/app/lib/query-keys';
+import { useToastOnError } from '@/app/lib/use-toast-on-error';
 import { TeamsTable } from '@/app/admin/teams-table';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
@@ -32,7 +35,7 @@ function AdminPageContent() {
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
     null,
   );
-  const [quizzes, setQuizzes] = useState<QuizzesListedPayload | null>(null);
+  const queryClient = useQueryClient();
 
   const isAuthenticated = auth.status === 'authenticated';
 
@@ -122,46 +125,34 @@ function AdminPageContent() {
 
   const gameStatus = snapshot?.progress.status;
 
-  const lastFetchedStatusRef = useRef<GameStatus | undefined>(undefined);
-  useEffect(() => {
-    // Fetch once on connect (any status) so the question browser has data
-    // immediately, then keep refreshing on every lobby/ended visit to pick
-    // up re-imports. Keyed off the *transition*, not off `quizzes` itself —
-    // depending on `quizzes` here would re-trigger this effect every time
-    // its own fetch resolves, since each response is a fresh object even
-    // when the quiz list hasn't changed, causing an infinite refetch loop.
-    if (!gameStatus || !connectedJoinCode) return;
-    const isFirstFetch = lastFetchedStatusRef.current === undefined;
-    const enteredChoosableStatus =
-      (gameStatus === 'lobby' || gameStatus === 'ended') &&
-      lastFetchedStatusRef.current !== gameStatus;
-    lastFetchedStatusRef.current = gameStatus;
-    if (!isFirstFetch && !enteredChoosableStatus) return;
+  const quizzesQuery = useQuery({
+    queryKey: queryKeys.quizzes.list(connectedJoinCode),
+    queryFn: () => fetchQuizzes(connectedJoinCode as string),
+    enabled: Boolean(connectedJoinCode),
+  });
+  const quizzes = quizzesQuery.data ?? null;
+  useToastOnError(
+    apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes'),
+  );
 
-    // A `cancelled` flag scoped to *this* effect invocation, not a
-    // page-wide "is the component still mounted" ref — the latter breaks
-    // under React Strict Mode's dev-only mount→cleanup→remount cycle: its
-    // cleanup fires once and is never reset back, so every fetch after the
-    // very first render is silently discarded and the panel below only
-    // ever appears after a manual reload.
-    let cancelled = false;
-    fetchQuizzes(connectedJoinCode)
-      .then((payload) => {
-        if (cancelled) return;
-        setQuizzes(payload);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        toast.error(
-          error instanceof QuizApiError
-            ? error.message
-            : 'Could not load quizzes',
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [gameStatus, connectedJoinCode]);
+  const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
+  useEffect(() => {
+    // Fetch-on-connect is the query's own job now (it fires as soon as
+    // `connectedJoinCode` makes it enabled). This only handles the
+    // "re-entered a choosable status, re-read the quiz list to pick up
+    // re-imports" case, keyed off the *transition* so a snapshot broadcast
+    // that doesn't change status is a no-op.
+    const previous = previousGameStatusRef.current;
+    previousGameStatusRef.current = gameStatus;
+    const enteredChoosableStatus =
+      previous !== undefined &&
+      previous !== gameStatus &&
+      (gameStatus === 'lobby' || gameStatus === 'ended');
+    if (!enteredChoosableStatus) return;
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.quizzes.list(connectedJoinCode),
+    });
+  }, [gameStatus, connectedJoinCode, queryClient]);
 
   // A newly selected/restarted quiz invalidates any question id picked under
   // the previous session. Adjusted during render rather than in an Effect.
@@ -231,31 +222,44 @@ function AdminPageContent() {
   const effectiveQuestionId =
     selectedQuestionId ?? displayQuestionId ?? defaultBlockQuestionId;
 
+  const answersJoinCode = snapshot?.joinCode;
+  const answersQuery = useQuery({
+    queryKey: queryKeys.answers.forQuestion(
+      answersJoinCode ?? '',
+      effectiveQuestionId ?? -1,
+    ),
+    queryFn: () =>
+      fetchAnswers(answersJoinCode as string, effectiveQuestionId as number),
+    enabled: Boolean(answersJoinCode) && effectiveQuestionId !== null,
+    // Transient, request-driven data — never serve a previous block's
+    // answers from cache, and don't keep them around once the admin moves
+    // on to a different question.
+    gcTime: 0,
+  });
+  useToastOnError(
+    apiErrorMessage(
+      answersQuery.error,
+      AnswerApiError,
+      'Could not load answers',
+    ),
+  );
+
   useEffect(() => {
-    // `liveAnswers` is transient, request-driven data — it isn't part of the
-    // STATE_SYNC snapshot the server resends automatically on reconnect, so
-    // `reconnectedAt` is included here to re-fetch it after a dropped
-    // connection recovers (e.g. a phone/laptop losing Wi-Fi mid-grading).
-    const joinCode = snapshot?.joinCode;
-    if (!joinCode || effectiveQuestionId === null) return;
-    let cancelled = false;
-    fetchAnswers(joinCode, effectiveQuestionId)
-      .then((payload) => {
-        if (cancelled) return;
-        setLiveAnswers(payload);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        toast.error(
-          error instanceof AnswerApiError
-            ? error.message
-            : 'Could not load answers',
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [snapshot?.joinCode, effectiveQuestionId, setLiveAnswers, reconnectedAt]);
+    // Folds the REST load into the same state slot the live ANSWERS_UPDATED
+    // broadcasts (SUBMIT_ANSWER/GRADE_ANSWER) already write to.
+    if (!answersQuery.data) return;
+    setLiveAnswers(answersQuery.data);
+  }, [answersQuery.data, setLiveAnswers]);
+
+  useEffect(() => {
+    // `liveAnswers` isn't part of the STATE_SYNC snapshot the server resends
+    // on reconnect, so a dropped connection has to re-trigger this read
+    // explicitly (e.g. a phone/laptop losing Wi-Fi mid-grading). Invalidating
+    // — rather than folding `reconnectedAt` into the query key — avoids
+    // minting a new cache entry per reconnect.
+    if (reconnectedAt === null) return;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.answers.all });
+  }, [reconnectedAt, queryClient]);
 
   const activeQuizId = quizzes?.activeQuizId ?? null;
   const activeQuizTitle =

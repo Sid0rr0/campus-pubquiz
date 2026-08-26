@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -49,7 +49,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowRight}');
 
@@ -74,7 +74,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowLeft}');
 
@@ -88,7 +88,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowUp}');
 
@@ -105,7 +105,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowDown}');
 
@@ -122,7 +122,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowUp}');
 
@@ -154,7 +154,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowRight}');
 
@@ -183,7 +183,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.keyboard('{ArrowRight}');
 
@@ -201,7 +201,7 @@ describe('AdminPage — keyboard shortcuts', () => {
       connectionError: null,
       sendAction,
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     // The shortcut listener ignores any focused <input>/<textarea>/<select>
     // regardless of which component rendered it (see isEditableTarget in

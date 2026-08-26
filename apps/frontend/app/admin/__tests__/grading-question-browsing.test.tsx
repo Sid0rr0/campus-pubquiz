@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/admin/page';
@@ -69,7 +70,7 @@ describe('AdminPage — grading question browsing', () => {
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await vi.waitFor(() =>
       expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r1q1'),
@@ -116,7 +117,7 @@ describe('AdminPage — grading question browsing', () => {
       },
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(screen.getByText('Banana')).toBeInTheDocument();
     expect(
@@ -160,7 +161,7 @@ describe('AdminPage — grading question browsing', () => {
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       await screen.findByRole('button', {
@@ -211,7 +212,7 @@ describe('AdminPage — grading question browsing', () => {
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     expect(
       await screen.findByRole('button', {
@@ -269,7 +270,7 @@ describe('AdminPage — grading question browsing', () => {
       liveAnswers: null,
       gradeAnswer: vi.fn(),
     });
-    render(<AdminPage />);
+    renderWithQuery(<AdminPage />);
 
     await userEvent.click(
       await screen.findByRole('button', {
