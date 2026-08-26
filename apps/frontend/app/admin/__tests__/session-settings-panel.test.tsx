@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { SessionSettingsPanel } from '@/app/admin/session-settings-panel';
+import { renderWithQuery } from '@/test-utils/query';
 
 const { mockUpdateSessionSettings } = vi.hoisted(() => ({
   mockUpdateSessionSettings: vi.fn(),
@@ -22,7 +23,7 @@ describe('SessionSettingsPanel', () => {
   });
 
   it('saves the edited settings for the current join code', async () => {
-    render(
+    renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
         settings={DEFAULT_SESSION_SETTINGS}
@@ -41,7 +42,7 @@ describe('SessionSettingsPanel', () => {
   });
 
   it('re-syncs local edits when the settings prop changes (e.g. saved from another admin tab)', () => {
-    const { rerender } = render(
+    const { rerender } = renderWithQuery(
       <SessionSettingsPanel
         joinCode="ABCDEF"
         settings={DEFAULT_SESSION_SETTINGS}
@@ -63,7 +64,7 @@ describe('SessionSettingsPanel', () => {
     mockUpdateSessionSettings.mockRejectedValue(
       new SessionApiError('Session already started', 409),
     );
-    render(
+    renderWithQuery(
       <>
         <SessionSettingsPanel
           joinCode="ABCDEF"

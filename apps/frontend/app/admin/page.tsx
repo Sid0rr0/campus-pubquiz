@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   DEFAULT_SESSION_SETTINGS,
@@ -272,19 +272,22 @@ function AdminPageContent() {
     [activeQuizRounds],
   );
 
+  const closeSessionMutation = useMutation({
+    mutationFn: (joinCode: string) => closeSession(joinCode),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+      router.push('/sessions');
+    },
+    onError: (error) =>
+      toast.error(
+        apiErrorMessage(error, SessionApiError, 'Could not close session') ??
+          'Could not close session',
+      ),
+  });
+
   function handleCloseSession(): void {
     if (!snapshot) return;
-    closeSession(snapshot.joinCode)
-      .then(() => {
-        router.push('/sessions');
-      })
-      .catch((error: unknown) => {
-        toast.error(
-          error instanceof SessionApiError
-            ? error.message
-            : 'Could not close session',
-        );
-      });
+    closeSessionMutation.mutate(snapshot.joinCode);
   }
 
   function handleLogout(): void {

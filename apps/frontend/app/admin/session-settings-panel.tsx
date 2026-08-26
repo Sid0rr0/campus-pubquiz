@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { SessionSettings } from '@campus-pubquiz/types';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { SessionApiError, updateSessionSettings } from '@/app/lib/sessions-api';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { Button } from '@/app/components/button';
 
 interface SessionSettingsPanelProps {
@@ -18,7 +20,6 @@ export function SessionSettingsPanel({
   settings,
 }: SessionSettingsPanelProps) {
   const [value, setValue] = useState<SessionSettings>(settings);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Re-seeds local edits from the live settings whenever the admin switches
   // sessions, or whenever the settings reference itself changes (e.g. saved
@@ -35,18 +36,15 @@ export function SessionSettingsPanel({
     setValue(settings);
   }
 
-  function handleSave(): void {
-    setIsSaving(true);
-    updateSessionSettings(joinCode, value)
-      .catch((error: unknown) => {
-        toast.error(
-          error instanceof SessionApiError
-            ? error.message
-            : 'Could not save settings',
-        );
-      })
-      .finally(() => setIsSaving(false));
-  }
+  const saveMutation = useMutation({
+    mutationFn: (next: SessionSettings) =>
+      updateSessionSettings(joinCode, next),
+    onError: (error) =>
+      toast.error(
+        apiErrorMessage(error, SessionApiError, 'Could not save settings') ??
+          'Could not save settings',
+      ),
+  });
 
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-foreground/15 bg-white p-4">
@@ -54,13 +52,13 @@ export function SessionSettingsPanel({
       <SessionSettingsForm value={value} onChange={setValue} />
       <Button
         type="button"
-        disabled={isSaving}
+        disabled={saveMutation.isPending}
         variant="solid-flat"
         size="md"
-        onClick={handleSave}
+        onClick={() => saveMutation.mutate(value)}
         className="w-fit self-end disabled:opacity-40"
       >
-        {isSaving ? 'Saving…' : 'Save'}
+        {saveMutation.isPending ? 'Saving…' : 'Save'}
       </Button>
     </section>
   );
