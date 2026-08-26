@@ -157,3 +157,20 @@ export function previousFromRevealIntro(
     revealIndex: progress.revealIndex - 1,
   };
 }
+
+/**
+ * Undoes the transition into 'ended', restoring whatever status was active
+ * right before it — recorded in previousStatus by both paths that reach
+ * 'ended' (END_QUIZ, and advanceFromReveal's natural end). Every other
+ * field (roundIndex, questionIndex, revealIndex, furthestOpenIndex) was
+ * already carried through untouched by both paths, so this is a pure "undo
+ * the last transition," not a recomputation. Illegal when there's no
+ * recorded previousStatus — a legacy session that reached 'ended' before
+ * this field existed.
+ */
+export function previousFromEnded(progress: GameProgress): GameProgress {
+  if (!progress.previousStatus) {
+    illegal(progress.status, 'PREVIOUS');
+  }
+  return { ...progress, status: progress.previousStatus, previousStatus: null };
+}

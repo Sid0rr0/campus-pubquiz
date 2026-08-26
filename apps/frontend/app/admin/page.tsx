@@ -340,7 +340,11 @@ function AdminPageContent() {
     gameStatus === 'break_intro' ||
     gameStatus === 'break' ||
     (gameStatus === 'break_round_intro' &&
-      (revealIndex > 0 || activeBlockStartIndex > 0));
+      (revealIndex > 0 || activeBlockStartIndex > 0)) ||
+    // Once the quiz has ended, Previous undoes back into whatever status
+    // was active right before — hidden for legacy sessions that reached
+    // 'ended' with no recorded previousStatus.
+    (gameStatus === 'ended' && snapshot?.progress.previousStatus != null);
   const hasUnrevealedTeams =
     isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 

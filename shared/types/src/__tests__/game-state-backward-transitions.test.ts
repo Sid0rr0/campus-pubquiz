@@ -425,4 +425,58 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     );
     expect(next).toEqual({ ...roundTitle, status: 'break' });
   });
+
+  it("restores 'reveal' at the last block's last question when Previous undoes a natural end", () => {
+    const ended: GameProgress = {
+      status: 'ended',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: true,
+      revealIndex: 3, // last of 4 questions in the 2-round block, left untouched by advanceFromReveal
+      furthestOpenIndex: 1,
+      previousStatus: 'reveal',
+    };
+    const next = getNextGameState(
+      ended,
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...ended, status: 'reveal', previousStatus: null });
+  });
+
+  it('restores whatever status and indices were live when Previous undoes an early manual End Quiz', () => {
+    const ended: GameProgress = {
+      status: 'ended',
+      roundIndex: 0,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 1,
+      previousStatus: 'question_open',
+    };
+    const next = getNextGameState(
+      ended,
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({
+      ...ended,
+      status: 'question_open',
+      previousStatus: null,
+    });
+  });
+
+  it('rejects Previous from ended when no previousStatus was recorded (a legacy session)', () => {
+    const ended: GameProgress = {
+      status: 'ended',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    expect(() =>
+      getNextGameState(ended, 'PREVIOUS', twoRoundsWithBreakAfterSecond),
+    ).toThrow(IllegalGameTransitionError);
+  });
 });

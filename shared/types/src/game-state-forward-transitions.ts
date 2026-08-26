@@ -81,11 +81,13 @@ export function advanceFromReveal(
   if (isLastRound) {
     // Advancing past the last reveal question ends the quiz the same way
     // the admin's explicit "End Quiz" button does — the final leaderboard
-    // shouldn't need a second click to appear.
+    // shouldn't need a second click to appear. revealIndex is left
+    // untouched (still the block's last question) so PREVIOUS can restore
+    // this exact 'reveal' position without recomputation.
     return {
       ...progress,
       status: 'ended',
-      revealIndex: 0,
+      previousStatus: 'reveal',
       isLeaderboardVisible: true,
     };
   }

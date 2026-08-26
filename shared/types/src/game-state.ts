@@ -5,6 +5,7 @@ import {
 import {
   previousFromBlockReview,
   previousFromBreakRoundIntro,
+  previousFromEnded,
   previousFromQuestionOpen,
   previousFromReveal,
   previousFromRevealIntro,
@@ -55,8 +56,13 @@ export function getNextGameState(
     }
     // Ending the quiz shows the "Quiz complete!" screen first, not the
     // leaderboard — the admin reveals it afterward via TOGGLE_LEADERBOARD,
-    // same as at any other break.
-    return { ...progress, status: 'ended', isLeaderboardVisible: false };
+    // same as at any other break. previousStatus records what to undo into.
+    return {
+      ...progress,
+      status: 'ended',
+      previousStatus: progress.status,
+      isLeaderboardVisible: false,
+    };
   }
 
   switch (action) {
@@ -143,6 +149,7 @@ export function getNextGameState(
         return previousFromRevealIntro(progress, context);
       if (progress.status === 'reveal')
         return previousFromReveal(progress, context);
+      if (progress.status === 'ended') return previousFromEnded(progress);
       return illegal(progress.status, action);
   }
 }

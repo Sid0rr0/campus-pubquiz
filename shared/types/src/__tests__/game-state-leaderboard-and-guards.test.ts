@@ -193,6 +193,24 @@ describe('getNextGameState — illegal transitions and config guards', () => {
     ).toThrow(IllegalGameTransitionError);
   });
 
+  it('allows Previous once the quiz has ended, when a previousStatus was recorded', () => {
+    const ended: GameProgress = {
+      status: 'ended',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+      previousStatus: 'break',
+    };
+    const next = getNextGameState(
+      ended,
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.status).toBe('break');
+  });
+
   it('rejects a config where the last round has no break (answers could never be revealed)', () => {
     const badContext: GameContext = {
       rounds: [{ questionCount: 1, breakAfter: false }],

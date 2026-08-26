@@ -262,7 +262,10 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       twoRoundsWithBreakAfterSecond,
     );
     expect(next.status).toBe('ended');
-    expect(next.revealIndex).toBe(0);
+    // revealIndex is left untouched (not reset to 0) so PREVIOUS can restore
+    // this exact 'reveal' position without recomputation.
+    expect(next.revealIndex).toBe(3);
+    expect(next.previousStatus).toBe('reveal');
   });
 
   it('shows the leaderboard immediately when advancing past the last reveal question ends the quiz', () => {

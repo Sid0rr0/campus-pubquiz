@@ -387,4 +387,38 @@ describe('AdminPage — previous button', () => {
 
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
+
+  it('shows a disabled Previous button once the quiz has ended naturally, until the leaderboard is closed', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'ended',
+          isLeaderboardVisible: true,
+          previousStatus: 'reveal',
+        }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    expect(getDesktopButton(/^previous$/i)).toBeDisabled();
+  });
+
+  it('hides the Previous button on ended when no previousStatus was recorded (a legacy session)', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'ended', isLeaderboardVisible: false }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    expect(
+      screen.queryByRole('button', { name: /^previous$/i }),
+    ).not.toBeInTheDocument();
+  });
 });

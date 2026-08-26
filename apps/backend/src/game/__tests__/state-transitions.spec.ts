@@ -235,4 +235,61 @@ describe('GameStateService — state transitions', () => {
       IllegalGameTransitionError,
     );
   });
+
+  it('round-trips through Previous and Advance around a natural end', async () => {
+    await service.applyAction(joinCode, 'START_QUIZ');
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
+    await service.applyAction(joinCode, 'ADVANCE'); // -> locking
+    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal (revealIndex 0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> revealIndex 1
+    await service.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 1)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> revealIndex 2
+    await service.applyAction(joinCode, 'ADVANCE'); // -> revealIndex 3 (last)
+    const endedSnapshot = await service.applyAction(joinCode, 'ADVANCE'); // -> ended
+    expect(endedSnapshot.progress.status).toBe('ended');
+    expect(endedSnapshot.progress.previousStatus).toBe('reveal');
+
+    const revealAgain = await service.applyAction(joinCode, 'PREVIOUS');
+    expect(revealAgain.progress).toEqual({
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: true,
+      revealIndex: 3,
+      furthestOpenIndex: 3,
+      previousStatus: null,
+    });
+
+    const endedAgain = await service.applyAction(joinCode, 'ADVANCE'); // -> ended again
+    expect(endedAgain.progress.status).toBe('ended');
+    expect(endedAgain.progress.previousStatus).toBe('reveal');
+  });
+
+  it('restores the exact live question when Previous undoes an early manual End Quiz', async () => {
+    await service.applyAction(joinCode, 'START_QUIZ');
+    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
+    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
+    const endedSnapshot = await service.applyAction(joinCode, 'END_QUIZ');
+    expect(endedSnapshot.progress.status).toBe('ended');
+    expect(endedSnapshot.progress.previousStatus).toBe('question_open');
+
+    const restored = await service.applyAction(joinCode, 'PREVIOUS');
+    expect(restored.progress).toEqual({
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+      previousStatus: null,
+    });
+    expect(restored.currentQuestion?.id).toBe(21);
+  });
 });

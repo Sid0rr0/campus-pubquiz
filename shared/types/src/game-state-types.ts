@@ -60,6 +60,14 @@ export interface GameProgress {
    * answerable underneath the card).
    */
   furthestOpenIndex: number;
+  /**
+   * The status that was active immediately before the quiz entered 'ended'
+   * (via END_QUIZ or the natural end of the last reveal) — lets PREVIOUS
+   * undo into it. Meaningless outside 'status === "ended"'; null/undefined
+   * there means there's nowhere for PREVIOUS to go (e.g. a session that
+   * reached 'ended' before this field existed).
+   */
+  previousStatus?: GameStatus | null;
 }
 
 export class IllegalGameTransitionError extends Error {

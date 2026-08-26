@@ -19,6 +19,7 @@ export class GameProgressRepository {
     session.revealIndex = progress.revealIndex;
     session.furthestOpenIndex = progress.furthestOpenIndex;
     session.isLeaderboardVisible = progress.isLeaderboardVisible;
+    session.previousStatus = progress.previousStatus ?? null;
     await this.gameSessions.getEntityManager().flush();
   }
 
@@ -41,6 +42,7 @@ export class GameProgressRepository {
       revealIndex: session.revealIndex,
       furthestOpenIndex: session.furthestOpenIndex,
       isLeaderboardVisible: session.isLeaderboardVisible,
+      previousStatus: session.previousStatus,
     };
   }
 }
