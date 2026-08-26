@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
 import type { UserRole } from '@campus-pubquiz/types';
@@ -11,6 +11,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 
 export function UsersPanel() {
+  const queryClient = useQueryClient();
   const usersQuery = useQuery({
     queryKey: queryKeys.users.list(),
     queryFn: ({ signal }) => fetchUsers(signal),
@@ -29,31 +30,37 @@ export function UsersPanel() {
     Record<number, UserRole>
   >({});
 
-  async function handleApprove(userId: number): Promise<void> {
-    const role = roleSelections[userId] ?? 'moderator';
-    try {
-      await approveUser(userId, role);
-      void usersQuery.refetch();
-    } catch (approveError) {
+  const invalidateUsers = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.users.list() });
+
+  const approveMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: number; role: UserRole }) =>
+      approveUser(userId, role),
+    onSuccess: invalidateUsers,
+    onError: (approveError) =>
       toast.error(
-        approveError instanceof Error
-          ? approveError.message
-          : 'Could not approve user',
-      );
-    }
+        apiErrorMessage(approveError, Error, 'Could not approve user') ??
+          'Could not approve user',
+      ),
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (userId: number) => deactivateUser(userId),
+    onSuccess: invalidateUsers,
+    onError: (deactivateError) =>
+      toast.error(
+        apiErrorMessage(deactivateError, Error, 'Could not deactivate user') ??
+          'Could not deactivate user',
+      ),
+  });
+
+  function handleApprove(userId: number): void {
+    const role = roleSelections[userId] ?? 'moderator';
+    approveMutation.mutate({ userId, role });
   }
 
-  async function handleDeactivate(userId: number): Promise<void> {
-    try {
-      await deactivateUser(userId);
-      void usersQuery.refetch();
-    } catch (deactivateError) {
-      toast.error(
-        deactivateError instanceof Error
-          ? deactivateError.message
-          : 'Could not deactivate user',
-      );
-    }
+  function handleDeactivate(userId: number): void {
+    deactivateMutation.mutate(userId);
   }
 
   if (!users) {
@@ -109,7 +116,7 @@ export function UsersPanel() {
                 type="button"
                 variant="solid-flat"
                 size="sm"
-                onClick={() => void handleApprove(pendingUser.id)}
+                onClick={() => handleApprove(pendingUser.id)}
                 className="ml-auto"
               >
                 <CheckIcon aria-hidden="true" />
@@ -135,7 +142,7 @@ export function UsersPanel() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => void handleDeactivate(activeUser.id)}
+                onClick={() => handleDeactivate(activeUser.id)}
                 className="ml-auto rounded-lg border-2 border-magenta font-extrabold text-magenta"
               >
                 <LockClosedIcon aria-hidden="true" />
