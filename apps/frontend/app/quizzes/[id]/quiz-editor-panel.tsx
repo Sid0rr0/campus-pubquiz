@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   CheckIcon,
@@ -18,6 +19,8 @@ import {
   QuizDraftApiError,
   updateQuiz,
 } from '@/app/lib/quiz-draft-api';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { queryKeys } from '@/app/lib/query-keys';
 import {
   makeRound,
   roundFromPreview,
@@ -30,7 +33,7 @@ interface QuizEditorPanelProps {
   quizId: string;
 }
 
-type Phase = 'loading' | 'empty' | 'error' | 'editor';
+type Phase = 'empty' | 'editor';
 
 function issueLabel(issue: QuizDraftIssue): string {
   if (issue.roundIndex === -1) return `Quiz (${issue.field}): ${issue.message}`;
@@ -41,16 +44,32 @@ function issueLabel(issue: QuizDraftIssue): string {
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const router = useRouter();
-  const initialQuizIdRef = useRef(quizId);
-  const [phase, setPhase] = useState<Phase>(
-    quizId === 'new' ? 'empty' : 'loading',
+  const numericQuizId = quizId === 'new' ? null : Number(quizId);
+
+  const draftQuery = useQuery({
+    queryKey: queryKeys.quizzes.draft(numericQuizId ?? -1),
+    queryFn: () => fetchQuizDraft(numericQuizId as number),
+    enabled: numericQuizId !== null,
+    // The draft is copied once into editable local state below (see the
+    // effect). A background refetch returning new data would silently
+    // clobber unsaved edits, so never refetch while mounted — and drop it on
+    // unmount so leaving and coming back reloads fresh.
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+  const loadError = apiErrorMessage(
+    draftQuery.error,
+    QuizDraftApiError,
+    'Could not load that quiz.',
   );
+
+  // For an existing quiz, the isPending early return below blocks every
+  // render until the effect flips this to 'editor', so this initial value
+  // is inert for that case — 'empty' only actually renders for a new quiz.
+  const [phase, setPhase] = useState<Phase>('empty');
   const [quizTitle, setQuizTitle] = useState('');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
-  const [savedQuizId, setSavedQuizId] = useState<number | null>(
-    quizId === 'new' ? null : Number(quizId),
-  );
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
   const [importError, setImportError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveIssues, setSaveIssues] = useState<QuizDraftIssue[]>([]);
@@ -58,28 +77,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
-    if (initialQuizIdRef.current === 'new') return;
-    fetchQuizDraft(Number(initialQuizIdRef.current))
-      .then((draft) => {
-        setQuizTitle(draft.title);
-        setRounds(
-          draft.rounds.map((round) =>
-            roundFromPreview(crypto.randomUUID(), round, () =>
-              crypto.randomUUID(),
-            ),
-          ),
-        );
-        setPhase('editor');
-      })
-      .catch((error: unknown) => {
-        setLoadError(
-          error instanceof QuizDraftApiError
-            ? error.message
-            : 'Could not load that quiz.',
-        );
-        setPhase('error');
-      });
-  }, []);
+    // Runs exactly once per quizId: staleTime Infinity means `data` never
+    // changes identity after the first success.
+    if (!draftQuery.data) return;
+    setQuizTitle(draftQuery.data.title);
+    setRounds(
+      draftQuery.data.rounds.map((round) =>
+        roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
+      ),
+    );
+    setPhase('editor');
+  }, [draftQuery.data]);
 
   function startFromScratch(): void {
     setRounds([makeRound(crypto.randomUUID(), 'Round 1')]);
@@ -193,7 +201,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     }
   }
 
-  if (phase === 'loading') {
+  if (numericQuizId !== null && draftQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>
@@ -201,7 +209,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     );
   }
 
-  if (phase === 'error') {
+  if (loadError) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-foreground">
         <p role="alert" className="font-extrabold text-magenta">

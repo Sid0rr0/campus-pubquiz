@@ -1,50 +1,39 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
-import type { UserRole, UsersListedPayload } from '@campus-pubquiz/types';
+import type { UserRole } from '@campus-pubquiz/types';
 import { approveUser, deactivateUser, fetchUsers } from '@/app/lib/auth-api';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 
 export function UsersPanel() {
-  const [users, setUsers] = useState<UsersListedPayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users.list(),
+    queryFn: ({ signal }) => fetchUsers(signal),
+  });
+  const users = usersQuery.data ?? null;
+  // This panel's existing convention unwraps as `instanceof Error` (not a
+  // specific ApiError subclass) — preserved rather than switched to
+  // AuthApiError, since that would surface a different fallback message.
+  const error = apiErrorMessage(
+    usersQuery.error,
+    Error,
+    'Could not load users',
+  );
+
   const [roleSelections, setRoleSelections] = useState<
     Record<number, UserRole>
   >({});
-  // Bumped on every refetch() call so an in-flight response from a
-  // superseded request (e.g. a second Approve click before the first
-  // refetch resolves) can be told apart from the latest one and ignored.
-  const requestGenerationRef = useRef(0);
-
-  const refetch = useCallback(() => {
-    const requestGeneration = ++requestGenerationRef.current;
-    fetchUsers()
-      .then((payload) => {
-        if (requestGeneration !== requestGenerationRef.current) return;
-        setUsers(payload);
-        setError(null);
-      })
-      .catch((fetchError: unknown) => {
-        if (requestGeneration !== requestGenerationRef.current) return;
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : 'Could not load users',
-        );
-      });
-  }, []);
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
 
   async function handleApprove(userId: number): Promise<void> {
     const role = roleSelections[userId] ?? 'moderator';
     try {
       await approveUser(userId, role);
-      refetch();
+      void usersQuery.refetch();
     } catch (approveError) {
       toast.error(
         approveError instanceof Error
@@ -57,7 +46,7 @@ export function UsersPanel() {
   async function handleDeactivate(userId: number): Promise<void> {
     try {
       await deactivateUser(userId);
-      refetch();
+      void usersQuery.refetch();
     } catch (deactivateError) {
       toast.error(
         deactivateError instanceof Error

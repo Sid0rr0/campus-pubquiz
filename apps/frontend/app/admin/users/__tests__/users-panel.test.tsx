@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UsersPanel } from '@/app/admin/users/users-panel';
+import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchUsers, mockApproveUser, mockDeactivateUser } = vi.hoisted(
   () => ({
@@ -52,7 +53,7 @@ describe('UsersPanel', () => {
   });
 
   it('lists pending and active users once loaded', async () => {
-    render(<UsersPanel />);
+    renderWithQuery(<UsersPanel />);
 
     await waitFor(() => expect(screen.getByText('bob')).toBeInTheDocument());
     expect(screen.getByText('alice')).toBeInTheDocument();
@@ -61,7 +62,7 @@ describe('UsersPanel', () => {
   it('approves a pending user with the selected role', async () => {
     const user = userEvent.setup();
     mockApproveUser.mockResolvedValue(undefined);
-    render(<UsersPanel />);
+    renderWithQuery(<UsersPanel />);
     await waitFor(() => screen.getByText('bob'));
 
     await user.selectOptions(screen.getByLabelText(/role for bob/i), 'admin');
@@ -76,7 +77,7 @@ describe('UsersPanel', () => {
   it('deactivates an active user', async () => {
     const user = userEvent.setup();
     mockDeactivateUser.mockResolvedValue(undefined);
-    render(<UsersPanel />);
+    renderWithQuery(<UsersPanel />);
     await waitFor(() => screen.getByText('alice'));
 
     await user.click(screen.getByRole('button', { name: /deactivate/i }));
@@ -87,7 +88,7 @@ describe('UsersPanel', () => {
   it('shows an error alert when the initial fetch fails', async () => {
     mockFetchUsers.mockReset();
     mockFetchUsers.mockRejectedValue(new Error('Could not load users'));
-    render(<UsersPanel />);
+    renderWithQuery(<UsersPanel />);
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(

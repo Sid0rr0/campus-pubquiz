@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Dialog, Tabs } from 'radix-ui';
@@ -25,10 +26,15 @@ import {
   fetchSessions,
   SessionApiError,
 } from '@/app/lib/sessions-api';
+import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 import { RoundsList } from '@/app/components/rounds-list';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { CopyButton } from '@/app/components/copy-button';
+
+const EMPTY_SESSIONS: ActiveSessionSummary[] = [];
+const EMPTY_QUIZZES: QuizzesListedPayload['quizzes'] = [];
 
 interface SessionPickerPanelProps {
   /** Navigates the browser into the console for a specific session's code — owned by the page since only it holds the router. */
@@ -37,9 +43,27 @@ interface SessionPickerPanelProps {
 
 /** Landing screen shown when the admin hasn't pinned a specific session via `?code=` yet — lists every session currently running in the process and offers to start a new one. */
 export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
-  const [sessions, setSessions] = useState<ActiveSessionSummary[]>([]);
-  const [quizzes, setQuizzes] = useState<QuizzesListedPayload['quizzes']>([]);
-  const [error, setError] = useState<string | null>(null);
+  const sessionsQuery = useQuery({
+    queryKey: queryKeys.sessions.list(),
+    queryFn: fetchSessions,
+  });
+  const quizzesQuery = useQuery({
+    queryKey: queryKeys.quizzes.list(),
+    queryFn: () => fetchQuizzes(),
+  });
+  const sessions = sessionsQuery.data ?? EMPTY_SESSIONS;
+  const quizzes = quizzesQuery.data?.quizzes ?? EMPTY_QUIZZES;
+  // Single alert slot, sessions first — matches the old shared `error` state,
+  // where whichever fetch rejected last won it and the sessions fetch
+  // cleared it on success.
+  const error =
+    apiErrorMessage(
+      sessionsQuery.error,
+      SessionApiError,
+      'Could not load sessions',
+    ) ??
+    apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes');
+
   const [isCreating, setIsCreating] = useState(false);
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
   const [settings, setSettings] = useState<SessionSettings>(
@@ -53,51 +77,6 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
     setPrevPendingQuizId(pendingQuizId);
     setSettings(DEFAULT_SESSION_SETTINGS);
   }
-  // Guards state updates from requests that resolve after this panel has
-  // unmounted (e.g. the admin clicks "Open" on a session before the initial
-  // refresh finishes) — skips the update instead of setting state on a
-  // component nothing is rendering anymore.
-  const isMountedRef = useRef(true);
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(() => {
-    fetchSessions()
-      .then((result) => {
-        if (!isMountedRef.current) return;
-        setSessions(result);
-        setError(null);
-      })
-      .catch((fetchError: unknown) => {
-        if (!isMountedRef.current) return;
-        setError(
-          fetchError instanceof SessionApiError
-            ? fetchError.message
-            : 'Could not load sessions',
-        );
-      });
-    fetchQuizzes()
-      .then((result) => {
-        if (!isMountedRef.current) return;
-        setQuizzes(result.quizzes);
-      })
-      .catch((fetchError: unknown) => {
-        if (!isMountedRef.current) return;
-        setError(
-          fetchError instanceof QuizApiError
-            ? fetchError.message
-            : 'Could not load quizzes',
-        );
-      });
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
 
@@ -108,26 +87,22 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       const session = await createSession(pendingQuizId, settings);
       onOpenSession(session.joinCode);
     } catch (createError) {
-      if (!isMountedRef.current) return;
       toast.error(
         createError instanceof SessionApiError
           ? createError.message
           : 'Could not start session',
       );
     } finally {
-      if (isMountedRef.current) {
-        setIsCreating(false);
-        setPendingQuizId(null);
-      }
+      setIsCreating(false);
+      setPendingQuizId(null);
     }
   }
 
   async function handleClose(joinCode: string) {
     try {
       await closeSession(joinCode);
-      refresh();
+      void sessionsQuery.refetch();
     } catch (closeError) {
-      if (!isMountedRef.current) return;
       toast.error(
         closeError instanceof SessionApiError
           ? closeError.message

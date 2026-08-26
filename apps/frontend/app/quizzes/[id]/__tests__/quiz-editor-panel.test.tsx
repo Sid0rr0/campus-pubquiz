@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
 import { ImportApiError } from '@/app/lib/import-api';
 import { QuizEditorPanel } from '@/app/quizzes/[id]/quiz-editor-panel';
+import { renderWithQuery } from '@/test-utils/query';
 
 const {
   routerRef,
@@ -64,7 +65,7 @@ describe('QuizEditorPanel', () => {
 
   it('shows the empty state for a new quiz and starts an editable round from scratch', async () => {
     const user = userEvent.setup();
-    render(<QuizEditorPanel quizId="new" />);
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
 
     expect(screen.getByText(/build a new quiz/i)).toBeInTheDocument();
     await user.click(
@@ -94,7 +95,7 @@ describe('QuizEditorPanel', () => {
       ],
     });
 
-    render(<QuizEditorPanel quizId="5" />);
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
 
     expect(await screen.findByDisplayValue('Trivia Night')).toBeInTheDocument();
     expect(mockFetchQuizDraft).toHaveBeenCalledWith(5);
@@ -109,7 +110,7 @@ describe('QuizEditorPanel', () => {
 
   it('selecting the YouTube video type shows the clip inputs and requires a media url', async () => {
     const user = userEvent.setup();
-    render(<QuizEditorPanel quizId="new" />);
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
     await user.click(
       screen.getByRole('button', { name: /start from scratch/i }),
     );
@@ -149,7 +150,7 @@ describe('QuizEditorPanel', () => {
       ],
     });
 
-    render(<QuizEditorPanel quizId="5" />);
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
     await screen.findByDisplayValue('Trivia Night');
 
     expect(screen.getByLabelText(/clip start/i)).toHaveValue('1:22');
@@ -185,7 +186,7 @@ describe('QuizEditorPanel', () => {
       questionCount: 1,
     });
 
-    render(<QuizEditorPanel quizId="5" />);
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
     await screen.findByDisplayValue('Trivia Night');
 
     const endInput = screen.getByLabelText(/clip end/i);
@@ -234,7 +235,7 @@ describe('QuizEditorPanel', () => {
       questionCount: 2,
     });
 
-    render(<QuizEditorPanel quizId="5" />);
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
     await screen.findByDisplayValue('Trivia Night');
 
     const upButtons = screen.getAllByLabelText(/move question up/i);
@@ -269,7 +270,7 @@ describe('QuizEditorPanel', () => {
       new QuizDraftApiError('Quiz 999 does not exist', 404),
     );
 
-    render(<QuizEditorPanel quizId="999" />);
+    renderWithQuery(<QuizEditorPanel quizId="999" />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /quiz 999 does not exist/i,
@@ -283,7 +284,7 @@ describe('QuizEditorPanel', () => {
       roundCount: 1,
       questionCount: 1,
     });
-    render(<QuizEditorPanel quizId="new" />);
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
     await user.click(
       screen.getByRole('button', { name: /start from scratch/i }),
     );
@@ -340,7 +341,7 @@ describe('QuizEditorPanel', () => {
       questionCount: 0,
     });
 
-    render(
+    renderWithQuery(
       <>
         <QuizEditorPanel quizId="5" />
         <Toaster />
@@ -375,7 +376,7 @@ describe('QuizEditorPanel', () => {
         },
       ]),
     );
-    render(<QuizEditorPanel quizId="new" />);
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
     await user.click(
       screen.getByRole('button', { name: /start from scratch/i }),
     );
@@ -412,7 +413,7 @@ describe('QuizEditorPanel', () => {
       isImportable: true,
     });
 
-    render(<QuizEditorPanel quizId="new" />);
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
     const input = screen.getByLabelText(/import csv/i);
     await user.upload(input, makeCsvFile());
 
@@ -429,7 +430,7 @@ describe('QuizEditorPanel', () => {
       new ImportApiError('Could not read the CSV file', 200),
     );
 
-    render(<QuizEditorPanel quizId="new" />);
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
     const input = screen.getByLabelText(/import csv/i);
     await user.upload(input, makeCsvFile());
 

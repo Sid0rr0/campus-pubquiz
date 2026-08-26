@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
+import { renderWithQuery } from '@/test-utils/query';
 
 const {
   mockFetchSessions,
@@ -44,7 +45,7 @@ describe('SessionPickerPanel', () => {
   });
 
   it('shows a message when no sessions are running', async () => {
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     expect(
       await screen.findByText(/no sessions running yet/i),
@@ -61,7 +62,7 @@ describe('SessionPickerPanel', () => {
         teamCount: 3,
       },
     ]);
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     expect(
       await screen.findByText('Campus Pub Quiz Night'),
@@ -80,7 +81,7 @@ describe('SessionPickerPanel', () => {
       },
     ]);
     const onOpenSession = vi.fn();
-    render(<SessionPickerPanel onOpenSession={onOpenSession} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={onOpenSession} />);
 
     await userEvent.click(await screen.findByRole('button', { name: /open/i }));
 
@@ -115,7 +116,7 @@ describe('SessionPickerPanel', () => {
         },
       ]);
     mockCloseSession.mockResolvedValue(undefined);
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await screen.findByText('Live Quiz');
     expect(screen.getAllByRole('button', { name: /^close$/i })).toHaveLength(1);
@@ -136,13 +137,13 @@ describe('SessionPickerPanel', () => {
         { id: 2, title: 'Imported Quiz', rounds: [] },
       ],
     });
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     expect(await screen.findByText(/imported quiz/i)).toBeInTheDocument();
   });
 
   it('links to the quiz editor to create a new quiz', () => {
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     expect(screen.getByRole('link', { name: /new quiz/i })).toHaveAttribute(
       'href',
@@ -155,7 +156,7 @@ describe('SessionPickerPanel', () => {
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
     });
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await screen.findByText(/imported quiz/i);
     expect(screen.getByRole('link', { name: /edit/i })).toHaveAttribute(
@@ -188,7 +189,7 @@ describe('SessionPickerPanel', () => {
         },
       ],
     });
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
@@ -207,7 +208,7 @@ describe('SessionPickerPanel', () => {
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
     });
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
@@ -239,7 +240,7 @@ describe('SessionPickerPanel', () => {
       teamCount: 0,
     });
     const onOpenSession = vi.fn();
-    render(<SessionPickerPanel onOpenSession={onOpenSession} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={onOpenSession} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
@@ -262,7 +263,7 @@ describe('SessionPickerPanel', () => {
       status: 'lobby',
       teamCount: 0,
     });
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
@@ -284,7 +285,7 @@ describe('SessionPickerPanel', () => {
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
     });
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /^start$/i }),
@@ -299,7 +300,7 @@ describe('SessionPickerPanel', () => {
 
   it('shows an error when the session list cannot be loaded', async () => {
     mockFetchSessions.mockRejectedValue(new Error('network down'));
-    render(<SessionPickerPanel onOpenSession={vi.fn()} />);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /could not load sessions/i,
@@ -315,7 +316,7 @@ describe('SessionPickerPanel', () => {
     mockCreateSession.mockRejectedValue(
       new SessionApiError('Could not start session', 500),
     );
-    render(
+    renderWithQuery(
       <>
         <SessionPickerPanel onOpenSession={vi.fn()} />
         <Toaster />
