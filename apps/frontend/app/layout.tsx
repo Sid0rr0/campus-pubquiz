@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { Toaster } from 'sonner';
 import { SiteHeader } from '@/app/components/site-header';
+import { Providers } from '@/app/providers';
 import { AuthProvider } from '@/app/lib/use-auth';
 import { PlayerMenuProvider } from '@/app/lib/player-menu-context';
 import './globals.css';
@@ -35,12 +36,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${technika.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground font-body">
-        <AuthProvider>
-          <PlayerMenuProvider>
-            <SiteHeader />
-            {children}
-          </PlayerMenuProvider>
-        </AuthProvider>
+        <Providers>
+          <AuthProvider>
+            <PlayerMenuProvider>
+              <SiteHeader />
+              {children}
+            </PlayerMenuProvider>
+          </AuthProvider>
+        </Providers>
         <Toaster
           position="top-right"
           richColors
