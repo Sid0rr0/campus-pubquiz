@@ -11,6 +11,7 @@ import { GameGateway } from '@/game/game.gateway';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import { TeamService } from '@/team/team.service';
+import { TeamsController } from '@/team/teams.controller';
 import { AnswerController } from '@/answer/answer.controller';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -37,6 +38,7 @@ import { SessionsController } from '@/session/sessions.controller';
     QuizController,
     SessionsController,
     AnswerController,
+    TeamsController,
   ],
   providers: [
     AppService,

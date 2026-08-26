@@ -1,5 +1,10 @@
 import Link from 'next/link';
-import { ExitIcon, GearIcon, ListBulletIcon } from '@radix-ui/react-icons';
+import {
+  ExitIcon,
+  GearIcon,
+  ListBulletIcon,
+  PersonIcon,
+} from '@radix-ui/react-icons';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
@@ -26,6 +31,14 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
           >
             <GearIcon aria-hidden="true" />
             Users
+          </Link>
+
+          <Link
+            href="/admin/teams"
+            className="flex items-center gap-1 underline"
+          >
+            <PersonIcon aria-hidden="true" />
+            Teams
           </Link>
         </>
       )}

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { UniqueConstraintViolationException } from '@mikro-orm/core';
+import type { TeamsListedPayload } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -9,6 +10,7 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { generateJoinCode } from '@/db/join-code.util';
+import type { TeamsQuery } from '@/team/teams-query.schema';
 
 class TeamNameTakenError extends Error {
   constructor(teamName: string) {
@@ -31,6 +33,14 @@ export class InvalidJoinCodeError extends Error {
     super('Invalid game code — check the code on the screen and try again');
     this.name = 'InvalidJoinCodeError';
   }
+}
+
+interface TeamListRow {
+  id: number;
+  name: string;
+  code: string;
+  joinedAt: string | Date;
+  sessionsJoined: string | number;
 }
 
 export interface TeamIdentity {
@@ -122,6 +132,52 @@ export class TeamService {
       teamId: row.team.id,
       teamName: row.team.name,
     }));
+  }
+
+  /** Every team that has ever registered, paginated and sorted server-side — the full league roster, not scoped to one session. */
+  async listAll({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+  }: TeamsQuery): Promise<TeamsListedPayload> {
+    const knex = this.gameSessionTeams.getKnex();
+    const offset = (page - 1) * pageSize;
+
+    const sessionCounts = knex('game_session_teams')
+      .groupBy('team_id')
+      .select('team_id')
+      .count({ count: '*' });
+
+    const orderColumn =
+      sortBy === 'sessionsJoined'
+        ? knex.raw('coalesce(sc.count, 0)')
+        : 't.created_at';
+
+    const [rows, [{ count: total }]] = await Promise.all([
+      knex('teams as t')
+        .leftJoin(sessionCounts.as('sc'), 'sc.team_id', 't.id')
+        .select('t.id', 't.name', 't.code', 't.created_at as joinedAt')
+        .select(knex.raw('coalesce(sc.count, 0) as "sessionsJoined"'))
+        .orderBy(orderColumn, sortOrder)
+        .orderBy('t.id', 'asc')
+        .limit(pageSize)
+        .offset(offset) as Promise<TeamListRow[]>,
+      knex('teams').count({ count: '*' }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        joinedAt: new Date(row.joinedAt).toISOString(),
+        sessionsJoined: Number(row.sessionsJoined),
+      })),
+      total: Number(total),
+      page,
+      pageSize,
+    };
   }
 
   /** Removes a team from this session's roster (kick) — the Team entity itself, and its history, are untouched. */

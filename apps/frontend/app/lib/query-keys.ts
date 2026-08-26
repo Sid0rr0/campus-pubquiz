@@ -16,6 +16,15 @@ export const queryKeys = {
     all: ['users'] as const,
     list: () => ['users', 'list'] as const,
   },
+  teams: {
+    all: ['teams'] as const,
+    list: (params: {
+      page: number;
+      pageSize: number;
+      sortBy: string;
+      sortOrder: string;
+    }) => ['teams', 'list', params] as const,
+  },
   quizzes: {
     all: ['quizzes'] as const,
     // `null` (not `undefined`) for the unscoped list, so the key is

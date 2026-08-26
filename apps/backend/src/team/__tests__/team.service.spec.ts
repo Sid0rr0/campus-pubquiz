@@ -261,4 +261,112 @@ describe('TeamService (Postgres integration)', () => {
       { teamId: team.id, teamName: 'The Quizzards' },
     ]);
   });
+
+  describe('listAll', () => {
+    async function createBareTeam(name: string): Promise<Team> {
+      const team = em.create(Team, {
+        name,
+        token: `${name}-token`,
+        code: `${name}-code`,
+      });
+      await em.flush();
+      return team;
+    }
+
+    it('returns every team with its sessionsJoined count, including teams with zero sessions', async () => {
+      const session2Id = await createSecondSession('GHIJKL');
+      const soloTeam = await teamService.join(sessionId, 'Solo Team', {
+        joinCode: 'ABCDEF',
+      });
+      const multiTeam = await teamService.join(sessionId, 'Multi Team', {
+        joinCode: 'ABCDEF',
+      });
+      await teamService.join(session2Id, 'ignored', {
+        teamToken: multiTeam.token,
+        joinCode: 'GHIJKL',
+      });
+      const bareTeam = await createBareTeam('Bare Team');
+
+      const result = await teamService.listAll({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'joinedAt',
+        sortOrder: 'asc',
+      });
+
+      expect(result.total).toBe(3);
+      expect(result.items).toEqual([
+        expect.objectContaining({ id: soloTeam.id, sessionsJoined: 1 }),
+        expect.objectContaining({ id: multiTeam.id, sessionsJoined: 2 }),
+        expect.objectContaining({ id: bareTeam.id, sessionsJoined: 0 }),
+      ]);
+    });
+
+    it('paginates: page 2 returns the next slice, with a stable total across pages', async () => {
+      await teamService.join(sessionId, 'Team A', { joinCode: 'ABCDEF' });
+      await teamService.join(sessionId, 'Team B', { joinCode: 'ABCDEF' });
+      await teamService.join(sessionId, 'Team C', { joinCode: 'ABCDEF' });
+
+      const page1 = await teamService.listAll({
+        page: 1,
+        pageSize: 2,
+        sortBy: 'joinedAt',
+        sortOrder: 'asc',
+      });
+      const page2 = await teamService.listAll({
+        page: 2,
+        pageSize: 2,
+        sortBy: 'joinedAt',
+        sortOrder: 'asc',
+      });
+
+      expect(page1.items.map((item) => item.name)).toEqual([
+        'Team A',
+        'Team B',
+      ]);
+      expect(page2.items.map((item) => item.name)).toEqual(['Team C']);
+      expect(page1.total).toBe(3);
+      expect(page2.total).toBe(3);
+    });
+
+    it('sorts by sessionsJoined ascending, fewer sessions first', async () => {
+      const session2Id = await createSecondSession('GHIJKL');
+      const fewer = await teamService.join(sessionId, 'Fewer Sessions', {
+        joinCode: 'ABCDEF',
+      });
+      const more = await teamService.join(sessionId, 'More Sessions', {
+        joinCode: 'ABCDEF',
+      });
+      await teamService.join(session2Id, 'ignored', {
+        teamToken: more.token,
+        joinCode: 'GHIJKL',
+      });
+
+      const result = await teamService.listAll({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'sessionsJoined',
+        sortOrder: 'asc',
+      });
+
+      expect(result.items.map((item) => item.id)).toEqual([fewer.id, more.id]);
+    });
+
+    it('sorts by joinedAt ascending, oldest team first', async () => {
+      await teamService.join(sessionId, 'Older Team', { joinCode: 'ABCDEF' });
+      await teamService.join(sessionId, 'Newer Team', { joinCode: 'ABCDEF' });
+
+      const result = await teamService.listAll({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'joinedAt',
+        sortOrder: 'asc',
+      });
+
+      expect(result.items.map((item) => item.name)).toEqual([
+        'Older Team',
+        'Newer Team',
+      ]);
+    });
+  });
 });
