@@ -7,6 +7,7 @@ import type { AuthUser, GameAction } from '@campus-pubquiz/types';
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
 import { BreakEndTimeControl } from '@/app/admin/break-end-time-control';
+import { ShowdownPanel } from '@/app/admin/showdown-panel';
 import { TeamsPanel } from '@/app/admin/teams-panel';
 import { SessionStatusPanel } from '@/app/admin/session-status-panel';
 import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
@@ -43,6 +44,9 @@ export function MobileAdminBar({
   breakEndsAt,
   onSetBreakEndTime,
   isLastQuestionBeforeBreak,
+  activeShowdown,
+  tiedTeamNames,
+  onCreateShowdownRound,
   user,
   onLogout,
 }: MobileAdminBarProps) {
@@ -115,6 +119,12 @@ export function MobileAdminBar({
               breakEndsAt={breakEndsAt}
               onSetBreakEndTime={onSetBreakEndTime}
               isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+            />
+            <ShowdownPanel
+              progressStatus={progressStatus}
+              activeShowdown={activeShowdown}
+              tiedTeamNames={tiedTeamNames}
+              onCreateShowdownRound={onCreateShowdownRound}
             />
             <TeamsPanel
               teams={teams}

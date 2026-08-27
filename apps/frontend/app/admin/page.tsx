@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBlockStartRoundIndex,
+  getTiedForFirst,
   isLastQuestionOfBreakAfterRound,
   type GameStatus,
   type QuizSummaryRound,
@@ -60,6 +61,7 @@ function AdminPageContent() {
     kickTeam,
     awardBonus,
     setBreakEndTime,
+    createShowdownRound,
     setLiveAnswers = () => {},
     reconnectedAt,
   } = useGameSocket(
@@ -314,6 +316,12 @@ function AdminPageContent() {
       ? getBlockStartRoundIndex(roundIndex, gameContext)
       : 0;
   const canStartQuiz = gameStatus === 'lobby';
+  // An active showdown round keeps status pinned at 'ended' throughout its
+  // own reveal walk (see GameStateService.applyAction's showdown intercept),
+  // so Advance/Previous need an extra escape hatch here — 'ended' otherwise
+  // never appears in either list below.
+  const hasActiveShowdown = snapshot?.activeShowdown != null;
+  const showdownRevealStep = snapshot?.showdownRevealStep ?? 0;
   const canAdvance =
     gameStatus === 'rules' ||
     gameStatus === 'round_intro' ||
@@ -323,7 +331,8 @@ function AdminPageContent() {
     gameStatus === 'break' ||
     gameStatus === 'break_round_intro' ||
     gameStatus === 'reveal_intro' ||
-    gameStatus === 'reveal';
+    gameStatus === 'reveal' ||
+    (gameStatus === 'ended' && hasActiveShowdown);
   const canGoToPreviousQuestion =
     gameStatus === 'round_intro' ||
     gameStatus === 'question_open' ||
@@ -346,7 +355,11 @@ function AdminPageContent() {
     // Once the quiz has ended, Previous undoes back into whatever status
     // was active right before — hidden for legacy sessions that reached
     // 'ended' with no recorded previousStatus.
-    (gameStatus === 'ended' && snapshot?.progress.previousStatus != null);
+    (gameStatus === 'ended' && snapshot?.progress.previousStatus != null) ||
+    // Steps back through an active showdown's own reveal walk — a no-op at
+    // step 0 (see tryStepShowdownReveal), so only shown once there's
+    // somewhere to go.
+    (gameStatus === 'ended' && hasActiveShowdown && showdownRevealStep > 0);
   const hasUnrevealedTeams =
     isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 
@@ -401,7 +414,11 @@ function AdminPageContent() {
     ungradedQuestionIds = [],
     breakEndsAt = null,
     settings = DEFAULT_SESSION_SETTINGS,
+    activeShowdown = null,
   } = snapshot;
+  const tiedTeamNames = getTiedForFirst(leaderboard).map(
+    (entry) => entry.teamName,
+  );
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
     : blockQuestions;
@@ -443,6 +460,9 @@ function AdminPageContent() {
         breakEndsAt={breakEndsAt}
         onSetBreakEndTime={setBreakEndTime}
         isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+        activeShowdown={activeShowdown}
+        tiedTeamNames={tiedTeamNames}
+        onCreateShowdownRound={createShowdownRound}
         user={auth.user}
         onLogout={handleLogout}
       />
@@ -470,6 +490,9 @@ function AdminPageContent() {
         breakEndsAt={breakEndsAt}
         onSetBreakEndTime={setBreakEndTime}
         isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+        activeShowdown={activeShowdown}
+        tiedTeamNames={tiedTeamNames}
+        onCreateShowdownRound={createShowdownRound}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
         {progress.status === 'lobby' && (

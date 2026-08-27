@@ -1,6 +1,7 @@
 import { NavigationButtons } from '@/app/admin/navigation-buttons';
 import { AdminActions } from '@/app/admin/admin-actions';
 import { BreakEndTimeControl } from '@/app/admin/break-end-time-control';
+import { ShowdownPanel } from '@/app/admin/showdown-panel';
 import { TeamsPanel } from '@/app/admin/teams-panel';
 import { SessionStatusPanel } from '@/app/admin/session-status-panel';
 import type { AdminSidebarProps } from '@/app/admin/admin-sidebar-props';
@@ -30,6 +31,9 @@ export function DesktopSidebar({
   breakEndsAt,
   onSetBreakEndTime,
   isLastQuestionBeforeBreak,
+  activeShowdown,
+  tiedTeamNames,
+  onCreateShowdownRound,
 }: AdminSidebarProps) {
   return (
     <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-foreground p-5 text-background md:sticky md:top-(--site-header-height) md:flex md:h-[calc(100vh-var(--site-header-height))]">
@@ -65,6 +69,12 @@ export function DesktopSidebar({
           breakEndsAt={breakEndsAt}
           onSetBreakEndTime={onSetBreakEndTime}
           isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+        />
+        <ShowdownPanel
+          progressStatus={progressStatus}
+          activeShowdown={activeShowdown}
+          tiedTeamNames={tiedTeamNames}
+          onCreateShowdownRound={onCreateShowdownRound}
         />
       </div>
       <TeamsPanel

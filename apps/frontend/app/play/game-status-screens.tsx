@@ -1,9 +1,12 @@
 import type {
+  ActiveShowdownView,
   BonusCategory,
   GameProgress,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
 import { RulesContent } from '@/app/components/rules-content';
+import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
+import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
 interface GameStatusScreensProps {
   progress: GameProgress;
@@ -15,6 +18,14 @@ interface GameStatusScreensProps {
   joinCode: string;
   rules: string[];
   enabledBonusCategories: BonusCategory[];
+  activeShowdown: ActiveShowdownView | null;
+  showdownRevealStep: number;
+  myTeamId: number | null;
+  onSubmitShowdownGuess: (
+    showdownRoundId: number,
+    teamId: number,
+    value: string,
+  ) => void;
 }
 
 /** The non-block-browser screens: leaderboard overlay, lobby, rules, round intro, and ended — whichever applies to the current status. Renders nothing when the block browser should be shown instead. */
@@ -28,7 +39,17 @@ export function GameStatusScreens({
   joinCode,
   rules,
   enabledBonusCategories,
+  activeShowdown,
+  showdownRevealStep,
+  myTeamId,
+  onSubmitShowdownGuess,
 }: GameStatusScreensProps) {
+  const isShowdownParticipant =
+    activeShowdown !== null &&
+    myTeamId !== null &&
+    activeShowdown.participants.some(
+      (participant) => participant.teamId === myTeamId,
+    );
   return (
     <>
       {progress.isLeaderboardVisible && !isAnswerable && (
@@ -103,11 +124,34 @@ export function GameStatusScreens({
             </h1>
           </div>
         )}
-      {!progress.isLeaderboardVisible && progress.status === 'ended' && (
-        <h1 className="mt-16 text-center font-display text-2xl">
-          Quiz complete!
-        </h1>
-      )}
+      {!progress.isLeaderboardVisible &&
+        progress.status === 'ended' &&
+        (!activeShowdown ? (
+          <h1 className="mt-16 text-center font-display text-2xl">
+            Quiz complete!
+          </h1>
+        ) : showdownRevealStep > 0 ? (
+          <div className="mt-16 flex flex-col items-center gap-6 px-6 text-center">
+            <ShowdownRevealScreen
+              activeShowdown={activeShowdown}
+              step={showdownRevealStep}
+            />
+          </div>
+        ) : isShowdownParticipant && myTeamId !== null ? (
+          <ShowdownGuessForm
+            question={activeShowdown.question}
+            onSubmit={(value) =>
+              onSubmitShowdownGuess(activeShowdown.id, myTeamId, value)
+            }
+          />
+        ) : (
+          <div className="mt-16 flex flex-col items-center gap-2 text-center">
+            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+            <h1 className="font-display text-2xl">Tiebreaker in progress</h1>
+          </div>
+        ))}
     </>
   );
 }

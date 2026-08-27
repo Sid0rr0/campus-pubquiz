@@ -45,6 +45,7 @@ function PlayPageContent() {
     activeJoinCode,
     joinTeam,
     submitAnswer,
+    submitShowdownGuess,
     myAnswers = {},
     myAnswerGrades = {},
     myBonusAwards = [],
@@ -229,7 +230,10 @@ function PlayPageContent() {
     roundTitle = '',
     closestGuessRevealStep = 0,
     settings = DEFAULT_SESSION_SETTINGS,
+    activeShowdown = null,
+    showdownRevealStep = 0,
   } = snapshot;
+  const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
   // During reveal, the big screen walks one question at a time via
@@ -396,6 +400,10 @@ function PlayPageContent() {
         joinCode={snapshot.joinCode}
         rules={settings.rules}
         enabledBonusCategories={settings.enabledBonusCategories}
+        activeShowdown={activeShowdown}
+        showdownRevealStep={showdownRevealStep}
+        myTeamId={myTeamId}
+        onSubmitShowdownGuess={submitShowdownGuess}
       />
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         {showBlockBrowser && selectedQuestion && (

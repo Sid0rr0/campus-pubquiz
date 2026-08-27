@@ -13,6 +13,7 @@ import {
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
+import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
@@ -83,10 +84,16 @@ function getScreenKey(
     | Pick<BlockRevealQuestionView, 'roundNumber' | 'questionNumberInRound'>
     | undefined,
   closestGuessRevealStep: number,
+  activeShowdownId: number | undefined,
+  showdownRevealStep: number,
 ): string {
   if (progress.isLeaderboardVisible) return 'leaderboard';
 
   switch (progress.status) {
+    case 'ended':
+      return activeShowdownId === undefined
+        ? 'ended'
+        : `ended-showdown-${activeShowdownId}-${showdownRevealStep}`;
     case 'question_open':
     case 'locking':
       return `${progress.status}-${progress.roundIndex}-${progress.questionIndex}`;
@@ -172,6 +179,8 @@ function DisplayPageContent() {
     closestGuessRevealStep = 0,
     breakEndsAt = null,
     settings = DEFAULT_SESSION_SETTINGS,
+    activeShowdown = null,
+    showdownRevealStep = 0,
   } = snapshot;
 
   const revealQuestion = revealQuestions[progress.revealIndex];
@@ -194,6 +203,8 @@ function DisplayPageContent() {
     progress,
     revealQuestion,
     closestGuessRevealStep,
+    activeShowdown?.id,
+    showdownRevealStep,
   );
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
@@ -334,11 +345,19 @@ function DisplayPageContent() {
                     />
                   </div>
                 ))}
-              {progress.status === 'ended' && (
-                <div className="flex flex-1 items-center justify-center px-16 text-center">
-                  <h1 className="font-display text-4xl">Quiz complete!</h1>
-                </div>
-              )}
+              {progress.status === 'ended' &&
+                (activeShowdown ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
+                    <ShowdownRevealScreen
+                      activeShowdown={activeShowdown}
+                      step={showdownRevealStep}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-1 items-center justify-center px-16 text-center">
+                    <h1 className="font-display text-4xl">Quiz complete!</h1>
+                  </div>
+                ))}
             </>
           )}
         </motion.div>

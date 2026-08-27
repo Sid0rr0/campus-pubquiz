@@ -1,4 +1,9 @@
-import type { GameAction, GameStatus, TeamView } from '@campus-pubquiz/types';
+import type {
+  ActiveShowdownView,
+  GameAction,
+  GameStatus,
+  TeamView,
+} from '@campus-pubquiz/types';
 
 /** Shared by DesktopSidebar and MobileAdminBar — the two panels present the same quiz-master info and actions in different layouts. */
 export interface AdminSidebarProps {
@@ -25,4 +30,11 @@ export interface AdminSidebarProps {
   breakEndsAt: number | null;
   onSetBreakEndTime: (breakEndsAt: number | null) => void;
   isLastQuestionBeforeBreak: boolean;
+  activeShowdown: ActiveShowdownView | null;
+  tiedTeamNames: string[];
+  onCreateShowdownRound: (
+    question: string,
+    answer: string,
+    points: number,
+  ) => void;
 }

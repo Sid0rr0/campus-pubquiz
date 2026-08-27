@@ -12,6 +12,7 @@ import {
   type BlockRevealQuestionView,
   type BonusAwardedPayload,
   type BonusCategory,
+  type CreateShowdownRoundPayload,
   type GameAction,
   type GradeAnswerPayload,
   type JoinAcceptedPayload,
@@ -21,6 +22,7 @@ import {
   type SetBreakEndTimePayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
+  type SubmitShowdownGuessPayload,
   type TeamAnswerView,
   type TeamAnswersSyncedPayload,
   type TeamBonusAwardView,
@@ -59,6 +61,14 @@ export interface UseGameSocketResult {
   ) => void;
   /** Admin-only: sets/clears the epoch-ms time shown as "back at HH:MM" on the display's break screen — null clears it. */
   setBreakEndTime: (breakEndsAt: number | null) => void;
+  /** Admin-only: starts a showdown tiebreaker round for the teams currently tied for 1st. */
+  createShowdownRound: (question: string, answer: string, points: number) => void;
+  /** Players-only: submits this team's numeric guess for the active showdown round. */
+  submitShowdownGuess: (
+    showdownRoundId: number,
+    teamId: number,
+    value: string,
+  ) => void;
   /** The team's own saved answers by question id (players only). */
   myAnswers: Record<number, string>;
   /** The team's own points awarded by question id, present only once that question's answer is graded (players only). */
@@ -365,6 +375,26 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.SET_BREAK_END_TIME, payload);
   }, []);
 
+  const createShowdownRound = useCallback(
+    (question: string, answer: string, points: number) => {
+      const payload: CreateShowdownRoundPayload = { question, answer, points };
+      socketRef.current?.emit(SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND, payload);
+    },
+    [],
+  );
+
+  const submitShowdownGuess = useCallback(
+    (showdownRoundId: number, teamId: number, value: string) => {
+      const payload: SubmitShowdownGuessPayload = {
+        showdownRoundId,
+        teamId,
+        value,
+      };
+      socketRef.current?.emit(SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS, payload);
+    },
+    [],
+  );
+
   return {
     snapshot,
     connectionError,
@@ -377,6 +407,8 @@ export function useGameSocket(
     kickTeam,
     awardBonus,
     setBreakEndTime,
+    createShowdownRound,
+    submitShowdownGuess,
     myAnswers,
     myAnswerGrades,
     myBonusAwards,
