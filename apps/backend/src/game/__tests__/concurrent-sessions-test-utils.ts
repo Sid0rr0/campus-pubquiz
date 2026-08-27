@@ -21,6 +21,8 @@ import {
   asSessionService,
   type MockServer,
   type MockSocket,
+  createFakeShowdownService,
+  asShowdownService,
 } from '@/game/__tests__/test-utils';
 
 // Two single-question, breakAfter:true games so each session can independently
@@ -200,6 +202,7 @@ export function setupConcurrentSessionsTest(): ConcurrentSessionsTestContext {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await state.gameStateService.onModuleInit();
 
@@ -212,6 +215,7 @@ export function setupConcurrentSessionsTest(): ConcurrentSessionsTestContext {
       asBonusService(createFakeBonusService()),
       asSessionService(createFakeSessionService()),
       createFakeOrm(),
+      asShowdownService(createFakeShowdownService()),
     );
     state.server = createMockServer();
     state.gateway.server = asServer(state.server);

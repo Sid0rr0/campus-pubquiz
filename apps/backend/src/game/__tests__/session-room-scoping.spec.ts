@@ -27,6 +27,8 @@ import {
   asBonusService,
   asSessionService,
   type MockServer,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameGateway — session room scoping', () => {
@@ -194,6 +196,7 @@ describe('GameGateway — session room scoping', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await localGameState.onModuleInit();
     const localGateway = new GameGateway(
@@ -203,6 +206,7 @@ describe('GameGateway — session room scoping', () => {
       asBonusService(createFakeBonusService()),
       asSessionService(createFakeSessionService()),
       createFakeOrm(),
+      asShowdownService(createFakeShowdownService()),
     );
     localGateway.server = asServer(createMockServer());
 

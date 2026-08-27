@@ -15,6 +15,7 @@ import {
   getUpcomingQuestionPositions,
 } from '@/game/state/block-questions.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
+import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
 
 /** Assembles the full broadcast payload for a session — the shape every display/admin/players client resyncs to on connect or after every applyAction. */
 export function buildSnapshot(session: SessionState): StateSnapshotPayload {
@@ -42,6 +43,11 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
     settings: session.seededGame.settings,
+    activeShowdown: buildActiveShowdownView(
+      session.activeShowdownRound,
+      session.showdownRevealStep,
+    ),
+    showdownRevealStep: session.showdownRevealStep,
   };
 }
 

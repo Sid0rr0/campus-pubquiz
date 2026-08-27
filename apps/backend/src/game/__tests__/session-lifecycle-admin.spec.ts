@@ -10,6 +10,8 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameStateService — session lifecycle admin surface (phase 4)', () => {
@@ -22,6 +24,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

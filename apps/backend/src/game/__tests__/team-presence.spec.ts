@@ -7,6 +7,8 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameStateService — team connection presence (one live device per team + kick)', () => {
@@ -19,6 +21,7 @@ describe('GameStateService — team connection presence (one live device per tea
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

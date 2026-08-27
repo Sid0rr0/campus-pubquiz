@@ -20,6 +20,8 @@ import {
   asAnswerService,
   asSocket,
   type MockServer,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameGateway — set break end time', () => {
@@ -145,6 +147,7 @@ describe('GameStateService — breakEndsAt reset on a fresh break', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
   });

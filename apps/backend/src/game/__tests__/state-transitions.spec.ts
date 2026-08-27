@@ -8,6 +8,8 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameStateService — state transitions', () => {
@@ -20,6 +22,7 @@ describe('GameStateService — state transitions', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

@@ -16,6 +16,7 @@ import type { BonusService } from '@/bonus/bonus.service';
 import type { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/state/game-state.service';
+import type { ShowdownService } from '@/showdown/showdown.service';
 
 // GameStateService.onModuleInit and every DB-touching GameGateway handler
 // are wrapped in @CreateRequestContext(), which requires a real MikroORM
@@ -308,6 +309,28 @@ export function asBonusService(mock: MockBonusService): BonusService {
   return mock as unknown as BonusService;
 }
 
+export function createFakeShowdownService() {
+  return {
+    createRound: jest.fn().mockResolvedValue({
+      id: 1,
+      question: 'How many?',
+      answer: '100',
+      winnerTeamId: null,
+      isTie: false,
+      resolved: false,
+      participants: [],
+    }),
+    submitGuess: jest.fn().mockResolvedValue(undefined),
+    resolve: jest.fn().mockResolvedValue({ winnerTeamId: null, isTie: false }),
+  };
+}
+
+export type MockShowdownService = ReturnType<typeof createFakeShowdownService>;
+
+export function asShowdownService(mock: MockShowdownService): ShowdownService {
+  return mock as unknown as ShowdownService;
+}
+
 export function createMockSocket(
   role?: string,
   auth: Record<string, string> = {},
@@ -392,6 +415,7 @@ export interface TestGateway {
   seedService: MockSeedService;
   sessionService: MockSessionService;
   gameStateService: GameStateService;
+  showdownService: MockShowdownService;
 }
 
 /** Builds a GameGateway wired to fresh fake services/mock server, seeded by
@@ -402,11 +426,13 @@ export async function createTestGateway(
   seedService: MockSeedService = createFakeSeedService(),
 ): Promise<TestGateway> {
   const answerService = createFakeAnswerService();
+  const showdownService = createFakeShowdownService();
   const gameStateService = new GameStateService(
     asSeedService(seedService),
     asGameProgressRepository(createFakeGameProgressRepository()),
     createFakeOrm(),
     asAnswerService(answerService),
+    asShowdownService(showdownService),
   );
   await gameStateService.onModuleInit();
   const teamService = createFakeTeamService();
@@ -419,6 +445,7 @@ export async function createTestGateway(
     asBonusService(bonusService),
     asSessionService(sessionService),
     createFakeOrm(),
+    asShowdownService(showdownService),
   );
   const server = createMockServer();
   gateway.server = asServer(server);
@@ -431,6 +458,7 @@ export async function createTestGateway(
     seedService,
     sessionService,
     gameStateService,
+    showdownService,
   };
 }
 

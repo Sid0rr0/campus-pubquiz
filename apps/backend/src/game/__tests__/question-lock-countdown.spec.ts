@@ -8,6 +8,8 @@ import {
   asGameProgressRepository,
   asAnswerService,
   GAME_STATE_FIXTURE_SEEDED_GAME,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameStateService — question lock countdown', () => {
@@ -20,6 +22,7 @@ describe('GameStateService — question lock countdown', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';
@@ -148,6 +151,7 @@ describe('GameStateService — question lock countdown', () => {
       asGameProgressRepository(rehydratingRepository),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await rehydratedService.onModuleInit();
 
@@ -170,6 +174,7 @@ describe('GameStateService — question lock countdown', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await customService.onModuleInit();
 

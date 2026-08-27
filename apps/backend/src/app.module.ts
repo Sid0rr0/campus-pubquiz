@@ -24,6 +24,7 @@ import { QuizController } from '@/quiz/quiz.controller';
 import { ImportController } from '@/import/import.controller';
 import { ImportService } from '@/import/import.service';
 import { SessionsController } from '@/session/sessions.controller';
+import { ShowdownService } from '@/showdown/showdown.service';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { SessionsController } from '@/session/sessions.controller';
     GameStateService,
     GameGateway,
     ImportService,
+    ShowdownService,
   ],
 })
 export class AppModule {}

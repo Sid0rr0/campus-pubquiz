@@ -26,6 +26,9 @@ const ANSWER_VALUE_MAX_LENGTH = 2000;
 const TEAM_NAME_MAX_LENGTH = 100;
 const JOIN_CREDENTIAL_MAX_LENGTH = 100;
 const BONUS_REASON_MAX_LENGTH = 500;
+const SHOWDOWN_QUESTION_MAX_LENGTH = 500;
+const SHOWDOWN_ANSWER_MAX_LENGTH = 100;
+const SHOWDOWN_GUESS_MAX_LENGTH = 100;
 
 const positiveInt = z.number().int().positive();
 const finiteNumber = z.number().finite();
@@ -65,6 +68,18 @@ export const awardBonusPayloadSchema = z.object({
   category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),
   reason: z.string().max(BONUS_REASON_MAX_LENGTH).optional(),
   points: finiteNumber,
+});
+
+export const createShowdownRoundPayloadSchema = z.object({
+  question: z.string().min(1).max(SHOWDOWN_QUESTION_MAX_LENGTH),
+  answer: z.string().min(1).max(SHOWDOWN_ANSWER_MAX_LENGTH),
+  points: finiteNumber,
+});
+
+export const submitShowdownGuessPayloadSchema = z.object({
+  showdownRoundId: positiveInt,
+  teamId: positiveInt,
+  value: z.string().max(SHOWDOWN_GUESS_MAX_LENGTH),
 });
 
 /** Parses a raw socket payload against `schema`, or throws a client-safe WsException. */

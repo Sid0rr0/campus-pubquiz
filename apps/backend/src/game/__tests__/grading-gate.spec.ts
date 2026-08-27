@@ -9,6 +9,8 @@ import {
   asGameProgressRepository,
   asAnswerService,
   type MockAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from '@/game/__tests__/test-utils';
 
 describe('GameStateService — grading gate before reveal', () => {
@@ -23,6 +25,7 @@ describe('GameStateService — grading gate before reveal', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(answerService),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

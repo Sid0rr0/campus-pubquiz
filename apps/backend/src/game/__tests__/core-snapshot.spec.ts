@@ -8,6 +8,8 @@ import {
   asGameProgressRepository,
   asAnswerService,
   type MockGameProgressRepository,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameStateService — core snapshot', () => {
@@ -22,6 +24,7 @@ describe('GameStateService — core snapshot', () => {
       asGameProgressRepository(progressRepository),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';
@@ -33,6 +36,7 @@ describe('GameStateService — core snapshot', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await expect(
       uninitialized.applyAction('ABCDEF', 'START_QUIZ'),

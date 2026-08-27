@@ -8,6 +8,8 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from '@/game/__tests__/test-utils';
 
 describe('GameStateService — reveal paging', () => {
@@ -20,6 +22,7 @@ describe('GameStateService — reveal paging', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

@@ -7,6 +7,8 @@ import {
   asSeedService,
   asGameProgressRepository,
   asAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from '@/game/__tests__/test-utils';
 
 describe('GameStateService — response indicators', () => {
@@ -19,6 +21,7 @@ describe('GameStateService — response indicators', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';

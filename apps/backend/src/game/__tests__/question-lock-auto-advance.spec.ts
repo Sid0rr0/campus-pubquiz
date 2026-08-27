@@ -26,6 +26,8 @@ import {
   asBonusService,
   asSessionService,
   type MockServer,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 describe('GameGateway — question lock auto-advance timer', () => {
@@ -73,6 +75,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await gameStateService.onModuleInit();
     const localGateway = new GameGateway(
@@ -82,6 +85,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       asBonusService(createFakeBonusService()),
       asSessionService(createFakeSessionService()),
       createFakeOrm(),
+      asShowdownService(createFakeShowdownService()),
     );
     const localServer = createMockServer();
     localGateway.server = asServer(localServer);

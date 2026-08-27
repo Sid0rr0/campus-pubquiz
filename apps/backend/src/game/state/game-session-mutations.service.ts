@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from '@campus-pubquiz/types';
 import { GameSessionStore } from '@/game/state/game-session.store';
+import type { ActiveShowdownRoundState } from '@/game/state/session-state';
 import type { TeamRosterEntry } from '@/team/team.service';
 
 /**
@@ -93,6 +94,51 @@ export class GameSessionMutationsService {
       ungradedQuestionIds: hasUngradedAnswers
         ? [...withoutQuestion, questionId]
         : withoutQuestion,
+    });
+  }
+
+  /** Sets/replaces the in-progress showdown round cache and resets the reveal step to 0 — called on CREATE_SHOWDOWN_ROUND, including sudden death's fresh round. */
+  setActiveShowdownRound(
+    joinCode: string,
+    round: ActiveShowdownRoundState,
+  ): void {
+    const session = this.store.get(joinCode);
+    this.store.set(joinCode, {
+      ...session,
+      activeShowdownRound: round,
+      showdownRevealStep: 0,
+    });
+  }
+
+  /** Overwrite semantics, same as setAnsweredTeamIds/setBreakEndTime — resubmitting a guess before reveal replaces the previous one. No-op if there's no active round (a stale/racing submit after the round already moved on). */
+  setShowdownGuess(joinCode: string, teamId: number, value: string): void {
+    const session = this.store.get(joinCode);
+    if (!session.activeShowdownRound) return;
+    this.store.set(joinCode, {
+      ...session,
+      activeShowdownRound: {
+        ...session.activeShowdownRound,
+        participants: session.activeShowdownRound.participants.map(
+          (participant) =>
+            participant.teamId === teamId
+              ? { ...participant, guess: value }
+              : participant,
+        ),
+      },
+    });
+  }
+
+  /**
+   * In-memory-only override of progress.isLeaderboardVisible, deliberately
+   * not persisted to GameProgress (same ephemeral shape as setBreakEndTime)
+   * — used to hide the leaderboard overlay behind the showdown screen
+   * without teaching the state machine a new transition out of 'ended'.
+   */
+  setLeaderboardVisible(joinCode: string, isVisible: boolean): void {
+    const session = this.store.get(joinCode);
+    this.store.set(joinCode, {
+      ...session,
+      progress: { ...session.progress, isLeaderboardVisible: isVisible },
     });
   }
 }

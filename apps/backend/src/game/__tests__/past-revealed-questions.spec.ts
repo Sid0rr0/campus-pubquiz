@@ -9,6 +9,8 @@ import {
   asGameProgressRepository,
   asAnswerService,
   type MockSeedService,
+  createFakeShowdownService,
+  asShowdownService,
 } from '@/game/__tests__/test-utils';
 
 // Three rounds across two blocks: Round A + Round B (breakAfter) form block
@@ -77,6 +79,7 @@ describe('GameStateService — past-block revealed questions', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     return service;

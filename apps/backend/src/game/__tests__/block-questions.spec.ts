@@ -10,6 +10,8 @@ import {
   asGameProgressRepository,
   asAnswerService,
   type MockSeedService,
+  createFakeShowdownService,
+  asShowdownService,
 } from '@/game/__tests__/test-utils';
 
 describe('GameStateService — block questions and upcoming questions', () => {
@@ -22,6 +24,7 @@ describe('GameStateService — block questions and upcoming questions', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await service.onModuleInit();
     joinCode = 'ABCDEF';
@@ -243,6 +246,7 @@ describe('GameStateService — block questions and upcoming questions', () => {
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
       asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
     );
     await customService.onModuleInit();
     const customJoinCode = threeQuestionRoundGame.joinCode;

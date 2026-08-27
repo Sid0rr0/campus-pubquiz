@@ -9,6 +9,8 @@ import {
   asGameProgressRepository,
   asAnswerService,
   type MockAnswerService,
+  createFakeShowdownService,
+  asShowdownService,
 } from './test-utils';
 
 const CLOSEST_GUESS_GAME: SeededGame = {
@@ -83,6 +85,7 @@ async function buildService(
     asGameProgressRepository(createFakeGameProgressRepository()),
     createFakeOrm(),
     asAnswerService(answerService),
+    asShowdownService(createFakeShowdownService()),
   );
   await service.onModuleInit();
   return service;

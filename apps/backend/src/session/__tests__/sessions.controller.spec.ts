@@ -75,6 +75,8 @@ function snapshot(
     closestGuessRevealStep: 0,
     breakEndsAt: null,
     settings: DEFAULT_SESSION_SETTINGS,
+    activeShowdown: null,
+    showdownRevealStep: 0,
     ...overrides,
   };
 }

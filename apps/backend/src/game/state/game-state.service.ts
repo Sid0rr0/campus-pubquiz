@@ -33,9 +33,12 @@ import {
   computeQuestionLockAt,
   freshSessionState,
   getGameContext,
+  type ActiveShowdownRoundState,
   type SessionState,
 } from '@/game/state/session-state';
+import { tryStepShowdownReveal } from '@/game/state/showdown-reveal.util';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
+import { ShowdownService } from '@/showdown/showdown.service';
 import type { TeamRosterEntry } from '@/team/team.service';
 
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
@@ -55,6 +58,7 @@ export class GameStateService implements OnModuleInit {
     private readonly progressRepository: GameProgressRepository,
     private readonly orm: MikroORM,
     private readonly answerService: AnswerService,
+    private readonly showdownService: ShowdownService,
   ) {
     this.grading = new BlockGradingService(this.answerService);
   }
@@ -209,6 +213,32 @@ export class GameStateService implements OnModuleInit {
     this.mutations.setBreakEndTime(joinCode, breakEndsAt);
   }
 
+  /** The in-progress/just-resolved showdown round, or null between rounds. */
+  getActiveShowdownRound(joinCode: string): ActiveShowdownRoundState | null {
+    return this.sessionStore.get(joinCode).activeShowdownRound;
+  }
+
+  /** Current showdown reveal sub-step — meaningless while getActiveShowdownRound is null. */
+  getShowdownRevealStep(joinCode: string): number {
+    return this.sessionStore.get(joinCode).showdownRevealStep;
+  }
+
+  setActiveShowdownRound(
+    joinCode: string,
+    round: ActiveShowdownRoundState,
+  ): void {
+    this.mutations.setActiveShowdownRound(joinCode, round);
+  }
+
+  setShowdownGuess(joinCode: string, teamId: number, value: string): void {
+    this.mutations.setShowdownGuess(joinCode, teamId, value);
+  }
+
+  /** In-memory-only override of the leaderboard-visible flag — see GameSessionMutationsService.setLeaderboardVisible. */
+  setLeaderboardVisible(joinCode: string, isVisible: boolean): void {
+    this.mutations.setLeaderboardVisible(joinCode, isVisible);
+  }
+
   /** This session's current settings — used by the gateway to filter enabled bonus categories. */
   getSessionSettings(joinCode: string): SessionSettings {
     return this.sessionStore.get(joinCode).seededGame.settings;
@@ -246,6 +276,41 @@ export class GameStateService implements OnModuleInit {
     action: GameAction,
   ): Promise<StateSnapshotPayload> {
     const session = this.sessionStore.get(joinCode);
+
+    // Mid-showdown-reveal intercept — checked first since it doesn't depend
+    // on status (an active showdown round only ever exists while status is
+    // 'ended', but this doesn't need to know that). Never reaches
+    // getNextGameState; status stays 'ended' throughout, nothing persisted.
+    if (
+      (action === 'ADVANCE' || action === 'PREVIOUS') &&
+      session.activeShowdownRound !== null
+    ) {
+      const stepped = tryStepShowdownReveal(session, action);
+      if (stepped) {
+        let updated = stepped.session;
+        if (stepped.shouldResolve && updated.activeShowdownRound) {
+          const { winnerTeamId, isTie } = await this.showdownService.resolve(
+            updated.activeShowdownRound.id,
+          );
+          const resolvedRound: ActiveShowdownRoundState = {
+            ...updated.activeShowdownRound,
+            winnerTeamId,
+            isTie,
+            resolved: true,
+          };
+          const leaderboard = await this.answerService.computeLeaderboard(
+            updated.seededGame.gameSessionId,
+          );
+          updated = {
+            ...updated,
+            activeShowdownRound: resolvedRound,
+            leaderboard,
+          };
+        }
+        this.sessionStore.set(joinCode, updated);
+        return this.getSnapshot(joinCode);
+      }
+    }
 
     // Mid-reveal-sequence intercept for closest_guess questions — never
     // reaches getNextGameState, GameProgress untouched, nothing persisted.

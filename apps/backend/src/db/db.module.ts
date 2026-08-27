@@ -8,6 +8,8 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Session } from '@/db/entities/session.entity';
+import { ShowdownRound } from '@/db/entities/showdown-round.entity';
+import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { Team } from '@/db/entities/team.entity';
 import { User } from '@/db/entities/user.entity';
 import config from '@/mikro-orm.config';
@@ -27,6 +29,8 @@ import config from '@/mikro-orm.config';
       BonusAward,
       User,
       Session,
+      ShowdownRound,
+      ShowdownRoundTeam,
     ]),
   ],
   exports: [MikroOrmModule],

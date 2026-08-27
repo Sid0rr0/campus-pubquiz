@@ -48,6 +48,29 @@ export interface SessionState {
    * next bulk recompute.
    */
   ungradedQuestionIds: number[];
+  /** The in-progress/just-resolved showdown tiebreaker round, or null between rounds — see ActiveShowdownRoundState. */
+  activeShowdownRound: ActiveShowdownRoundState | null;
+  /** showdown reveal-step counter, ephemeral like closestGuessRevealStep — meaningless while activeShowdownRound is null. */
+  showdownRevealStep: number;
+}
+
+/** One participating team's seat + guess within the active showdown round — the server-side cache backing ActiveShowdownView; the answer/guess fields are always held here in plaintext and only selectively projected out per showdownRevealStep by buildActiveShowdownView. */
+export interface ShowdownParticipantState {
+  teamId: number;
+  teamName: string;
+  seatIndex: number;
+  guess: string | null;
+}
+
+/** Ephemeral cache of the in-progress/just-resolved showdown round — populated from the DB once at creation/resolution (mirrors closestGuessSummaries) so buildSnapshot can stay synchronous. */
+export interface ActiveShowdownRoundState {
+  id: number;
+  question: string;
+  answer: string;
+  participants: ShowdownParticipantState[];
+  winnerTeamId: number | null;
+  isTie: boolean;
+  resolved: boolean;
 }
 
 export function freshSessionState(
@@ -70,6 +93,8 @@ export function freshSessionState(
     closestGuessRevealStep: 0,
     closestGuessSummaries: {},
     ungradedQuestionIds: [],
+    activeShowdownRound: null,
+    showdownRevealStep: 0,
   };
 }
 

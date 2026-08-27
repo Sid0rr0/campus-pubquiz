@@ -29,6 +29,7 @@ import {
   acceptConnection,
   disconnectClient,
 } from '@/game/socket/connection.util';
+import { createShowdownRound } from '@/game/socket/handlers/create-showdown-round.handler';
 import { broadcastGameState } from '@/game/socket/game-broadcast.util';
 import { gradeTeamAnswer } from '@/game/socket/handlers/grade-answer.handler';
 import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
@@ -36,17 +37,21 @@ import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
 import { QuestionLockTimerRegistry } from '@/game/socket/question-lock-timer.registry';
 import { syncTeamAnswersOnRevealEntry } from '@/game/socket/reveal-entry-sync.util';
 import { updateBreakEndTime } from '@/game/socket/handlers/set-break-end-time.handler';
+import { submitShowdownGuess } from '@/game/socket/handlers/submit-showdown-guess.handler';
 import {
   adminActionPayloadSchema,
   awardBonusPayloadSchema,
+  createShowdownRoundPayloadSchema,
   gradeAnswerPayloadSchema,
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
   parseSocketPayload,
   setBreakEndTimePayloadSchema,
   submitAnswerPayloadSchema,
+  submitShowdownGuessPayloadSchema,
 } from '@/game/socket/socket-payload.schemas';
 import { submitTeamAnswer } from '@/game/socket/handlers/submit-answer.handler';
+import { ShowdownService } from '@/showdown/showdown.service';
 
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
@@ -67,6 +72,7 @@ export class GameGateway
     private readonly bonusService: BonusService,
     private readonly sessions: SessionService,
     private readonly orm: MikroORM,
+    private readonly showdownService: ShowdownService,
   ) {}
 
   onModuleDestroy(): void {
@@ -387,6 +393,67 @@ export class GameGateway
         answerService: this.answerService,
         server: this.server,
       },
+      joinCode,
+      payload,
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND)
+  @CreateRequestContext()
+  async handleCreateShowdownRound(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<void> {
+    const payload = parseSocketPayload(
+      createShowdownRoundPayloadSchema,
+      rawPayload,
+    );
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+      throw new WsException('Only admin clients may start a showdown round');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND} from ${client.id}: points=${payload.points}`,
+    );
+
+    await createShowdownRound(
+      {
+        gameState: this.gameState,
+        showdownService: this.showdownService,
+        server: this.server,
+      },
+      joinCode,
+      payload,
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS)
+  @CreateRequestContext()
+  async handleSubmitShowdownGuess(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<void> {
+    const payload = parseSocketPayload(
+      submitShowdownGuessPayloadSchema,
+      rawPayload,
+    );
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
+      throw new WsException('Only player clients may submit a showdown guess');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS} from ${client.id}: showdownRoundId=${payload.showdownRoundId} teamId=${payload.teamId}`,
+    );
+
+    await submitShowdownGuess(
+      {
+        gameState: this.gameState,
+        showdownService: this.showdownService,
+        server: this.server,
+      },
+      client,
       joinCode,
       payload,
     );
