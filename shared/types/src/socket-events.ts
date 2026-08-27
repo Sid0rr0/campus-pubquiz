@@ -24,6 +24,8 @@ export const SOCKET_EVENTS = {
   KICK_TEAM: 'game:kick_team',
   AWARD_BONUS: 'game:award_bonus',
   SET_BREAK_END_TIME: 'game:set_break_end_time',
+  CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
+  SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -222,6 +224,20 @@ export interface StateSnapshotPayload {
   breakEndsAt: number | null;
   /** This session's configurable settings — see SessionSettings. */
   settings: SessionSettings;
+  /**
+   * The in-progress/just-resolved showdown tiebreaker round, or null between
+   * rounds. Only ever set while progress.status === 'ended' — see
+   * ActiveShowdownView. Fields are progressively included based on
+   * showdownRevealStep, the same secrecy technique already used for
+   * ClosestGuessRevealData.
+   */
+  activeShowdown: ActiveShowdownView | null;
+  /**
+   * Showdown reveal sub-step (0-indexed), ephemeral like
+   * closestGuessRevealStep: 0..(participants.length + 1). Meaningless
+   * whenever activeShowdown is null.
+   */
+  showdownRevealStep: number;
 }
 
 export interface AdminActionPayload {
@@ -483,4 +499,47 @@ export type BonusAwardedPayload = TeamBonusAwardView;
 /** Broadcast to a session's players room once its admin closes it — the session no longer exists server-side, so the client should drop its identity and return to the join screen. */
 export interface SessionClosedPayload {
   joinCode: string;
+}
+
+/**
+ * Admin-typed tiebreaker question for a "showdown" round — created once
+ * two or more teams are tied for 1st place at `ended`. Participating teams
+ * are never client-supplied: the server derives them from the leaderboard
+ * via getTiedForFirst (shared/types/src/leaderboard-tiebreak.ts).
+ */
+export interface CreateShowdownRoundPayload {
+  question: string;
+  /** Numeric string, parsed like Question.answer for closest_guess. */
+  answer: string;
+  points: number;
+}
+
+export interface SubmitShowdownGuessPayload {
+  showdownRoundId: number;
+  teamId: number;
+  value: string;
+}
+
+/** One participating team's showdown status, in seatIndex (reveal) order. */
+export interface ActiveShowdownParticipant {
+  teamId: number;
+  teamName: string;
+  /** Reveal order, 0..N-1 — fixed at round creation from leaderboard order. */
+  seatIndex: number;
+  /** Always present — status only, no value (mirrors answeredTeamIds). */
+  hasGuessed: boolean;
+  /** Present once showdownRevealStep >= seatIndex + 1. */
+  guess?: string;
+}
+
+/** The in-progress/just-resolved showdown tiebreaker round — see StateSnapshotPayload.activeShowdown. */
+export interface ActiveShowdownView {
+  id: number;
+  question: string;
+  participants: ActiveShowdownParticipant[];
+  /** Present once showdownRevealStep >= participants.length + 1 (final step). */
+  answer?: string;
+  /** null when isTie is true, or before the round is resolved. */
+  winnerTeamId?: number | null;
+  isTie?: boolean;
 }

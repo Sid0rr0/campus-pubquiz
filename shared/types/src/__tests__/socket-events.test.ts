@@ -34,6 +34,8 @@ describe('SOCKET_EVENTS', () => {
       KICK_TEAM: 'game:kick_team',
       AWARD_BONUS: 'game:award_bonus',
       SET_BREAK_END_TIME: 'game:set_break_end_time',
+      CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
+      SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
     });
   });
 });
