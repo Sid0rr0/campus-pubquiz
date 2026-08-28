@@ -277,13 +277,21 @@ export class GameStateService implements OnModuleInit {
   ): Promise<StateSnapshotPayload> {
     const session = this.sessionStore.get(joinCode);
 
-    // Mid-showdown-reveal intercept — checked first since it doesn't depend
-    // on status (an active showdown round only ever exists while status is
-    // 'ended', but this doesn't need to know that). Never reaches
-    // getNextGameState; status stays 'ended' throughout, nothing persisted.
+    // Mid-showdown-reveal intercept — checked first, ahead of the normal
+    // status switch below. Gated on status === 'ended' rather than just
+    // activeShowdownRound !== null: the admin can compose/save the
+    // tiebreaker question as soon as the final block is graded, well before
+    // the quiz reaches 'ended' (see ShowdownPanel), so an active round can
+    // exist while the block's own answers still haven't been revealed.
+    // Without this guard, ADVANCE/PREVIOUS would hijack into the showdown
+    // reveal walk immediately and the audience would never see the final
+    // round's answers revealed. Once status genuinely is 'ended', it never
+    // reaches getNextGameState; status stays 'ended' throughout, nothing
+    // persisted.
     if (
       (action === 'ADVANCE' || action === 'PREVIOUS') &&
-      session.activeShowdownRound !== null
+      session.activeShowdownRound !== null &&
+      session.progress.status === 'ended'
     ) {
       const stepped = tryStepShowdownReveal(session, action);
       if (stepped) {

@@ -32,6 +32,8 @@ export interface AdminSidebarProps {
   isLastQuestionBeforeBreak: boolean;
   activeShowdown: ActiveShowdownView | null;
   tiedTeamNames: string[];
+  /** True once the final block is fully graded (or the quiz has ended) — see the isShowdownEligible computation in AdminPage. */
+  isShowdownEligible: boolean;
   onCreateShowdownRound: (
     question: string,
     answer: string,

@@ -92,8 +92,11 @@ describe('GameGateway — showdown', () => {
       expect(showdownService.createRound).not.toHaveBeenCalled();
     });
 
-    it('creates a round for the tied teams, hides the leaderboard, and broadcasts activeShowdown', async () => {
+    it('creates a round for the tied teams without touching leaderboard visibility, and broadcasts activeShowdown', async () => {
       gameStateService.setLeaderboard('ABCDEF', TIED_LEADERBOARD);
+      // The final standings are still up (e.g. auto-shown when the quiz hit
+      // 'ended') — creating the round must not yank them away.
+      gameStateService.setLeaderboardVisible('ABCDEF', true);
       showdownService.createRound.mockResolvedValueOnce({
         id: 900,
         question: 'How many?',
@@ -136,7 +139,7 @@ describe('GameGateway — showdown', () => {
       expect(lastCall?.[0]).toBe(SOCKET_EVENTS.STATE_UPDATED);
       expect(lastCall?.[1].showdownRevealStep).toBe(0);
       expect(lastCall?.[1].activeShowdown?.id).toBe(900);
-      expect(lastCall?.[1].progress.isLeaderboardVisible).toBe(false);
+      expect(lastCall?.[1].progress.isLeaderboardVisible).toBe(true);
     });
   });
 
@@ -241,6 +244,10 @@ describe('GameGateway — showdown', () => {
       gameStateService.setTeamConnected('ABCDEF', 32, 'socket-b');
       gameStateService.setShowdownGuess('ABCDEF', 31, '10');
       gameStateService.setShowdownGuess('ABCDEF', 32, '20');
+      // The showdown-reveal intercept only engages once the quiz has
+      // actually ended (see GameStateService.applyAction) — reached here via
+      // the same END_QUIZ escape hatch the admin's "End Quiz" button uses.
+      await gameStateService.applyAction('ABCDEF', 'END_QUIZ');
       await gameStateService.applyAction('ABCDEF', 'ADVANCE');
 
       await expect(

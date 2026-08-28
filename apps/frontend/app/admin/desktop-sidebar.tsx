@@ -33,6 +33,7 @@ export function DesktopSidebar({
   isLastQuestionBeforeBreak,
   activeShowdown,
   tiedTeamNames,
+  isShowdownEligible,
   onCreateShowdownRound,
 }: AdminSidebarProps) {
   return (
@@ -71,7 +72,7 @@ export function DesktopSidebar({
           isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
         />
         <ShowdownPanel
-          progressStatus={progressStatus}
+          isEligible={isShowdownEligible}
           activeShowdown={activeShowdown}
           tiedTeamNames={tiedTeamNames}
           onCreateShowdownRound={onCreateShowdownRound}

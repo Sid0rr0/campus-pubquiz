@@ -13,18 +13,32 @@ const TWO_TEAM_ROUND: ActiveShowdownView = {
 };
 
 describe('ShowdownRevealScreen', () => {
-  it('shows only the question and waiting placeholders at step 0', () => {
+  it('shows the question and marks teams Answered once they have guessed, at step 0', () => {
     render(<ShowdownRevealScreen activeShowdown={TWO_TEAM_ROUND} step={0} />);
 
     expect(
       screen.getByText('How many people are in this room?'),
     ).toBeInTheDocument();
     expect(screen.getByText('Team A')).toBeInTheDocument();
-    expect(screen.getAllByText('waiting…')).toHaveLength(2);
-    expect(screen.queryByText(/answer/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Answered')).toHaveLength(2);
+    expect(screen.queryByText('ANSWER')).not.toBeInTheDocument();
   });
 
-  it("reveals the first team's guess at step 1, second team still waiting", () => {
+  it('shows waiting… for a team that has not guessed yet at step 0', () => {
+    const round: ActiveShowdownView = {
+      ...TWO_TEAM_ROUND,
+      participants: [
+        { ...TWO_TEAM_ROUND.participants[0], hasGuessed: false },
+        TWO_TEAM_ROUND.participants[1],
+      ],
+    };
+    render(<ShowdownRevealScreen activeShowdown={round} step={0} />);
+
+    expect(screen.getAllByText('waiting…')).toHaveLength(1);
+    expect(screen.getAllByText('Answered')).toHaveLength(1);
+  });
+
+  it("reveals the first team's guess at step 1; second team shows Answered since it has guessed but isn't revealed yet", () => {
     const round: ActiveShowdownView = {
       ...TWO_TEAM_ROUND,
       participants: [
@@ -35,7 +49,7 @@ describe('ShowdownRevealScreen', () => {
     render(<ShowdownRevealScreen activeShowdown={round} step={1} />);
 
     expect(screen.getByText('40')).toBeInTheDocument();
-    expect(screen.getAllByText('waiting…')).toHaveLength(1);
+    expect(screen.getAllByText('Answered')).toHaveLength(1);
   });
 
   it('reveals both guesses at step 2, before the answer', () => {

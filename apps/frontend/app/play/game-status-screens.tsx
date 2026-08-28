@@ -140,6 +140,11 @@ export function GameStatusScreens({
         ) : isShowdownParticipant && myTeamId !== null ? (
           <ShowdownGuessForm
             question={activeShowdown.question}
+            hasGuessed={
+              activeShowdown.participants.find(
+                (participant) => participant.teamId === myTeamId,
+              )?.hasGuessed ?? false
+            }
             onSubmit={(value) =>
               onSubmitShowdownGuess(activeShowdown.id, myTeamId, value)
             }

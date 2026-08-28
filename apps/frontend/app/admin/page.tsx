@@ -29,6 +29,18 @@ import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortc
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
 
+// Mirrors the backend's block-grading GRADED_STATUSES (see
+// block-grading.service.ts) — the window in which ungradedQuestionIds is
+// kept fresh, so it's safe to trust "grading complete" from that point on.
+const SHOWDOWN_ELIGIBLE_STATUSES: GameStatus[] = [
+  'break_intro',
+  'break',
+  'break_round_intro',
+  'reveal_intro',
+  'reveal',
+  'ended',
+];
+
 function AdminPageContent() {
   const auth = useAuth();
   const router = useRouter();
@@ -316,10 +328,11 @@ function AdminPageContent() {
       ? getBlockStartRoundIndex(roundIndex, gameContext)
       : 0;
   const canStartQuiz = gameStatus === 'lobby';
-  // An active showdown round keeps status pinned at 'ended' throughout its
-  // own reveal walk (see GameStateService.applyAction's showdown intercept),
-  // so Advance/Previous need an extra escape hatch here — 'ended' otherwise
-  // never appears in either list below.
+  // A showdown round can be created as early as the final block being fully
+  // graded (see isShowdownEligible below), well before status reaches
+  // 'ended' — but its own reveal walk only starts hijacking Advance/Previous
+  // once status genuinely is 'ended' (see GameStateService.applyAction's
+  // showdown intercept), so 'ended' still needs its own escape hatch here.
   const hasActiveShowdown = snapshot?.activeShowdown != null;
   const showdownRevealStep = snapshot?.showdownRevealStep ?? 0;
   const canAdvance =
@@ -419,6 +432,16 @@ function AdminPageContent() {
   const tiedTeamNames = getTiedForFirst(leaderboard).map(
     (entry) => entry.teamName,
   );
+  // The admin can compose/save the tiebreaker question as soon as the final
+  // block is graded — no need to wait through the block's own reveal walk
+  // to reach 'ended'. Gated on the final round specifically (not just any
+  // grading break) so a coincidental mid-quiz tie for 1st never offers it
+  // early.
+  const isShowdownEligible =
+    activeQuizRounds.length > 0 &&
+    roundIndex >= activeQuizRounds.length - 1 &&
+    ungradedQuestionIds.length === 0 &&
+    SHOWDOWN_ELIGIBLE_STATUSES.includes(progress.status);
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
     : blockQuestions;
@@ -462,6 +485,7 @@ function AdminPageContent() {
         isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
         activeShowdown={activeShowdown}
         tiedTeamNames={tiedTeamNames}
+        isShowdownEligible={isShowdownEligible}
         onCreateShowdownRound={createShowdownRound}
         user={auth.user}
         onLogout={handleLogout}
@@ -492,6 +516,7 @@ function AdminPageContent() {
         isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
         activeShowdown={activeShowdown}
         tiedTeamNames={tiedTeamNames}
+        isShowdownEligible={isShowdownEligible}
         onCreateShowdownRound={createShowdownRound}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">

@@ -46,7 +46,11 @@ export function ShowdownRevealScreen({
                 <span>{participant.guess}</span>
               ) : (
                 <span className="text-sm font-extrabold text-foreground/45">
-                  {isRevealed ? 'no guess' : 'waiting…'}
+                  {isRevealed
+                    ? 'no guess'
+                    : participant.hasGuessed
+                      ? 'Answered'
+                      : 'waiting…'}
                 </span>
               )}
               {isWinner && (

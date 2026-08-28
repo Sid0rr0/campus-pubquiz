@@ -46,6 +46,7 @@ export function MobileAdminBar({
   isLastQuestionBeforeBreak,
   activeShowdown,
   tiedTeamNames,
+  isShowdownEligible,
   onCreateShowdownRound,
   user,
   onLogout,
@@ -121,7 +122,7 @@ export function MobileAdminBar({
               isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
             />
             <ShowdownPanel
-              progressStatus={progressStatus}
+              isEligible={isShowdownEligible}
               activeShowdown={activeShowdown}
               tiedTeamNames={tiedTeamNames}
               onCreateShowdownRound={onCreateShowdownRound}

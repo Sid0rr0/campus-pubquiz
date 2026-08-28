@@ -74,13 +74,56 @@ async function buildService(
   return service;
 }
 
+/**
+ * Reaches 'ended' via the same END_QUIZ escape hatch the admin's "End Quiz"
+ * button uses (legal from any non-ended status) — the showdown-reveal
+ * intercept only engages once status is genuinely 'ended' (see
+ * GameStateService.applyAction), so tests exercising it need a real 'ended'
+ * status rather than a synthetic one.
+ */
+async function buildServiceAtEnded(
+  answerService: MockAnswerService,
+  showdownService: MockShowdownService,
+  joinCode: string,
+): Promise<GameStateService> {
+  const service = await buildService(answerService, showdownService);
+  const final = await service.applyAction(joinCode, 'END_QUIZ');
+  expect(final.progress.status).toBe('ended');
+  return service;
+}
+
 describe('GameStateService — showdown reveal-step gating', () => {
   const joinCode = 'ABCDEF';
+
+  it("does not intercept ADVANCE before the quiz reaches ended, even with an active round — the block's own reveal keeps driving", async () => {
+    const answerService = createFakeAnswerService();
+    const showdownService = createFakeShowdownService();
+    const service = await buildService(answerService, showdownService);
+    await service.applyAction(joinCode, 'START_QUIZ');
+    await service.applyAction(joinCode, 'ADVANCE'); // rules -> round_intro
+    await service.applyAction(joinCode, 'ADVANCE'); // round_intro -> question_open
+    await service.applyAction(joinCode, 'ADVANCE'); // question_open -> locking
+    await service.applyAction(joinCode, 'ADVANCE'); // locking -> break_intro
+    // Admin composes the tiebreaker question during grading, before the
+    // block's own answers have been revealed to the audience.
+    const round = twoTeamRound();
+    service.setActiveShowdownRound(joinCode, round);
+
+    const stepped = await service.applyAction(joinCode, 'ADVANCE');
+
+    expect(stepped.progress.status).toBe('reveal_intro');
+    expect(stepped.showdownRevealStep).toBe(0);
+    expect(showdownService.resolve).not.toHaveBeenCalled();
+  });
 
   it('throws ShowdownGuessesPendingError when ADVANCE is pressed before every participant has guessed', async () => {
     const answerService = createFakeAnswerService();
     const showdownService = createFakeShowdownService();
-    const service = await buildService(answerService, showdownService);
+    const service = await buildServiceAtEnded(
+      answerService,
+      showdownService,
+      joinCode,
+    );
     const round = twoTeamRound();
     round.participants[0].guess = '40';
     // Team B (seatIndex 1) still hasn't guessed.
@@ -108,7 +151,11 @@ describe('GameStateService — showdown reveal-step gating', () => {
       winnerTeamId: 31,
       isTie: false,
     });
-    const service = await buildService(answerService, showdownService);
+    const service = await buildServiceAtEnded(
+      answerService,
+      showdownService,
+      joinCode,
+    );
     const round = twoTeamRound();
     round.participants[0].guess = '40';
     round.participants[1].guess = '50';
@@ -119,7 +166,7 @@ describe('GameStateService — showdown reveal-step gating', () => {
     expect(step1.activeShowdown?.participants[0].guess).toBe('40');
     expect(step1.activeShowdown?.participants[1].guess).toBeUndefined();
     // Never falls through to getNextGameState — status is untouched.
-    expect(step1.progress.status).toBe('lobby');
+    expect(step1.progress.status).toBe('ended');
 
     const step2 = await service.applyAction(joinCode, 'ADVANCE');
     expect(step2.showdownRevealStep).toBe(2);
@@ -152,7 +199,11 @@ describe('GameStateService — showdown reveal-step gating', () => {
   it('walks PREVIOUS backward without resolving', async () => {
     const answerService = createFakeAnswerService();
     const showdownService = createFakeShowdownService();
-    const service = await buildService(answerService, showdownService);
+    const service = await buildServiceAtEnded(
+      answerService,
+      showdownService,
+      joinCode,
+    );
     const round = twoTeamRound();
     round.participants[0].guess = '40';
     round.participants[1].guess = '50';
