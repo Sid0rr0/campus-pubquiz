@@ -20,7 +20,10 @@ export class GameSession extends BaseEntity {
     | 'furthestOpenIndex'
     | 'isLeaderboardVisible'
     | 'previousStatus'
-    | 'settings';
+    | 'settings'
+    | 'livePhaseKey'
+    | 'phaseStartedAt'
+    | 'phaseElapsedByKey';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
   quiz!: Quiz;
@@ -51,4 +54,16 @@ export class GameSession extends BaseEntity {
 
   @Property({ type: 'json' })
   settings: SessionSettings = DEFAULT_SESSION_SETTINGS;
+
+  /** The timed-phase key currently "live" — see SessionState.livePhaseKey. */
+  @Property({ type: 'text', nullable: true })
+  livePhaseKey: string | null = null;
+
+  /** Epoch-ms livePhaseKey's live segment started, stored as a real timestamp — see SessionState.phaseStartedAt. */
+  @Property({ type: 'timestamptz', nullable: true })
+  phaseStartedAt: Date | null = null;
+
+  /** Final elapsed-ms for every superseded timed phase key — see SessionState.phaseElapsedByKey. */
+  @Property({ type: 'json', default: '{}' })
+  phaseElapsedByKey: Record<string, number> = {};
 }

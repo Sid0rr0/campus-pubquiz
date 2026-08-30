@@ -70,14 +70,26 @@ export class GameStateService implements OnModuleInit {
   @CreateRequestContext()
   async onModuleInit(): Promise<void> {
     const seededGame = await this.seedService.seed();
-    const savedProgress = await this.progressRepository.load(
-      seededGame.gameSessionId,
-    );
+    const saved = await this.progressRepository.load(seededGame.gameSessionId);
     const session = freshSessionState(
       seededGame,
-      savedProgress ?? { ...LOBBY_PROGRESS },
+      saved?.progress ?? { ...LOBBY_PROGRESS },
     );
-    this.sessionStore.set(seededGame.joinCode, session);
+    this.sessionStore.set(
+      seededGame.joinCode,
+      // A saved phase timer is restored exactly (unlike questionLockAt's
+      // deliberate re-arm-fresh below) — its epoch-ms start time is real and
+      // persisted, so the elapsed time it shows after a restart is still
+      // accurate, downtime included.
+      saved
+        ? {
+            ...session,
+            livePhaseKey: saved.livePhaseKey,
+            phaseStartedAt: saved.phaseStartedAt,
+            phaseElapsedByKey: saved.phaseElapsedByKey,
+          }
+        : session,
+    );
     this.sessionStore.markInitialized();
   }
 
@@ -410,10 +422,12 @@ export class GameStateService implements OnModuleInit {
       closestGuessRevealStep,
     };
     this.sessionStore.set(joinCode, updated);
-    await this.progressRepository.save(
-      updated.seededGame.gameSessionId,
+    await this.progressRepository.save(updated.seededGame.gameSessionId, {
       progress,
-    );
+      livePhaseKey: updated.livePhaseKey,
+      phaseStartedAt: updated.phaseStartedAt,
+      phaseElapsedByKey: updated.phaseElapsedByKey,
+    });
     return this.getSnapshot(joinCode);
   }
 

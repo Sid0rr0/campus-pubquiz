@@ -38,12 +38,17 @@ describe('GameStateService — persistence and quiz selection', () => {
     await service.applyAction(joinCode, 'START_QUIZ');
 
     expect(progressRepository.save).toHaveBeenCalledWith(101, {
-      status: 'rules',
-      roundIndex: 0,
-      questionIndex: 0,
-      isLeaderboardVisible: false,
-      revealIndex: 0,
-      furthestOpenIndex: -1,
+      progress: {
+        status: 'rules',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: -1,
+      },
+      livePhaseKey: null,
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
     });
   });
 
@@ -76,6 +81,38 @@ describe('GameStateService — persistence and quiz selection', () => {
       furthestOpenIndex: 0,
     });
     expect(snapshot.currentQuestion?.id).toBe(22);
+  });
+
+  it('rehydrates the phase timer’s live frontier from the repository on init', async () => {
+    const rehydratingRepository = createFakeGameProgressRepository(
+      {
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      },
+      {
+        livePhaseKey: 'q:0:1',
+        phaseStartedAt: 1_700_000_000_000,
+        phaseElapsedByKey: { 'q:0:0': 12_345 },
+      },
+    );
+    const rehydratedService = new GameStateService(
+      asSeedService(createFakeGameStateSeedService()),
+      asGameProgressRepository(rehydratingRepository),
+      createFakeOrm(),
+      asAnswerService(createFakeAnswerService()),
+      asShowdownService(createFakeShowdownService()),
+    );
+    await rehydratedService.onModuleInit();
+
+    const snapshot = rehydratedService.getSnapshot('ABCDEF');
+    // The currently-displayed question is the restored live frontier, so it
+    // shows live — using the *exact* persisted start time, not a fresh one.
+    expect(snapshot.phaseStartedAt).toBe(1_700_000_000_000);
+    expect(snapshot.phaseElapsedMs).toBeNull();
   });
 
   it('exposes the active quiz id', () => {
@@ -153,12 +190,17 @@ describe('GameStateService — persistence and quiz selection', () => {
     await service.applyAction(created.joinCode, 'START_QUIZ');
 
     expect(progressRepository.save).toHaveBeenCalledWith(102, {
-      status: 'rules',
-      roundIndex: 0,
-      questionIndex: 0,
-      isLeaderboardVisible: false,
-      revealIndex: 0,
-      furthestOpenIndex: -1,
+      progress: {
+        status: 'rules',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: -1,
+      },
+      livePhaseKey: null,
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
     });
   });
 

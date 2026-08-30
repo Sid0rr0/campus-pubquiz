@@ -52,32 +52,42 @@ describe('GameProgressRepository (Postgres integration)', () => {
       );
   });
 
-  it('returns the default lobby progress for a freshly seeded session', async () => {
-    const progress = await repository.load(sessionId);
+  it('returns the default lobby progress and an unset phase timer for a freshly seeded session', async () => {
+    const saved = await repository.load(sessionId);
 
-    expect(progress).toEqual({
-      status: 'lobby',
-      roundIndex: 0,
-      questionIndex: 0,
-      isLeaderboardVisible: false,
-      revealIndex: 0,
-      furthestOpenIndex: -1,
-      previousStatus: null,
+    expect(saved).toEqual({
+      progress: {
+        status: 'lobby',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: -1,
+        previousStatus: null,
+      },
+      livePhaseKey: null,
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
     });
   });
 
   it('persists and reloads progress across a simulated restart', async () => {
     await repository.save(sessionId, {
-      status: 'question_open',
-      roundIndex: 1,
-      questionIndex: 2,
-      isLeaderboardVisible: true,
-      revealIndex: 0,
-      furthestOpenIndex: 2,
+      progress: {
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 2,
+        isLeaderboardVisible: true,
+        revealIndex: 0,
+        furthestOpenIndex: 2,
+      },
+      livePhaseKey: null,
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
     });
 
     const reloaded = await repository.load(sessionId);
-    expect(reloaded).toEqual({
+    expect(reloaded?.progress).toEqual({
       status: 'question_open',
       roundIndex: 1,
       questionIndex: 2,
@@ -90,16 +100,21 @@ describe('GameProgressRepository (Postgres integration)', () => {
 
   it('persists and reloads the reveal paging position', async () => {
     await repository.save(sessionId, {
-      status: 'reveal',
-      roundIndex: 1,
-      questionIndex: 2,
-      isLeaderboardVisible: false,
-      revealIndex: 3,
-      furthestOpenIndex: 0,
+      progress: {
+        status: 'reveal',
+        roundIndex: 1,
+        questionIndex: 2,
+        isLeaderboardVisible: false,
+        revealIndex: 3,
+        furthestOpenIndex: 0,
+      },
+      livePhaseKey: null,
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
     });
 
     const reloaded = await repository.load(sessionId);
-    expect(reloaded?.revealIndex).toBe(3);
+    expect(reloaded?.progress.revealIndex).toBe(3);
   });
 
   it('normalizes a legacy locked status to question_open on load', async () => {
@@ -119,9 +134,9 @@ describe('GameProgressRepository (Postgres integration)', () => {
         .fork()
         .getRepository<GameSession, GameSessionRepository>(GameSession),
     );
-    const progress = await freshRepository.load(sessionId);
+    const saved = await freshRepository.load(sessionId);
 
-    expect(progress).toEqual({
+    expect(saved?.progress).toEqual({
       status: 'question_open',
       roundIndex: 0,
       questionIndex: 1,
@@ -133,7 +148,66 @@ describe('GameProgressRepository (Postgres integration)', () => {
   });
 
   it('returns null for a session that does not exist', async () => {
-    const progress = await repository.load(999_999_999);
-    expect(progress).toBeNull();
+    const saved = await repository.load(999_999_999);
+    expect(saved).toBeNull();
+  });
+
+  it('persists and reloads the phase timer’s live frontier exactly, epoch-ms precision included', async () => {
+    const startedAt = Date.UTC(2026, 0, 1, 12, 0, 0, 123);
+    await repository.save(sessionId, {
+      progress: {
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      },
+      livePhaseKey: 'q:0:1',
+      phaseStartedAt: startedAt,
+      phaseElapsedByKey: { 'q:0:0': 12_345 },
+    });
+
+    const reloaded = await repository.load(sessionId);
+
+    expect(reloaded?.livePhaseKey).toBe('q:0:1');
+    expect(reloaded?.phaseStartedAt).toBe(startedAt);
+    expect(reloaded?.phaseElapsedByKey).toEqual({ 'q:0:0': 12_345 });
+  });
+
+  it('persists a null phase timer (no live frontier, e.g. lobby/rules) as null, not a stale value', async () => {
+    await repository.save(sessionId, {
+      progress: {
+        status: 'question_open',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 0,
+      },
+      livePhaseKey: 'q:0:0',
+      phaseStartedAt: Date.now(),
+      phaseElapsedByKey: {},
+    });
+
+    // A later save with no live frontier (e.g. the quiz moved to an untimed
+    // status without ever closing q:0:0) must clear it back to null, not
+    // silently keep the stale value from the previous save.
+    await repository.save(sessionId, {
+      progress: {
+        status: 'round_intro',
+        roundIndex: 0,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 0,
+      },
+      livePhaseKey: 'q:0:0',
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
+    });
+
+    const reloaded = await repository.load(sessionId);
+    expect(reloaded?.phaseStartedAt).toBeNull();
   });
 });

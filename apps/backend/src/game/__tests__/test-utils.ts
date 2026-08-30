@@ -13,7 +13,10 @@ import type { SeededGame } from '@/db/seed.types';
 import type { TeamService } from '@/team/team.service';
 import type { AnswerService } from '@/answer/answer.service';
 import type { BonusService } from '@/bonus/bonus.service';
-import type { GameProgressRepository } from '@/game/state/game-progress.repository';
+import type {
+  GameProgressRepository,
+  PersistedGameProgress,
+} from '@/game/state/game-progress.repository';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/state/game-state.service';
 import type { ShowdownService } from '@/showdown/showdown.service';
@@ -203,8 +206,19 @@ export function createFakeGameStateSeedService() {
 }
 
 export function createFakeGameProgressRepository(
-  initial: GameProgress | null = null,
+  initialProgress: GameProgress | null = null,
+  timerOverrides: Partial<Omit<PersistedGameProgress, 'progress'>> = {},
 ) {
+  const initial: PersistedGameProgress | null =
+    initialProgress === null
+      ? null
+      : {
+          progress: initialProgress,
+          livePhaseKey: null,
+          phaseStartedAt: null,
+          phaseElapsedByKey: {},
+          ...timerOverrides,
+        };
   return {
     save: jest.fn().mockResolvedValue(undefined),
     load: jest.fn().mockResolvedValue(initial),
