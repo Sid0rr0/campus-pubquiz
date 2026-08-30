@@ -107,6 +107,27 @@ describe('PlayPage — question visibility', () => {
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
   });
 
+  it('shows the screen hint for a free-text question carrying a media_url, regardless of type', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q3',
+            type: 'free_text',
+            prompt: 'Name this flag.',
+            mediaUrl: 'https://example.com/france-flag.jpg',
+            points: 1,
+          },
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
+  });
+
   it('does not show the screen hint for a free-text question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(

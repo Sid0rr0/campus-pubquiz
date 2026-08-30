@@ -1,12 +1,11 @@
-import {
-  extractYoutubeVideoId,
-  type BlockQuestionView,
-  type BlockRevealQuestionView,
-  type GameProgress,
-  type JoinAcceptedPayload,
-  type QuestionView,
+import type {
+  BlockQuestionView,
+  BlockRevealQuestionView,
+  GameProgress,
+  JoinAcceptedPayload,
+  QuestionView,
 } from '@campus-pubquiz/types';
-import { QuestionDisplay } from '@/app/display/question-display';
+import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
@@ -119,7 +118,7 @@ export function QuestionBrowser({
           )}
           <p className="font-display text-lg text-magenta">
             <span className="font-body text-sm font-extrabold text-foreground/55">
-              YOUR ANSWER{' '}
+              Your answer{': '}
             </span>
             {myAnswer
               ? formatAnswerValue(
@@ -150,11 +149,7 @@ export function QuestionBrowser({
               )}
             </p>
           )}
-          {(selectedQuestion.type === 'picture' ||
-            selectedQuestion.type === 'audio' ||
-            selectedQuestion.type === 'youtube' ||
-            extractYoutubeVideoId(selectedQuestion.mediaUrl ?? '') !==
-              undefined) && (
+          {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               👀 Look at the screen
             </p>
