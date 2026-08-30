@@ -1,8 +1,9 @@
-import type {
-  ClosestGuessRevealData,
-  GameContext,
-  GameProgress,
-  LeaderboardEntry,
+import {
+  getTimedPhaseKey,
+  type ClosestGuessRevealData,
+  type GameContext,
+  type GameProgress,
+  type LeaderboardEntry,
 } from '@campus-pubquiz/types';
 import type { SeededGame } from '@/db/seed.types';
 import type { TeamRosterEntry } from '@/team/team.service';
@@ -24,6 +25,24 @@ export interface SessionState {
   questionLockAt: number | null;
   /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
   breakEndsAt: number | null;
+  /**
+   * The timed-phase key currently "live" — the most recent genuinely-new
+   * question or grading block to open — or null before any timed phase has
+   * ever opened. Only a genuinely new phase opening moves this; Previous,
+   * and any detour through an untimed status, never touch it. See
+   * computePhaseTimerFields.
+   */
+  livePhaseKey: string | null;
+  /** Epoch-ms livePhaseKey's live segment started, or null when livePhaseKey is null. */
+  phaseStartedAt: number | null;
+  /**
+   * Final, immutable elapsed-ms for every timed phase key that's been
+   * superseded — written exactly once, the moment a *different* genuinely
+   * new phase opens. Never touched again after that, even if the key is
+   * later re-displayed via Previous. Ephemeral like questionLockAt/
+   * breakEndsAt — resets on restart. See computePhaseTimerFields.
+   */
+  phaseElapsedByKey: Record<string, number>;
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
@@ -77,6 +96,13 @@ export function freshSessionState(
   seededGame: SeededGame,
   progress: GameProgress,
 ): SessionState {
+  // Covers both a genuinely fresh session and post-restart rehydration —
+  // same restart tradeoff as questionLockAt below: a timed phase always
+  // resumes live rather than recovering its true elapsed time.
+  const livePhaseKey = getTimedPhaseKey(
+    progress,
+    contextFromSeededGame(seededGame),
+  );
   return {
     seededGame,
     progress,
@@ -85,6 +111,9 @@ export function freshSessionState(
       seededGame.settings.lockGraceSeconds * 1000,
     ),
     breakEndsAt: null,
+    livePhaseKey,
+    phaseStartedAt: livePhaseKey !== null ? Date.now() : null,
+    phaseElapsedByKey: {},
     leaderboard: [],
     leaderboardRevealCount: 0,
     teams: [],
@@ -111,8 +140,13 @@ export function computeQuestionLockAt(
 }
 
 export function getGameContext(session: SessionState): GameContext {
+  return contextFromSeededGame(session.seededGame);
+}
+
+/** Extracted from getGameContext so freshSessionState can compute a GameContext before a SessionState exists to hand it. */
+export function contextFromSeededGame(seededGame: SeededGame): GameContext {
   return {
-    rounds: session.seededGame.rounds.map((round) => ({
+    rounds: seededGame.rounds.map((round) => ({
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
     })),

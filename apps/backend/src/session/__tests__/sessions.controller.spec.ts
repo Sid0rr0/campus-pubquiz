@@ -74,6 +74,8 @@ function snapshot(
     questionLockAt: null,
     closestGuessRevealStep: 0,
     breakEndsAt: null,
+    phaseStartedAt: null,
+    phaseElapsedMs: null,
     settings: DEFAULT_SESSION_SETTINGS,
     activeShowdown: null,
     showdownRevealStep: 0,

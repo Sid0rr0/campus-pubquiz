@@ -1,5 +1,6 @@
 import {
   getQuizStructureSummary,
+  getTimedPhaseKey,
   type AdminQuestionContext,
   type StateSnapshotPayload,
   type TeamView,
@@ -16,6 +17,32 @@ import {
 } from '@/game/state/block-questions.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
+
+/**
+ * The phaseStartedAt/phaseElapsedMs pair for whatever timed phase is
+ * *currently displayed* (session.progress) — which may not be the live
+ * frontier (session.livePhaseKey) if the admin has stepped back via
+ * Previous. Displaying the frontier itself is live (phaseStartedAt set,
+ * ticking); displaying anything else timed is a fixed, already-banked value
+ * (see SessionState.phaseElapsedByKey); displaying an untimed status is
+ * neither.
+ */
+function resolveCurrentPhaseTimerView(session: SessionState): {
+  phaseStartedAt: number | null;
+  phaseElapsedMs: number | null;
+} {
+  const displayedKey = getTimedPhaseKey(session.progress, getGameContext(session));
+  if (displayedKey === null) {
+    return { phaseStartedAt: null, phaseElapsedMs: null };
+  }
+  if (displayedKey === session.livePhaseKey) {
+    return { phaseStartedAt: session.phaseStartedAt, phaseElapsedMs: null };
+  }
+  return {
+    phaseStartedAt: null,
+    phaseElapsedMs: session.phaseElapsedByKey[displayedKey] ?? null,
+  };
+}
 
 /** Assembles the full broadcast payload for a session — the shape every display/admin/players client resyncs to on connect or after every applyAction. */
 export function buildSnapshot(session: SessionState): StateSnapshotPayload {
@@ -42,6 +69,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     questionLockAt: session.questionLockAt,
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
+    ...resolveCurrentPhaseTimerView(session),
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,

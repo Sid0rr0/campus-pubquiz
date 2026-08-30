@@ -21,6 +21,7 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameSessionMutationsService } from '@/game/state/game-session-mutations.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
+import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
 import {
   buildAdminQuestionContext,
   buildSnapshot,
@@ -367,9 +368,20 @@ export class GameStateService implements OnModuleInit {
       progress,
       action,
     );
+    const { livePhaseKey, phaseStartedAt, phaseElapsedByKey } =
+      computePhaseTimerFields(
+        progress,
+        getGameContext(session),
+        session.livePhaseKey,
+        session.phaseStartedAt,
+        session.phaseElapsedByKey,
+      );
     const updated: SessionState = {
       ...sessionWithGradingStatus,
       progress,
+      livePhaseKey,
+      phaseStartedAt,
+      phaseElapsedByKey,
       questionLockAt: computeQuestionLockAt(
         progress,
         sessionWithGradingStatus.seededGame.settings.lockGraceSeconds * 1000,
