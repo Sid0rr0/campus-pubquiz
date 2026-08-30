@@ -44,10 +44,12 @@ export function CopyButton({
       variant={text ? 'outline' : 'icon'}
     >
       {isCopied ? (
-        <CheckIcon aria-hidden="true" />
+        <div className="flex items-center gap-1">
+          <CheckIcon aria-hidden="true" /> Copied
+        </div>
       ) : (
         <>
-          <CopyIcon aria-hidden="true" /> {text && 'Copy code to clipboard'}
+          <CopyIcon aria-hidden="true" /> {text && 'Copy code'}
         </>
       )}
     </Button>
