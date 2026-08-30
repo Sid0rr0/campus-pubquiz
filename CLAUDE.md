@@ -122,7 +122,7 @@ from every player-facing `QuestionView`.
 <type>(<scope>): <description>
 ```
 
-- Types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`, `perf`, `ci` (matches the global git-workflow convention)
+- Types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test` (matches the global git-workflow convention)
 - Scopes: `shared-types`, `backend`, `frontend`, `repo` (root-level/tooling changes not scoped to one workspace)
 
 Examples: `feat(backend): implement GameGateway`, `test(shared-types): add reproducer for game state machine`, `docs(repo): update CLAUDE.md`.
