@@ -29,6 +29,7 @@ export {
   isLastQuestionOfBreakAfterRound,
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
+export { getTimedPhaseKey } from './game-state-timed-phase';
 
 export function getNextGameState(
   progress: GameProgress,

@@ -222,6 +222,26 @@ export interface StateSnapshotPayload {
    * whenever a fresh break starts (entering 'break_intro' from 'locking').
    */
   breakEndsAt: number | null;
+  /**
+   * Epoch-ms the currently-displayed question/grading block started, or
+   * null when it isn't live. There is at most one live timed phase per
+   * session (the "frontier" — the most recent genuinely-new question or
+   * block to open); Previous, and any detour through an untimed status,
+   * never stop it, so it keeps ticking in the background and shows its full
+   * elapsed time whenever it's displayed again — undiminished by wherever
+   * the admin wandered via Previous in between. Mutually exclusive with
+   * phaseElapsedMs: exactly one of the two is non-null whenever the current
+   * status is timed at all.
+   */
+  phaseStartedAt: number | null;
+  /**
+   * Final, immutable elapsed-ms for the currently-displayed question/
+   * grading block, once it's been superseded by a *different* genuinely new
+   * phase — null while it's still the live frontier (see phaseStartedAt) or
+   * the current status isn't timed at all. Set exactly once and never
+   * recomputed, even if displayed again later via Previous.
+   */
+  phaseElapsedMs: number | null;
   /** This session's configurable settings — see SessionSettings. */
   settings: SessionSettings;
   /**
