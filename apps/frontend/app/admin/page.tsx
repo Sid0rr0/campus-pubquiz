@@ -23,6 +23,7 @@ import { useToastOnError } from '@/app/lib/use-toast-on-error';
 import { TeamsTable } from '@/app/admin/teams-table';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
+import { PhaseTimer } from '@/app/admin/phase-timer';
 import { MobileAdminBar } from '@/app/admin/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/admin/session-settings-panel';
 import { useAdminKeyboardShortcuts } from '@/app/admin/use-admin-keyboard-shortcuts';
@@ -426,6 +427,8 @@ function AdminPageContent() {
     answeredTeamIds = [],
     ungradedQuestionIds = [],
     breakEndsAt = null,
+    phaseStartedAt = null,
+    phaseElapsedMs = null,
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
   } = snapshot;
@@ -528,21 +531,29 @@ function AdminPageContent() {
         )}
         {progress.status !== 'lobby' && (
           <>
-            <QuestionBrowserPanel
-              rounds={activeQuizRounds}
-              currentRoundIndex={progress.roundIndex}
-              activeBlockStartIndex={activeBlockStartIndex}
-              selectedQuestionId={effectiveQuestionId}
-              displayQuestionId={displayQuestionId}
-              displayTitleRoundIndex={displayTitleRoundIndex}
-              displayBreakRoundIndex={displayBreakRoundIndex}
-              onSelectQuestion={setSelectedQuestionId}
-              liveAnswers={liveAnswers}
-              teams={teams}
-              onGrade={gradeAnswer}
-              fallbackQuestions={fallbackQuestions}
-              ungradedQuestionIds={ungradedQuestionIds}
-            />
+            <div className="flex flex-col gap-3 md:flex-row md:items-start">
+              <div className="md:min-w-0 md:flex-1">
+                <QuestionBrowserPanel
+                  rounds={activeQuizRounds}
+                  currentRoundIndex={progress.roundIndex}
+                  activeBlockStartIndex={activeBlockStartIndex}
+                  selectedQuestionId={effectiveQuestionId}
+                  displayQuestionId={displayQuestionId}
+                  displayTitleRoundIndex={displayTitleRoundIndex}
+                  displayBreakRoundIndex={displayBreakRoundIndex}
+                  onSelectQuestion={setSelectedQuestionId}
+                  liveAnswers={liveAnswers}
+                  teams={teams}
+                  onGrade={gradeAnswer}
+                  fallbackQuestions={fallbackQuestions}
+                  ungradedQuestionIds={ungradedQuestionIds}
+                />
+              </div>
+              <PhaseTimer
+                phaseStartedAt={phaseStartedAt}
+                phaseElapsedMs={phaseElapsedMs}
+              />
+            </div>
             <section className="flex flex-col gap-3">
               <h2 className="font-display text-xl">Teams</h2>
               <TeamsTable
