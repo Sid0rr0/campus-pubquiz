@@ -20,8 +20,10 @@ function isAudioUrl(url: string): boolean {
 
 // media_url/answer_media_url come from an admin-imported spreadsheet, not a
 // trusted author — restrict to http(s) so a malicious sheet can't slip in a
-// data:/blob: payload that bloats or hangs the shared display.
-function isHttpUrl(url: string): boolean {
+// data:/blob: payload that bloats or hangs the shared display. Exported so
+// callers (e.g. QuestionBrowser's "Look at the screen" hint) can detect
+// whether a question has display-worthy media without duplicating this check.
+export function isHttpUrl(url: string): boolean {
   return HTTP_URL_PATTERN.test(url);
 }
 
@@ -46,6 +48,8 @@ interface AnswerMediaProps {
   mediaTestIdPrefix: string;
   /** Controls <audio autoPlay> and YouTube's autoplay param — defaults to true, matching the pre-settings hardcoded behavior. */
   autoplayMedia?: boolean;
+  /** Overrides the answer image's className — defaults to the original fixed size used by ClosestGuessRevealScreen's standalone reveal. */
+  imageClassName?: string;
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
@@ -56,6 +60,7 @@ export function AnswerMedia({
   url,
   mediaTestIdPrefix,
   autoplayMedia = true,
+  imageClassName = 'max-h-64 rounded-xl',
 }: AnswerMediaProps) {
   const safeUrl = url && isHttpUrl(url) ? url : undefined;
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
@@ -91,7 +96,7 @@ export function AnswerMedia({
       data-testid={`${mediaTestIdPrefix}-answer-image`}
       src={safeUrl}
       alt="Answer image"
-      className="max-h-64 rounded-xl"
+      className={imageClassName}
     />
   );
 }
@@ -130,9 +135,11 @@ export function QuestionDisplay({
   mediaTestIdPrefix,
   autoplayMedia = true,
 }: QuestionDisplayProps) {
-  // On reveal, answer_media_url (when set) replaces the question's own
-  // media_url rather than showing both — e.g. a picture round's image gives
-  // way to whatever the answer_media_url shows instead.
+  // On reveal, answer_media_url (when set) normally replaces the question's
+  // own media_url rather than showing both. The one exception is a plain
+  // picture question (not audio/video): then both are shown together,
+  // question picture smaller, answer picture bigger, side by side — see
+  // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
   const isSort = type === 'sort';
   const isMatch = type === 'match';
@@ -144,15 +151,22 @@ export function QuestionDisplay({
     isMatch && isRevealing && correctAnswer
       ? splitPipeList(correctAnswer)
       : undefined;
+  const isRevealingWithAnswerMedia =
+    isRevealing && answerMediaUrl !== undefined;
   const rawQuestionMediaUrl =
-    isRevealing && answerMediaUrl ? undefined : mediaUrl;
-  const questionMediaUrl =
-    rawQuestionMediaUrl && isHttpUrl(rawQuestionMediaUrl)
-      ? rawQuestionMediaUrl
-      : undefined;
-  const questionYoutubeId = questionMediaUrl
-    ? extractYoutubeVideoId(questionMediaUrl)
+    mediaUrl && isHttpUrl(mediaUrl) ? mediaUrl : undefined;
+  const questionYoutubeId = rawQuestionMediaUrl
+    ? extractYoutubeVideoId(rawQuestionMediaUrl)
     : undefined;
+  const questionIsImage =
+    rawQuestionMediaUrl !== undefined &&
+    !questionYoutubeId &&
+    !isAudioUrl(rawQuestionMediaUrl);
+  const showSideBySideReveal = isRevealingWithAnswerMedia && questionIsImage;
+  const questionMediaUrl =
+    isRevealingWithAnswerMedia && !showSideBySideReveal
+      ? undefined
+      : rawQuestionMediaUrl;
 
   return (
     <>
@@ -178,15 +192,38 @@ export function QuestionDisplay({
       )}
       {questionMediaUrl &&
         !questionYoutubeId &&
-        !isAudioUrl(questionMediaUrl) && (
-          // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
-          <img
-            data-testid={`${mediaTestIdPrefix}-image`}
-            src={questionMediaUrl}
-            alt="Question image"
-            className="max-h-64 rounded-xl"
-          />
-        )}
+        !isAudioUrl(questionMediaUrl) &&
+        (showSideBySideReveal ? (
+          <div className="flex w-full min-h-0 flex-1 items-stretch justify-center gap-6">
+            <div className="flex min-h-0 min-w-0 flex-2 items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
+              <img
+                data-testid={`${mediaTestIdPrefix}-image`}
+                src={questionMediaUrl}
+                alt="Question image"
+                className="max-h-full max-w-full rounded-xl object-contain"
+              />
+            </div>
+            <div className="flex min-h-0 min-w-0 flex-3 items-center justify-center">
+              <AnswerMedia
+                url={answerMediaUrl}
+                mediaTestIdPrefix={mediaTestIdPrefix}
+                autoplayMedia={autoplayMedia}
+                imageClassName="max-h-full max-w-full rounded-xl object-contain"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex w-full min-h-0 flex-1 items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
+            <img
+              data-testid={`${mediaTestIdPrefix}-image`}
+              src={questionMediaUrl}
+              alt="Question image"
+              className="max-h-full max-w-full rounded-xl object-contain"
+            />
+          </div>
+        ))}
       {questionMediaUrl &&
         !questionYoutubeId &&
         isAudioUrl(questionMediaUrl) && (
@@ -313,19 +350,20 @@ export function QuestionDisplay({
         </ul>
       )}
       {isRevealing && !isSort && !isMatch && (
-        <p className="font-display text-lg text-green">
-          <span className="font-body text-sm font-extrabold text-foreground/55">
-            ANSWER{' '}
-          </span>
+        <p className="font-extrabold text-3xl text-green border-2 px-4 py-2 border-magenta">
+          <span className="font-body text-foreground/55">Answer{': '}</span>
           {correctAnswer}
         </p>
       )}
-      {isRevealing && (
-        <AnswerMedia
-          url={answerMediaUrl}
-          mediaTestIdPrefix={mediaTestIdPrefix}
-          autoplayMedia={autoplayMedia}
-        />
+      {isRevealing && !showSideBySideReveal && answerMediaUrl && (
+        <div className="flex w-full min-h-0 flex-1 items-center justify-center">
+          <AnswerMedia
+            url={answerMediaUrl}
+            mediaTestIdPrefix={mediaTestIdPrefix}
+            autoplayMedia={autoplayMedia}
+            imageClassName="max-h-full max-w-full rounded-xl object-contain"
+          />
+        </div>
       )}
     </>
   );

@@ -15,7 +15,7 @@ export function QuestionOpenScreen({
   autoplayMedia,
 }: QuestionOpenScreenProps) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
       <QuestionDisplay
         type={question.type}
         prompt={question.prompt}

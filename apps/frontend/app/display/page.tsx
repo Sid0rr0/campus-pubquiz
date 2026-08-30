@@ -210,7 +210,7 @@ function DisplayPageContent() {
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
 
   return (
-    <main className="flex min-h-screen flex-col bg-background text-foreground">
+    <main className="flex h-dvh flex-col bg-background text-foreground">
       <TriviaHeader label={headerContent.label} badge={headerContent.badge} />
       <AnimatePresence mode="wait">
         <motion.div
@@ -219,7 +219,7 @@ function DisplayPageContent() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -16 }}
           transition={{ duration: 0.35, ease: 'easeInOut' }}
-          className="flex flex-1 flex-col"
+          className="flex min-h-0 flex-1 flex-col"
         >
           {progress.isLeaderboardVisible ? (
             <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
@@ -329,7 +329,7 @@ function DisplayPageContent() {
                     />
                   </div>
                 ) : (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                     <QuestionDisplay
                       type={revealQuestion.type}
                       prompt={revealQuestion.prompt}

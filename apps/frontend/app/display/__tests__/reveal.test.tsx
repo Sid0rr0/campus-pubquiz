@@ -227,7 +227,7 @@ describe('DisplayPage — reveal', () => {
     );
   });
 
-  it('shows only answer_media_url on reveal when a question has both it and its own media_url', () => {
+  it('shows both media_url and answer_media_url side by side on reveal when a picture question has both', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -253,7 +253,10 @@ describe('DisplayPage — reveal', () => {
       'src',
       'https://example.com/eiffel-plaque.jpg',
     );
-    expect(screen.queryByTestId('reveal-image')).not.toBeInTheDocument();
+    expect(screen.getByTestId('reveal-image')).toHaveAttribute(
+      'src',
+      'https://example.com/landmark.jpg',
+    );
   });
 
   it('shows an answer_media_url image on reveal for a free_text question, independent of type', () => {
