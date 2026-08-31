@@ -15,6 +15,7 @@ import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
+import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
@@ -274,8 +275,7 @@ function PlayPageContent() {
   );
   const canGoBackToQuestion = blockQuestionIndex > 0;
   const canGoForwardToQuestion =
-    blockQuestionIndex !== -1 &&
-    blockQuestionIndex < blockQuestions.length - 1;
+    blockQuestionIndex !== -1 && blockQuestionIndex < blockQuestions.length - 1;
   function goToPreviousQuestion(): void {
     if (blockQuestionIndex > 0) {
       setBrowsedQuestionId(blockQuestions[blockQuestionIndex - 1].id);
@@ -347,20 +347,21 @@ function PlayPageContent() {
     ? (openedQuestions.find((entry) => entry.id === selectedQuestion.id)
         ?.pointsAwarded ?? null)
     : null;
-  // The mobile bonus bar is fixed to the viewport bottom (see
-  // BonusProgressPanel), so the page needs matching bottom padding on mobile
-  // or its bar would cover the last bit of inline content underneath it.
+  // MobileQuizActionsBar is fixed to the viewport bottom on mobile, so the
+  // page needs matching bottom padding there or the bar would cover the
+  // last bit of inline content underneath it.
   const hasBonusPanel = settings.enabledBonusCategories.length > 0;
   const showBonusAvailability = !isShowingLastBreak(progress, quizStructure);
+  const hasMobileActionBar = hasBonusPanel || openedQuestions.length > 0;
 
   return (
     <main
       className={`flex min-h-screen flex-col bg-background px-5 pt-1 text-foreground ${
-        hasBonusPanel ? 'pb-24 md:pb-5' : 'pb-5'
+        hasMobileActionBar ? 'pb-24 md:pb-5' : 'pb-5'
       }`}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+        <p className="text-sm font-extrabold tracking-wide text-foreground/55 mb-2">
           Playing as {teamName}
         </p>
         <div className="hidden items-center gap-2 md:flex">
@@ -368,13 +369,19 @@ function PlayPageContent() {
             type="button"
             variant="text-quiet"
             onClick={openSettings}
+            className="flex"
           >
             <GearIcon aria-hidden="true" />
             Settings
           </Button>
-          <Button type="button" variant="text-quiet" onClick={handleLogOut}>
+          <Button
+            type="button"
+            variant="text-quiet"
+            onClick={handleLogOut}
+            className="flex"
+          >
             <ExitIcon aria-hidden="true" />
-            Log out
+            Change team
           </Button>
         </div>
       </div>
@@ -405,7 +412,7 @@ function PlayPageContent() {
         myTeamId={myTeamId}
         onSubmitShowdownGuess={submitShowdownGuess}
       />
-      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+      <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start">
         {showBlockBrowser && selectedQuestion && (
           <div className="md:min-w-0 md:flex-1">
             <QuestionBrowser
@@ -434,23 +441,41 @@ function PlayPageContent() {
             />
           </div>
         )}
-        {openedQuestions.length > 0 && (
-          <AnsweredQuestionsPanel
-            entries={openedQuestions}
-            jumpableIds={jumpableQuestionIds}
-            onSelectQuestion={setBrowsedQuestionId}
-          />
-        )}
-        {hasBonusPanel && (
-          <BonusProgressPanel
-            enabledCategories={settings.enabledBonusCategories}
-            maxAwardsPerCategory={settings.maxBonusAwardsPerCategory}
-            myBonusAwards={myBonusAwards}
-            quizStructure={quizStructure}
-            showAvailability={showBonusAvailability}
-          />
-        )}
+        <div className="flex flex-col gap-6 md:flex-row">
+          {openedQuestions.length > 0 && (
+            <AnsweredQuestionsPanel
+              entries={openedQuestions}
+              jumpableIds={jumpableQuestionIds}
+              onSelectQuestion={setBrowsedQuestionId}
+            />
+          )}
+          {hasBonusPanel && (
+            <BonusProgressPanel
+              enabledCategories={settings.enabledBonusCategories}
+              maxAwardsPerCategory={settings.maxBonusAwardsPerCategory}
+              myBonusAwards={myBonusAwards}
+              quizStructure={quizStructure}
+              showAvailability={showBonusAvailability}
+            />
+          )}
+        </div>
       </div>
+      <MobileQuizActionsBar
+        historyEntries={openedQuestions}
+        jumpableHistoryIds={jumpableQuestionIds}
+        onSelectHistoryQuestion={setBrowsedQuestionId}
+        bonus={
+          hasBonusPanel
+            ? {
+                enabledCategories: settings.enabledBonusCategories,
+                maxAwardsPerCategory: settings.maxBonusAwardsPerCategory,
+                myBonusAwards,
+                quizStructure,
+                showAvailability: showBonusAvailability,
+              }
+            : null
+        }
+      />
       <SettingsModal
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}

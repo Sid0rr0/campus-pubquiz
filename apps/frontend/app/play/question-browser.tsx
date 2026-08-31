@@ -114,10 +114,17 @@ export function QuestionBrowser({
               matchTargets={revealQuestion.matchTargets}
               correctAnswer={revealQuestion.answer}
               mediaTestIdPrefix="play-reveal"
+              promptClassName="text-balance font-display text-2xl leading-tight"
             />
           )}
-          <p className="font-display text-lg text-magenta">
-            <span className="font-body text-sm font-extrabold text-foreground/55">
+          <p
+            className={`font-display text-2xl ${
+              myAnswerPoints === revealQuestion.points
+                ? 'text-green'
+                : 'text-magenta'
+            }`}
+          >
+            <span className="font-body text-md font-extrabold text-foreground/55">
               Your answer{': '}
             </span>
             {myAnswer
@@ -129,7 +136,7 @@ export function QuestionBrowser({
               : 'No answer submitted'}
           </p>
           {myAnswerPoints !== null && (
-            <p className="font-body text-sm font-extrabold text-foreground/55">
+            <p className="font-body text-3xl font-extrabold text-foreground/55">
               {myAnswerPoints} / {revealQuestion.points} points
             </p>
           )}
@@ -139,19 +146,19 @@ export function QuestionBrowser({
           <h1 className="text-balance font-display text-2xl leading-tight">
             {selectedQuestion.prompt}
           </h1>
-          {myAnswer && (
+          {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              Submitted:{' '}
+              👀 Look at the screen
+            </p>
+          )}
+          {myAnswer && (
+            <p className="text-center text-lg font-extrabold tracking-wide">
+              <span className="text-foreground/55">Submitted: </span>
               {formatAnswerValue(
                 myAnswer,
                 selectedQuestion.type,
                 selectedQuestion.options,
               )}
-            </p>
-          )}
-          {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
-            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
             </p>
           )}
           {isAnswerable && team && (

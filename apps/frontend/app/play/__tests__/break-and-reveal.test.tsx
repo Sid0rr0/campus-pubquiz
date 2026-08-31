@@ -307,6 +307,80 @@ describe('PlayPage — break and reveal', () => {
     expect(screen.getByText('0 / 5 points')).toBeInTheDocument();
   });
 
+  it('colors YOUR ANSWER green during reveal when it earned full points', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+          revealQuestions: [{ ...q1, answer: 'Banana' }],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Banana' },
+        myAnswerGrades: {
+          r1q1: { pointsAwarded: 5, gradedAt: '2024-01-01T00:00:00.000Z' },
+        },
+        seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      screen.getByText('Banana', { selector: 'p.font-display' }),
+    ).toHaveClass('text-green');
+  });
+
+  it('colors YOUR ANSWER red during reveal when it earned less than full points', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+          revealQuestions: [{ ...q1, answer: 'Banana' }],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Mango' },
+        myAnswerGrades: {
+          r1q1: { pointsAwarded: 0, gradedAt: '2024-01-01T00:00:00.000Z' },
+        },
+        seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(
+      screen.getByText('Mango', { selector: 'p.font-display' }),
+    ).toHaveClass('text-magenta');
+  });
+
   it('formats YOUR ANSWER for a sort/match question during reveal instead of showing the raw pipe-joined value', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {

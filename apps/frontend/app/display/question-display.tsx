@@ -118,6 +118,8 @@ interface QuestionDisplayProps {
   mediaTestIdPrefix: string;
   /** Controls <audio autoPlay> and YouTube's autoplay param — defaults to true, matching the pre-settings hardcoded behavior. */
   autoplayMedia?: boolean;
+  /** Overrides the prompt heading's className — defaults to the big-screen size used by /display; the /play reveal step passes its question_open size to keep both states visually consistent. */
+  promptClassName?: string;
 }
 
 // Shared by question_open and reveal so the big screen shows each question
@@ -134,6 +136,7 @@ export function QuestionDisplay({
   answerMediaUrl,
   mediaTestIdPrefix,
   autoplayMedia = true,
+  promptClassName = 'text-balance font-display text-4xl leading-snug',
 }: QuestionDisplayProps) {
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
@@ -170,9 +173,7 @@ export function QuestionDisplay({
 
   return (
     <>
-      <h1 className="text-balance font-display text-4xl leading-snug">
-        {prompt}
-      </h1>
+      <h1 className={promptClassName}>{prompt}</h1>
       {questionMediaUrl && questionYoutubeId && (
         <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
           <iframe
@@ -350,7 +351,7 @@ export function QuestionDisplay({
         </ul>
       )}
       {isRevealing && !isSort && !isMatch && (
-        <p className="font-extrabold text-3xl text-green border-2 px-4 py-2 border-magenta">
+        <p className="font-extrabold text-2xl">
           <span className="font-body text-foreground/55">Answer{': '}</span>
           {correctAnswer}
         </p>
