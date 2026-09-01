@@ -147,7 +147,7 @@ describe('PlayPage — logout and errors', () => {
     );
     renderWithQuery(<PlayPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /log out/i }));
+    await userEvent.click(screen.getByRole('button', { name: /change team/i }));
 
     expect(
       screen.getByRole('textbox', { name: /team name/i }),

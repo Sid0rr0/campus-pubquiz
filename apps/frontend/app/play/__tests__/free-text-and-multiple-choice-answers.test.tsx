@@ -140,7 +140,11 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     );
     renderWithQuery(<PlayPage />);
 
-    expect(screen.getByText('Submitted: Banana')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) => element?.textContent === 'Submitted: Banana',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('does not show a submitted-answer note before the team has answered', () => {
