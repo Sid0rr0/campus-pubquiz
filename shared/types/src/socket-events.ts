@@ -444,6 +444,8 @@ export interface SessionSettings {
   enabledBonusCategories: BonusCategory[];
   /** Controls <audio autoPlay> and YouTube's autoplay=1 on /display. */
   autoplayMedia: boolean;
+  /** Plays a ~60s countdown track during the 'locking' phase on /display and /admin, timed to end exactly at questionLockAt regardless of lockGraceSeconds. */
+  playLockCountdownSound: boolean;
   /** One entry per rendered /rules bullet line — display text only, no enforcement. */
   rules: string[];
   /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
@@ -465,6 +467,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
     ...BONUS_CATEGORIES,
   ]) as BonusCategory[],
   autoplayMedia: true,
+  playLockCountdownSound: true,
   maxBonusAwardsPerCategory: Object.freeze({
     shot: 2,
     selfie: 1,

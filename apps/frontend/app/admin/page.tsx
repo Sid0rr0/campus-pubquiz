@@ -13,6 +13,7 @@ import {
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
@@ -20,6 +21,7 @@ import { useAuth } from '@/app/lib/use-auth';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
+import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { TeamsTable } from '@/app/admin/teams-table';
 import { DesktopSidebar } from '@/app/admin/desktop-sidebar';
 import { QuestionBrowserPanel } from '@/app/admin/question-browser-panel';
@@ -82,6 +84,13 @@ function AdminPageContent() {
     isAuthenticated && Boolean(connectJoinCode),
     connectJoinCode ?? undefined,
   );
+  const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
+    useLockCountdownSound({
+      lockAt: snapshot?.questionLockAt ?? null,
+      enabled:
+        snapshot?.settings?.playLockCountdownSound ??
+        DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
+    });
   const connectedJoinCode = snapshot?.joinCode;
 
   // Adopts a new ?code= only when it points at a session the socket doesn't
@@ -462,6 +471,7 @@ function AdminPageContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
+      {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
       <MobileAdminBar
         progressStatus={progress.status}
         roundIndex={progress.roundIndex}

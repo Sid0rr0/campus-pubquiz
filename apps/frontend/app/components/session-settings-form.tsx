@@ -139,6 +139,20 @@ export function SessionSettingsForm({
         Autoplay media
       </label>
 
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.playLockCountdownSound}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              playLockCountdownSound: event.target.checked,
+            })
+          }
+        />
+        Play countdown sound
+      </label>
+
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-extrabold">Rules</span>
         <ul className="flex flex-col gap-2">

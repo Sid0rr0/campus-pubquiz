@@ -27,6 +27,7 @@ export const sessionSettingsPartialSchema = z
       .array(z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]))
       .min(1, 'At least one bonus category must stay enabled'),
     autoplayMedia: z.boolean(),
+    playLockCountdownSound: z.boolean(),
     rules: z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),

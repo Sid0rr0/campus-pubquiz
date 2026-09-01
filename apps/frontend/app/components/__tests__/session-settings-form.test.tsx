@@ -130,6 +130,23 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('toggles playLockCountdownSound off', async () => {
+    const onChange = vi.fn();
+    render(
+      <SessionSettingsForm
+        value={DEFAULT_SESSION_SETTINGS}
+        onChange={onChange}
+      />,
+    );
+
+    await userEvent.click(screen.getByLabelText(/play countdown sound/i));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      playLockCountdownSound: false,
+    });
+  });
+
   it('adds a new blank rule line', async () => {
     const onChange = vi.fn();
     render(

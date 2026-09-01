@@ -271,6 +271,7 @@ describe('SessionSettings defaults', () => {
       lockGraceSeconds: 60,
       enabledBonusCategories: ['shot', 'selfie', 'custom'],
       autoplayMedia: true,
+      playLockCountdownSound: true,
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       rules: [
         'Max 6 players per team, every additional player costs the team −2 points.',

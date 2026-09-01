@@ -12,7 +12,9 @@ import {
   type GameProgress,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
+import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
+import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
@@ -22,7 +24,10 @@ import { BreakRoundIntroScreen } from '@/app/display/break-round-intro-screen';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
 import { LobbyScreen } from '@/app/display/lobby-screen';
 import { QuestionDisplay } from '@/app/display/question-display';
-import { QuestionLockCountdown } from '@/app/display/question-lock-countdown';
+import {
+  QuestionLockCountdown,
+  QuestionLockHeading,
+} from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RevealIntroScreen } from '@/app/display/reveal-intro-screen';
 import { TriviaHeader } from '@/app/display/trivia-header';
@@ -127,6 +132,13 @@ function DisplayPageContent() {
     Boolean(codeFromUrl),
     codeFromUrl,
   );
+  const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
+    useLockCountdownSound({
+      lockAt: snapshot?.questionLockAt ?? null,
+      enabled:
+        snapshot?.settings?.playLockCountdownSound ??
+        DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
+    });
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) still needs the picker's error message on screen, so this only
@@ -211,6 +223,7 @@ function DisplayPageContent() {
 
   return (
     <main className="flex h-dvh flex-col bg-background text-foreground">
+      {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
       <TriviaHeader label={headerContent.label} badge={headerContent.badge} />
       <AnimatePresence mode="wait">
         <motion.div
@@ -265,11 +278,12 @@ function DisplayPageContent() {
               )}
               {progress.status === 'locking' && questionLockAt !== null && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-                  <h1 className="font-display text-4xl">
-                    Time&apos;s almost up!
-                  </h1>
+                  <QuestionLockHeading
+                    key={`heading-${questionLockAt}`}
+                    lockAt={questionLockAt}
+                  />
                   <QuestionLockCountdown
-                    key={questionLockAt}
+                    key={`ring-${questionLockAt}`}
                     lockAt={questionLockAt}
                   />
                 </div>

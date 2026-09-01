@@ -6,9 +6,37 @@ import { motion } from 'motion/react';
 const LOCK_RING_RADIUS = 45;
 const LOCK_RING_CIRCUMFERENCE = 2 * Math.PI * LOCK_RING_RADIUS;
 
+// Below this many seconds remaining, the heading switches from the initial
+// "last minute" warning to a more urgent "almost up" message.
+const NEAR_LOCK_THRESHOLD_SECONDS = 15;
+
 interface QuestionLockCountdownProps {
   /** Epoch-ms deadline when the question auto-locks. */
   lockAt: number;
+}
+
+// Companion to QuestionLockCountdown's ring — same deadline, same tick
+// cadence, just rendered as a heading instead of a ring+number.
+export function QuestionLockHeading({ lockAt }: QuestionLockCountdownProps) {
+  const [secondsRemaining, setSecondsRemaining] = useState(() =>
+    Math.max(0, Math.ceil((lockAt - Date.now()) / 1000)),
+  );
+
+  useEffect(() => {
+    const tick = () =>
+      setSecondsRemaining(Math.max(0, Math.ceil((lockAt - Date.now()) / 1000)));
+    tick();
+    const interval = setInterval(tick, 250);
+    return () => clearInterval(interval);
+  }, [lockAt]);
+
+  return (
+    <h1 className="font-display text-4xl">
+      {secondsRemaining <= NEAR_LOCK_THRESHOLD_SECONDS
+        ? "Time's almost up!"
+        : 'You have the last minute to answer!'}
+    </h1>
+  );
 }
 
 // Ring duration is derived from the remaining time at mount, not a hardcoded

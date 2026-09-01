@@ -17,6 +17,7 @@ describe('sessionSettingsPartialSchema', () => {
       lockGraceSeconds: 15,
       enabledBonusCategories: ['shot'],
       autoplayMedia: false,
+      playLockCountdownSound: false,
       rules: ['Be nice.'],
     });
 
@@ -25,6 +26,7 @@ describe('sessionSettingsPartialSchema', () => {
       lockGraceSeconds: 15,
       enabledBonusCategories: ['shot'],
       autoplayMedia: false,
+      playLockCountdownSound: false,
       rules: ['Be nice.'],
     });
   });
@@ -81,6 +83,13 @@ describe('sessionSettingsPartialSchema', () => {
   it('rejects a non-boolean autoplayMedia', () => {
     expect(
       sessionSettingsPartialSchema.safeParse({ autoplayMedia: 'yes' }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a non-boolean playLockCountdownSound', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ playLockCountdownSound: 'yes' })
+        .success,
     ).toBe(false);
   });
 
