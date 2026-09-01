@@ -1,0 +1,54 @@
+name: Deploy Backend to Azure
+
+# Manual by design: nothing deploys on push to main. Deploy by cutting a
+# release tag, e.g.:
+#   git tag v1.2.0 && git push origin v1.2.0
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write # required for Azure OIDC login
+  contents: read
+  packages: write # required to push the image to GHCR
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: Production # must match the federated credential's subject (case-sensitive)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image repo (GHCR requires lowercase)
+        run: echo "IMAGE_REPO=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_REPO }}-backend:${{ github.ref_name }}
+            ghcr.io/${{ env.IMAGE_REPO }}-backend:latest
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy image to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: campus-pubquiz-backend # must match the Web App name you create in Azure
+          images: ghcr.io/${{ env.IMAGE_REPO }}-backend:${{ github.ref_name }}
