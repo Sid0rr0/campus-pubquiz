@@ -14,7 +14,6 @@ import {
 const QUESTION_TYPES: readonly QuestionType[] = [
   'free_text',
   'multiple_choice',
-  'picture',
   'audio',
   'youtube',
   'sort',
@@ -66,12 +65,6 @@ const questionRowSchema = z.discriminatedUnion('type', [
       path: ['answer'],
       error: 'Answer must be one of the options',
     }),
-  z.object({
-    type: z.literal('picture'),
-    ...baseFields,
-    media_url: httpUrl,
-    answer_media_url: httpUrl.optional(),
-  }),
   z.object({
     type: z.literal('audio'),
     ...baseFields,

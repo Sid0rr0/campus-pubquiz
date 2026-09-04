@@ -47,11 +47,6 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
       error: 'Answer must be one of the options',
     }),
   z.object({
-    type: z.literal('picture'),
-    ...baseQuestionFields,
-    mediaUrl: httpUrl,
-  }),
-  z.object({
     type: z.literal('audio'),
     ...baseQuestionFields,
     mediaUrl: httpUrl,

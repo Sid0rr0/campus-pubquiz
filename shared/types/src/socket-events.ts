@@ -55,7 +55,6 @@ export function sessionRoom(code: string, role: SocketRoomName): string {
 export type QuestionType =
   | 'free_text'
   | 'multiple_choice'
-  | 'picture'
   | 'audio'
   | 'youtube'
   | 'sort'
@@ -279,7 +278,7 @@ export interface SubmitAnswerPayload {
  * (frontend) recognizes it, to render a friendly label instead of the raw
  * sentinel. Never equals a real correct answer, so it's auto-graded 0 for
  * multiple_choice/sort/match/closest_guess exactly like any other wrong
- * answer, and free_text/picture/audio still fall to the admin to grade.
+ * answer, and free_text/audio still fall to the admin to grade.
  */
 export const IDK_ANSWER_VALUE = '__idk__';
 
@@ -288,9 +287,9 @@ export interface AnswerReceivedPayload {
   teamId: number;
   teamName: string;
   value: string;
-  /** Set for auto-graded types (multiple_choice/sort/match), graded the instant they're submitted; 0 for types that need admin grading (free_text/picture/audio) until GRADE_ANSWER fires. */
+  /** Set for auto-graded types (multiple_choice/sort/match), graded the instant they're submitted; 0 for types that need admin grading (free_text/audio) until GRADE_ANSWER fires. */
   pointsAwarded: number;
-  /** Set the instant auto-graded types are submitted; null until the admin grades a free_text/picture/audio answer. */
+  /** Set the instant auto-graded types are submitted; null until the admin grades a free_text/audio answer. */
   gradedAt: string | null;
 }
 

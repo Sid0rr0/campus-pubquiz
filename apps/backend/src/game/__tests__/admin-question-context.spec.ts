@@ -29,7 +29,7 @@ describe('GameStateService — getAdminQuestionContext', () => {
 
   it('returns the correct answer and round position for a question', () => {
     expect(service.getAdminQuestionContext(joinCode, 23)).toEqual({
-      type: 'picture',
+      type: 'free_text',
       prompt: 'Which landmark is shown?',
       mediaUrl: 'https://example.com/landmark.jpg',
       points: 3,

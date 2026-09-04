@@ -33,13 +33,13 @@ describe('DisplayPage — media rendering', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
   });
 
-  it('renders a picture question as an image', () => {
+  it('renders a question with an image mediaUrl as an image', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r2q1',
-          type: 'picture',
+          type: 'free_text',
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
           points: 3,
@@ -79,7 +79,7 @@ describe('DisplayPage — media rendering', () => {
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
 
-  it('renders media_url on a multiple_choice/free_text question too, not just picture/audio', () => {
+  it('renders media_url on a multiple_choice/free_text question too, not just audio', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'question_open' }),
@@ -109,7 +109,7 @@ describe('DisplayPage — media rendering', () => {
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r4q1',
-          type: 'picture',
+          type: 'free_text',
           prompt: 'Name this music video.',
           mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
           mediaStartSeconds: 82,
@@ -159,7 +159,7 @@ describe('DisplayPage — media rendering', () => {
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r4q1',
-          type: 'picture',
+          type: 'free_text',
           prompt: 'Name this music video.',
           mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
           points: 3,

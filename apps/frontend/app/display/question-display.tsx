@@ -140,8 +140,8 @@ export function QuestionDisplay({
 }: QuestionDisplayProps) {
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
-  // picture question (not audio/video): then both are shown together,
-  // question picture smaller, answer picture bigger, side by side — see
+  // question whose media is an image (not audio/video): then both are shown
+  // together, question image smaller, answer image bigger, side by side — see
   // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
   const isSort = type === 'sort';

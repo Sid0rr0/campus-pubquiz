@@ -279,10 +279,10 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
 ```
 
-`type` is one of `free_text`, `multiple_choice`, `picture`, `audio`,
+`type` is one of `free_text`, `multiple_choice`, `audio`,
 `youtube`, `sort`, `match`, `closest_guess` — see
 [Question Types](#question-types) for what each one needs in `options` and
-`answer`. `media_url` is required for `picture`/`audio`/`youtube` (for
+`answer`. `media_url` is required for `audio`/`youtube` (for
 `youtube` it must resolve to a `youtube.com`/`youtu.be` video id — enforced by
 both the CSV import schema and the manual editor's save validation), optional
 otherwise. `answer_media_url` is optional on any type (shown alongside the
@@ -296,8 +296,7 @@ author one — the manual editor's type picker offers it, requires `media_url`,
 and shows dedicated Clip start/Clip end inputs. Under the hood display
 rendering is actually keyed off `media_url` itself (`youtube.com`/`youtu.be`),
 not the `type` value, matching how image vs. audio already works — so a
-`picture`/`free_text`/etc. row with a YouTube `media_url` still embeds too,
-for quizzes authored before this type existed. A clip's start/end (seconds
+`free_text`/etc. row with a YouTube `media_url` still embeds too. A clip's start/end (seconds
 into the video) is best-effort parsed out of that question's `notes` cell,
 e.g. `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
 parse). This isn't strict JSON — it's a regex looking for `start`/`end`
@@ -310,7 +309,7 @@ channel of its own) — a YouTube answer video always renders full-length.
 
 ## Question Types
 
-Beyond `free_text`, `multiple_choice`, `picture`, `audio`, and `youtube`
+Beyond `free_text`, `multiple_choice`, `audio`, and `youtube`
 (covered above), three types have their own submission format and grading
 behavior:
 
@@ -349,7 +348,7 @@ behavior:
 Postgres via MikroORM. Two halves of the schema:
 
 - **Authoring time**: `quizzes → rounds → questions`. Questions have a `type`
-  (`free_text`, `multiple_choice`, `picture`, `audio`, `youtube`) plus a JSON
+  (`free_text`, `multiple_choice`, `audio`, `youtube`) plus a JSON
   payload for type-specific data (options, media URL), so new question types
   don't need migrations.
 - **Runtime**: `game_sessions → teams → answers`, plus `bonus_awards` and the

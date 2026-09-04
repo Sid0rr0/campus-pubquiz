@@ -200,7 +200,7 @@ describe('DisplayPage — reveal', () => {
     expect(screen.queryByText('Tallest mountain?')).not.toBeInTheDocument();
   });
 
-  it('shows media for picture and audio reveal questions', () => {
+  it('shows media for an image mediaUrl and audio reveal questions', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -208,7 +208,7 @@ describe('DisplayPage — reveal', () => {
         revealQuestions: [
           {
             id: 'r2q1',
-            type: 'picture',
+            type: 'free_text',
             prompt: 'Which landmark?',
             mediaUrl: 'https://example.com/landmark.jpg',
             points: 3,
@@ -227,7 +227,7 @@ describe('DisplayPage — reveal', () => {
     );
   });
 
-  it('shows both media_url and answer_media_url side by side on reveal when a picture question has both', () => {
+  it('shows both media_url and answer_media_url side by side on reveal when the question media is an image', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -235,7 +235,7 @@ describe('DisplayPage — reveal', () => {
         revealQuestions: [
           {
             id: 'r2q1',
-            type: 'picture',
+            type: 'free_text',
             prompt: 'Which landmark?',
             mediaUrl: 'https://example.com/landmark.jpg',
             points: 3,

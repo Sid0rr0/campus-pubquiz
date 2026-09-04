@@ -45,7 +45,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
       questions: [
         {
           id: 3,
-          type: 'picture',
+          type: 'free_text',
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
           answer: 'Eiffel Tower',

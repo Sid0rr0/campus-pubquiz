@@ -62,7 +62,7 @@ describe('DisplayPage — break', () => {
   const twoQuestionBlock = [
     {
       id: 23,
-      type: 'picture' as const,
+      type: 'free_text' as const,
       prompt: 'Which landmark?',
       mediaUrl: 'https://example.com/landmark.jpg',
       points: 3,

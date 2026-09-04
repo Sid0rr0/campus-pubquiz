@@ -32,7 +32,6 @@ interface QuizQuestionEditorProps {
 const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'multiple_choice', label: 'Multiple choice' },
   { value: 'free_text', label: 'Free text' },
-  { value: 'picture', label: 'Picture' },
   { value: 'audio', label: 'Audio' },
   { value: 'youtube', label: 'YouTube video' },
   { value: 'sort', label: 'Sort / order' },
@@ -94,9 +93,7 @@ export function QuizQuestionEditor({
   const isSort = question.type === 'sort';
   const isMatch = question.type === 'match';
   const needsMediaUrl =
-    question.type === 'picture' ||
-    question.type === 'audio' ||
-    question.type === 'youtube';
+    question.type === 'audio' || question.type === 'youtube';
   const isYoutubeMedia =
     question.type === 'youtube' ||
     extractYoutubeVideoId(question.mediaUrl) !== undefined;

@@ -2,20 +2,18 @@ import { parseQuestionRow } from '@/import/question-row.schema';
 import { makeRow } from '@/import/__tests__/question-row-test-utils';
 
 describe('parseQuestionRow - media question types', () => {
-  it('rejects picture and audio rows without a valid http(s) media url', () => {
-    for (const type of ['picture', 'audio']) {
-      const missing = parseQuestionRow(makeRow({ type, mediaUrl: '' }));
-      const invalid = parseQuestionRow(
-        makeRow({ type, mediaUrl: 'ftp://example.com/x.mp3' }),
-      );
+  it('rejects an audio row without a valid http(s) media url', () => {
+    const missing = parseQuestionRow(makeRow({ type: 'audio', mediaUrl: '' }));
+    const invalid = parseQuestionRow(
+      makeRow({ type: 'audio', mediaUrl: 'ftp://example.com/x.mp3' }),
+    );
 
-      expect(missing.ok).toBe(false);
-      expect(invalid.ok).toBe(false);
-      if (!missing.ok) {
-        expect(missing.issues).toContainEqual(
-          expect.objectContaining({ field: 'media_url' }),
-        );
-      }
+    expect(missing.ok).toBe(false);
+    expect(invalid.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.issues).toContainEqual(
+        expect.objectContaining({ field: 'media_url' }),
+      );
     }
   });
 

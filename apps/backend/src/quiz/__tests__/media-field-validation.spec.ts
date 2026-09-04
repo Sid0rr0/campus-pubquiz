@@ -6,40 +6,41 @@ import {
 } from '@/quiz/__tests__/quiz-draft-test-utils';
 
 describe('validateQuizDraft - media field validation', () => {
-  it('reports picture and audio questions without a valid http(s) media url', () => {
-    for (const type of ['picture', 'audio'] as const) {
-      const missing = validateQuizDraft(
-        makeRequest({
-          rounds: [makeRound({ questions: [makeQuestion({ type })] })],
-        }),
-      );
-      const invalid = validateQuizDraft(
-        makeRequest({
-          rounds: [
-            makeRound({
-              questions: [
-                makeQuestion({ type, mediaUrl: 'ftp://example.com/x.mp3' }),
-              ],
-            }),
-          ],
-        }),
-      );
+  it('reports audio questions without a valid http(s) media url', () => {
+    const missing = validateQuizDraft(
+      makeRequest({
+        rounds: [makeRound({ questions: [makeQuestion({ type: 'audio' })] })],
+      }),
+    );
+    const invalid = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'audio',
+                mediaUrl: 'ftp://example.com/x.mp3',
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
 
-      expect(missing).toContainEqual(
-        expect.objectContaining({
-          roundIndex: 0,
-          questionIndex: 0,
-          field: 'mediaUrl',
-        }),
-      );
-      expect(invalid).toContainEqual(
-        expect.objectContaining({
-          roundIndex: 0,
-          questionIndex: 0,
-          field: 'mediaUrl',
-        }),
-      );
-    }
+    expect(missing).toContainEqual(
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: 0,
+        field: 'mediaUrl',
+      }),
+    );
+    expect(invalid).toContainEqual(
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: 0,
+        field: 'mediaUrl',
+      }),
+    );
   });
 
   it('reports a youtube question missing a media url or pointing at a non-YouTube url', () => {

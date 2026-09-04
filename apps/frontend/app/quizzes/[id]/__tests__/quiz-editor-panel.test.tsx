@@ -137,7 +137,7 @@ describe('QuizEditorPanel', () => {
           breakAfter: true,
           questions: [
             {
-              type: 'picture',
+              type: 'free_text',
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,
@@ -169,7 +169,7 @@ describe('QuizEditorPanel', () => {
           breakAfter: true,
           questions: [
             {
-              type: 'picture',
+              type: 'free_text',
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,

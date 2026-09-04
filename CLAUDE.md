@@ -70,7 +70,7 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 
 - Free-text (human-graded)
 - Multiple choice (optionally auto-graded)
-- Picture / media rounds (image or audio URL shown on display screen)
+- Media rounds (image or audio URL shown on display screen)
 - Grouped into named rounds with per-round scoring
 
 ## First Milestone (done)
@@ -100,7 +100,7 @@ Evidence: `.claude/tdd/milestone-2.tdd.md`.
 3. `ImportService`: pure `preview()`, idempotent `confirm()` upserting on `(quiz/round, orderIndex)` unique indexes, lobby/ended-only locking, active-quiz reload on re-import
 4. `POST /import/preview` and `POST /import/confirm`, guarded by an admin-only guard (mirrored the socket handshake password check at the time; both now use `SessionGuard`/`RolesGuard`, see "Auth" above)
 5. Admin `ImportPanel`: upload a CSV file → preview table with per-row issues → confirm gated on `isImportable`, wired into the lobby/ended quiz picker
-6. Display renders `picture` questions as `<img>` and `audio` questions as an autoplaying `<audio controls>`; PlayPage shows a "Look at the screen" hint for both
+6. Display renders an image `mediaUrl` as `<img>` and `audio` questions as an autoplaying `<audio controls>` (image vs. audio is inferred from the URL, not a dedicated `picture` type — any type can carry an image); PlayPage shows a "Look at the screen" hint for both
 
 Evidence: `.claude/tdd/milestone-3.tdd.md`.
 

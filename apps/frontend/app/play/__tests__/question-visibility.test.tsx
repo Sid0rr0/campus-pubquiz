@@ -65,7 +65,7 @@ describe('PlayPage — question visibility', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
-  it('shows a hint to look at the big screen for a picture question', () => {
+  it('shows a hint to look at the big screen for a question with an image mediaUrl', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(
       socketResult({
@@ -73,7 +73,7 @@ describe('PlayPage — question visibility', () => {
           progress: progress({ status: 'question_open' }),
           currentQuestion: {
             id: 'r2q1',
-            type: 'picture',
+            type: 'free_text',
             prompt: 'Which landmark is shown?',
             mediaUrl: 'https://example.com/landmark.jpg',
             points: 3,

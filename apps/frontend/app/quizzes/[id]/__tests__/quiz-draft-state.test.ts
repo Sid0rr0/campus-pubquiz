@@ -63,9 +63,9 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(questionToPreview(question)).toEqual(preview);
   });
 
-  it('carries notes and media urls through for a picture question', () => {
+  it('carries notes and media urls through for a question with an image mediaUrl', () => {
     const preview: ImportQuestionPreview = {
-      type: 'picture',
+      type: 'free_text',
       prompt: 'Name this landmark.',
       answer: 'Eiffel Tower',
       points: 2,

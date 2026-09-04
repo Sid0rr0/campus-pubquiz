@@ -172,7 +172,7 @@ export const GAME_STATE_FIXTURE_SEEDED_GAME: SeededGame = {
       questions: [
         {
           id: 23,
-          type: 'picture',
+          type: 'free_text',
           prompt: 'Which landmark is shown?',
           mediaUrl: 'https://example.com/landmark.jpg',
           points: 3,

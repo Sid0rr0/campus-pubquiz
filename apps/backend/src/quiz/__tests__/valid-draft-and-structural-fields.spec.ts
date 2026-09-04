@@ -18,11 +18,6 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
               options: ['Paris', 'London', 'Berlin'],
             }),
             makeQuestion({
-              type: 'picture',
-              answer: 'Eiffel Tower',
-              mediaUrl: 'https://example.com/eiffel.jpg',
-            }),
-            makeQuestion({
               type: 'audio',
               answer: 'Bohemian Rhapsody',
               mediaUrl: 'https://example.com/song.mp3',

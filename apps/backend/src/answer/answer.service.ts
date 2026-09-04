@@ -75,7 +75,7 @@ export class AnswerService {
     // Multiple choice, sort, and match all have one exact-match correct
     // value (enforced at import/save time — see question-row.schema.ts and
     // quiz-draft.schema.ts), so they can be graded the instant they're
-    // submitted — no admin judgement call needed like free_text/picture/audio
+    // submitted — no admin judgement call needed like free_text/audio
     // require.
     const isAutoGraded = AUTO_GRADED_TYPES.includes(question.type);
     const isCorrect = isAutoGraded && value === question.answer;
