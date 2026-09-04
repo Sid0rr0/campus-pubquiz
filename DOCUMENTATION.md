@@ -6,22 +6,24 @@ laptop. This document describes the system as currently built.
 
 ## Contents
 
-- [System Overview](#system-overview)
-- [The Three UIs](#the-three-uis)
-- [Other Routes: Auth, Sessions, and Quiz Authoring](#other-routes-auth-sessions-and-quiz-authoring)
-- [Game Flow: Rounds, Blocks, and the State Machine](#game-flow-rounds-blocks-and-the-state-machine)
-- [Real-Time Protocol (Socket.IO)](#real-time-protocol-socketio)
-- [Answer Lifecycle](#answer-lifecycle)
-- [Teams: Join, Reconnect, and Kick](#teams-join-reconnect-and-kick)
-- [Quiz Authoring and CSV Import](#quiz-authoring-and-csv-import)
-- [Question Types](#question-types)
-- [Persistence and Restart Resilience](#persistence-and-restart-resilience)
-- [Authentication](#authentication)
-- [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
-- [Frontend Structure](#frontend-structure)
-- [Testing](#testing)
-- [Running the App](#running-the-app)
-- [Known Gaps and Accepted Tradeoffs](#known-gaps-and-accepted-tradeoffs)
+- [Campus Pub Quiz — How It Works](#campus-pub-quiz--how-it-works)
+  - [Contents](#contents)
+  - [System Overview](#system-overview)
+  - [The Three UIs](#the-three-uis)
+  - [Other Routes: Auth, Sessions, and Quiz Authoring](#other-routes-auth-sessions-and-quiz-authoring)
+  - [Game Flow: Rounds, Blocks, and the State Machine](#game-flow-rounds-blocks-and-the-state-machine)
+    - [Statuses](#statuses)
+    - [Admin actions](#admin-actions)
+  - [Real-Time Protocol (Socket.IO)](#real-time-protocol-socketio)
+    - [The snapshot](#the-snapshot)
+    - [Events](#events)
+  - [Answer Lifecycle](#answer-lifecycle)
+  - [Teams: Join, Reconnect, and Kick](#teams-join-reconnect-and-kick)
+  - [Question Types](#question-types)
+  - [Quiz Authoring and CSV Import](#quiz-authoring-and-csv-import)
+  - [Persistence and Restart Resilience](#persistence-and-restart-resilience)
+  - [Authentication](#authentication)
+  - [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
 
 ## System Overview
 
@@ -45,26 +47,26 @@ is a cache that can be rebuilt after a restart.
 
 ## The Three UIs
 
-| Route      | Who                  | What it does                                                                      |
-| ---------- | -------------------- | ----------------------------------------------------------------------------------- |
+| Route      | Who                  | What it does                                                                                                                                                                           |
+| ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/display` | Big screen (TV)      | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
-| `/admin`   | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards |
-| `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far |
+| `/admin`   | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards                                                                             |
+| `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far                 |
 
 ## Other Routes: Auth, Sessions, and Quiz Authoring
 
 Beyond the three live-game surfaces, the same Next.js app serves the
 management and authoring UI:
 
-| Route            | Who                             | What it does                                                                 |
-| ---------------- | -------------------------------- | ----------------------------------------------------------------------------- |
-| `/`               | Anyone                          | Landing page — team join panel, plus a "Quiz master login" link             |
-| `/login`          | Admin/moderator                 | Session login; redirects to `/sessions` on success                          |
-| `/register`       | Prospective admin/moderator     | Self-registration; account is `pending` until an existing admin approves it |
-| `/sessions`       | Admin/moderator (any)           | Lists/starts/closes game sessions; opening one routes to `/admin?code=...`  |
-| `/admin/users`    | Admin only                      | Approve pending accounts, deactivate active ones                            |
-| `/quizzes/[id]`   | Admin/moderator (any)           | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
-| `/rules`          | Anyone, any time                | Standalone round/topic/break-structure page, computed from the active quiz  |
+| Route           | Who                         | What it does                                                                    |
+| --------------- | --------------------------- | ------------------------------------------------------------------------------- |
+| `/`             | Anyone                      | Landing page — team join panel, plus a "Quiz master login" link                 |
+| `/login`        | Admin/moderator             | Session login; redirects to `/sessions` on success                              |
+| `/register`     | Prospective admin/moderator | Self-registration; account is `pending` until an existing admin approves it     |
+| `/sessions`     | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/admin?code=...`      |
+| `/admin/users`  | Admin only                  | Approve pending accounts, deactivate active ones                                |
+| `/quizzes/[id]` | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
+| `/rules`        | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -134,14 +136,14 @@ where the game was.
 
 ### Admin actions
 
-| Action                | Legal from                | Effect                                                                 |
-| --------------------- | -------------------------- | ------------------------------------------------------------------------ |
-| `START_QUIZ`          | `lobby`                    | → `rules`                                                              |
-| `ADVANCE`              | `rules`, `round_intro`, `question_open`, `reveal`/`reveal_intro` | Steps forward through the sequence above, crossing block boundaries automatically |
-| `PREVIOUS`             | most non-terminal statuses | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
-| `END_QUIZ`             | any except `ended`         | Force-end                                                              |
-| `TOGGLE_LEADERBOARD`   | any                        | Flips `isLeaderboardVisible`, status untouched                        |
-| `REVEAL_NEXT_TEAM`     | while leaderboard visible  | Advances the leaderboard's team-by-team reveal (no status change)     |
+| Action               | Legal from                                                       | Effect                                                                                          |
+| -------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `START_QUIZ`         | `lobby`                                                          | → `rules`                                                                                       |
+| `ADVANCE`            | `rules`, `round_intro`, `question_open`, `reveal`/`reveal_intro` | Steps forward through the sequence above, crossing block boundaries automatically               |
+| `PREVIOUS`           | most non-terminal statuses                                       | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
+| `END_QUIZ`           | any except `ended`                                               | Force-end                                                                                       |
+| `TOGGLE_LEADERBOARD` | any                                                              | Flips `isLeaderboardVisible`, status untouched                                                  |
+| `REVEAL_NEXT_TEAM`   | while leaderboard visible                                        | Advances the leaderboard's team-by-team reveal (no status change)                               |
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
@@ -174,14 +176,14 @@ clients are unaffected; the admin just reconnects with a fresh token.
 `StateSnapshotPayload` is the single source of truth every client renders:
 
 | Field             | Meaning                                                                                                                                |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `progress`        | Status + round/question indices + leaderboard flag                                                                                      |
-| `currentQuestion` | What the big screen shows (only while `question_open`)                                                                                  |
-| `blockQuestions`  | Questions open for answering (revealed-so-far during `question_open`; the whole locked block during `break`/`reveal`; empty otherwise)  |
-| `answeredTeamIds` | Teams that have answered the current question — drives all response indicators                                                          |
-| `leaderboard`     | Graded totals, recomputed after every grade or bonus award                                                                              |
-| `joinCode`        | Six-character code for this game session                                                                                                |
-| `teams`           | Connected/registered teams                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `progress`        | Status + round/question indices + leaderboard flag                                                                                     |
+| `currentQuestion` | What the big screen shows (only while `question_open`)                                                                                 |
+| `blockQuestions`  | Questions open for answering (revealed-so-far during `question_open`; the whole locked block during `break`/`reveal`; empty otherwise) |
+| `answeredTeamIds` | Teams that have answered the current question — drives all response indicators                                                         |
+| `leaderboard`     | Graded totals, recomputed after every grade or bonus award                                                                             |
+| `joinCode`        | Six-character code for this game session                                                                                               |
+| `teams`           | Connected/registered teams                                                                                                             |
 
 ### Events
 
@@ -241,13 +243,81 @@ table (`GameSessionTeam`).
 - **New name** → creates a fresh `Team` row with a fresh token and code, and
   adds it to the session roster.
 - **Existing name + saved token** → reconnects silently (adding the team to a
-  *new* session's roster still requires that session's join code).
+  _new_ session's roster still requires that session's join code).
 - **Existing name, no token** (e.g. a teammate's phone) → requires the team's
   recovery `code`, since a bare name match isn't proof of identity.
-- **Kick** — the admin can remove a team from the *current session's roster*
+- **Kick** — the admin can remove a team from the _current session's roster_
   (`KICK_TEAM`) without touching the underlying `Team` entity or its answer
   history; a kicked team's persistent identity and past scores survive.
   Available only for disconnected teams in the admin UI.
+
+## Question Types
+
+`QuestionType` is one of `free_text`, `multiple_choice`, `audio`, `youtube`,
+`sort`, `match`, or `closest_guess`. Each has its own submission format and
+grading behavior:
+
+- **`free_text`** — any typed answer (`FreeTextAnswer`). Always graded
+  manually by the admin during `break`; there's no auto-match to fall back
+  to.
+- **`multiple_choice`** — players pick one of `options`. Auto-graded at
+  submit time by exact match against the stored `answer`.
+- **`audio`** — `media_url` is required and plays on `/display` as an
+  autoplaying `<audio controls>` element. Grading follows `free_text`
+  (manual, during `break`) — the type only changes what's rendered, not how
+  it's scored.
+- **`youtube`** — `media_url` is required and must resolve to a
+  `youtube.com`/`youtu.be` video id (enforced by both the CSV import schema
+  and the manual editor's save validation). The display renders it as an
+  embedded iframe instead of `<img>`/`<audio>`; under the hood this
+  rendering is actually keyed off `media_url` itself, not the `type` value —
+  matching how image vs. audio already works — so a `free_text`/etc. row
+  with a YouTube `media_url` still embeds too. A clip's start/end (seconds
+  into the video) is best-effort parsed out of that question's `notes` cell,
+  e.g. `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds
+  all parse) — this isn't strict JSON, it's a regex looking for
+  `start`/`end` keywords, so `notes` without that syntax is left untouched
+  as a normal free-text note. Parsing happens once, in
+  `QuizService.syncRoundsAndQuestions` (shared by CSV import and the manual
+  editor's Save), which derives `mediaStartSeconds`/`mediaEndSeconds` into
+  the question's JSON `payload` alongside `mediaUrl`. `answer_media_url`
+  never gets clip times (no notes channel of its own) — a YouTube answer
+  video always renders full-length. Grading follows `free_text` (manual).
+- **`sort`** — players drag `options` into what they think is the correct
+  order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
+  submitted value is the reordered pipe-list. The CSV `answer` cell must
+  contain the same items as `options`, just reordered — validated as a
+  multiset match at import time. Auto-graded at submit time by exact match.
+- **`match`** — players pair each left-hand item with a right-hand item
+  (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
+  carries the two lists separately as `options` (left) and `matchTargets`
+  (right). In the CSV, both lists are packed into one `options` cell, joined
+  by a single `+`: `left1|left2+right1|right2`. The `answer` cell lists
+  correct pairs as `left+right`, pipe-separated, in any order (e.g.
+  `arthur+excalibur|robin hood+bow`) — import canonicalizes it into `left`'s
+  order so it's directly comparable to a submission, which is built the same
+  positional way. Auto-graded at submit time by exact match.
+- **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
+  a number); players type a guess in a `type="number"` input. It is
+  **auto-graded**, but not at submit time like
+  `multiple_choice`/`sort`/`match` — `AnswerService` rejects a manual
+  `GRADE_ANSWER` on one of these with an error. Once the block locks,
+  `GameStateService` batch-grades every submission, awarding full points to
+  whichever team(s) are numerically closest to the answer (ties share full
+  points) and 0 to everyone else, caching the result per question
+  (`closestGuessSummaries`) since it only needs computing once. During
+  `reveal`, a `closest_guess` question with at least one submission gets a
+  5-step cumulative walk instead of the usual single-shot reveal —
+  `ADVANCE`/`PREVIOUS` step through smallest guess → highest guess → correct
+  answer → closest team(s), each step adding a line without replacing what's
+  already shown (`ClosestGuessRevealScreen`, shared by `/display` and
+  `/play`). A question with zero submissions collapses back to the normal
+  single-shot reveal, since there's nothing to walk through.
+
+`multiple_choice`/`sort`/`match` are auto-graded the instant a team submits;
+`free_text`/`audio`/`youtube` need the admin's judgment during `break`;
+`closest_guess` is auto-graded but deferred to a single batch pass once the
+block locks.
 
 ## Quiz Authoring and CSV Import
 
@@ -279,69 +349,13 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
 ```
 
-`type` is one of `free_text`, `multiple_choice`, `audio`,
-`youtube`, `sort`, `match`, `closest_guess` — see
-[Question Types](#question-types) for what each one needs in `options` and
-`answer`. `media_url` is required for `audio`/`youtube` (for
-`youtube` it must resolve to a `youtube.com`/`youtu.be` video id — enforced by
-both the CSV import schema and the manual editor's save validation), optional
-otherwise. `answer_media_url` is optional on any type (shown alongside the
-correct answer during reveal). `break_after` is `''`/`0`/`1`; the **last
-round's break is always forced on** regardless of its cells, since the state
-machine has no other way to ever reveal it.
-
-**YouTube embeds**: the display renders a YouTube `media_url` as an embedded
-iframe instead of `<img>`/`<audio>`. `type: youtube` is the intended way to
-author one — the manual editor's type picker offers it, requires `media_url`,
-and shows dedicated Clip start/Clip end inputs. Under the hood display
-rendering is actually keyed off `media_url` itself (`youtube.com`/`youtu.be`),
-not the `type` value, matching how image vs. audio already works — so a
-`free_text`/etc. row with a YouTube `media_url` still embeds too. A clip's start/end (seconds
-into the video) is best-effort parsed out of that question's `notes` cell,
-e.g. `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
-parse). This isn't strict JSON — it's a regex looking for `start`/`end`
-keywords — so `notes` without that syntax is left untouched as a normal
-free-text note. Parsing happens once, in `QuizService.syncRoundsAndQuestions`
-(shared by CSV import and the manual editor's Save), which derives
-`mediaStartSeconds`/`mediaEndSeconds` into the question's JSON `payload`
-alongside `mediaUrl`. `answer_media_url` never gets clip times (no notes
-channel of its own) — a YouTube answer video always renders full-length.
-
-## Question Types
-
-Beyond `free_text`, `multiple_choice`, `audio`, and `youtube`
-(covered above), three types have their own submission format and grading
-behavior:
-
-- **`sort`** — players drag `options` into what they think is the correct
-  order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
-  submitted value is the reordered pipe-list. The CSV `answer` cell must
-  contain the same items as `options`, just reordered — validated as a
-  multiset match at import time.
-- **`match`** — players pair each left-hand item with a right-hand item
-  (`MatchAnswer`, `apps/frontend/app/play/match-answer.tsx`); `QuestionView`
-  carries the two lists separately as `options` (left) and `matchTargets`
-  (right). In the CSV, both lists are packed into one `options` cell, joined
-  by a single `+`: `left1|left2+right1|right2`. The `answer` cell lists
-  correct pairs as `left+right`, pipe-separated, in any order (e.g.
-  `arthur+excalibur|robin hood+bow`) — import canonicalizes it into `left`'s
-  order so it's directly comparable to a submission, which is built the same
-  positional way.
-- **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
-  a number); players type a guess in a `type="number"` input. It is
-  **auto-graded**, not manually graded during `break` — `AnswerService`
-  rejects a manual `GRADE_ANSWER` on one of these with an error. Once the
-  block locks, `GameStateService` batch-grades every submission, awarding
-  full points to whichever team(s) are numerically closest to the answer
-  (ties share full points) and 0 to everyone else, caching the result per
-  question (`closestGuessSummaries`) since it only needs computing once.
-  During `reveal`, a `closest_guess` question with at least one submission
-  gets a 5-step cumulative walk instead of the usual single-shot reveal —
-  `ADVANCE`/`PREVIOUS` step through smallest guess → highest guess → correct
-  answer → closest team(s), each step adding a line without replacing what's
-  already shown (`ClosestGuessRevealScreen`, shared by `/display` and
-  `/play`). A question with zero submissions collapses back to the normal
-  single-shot reveal, since there's nothing to walk through.
+`type` is one of the seven [Question Types](#question-types) above — see
+that section for what each needs in `options` and `answer`. `media_url` is
+required for `audio`/`youtube`, optional otherwise. `answer_media_url` is
+optional on any type (shown alongside the correct answer during reveal).
+`break_after` is `''`/`0`/`1`; the **last round's break is always forced on**
+regardless of its cells, since the state machine has no other way to ever
+reveal it.
 
 ## Persistence and Restart Resilience
 
@@ -411,94 +425,3 @@ admin/moderator landing page for managing them:
 Picking or starting a session in `/sessions` routes the admin to
 `/admin?code=<joinCode>`, which binds that admin tab to one specific session
 for the rest of the flow.
-
-## Frontend Structure
-
-All three live-game routes share one hook that owns the socket connection and
-exposes the latest snapshot, connection state, team identity, and typed
-emitters for each client→server event. Pages are thin renderers over the
-snapshot:
-
-- **PlayPage** — join form → question view with a numbered navigator over the
-  open block (✓ = answered, prefilled/highlighted saved answers) plus an
-  answer-history panel (sticky sidebar on wide screens, a bottom-sheet drawer
-  on mobile) listing every question the team has seen open so far, across
-  rounds — each with the team's own answer and the correct answer once
-  revealed. This is backed by a `seenQuestions` accumulator in
-  `useGameSocket`, since `blockQuestions`/`revealQuestions` on the snapshot
-  only ever cover the _current_ block; clicking a row from the active block
-  jumps the question navigator to it. Media (images/audio/YouTube embeds) is
-  never rendered on `/play`, during either `question_open` or reveal — teams
-  are pointed at the big screen instead, matching the "Look at the screen"
-  hint already shown for media questions.
-- **AdminPage** — sidebar of game actions, a teams roster (with kick) and
-  live answers while a question is open, a prev/next grading browser during
-  breaks, and bonus-award controls; binds to a session via `?code=`.
-- **DisplayPage** — session picker (if no `?code=`), then per-status screens:
-  lobby QR, rules, round intro, current question with media/options, the
-  answered counter, and the leaderboard overlay.
-
-A shared `CopyButton` component (`apps/frontend/app/components/copy-button.tsx`)
-sits next to every join/team code shown anywhere in the app — the admin
-sidebar/drawer, the display lobby screen, session pickers, and `/play`'s team
-code — so quiz masters and teams can copy a code instead of retyping it.
-
-Both apps import shared code via the `@/*` path alias and the
-`@campus-pubquiz/types` workspace package — never relative `../` paths.
-
-## Testing
-
-Every feature lands test-first (RED commit → GREEN commit). Suites:
-
-| Workspace       | Runner                         | What's covered                                      |
-| --------------- | ------------------------------- | ----------------------------------------------------- |
-| `shared/types`  | Vitest                         | State machine transitions, socket contract pin test  |
-| `apps/backend`  | Jest + Testcontainers Postgres | Services, gateway handlers, real-DB integration      |
-| `apps/frontend` | Vitest + Testing Library       | Hook behavior, all pages                             |
-
-The socket contract has a pin test (`expect(SOCKET_EVENTS).toEqual({...})`) so
-any protocol change forces a deliberate test update on both sides.
-
-```bash
-pnpm test          # all workspaces
-pnpm lint
-pnpm build
-cd apps/backend && pnpm test:cov   # coverage (Testcontainers needs Docker)
-```
-
-## Running the App
-
-```bash
-pnpm dev            # frontend :8888 + backend :3000
-pnpm dev:frontend   # frontend only
-pnpm dev:backend    # backend only
-```
-
-Required backend env: `DATABASE_URL` (Postgres); optionally
-`BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` (creates the first admin
-account at startup — required until at least one admin exists) and
-`FRONTEND_ORIGIN` (CORS, defaults to `http://localhost:8888`). Frontend:
-`NEXT_PUBLIC_BACKEND_URL` (defaults to `http://localhost:3000`).
-
-Deployment target is a single instance on Railway/Fly.io with Postgres. Do
-**not** deploy the backend to Vercel — serverless and Socket.IO don't mix.
-
-## Known Gaps and Accepted Tradeoffs
-
-- **Answered-count cache is in-memory** — after a backend restart mid-question
-  the "X of Y answered" indicators show 0 until the next submission. The
-  answers themselves are safe in Postgres.
-- **Venue internet is a hard dependency** — phones on mobile data are the
-  mitigation; a phone hotspot can carry the two PCs if Wi-Fi dies.
-- **Single backend instance, no horizontal scaling** — a redeploy drops every
-  socket for ~10 seconds; clients resync automatically, no data is lost.
-- **JSON payload column on `Question`** — flexible for new question types,
-  but requires per-type Zod validation at import/save time or a bad payload
-  crashes the flow live on stage.
-- **Grading isn't attributed on `Answer` rows** — per-user accounts and
-  sessions now identify who's connected to the admin room, but grading a
-  specific answer doesn't yet stamp a `gradedBy` user id on it.
-- **`localStorage` identity** — private browsing or cleared storage loses the
-  team token (and, equivalently, the admin/moderator session token); there is
-  no admin "re-link phone to team" escape hatch yet. Teams can still recover
-  via their recovery code.

@@ -6,12 +6,22 @@ A live pub quiz web app for campus events. One machine displays questions on a b
 
 ## Three UIs (one Next.js app, three routes)
 
-| Route | Who uses it | Purpose |
-|---|---|---|
-| `/display` | Big screen (TV/projector) | Current question, media, countdown, leaderboard between rounds |
-| `/admin` | Quiz master's laptop | Advance questions, watch live answers, grade free-text, award points |
-| `/play` | Team phones | Join via QR + team name, see question, submit answers |
-| `/rules` | Anyone, any time | Standalone rules page (round/topic/break structure + house rules), also shown in-game during the `rules` status |
+| Route      | Who uses it               | Purpose                                                                                                         |
+| ---------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `/display` | Big screen (TV/projector) | Current question, media, countdown, leaderboard between rounds                                                  |
+| `/admin`   | Quiz master's laptop      | Advance questions, watch live answers, grade free-text, award points                                            |
+| `/play`    | Team phones               | Join via QR + team name, see question, submit answers                                                           |
+| `/rules`   | Anyone, any time          | Standalone rules page (round/topic/break structure + house rules), also shown in-game during the `rules` status |
+
+## Development Commands
+
+pnpm workspace, run from repo root unless noted:
+
+- `pnpm dev` — all workspaces in parallel; `pnpm dev:backend` / `pnpm dev:frontend` for just one
+- `pnpm build` / `pnpm lint` / `pnpm test` — run across all workspaces
+- Backend (`apps/backend`) uses **Jest**: `pnpm --filter backend test <path>` to run a single spec, not the whole suite
+- Frontend (`apps/frontend`) uses **Vitest**: `pnpm --filter frontend test <path>` to run a single spec
+- `pnpm --filter backend db:migrate` applies pending MikroORM migrations locally (Postgres must be running — see `docker-compose.yml`); `db:migrate:create` generates one after an entity change
 
 ## Architecture Decisions
 
@@ -31,9 +41,23 @@ Only admin actions advance the state. Clients in three rooms (`display`, `admin`
 - Admin/moderator: per-user accounts with two roles — `admin` (everything, including user management) and `moderator` (everything except user management). Self-registration creates a `pending` account; an existing admin approves it and assigns a role before it can log in. Passwords are bcrypt-hashed (`bcryptjs`); login issues an opaque, DB-backed session token (`Session` entity) with sliding expiration, delivered as an httpOnly cookie (`campus_pubquiz_session`) rather than a token the frontend handles directly. REST requests send it automatically via `credentials: 'include'` (checked by `SessionGuard`/`RolesGuard`); the Socket.IO handshake reads it from the raw `Cookie` header (`extractSessionCookie` in `session-cookie.ts`), since `cookie-parser`'s middleware doesn't run on the WS upgrade. Deactivating a user revokes all of its sessions immediately. The first admin is bootstrapped at startup from `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars (`AuthBootstrapService`), since self-registration alone can never produce the first approver — a no-op once any admin exists.
 - Teams: short join code per game session → token stored in `localStorage`. Token survives page refresh; reconnecting restores team identity.
 
+### Question types
+
+`QuestionType` (`shared/types`) is the single source of truth — seven types, each with different grading:
+
+- **`free_text`** — any typed answer. Always human-graded by the admin during `break`; there's no auto-match to fall back to.
+- **`multiple_choice`** — pick one of `options`. Auto-graded at `SUBMIT_ANSWER` time by exact match against the stored answer.
+- **`audio`** — an audio `mediaUrl` plays on `/display`; the question itself can be any answer style but is treated like `free_text` for grading (human-graded).
+- **`youtube`** — a YouTube `mediaUrl`, optionally clipped to `mediaStartSeconds`/`mediaEndSeconds` (derived from the CSV `notes` column). Human-graded like `free_text`.
+- **`sort`** — teams reorder `options` into what they think is the correct order; graded by exact match against the pipe-joined correct order, at submit time.
+- **`match`** — teams pair `options` (left) with `matchTargets` (right); graded by exact match against the pipe-joined correct pairing, at submit time.
+- **`closest_guess`** — teams submit a number; the correct answer is numeric. Unlike every other type this can't be graded per-answer as it arrives — it's graded in one batch (`gradeClosestGuess`) once the question locks, comparing every team's guess by distance from the target. Every team tied for smallest distance gets full points, no partial credit; everyone else gets zero.
+
+`multiple_choice`/`sort`/`match` are auto-graded (`AUTO_GRADED_TYPES` in `answer.service.ts`); `free_text`/`audio`/`youtube` need the admin's judgment; `closest_guess` is auto-graded but deferred to a batch pass. Any type can carry `mediaUrl`/`answerMediaUrl` — image vs. audio vs. YouTube is inferred from the URL, not tied to a specific type (there is deliberately no dedicated `picture` type).
+
 ### Question import: Google Sheets → CSV
 
-Sheets are shared "anyone with link can view" — import parses the CSV export URL. No Google API credentials needed. Authors get full Google collaboration.
+Import works by uploading an **exported CSV file**.
 
 Sheet format (one row per question):
 
@@ -47,11 +71,7 @@ round | type | question | options | answer | points | media_url | answer_media_u
 
 `break_after` is optional and per-row; a round grades after itself once any of its rows has `break_after` = `1` (blank/`0` = no break). The last round always breaks regardless of its `break_after` cells — the state machine has no way to reveal answers otherwise, so import forces it on rather than requiring authors to remember it.
 
-Import shows a validation preview before saving (unknown type, missing answer, broken URL). Re-import is idempotent — updates in place so authors can keep editing until quiz night.
-
-**Security note:** Keep the sheet URL a secret. Restrict sharing after import, or keep answers in a separate hidden sheet. The link is effectively your answer key.
-
-### Hosting: Cloud (Railway or Fly.io)
+### Hosting: Cloud
 
 Both apps deployed together with Postgres. Venue internet is a hard dependency — mitigation is that phones on mobile data just work, and a phone hotspot can carry the two PCs if Wi-Fi dies. **Do not deploy the backend to Vercel** — serverless and Socket.IO are incompatible.
 
@@ -66,53 +86,7 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 - **localStorage tokens** — private browsing or cleared storage loses team identity (this now also applies to admin/moderator session tokens, matching the existing team-token precedent). Admin needs a "re-link phone to team" escape hatch.
 - **Grading isn't attributed on `Answer` rows** — sessions identify who's connected to the admin room, but grading a specific answer doesn't yet stamp a `gradedBy` user id. Smaller residual tradeoff now that per-user accounts exist; fine until an audit trail of who-graded-what is needed.
 
-## Question Types Planned
-
-- Free-text (human-graded)
-- Multiple choice (optionally auto-graded)
-- Media rounds (image or audio URL shown on display screen)
-- Grouped into named rounds with per-round scoring
-
-## First Milestone (done)
-
-1. `shared/types` — game state machine types + socket event names
-2. Drizzle schema — `Quiz/Round/Question` + `GameSession/Team/Answer`
-3. NestJS gateway — state machine + room broadcasts
-4. Three bare-bones routes with a hardcoded quiz (no DB yet)
-
-Evidence: `.claude/tdd/milestone-1.tdd.md`.
-
-## Second Milestone (done) — Playable Quiz
-
-1. Idempotent startup seed from the hardcoded quiz into real Postgres rows
-2. Team join (`JOIN_PLAYERS`) with token-based reconnect, admin handshake password guard
-3. Answer submission (`SUBMIT_ANSWER`, last-write-wins) with live admin-only answer broadcasts
-4. Grading (`GRADE_ANSWER`) and a real leaderboard computed from graded points
-5. Restart resilience — `GameProgress` persisted to `game_sessions` on every transition and rehydrated on boot
-6. Full frontend wiring: `PlayPage` join + answer submission, `AdminPage` grading panel + leaderboard preview, `DisplayPage` real leaderboard
-
-Evidence: `.claude/tdd/milestone-2.tdd.md`.
-
-## Third Milestone (done) — CSV Import + Media Rounds
-
-1. Shared `SheetRow`/`ImportPreview`/`ImportRequest` (`csvText`, not a sheet URL) contract in `shared/types`
-2. Backend CSV parsing (`sheet-csv.parser.ts`, BOM/header-tolerant) + per-type Zod validation (`question-row.schema.ts`)
-3. `ImportService`: pure `preview()`, idempotent `confirm()` upserting on `(quiz/round, orderIndex)` unique indexes, lobby/ended-only locking, active-quiz reload on re-import
-4. `POST /import/preview` and `POST /import/confirm`, guarded by an admin-only guard (mirrored the socket handshake password check at the time; both now use `SessionGuard`/`RolesGuard`, see "Auth" above)
-5. Admin `ImportPanel`: upload a CSV file → preview table with per-row issues → confirm gated on `isImportable`, wired into the lobby/ended quiz picker
-6. Display renders an image `mediaUrl` as `<img>` and `audio` questions as an autoplaying `<audio controls>` (image vs. audio is inferred from the URL, not a dedicated `picture` type — any type can carry an image); PlayPage shows a "Look at the screen" hint for both
-
-Evidence: `.claude/tdd/milestone-3.tdd.md`.
-
-**Note on the import flow:** the plan originally called for pasting a Google
-Sheets share URL (server-fetched, SSRF-guarded via a `docs.google.com`
-allowlist). Mid-implementation this was changed to uploading an exported CSV
-file instead — the browser reads the file and POSTs its text, so there is no
-server-side fetch of a user-supplied URL and no SSRF surface. The "Answer key
-leakage" risk from the original plan is mitigated the same way either
-approach would: the CSV is only ever sent to `/import/preview`/`/import/confirm`
-behind the admin password guard, and `SeedService` strips the stored answer
-from every player-facing `QuestionView`.
+Completed-milestone implementation detail (including which question types exist) lives in `.claude/tdd/milestone-*.tdd.md`, not here — this file only tracks decisions and constraints future work must respect, since a changelog of finished work goes stale (and duplicates git history and code) faster than anyone remembers to update it.
 
 ## Git Commit Convention
 
