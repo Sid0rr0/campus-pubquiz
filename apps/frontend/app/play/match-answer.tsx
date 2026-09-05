@@ -46,17 +46,17 @@ function MatchRightRow({ value, animatePositionChange }: MatchRightRowProps) {
       layout={animatePositionChange}
       transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className="flex min-h-14 items-center gap-2 bg-white px-4 text-lg font-bold text-foreground"
+      className="flex min-h-16 items-center gap-2 bg-white py-1 pr-1 pl-4 text-lg font-bold text-foreground"
     >
       <span className="flex-1">{value}</span>
       <button
         type="button"
         aria-label={`Drag to reorder ${value}`}
-        className="flex shrink-0 cursor-grab touch-none items-center justify-center text-foreground/40 active:cursor-grabbing"
+        className="flex h-12 w-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-foreground/40 active:cursor-grabbing active:bg-foreground/10"
         {...attributes}
         {...listeners}
       >
-        <DragHandleDots2Icon aria-hidden="true" />
+        <DragHandleDots2Icon aria-hidden="true" className="h-7 w-7" />
       </button>
     </motion.li>
   );
@@ -102,7 +102,7 @@ export function MatchAnswer({
           {leftItems.map((left) => (
             <li
               key={left}
-              className="flex min-h-14 items-center px-4 text-lg font-bold text-foreground"
+              className="flex min-h-16 items-center px-4 text-lg font-bold text-foreground"
             >
               {left}
             </li>

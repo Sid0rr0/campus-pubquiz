@@ -59,16 +59,16 @@ function SortItem({
       layout={animatePositionChange}
       transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className="flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold"
+      className="flex min-h-16 items-center gap-2 rounded-2xl border-2 border-foreground/30 bg-white pr-4 pl-1 text-lg font-bold"
     >
       <button
         type="button"
         aria-label={`Drag to reorder ${item}`}
-        className="flex shrink-0 cursor-grab touch-none items-center justify-center text-foreground/40 active:cursor-grabbing"
+        className="flex h-12 w-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-foreground/40 active:cursor-grabbing active:bg-foreground/10"
         {...attributes}
         {...listeners}
       >
-        <DragHandleDots2Icon aria-hidden="true" />
+        <DragHandleDots2Icon aria-hidden="true" className="h-7 w-7" />
       </button>
       <span aria-hidden="true" className="font-display text-cyan">
         {itemIndex + 1}
