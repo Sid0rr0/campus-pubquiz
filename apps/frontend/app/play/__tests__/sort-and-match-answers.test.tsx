@@ -26,7 +26,7 @@ describe('PlayPage — sort and match answers', () => {
     mockUseGameSocket.mockReturnValue(socketResult());
   });
 
-  it('shows sort items in display order and submits the reordered list on move', async () => {
+  it('reorders on move without submitting, then submits the reordered list on Submit click', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue(
@@ -59,6 +59,10 @@ describe('PlayPage — sort and match answers', () => {
       screen.getByRole('button', { name: 'Move Venus down' }),
     );
 
+    expect(submitAnswer).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
     expect(submitAnswer).toHaveBeenCalledWith(
       'r1q1',
       'team-1',
@@ -66,7 +70,7 @@ describe('PlayPage — sort and match answers', () => {
     );
   });
 
-  it('shows a fixed left column beside a reorderable right column', async () => {
+  it('shows a fixed left column beside a reorderable right column and submits on Submit click', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue(
@@ -103,6 +107,15 @@ describe('PlayPage — sort and match answers', () => {
       screen.getByRole('button', { name: 'Drag to reorder excalibur' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(submitAnswer).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+    expect(submitAnswer).toHaveBeenCalledWith(
+      'r1q1',
+      'team-1',
+      'shield|excalibur',
+    );
   });
 
   it('submits the IDK sentinel from the sort question\'s "I don\'t know" button', async () => {

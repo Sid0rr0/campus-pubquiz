@@ -20,6 +20,7 @@ import { motion } from 'motion/react';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  CheckIcon,
   DragHandleDots2Icon,
 } from '@radix-ui/react-icons';
 import { splitPipeList } from '@campus-pubquiz/types';
@@ -121,7 +122,6 @@ export function SortAnswer({
     const next = [...order];
     [next[itemIndex], next[targetIndex]] = [next[targetIndex], next[itemIndex]];
     setOrder(next);
-    onSubmit(next.join('|'));
   }
 
   function handleDragEnd(event: DragEndEvent): void {
@@ -131,32 +131,42 @@ export function SortAnswer({
     const next = reorderOnDragEnd(order, String(active.id), String(over.id));
     if (!next) return;
     setOrder(next);
-    onSubmit(next.join('|'));
   }
 
   return (
-    // A static id keeps dnd-kit's aria-describedby id deterministic across SSR/hydration — without it dnd-kit falls back to a shared mutable module counter that drifts between the server and client render, causing a hydration mismatch.
-    <DndContext
-      id="sort-answer"
-      sensors={sensors}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={handleDragEnd}
-      onDragCancel={() => setIsDragging(false)}
-    >
-      <SortableContext items={order} strategy={verticalListSortingStrategy}>
-        <ol className="flex flex-col gap-2.5">
-          {order.map((item, itemIndex) => (
-            <SortItem
-              key={item}
-              item={item}
-              itemIndex={itemIndex}
-              itemCount={order.length}
-              onMove={move}
-              animatePositionChange={!isDragging}
-            />
-          ))}
-        </ol>
-      </SortableContext>
-    </DndContext>
+    <div className="flex flex-col gap-3">
+      {/* A static id keeps dnd-kit's aria-describedby id deterministic across SSR/hydration — without it dnd-kit falls back to a shared mutable module counter that drifts between the server and client render, causing a hydration mismatch. */}
+      <DndContext
+        id="sort-answer"
+        sensors={sensors}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setIsDragging(false)}
+      >
+        <SortableContext items={order} strategy={verticalListSortingStrategy}>
+          <ol className="flex flex-col gap-2.5">
+            {order.map((item, itemIndex) => (
+              <SortItem
+                key={item}
+                item={item}
+                itemIndex={itemIndex}
+                itemCount={order.length}
+                onMove={move}
+                animatePositionChange={!isDragging}
+              />
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
+      <Button
+        type="button"
+        variant="solid"
+        onClick={() => onSubmit(order.join('|'))}
+        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
+      >
+        <CheckIcon aria-hidden="true" />
+        Submit
+      </Button>
+    </div>
   );
 }

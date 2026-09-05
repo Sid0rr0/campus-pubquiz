@@ -17,8 +17,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'motion/react';
-import { DragHandleDots2Icon } from '@radix-ui/react-icons';
+import { CheckIcon, DragHandleDots2Icon } from '@radix-ui/react-icons';
 import { splitPipeList } from '@campus-pubquiz/types';
+import { Button } from '@/app/components/button';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
 
 interface MatchAnswerProps {
@@ -92,41 +93,51 @@ export function MatchAnswer({
     const next = reorderOnDragEnd(order, String(active.id), String(over.id));
     if (!next) return;
     setOrder(next);
-    onSubmit(next.join('|'));
   }
 
   return (
-    <div className="flex overflow-hidden rounded-2xl border-2 border-foreground/30 bg-white">
-      <ul className="flex flex-1 flex-col divide-y divide-foreground/15 border-r-2 border-foreground/15">
-        {leftItems.map((left) => (
-          <li
-            key={left}
-            className="flex min-h-14 items-center px-4 text-lg font-bold text-foreground"
-          >
-            {left}
-          </li>
-        ))}
-      </ul>
-      {/* A static id keeps dnd-kit's aria-describedby id deterministic across SSR/hydration — see the identical comment in sort-answer.tsx. */}
-      <DndContext
-        id="match-answer"
-        sensors={sensors}
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => setIsDragging(false)}
+    <div className="flex flex-col gap-3">
+      <div className="flex overflow-hidden rounded-2xl border-2 border-foreground/30 bg-white">
+        <ul className="flex flex-1 flex-col divide-y divide-foreground/15 border-r-2 border-foreground/15">
+          {leftItems.map((left) => (
+            <li
+              key={left}
+              className="flex min-h-14 items-center px-4 text-lg font-bold text-foreground"
+            >
+              {left}
+            </li>
+          ))}
+        </ul>
+        {/* A static id keeps dnd-kit's aria-describedby id deterministic across SSR/hydration — see the identical comment in sort-answer.tsx. */}
+        <DndContext
+          id="match-answer"
+          sensors={sensors}
+          onDragStart={() => setIsDragging(true)}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => setIsDragging(false)}
+        >
+          <SortableContext items={order} strategy={verticalListSortingStrategy}>
+            <ol className="flex flex-1 flex-col divide-y divide-foreground/15">
+              {order.map((value) => (
+                <MatchRightRow
+                  key={value}
+                  value={value}
+                  animatePositionChange={!isDragging}
+                />
+              ))}
+            </ol>
+          </SortableContext>
+        </DndContext>
+      </div>
+      <Button
+        type="button"
+        variant="solid"
+        onClick={() => onSubmit(order.join('|'))}
+        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
       >
-        <SortableContext items={order} strategy={verticalListSortingStrategy}>
-          <ol className="flex flex-1 flex-col divide-y divide-foreground/15">
-            {order.map((value) => (
-              <MatchRightRow
-                key={value}
-                value={value}
-                animatePositionChange={!isDragging}
-              />
-            ))}
-          </ol>
-        </SortableContext>
-      </DndContext>
+        <CheckIcon aria-hidden="true" />
+        Submit
+      </Button>
     </div>
   );
 }
