@@ -182,29 +182,42 @@ export function QuestionDisplay({
           className={
             isFullscreen
               ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
-              : 'relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl'
+              : 'w-full max-w-2xl'
           }
         >
-          {/* Same iframe element in both states — swapping in a second,
-              separately-mounted iframe for fullscreen would restart the
-              YouTube player from the beginning instead of continuing. */}
-          <iframe
-            data-testid={`${mediaTestIdPrefix}-youtube`}
-            src={buildYoutubeEmbedSrc(
-              questionYoutubeId,
-              autoplayMedia,
-              mediaStartSeconds,
-              mediaEndSeconds,
-            )}
-            title="Question video"
+          {/* Same nesting (and the same iframe element) in both states —
+              changing the tree shape between fullscreen and inline would
+              remount the iframe and restart the YouTube player instead of
+              continuing playback. */}
+          <div
             className={
               isFullscreen
-                ? 'aspect-video max-h-full w-full'
-                : 'absolute inset-x-0 top-[-12%] h-[112%] w-full'
+                ? 'relative aspect-video max-h-full w-full'
+                : 'relative aspect-video w-full overflow-hidden rounded-xl'
             }
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
+          >
+            <iframe
+              data-testid={`${mediaTestIdPrefix}-youtube`}
+              src={buildYoutubeEmbedSrc(
+                questionYoutubeId,
+                autoplayMedia,
+                mediaStartSeconds,
+                mediaEndSeconds,
+              )}
+              title="Question video"
+              className="absolute inset-0 h-full w-full"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+            />
+            {/* YouTube always renders its title/channel overlay near the top
+                of the player and no longer honors any param that removes it
+                (modestbranding is deprecated) — mask it with a solid bar
+                instead, sized to the band YouTube draws it in. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
+            />
+          </div>
         </div>
       )}
       {questionMediaUrl &&
