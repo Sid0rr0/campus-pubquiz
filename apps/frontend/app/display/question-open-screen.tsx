@@ -28,7 +28,7 @@ export function QuestionOpenScreen({
         autoplayMedia={autoplayMedia}
       />
       {totalTeams > 0 && (
-        <p className="font-extrabold tracking-wide text-foreground/55">
+        <p className="text-[calc(1rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
           {answeredCount} OF {totalTeams} TEAMS ANSWERED
         </p>
       )}

@@ -38,20 +38,20 @@ export function ClosestGuessRevealScreen({
 
   return (
     <>
-      <h1 className="text-balance font-display text-4xl leading-snug">
+      <h1 className="text-balance font-display text-[calc(2.25rem*var(--display-text-scale,1))] leading-snug">
         {prompt}
       </h1>
       {showSmallest && (
-        <p className="font-display text-lg text-cyan">
-          <span className="font-body text-sm font-extrabold text-foreground/55">
+        <p className="font-display text-[calc(1.125rem*var(--display-text-scale,1))] text-cyan">
+          <span className="font-body text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold text-foreground/55">
             SMALLEST GUESS{' '}
           </span>
           {closestGuess.minGuess}
         </p>
       )}
       {showHighest && (
-        <p className="font-display text-lg text-cyan">
-          <span className="font-body text-sm font-extrabold text-foreground/55">
+        <p className="font-display text-[calc(1.125rem*var(--display-text-scale,1))] text-cyan">
+          <span className="font-body text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold text-foreground/55">
             HIGHEST GUESS{' '}
           </span>
           {closestGuess.maxGuess}
@@ -59,8 +59,8 @@ export function ClosestGuessRevealScreen({
       )}
       {showCorrect && (
         <>
-          <p className="font-display text-lg text-green">
-            <span className="font-body text-sm font-extrabold text-foreground/55">
+          <p className="font-display text-[calc(1.125rem*var(--display-text-scale,1))] text-green">
+            <span className="font-body text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold text-foreground/55">
               ANSWER{' '}
             </span>
             {correctAnswer}
@@ -77,7 +77,7 @@ export function ClosestGuessRevealScreen({
           {closestGuess.closestGuesses.map((guess, index) => (
             <li
               key={index}
-              className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold text-foreground"
+              className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground"
             >
               <span>{guess.teamName}</span>
               <span aria-hidden="true" className="text-green">

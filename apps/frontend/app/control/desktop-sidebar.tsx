@@ -1,6 +1,7 @@
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { AdminActions } from '@/app/control/admin-actions';
 import { BreakEndTimeControl } from '@/app/control/break-end-time-control';
+import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
 import { TeamsPanel } from '@/app/control/teams-panel';
 import { SessionStatusPanel } from '@/app/control/session-status-panel';
@@ -31,6 +32,8 @@ export function DesktopSidebar({
   breakEndsAt,
   onSetBreakEndTime,
   isLastQuestionBeforeBreak,
+  displayTextScale,
+  onSetDisplayTextScale,
   activeShowdown,
   tiedTeamNames,
   isShowdownEligible,
@@ -70,6 +73,10 @@ export function DesktopSidebar({
           breakEndsAt={breakEndsAt}
           onSetBreakEndTime={onSetBreakEndTime}
           isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+        />
+        <DisplayTextScaleControl
+          displayTextScale={displayTextScale}
+          onSetDisplayTextScale={onSetDisplayTextScale}
         />
         <ShowdownPanel
           isEligible={isShowdownEligible}

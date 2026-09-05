@@ -24,6 +24,7 @@ export const SOCKET_EVENTS = {
   KICK_TEAM: 'game:kick_team',
   AWARD_BONUS: 'game:award_bonus',
   SET_BREAK_END_TIME: 'game:set_break_end_time',
+  SET_DISPLAY_TEXT_SCALE: 'game:set_display_text_scale',
   CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
   SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
 } as const;
@@ -221,6 +222,13 @@ export interface StateSnapshotPayload {
    * whenever a fresh break starts (entering 'break_intro' from 'locking').
    */
   breakEndsAt: number | null;
+  /**
+   * Text-size multiplier applied to every /display screen except the
+   * persistent header, admin-editable via SET_DISPLAY_TEXT_SCALE — see
+   * DISPLAY_TEXT_SCALE_STEPS. Ephemeral (not persisted), defaults to
+   * DEFAULT_DISPLAY_TEXT_SCALE.
+   */
+  displayTextScale: number;
   /**
    * Epoch-ms the currently-displayed question/grading block started, or
    * null when it isn't live. There is at most one live timed phase per
@@ -424,6 +432,16 @@ export interface KickTeamPayload {
 /** Admin-set/clear the display's break-end-time line — null clears it back to unset. */
 export interface SetBreakEndTimePayload {
   breakEndsAt: number | null;
+}
+
+/** Discrete steps the admin can pick between for /display's text size — 1 is the original, unscaled size. */
+export const DISPLAY_TEXT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
+export const DEFAULT_DISPLAY_TEXT_SCALE: (typeof DISPLAY_TEXT_SCALE_STEPS)[number] = 1;
+
+/** Admin-set text-size multiplier for /display (every screen except the header) — see DISPLAY_TEXT_SCALE_STEPS. */
+export interface SetDisplayTextScalePayload {
+  displayTextScale: number;
 }
 
 /** "shot"/"selfie" are the predefined quick-award categories; "custom" requires a `reason`. */

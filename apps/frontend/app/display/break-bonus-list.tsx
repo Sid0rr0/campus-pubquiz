@@ -38,10 +38,10 @@ export function BreakBonusList({
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3">
-      <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+      <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
         BONUS POINTS AVAILABLE
       </p>
-      <p className="-mt-2 text-sm text-foreground/55">
+      <p className="-mt-2 text-[calc(0.875rem*var(--display-text-scale,1))] text-foreground/55">
         {getBonusEarnDeadlineText(quizStructure)}
       </p>
       <ul className="flex flex-col gap-3">
@@ -51,14 +51,14 @@ export function BreakBonusList({
             className="rounded-xl border border-foreground/15 bg-white px-5 py-3 text-left"
           >
             <p className="flex items-baseline justify-between gap-3">
-              <span className="font-display text-lg">
+              <span className="font-display text-[calc(1.125rem*var(--display-text-scale,1))]">
                 {BONUS_CATEGORY_LABELS[category]}
               </span>
-              <span className="shrink-0 text-sm font-extrabold text-magenta">
+              <span className="shrink-0 text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold text-magenta">
                 +{DEFAULT_BONUS_POINTS} pt each
               </span>
             </p>
-            <p className="mt-1 text-base text-foreground/70">
+            <p className="mt-1 text-[calc(1rem*var(--display-text-scale,1))] text-foreground/70">
               {BONUS_CATEGORY_EXPLANATIONS[category]}
             </p>
           </li>

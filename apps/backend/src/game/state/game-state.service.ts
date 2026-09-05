@@ -226,6 +226,11 @@ export class GameStateService implements OnModuleInit {
     this.mutations.setBreakEndTime(joinCode, breakEndsAt);
   }
 
+  /** Admin-set text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
+  setDisplayTextScale(joinCode: string, displayTextScale: number): void {
+    this.mutations.setDisplayTextScale(joinCode, displayTextScale);
+  }
+
   /** The in-progress/just-resolved showdown round, or null between rounds. */
   getActiveShowdownRound(joinCode: string): ActiveShowdownRoundState | null {
     return this.sessionStore.get(joinCode).activeShowdownRound;

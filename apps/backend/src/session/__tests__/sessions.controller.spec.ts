@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   type ActiveSessionSummary,
   type StateSnapshotPayload,
@@ -74,6 +75,7 @@ function snapshot(
     questionLockAt: null,
     closestGuessRevealStep: 0,
     breakEndsAt: null,
+    displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     phaseStartedAt: null,
     phaseElapsedMs: null,
     settings: DEFAULT_SESSION_SETTINGS,

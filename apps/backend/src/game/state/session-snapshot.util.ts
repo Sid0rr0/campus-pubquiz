@@ -31,7 +31,10 @@ function resolveCurrentPhaseTimerView(session: SessionState): {
   phaseStartedAt: number | null;
   phaseElapsedMs: number | null;
 } {
-  const displayedKey = getTimedPhaseKey(session.progress, getGameContext(session));
+  const displayedKey = getTimedPhaseKey(
+    session.progress,
+    getGameContext(session),
+  );
   if (displayedKey === null) {
     return { phaseStartedAt: null, phaseElapsedMs: null };
   }
@@ -69,6 +72,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     questionLockAt: session.questionLockAt,
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
+    displayTextScale: session.displayTextScale,
     ...resolveCurrentPhaseTimerView(session),
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(

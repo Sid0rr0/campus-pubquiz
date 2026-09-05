@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { WsException } from '@nestjs/websockets';
 import {
   BONUS_CATEGORIES,
+  DISPLAY_TEXT_SCALE_STEPS,
   type BonusCategory,
   type GameAction,
 } from '@campus-pubquiz/types';
@@ -61,6 +62,13 @@ export const kickTeamPayloadSchema = z.object({
 
 export const setBreakEndTimePayloadSchema = z.object({
   breakEndsAt: finiteNumber.nullable(),
+});
+
+export const setDisplayTextScalePayloadSchema = z.object({
+  displayTextScale: finiteNumber.refine(
+    (value) => (DISPLAY_TEXT_SCALE_STEPS as readonly number[]).includes(value),
+    { message: 'displayTextScale must be one of DISPLAY_TEXT_SCALE_STEPS' },
+  ),
 });
 
 export const awardBonusPayloadSchema = z.object({

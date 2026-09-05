@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   getBlockStartRoundIndex,
   getTiedForFirst,
@@ -76,6 +77,7 @@ function AdminPageContent() {
     kickTeam,
     awardBonus,
     setBreakEndTime,
+    setDisplayTextScale,
     createShowdownRound,
     setLiveAnswers = () => {},
     reconnectedAt,
@@ -436,6 +438,7 @@ function AdminPageContent() {
     answeredTeamIds = [],
     ungradedQuestionIds = [],
     breakEndsAt = null,
+    displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
     phaseStartedAt = null,
     phaseElapsedMs = null,
     settings = DEFAULT_SESSION_SETTINGS,
@@ -496,6 +499,8 @@ function AdminPageContent() {
         breakEndsAt={breakEndsAt}
         onSetBreakEndTime={setBreakEndTime}
         isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+        displayTextScale={displayTextScale}
+        onSetDisplayTextScale={setDisplayTextScale}
         activeShowdown={activeShowdown}
         tiedTeamNames={tiedTeamNames}
         isShowdownEligible={isShowdownEligible}
@@ -527,6 +532,8 @@ function AdminPageContent() {
         breakEndsAt={breakEndsAt}
         onSetBreakEndTime={setBreakEndTime}
         isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+        displayTextScale={displayTextScale}
+        onSetDisplayTextScale={setDisplayTextScale}
         activeShowdown={activeShowdown}
         tiedTeamNames={tiedTeamNames}
         isShowdownEligible={isShowdownEligible}

@@ -20,6 +20,7 @@ import {
   type KickTeamPayload,
   type SessionClosedPayload,
   type SetBreakEndTimePayload,
+  type SetDisplayTextScalePayload,
   type StateSnapshotPayload,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
@@ -61,8 +62,14 @@ export interface UseGameSocketResult {
   ) => void;
   /** Admin-only: sets/clears the epoch-ms time shown as "back at HH:MM" on the display's break screen — null clears it. */
   setBreakEndTime: (breakEndsAt: number | null) => void;
+  /** Admin-only: sets the text-size multiplier for every /display screen except the header — see DISPLAY_TEXT_SCALE_STEPS. */
+  setDisplayTextScale: (displayTextScale: number) => void;
   /** Admin-only: starts a showdown tiebreaker round for the teams currently tied for 1st. */
-  createShowdownRound: (question: string, answer: string, points: number) => void;
+  createShowdownRound: (
+    question: string,
+    answer: string,
+    points: number,
+  ) => void;
   /** Players-only: submits this team's numeric guess for the active showdown round. */
   submitShowdownGuess: (
     showdownRoundId: number,
@@ -375,6 +382,11 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.SET_BREAK_END_TIME, payload);
   }, []);
 
+  const setDisplayTextScale = useCallback((displayTextScale: number) => {
+    const payload: SetDisplayTextScalePayload = { displayTextScale };
+    socketRef.current?.emit(SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE, payload);
+  }, []);
+
   const createShowdownRound = useCallback(
     (question: string, answer: string, points: number) => {
       const payload: CreateShowdownRoundPayload = { question, answer, points };
@@ -407,6 +419,7 @@ export function useGameSocket(
     kickTeam,
     awardBonus,
     setBreakEndTime,
+    setDisplayTextScale,
     createShowdownRound,
     submitShowdownGuess,
     myAnswers,

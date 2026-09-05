@@ -30,6 +30,8 @@ export interface AdminSidebarProps {
   breakEndsAt: number | null;
   onSetBreakEndTime: (breakEndsAt: number | null) => void;
   isLastQuestionBeforeBreak: boolean;
+  displayTextScale: number;
+  onSetDisplayTextScale: (displayTextScale: number) => void;
   activeShowdown: ActiveShowdownView | null;
   tiedTeamNames: string[];
   /** True once the final block is fully graded (or the quiz has ended) — see the isShowdownEligible computation in AdminPage. */

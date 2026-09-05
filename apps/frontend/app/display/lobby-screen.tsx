@@ -14,7 +14,9 @@ export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
       <TeamRoster teams={teams} />
-      <h1 className="font-display text-4xl">Waiting for the quiz to start…</h1>
+      <h1 className="font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
+        Waiting for the quiz to start…
+      </h1>
       {joinCode && (
         <div className="flex flex-col items-center gap-4">
           <div className="rounded-2xl border-2 border-foreground/30 bg-white p-5">
@@ -24,14 +26,17 @@ export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
               size={QR_SIZE_PX}
             />
           </div>
-          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+          <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
             SCAN TO JOIN — OR GO TO /PLAY AND ENTER THE CODE
           </p>
           <p className="flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center">
-            <span className="font-display text-3xl tracking-widest text-magenta wrap-break-word">
+            <span className="font-display text-[calc(1.875rem*var(--display-text-scale,1))] tracking-widest text-magenta wrap-break-word">
               {joinCode}
             </span>
-            <CopyButton value={joinCode} className="text-2xl text-magenta" />
+            <CopyButton
+              value={joinCode}
+              className="text-[calc(1.5rem*var(--display-text-scale,1))] text-magenta"
+            />
           </p>
         </div>
       )}

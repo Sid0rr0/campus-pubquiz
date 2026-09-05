@@ -136,7 +136,7 @@ export function QuestionDisplay({
   answerMediaUrl,
   mediaTestIdPrefix,
   autoplayMedia = true,
-  promptClassName = 'text-balance font-display text-4xl leading-snug',
+  promptClassName = 'text-balance font-display text-[calc(2.25rem*var(--display-text-scale,1))] leading-snug',
 }: QuestionDisplayProps) {
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
@@ -240,7 +240,7 @@ export function QuestionDisplay({
           {options.map((item, index) => (
             <li
               key={index}
-              className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold"
+              className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold"
             >
               <span className="font-display text-cyan">{index + 1}</span>
               <span className="text-foreground">{item}</span>
@@ -253,7 +253,7 @@ export function QuestionDisplay({
           {sortCorrectOrder.map((item, index) => (
             <li
               key={index}
-              className="flex items-center gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold"
+              className="flex items-center gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold"
             >
               <span className="font-display text-green">{index + 1}</span>
               <span className="text-foreground">{item}</span>
@@ -270,7 +270,7 @@ export function QuestionDisplay({
             {options.map((item, index) => (
               <li
                 key={index}
-                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
+                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground"
               >
                 <span className="font-display text-cyan">{index + 1}</span>
                 <span>{item}</span>
@@ -281,7 +281,7 @@ export function QuestionDisplay({
             {matchTargets.map((item, index) => (
               <li
                 key={index}
-                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-xl font-bold text-foreground"
+                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground"
               >
                 <span className="font-display text-cyan">
                   {getLowerOptionLetter(index)}
@@ -300,7 +300,7 @@ export function QuestionDisplay({
             return (
               <li
                 key={index}
-                className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold text-foreground"
+                className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground"
               >
                 <span className="flex items-center gap-3">
                   <span className="font-display text-green">{index + 1}</span>
@@ -330,7 +330,7 @@ export function QuestionDisplay({
             return (
               <li
                 key={index}
-                className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-xl font-bold ${
+                className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-[calc(1.25rem*var(--display-text-scale,1))] font-bold ${
                   isCorrect ? 'border-green' : 'border-foreground/30'
                 }`}
               >
@@ -351,7 +351,7 @@ export function QuestionDisplay({
         </ul>
       )}
       {isRevealing && !isSort && !isMatch && (
-        <p className="font-extrabold text-2xl">
+        <p className="font-extrabold text-[calc(1.5rem*var(--display-text-scale,1))]">
           <span className="font-body text-foreground/55">Answer{': '}</span>
           {correctAnswer}
         </p>

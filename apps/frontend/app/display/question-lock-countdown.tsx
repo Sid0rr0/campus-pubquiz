@@ -31,7 +31,7 @@ export function QuestionLockHeading({ lockAt }: QuestionLockCountdownProps) {
   }, [lockAt]);
 
   return (
-    <h1 className="font-display text-4xl">
+    <h1 className="font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
       {secondsRemaining <= NEAR_LOCK_THRESHOLD_SECONDS
         ? "Time's almost up!"
         : 'You have the last minute to answer!'}
@@ -85,7 +85,7 @@ export function QuestionLockCountdown({ lockAt }: QuestionLockCountdownProps) {
           transition={{ duration: remainingMs / 1000, ease: 'linear' }}
         />
       </svg>
-      <span className="absolute font-display text-2xl text-foreground">
+      <span className="absolute font-display text-[calc(1.5rem*var(--display-text-scale,1))] text-foreground">
         {secondsRemaining}
       </span>
     </div>

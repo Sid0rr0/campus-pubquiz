@@ -1,4 +1,5 @@
 import {
+  DEFAULT_DISPLAY_TEXT_SCALE,
   getTimedPhaseKey,
   type ClosestGuessRevealData,
   type GameContext,
@@ -25,6 +26,8 @@ export interface SessionState {
   questionLockAt: number | null;
   /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
   breakEndsAt: number | null;
+  /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
+  displayTextScale: number;
   /**
    * The timed-phase key currently "live" — the most recent genuinely-new
    * question or grading block to open — or null before any timed phase has
@@ -111,6 +114,7 @@ export function freshSessionState(
       seededGame.settings.lockGraceSeconds * 1000,
     ),
     breakEndsAt: null,
+    displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     livePhaseKey,
     phaseStartedAt: livePhaseKey !== null ? Date.now() : null,
     phaseElapsedByKey: {},

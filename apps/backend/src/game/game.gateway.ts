@@ -37,6 +37,7 @@ import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
 import { QuestionLockTimerRegistry } from '@/game/socket/question-lock-timer.registry';
 import { syncTeamAnswersOnRevealEntry } from '@/game/socket/reveal-entry-sync.util';
 import { updateBreakEndTime } from '@/game/socket/handlers/set-break-end-time.handler';
+import { updateDisplayTextScale } from '@/game/socket/handlers/set-display-text-scale.handler';
 import { submitShowdownGuess } from '@/game/socket/handlers/submit-showdown-guess.handler';
 import {
   adminActionPayloadSchema,
@@ -47,6 +48,7 @@ import {
   kickTeamPayloadSchema,
   parseSocketPayload,
   setBreakEndTimePayloadSchema,
+  setDisplayTextScalePayloadSchema,
   submitAnswerPayloadSchema,
   submitShowdownGuessPayloadSchema,
 } from '@/game/socket/socket-payload.schemas';
@@ -364,6 +366,35 @@ export class GameGateway
     );
 
     updateBreakEndTime(
+      { gameState: this.gameState, server: this.server },
+      joinCode,
+      payload,
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE)
+  @CreateRequestContext()
+  // eslint-disable-next-line @typescript-eslint/require-await -- @CreateRequestContext() wraps this in a Promise at runtime regardless of the body, so the declared type must stay Promise<void> for callers (and tests) that await it
+  async handleSetDisplayTextScale(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<void> {
+    const payload = parseSocketPayload(
+      setDisplayTextScalePayloadSchema,
+      rawPayload,
+    );
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+      throw new WsException(
+        'Only admin clients may set the display text scale',
+      );
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE} from ${client.id}: displayTextScale=${payload.displayTextScale}`,
+    );
+
+    updateDisplayTextScale(
       { gameState: this.gameState, server: this.server },
       joinCode,
       payload,

@@ -81,19 +81,19 @@ export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
             className={rowClasses(rankIndex)}
           >
             <span
-              className={`font-display w-16 shrink-0 text-2xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+              className={`font-display w-16 shrink-0 text-[calc(1.5rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
               {label}
             </span>
             <span
-              className={`flex-1 font-bold ${rankIndex === 0 ? 'text-xl' : 'text-lg'}`}
+              className={`flex-1 font-bold ${rankIndex === 0 ? 'text-[calc(1.25rem*var(--display-text-scale,1))]' : 'text-[calc(1.125rem*var(--display-text-scale,1))]'}`}
             >
               {entry.teamName}
             </span>
             {entry.bonusPoints !== 0 && (
               <span
                 aria-label={`${entry.bonusPoints} bonus points`}
-                className={`rounded-full px-2 py-0.5 text-sm font-extrabold ${
+                className={`rounded-full px-2 py-0.5 text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold ${
                   entry.bonusPoints > 0
                     ? 'bg-cyan text-dark-blue'
                     : 'bg-magenta text-white'
@@ -103,7 +103,9 @@ export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
                 {entry.bonusPoints}
               </span>
             )}
-            <span className="font-display text-xl">{entry.totalPoints}</span>
+            <span className="font-display text-[calc(1.25rem*var(--display-text-scale,1))]">
+              {entry.totalPoints}
+            </span>
           </motion.li>
         );
       })}

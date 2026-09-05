@@ -4,6 +4,7 @@ import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
   isShowingLastBreak,
@@ -190,6 +191,7 @@ function DisplayPageContent() {
     questionLockAt = null,
     closestGuessRevealStep = 0,
     breakEndsAt = null,
+    displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
     showdownRevealStep = 0,
@@ -222,7 +224,12 @@ function DisplayPageContent() {
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
 
   return (
-    <main className="flex h-dvh flex-col bg-background text-foreground">
+    <main
+      className="flex h-dvh flex-col bg-background text-foreground"
+      style={
+        { '--display-text-scale': displayTextScale } as React.CSSProperties
+      }
+    >
       {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
       <TriviaHeader label={headerContent.label} badge={headerContent.badge} />
       <AnimatePresence mode="wait">
@@ -236,7 +243,7 @@ function DisplayPageContent() {
         >
           {progress.isLeaderboardVisible ? (
             <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
-              <h1 className="text-center font-display text-4xl">
+              <h1 className="text-center font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
                 <span className="text-magenta">Leaderboard</span>
               </h1>
               <Leaderboard
@@ -260,10 +267,10 @@ function DisplayPageContent() {
               )}
               {progress.status === 'round_intro' && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-                  <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+                  <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
                     ROUND {progress.roundIndex + 1}
                   </p>
-                  <h1 className="text-balance font-display text-6xl text-magenta">
+                  <h1 className="text-balance font-display text-[calc(3.75rem*var(--display-text-scale,1))] text-magenta">
                     {roundTitle}
                   </h1>
                 </div>
@@ -369,7 +376,9 @@ function DisplayPageContent() {
                   </div>
                 ) : (
                   <div className="flex flex-1 items-center justify-center px-16 text-center">
-                    <h1 className="font-display text-4xl">Quiz complete!</h1>
+                    <h1 className="font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
+                      Quiz complete!
+                    </h1>
                   </div>
                 ))}
             </>

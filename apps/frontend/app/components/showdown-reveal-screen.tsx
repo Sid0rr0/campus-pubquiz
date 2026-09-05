@@ -21,10 +21,10 @@ export function ShowdownRevealScreen({
 
   return (
     <>
-      <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+      <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
         SHOWDOWN TIEBREAKER
       </p>
-      <h1 className="text-balance font-display text-4xl leading-snug">
+      <h1 className="text-balance font-display text-[calc(2.25rem*var(--display-text-scale,1))] leading-snug">
         {question}
       </h1>
       <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
@@ -37,15 +37,15 @@ export function ShowdownRevealScreen({
               key={participant.teamId}
               className={
                 isWinner
-                  ? 'flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-xl font-bold text-foreground'
-                  : 'flex items-center justify-between gap-3 rounded-xl border-2 border-foreground/20 bg-white px-5 py-3 text-xl font-bold text-foreground'
+                  ? 'flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground'
+                  : 'flex items-center justify-between gap-3 rounded-xl border-2 border-foreground/20 bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground'
               }
             >
               <span>{participant.teamName}</span>
               {isRevealed && participant.guess !== undefined ? (
                 <span>{participant.guess}</span>
               ) : (
-                <span className="text-sm font-extrabold text-foreground/45">
+                <span className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold text-foreground/45">
                   {isRevealed
                     ? 'no guess'
                     : participant.hasGuessed
@@ -63,15 +63,15 @@ export function ShowdownRevealScreen({
         })}
       </ul>
       {showAnswer && (
-        <p className="font-display text-lg text-green">
-          <span className="font-body text-sm font-extrabold text-foreground/55">
+        <p className="font-display text-[calc(1.125rem*var(--display-text-scale,1))] text-green">
+          <span className="font-body text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold text-foreground/55">
             ANSWER{' '}
           </span>
           {activeShowdown.answer}
         </p>
       )}
       {showAnswer && activeShowdown.isTie === true && (
-        <p className="font-display text-2xl text-magenta">
+        <p className="font-display text-[calc(1.5rem*var(--display-text-scale,1))] text-magenta">
           It&apos;s a tie — sudden death!
         </p>
       )}

@@ -79,6 +79,12 @@ export class GameSessionMutationsService {
     this.store.set(joinCode, { ...session, breakEndsAt });
   }
 
+  /** Admin-set text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
+  setDisplayTextScale(joinCode: string, displayTextScale: number): void {
+    const session = this.store.get(joinCode);
+    this.store.set(joinCode, { ...session, displayTextScale });
+  }
+
   /** Incrementally patches the ungraded-question cache for one questionId — called by the gateway right after SUBMIT_ANSWER/GRADE_ANSWER, which grade individual answers without going through applyAction's bulk refresh. */
   setQuestionGradedStatus(
     joinCode: string,
