@@ -190,6 +190,23 @@ describe('AdminPage — keyboard shortcuts', () => {
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
 
+  it('sends TOGGLE_MEDIA_FULLSCREEN when Space is pressed', async () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: null,
+      },
+      connectionError: null,
+      sendAction,
+    });
+    renderWithQuery(<AdminPage />);
+
+    await userEvent.keyboard(' ');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_FULLSCREEN');
+  });
+
   it('does not trigger a shortcut while typing in a text field', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({

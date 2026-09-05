@@ -36,6 +36,21 @@ export function getNextGameState(
   action: GameAction,
   context: GameContext,
 ): GameProgress {
+  if (action === 'TOGGLE_MEDIA_FULLSCREEN') {
+    return {
+      ...progress,
+      isMediaFullscreen: !progress.isMediaFullscreen,
+    };
+  }
+
+  // The fullscreen view is tied to whatever's currently on screen, so any
+  // other action closes it rather than leaving it stuck over unrelated
+  // content — every branch below spreads ...progress, so reassigning the
+  // local binding here carries the cleared flag through automatically.
+  if (progress.isMediaFullscreen) {
+    progress = { ...progress, isMediaFullscreen: false };
+  }
+
   if (action === 'TOGGLE_LEADERBOARD') {
     return {
       ...progress,

@@ -151,6 +151,61 @@ describe('getNextGameState — leaderboard visibility and REVEAL_NEXT_TEAM', () 
   });
 });
 
+describe('getNextGameState — media fullscreen', () => {
+  it('toggles media fullscreen on without changing the underlying status', () => {
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      open,
+      'TOGGLE_MEDIA_FULLSCREEN',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...open, isMediaFullscreen: true });
+  });
+
+  it('toggles media fullscreen back off', () => {
+    const openFullscreen: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      isMediaFullscreen: true,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      openFullscreen,
+      'TOGGLE_MEDIA_FULLSCREEN',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...openFullscreen, isMediaFullscreen: false });
+  });
+
+  it('clears media fullscreen when any other action fires', () => {
+    const openFullscreen: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      isMediaFullscreen: true,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      openFullscreen,
+      'TOGGLE_LEADERBOARD',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaFullscreen).toBe(false);
+  });
+});
+
 describe('getNextGameState — illegal transitions and config guards', () => {
   it('rejects advancing from the lobby', () => {
     expect(() =>

@@ -24,8 +24,9 @@ function isEditableTarget(target: EventTarget | null): boolean {
 /**
  * Left/Right step through Previous/Advance (reveal leaderboard teams one at a
  * time once the board is up, then hide it again once every team's shown);
- * Up/Down show/hide the leaderboard. Ignored while focus is in a form field
- * so typing a password or a grade isn't hijacked.
+ * Up/Down show/hide the leaderboard; Space toggles a fullscreen view of the
+ * current question's media on /display. Ignored while focus is in a form
+ * field so typing a password or a grade isn't hijacked.
  */
 export function useAdminKeyboardShortcuts({
   canAdvance,
@@ -71,6 +72,11 @@ export function useAdminKeyboardShortcuts({
       if (event.key === 'ArrowDown' && isLeaderboardVisible) {
         event.preventDefault();
         sendAction('TOGGLE_LEADERBOARD');
+        return;
+      }
+      if (event.key === ' ') {
+        event.preventDefault();
+        sendAction('TOGGLE_MEDIA_FULLSCREEN');
       }
     }
 

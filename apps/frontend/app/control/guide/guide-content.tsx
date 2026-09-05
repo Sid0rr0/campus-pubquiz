@@ -49,6 +49,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Left arrow — Previous, when available and the leaderboard isn’t showing.',
       'Up arrow — show the leaderboard.',
       'Down arrow — hide the leaderboard.',
+      'Space — toggle a fullscreen view of the current question’s image or YouTube video on the display screen.',
     ],
   },
   {

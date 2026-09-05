@@ -101,6 +101,61 @@ describe('DisplayPage — question display', () => {
     expect(screen.getByText('b')).toBeInTheDocument();
   });
 
+  it('shows the question image in a fullscreen overlay when media fullscreen is on', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isMediaFullscreen: true,
+        }),
+        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('question-image').parentElement).toHaveClass(
+      'fixed',
+    );
+  });
+
+  it('does not show the image in a fullscreen overlay when media fullscreen is off', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isMediaFullscreen: false,
+        }),
+        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByTestId('question-image').parentElement).not.toHaveClass(
+      'fixed',
+    );
+  });
+
+  it('does not show any media when the question has none, even with fullscreen on', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isMediaFullscreen: true,
+        }),
+        currentQuestion: question,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
+  });
+
   it('shows how many teams have answered the open question', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {

@@ -17,7 +17,8 @@ export type GameAction =
   | 'PREVIOUS'
   | 'END_QUIZ'
   | 'TOGGLE_LEADERBOARD'
-  | 'REVEAL_NEXT_TEAM';
+  | 'REVEAL_NEXT_TEAM'
+  | 'TOGGLE_MEDIA_FULLSCREEN';
 
 export interface RoundConfig {
   questionCount: number;
@@ -38,6 +39,15 @@ export interface GameProgress {
   roundIndex: number;
   questionIndex: number;
   isLeaderboardVisible: boolean;
+  /**
+   * Whether the current question's media (image or YouTube) is shown
+   * full-viewport on /display — toggled by TOGGLE_MEDIA_FULLSCREEN and
+   * cleared automatically by every other action, since the enlarged view is
+   * tied to whatever's currently on screen. Optional (unlike
+   * isLeaderboardVisible) so the many existing GameProgress literals across
+   * the codebase don't all need updating; undefined behaves as false.
+   */
+  isMediaFullscreen?: boolean;
   /**
    * Position within the just-finished block's flattened question list,
    * shown one at a time (same layout as question_open) during reveal, or

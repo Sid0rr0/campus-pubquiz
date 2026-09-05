@@ -6,6 +6,7 @@ interface QuestionOpenScreenProps {
   answeredCount: number;
   totalTeams: number;
   autoplayMedia?: boolean;
+  isFullscreen?: boolean;
 }
 
 export function QuestionOpenScreen({
@@ -13,6 +14,7 @@ export function QuestionOpenScreen({
   answeredCount,
   totalTeams,
   autoplayMedia,
+  isFullscreen,
 }: QuestionOpenScreenProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
@@ -26,6 +28,7 @@ export function QuestionOpenScreen({
         matchTargets={question.matchTargets}
         mediaTestIdPrefix="question"
         autoplayMedia={autoplayMedia}
+        isFullscreen={isFullscreen}
       />
       {totalTeams > 0 && (
         <p className="text-[calc(1rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">

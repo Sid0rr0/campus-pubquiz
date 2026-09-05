@@ -123,6 +123,27 @@ describe('useAdminKeyboardShortcuts', () => {
     document.body.innerHTML = '';
   });
 
+  it('sends TOGGLE_MEDIA_FULLSCREEN on Space regardless of other flags', async () => {
+    const { sendAction } = renderShortcuts();
+
+    await userEvent.keyboard(' ');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_FULLSCREEN');
+  });
+
+  it('ignores Space while an editable field is focused', async () => {
+    document.body.innerHTML = '<input id="target" />';
+    const input = document.getElementById('target') as HTMLInputElement;
+    input.focus();
+
+    const { sendAction } = renderShortcuts();
+
+    await userEvent.keyboard(' ');
+
+    expect(sendAction).not.toHaveBeenCalled();
+    document.body.innerHTML = '';
+  });
+
   it('re-subscribes with fresh flags after a rerender', async () => {
     const { sendAction, rerender } = renderShortcuts({ canAdvance: false });
 

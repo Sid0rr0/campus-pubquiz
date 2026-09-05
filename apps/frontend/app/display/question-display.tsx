@@ -120,6 +120,8 @@ interface QuestionDisplayProps {
   autoplayMedia?: boolean;
   /** Overrides the prompt heading's className — defaults to the big-screen size used by /display; the /play reveal step passes its question_open size to keep both states visually consistent. */
   promptClassName?: string;
+  /** Admin-toggled (spacebar in /control) full-viewport overlay of the question's own image/YouTube media — see GameProgress.isMediaFullscreen. No-op when there's no question media to enlarge. */
+  isFullscreen?: boolean;
 }
 
 // Shared by question_open and reveal so the big screen shows each question
@@ -137,6 +139,7 @@ export function QuestionDisplay({
   mediaTestIdPrefix,
   autoplayMedia = true,
   promptClassName = 'text-balance font-display text-[calc(2.25rem*var(--display-text-scale,1))] leading-snug',
+  isFullscreen = false,
 }: QuestionDisplayProps) {
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
@@ -175,7 +178,16 @@ export function QuestionDisplay({
     <>
       <h1 className={promptClassName}>{prompt}</h1>
       {questionMediaUrl && questionYoutubeId && (
-        <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
+        <div
+          className={
+            isFullscreen
+              ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
+              : 'relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl'
+          }
+        >
+          {/* Same iframe element in both states — swapping in a second,
+              separately-mounted iframe for fullscreen would restart the
+              YouTube player from the beginning instead of continuing. */}
           <iframe
             data-testid={`${mediaTestIdPrefix}-youtube`}
             src={buildYoutubeEmbedSrc(
@@ -185,7 +197,11 @@ export function QuestionDisplay({
               mediaEndSeconds,
             )}
             title="Question video"
-            className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
+            className={
+              isFullscreen
+                ? 'aspect-video max-h-full w-full'
+                : 'absolute inset-x-0 top-[-12%] h-[112%] w-full'
+            }
             allow="autoplay; encrypted-media"
             allowFullScreen
           />
@@ -215,7 +231,13 @@ export function QuestionDisplay({
             </div>
           </div>
         ) : (
-          <div className="flex w-full min-h-0 flex-1 items-center justify-center">
+          <div
+            className={
+              isFullscreen
+                ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
+                : 'flex w-full min-h-0 flex-1 items-center justify-center'
+            }
+          >
             {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
             <img
               data-testid={`${mediaTestIdPrefix}-image`}

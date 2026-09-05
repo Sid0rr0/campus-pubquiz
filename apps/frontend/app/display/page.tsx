@@ -281,6 +281,7 @@ function DisplayPageContent() {
                   answeredCount={answeredTeamIds.length}
                   totalTeams={teams.length}
                   autoplayMedia={settings.autoplayMedia}
+                  isFullscreen={progress.isMediaFullscreen}
                 />
               )}
               {progress.status === 'locking' && questionLockAt !== null && (
@@ -363,6 +364,7 @@ function DisplayPageContent() {
                       answerMediaUrl={revealQuestion.answerMediaUrl}
                       mediaTestIdPrefix="reveal"
                       autoplayMedia={settings.autoplayMedia}
+                      isFullscreen={progress.isMediaFullscreen}
                     />
                   </div>
                 ))}

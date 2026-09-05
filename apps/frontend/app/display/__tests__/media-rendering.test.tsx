@@ -176,4 +176,42 @@ describe('DisplayPage — media rendering', () => {
       'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0&controls=0&modestbranding=1',
     );
   });
+
+  it('keeps the same YouTube iframe element when toggling media fullscreen, so playback continues instead of restarting', () => {
+    const currentQuestion = {
+      id: 'r4q1',
+      type: 'free_text' as const,
+      prompt: 'Name this music video.',
+      mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      points: 3,
+    };
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isMediaFullscreen: false,
+        }),
+        currentQuestion,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    const { rerender } = render(<DisplayPage />);
+    const iframeBeforeToggle = screen.getByTestId('question-youtube');
+
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isMediaFullscreen: true,
+        }),
+        currentQuestion,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    rerender(<DisplayPage />);
+
+    expect(screen.getByTestId('question-youtube')).toBe(iframeBeforeToggle);
+  });
 });
