@@ -94,8 +94,8 @@ export function AnswerForm({
               onClick={() => onSubmit(option)}
               className={
                 isChosen
-                  ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-magenta bg-white px-4 text-lg font-bold'
-                  : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 border-foreground/30 bg-white px-4 text-lg font-bold'
+                  ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
+                  : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-foreground/30 bg-white px-4 text-lg font-bold'
               }
             >
               <span aria-hidden="true" className="font-display text-cyan">

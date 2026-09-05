@@ -62,7 +62,7 @@ function MatchRightRow({
         gridRow: index + 1,
         gridColumn: 2,
       }}
-      className="flex min-h-16 items-center gap-2 bg-white py-1 pr-1 pl-4 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
+      className="flex min-h-16 items-center gap-2 bg-white py-1 pr-1 pl-1 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
     >
       <span className="flex-1">{value}</span>
       <button
@@ -119,7 +119,7 @@ export function MatchAnswer({
             <li
               key={left}
               style={{ gridRow: index + 1, gridColumn: 1 }}
-              className="flex min-h-16 items-center border-r-2 border-foreground/15 px-4 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
+              className="flex min-h-16 items-center border-r-2 border-foreground/15 px-1 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
             >
               {left}
             </li>

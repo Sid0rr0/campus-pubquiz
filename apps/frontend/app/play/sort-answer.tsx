@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -41,7 +41,35 @@ interface SortItemProps {
   animatePositionChange: boolean;
 }
 
-/** One reorderable row — the drag handle carries dnd-kit's listeners so dragging never swallows clicks on the up/down buttons. */
+/** Tracks whether the referenced element's content has wrapped onto more than one line, e.g. a long sort/match option on a narrow phone screen. `ResizeObserver` is unavailable in the jsdom test environment, so it degrades to always-false there rather than throwing. */
+function useIsMultiline<T extends HTMLElement>(): [
+  React.RefObject<T | null>,
+  boolean,
+] {
+  const ref = useRef<T>(null);
+  const [isMultiline, setIsMultiline] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    function measure() {
+      if (!element) return;
+      const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+      setIsMultiline(element.scrollHeight > lineHeight * 1.5);
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, isMultiline];
+}
+
+/** One reorderable row — the drag handle carries dnd-kit's listeners so dragging never swallows clicks on the up/down buttons. Long options that wrap onto multiple lines stack the index above the drag handle in one column, self-centered against the tall card, alongside a similarly centered stacked up/down button column. */
 function SortItem({
   item,
   itemIndex,
@@ -51,6 +79,48 @@ function SortItem({
 }: SortItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: item });
+  const [textRef, isMultiline] = useIsMultiline<HTMLSpanElement>();
+
+  const upButton = (
+    <Button
+      type="button"
+      aria-label={`Move ${item} up`}
+      onClick={() => onMove(itemIndex, -1)}
+      disabled={itemIndex === 0}
+      variant="icon"
+      size="icon-lg"
+    >
+      <ArrowUpIcon aria-hidden="true" />
+    </Button>
+  );
+  const downButton = (
+    <Button
+      type="button"
+      aria-label={`Move ${item} down`}
+      onClick={() => onMove(itemIndex, 1)}
+      disabled={itemIndex === itemCount - 1}
+      variant="icon"
+      size="icon-lg"
+    >
+      <ArrowDownIcon aria-hidden="true" />
+    </Button>
+  );
+  const dragHandleButton = (
+    <button
+      type="button"
+      aria-label={`Drag to reorder ${item}`}
+      className="flex h-12 w-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-foreground/40 active:cursor-grabbing active:bg-foreground/10"
+      {...attributes}
+      {...listeners}
+    >
+      <DragHandleDots2Icon aria-hidden="true" className="h-7 w-7" />
+    </button>
+  );
+  const indexLabel = (
+    <span aria-hidden="true" className="font-display text-cyan">
+      {itemIndex + 1}
+    </span>
+  );
 
   return (
     <motion.li
@@ -59,41 +129,37 @@ function SortItem({
       layout={animatePositionChange}
       transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className="flex min-h-16 items-center gap-2 rounded-2xl border-2 border-foreground/30 bg-white pr-4 pl-1 text-lg font-bold"
+      className={
+        isMultiline
+          ? 'flex min-h-16 items-start gap-2 rounded-2xl border-2 border-foreground/30 bg-white py-2 pr-4 pl-1 text-lg font-bold'
+          : 'flex min-h-16 items-center gap-2 rounded-2xl border-2 border-foreground/30 bg-white pr-4 pl-1 text-lg font-bold'
+      }
     >
-      <button
-        type="button"
-        aria-label={`Drag to reorder ${item}`}
-        className="flex h-12 w-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-foreground/40 active:cursor-grabbing active:bg-foreground/10"
-        {...attributes}
-        {...listeners}
-      >
-        <DragHandleDots2Icon aria-hidden="true" className="h-7 w-7" />
-      </button>
-      <span aria-hidden="true" className="font-display text-cyan">
-        {itemIndex + 1}
+      {isMultiline ? (
+        <div className="flex shrink-0 flex-col items-center gap-1 self-center">
+          {indexLabel}
+          {dragHandleButton}
+        </div>
+      ) : (
+        <>
+          {dragHandleButton}
+          {indexLabel}
+        </>
+      )}
+      <span ref={textRef} className="flex-1 text-foreground">
+        {item}
       </span>
-      <span className="flex-1 text-foreground">{item}</span>
-      <Button
-        type="button"
-        aria-label={`Move ${item} up`}
-        onClick={() => onMove(itemIndex, -1)}
-        disabled={itemIndex === 0}
-        variant="icon"
-        size="icon-lg"
-      >
-        <ArrowUpIcon aria-hidden="true" />
-      </Button>
-      <Button
-        type="button"
-        aria-label={`Move ${item} down`}
-        onClick={() => onMove(itemIndex, 1)}
-        disabled={itemIndex === itemCount - 1}
-        variant="icon"
-        size="icon-lg"
-      >
-        <ArrowDownIcon aria-hidden="true" />
-      </Button>
+      {isMultiline ? (
+        <div className="flex flex-col items-center gap-2 self-center">
+          {upButton}
+          {downButton}
+        </div>
+      ) : (
+        <>
+          {upButton}
+          {downButton}
+        </>
+      )}
     </motion.li>
   );
 }
