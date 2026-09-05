@@ -4,6 +4,7 @@ import {
   GearIcon,
   ListBulletIcon,
   PersonIcon,
+  QuestionMarkCircledIcon,
 } from '@radix-ui/react-icons';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -13,11 +14,15 @@ interface AccountMenuLinksProps {
   onLogout: () => void;
 }
 
-/** Username, admin-only Sessions/Users links, and Log out — shared by the site header nav (desktop) and the mobile admin drawer (where the site header is hidden). Renders flat so each caller controls its own layout/sizing wrapper. */
+/** Username, the moderator Guide link, admin-only Sessions/Users/Teams links, and Log out — shared by the site header nav (desktop) and the mobile admin drawer (where the site header is hidden). Renders flat so each caller controls its own layout/sizing wrapper. */
 export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
   return (
     <>
       <span className="text-magenta">{user.username}</span>
+      <Link href="/admin/guide" className="flex items-center gap-1 underline">
+        <QuestionMarkCircledIcon aria-hidden="true" />
+        Guide
+      </Link>
       {user.role === 'admin' && (
         <>
           <Link href="/sessions" className="flex items-center gap-1 underline">
