@@ -5,7 +5,7 @@ big screen, teams answer on their phones, and the quiz master grades answers
 and controls the game from an admin laptop.
 
 - **`/display`** — big screen (TV/projector)
-- **`/admin`** — quiz master's laptop
+- **`/control`** — quiz master's laptop
 - **`/play`** — team phones
 
 ## Stack

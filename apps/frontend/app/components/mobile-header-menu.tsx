@@ -25,7 +25,7 @@ interface MobileHeaderMenuProps {
  * shows inline on desktop: the signed-in admin/moderator's AccountMenuLinks,
  * and/or (on /play) the team's code and Log out button. Same visual pattern
  * as MobileAdminBar's drawer, generalized to live in the shared header
- * itself so every route gets a mobile nav, not just /admin.
+ * itself so every route gets a mobile nav, not just /control.
  */
 export function MobileHeaderMenu({
   accountUser,

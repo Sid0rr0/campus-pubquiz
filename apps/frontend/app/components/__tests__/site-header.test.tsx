@@ -113,7 +113,7 @@ describe('SiteHeader', () => {
 
     expect(screen.getByRole('link', { name: /^users$/i })).toHaveAttribute(
       'href',
-      '/admin/users',
+      '/control/users',
     );
   });
 

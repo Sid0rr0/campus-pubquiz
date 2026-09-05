@@ -3,20 +3,20 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
-import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
+import { GuideContent } from '@/app/control/guide/guide-content';
 
-/** Admin-only landing screen for picking or starting a session — /login owns every auth screen (login/register/pending), so anyone not already signed in bounces back there instead of duplicating those screens here. */
-export default function SessionsPage() {
+export default function GuidePage() {
   const auth = useAuth();
   const router = useRouter();
+  const isAuthenticated = auth.status === 'authenticated';
 
   useEffect(() => {
     if (auth.status === 'unauthenticated' || auth.status === 'pending') {
-      router.replace('/login');
+      router.replace('/control');
     }
   }, [auth.status, router]);
 
-  if (auth.status !== 'authenticated') {
+  if (!isAuthenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>
@@ -25,8 +25,8 @@ export default function SessionsPage() {
   }
 
   return (
-    <SessionPickerPanel
-      onOpenSession={(joinCode) => router.push(`/control?code=${joinCode}`)}
-    />
+    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
+      <GuideContent />
+    </main>
   );
 }

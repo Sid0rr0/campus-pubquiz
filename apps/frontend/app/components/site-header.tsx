@@ -24,7 +24,7 @@ import { MobileHeaderMenu } from '@/app/components/mobile-header-menu';
  * one — merging the two isn't simple since the round/question data lives in
  * DisplayPage's socket state, not anything the root layout has access to.
  *
- * Also hidden below md on /admin itself: that page's own mobile drawer
+ * Also hidden below md on /control itself: that page's own mobile drawer
  * (MobileAdminBar) already surfaces the same AccountMenuLinks, so a second
  * copy pinned above it would just eat screen space on a phone.
  */
@@ -33,7 +33,7 @@ export function SiteHeader() {
   if (pathname.startsWith('/display')) {
     return null;
   }
-  return <SiteHeaderContent isHiddenOnMobile={pathname === '/admin'} />;
+  return <SiteHeaderContent isHiddenOnMobile={pathname === '/control'} />;
 }
 
 function SiteHeaderContent({

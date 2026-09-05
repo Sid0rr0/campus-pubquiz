@@ -9,7 +9,7 @@ interface EnableSoundButtonProps {
 
 // One-time "tap to enable sound" affordance for the locking-countdown track —
 // browsers block audio.play() until a real user gesture unlocks it, so each
-// independently-connected tab (/display, /admin) needs its own tap.
+// independently-connected tab (/display, /control) needs its own tap.
 export function EnableSoundButton({ onClick }: EnableSoundButtonProps) {
   return (
     <Button

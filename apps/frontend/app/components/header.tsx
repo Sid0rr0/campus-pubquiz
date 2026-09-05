@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 interface HeaderProps {
   children: React.ReactNode;
-  /** Hides the bar below the md breakpoint — used on /admin, whose mobile drawer already surfaces the same nav. */
+  /** Hides the bar below the md breakpoint — used on /control, whose mobile drawer already surfaces the same nav. */
   isHiddenOnMobile?: boolean;
 }
 

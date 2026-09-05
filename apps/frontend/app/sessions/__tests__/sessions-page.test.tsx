@@ -16,7 +16,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/app/sessions/session-picker-panel', () => ({
-  SessionPickerPanel: ({ onOpenSession }: { onOpenSession: (joinCode: string) => void }) => (
+  SessionPickerPanel: ({
+    onOpenSession,
+  }: {
+    onOpenSession: (joinCode: string) => void;
+  }) => (
     <button type="button" onClick={() => onOpenSession('NEWCODE')}>
       Open new session
     </button>
@@ -55,21 +59,27 @@ describe('SessionsPage', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated' }));
     render(<SessionsPage />);
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/login'));
+    await waitFor(() =>
+      expect(routerRef.replace).toHaveBeenCalledWith('/login'),
+    );
   });
 
   it('redirects to /login when the account is pending approval', async () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'pending' }));
     render(<SessionsPage />);
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/login'));
+    await waitFor(() =>
+      expect(routerRef.replace).toHaveBeenCalledWith('/login'),
+    );
   });
 
   it('renders the session picker once authenticated', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'authenticated' }));
     render(<SessionsPage />);
 
-    expect(screen.getByRole('button', { name: /open new session/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /open new session/i }),
+    ).toBeInTheDocument();
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
 
@@ -77,8 +87,10 @@ describe('SessionsPage', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'authenticated' }));
     render(<SessionsPage />);
 
-    await userEvent.click(screen.getByRole('button', { name: /open new session/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /open new session/i }),
+    );
 
-    expect(routerRef.push).toHaveBeenCalledWith('/admin?code=NEWCODE');
+    expect(routerRef.push).toHaveBeenCalledWith('/control?code=NEWCODE');
   });
 });

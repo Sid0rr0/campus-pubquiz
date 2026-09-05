@@ -50,7 +50,7 @@ is a cache that can be rebuilt after a restart.
 | Route      | Who                  | What it does                                                                                                                                                                           |
 | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/display` | Big screen (TV)      | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
-| `/admin`   | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards                                                                             |
+| `/control` | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards                                                                             |
 | `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far                 |
 
 ## Other Routes: Auth, Sessions, and Quiz Authoring
@@ -58,15 +58,15 @@ is a cache that can be rebuilt after a restart.
 Beyond the three live-game surfaces, the same Next.js app serves the
 management and authoring UI:
 
-| Route           | Who                         | What it does                                                                    |
-| --------------- | --------------------------- | ------------------------------------------------------------------------------- |
-| `/`             | Anyone                      | Landing page — team join panel, plus a "Quiz master login" link                 |
-| `/login`        | Admin/moderator             | Session login; redirects to `/sessions` on success                              |
-| `/register`     | Prospective admin/moderator | Self-registration; account is `pending` until an existing admin approves it     |
-| `/sessions`     | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/admin?code=...`      |
-| `/admin/users`  | Admin only                  | Approve pending accounts, deactivate active ones                                |
-| `/quizzes/[id]` | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
-| `/rules`        | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
+| Route            | Who                         | What it does                                                                    |
+| ---------------- | --------------------------- | ------------------------------------------------------------------------------- |
+| `/`              | Anyone                      | Landing page — team join panel, plus a "Quiz master login" link                 |
+| `/login`         | Admin/moderator             | Session login; redirects to `/sessions` on success                              |
+| `/register`      | Prospective admin/moderator | Self-registration; account is `pending` until an existing admin approves it     |
+| `/sessions`      | Admin/moderator (any)       | Lists/starts/closes game sessions; opening one routes to `/control?code=...`    |
+| `/control/users` | Admin only                  | Approve pending accounts, deactivate active ones                                |
+| `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
+| `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -423,5 +423,5 @@ admin/moderator landing page for managing them:
   join code, title, status, and team count.
 
 Picking or starting a session in `/sessions` routes the admin to
-`/admin?code=<joinCode>`, which binds that admin tab to one specific session
+`/control?code=<joinCode>`, which binds that admin tab to one specific session
 for the rest of the flow.

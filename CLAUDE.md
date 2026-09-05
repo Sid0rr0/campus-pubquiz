@@ -9,7 +9,7 @@ A live pub quiz web app for campus events. One machine displays questions on a b
 | Route      | Who uses it               | Purpose                                                                                                         |
 | ---------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `/display` | Big screen (TV/projector) | Current question, media, countdown, leaderboard between rounds                                                  |
-| `/admin`   | Quiz master's laptop      | Advance questions, watch live answers, grade free-text, award points                                            |
+| `/control` | Quiz master's laptop      | Advance questions, watch live answers, grade free-text, award points                                            |
 | `/play`    | Team phones               | Join via QR + team name, see question, submit answers                                                           |
 | `/rules`   | Anyone, any time          | Standalone rules page (round/topic/break structure + house rules), also shown in-game during the `rules` status |
 

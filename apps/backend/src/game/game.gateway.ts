@@ -198,7 +198,7 @@ export class GameGateway
   /**
    * Called by SessionsController once it has persisted new settings (`PATCH
    * /sessions/:joinCode/settings`) — a full state re-broadcast (unlike
-   * notifySessionClosed's narrow one-off emit) so /display, /admin, and
+   * notifySessionClosed's narrow one-off emit) so /display, /control, and
    * /rules?code= all pick up the change immediately.
    */
   notifySettingsUpdated(joinCode: string): void {
@@ -212,7 +212,7 @@ export class GameGateway
   /**
    * Called by BonusAwardMutationsController after editing/deleting a bonus
    * award via REST — recomputes the leaderboard and rebroadcasts, same as
-   * awardTeamBonus's socket-handler tail, so /display and /admin never show
+   * awardTeamBonus's socket-handler tail, so /display and /control never show
    * a stale bonus total after an out-of-band edit. No @CreateRequestContext()
    * needed: invoked synchronously from inside a REST controller method,
    * already covered by @mikro-orm/nestjs's HTTP-request-context middleware

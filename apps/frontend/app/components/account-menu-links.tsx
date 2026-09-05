@@ -19,7 +19,7 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
   return (
     <>
       <span className="text-magenta">{user.username}</span>
-      <Link href="/admin/guide" className="flex items-center gap-1 underline">
+      <Link href="/control/guide" className="flex items-center gap-1 underline">
         <QuestionMarkCircledIcon aria-hidden="true" />
         Guide
       </Link>
@@ -31,7 +31,7 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
           </Link>
 
           <Link
-            href="/admin/users"
+            href="/control/users"
             className="flex items-center gap-1 underline"
           >
             <GearIcon aria-hidden="true" />
@@ -39,7 +39,7 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
           </Link>
 
           <Link
-            href="/admin/teams"
+            href="/control/teams"
             className="flex items-center gap-1 underline"
           >
             <PersonIcon aria-hidden="true" />
