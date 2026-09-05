@@ -19,7 +19,10 @@ export class GameProgressRepository {
     private readonly gameSessions: GameSessionRepository,
   ) {}
 
-  async save(gameSessionId: number, data: PersistedGameProgress): Promise<void> {
+  async save(
+    gameSessionId: number,
+    data: PersistedGameProgress,
+  ): Promise<void> {
     const session = await this.gameSessions.findOneOrFail(gameSessionId);
     session.status = data.progress.status;
     session.currentRoundIndex = data.progress.roundIndex;
@@ -59,7 +62,9 @@ export class GameProgressRepository {
       },
       livePhaseKey: session.livePhaseKey,
       phaseStartedAt:
-        session.phaseStartedAt !== null ? session.phaseStartedAt.getTime() : null,
+        session.phaseStartedAt !== null
+          ? session.phaseStartedAt.getTime()
+          : null,
       phaseElapsedByKey: session.phaseElapsedByKey,
     };
   }
