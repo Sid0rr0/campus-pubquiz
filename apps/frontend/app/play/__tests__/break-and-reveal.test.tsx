@@ -414,6 +414,84 @@ describe('PlayPage — break and reveal', () => {
     expect(screen.queryByText('Imola|Spa|Silverstone')).not.toBeInTheDocument();
   });
 
+  it("shows the team's own order for a sort question during reveal, not the correct order", () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'sort' as const,
+      prompt: 'Order these circuits by season.',
+      points: 3,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      options: ['Imola', 'Spa', 'Silverstone'],
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+          revealQuestions: [{ ...q1, answer: 'Imola|Silverstone|Spa' }],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Imola|Spa|Silverstone' },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    // Each row of the reveal list shows the team's own submitted order —
+    // 'Imola' is correct (index 0 matches the answer key), 'Spa' and
+    // 'Silverstone' are not — never the correct-order list itself.
+    expect(screen.getByText('Imola').closest('li')).toHaveClass('border-green');
+    expect(screen.getByText('Spa').closest('li')).toHaveClass('border-magenta');
+    expect(screen.getByText('Silverstone').closest('li')).toHaveClass(
+      'border-magenta',
+    );
+  });
+
+  it("shows the team's own pairing for a match question during reveal, not the correct pairing", () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const q1 = {
+      id: 'r1q1',
+      type: 'match' as const,
+      prompt: 'Match the hero to their weapon.',
+      points: 4,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          blockQuestions: [q1],
+          revealQuestions: [{ ...q1, answer: 'excalibur|shield' }],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        // arthur -> shield (wrong, correct is excalibur), captain america -> excalibur (wrong, correct is shield)
+        myAnswers: { r1q1: 'shield|excalibur' },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('arthur').closest('li')).toHaveClass(
+      'border-magenta',
+    );
+    expect(screen.getByText('captain america').closest('li')).toHaveClass(
+      'border-magenta',
+    );
+  });
+
   it('tells the team they submitted nothing when reveal shows a question they never answered', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {

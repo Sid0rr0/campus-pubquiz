@@ -113,6 +113,8 @@ interface QuestionDisplayProps {
   matchTargets?: string[];
   /** When set (reveal only), highlights the matching option and shows an answer line. */
   correctAnswer?: string;
+  /** Sort/match only: the team's own submitted order (pipe-joined, same shape as correctAnswer). When set, reveal shows this instead of the correct order/pairing, bordered green or magenta per item depending on whether that item was correct — used by /play so teams see how they answered rather than the answer key. */
+  playerAnswer?: string;
   /** Shown alongside the answer during reveal only — independent of the question's own media. */
   answerMediaUrl?: string;
   mediaTestIdPrefix: string;
@@ -135,6 +137,7 @@ export function QuestionDisplay({
   options,
   matchTargets,
   correctAnswer,
+  playerAnswer,
   answerMediaUrl,
   mediaTestIdPrefix,
   autoplayMedia = true,
@@ -156,6 +159,29 @@ export function QuestionDisplay({
   const matchCorrectRights =
     isMatch && isRevealing && correctAnswer
       ? splitPipeList(correctAnswer)
+      : undefined;
+  // Presence of the prop (not its content) is what switches sort/match into
+  // player-reveal mode — an empty string still means "don't show the answer
+  // key", it just has nothing of the team's own to show either.
+  const isPlayerRevealMode = playerAnswer !== undefined;
+  const rawPlayerOrder = isPlayerRevealMode
+    ? splitPipeList(playerAnswer)
+    : undefined;
+  const playerSortOrder =
+    isSort &&
+    isRevealing &&
+    rawPlayerOrder &&
+    sortCorrectOrder &&
+    rawPlayerOrder.length === sortCorrectOrder.length
+      ? rawPlayerOrder
+      : undefined;
+  const playerMatchOrder =
+    isMatch &&
+    isRevealing &&
+    rawPlayerOrder &&
+    options &&
+    rawPlayerOrder.length === options.length
+      ? rawPlayerOrder
       : undefined;
   const isRevealingWithAnswerMedia =
     isRevealing && answerMediaUrl !== undefined;
@@ -283,7 +309,7 @@ export function QuestionDisplay({
           ))}
         </ol>
       )}
-      {isSort && sortCorrectOrder && (
+      {isSort && sortCorrectOrder && !isPlayerRevealMode && (
         <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
           {sortCorrectOrder.map((item, index) => (
             <li
@@ -297,6 +323,34 @@ export function QuestionDisplay({
               </span>
             </li>
           ))}
+        </ol>
+      )}
+      {isSort && playerSortOrder && sortCorrectOrder && (
+        <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
+          {playerSortOrder.map((item, index) => {
+            const isCorrect = item === sortCorrectOrder[index];
+            return (
+              <li
+                key={index}
+                className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold ${
+                  isCorrect ? 'border-green' : 'border-magenta'
+                }`}
+              >
+                <span
+                  className={`font-display ${isCorrect ? 'text-green' : 'text-magenta'}`}
+                >
+                  {index + 1}
+                </span>
+                <span className="text-foreground">{item}</span>
+                <span
+                  aria-hidden="true"
+                  className={`ml-auto ${isCorrect ? 'text-green' : 'text-magenta'}`}
+                >
+                  {isCorrect ? '✓' : '✗'}
+                </span>
+              </li>
+            );
+          })}
         </ol>
       )}
       {isMatch && options && matchTargets && !isRevealing && (
@@ -327,7 +381,7 @@ export function QuestionDisplay({
           </ul>
         </div>
       )}
-      {isMatch && options && matchCorrectRights && (
+      {isMatch && options && matchCorrectRights && !isPlayerRevealMode && (
         <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
           {options.map((left, index) => {
             const right = matchCorrectRights[index];
@@ -346,6 +400,42 @@ export function QuestionDisplay({
                 </span>
                 <span className="flex items-center gap-3">
                   <span className="font-display text-green">
+                    {getLowerOptionLetter(
+                      rightLetterIndex >= 0 ? rightLetterIndex : index,
+                    )}
+                  </span>
+                  <span>{right}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {isMatch && options && playerMatchOrder && matchCorrectRights && (
+        <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
+          {options.map((left, index) => {
+            const right = playerMatchOrder[index];
+            const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
+            const isCorrect = right === matchCorrectRights[index];
+            const accentClass = isCorrect ? 'text-green' : 'text-magenta';
+            return (
+              <li
+                key={index}
+                className={`flex items-center justify-between gap-3 rounded-xl border-2 bg-white px-5 py-3 text-[calc(1.25rem*var(--display-text-scale,1))] font-bold text-foreground ${
+                  isCorrect ? 'border-green' : 'border-magenta'
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <span className={`font-display ${accentClass}`}>
+                    {index + 1}
+                  </span>
+                  <span>{left}</span>
+                </span>
+                <span aria-hidden="true" className={accentClass}>
+                  {isCorrect ? '→' : '✗'}
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className={`font-display ${accentClass}`}>
                     {getLowerOptionLetter(
                       rightLetterIndex >= 0 ? rightLetterIndex : index,
                     )}
