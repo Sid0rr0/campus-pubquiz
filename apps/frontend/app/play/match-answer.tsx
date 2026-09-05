@@ -31,11 +31,22 @@ interface MatchAnswerProps {
 
 interface MatchRightRowProps {
   value: string;
+  index: number;
   animatePositionChange: boolean;
 }
 
-/** One draggable right-hand cell — reordering this column is how a team pairs a right item with the fixed left-hand row beside it. */
-function MatchRightRow({ value, animatePositionChange }: MatchRightRowProps) {
+/**
+ * One draggable right-hand cell — reordering this column is how a team pairs
+ * a right item with the fixed left-hand row beside it. Placed on the shared
+ * grid at `index` so it always occupies the same grid row as the left-hand
+ * cell it's paired with, keeping the two columns aligned even when one
+ * cell's text wraps to multiple lines.
+ */
+function MatchRightRow({
+  value,
+  index,
+  animatePositionChange,
+}: MatchRightRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: value });
 
@@ -45,8 +56,13 @@ function MatchRightRow({ value, animatePositionChange }: MatchRightRowProps) {
       // See the identical layout-vs-drag-transform comment in sort-answer.tsx.
       layout={animatePositionChange}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className="flex min-h-16 items-center gap-2 bg-white py-1 pr-1 pl-4 text-lg font-bold text-foreground"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        gridRow: index + 1,
+        gridColumn: 2,
+      }}
+      className="flex min-h-16 items-center gap-2 bg-white py-1 pr-1 pl-4 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
     >
       <span className="flex-1">{value}</span>
       <button
@@ -97,12 +113,13 @@ export function MatchAnswer({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex overflow-hidden rounded-2xl border-2 border-foreground/30 bg-white">
-        <ul className="flex flex-1 flex-col divide-y divide-foreground/15 border-r-2 border-foreground/15">
-          {leftItems.map((left) => (
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] overflow-hidden rounded-2xl border-2 border-foreground/30 bg-white">
+        <ul className="contents">
+          {leftItems.map((left, index) => (
             <li
               key={left}
-              className="flex min-h-16 items-center px-4 text-lg font-bold text-foreground"
+              style={{ gridRow: index + 1, gridColumn: 1 }}
+              className="flex min-h-16 items-center border-r-2 border-foreground/15 px-4 text-lg font-bold text-foreground not-first:border-t-2 not-first:border-t-foreground/15"
             >
               {left}
             </li>
@@ -117,11 +134,12 @@ export function MatchAnswer({
           onDragCancel={() => setIsDragging(false)}
         >
           <SortableContext items={order} strategy={verticalListSortingStrategy}>
-            <ol className="flex flex-1 flex-col divide-y divide-foreground/15">
-              {order.map((value) => (
+            <ol className="contents">
+              {order.map((value, index) => (
                 <MatchRightRow
                   key={value}
                   value={value}
+                  index={index}
                   animatePositionChange={!isDragging}
                 />
               ))}
