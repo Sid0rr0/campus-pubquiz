@@ -8,18 +8,15 @@ import { TeamsDirectoryPanel } from '@/app/control/teams/teams-directory-panel';
 export default function TeamsPage() {
   const auth = useAuth();
   const router = useRouter();
-  const isAdmin =
-    auth.status === 'authenticated' && auth.user?.role === 'admin';
+  const isAuthenticated = auth.status === 'authenticated' && Boolean(auth.user);
 
   useEffect(() => {
     if (auth.status === 'unauthenticated' || auth.status === 'pending') {
       router.replace('/control');
-    } else if (auth.status === 'authenticated' && auth.user?.role !== 'admin') {
-      router.replace('/control');
     }
-  }, [auth.status, auth.user, router]);
+  }, [auth.status, router]);
 
-  if (!isAdmin) {
+  if (!isAuthenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>

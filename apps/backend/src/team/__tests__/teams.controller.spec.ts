@@ -14,7 +14,7 @@ function makeController() {
 }
 
 describe('TeamsController', () => {
-  it('is protected by SessionGuard + RolesGuard, admin-only', () => {
+  it('is protected by SessionGuard + RolesGuard, open to any authenticated role', () => {
     const guards = Reflect.getMetadata('__guards__', TeamsController) as
       | unknown[]
       | undefined;
@@ -24,7 +24,7 @@ describe('TeamsController', () => {
     const roles = Reflect.getMetadata('roles', TeamsController) as
       | unknown[]
       | undefined;
-    expect(roles).toEqual(['admin']);
+    expect(roles).toBeUndefined();
   });
 
   describe('list', () => {

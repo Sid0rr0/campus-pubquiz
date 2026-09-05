@@ -9,14 +9,14 @@ import { MobileHeaderMenu } from '@/app/components/mobile-header-menu';
 
 /**
  * Shared top bar rendered once from the root layout — same "🍺 Trivia Night"
- * branding as display's TriviaHeader. Signed-in admins get Sessions/Users/Log
- * out links on every page (inline on desktop, behind a hamburger drawer on
- * mobile); /play publishes its team's code/Log out into the same drawer via
- * PlayerMenuProvider, since useTeamJoin lives route-locally on that page and
- * has no other way to reach this layout-level component. Signed-out
- * visitors and non-admin moderators on non-/play pages see no nav at all (no
- * header-driven login entry point — /login and /register are reached
- * directly).
+ * branding as display's TriviaHeader. Signed-in admins/moderators get
+ * Guide/Sessions/Teams/Log out links on every page (Users is admin-only),
+ * inline on desktop or behind a hamburger drawer on mobile; /play publishes
+ * its team's code/Log out into the same drawer via PlayerMenuProvider, since
+ * useTeamJoin lives route-locally on that page and has no other way to reach
+ * this layout-level component. Signed-out visitors on non-/play pages see no
+ * nav at all (no header-driven login entry point — /login and /register are
+ * reached directly).
  *
  * Suppressed entirely on /display: that screen is audience-facing (no auth
  * nav belongs on the big screen) and already has its own per-status header

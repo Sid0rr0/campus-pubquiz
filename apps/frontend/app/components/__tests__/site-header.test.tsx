@@ -105,6 +105,22 @@ describe('SiteHeader', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows Sessions and Teams links for moderators too', () => {
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'authenticated', user: MODERATOR_USER }),
+    );
+    render(<SiteHeader />);
+
+    expect(screen.getByRole('link', { name: /^sessions$/i })).toHaveAttribute(
+      'href',
+      '/sessions',
+    );
+    expect(screen.getByRole('link', { name: /^teams$/i })).toHaveAttribute(
+      'href',
+      '/control/teams',
+    );
+  });
+
   it('shows a Users link only for admin users', () => {
     mockUseAuth.mockReturnValue(
       authResult({ status: 'authenticated', user: ADMIN_USER }),

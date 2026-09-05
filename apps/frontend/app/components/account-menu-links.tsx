@@ -14,7 +14,7 @@ interface AccountMenuLinksProps {
   onLogout: () => void;
 }
 
-/** Username, the moderator Guide link, admin-only Sessions/Users/Teams links, and Log out — shared by the site header nav (desktop) and the mobile admin drawer (where the site header is hidden). Renders flat so each caller controls its own layout/sizing wrapper. */
+/** Username, the moderator Guide link, Sessions/Teams links (admin and moderator), the admin-only Users link, and Log out — shared by the site header nav (desktop) and the mobile admin drawer (where the site header is hidden). Renders flat so each caller controls its own layout/sizing wrapper. */
 export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
   return (
     <>
@@ -23,29 +23,24 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
         <QuestionMarkCircledIcon aria-hidden="true" />
         Guide
       </Link>
+      <Link href="/sessions" className="flex items-center gap-1 underline">
+        <ListBulletIcon aria-hidden="true" />
+        Sessions
+      </Link>
+
+      <Link href="/control/teams" className="flex items-center gap-1 underline">
+        <PersonIcon aria-hidden="true" />
+        Teams
+      </Link>
+
       {user.role === 'admin' && (
-        <>
-          <Link href="/sessions" className="flex items-center gap-1 underline">
-            <ListBulletIcon aria-hidden="true" />
-            Sessions
-          </Link>
-
-          <Link
-            href="/control/users"
-            className="flex items-center gap-1 underline"
-          >
-            <GearIcon aria-hidden="true" />
-            Users
-          </Link>
-
-          <Link
-            href="/control/teams"
-            className="flex items-center gap-1 underline"
-          >
-            <PersonIcon aria-hidden="true" />
-            Teams
-          </Link>
-        </>
+        <Link
+          href="/control/users"
+          className="flex items-center gap-1 underline"
+        >
+          <GearIcon aria-hidden="true" />
+          Users
+        </Link>
       )}
       <Button
         type="button"

@@ -6,15 +6,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { TeamsListedPayload } from '@campus-pubquiz/types';
-import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { TeamService } from '@/team/team.service';
 import { teamsQuerySchema } from '@/team/teams-query.schema';
 
+// No @Roles(...) — open to admin and moderator alike, same as sessions.
 @Controller('teams')
 @UseGuards(SessionGuard, RolesGuard)
-@Roles('admin')
 export class TeamsController {
   constructor(private readonly teamService: TeamService) {}
 
