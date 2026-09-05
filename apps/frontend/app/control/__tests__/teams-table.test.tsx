@@ -5,14 +5,20 @@ import type { LeaderboardEntry, TeamView } from '@campus-pubquiz/types';
 import { TeamsTable } from '@/app/control/teams-table';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchBonusAwards } = vi.hoisted(() => ({
+const { mockFetchBonusAwards, mockFetchTeamCode } = vi.hoisted(() => ({
   mockFetchBonusAwards: vi.fn(),
+  mockFetchTeamCode: vi.fn(),
 }));
 
 vi.mock('@/app/lib/bonus-award-api', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@/app/lib/bonus-award-api')>();
   return { ...actual, fetchBonusAwards: mockFetchBonusAwards };
+});
+
+vi.mock('@/app/lib/teams-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/teams-api')>();
+  return { ...actual, fetchTeamCode: mockFetchTeamCode };
 });
 
 const JOIN_CODE = 'ABCDEF';
@@ -70,6 +76,12 @@ describe('TeamsTable', () => {
   beforeEach(() => {
     mockFetchBonusAwards.mockReset();
     mockFetchBonusAwards.mockResolvedValue({ teamId: 1, awards: [] });
+    mockFetchTeamCode.mockReset();
+    mockFetchTeamCode.mockResolvedValue({
+      teamId: 1,
+      teamName: 'The Quizzards',
+      code: 'ZEBRA1',
+    });
   });
 
   it('renders a header row with Team, numbered round columns, Bonus, Total, and Actions', () => {
@@ -266,5 +278,31 @@ describe('TeamsTable', () => {
     ).toBeInTheDocument();
     expect(mockFetchBonusAwards).toHaveBeenCalledWith(JOIN_CODE, 1);
     expect(await screen.findByText(/shot/i)).toBeInTheDocument();
+  });
+
+  it('shows a team code fetched on demand from its actions menu', async () => {
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Actions for The Quizzards' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: /show team code/i }),
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: /team code.*the quizzards/i }),
+    ).toBeInTheDocument();
+    expect(mockFetchTeamCode).toHaveBeenCalledWith(1, expect.anything());
+    expect(await screen.findByText('ZEBRA1')).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createColumnHelper,
@@ -14,7 +14,13 @@ import type {
   SortingState,
   Updater,
 } from '@tanstack/react-table';
-import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DotsVerticalIcon,
+  EyeOpenIcon,
+} from '@radix-ui/react-icons';
+import { DropdownMenu } from 'radix-ui';
 import type {
   TeamListItem,
   TeamsSortColumn,
@@ -24,19 +30,10 @@ import { fetchTeams, TeamsApiError } from '@/app/lib/teams-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
+import { TeamCodeDialog } from '@/app/control/team-code-dialog';
 
 const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
 const helper = createColumnHelper<typeof features, TeamListItem>();
-
-const columns = helper.columns([
-  helper.accessor('name', { header: 'Team', enableSorting: false }),
-  helper.accessor('code', { header: 'Code', enableSorting: false }),
-  helper.accessor('joinedAt', {
-    header: 'Joined',
-    cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),
-  }),
-  helper.accessor('sessionsJoined', { header: 'Sessions played' }),
-]);
 
 export function TeamsDirectoryPanel() {
   const [sorting, setSorting] = useState<SortingState>([
@@ -46,6 +43,58 @@ export function TeamsDirectoryPanel() {
     pageIndex: 0,
     pageSize: 20,
   });
+  const [viewingCodeTeam, setViewingCodeTeam] = useState<TeamListItem | null>(
+    null,
+  );
+
+  const columns = useMemo(
+    () =>
+      helper.columns([
+        helper.accessor('name', { header: 'Team', enableSorting: false }),
+        helper.accessor('code', { header: 'Code', enableSorting: false }),
+        helper.accessor('joinedAt', {
+          header: 'Joined',
+          cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),
+        }),
+        helper.accessor('sessionsJoined', { header: 'Sessions played' }),
+        helper.display({
+          id: 'actions',
+          header: 'Actions',
+          cell: (context) => {
+            const team = context.row.original;
+            return (
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-md"
+                    aria-label={`Actions for ${team.name}`}
+                    className="rounded-lg border-2 border-foreground/15 text-foreground/70"
+                  >
+                    <DotsVerticalIcon aria-hidden="true" />
+                  </Button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
+                  >
+                    <DropdownMenu.Item
+                      onSelect={() => setViewingCodeTeam(team)}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+                    >
+                      <EyeOpenIcon aria-hidden="true" />
+                      Show team code
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            );
+          },
+        }),
+      ]),
+    [],
+  );
 
   const sortBy = (sorting[0]?.id ?? 'joinedAt') as TeamsSortColumn;
   const sortOrder: TeamsSortOrder = sorting[0]
@@ -210,6 +259,14 @@ export function TeamsDirectoryPanel() {
           Next
         </Button>
       </div>
+      <TeamCodeDialog
+        open={viewingCodeTeam !== null}
+        teamName={viewingCodeTeam?.name ?? ''}
+        code={viewingCodeTeam?.code ?? null}
+        onOpenChange={(open) => {
+          if (!open) setViewingCodeTeam(null);
+        }}
+      />
     </main>
   );
 }

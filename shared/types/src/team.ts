@@ -6,6 +6,13 @@ export interface TeamListItem {
   sessionsJoined: number; // count of game_session_teams rows for this team
 }
 
+/** A single team's persistent join code, looked up on demand (e.g. the control panel's "Show team code" action) rather than broadcast with every game state update. */
+export interface TeamCodeView {
+  teamId: number;
+  teamName: string;
+  code: string;
+}
+
 export interface TeamsListedPayload {
   items: TeamListItem[];
   total: number;

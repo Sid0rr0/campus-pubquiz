@@ -7,6 +7,7 @@ import {
 import { Dialog, DropdownMenu } from 'radix-ui';
 import {
   DotsVerticalIcon,
+  EyeOpenIcon,
   ListBulletIcon,
   StarIcon,
 } from '@radix-ui/react-icons';
@@ -17,6 +18,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
+import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { Button } from '@/app/components/button';
 
 interface TeamsTableProps {
@@ -88,6 +90,9 @@ export function TeamsTable({
   const [viewingAwardsTeamId, setViewingAwardsTeamId] = useState<number | null>(
     null,
   );
+  const [viewingCodeTeamId, setViewingCodeTeamId] = useState<number | null>(
+    null,
+  );
   const entries = useMemo(
     () => buildEntries(teams, leaderboard, roundTitles),
     [teams, leaderboard, roundTitles],
@@ -96,6 +101,8 @@ export function TeamsTable({
     entries.find((entry) => entry.teamId === awardingTeamId) ?? null;
   const viewingAwardsTeam =
     entries.find((entry) => entry.teamId === viewingAwardsTeamId) ?? null;
+  const viewingCodeTeam =
+    entries.find((entry) => entry.teamId === viewingCodeTeamId) ?? null;
   const columns = useMemo(
     () =>
       helper.columns([
@@ -143,6 +150,13 @@ export function TeamsTable({
                     >
                       <ListBulletIcon aria-hidden="true" />
                       Bonus awards
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      onSelect={() => setViewingCodeTeamId(entry.teamId)}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-dark-blue outline-none data-highlighted:bg-dark-blue/10"
+                    >
+                      <EyeOpenIcon aria-hidden="true" />
+                      Show team code
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
@@ -239,6 +253,13 @@ export function TeamsTable({
         teamName={viewingAwardsTeam?.teamName ?? ''}
         onOpenChange={(open) => {
           if (!open) setViewingAwardsTeamId(null);
+        }}
+      />
+      <TeamCodeModal
+        teamId={viewingCodeTeamId}
+        teamName={viewingCodeTeam?.teamName ?? ''}
+        onOpenChange={(open) => {
+          if (!open) setViewingCodeTeamId(null);
         }}
       />
     </div>

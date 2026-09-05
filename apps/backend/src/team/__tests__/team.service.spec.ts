@@ -262,6 +262,24 @@ describe('TeamService (Postgres integration)', () => {
     ]);
   });
 
+  describe('getTeamCode', () => {
+    it('returns the team id, name, and persistent join code', async () => {
+      const team = await teamService.join(sessionId, 'The Quizzards', {
+        joinCode: 'ABCDEF',
+      });
+
+      await expect(teamService.getTeamCode(team.id)).resolves.toEqual({
+        teamId: team.id,
+        teamName: 'The Quizzards',
+        code: team.code,
+      });
+    });
+
+    it('returns null for an unknown team id', async () => {
+      await expect(teamService.getTeamCode(-1)).resolves.toBeNull();
+    });
+  });
+
   describe('listAll', () => {
     async function createBareTeam(name: string): Promise<Team> {
       const team = em.create(Team, {

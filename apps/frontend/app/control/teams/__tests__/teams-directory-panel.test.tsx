@@ -104,6 +104,24 @@ describe('TeamsDirectoryPanel', () => {
     );
   });
 
+  it('shows a team code from the actions menu without an extra fetch', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+
+    await user.click(
+      screen.getByRole('button', { name: 'Actions for The Quizzards' }),
+    );
+    await user.click(
+      await screen.findByRole('menuitem', { name: /show team code/i }),
+    );
+
+    const dialog = screen.getByRole('dialog', {
+      name: /team code.*the quizzards/i,
+    });
+    expect(within(dialog).getByText('ABC-DEF-GHI')).toBeInTheDocument();
+  });
+
   it('shows an error alert when the initial fetch fails', async () => {
     mockFetchTeams.mockReset();
     mockFetchTeams.mockRejectedValue(new Error('Could not load teams'));

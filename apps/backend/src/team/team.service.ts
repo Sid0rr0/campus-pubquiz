@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { UniqueConstraintViolationException } from '@mikro-orm/core';
-import type { TeamsListedPayload } from '@campus-pubquiz/types';
+import type { TeamCodeView, TeamsListedPayload } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -178,6 +178,13 @@ export class TeamService {
       page,
       pageSize,
     };
+  }
+
+  /** Looks up one team's persistent join code on demand — used by the "Show team code" admin action rather than being carried on every roster/game-state broadcast. */
+  async getTeamCode(teamId: number): Promise<TeamCodeView | null> {
+    const team = await this.teams.findOne({ id: teamId });
+    if (!team) return null;
+    return { teamId: team.id, teamName: team.name, code: team.code };
   }
 
   /** Removes a team from this session's roster (kick) — the Team entity itself, and its history, are untouched. */

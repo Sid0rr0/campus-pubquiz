@@ -1,13 +1,14 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { TeamsController } from '@/team/teams.controller';
 import type { TeamService } from '@/team/team.service';
-import type { TeamsListedPayload } from '@campus-pubquiz/types';
+import type { TeamCodeView, TeamsListedPayload } from '@campus-pubquiz/types';
 
 function makeController() {
   const teamService = {
     listAll: jest.fn(),
+    getTeamCode: jest.fn(),
   };
   const controller = new TeamsController(teamService as unknown as TeamService);
   return { controller, teamService };
@@ -85,6 +86,28 @@ describe('TeamsController', () => {
       await expect(controller.list({ sortBy: 'notAColumn' })).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('getCode', () => {
+    it('delegates to teamService.getTeamCode and returns its result', async () => {
+      const { controller, teamService } = makeController();
+      const view: TeamCodeView = {
+        teamId: 7,
+        teamName: 'The Quizzards',
+        code: 'ABC123',
+      };
+      teamService.getTeamCode.mockResolvedValue(view);
+
+      await expect(controller.getCode(7)).resolves.toBe(view);
+      expect(teamService.getTeamCode).toHaveBeenCalledWith(7);
+    });
+
+    it('throws NotFoundException when the team does not exist', async () => {
+      const { controller, teamService } = makeController();
+      teamService.getTeamCode.mockResolvedValue(null);
+
+      await expect(controller.getCode(999)).rejects.toThrow(NotFoundException);
     });
   });
 });

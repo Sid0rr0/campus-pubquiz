@@ -1,4 +1,5 @@
 import type {
+  TeamCodeView,
   TeamsListedPayload,
   TeamsSortColumn,
   TeamsSortOrder,
@@ -50,4 +51,18 @@ export async function fetchTeams(
   });
   if (!response.ok) return throwApiError(response, 'Could not load teams');
   return (await response.json()) as TeamsListedPayload;
+}
+
+export async function fetchTeamCode(
+  teamId: number,
+  signal?: AbortSignal,
+): Promise<TeamCodeView> {
+  const response = await fetch(`${getBackendUrl()}/teams/${teamId}/code`, {
+    credentials: 'include',
+    signal,
+  });
+  if (!response.ok) {
+    return throwApiError(response, 'Could not load team code');
+  }
+  return (await response.json()) as TeamCodeView;
 }
