@@ -19,9 +19,9 @@ export const BONUS_CATEGORY_LABELS: Record<BonusCategory, string> = {
 export const BONUS_CATEGORY_EXPLANATIONS: Partial<
   Record<BonusCategory, string>
 > = {
-  shot: 'Order shots, at minimum more than half your player count. (1 point, doable twice per quiz)',
+  shot: 'Order shots, at minimum more than half your player count. Must be checked by a moderator to get the points. (1 point, doable twice per quiz)',
   selfie:
-    'Snap a group photo or selfie with your whole team, post it as an Instagram story, and tag @esn.cut and @isc_hub.cz. (1 point)',
+    'Snap a group photo or selfie with your whole team, post it as an Instagram story, and tag @esn.cut and @isc_hub.cz. Must be checked by a moderator to get the points. (1 point)',
 };
 
 /** Point value a predefined-category award starts at (editable per award) — also shown next to each category in SessionSettingsForm's award-count caps and the /play bonus drawer. */
