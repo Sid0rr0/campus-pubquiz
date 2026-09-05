@@ -48,7 +48,10 @@ export function AnswerForm({
   const [value, setValue] = useState(initialValue);
   const isIdk = initialValue === IDK_ANSWER_VALUE;
   const idkButton = (
-    <IdkButton isChosen={isIdk} onClick={() => onSubmit(IDK_ANSWER_VALUE)} />
+    <IdkButton
+      isChosen={isIdk}
+      onClick={() => onSubmit(isIdk ? '' : IDK_ANSWER_VALUE)}
+    />
   );
 
   if (question.type === 'sort' && question.options) {

@@ -237,6 +237,38 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
   });
 
+  it('clears the answer when the IDK button is pressed again while already chosen', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: '__idk__' },
+        submitAnswer,
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /i don't know/i }),
+    );
+
+    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '');
+  });
+
   it('shows the IDK button as pressed once submitted, on both free-text and multiple-choice', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(
