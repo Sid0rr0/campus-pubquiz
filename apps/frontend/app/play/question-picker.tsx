@@ -57,7 +57,7 @@ export function QuestionPicker({
                   onClick={() => onSelect(question.id)}
                   className={
                     isSelected
-                      ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-magenta bg-white font-extrabold text-magenta'
+                      ? 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-dark-blue bg-white font-extrabold text-dark-blue'
                       : 'flex min-h-11 min-w-11 items-center justify-center rounded-xl border-2 border-foreground/30 bg-white font-extrabold'
                   }
                 >
