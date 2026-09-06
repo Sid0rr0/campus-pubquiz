@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { toast } from 'sonner';
 import {
   SOCKET_EVENTS,
   type AdminActionPayload,
@@ -109,6 +110,8 @@ export interface UseGameSocketResult {
   sessionClosed: string | null;
   /** True once this team's own socket has been kicked by the admin — players-room consumers use this to drop their identity and return to the join screen with a notice. */
   kicked: boolean;
+  /** The message from the most recent rejected awardBonus call (admin-only) — surfaced separately from connectionError so callers can show it as a toast next to the award form instead of the persistent connection banner. */
+  bonusAwardError: string | null;
 }
 
 type SeenQuestions = Record<
@@ -194,7 +197,13 @@ export function useGameSocket(
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
+  const [bonusAwardError, setBonusAwardError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Set right before an AWARD_BONUS emit, cleared on the next STATE_UPDATED
+  // (success) or 'exception' (failure) — lets the generic exception handler
+  // below tell a bonus-award rejection apart from any other action-level
+  // WsException without the backend needing to tag which action failed.
+  const pendingBonusAwardRef = useRef(false);
 
   // A fresh connect (first mount, or `role`/`joinCode`/`retryKey` identity
   // change) starts from a clean slate — otherwise the previous identity's
@@ -216,6 +225,8 @@ export function useGameSocket(
       setSeenQuestions({});
       setSessionClosed(null);
       setKicked(false);
+      setBonusAwardError(null);
+      pendingBonusAwardRef.current = false;
     }
   }
 
@@ -243,6 +254,7 @@ export function useGameSocket(
     socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateSnapshotPayload) => {
       setSnapshot(payload);
       setSeenQuestions((current) => mergeSeenQuestions(current, payload));
+      pendingBonusAwardRef.current = false;
     });
 
     socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
@@ -320,6 +332,18 @@ export function useGameSocket(
     });
 
     socket.on('exception', (payload: unknown) => {
+      if (pendingBonusAwardRef.current) {
+        pendingBonusAwardRef.current = false;
+        // Called directly (not via state + useToastOnError) so repeat
+        // rejections with the identical message — e.g. hitting the same
+        // per-category cap twice in a row — still toast each time. Routing
+        // this through state would have React bail on the no-op update
+        // (Object.is sees the same string) and skip the second toast.
+        const message = getExceptionMessage(payload);
+        setBonusAwardError(message);
+        toast.error(message);
+        return;
+      }
       setConnectionError(getExceptionMessage(payload));
     });
 
@@ -372,6 +396,7 @@ export function useGameSocket(
       reason?: string,
     ) => {
       const payload: AwardBonusPayload = { teamId, category, points, reason };
+      pendingBonusAwardRef.current = true;
       socketRef.current?.emit(SOCKET_EVENTS.AWARD_BONUS, payload);
     },
     [],
@@ -430,5 +455,6 @@ export function useGameSocket(
     reconnectedAt,
     sessionClosed,
     kicked,
+    bonusAwardError,
   };
 }

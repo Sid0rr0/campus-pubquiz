@@ -45,7 +45,7 @@ export default function RootLayout({
           </AuthProvider>
         </Providers>
         <Toaster
-          position="top-right"
+          position="bottom-right"
           richColors
           toastOptions={{ classNames: { toast: 'font-bold' } }}
           style={

@@ -22,12 +22,17 @@ function createFakeSocket() {
   };
 }
 
-const { mockIo } = vi.hoisted(() => ({
+const { mockIo, mockToastError } = vi.hoisted(() => ({
   mockIo: vi.fn(() => createFakeSocket()),
+  mockToastError: vi.fn(),
 }));
 
 vi.mock('socket.io-client', () => ({
   io: mockIo,
+}));
+
+vi.mock('sonner', () => ({
+  toast: { error: mockToastError },
 }));
 
 function getFakeSocket() {
@@ -38,6 +43,7 @@ function getFakeSocket() {
 describe('useGameSocket — connection errors', () => {
   beforeEach(() => {
     mockIo.mockClear();
+    mockToastError.mockClear();
   });
 
   it('surfaces a server exception as a connection error', async () => {
@@ -133,5 +139,43 @@ describe('useGameSocket — connection errors', () => {
 
     await waitFor(() => expect(result.current.team).not.toBeNull());
     expect(result.current.connectionError).toBeNull();
+  });
+
+  it('routes a rejected awardBonus call to a toast instead of connectionError', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.awardBonus(31, 'shot', 1);
+      fakeSocket.trigger('exception', {
+        message:
+          'This team has already been awarded the "shot" bonus the maximum 2 time(s)',
+      });
+    });
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    expect(mockToastError).toHaveBeenCalledWith(
+      'This team has already been awarded the "shot" bonus the maximum 2 time(s)',
+    );
+    expect(result.current.connectionError).toBeNull();
+  });
+
+  it('toasts again when a retried awardBonus call is rejected with the identical message', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+    const message =
+      'This team has already been awarded the "shot" bonus the maximum 2 time(s)';
+
+    act(() => {
+      result.current.awardBonus(31, 'shot', 1);
+      fakeSocket.trigger('exception', { message });
+    });
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      result.current.awardBonus(31, 'shot', 1);
+      fakeSocket.trigger('exception', { message });
+    });
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(2));
   });
 });
