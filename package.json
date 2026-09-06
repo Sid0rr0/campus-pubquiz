@@ -18,11 +18,5 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "prettier": "^3.4.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "ws": ">=8.21.0",
-      "socket.io-adapter": ">=2.5.8"
-    }
   }
 }

@@ -2,6 +2,10 @@ packages:
   - apps/*
   - shared/*
 
+overrides:
+  ws: '>=8.21.0'
+  socket.io-adapter: '>=2.5.8'
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
