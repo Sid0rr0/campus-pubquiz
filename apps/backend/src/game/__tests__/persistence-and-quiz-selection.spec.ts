@@ -160,6 +160,8 @@ describe('GameStateService — persistence and quiz selection', () => {
         teamName: 'The Quizzards',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);

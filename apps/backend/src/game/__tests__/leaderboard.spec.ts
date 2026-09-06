@@ -49,6 +49,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'First',
         totalPoints: 10,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -56,6 +58,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'Second',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -92,6 +96,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'First',
         totalPoints: 10,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -99,6 +105,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'Second',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -117,6 +125,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'First',
         totalPoints: 10,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -139,6 +149,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'First',
         totalPoints: 10,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -146,6 +158,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'Second',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -178,6 +192,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'First',
         totalPoints: 10,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -185,6 +201,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'Second',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -256,6 +274,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'First',
         totalPoints: 10,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -296,6 +316,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'The Quizzards',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);
@@ -306,6 +328,8 @@ describe('GameStateService — leaderboard', () => {
         teamName: 'The Quizzards',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ]);

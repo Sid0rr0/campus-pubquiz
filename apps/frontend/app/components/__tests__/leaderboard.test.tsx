@@ -9,6 +9,8 @@ const ENTRIES: LeaderboardEntry[] = [
     teamName: 'First Place',
     totalPoints: 30,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: [],
   },
   {
@@ -16,6 +18,8 @@ const ENTRIES: LeaderboardEntry[] = [
     teamName: 'Second Place',
     totalPoints: 20,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: [],
   },
   {
@@ -23,6 +27,8 @@ const ENTRIES: LeaderboardEntry[] = [
     teamName: 'Third Place',
     totalPoints: 10,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: [],
   },
 ];
@@ -76,40 +82,87 @@ describe('Leaderboard', () => {
     expect(row).toHaveTextContent('3');
   });
 
-  it('shows a "+N" badge for a team with accumulated bonus points', () => {
+  it('shows one yellow star per point for a small positive bonus total', () => {
     const withBonus: LeaderboardEntry[] = [
       {
         teamId: 1,
         teamName: 'First Place',
-        totalPoints: 31,
-        bonusPoints: 1,
+        totalPoints: 33,
+        bonusPoints: 3,
+        positiveBonusPoints: 3,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ];
     render(<Leaderboard entries={withBonus} />);
 
-    expect(screen.getByText('+1')).toBeInTheDocument();
+    const badge = screen.getByLabelText('3 bonus points');
+    expect(badge).toHaveTextContent('★★★');
+    expect(badge).toHaveClass('text-yellow');
   });
 
-  it('shows a "-N" badge for a team with a negative bonus total (penalty)', () => {
+  it('shows one magenta star per point for a small negative bonus total (penalty)', () => {
     const withPenalty: LeaderboardEntry[] = [
       {
         teamId: 1,
         teamName: 'First Place',
         totalPoints: 28,
         bonusPoints: -2,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: -2,
         roundPoints: [],
       },
     ];
     render(<Leaderboard entries={withPenalty} />);
 
-    expect(screen.getByText('-2')).toBeInTheDocument();
+    const badge = screen.getByLabelText('-2 bonus points');
+    expect(badge).toHaveTextContent('★★');
+    expect(badge).toHaveClass('text-magenta');
+  });
+
+  it('shows the number and a single star once the bonus total exceeds 9', () => {
+    const withLargeBonus: LeaderboardEntry[] = [
+      {
+        teamId: 1,
+        teamName: 'First Place',
+        totalPoints: 40,
+        bonusPoints: 12,
+        positiveBonusPoints: 12,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+    ];
+    render(<Leaderboard entries={withLargeBonus} />);
+
+    expect(screen.getByLabelText('12 bonus points')).toHaveTextContent('12★');
+  });
+
+  it('shows both a yellow and a magenta badge for a team with both positive and negative bonus awards', () => {
+    const withBoth: LeaderboardEntry[] = [
+      {
+        teamId: 1,
+        teamName: 'First Place',
+        totalPoints: 30,
+        bonusPoints: 0,
+        positiveBonusPoints: 1,
+        negativeBonusPoints: -1,
+        roundPoints: [],
+      },
+    ];
+    render(<Leaderboard entries={withBoth} />);
+
+    const positiveBadge = screen.getByLabelText('1 bonus points');
+    const negativeBadge = screen.getByLabelText('-1 bonus points');
+    expect(positiveBadge).toHaveTextContent('★');
+    expect(positiveBadge).toHaveClass('text-yellow');
+    expect(negativeBadge).toHaveTextContent('★');
+    expect(negativeBadge).toHaveClass('text-magenta');
   });
 
   it('shows no badge for a team with no bonus points', () => {
     render(<Leaderboard entries={ENTRIES} />);
 
-    expect(screen.queryByText(/^\+/)).not.toBeInTheDocument();
+    expect(screen.queryByText('★', { exact: false })).not.toBeInTheDocument();
   });
 
   it('shows a shared rank range for teams tied on points', () => {
@@ -119,6 +172,8 @@ describe('Leaderboard', () => {
         teamName: 'Sole Leader',
         totalPoints: 30,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -126,6 +181,8 @@ describe('Leaderboard', () => {
         teamName: 'Tied A',
         totalPoints: 20,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -133,6 +190,8 @@ describe('Leaderboard', () => {
         teamName: 'Tied B',
         totalPoints: 20,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -140,6 +199,8 @@ describe('Leaderboard', () => {
         teamName: 'Tied C',
         totalPoints: 20,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
       {
@@ -147,6 +208,8 @@ describe('Leaderboard', () => {
         teamName: 'Last Place',
         totalPoints: 5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [],
       },
     ];

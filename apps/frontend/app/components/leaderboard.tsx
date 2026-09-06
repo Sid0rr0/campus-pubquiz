@@ -13,6 +13,64 @@ interface LeaderboardProps {
 
 const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
 
+/** Above this magnitude, bonus points render as a number + star instead of one star per point. */
+const BONUS_STAR_THRESHOLD = 9;
+
+function bonusStarLabel(magnitude: number): string {
+  return magnitude > BONUS_STAR_THRESHOLD
+    ? `${magnitude}★`
+    : '★'.repeat(magnitude);
+}
+
+function BonusStars({
+  magnitude,
+  colorClass,
+  bonusPoints,
+}: {
+  magnitude: number;
+  colorClass: string;
+  bonusPoints: number;
+}) {
+  if (magnitude === 0) {
+    return null;
+  }
+  return (
+    <span
+      aria-label={`${bonusPoints} bonus points`}
+      className={`text-[calc(1.125rem*var(--display-text-scale,1))] font-extrabold ${colorClass}`}
+    >
+      {bonusStarLabel(magnitude)}
+    </span>
+  );
+}
+
+/** Positive and negative bonus totals render as separate badges so a team with both shows both. */
+function BonusIndicator({
+  positiveBonusPoints,
+  negativeBonusPoints,
+}: {
+  positiveBonusPoints: number;
+  negativeBonusPoints: number;
+}) {
+  if (positiveBonusPoints === 0 && negativeBonusPoints === 0) {
+    return null;
+  }
+  return (
+    <span className="flex items-center gap-1.5">
+      <BonusStars
+        magnitude={positiveBonusPoints}
+        colorClass="text-yellow"
+        bonusPoints={positiveBonusPoints}
+      />
+      <BonusStars
+        magnitude={Math.abs(negativeBonusPoints)}
+        colorClass="text-magenta"
+        bonusPoints={negativeBonusPoints}
+      />
+    </span>
+  );
+}
+
 interface RankInfo {
   /** 0-indexed position of this tie group's first entry — drives styling. */
   rankIndex: number;
@@ -47,12 +105,12 @@ function computeRankInfos(entries: LeaderboardEntry[]): RankInfo[] {
 
 function rowClasses(rankIndex: number): string {
   if (rankIndex === 0) {
-    return 'flex items-center gap-4 rounded-xl border-[3px] border-magenta bg-white px-5 py-3 shadow-[0_3px_0_#ec008c]';
+    return 'flex items-center gap-4 rounded-xl border-[3px] border-magenta bg-white px-5 py-2 shadow-[0_3px_0_#ec008c]';
   }
   if (rankIndex < 3) {
-    return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/25 bg-white px-5 py-2.5';
+    return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/25 bg-white px-5 py-1.5';
   }
-  return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/15 bg-white/60 px-5 py-2.5 text-dark-blue/70';
+  return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/15 bg-white/60 px-5 py-1.5 text-dark-blue/70';
 }
 
 export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
@@ -81,29 +139,20 @@ export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
             className={rowClasses(rankIndex)}
           >
             <span
-              className={`font-display w-16 shrink-0 text-[calc(1.5rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+              className={`font-display w-16 shrink-0 text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
               {label}
             </span>
             <span
-              className={`flex-1 font-bold ${rankIndex === 0 ? 'text-[calc(1.25rem*var(--display-text-scale,1))]' : 'text-[calc(1.125rem*var(--display-text-scale,1))]'}`}
+              className={`flex-1 font-bold ${rankIndex === 0 ? 'text-[calc(2rem*var(--display-text-scale,1))]' : 'text-[calc(1.75rem*var(--display-text-scale,1))]'}`}
             >
               {entry.teamName}
             </span>
-            {entry.bonusPoints !== 0 && (
-              <span
-                aria-label={`${entry.bonusPoints} bonus points`}
-                className={`rounded-full px-2 py-0.5 text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold ${
-                  entry.bonusPoints > 0
-                    ? 'bg-cyan text-dark-blue'
-                    : 'bg-magenta text-white'
-                }`}
-              >
-                {entry.bonusPoints > 0 ? '+' : ''}
-                {entry.bonusPoints}
-              </span>
-            )}
-            <span className="font-display text-[calc(1.25rem*var(--display-text-scale,1))]">
+            <BonusIndicator
+              positiveBonusPoints={entry.positiveBonusPoints}
+              negativeBonusPoints={entry.negativeBonusPoints}
+            />
+            <span className="font-display text-[calc(2rem*var(--display-text-scale,1))]">
               {entry.totalPoints}
             </span>
           </motion.li>

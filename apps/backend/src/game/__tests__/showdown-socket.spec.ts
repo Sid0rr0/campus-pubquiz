@@ -22,6 +22,8 @@ const TIED_LEADERBOARD = [
     teamName: 'Team A',
     totalPoints: 10,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: [],
   },
   {
@@ -29,6 +31,8 @@ const TIED_LEADERBOARD = [
     teamName: 'Team B',
     totalPoints: 10,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: [],
   },
 ];
@@ -52,6 +56,8 @@ describe('GameGateway — showdown', () => {
           teamName: 'Team A',
           totalPoints: 10,
           bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
           roundPoints: [],
         },
         {
@@ -59,6 +65,8 @@ describe('GameGateway — showdown', () => {
           teamName: 'Team B',
           totalPoints: 5,
           bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
           roundPoints: [],
         },
       ]);

@@ -33,6 +33,8 @@ interface LeaderboardRow {
   teamName: string;
   quizPoints: string | number;
   bonusPoints: string | number;
+  positiveBonusPoints: string | number;
+  negativeBonusPoints: string | number;
 }
 
 interface RoundRow {
@@ -260,7 +262,17 @@ export class AnswerService {
       .where('game_session_id', gameSessionId)
       .groupBy('team_id')
       .select('team_id')
-      .select(knex.raw('sum(points) as total'));
+      .select(knex.raw('sum(points) as total'))
+      .select(
+        knex.raw(
+          'sum(case when points > 0 then points else 0 end) as positive_total',
+        ),
+      )
+      .select(
+        knex.raw(
+          'sum(case when points < 0 then points else 0 end) as negative_total',
+        ),
+      );
 
     const rows = (await knex('game_session_teams as gst')
       .join('teams as t', 't.id', 'gst.team_id')
@@ -270,6 +282,12 @@ export class AnswerService {
       .select('t.id as teamId', 't.name as teamName')
       .select(knex.raw('coalesce(ans.total, 0) as "quizPoints"'))
       .select(knex.raw('coalesce(bonus.total, 0) as "bonusPoints"'))
+      .select(
+        knex.raw('coalesce(bonus.positive_total, 0) as "positiveBonusPoints"'),
+      )
+      .select(
+        knex.raw('coalesce(bonus.negative_total, 0) as "negativeBonusPoints"'),
+      )
       .orderBy([
         {
           column: knex.raw('coalesce(ans.total, 0) + coalesce(bonus.total, 0)'),
@@ -298,6 +316,8 @@ export class AnswerService {
       teamName: row.teamName,
       totalPoints: Number(row.quizPoints) + Number(row.bonusPoints),
       bonusPoints: Number(row.bonusPoints),
+      positiveBonusPoints: Number(row.positiveBonusPoints),
+      negativeBonusPoints: Number(row.negativeBonusPoints),
       roundPoints: rounds.map((round) => ({
         roundTitle: round.roundTitle,
         points: Number(

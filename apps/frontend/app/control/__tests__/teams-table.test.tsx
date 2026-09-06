@@ -35,6 +35,8 @@ const LEADERBOARD: LeaderboardEntry[] = [
     teamName: 'The Quizzards',
     totalPoints: 12,
     bonusPoints: 2,
+    positiveBonusPoints: 2,
+    negativeBonusPoints: 0,
     roundPoints: [
       { roundTitle: 'Animals', points: 4 },
       { roundTitle: 'History', points: 6 },
@@ -45,6 +47,8 @@ const LEADERBOARD: LeaderboardEntry[] = [
     teamName: 'Second Place',
     totalPoints: 6,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: [
       { roundTitle: 'Animals', points: 6 },
       { roundTitle: 'History', points: 0 },

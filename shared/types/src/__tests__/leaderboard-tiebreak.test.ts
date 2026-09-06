@@ -7,7 +7,15 @@ function entry(
   teamName: string,
   totalPoints: number,
 ): LeaderboardEntry {
-  return { teamId, teamName, totalPoints, bonusPoints: 0, roundPoints: [] };
+  return {
+    teamId,
+    teamName,
+    totalPoints,
+    bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    roundPoints: [],
+  };
 }
 
 describe('getTiedForFirst', () => {

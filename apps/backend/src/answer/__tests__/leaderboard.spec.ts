@@ -52,6 +52,8 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'Team A',
         totalPoints: 2.5,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [{ roundTitle: 'Round 1', points: 2.5 }],
       },
       {
@@ -59,6 +61,8 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'Team B',
         totalPoints: 1,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [{ roundTitle: 'Round 1', points: 1 }],
       },
     ]);
@@ -82,6 +86,8 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'The Quizzards',
         totalPoints: 0,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
       },
     ]);
@@ -130,6 +136,8 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'Team A',
         totalPoints: 6,
         bonusPoints: 4,
+        positiveBonusPoints: 4,
+        negativeBonusPoints: 0,
         roundPoints: [{ roundTitle: 'Round 1', points: 2 }],
       },
       {
@@ -137,6 +145,8 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'Team B',
         totalPoints: 1,
         bonusPoints: 1,
+        positiveBonusPoints: 1,
+        negativeBonusPoints: 0,
         roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
       },
     ]);
@@ -180,6 +190,8 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'Team A',
         totalPoints: 1,
         bonusPoints: -4,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: -4,
         roundPoints: [{ roundTitle: 'Round 1', points: 5 }],
       },
       {
@@ -187,7 +199,44 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
         teamName: 'Team B',
         totalPoints: 1,
         bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
         roundPoints: [{ roundTitle: 'Round 1', points: 1 }],
+      },
+    ]);
+  });
+
+  it('reports positive and negative bonus totals separately even when they net to the same total', async () => {
+    const team = await insertTeam('Team A', 'token-a');
+
+    state.em.create(BonusAward, {
+      gameSession: state.session,
+      team,
+      category: 'shot',
+      points: 3,
+    });
+    state.em.create(BonusAward, {
+      gameSession: state.session,
+      team,
+      category: 'custom',
+      reason: 'Interrupted the quiz master',
+      points: -1,
+    });
+    await state.em.flush();
+
+    const leaderboard = await state.answerService.computeLeaderboard(
+      state.session.id,
+    );
+
+    expect(leaderboard).toEqual([
+      {
+        teamId: team.id,
+        teamName: 'Team A',
+        totalPoints: 2,
+        bonusPoints: 2,
+        positiveBonusPoints: 3,
+        negativeBonusPoints: -1,
+        roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
       },
     ]);
   });

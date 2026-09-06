@@ -54,6 +54,8 @@ function zeroEntry(team: TeamView, roundTitles: string[]): LeaderboardEntry {
     teamName: team.teamName,
     totalPoints: 0,
     bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
     roundPoints: roundTitles.map((roundTitle) => ({ roundTitle, points: 0 })),
   };
 }

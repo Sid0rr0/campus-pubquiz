@@ -142,6 +142,10 @@ export interface LeaderboardEntry {
   totalPoints: number;
   /** Sum of this team's bonus awards, already included in totalPoints — shown separately as a badge. */
   bonusPoints: number;
+  /** Sum of this team's positive bonus awards only — lets the UI show both a positive and a negative badge at once instead of collapsing to the net. */
+  positiveBonusPoints: number;
+  /** Sum of this team's negative bonus awards (penalties) only, as a non-positive number. */
+  negativeBonusPoints: number;
   /**
    * Points earned per round of the session's active quiz, in round order.
    * Answers graded under a since-replaced quiz's rounds are still folded
