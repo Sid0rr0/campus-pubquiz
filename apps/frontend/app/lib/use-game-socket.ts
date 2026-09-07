@@ -232,7 +232,6 @@ export function useGameSocket(
       setSessionClosed(null);
       setKicked(false);
       setBonusAwardError(null);
-      pendingBonusAwardRef.current = false;
     }
   }
 
@@ -246,6 +245,7 @@ export function useGameSocket(
       withCredentials: true,
     });
     socketRef.current = socket;
+    pendingBonusAwardRef.current = false;
 
     socket.on('connect', () => {
       setReconnectedAt(Date.now());
