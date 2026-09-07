@@ -32,9 +32,5 @@ export async function kickTeamFromSession(
 
   const teams = await deps.teamService.listForSession(gameSessionId);
   deps.gameState.setTeams(joinCode, teams);
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

@@ -158,30 +158,20 @@ export function getBlockQuestions(session: SessionState): BlockQuestionView[] {
 }
 
 /**
- * Positions of the furthest-opened round's remaining questions, not open
- * yet — the whole round's shape, so the picker doesn't grow as questions
- * unlock. Based on furthestOpenIndex rather than the literal display
- * position, so stepping the display back with PREVIOUS doesn't re-mark
- * already-opened questions as upcoming. Round boundaries within a block
- * only advance through a round_intro screen, so these can only ever be
- * later in the furthest-opened round.
+ * The (roundIndex, questionIndex) of the furthest question ever opened in
+ * the current block — shared by getUpcomingQuestionPositions and
+ * buildPresenterContext's next-question preview.
  *
  * During round_intro, furthestOpenIndex may still point at an earlier
  * round (a fresh round_intro reached by ADVANCE, nothing open in the new
- * round yet) — in that case the whole round about to start is upcoming,
+ * round yet) — in that case the whole round about to start is the target,
  * not whatever's left of the round furthestOpenIndex still points at.
  */
-export function getUpcomingQuestionPositions(
-  session: SessionState,
-): QuestionPosition[] {
+export function getFurthestOpenPosition(session: SessionState): {
+  roundIndex: number;
+  questionIndex: number;
+} {
   const { status, roundIndex, furthestOpenIndex } = session.progress;
-  if (
-    status !== 'question_open' &&
-    status !== 'locking' &&
-    status !== 'round_intro'
-  ) {
-    return [];
-  }
   const context = getGameContext(session);
   const blockStart = getBlockStartRoundIndex(roundIndex, context);
   const furthest = getRoundAndQuestionForBlockPosition(
@@ -189,10 +179,32 @@ export function getUpcomingQuestionPositions(
     furthestOpenIndex,
     context,
   );
-  const target =
-    status === 'round_intro' && furthest.roundIndex < roundIndex
-      ? { roundIndex, questionIndex: -1 }
-      : furthest;
+  return status === 'round_intro' && furthest.roundIndex < roundIndex
+    ? { roundIndex, questionIndex: -1 }
+    : furthest;
+}
+
+/**
+ * Positions of the furthest-opened round's remaining questions, not open
+ * yet — the whole round's shape, so the picker doesn't grow as questions
+ * unlock. Based on furthestOpenIndex rather than the literal display
+ * position, so stepping the display back with PREVIOUS doesn't re-mark
+ * already-opened questions as upcoming. Round boundaries within a block
+ * only advance through a round_intro screen, so these can only ever be
+ * later in the furthest-opened round.
+ */
+export function getUpcomingQuestionPositions(
+  session: SessionState,
+): QuestionPosition[] {
+  const { status } = session.progress;
+  if (
+    status !== 'question_open' &&
+    status !== 'locking' &&
+    status !== 'round_intro'
+  ) {
+    return [];
+  }
+  const target = getFurthestOpenPosition(session);
   const round = session.seededGame.rounds[target.roundIndex];
   if (!round) {
     return [];

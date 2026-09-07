@@ -49,9 +49,5 @@ export async function awardTeamBonus(
     deps.gameState.getGameSessionId(joinCode),
   );
   deps.gameState.setLeaderboard(joinCode, leaderboard);
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

@@ -75,9 +75,5 @@ export async function submitTeamAnswer(
     payload.questionId,
     answers.some((answer) => answer.gradedAt === null),
   );
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

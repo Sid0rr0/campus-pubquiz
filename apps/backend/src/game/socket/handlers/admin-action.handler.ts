@@ -46,5 +46,5 @@ export async function applyAdminAction(
     snapshot.progress.status,
   );
 
-  broadcastGameState(deps.server, joinCode, snapshot);
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

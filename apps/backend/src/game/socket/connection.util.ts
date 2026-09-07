@@ -82,6 +82,16 @@ export async function acceptConnection(
     `Client ${client.id} connected as ${role} (session ${joinCode})`,
   );
   client.emit(SOCKET_EVENTS.STATE_SYNC, deps.gameState.getSnapshot(joinCode));
+  // Otherwise an admin socket that connects (or reconnects) mid-session —
+  // e.g. /remote opened well after the last admin action — would show no
+  // notes/next-question preview at all until the next action happens to
+  // trigger broadcastGameState's admin-room broadcast.
+  if (role === SOCKET_ROOMS.ADMIN) {
+    client.emit(
+      SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
+      deps.gameState.getPresenterContext(joinCode),
+    );
+  }
 }
 
 export function disconnectClient(
@@ -102,9 +112,5 @@ export function disconnectClient(
   if (!teamId) return;
 
   deps.logger.log(`Client ${client.id} disconnected, freeing team ${teamId}`);
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

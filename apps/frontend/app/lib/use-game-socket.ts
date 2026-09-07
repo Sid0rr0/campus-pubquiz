@@ -19,6 +19,7 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type KickTeamPayload,
+  type PresenterContextPayload,
   type SessionClosedPayload,
   type SetBreakEndTimePayload,
   type SetDisplayTextScalePayload,
@@ -53,6 +54,8 @@ export interface UseGameSocketResult {
   joinTeam: (teamName: string, options?: JoinTeamOptions) => void;
   submitAnswer: (questionId: number, teamId: number, value: string) => void;
   liveAnswers: AnswersUpdatedPayload | null;
+  /** Admin-only: host notes for the currently open question + a preview of the next question — see PresenterContextPayload. Never sent to /display or /play. */
+  presenterContext: PresenterContextPayload | null;
   gradeAnswer: (answerId: number, pointsAwarded: number) => void;
   kickTeam: (teamId: number) => void;
   awardBonus: (
@@ -188,6 +191,8 @@ export function useGameSocket(
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(
     null,
   );
+  const [presenterContext, setPresenterContext] =
+    useState<PresenterContextPayload | null>(null);
   const [myAnswers, setMyAnswers] = useState<Record<number, string>>({});
   const [myAnswerGrades, setMyAnswerGrades] = useState<
     Record<number, MyAnswerGrade>
@@ -219,6 +224,7 @@ export function useGameSocket(
       setConnectionError(null);
       setTeam(null);
       setLiveAnswers(null);
+      setPresenterContext(null);
       setMyAnswers({});
       setMyAnswerGrades({});
       setMyBonusAwards([]);
@@ -303,6 +309,13 @@ export function useGameSocket(
       SOCKET_EVENTS.ANSWERS_UPDATED,
       (payload: AnswersUpdatedPayload) => {
         setLiveAnswers(payload);
+      },
+    );
+
+    socket.on(
+      SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
+      (payload: PresenterContextPayload) => {
+        setPresenterContext(payload);
       },
     );
 
@@ -440,6 +453,7 @@ export function useGameSocket(
     joinTeam,
     submitAnswer,
     liveAnswers,
+    presenterContext,
     gradeAnswer,
     kickTeam,
     awardBonus,

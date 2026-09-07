@@ -55,9 +55,5 @@ export async function createShowdownRound(
   // and the next. Forcing it false here would yank the final standings off
   // the display the instant the tiebreaker question is saved, even though
   // it can now be created mid-break, well before anyone's seen them.
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

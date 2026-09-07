@@ -7,6 +7,7 @@ import {
   type AdminQuestionContext,
   type GameAction,
   type LeaderboardEntry,
+  type PresenterContextPayload,
   type SessionSettings,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
@@ -24,6 +25,7 @@ import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.u
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
 import {
   buildAdminQuestionContext,
+  buildPresenterContext,
   buildSnapshot,
   isQuestionOpenForAnswering,
 } from '@/game/state/session-snapshot.util';
@@ -460,5 +462,15 @@ export class GameStateService implements OnModuleInit {
   ): AdminQuestionContext | null {
     const rounds = this.sessionStore.get(joinCode).seededGame.rounds;
     return buildAdminQuestionContext(rounds, questionId);
+  }
+
+  /**
+   * Host notes for the open question + a preview of the next question, for
+   * the /remote presenter view alone. Callers MUST only forward this over
+   * an admin-room-only channel (PRESENTER_CONTEXT_UPDATED) — never through
+   * the broadcast snapshot.
+   */
+  getPresenterContext(joinCode: string): PresenterContextPayload {
+    return buildPresenterContext(this.sessionStore.get(joinCode));
   }
 }

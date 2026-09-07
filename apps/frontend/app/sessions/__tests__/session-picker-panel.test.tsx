@@ -70,7 +70,7 @@ describe('SessionPickerPanel', () => {
     expect(screen.getByText(/lobby · 3 teams · abcdef/i)).toBeInTheDocument();
   });
 
-  it('opens a session when its Open button is clicked', async () => {
+  it('opens a session when its Control button is clicked', async () => {
     mockFetchSessions.mockResolvedValue([
       {
         joinCode: 'ABCDEF',
@@ -83,9 +83,28 @@ describe('SessionPickerPanel', () => {
     const onOpenSession = vi.fn();
     renderWithQuery(<SessionPickerPanel onOpenSession={onOpenSession} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: /open/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /control/i }),
+    );
 
     expect(onOpenSession).toHaveBeenCalledWith('ABCDEF');
+  });
+
+  it('links each running session to its /remote view in a new tab', async () => {
+    mockFetchSessions.mockResolvedValue([
+      {
+        joinCode: 'ABCDEF',
+        quizId: 1,
+        quizTitle: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 0,
+      },
+    ]);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    const remoteLink = await screen.findByRole('link', { name: /remote/i });
+    expect(remoteLink).toHaveAttribute('href', '/remote?code=ABCDEF');
+    expect(remoteLink).toHaveAttribute('target', '_blank');
   });
 
   it('shows a Close button only for ended sessions and closes then refreshes the list', async () => {

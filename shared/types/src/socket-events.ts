@@ -12,6 +12,7 @@ export const SOCKET_EVENTS = {
   ANSWER_RECEIVED: 'game:answer_received',
   JOIN_ACCEPTED: 'game:join_accepted',
   ANSWERS_UPDATED: 'game:answers_updated',
+  PRESENTER_CONTEXT_UPDATED: 'game:presenter_context_updated',
   TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
   BONUS_AWARDED: 'game:bonus_awarded',
   SESSION_CLOSED: 'game:session_closed',
@@ -360,6 +361,20 @@ export interface AdminQuestionContext {
   /** 1-based position of this question within its round. */
   questionNumberInRound: number;
   totalQuestionsInRound: number;
+}
+
+/**
+ * Presenter-remote-only context (host notes + a preview of the next
+ * question): only ever sent over PRESENTER_CONTEXT_UPDATED, emitted to the
+ * admin room alone. Must NEVER be folded into StateSnapshotPayload/
+ * broadcastGameState's tri-room emit — players and the display must never
+ * receive next-question content or host notes.
+ */
+export interface PresenterContextPayload {
+  /** Host-only notes for the currently open question, or null when none is open or none were authored. */
+  currentQuestionNotes: string | null;
+  /** Full content (including the correct answer) of the question right after the furthest-opened one — crosses round boundaries within the quiz, so it's still populated on a round's last question. Null only once nothing is left in the quiz. */
+  nextQuestion: RevealQuestionView | null;
 }
 
 export interface AnswersUpdatedPayload {

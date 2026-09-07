@@ -9,9 +9,5 @@ export function updateDisplayTextScale(
   payload: SetDisplayTextScalePayload,
 ): void {
   deps.gameState.setDisplayTextScale(joinCode, payload.displayTextScale);
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

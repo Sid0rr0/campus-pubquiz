@@ -55,9 +55,5 @@ export async function submitShowdownGuess(
   }
 
   deps.gameState.setShowdownGuess(joinCode, payload.teamId, payload.value);
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

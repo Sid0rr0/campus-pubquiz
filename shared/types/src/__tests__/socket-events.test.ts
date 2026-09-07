@@ -23,6 +23,7 @@ describe('SOCKET_EVENTS', () => {
       ANSWER_RECEIVED: 'game:answer_received',
       JOIN_ACCEPTED: 'game:join_accepted',
       ANSWERS_UPDATED: 'game:answers_updated',
+      PRESENTER_CONTEXT_UPDATED: 'game:presenter_context_updated',
       TEAM_ANSWERS_SYNCED: 'game:team_answers_synced',
       BONUS_AWARDED: 'game:bonus_awarded',
       SESSION_CLOSED: 'game:session_closed',

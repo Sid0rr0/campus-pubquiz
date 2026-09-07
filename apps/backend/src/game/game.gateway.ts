@@ -170,7 +170,7 @@ export class GameGateway
       snapshot.progress.status,
     );
 
-    broadcastGameState(this.server, joinCode, snapshot);
+    broadcastGameState(this.server, joinCode, this.gameState);
     this.rearmQuestionLockTimer(joinCode);
   }
 
@@ -204,11 +204,7 @@ export class GameGateway
    * /rules?code= all pick up the change immediately.
    */
   notifySettingsUpdated(joinCode: string): void {
-    broadcastGameState(
-      this.server,
-      joinCode,
-      this.gameState.getSnapshot(joinCode),
-    );
+    broadcastGameState(this.server, joinCode, this.gameState);
   }
 
   /**
@@ -226,11 +222,7 @@ export class GameGateway
     const leaderboard =
       await this.answerService.computeLeaderboard(gameSessionId);
     this.gameState.setLeaderboard(joinCode, leaderboard);
-    broadcastGameState(
-      this.server,
-      joinCode,
-      this.gameState.getSnapshot(joinCode),
-    );
+    broadcastGameState(this.server, joinCode, this.gameState);
   }
 
   @SubscribeMessage(SOCKET_EVENTS.JOIN_PLAYERS)

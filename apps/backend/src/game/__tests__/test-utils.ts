@@ -164,6 +164,10 @@ export const GAME_STATE_FIXTURE_SEEDED_GAME: SeededGame = {
           answer: 'Jupiter',
         },
       ],
+      // Covers both a populated note (21) and an explicit null one (22) —
+      // round 2 below deliberately omits this field entirely, covering the
+      // "no notes map at all" case too.
+      questionNotesById: { 21: 'Remind teams: EU capitals only.', 22: null },
     },
     {
       id: 12,

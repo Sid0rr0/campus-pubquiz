@@ -104,6 +104,28 @@ describe('GameGateway — connection', () => {
     expect(admin.disconnect).not.toHaveBeenCalled();
   });
 
+  it('sends presenter context to a connecting admin client, so /remote has something to show before the next admin action', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    expect(admin.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
+      expect.objectContaining({ currentQuestionNotes: null }),
+    );
+  });
+
+  it('never sends presenter context to a connecting display client', async () => {
+    const client = createMockSocket(SOCKET_ROOMS.DISPLAY);
+    await gateway.handleConnection(asSocket(client));
+
+    expect(client.emit).not.toHaveBeenCalledWith(
+      SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
+      expect.anything(),
+    );
+  });
+
   it('joins a moderator client that presents a valid session token', async () => {
     const moderatorToken = 'moderator-token';
     sessionService.validate.mockImplementation((token: string | undefined) =>

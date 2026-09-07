@@ -9,9 +9,5 @@ export function updateBreakEndTime(
   payload: SetBreakEndTimePayload,
 ): void {
   deps.gameState.setBreakEndTime(joinCode, payload.breakEndsAt);
-  broadcastGameState(
-    deps.server,
-    joinCode,
-    deps.gameState.getSnapshot(joinCode),
-  );
+  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

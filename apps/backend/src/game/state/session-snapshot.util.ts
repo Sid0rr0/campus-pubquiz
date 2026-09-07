@@ -2,6 +2,8 @@ import {
   getQuizStructureSummary,
   getTimedPhaseKey,
   type AdminQuestionContext,
+  type PresenterContextPayload,
+  type RevealQuestionView,
   type StateSnapshotPayload,
   type TeamView,
 } from '@campus-pubquiz/types';
@@ -11,6 +13,7 @@ import {
   getBlockQuestions,
   getCurrentQuestion,
   getCurrentRoundTitle,
+  getFurthestOpenPosition,
   getPastRevealedQuestions,
   getRevealQuestions,
   getUpcomingQuestionPositions,
@@ -93,6 +96,57 @@ export function isQuestionOpenForAnswering(
       session.progress.status === 'round_intro') &&
     getBlockQuestions(session).some((question) => question.id === questionId)
   );
+}
+
+/**
+ * The question immediately after (roundIndex, questionIndex) — walking
+ * forward into subsequent rounds when the given position is a round's last
+ * question, so a presenter on a round's final question still sees a
+ * preview instead of "nothing queued". Null only once nothing at all is
+ * left in the quiz.
+ */
+function getQuestionAfter(
+  rounds: SeededRound[],
+  roundIndex: number,
+  questionIndex: number,
+): RevealQuestionView | null {
+  let currentRoundIndex = roundIndex;
+  let nextQuestionIndex = questionIndex + 1;
+  while (currentRoundIndex < rounds.length) {
+    const round = rounds[currentRoundIndex];
+    if (nextQuestionIndex < round.questions.length) {
+      return round.questions[nextQuestionIndex];
+    }
+    currentRoundIndex += 1;
+    nextQuestionIndex = 0;
+  }
+  return null;
+}
+
+/**
+ * Host notes for the open question + a preview of the next question, for
+ * the /remote presenter view alone. Callers MUST only forward this over an
+ * admin-room-only channel (PRESENTER_CONTEXT_UPDATED) — never through the
+ * broadcast snapshot.
+ */
+export function buildPresenterContext(
+  session: SessionState,
+): PresenterContextPayload {
+  const currentQuestion = getCurrentQuestion(session);
+  const currentRound = session.seededGame.rounds[session.progress.roundIndex];
+  const currentQuestionNotes =
+    currentQuestion && currentRound
+      ? (currentRound.questionNotesById?.[currentQuestion.id] ?? null)
+      : null;
+
+  const target = getFurthestOpenPosition(session);
+  const nextQuestion = getQuestionAfter(
+    session.seededGame.rounds,
+    target.roundIndex,
+    target.questionIndex,
+  );
+
+  return { currentQuestionNotes, nextQuestion };
 }
 
 /**

@@ -66,11 +66,7 @@ export async function joinPlayerTeam(
       deps.gameState.getGameSessionId(joinCode),
     );
     deps.gameState.setTeams(joinCode, teams);
-    broadcastGameState(
-      deps.server,
-      joinCode,
-      deps.gameState.getSnapshot(joinCode),
-    );
+    broadcastGameState(deps.server, joinCode, deps.gameState);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to join';
     throw new WsException(message);

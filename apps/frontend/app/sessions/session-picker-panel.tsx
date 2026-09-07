@@ -9,6 +9,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   Cross2Icon,
+  ExternalLinkIcon,
   Pencil1Icon,
   PlayIcon,
   PlusIcon,
@@ -163,6 +164,15 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                       Close
                     </Button>
                   )}
+                  <Link
+                    href={`/remote?code=${session.joinCode}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
+                  >
+                    <ExternalLinkIcon aria-hidden="true" />
+                    Remote
+                  </Link>
                   <Button
                     type="button"
                     variant="solid-flat"
@@ -170,7 +180,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                     onClick={() => onOpenSession(session.joinCode)}
                   >
                     <ArrowRightIcon aria-hidden="true" />
-                    Open
+                    Control
                   </Button>
                 </div>
               </li>

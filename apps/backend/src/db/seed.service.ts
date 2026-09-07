@@ -130,6 +130,9 @@ export class SeedService {
           answer: row.answer,
           ...toViewPayload(row.payload),
         })),
+        questionNotesById: Object.fromEntries(
+          questionRows.map((row) => [row.id, row.notes ?? null]),
+        ),
       });
     }
 
@@ -189,6 +192,13 @@ export class SeedService {
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
         questions,
+        // The hardcoded fixture carries no notes — matches what a subsequent
+        // loadGame() would read back (Question.notes defaults to null),
+        // so seed()'s result stays identical whether it just created this
+        // game or is resuming an already-seeded one.
+        questionNotesById: Object.fromEntries(
+          questions.map((question) => [question.id, null]),
+        ),
       });
     }
 
