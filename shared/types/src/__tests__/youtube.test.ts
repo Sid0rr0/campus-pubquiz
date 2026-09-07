@@ -103,6 +103,17 @@ describe('parseYoutubeClipFromNotes', () => {
     expect(clip).toEqual({ startSeconds: 30, endSeconds: 90 });
   });
 
+  it('parses plain-seconds times over 99 seconds', () => {
+    // Arrange
+    const notes = '{start: "173", end: "200"}';
+
+    // Act
+    const clip = parseYoutubeClipFromNotes(notes);
+
+    // Assert
+    expect(clip).toEqual({ startSeconds: 173, endSeconds: 200 });
+  });
+
   it('returns only start when end is missing', () => {
     // Arrange
     const notes = '{start: "0:30"}';

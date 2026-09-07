@@ -9,10 +9,18 @@ export function extractYoutubeVideoId(url: string): string | undefined {
 /** Parses "SS", "M:SS", or "H:MM:SS" into total seconds, or undefined if unparseable. */
 function parseTimecodeToSeconds(raw: string): number | undefined {
   const parts = raw.trim().split(':');
-  if (parts.length === 0 || parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) {
+  if (
+    parts.length === 0 ||
+    parts.length > 3 ||
+    parts.some((part) => !/^\d+$/.test(part))
+  ) {
     return undefined;
   }
-  return parts.reduceRight((total, part, index) => total + Number(part) * 60 ** (parts.length - 1 - index), 0);
+  return parts.reduceRight(
+    (total, part, index) =>
+      total + Number(part) * 60 ** (parts.length - 1 - index),
+    0,
+  );
 }
 
 /**
@@ -27,10 +35,14 @@ export function parseYoutubeClipFromNotes(
 ): { startSeconds?: number; endSeconds?: number } | undefined {
   if (!notes) return undefined;
 
-  const startMatch = /start\s*[:=]\s*["']?(\d{1,2}(?::\d{1,2}){0,2})["']?/i.exec(notes);
-  const endMatch = /end\s*[:=]\s*["']?(\d{1,2}(?::\d{1,2}){0,2})["']?/i.exec(notes);
+  const startMatch = /start\s*[:=]\s*["']?(\d+(?::\d{1,2}){0,2})["']?/i.exec(
+    notes,
+  );
+  const endMatch = /end\s*[:=]\s*["']?(\d+(?::\d{1,2}){0,2})["']?/i.exec(notes);
 
-  const startSeconds = startMatch ? parseTimecodeToSeconds(startMatch[1]) : undefined;
+  const startSeconds = startMatch
+    ? parseTimecodeToSeconds(startMatch[1])
+    : undefined;
   const endSeconds = endMatch ? parseTimecodeToSeconds(endMatch[1]) : undefined;
 
   if (startSeconds === undefined && endSeconds === undefined) return undefined;
