@@ -153,6 +153,41 @@ export function SessionSettingsForm({
         Play countdown sound
       </label>
 
+      <div className="flex flex-wrap gap-4">
+        <label className="flex flex-col gap-1 text-sm font-extrabold">
+          Max players per team
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={value.maxPlayersPerTeam}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                maxPlayersPerTeam: Number(event.target.value),
+              })
+            }
+            className="min-h-10 w-32 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-extrabold">
+          Extra player penalty (points)
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={value.extraPlayerPenaltyPoints}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                extraPlayerPenaltyPoints: Number(event.target.value),
+              })
+            }
+            className="min-h-10 w-32 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+          />
+        </label>
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-extrabold">Rules</span>
         <ul className="flex flex-col gap-2">

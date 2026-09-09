@@ -18,6 +18,8 @@ interface GameStatusScreensProps {
   joinCode: string;
   rules: string[];
   enabledBonusCategories: BonusCategory[];
+  maxPlayersPerTeam: number;
+  extraPlayerPenaltyPoints: number;
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
@@ -39,6 +41,8 @@ export function GameStatusScreens({
   joinCode,
   rules,
   enabledBonusCategories,
+  maxPlayersPerTeam,
+  extraPlayerPenaltyPoints,
   activeShowdown,
   showdownRevealStep,
   myTeamId,
@@ -79,6 +83,8 @@ export function GameStatusScreens({
             quizStructure={quizStructure}
             rules={rules}
             enabledBonusCategories={enabledBonusCategories}
+            maxPlayersPerTeam={maxPlayersPerTeam}
+            extraPlayerPenaltyPoints={extraPlayerPenaltyPoints}
           />
         </div>
       )}

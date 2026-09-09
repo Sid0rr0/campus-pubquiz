@@ -504,6 +504,10 @@ export interface SessionSettings {
   rules: string[];
   /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
   maxBonusAwardsPerCategory: Partial<Record<BonusCategory, number>>;
+  /** Team size cap — display text only, no enforcement. Shown in the /display QR caption and the generated first /rules bullet. */
+  maxPlayersPerTeam: number;
+  /** Points deducted per player beyond maxPlayersPerTeam — display text only, no enforcement. Shown in the generated first /rules bullet. */
+  extraPlayerPenaltyPoints: number;
 }
 
 // Frozen (including its array and map fields) so no code path can ever
@@ -526,8 +530,9 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
     shot: 2,
     selfie: 1,
   }) as Partial<Record<BonusCategory, number>>,
+  maxPlayersPerTeam: 6,
+  extraPlayerPenaltyPoints: 2,
   rules: Object.freeze([
-    'Max 6 players per team, every additional player costs the team −2 points.',
     'No cheating.',
     'Please write your answers in English.',
     'In case of disagreements, the organizers have the final word.',

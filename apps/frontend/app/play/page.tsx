@@ -417,6 +417,8 @@ function PlayPageContent() {
           joinCode={snapshot.joinCode}
           rules={settings.rules}
           enabledBonusCategories={settings.enabledBonusCategories}
+          maxPlayersPerTeam={settings.maxPlayersPerTeam}
+          extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
           myTeamId={myTeamId}

@@ -45,6 +45,34 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('fires onChange with an updated maxPlayersPerTeam', async () => {
+    const onChange = vi.fn();
+    renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
+
+    const input = screen.getByLabelText(/max players per team/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, '4');
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      maxPlayersPerTeam: 4,
+    });
+  });
+
+  it('fires onChange with an updated extraPlayerPenaltyPoints', async () => {
+    const onChange = vi.fn();
+    renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
+
+    const input = screen.getByLabelText(/extra player penalty/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, '3');
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      extraPlayerPenaltyPoints: 3,
+    });
+  });
+
   it('toggles a bonus category off', async () => {
     const onChange = vi.fn();
     render(

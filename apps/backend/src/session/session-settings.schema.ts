@@ -32,6 +32,8 @@ export const sessionSettingsPartialSchema = z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),
     maxBonusAwardsPerCategory: maxBonusAwardsPerCategorySchema,
+    maxPlayersPerTeam: z.number().int().positive(),
+    extraPlayerPenaltyPoints: z.number().int().nonnegative(),
   })
   .partial();
 

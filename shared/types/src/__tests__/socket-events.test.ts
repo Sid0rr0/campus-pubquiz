@@ -276,8 +276,9 @@ describe('SessionSettings defaults', () => {
       autoplayMedia: true,
       playLockCountdownSound: true,
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
+      maxPlayersPerTeam: 6,
+      extraPlayerPenaltyPoints: 2,
       rules: [
-        'Max 6 players per team, every additional player costs the team −2 points.',
         'No cheating.',
         'Please write your answers in English.',
         'In case of disagreements, the organizers have the final word.',

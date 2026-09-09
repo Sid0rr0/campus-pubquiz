@@ -135,6 +135,39 @@ describe('sessionSettingsPartialSchema', () => {
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ maxBonusAwardsPerCategory: {} });
   });
+
+  it('accepts a valid maxPlayersPerTeam and extraPlayerPenaltyPoints', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      maxPlayersPerTeam: 5,
+      extraPlayerPenaltyPoints: 3,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({
+      maxPlayersPerTeam: 5,
+      extraPlayerPenaltyPoints: 3,
+    });
+  });
+
+  it('rejects a non-positive maxPlayersPerTeam', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ maxPlayersPerTeam: 0 }).success,
+    ).toBe(false);
+    expect(
+      sessionSettingsPartialSchema.safeParse({ maxPlayersPerTeam: -1 }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a zero extraPlayerPenaltyPoints but rejects a negative one', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ extraPlayerPenaltyPoints: 0 })
+        .success,
+    ).toBe(true);
+    expect(
+      sessionSettingsPartialSchema.safeParse({ extraPlayerPenaltyPoints: -1 })
+        .success,
+    ).toBe(false);
+  });
 });
 
 describe('resolveSessionSettings', () => {

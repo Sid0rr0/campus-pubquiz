@@ -44,6 +44,8 @@ function RulesPageContent() {
         enabledBonusCategories={
           snapshot?.settings?.enabledBonusCategories ?? []
         }
+        maxPlayersPerTeam={snapshot?.settings?.maxPlayersPerTeam}
+        extraPlayerPenaltyPoints={snapshot?.settings?.extraPlayerPenaltyPoints}
       />
     </main>
   );

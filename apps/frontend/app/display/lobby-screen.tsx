@@ -1,16 +1,20 @@
 import { QRCodeSVG } from 'qrcode.react';
 import type { TeamView } from '@campus-pubquiz/types';
 import { TeamRoster } from '@/app/display/team-roster';
-import { CopyButton } from '@/app/components/copy-button';
 
-const QR_SIZE_PX = 220;
+const QR_SIZE_PX = 320;
 
 interface LobbyScreenProps {
   teams: TeamView[];
   joinCode: string | null | undefined;
+  maxPlayersPerTeam: number;
 }
 
-export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
+export function LobbyScreen({
+  teams,
+  joinCode,
+  maxPlayersPerTeam,
+}: LobbyScreenProps) {
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
       <TeamRoster teams={teams} />
@@ -27,16 +31,16 @@ export function LobbyScreen({ teams, joinCode }: LobbyScreenProps) {
             />
           </div>
           <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
-            SCAN TO JOIN — OR GO TO /PLAY AND ENTER THE CODE
+            SCAN TO JOIN — OR GO TO /PLAY AND FIND A GAME WITH THE CODE
           </p>
           <p className="flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center">
-            <span className="font-display text-[calc(1.875rem*var(--display-text-scale,1))] tracking-widest text-magenta wrap-break-word">
+            <span className="font-display text-[calc(1.25rem*var(--display-text-scale,1))] tracking-widest text-magenta wrap-break-word">
               {joinCode}
             </span>
-            <CopyButton
-              value={joinCode}
-              className="text-[calc(1.5rem*var(--display-text-scale,1))] text-magenta"
-            />
+          </p>
+          <p className="text-[calc(1.5rem*var(--display-text-scale,1))] font-semibold">
+            Make teams of up to {maxPlayersPerTeam} players, only one device
+            connects per team.
           </p>
         </div>
       )}

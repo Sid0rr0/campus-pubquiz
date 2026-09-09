@@ -87,6 +87,25 @@ describe('DisplayPage — lobby', () => {
     expect(screen.getByText('ABCDEF')).toBeInTheDocument();
   });
 
+  it('shows the max team size and one-device-per-team note in the lobby', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'ABCDEF',
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(
+      screen.getByText(
+        'Make teams of up to 6 players, only one device connects per team.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('prefers the join code from the ?code= query parameter over the snapshot', () => {
     searchParamsRef.current = new URLSearchParams('code=GHIJKL');
     mockUseGameSocket.mockReturnValue({

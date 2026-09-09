@@ -16,6 +16,10 @@ interface RulesContentProps {
   rules?: string[];
   /** This session's SessionSettings.enabledBonusCategories — appends one bullet per enabled category that has a fixed explanation (shot, selfie), since that's session config rather than part of the admin-authored `rules` text. "custom" has no fixed explanation and is never appended. */
   enabledBonusCategories?: BonusCategory[];
+  /** This session's SessionSettings.maxPlayersPerTeam — combined with extraPlayerPenaltyPoints into a generated bullet shown first, ahead of the admin-authored `rules` text. */
+  maxPlayersPerTeam?: number;
+  /** This session's SessionSettings.extraPlayerPenaltyPoints — see maxPlayersPerTeam. */
+  extraPlayerPenaltyPoints?: number;
 }
 
 function pluralize(count: number, singular: string): string {
@@ -61,6 +65,8 @@ export function RulesContent({
   quizStructure,
   rules = DEFAULT_SESSION_SETTINGS.rules,
   enabledBonusCategories = [],
+  maxPlayersPerTeam = DEFAULT_SESSION_SETTINGS.maxPlayersPerTeam,
+  extraPlayerPenaltyPoints = DEFAULT_SESSION_SETTINGS.extraPlayerPenaltyPoints,
 }: RulesContentProps) {
   const bonusRules = BONUS_CATEGORIES.filter(
     (category) =>
@@ -70,7 +76,8 @@ export function RulesContent({
     (category) =>
       `${BONUS_CATEGORY_LABELS[category]} bonus: ${BONUS_CATEGORY_EXPLANATIONS[category]}`,
   );
-  const displayedRules = [...rules, ...bonusRules];
+  const teamSizeRule = `Max ${maxPlayersPerTeam} players per team, every additional player costs the team −${extraPlayerPenaltyPoints} points.`;
+  const displayedRules = [teamSizeRule, ...rules, ...bonusRules];
 
   return (
     <div className="flex flex-col gap-6 text-center">

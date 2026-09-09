@@ -254,7 +254,11 @@ function DisplayPageContent() {
           ) : (
             <>
               {progress.status === 'lobby' && (
-                <LobbyScreen teams={teams} joinCode={codeFromUrl} />
+                <LobbyScreen
+                  teams={teams}
+                  joinCode={codeFromUrl}
+                  maxPlayersPerTeam={settings.maxPlayersPerTeam}
+                />
               )}
               {progress.status === 'rules' && (
                 <div className="flex flex-1 items-center justify-center px-16 py-10">
@@ -262,6 +266,8 @@ function DisplayPageContent() {
                     quizStructure={quizStructure}
                     rules={settings.rules}
                     enabledBonusCategories={settings.enabledBonusCategories}
+                    maxPlayersPerTeam={settings.maxPlayersPerTeam}
+                    extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
                   />
                 </div>
               )}
