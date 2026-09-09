@@ -118,6 +118,45 @@ describe('PlayPage — sort and match answers', () => {
     );
   });
 
+  it('shows the sort Submit button as green "Submitted" when the order matches the recorded answer, and reverts to magenta "Submit" once reordered', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const submitAnswer = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'sort',
+            prompt: 'Order these planets from the sun outward.',
+            options: ['Venus', 'Mercury', 'Earth'],
+            points: 3,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Venus|Mercury|Earth' },
+        submitAnswer,
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByRole('button', { name: 'Submitted' })).toHaveClass(
+      'bg-green',
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Move Venus down' }),
+    );
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toHaveClass(
+      'bg-magenta',
+    );
+  });
+
   it('submits the IDK sentinel from the sort question\'s "I don\'t know" button', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();

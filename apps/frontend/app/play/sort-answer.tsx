@@ -20,12 +20,12 @@ import { motion } from 'motion/react';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  CheckIcon,
   DragHandleDots2Icon,
 } from '@radix-ui/react-icons';
 import { splitPipeList } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
+import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 
 interface SortAnswerProps {
   options: string[];
@@ -164,7 +164,7 @@ function SortItem({
   );
 }
 
-/** Reorder-in-place UI for `sort` questions — drag handle or up/down buttons, either way every move immediately re-submits the current order. */
+/** Reorder-in-place UI for `sort` questions — drag handle or up/down buttons reorder the draft, and the Submit button sends the current order. */
 export function SortAnswer({
   options,
   initialValue,
@@ -175,6 +175,7 @@ export function SortAnswer({
     restoredOrder.length === options.length ? restoredOrder : options,
   );
   const [isDragging, setIsDragging] = useState(false);
+  const isSubmitted = Boolean(initialValue) && order.join('|') === initialValue;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, {
@@ -224,15 +225,10 @@ export function SortAnswer({
           </ol>
         </SortableContext>
       </DndContext>
-      <Button
-        type="button"
-        variant="solid"
+      <SubmitAnswerButton
+        isSubmitted={isSubmitted}
         onClick={() => onSubmit(order.join('|'))}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
-      >
-        <CheckIcon aria-hidden="true" />
-        Submit
-      </Button>
+      />
     </div>
   );
 }

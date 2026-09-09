@@ -17,10 +17,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'motion/react';
-import { CheckIcon, DragHandleDots2Icon } from '@radix-ui/react-icons';
+import { DragHandleDots2Icon } from '@radix-ui/react-icons';
 import { splitPipeList } from '@campus-pubquiz/types';
-import { Button } from '@/app/components/button';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
+import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 
 interface MatchAnswerProps {
   leftItems: string[];
@@ -81,8 +81,8 @@ function MatchRightRow({
 /**
  * Match-pairs UI: the left column is fixed; dragging (or keyboard-reordering)
  * the right column is how a team pairs each right item with the left row
- * beside it. Submits as a `|`-joined string, positionally aligned to
- * leftItems, on every reorder.
+ * beside it. The Submit button sends the pairing as a `|`-joined string,
+ * positionally aligned to leftItems.
  */
 export function MatchAnswer({
   leftItems,
@@ -95,6 +95,7 @@ export function MatchAnswer({
     restored.length === rightItems.length ? restored : rightItems,
   );
   const [isDragging, setIsDragging] = useState(false);
+  const isSubmitted = Boolean(initialValue) && order.join('|') === initialValue;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, {
@@ -147,15 +148,10 @@ export function MatchAnswer({
           </SortableContext>
         </DndContext>
       </div>
-      <Button
-        type="button"
-        variant="solid"
+      <SubmitAnswerButton
+        isSubmitted={isSubmitted}
         onClick={() => onSubmit(order.join('|'))}
-        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
-      >
-        <CheckIcon aria-hidden="true" />
-        Submit
-      </Button>
+      />
     </div>
   );
 }

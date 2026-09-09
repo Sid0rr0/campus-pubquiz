@@ -7,6 +7,7 @@ import { Button } from '@/app/components/button';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
 import { SortAnswer } from '@/app/play/sort-answer';
+import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 
 interface AnswerFormProps {
   question: QuestionView;
@@ -82,16 +83,17 @@ export function AnswerForm({
   }
 
   if (question.type === 'multiple_choice' && question.options) {
+    const isSubmitted = value !== '' && value === initialValue;
     return (
       <div className="flex flex-col gap-2.5">
         {question.options.map((option, index) => {
-          const isChosen = option === initialValue;
+          const isChosen = option === value;
           return (
             <Button
               key={index}
               type="button"
               aria-pressed={isChosen}
-              onClick={() => onSubmit(option)}
+              onClick={() => setValue(option)}
               className={
                 isChosen
                   ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
@@ -111,6 +113,11 @@ export function AnswerForm({
             </Button>
           );
         })}
+        <SubmitAnswerButton
+          isSubmitted={isSubmitted}
+          disabled={value === ''}
+          onClick={() => onSubmit(value)}
+        />
         {idkButton}
       </div>
     );
@@ -121,6 +128,8 @@ export function AnswerForm({
     if (!value.trim()) return;
     onSubmit(value.trim());
   }
+
+  const isSubmitted = value.trim() !== '' && value.trim() === initialValue;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
@@ -138,14 +147,7 @@ export function AnswerForm({
         onChange={(event) => setValue(event.target.value)}
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
       />
-      <Button
-        type="submit"
-        variant="solid"
-        className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-lg"
-      >
-        <CheckIcon aria-hidden="true" />
-        Submit
-      </Button>
+      <SubmitAnswerButton type="submit" isSubmitted={isSubmitted} />
       {idkButton}
     </form>
   );

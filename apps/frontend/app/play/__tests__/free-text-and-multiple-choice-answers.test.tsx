@@ -87,7 +87,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Banana');
   });
 
-  it('shows multiple-choice options and submits the chosen option immediately', async () => {
+  it('shows multiple-choice options and submits the chosen option on Submit click', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue(
@@ -113,6 +113,10 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     renderWithQuery(<PlayPage />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
+
+    expect(submitAnswer).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
     expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
   });
@@ -203,6 +207,78 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     expect(screen.getByRole('button', { name: 'London' })).toHaveAttribute(
       'aria-pressed',
       'false',
+    );
+  });
+
+  it('shows the multiple-choice Submit button as green "Submitted" when it matches the recorded answer, and back to magenta "Submit" when a different option is chosen', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'multiple_choice',
+            prompt: 'Capital of France?',
+            options: ['Paris', 'London', 'Berlin', 'Rome'],
+            points: 2,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Paris' },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByRole('button', { name: 'Submitted' })).toHaveClass(
+      'bg-green',
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'London' }));
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toHaveClass(
+      'bg-magenta',
+    );
+  });
+
+  it('shows the free-text Submit button as green "Submitted" when it matches the recorded answer, and back to magenta "Submit" when the text changes', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type: 'free_text',
+            prompt: 'Name a fruit',
+            points: 1,
+          },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { r1q1: 'Banana' },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByRole('button', { name: 'Submitted' })).toHaveClass(
+      'bg-green',
+    );
+
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /your answer/i }),
+      '!',
+    );
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toHaveClass(
+      'bg-magenta',
     );
   });
 
