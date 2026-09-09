@@ -33,6 +33,7 @@ describe('SOCKET_EVENTS', () => {
       JOIN_PLAYERS: 'game:join_players',
       GRADE_ANSWER: 'game:grade_answer',
       KICK_TEAM: 'game:kick_team',
+      LEAVE_SESSION: 'game:leave_session',
       AWARD_BONUS: 'game:award_bonus',
       SET_BREAK_END_TIME: 'game:set_break_end_time',
       SET_DISPLAY_TEXT_SCALE: 'game:set_display_text_scale',

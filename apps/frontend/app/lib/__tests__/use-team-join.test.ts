@@ -97,3 +97,51 @@ describe('useTeamJoin — double-submit guard', () => {
     expect(joinTeam).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('useTeamJoin — log out leaves the session server-side', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    mockUseGameSocket.mockReset();
+  });
+
+  it('tells the server this team is leaving, with its own teamId, before clearing local storage', () => {
+    // Reproduces the /control roster leak: logging out is the only way to
+    // "rename" a team (log out, rejoin under a new name) — without this the
+    // old identity's roster row lingers until an admin kicks it by hand.
+    const leaveSession = vi.fn();
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        leaveSession,
+        team: {
+          teamId: 31,
+          teamToken: 'team-token-1',
+          teamCode: 'team-code-1',
+          teamName: 'The Quizzards',
+          answers: [],
+          bonusAwards: [],
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useTeamJoin(''));
+
+    act(() => {
+      result.current.handleLogOut();
+    });
+
+    expect(leaveSession).toHaveBeenCalledExactlyOnceWith(31);
+  });
+
+  it('does not call leaveSession when logging out with no confirmed team', () => {
+    const leaveSession = vi.fn();
+    mockUseGameSocket.mockReturnValue(socketResult({ leaveSession }));
+
+    const { result } = renderHook(() => useTeamJoin(''));
+
+    act(() => {
+      result.current.handleLogOut();
+    });
+
+    expect(leaveSession).not.toHaveBeenCalled();
+  });
+});

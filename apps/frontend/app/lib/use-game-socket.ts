@@ -19,6 +19,7 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type KickTeamPayload,
+  type LeaveSessionPayload,
   type PresenterContextPayload,
   type SessionClosedPayload,
   type SetBreakEndTimePayload,
@@ -58,6 +59,8 @@ export interface UseGameSocketResult {
   presenterContext: PresenterContextPayload | null;
   gradeAnswer: (answerId: number, pointsAwarded: number) => void;
   kickTeam: (teamId: number) => void;
+  /** Players-only: tells the server this team is intentionally leaving (log out) — removes its roster row so it doesn't linger in /control until an admin kicks it by hand. */
+  leaveSession: (teamId: number) => void;
   awardBonus: (
     teamId: number,
     category: BonusCategory,
@@ -401,6 +404,11 @@ export function useGameSocket(
     socketRef.current?.emit(SOCKET_EVENTS.KICK_TEAM, payload);
   }, []);
 
+  const leaveSession = useCallback((teamId: number) => {
+    const payload: LeaveSessionPayload = { teamId };
+    socketRef.current?.emit(SOCKET_EVENTS.LEAVE_SESSION, payload);
+  }, []);
+
   const awardBonus = useCallback(
     (
       teamId: number,
@@ -456,6 +464,7 @@ export function useGameSocket(
     presenterContext,
     gradeAnswer,
     kickTeam,
+    leaveSession,
     awardBonus,
     setBreakEndTime,
     setDisplayTextScale,

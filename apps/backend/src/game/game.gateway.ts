@@ -34,6 +34,7 @@ import { broadcastGameState } from '@/game/socket/game-broadcast.util';
 import { gradeTeamAnswer } from '@/game/socket/handlers/grade-answer.handler';
 import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
 import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
+import { leaveSessionAsTeam } from '@/game/socket/handlers/leave-session.handler';
 import { QuestionLockTimerRegistry } from '@/game/socket/question-lock-timer.registry';
 import { syncTeamAnswersOnRevealEntry } from '@/game/socket/reveal-entry-sync.util';
 import { updateBreakEndTime } from '@/game/socket/handlers/set-break-end-time.handler';
@@ -46,6 +47,7 @@ import {
   gradeAnswerPayloadSchema,
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
+  leaveSessionPayloadSchema,
   parseSocketPayload,
   setBreakEndTimePayloadSchema,
   setDisplayTextScalePayloadSchema,
@@ -333,6 +335,34 @@ export class GameGateway
         server: this.server,
       },
       joinCode,
+      payload,
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.LEAVE_SESSION)
+  @CreateRequestContext()
+  async handleLeaveSession(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<void> {
+    const payload = parseSocketPayload(leaveSessionPayloadSchema, rawPayload);
+    const joinCode = this.resolveJoinCode(client);
+    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
+      throw new WsException('Only player clients may leave a session');
+    }
+
+    this.logger.log(
+      `${SOCKET_EVENTS.LEAVE_SESSION} from ${client.id}: teamId=${payload.teamId}`,
+    );
+
+    await leaveSessionAsTeam(
+      {
+        gameState: this.gameState,
+        teamService: this.teamService,
+        server: this.server,
+      },
+      joinCode,
+      client.id,
       payload,
     );
   }

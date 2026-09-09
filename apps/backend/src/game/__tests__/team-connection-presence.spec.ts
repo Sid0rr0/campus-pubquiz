@@ -185,4 +185,62 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
     expect(teamService.removeFromRoster).toHaveBeenCalledWith(101, 999);
   });
+
+  it('rejects LEAVE_SESSION from a non-players client', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await expect(
+      gateway.handleLeaveSession(asSocket(admin), { teamId: 31 }),
+    ).rejects.toThrow(WsException);
+  });
+
+  it('rejects LEAVE_SESSION for a team the caller is not connected as', async () => {
+    const playerA = await joinAsPlayer('socket-a');
+
+    // A hand-crafted payload claiming a teamId this socket never joined as.
+    await expect(
+      gateway.handleLeaveSession(asSocket(playerA), { teamId: 999 }),
+    ).rejects.toThrow(/own team/i);
+  });
+
+  it('removes the team from the roster when it leaves on its own', async () => {
+    const playerA = await joinAsPlayer('socket-a');
+
+    await gateway.handleLeaveSession(asSocket(playerA), { teamId: 31 });
+
+    expect(teamService.removeFromRoster).toHaveBeenCalledWith(101, 31);
+  });
+
+  it('frees the connection slot so a new device can join after leaving', async () => {
+    const playerA = await joinAsPlayer('socket-a');
+
+    await gateway.handleLeaveSession(asSocket(playerA), { teamId: 31 });
+
+    const playerB = await connectPlayer(gateway, server, 'socket-b');
+    await expect(
+      gateway.handleJoinPlayers(asSocket(playerB), {
+        teamName: 'The Quizzards',
+        joinCode: 'ABCDEF',
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('broadcasts STATE_UPDATED to every room when a team leaves on its own', async () => {
+    const playerA = await joinAsPlayer('socket-a');
+    server.to.mockClear();
+    server.emit.mockClear();
+
+    await gateway.handleLeaveSession(asSocket(playerA), { teamId: 31 });
+
+    expect(server.to).toHaveBeenCalledWith(
+      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
+    );
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.anything(),
+    );
+  });
 });

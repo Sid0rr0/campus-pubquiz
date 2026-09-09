@@ -91,6 +91,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     kicked,
     reconnectedAt,
     connectionError,
+    leaveSession,
   } = socket;
 
   useEffect(() => {
@@ -271,6 +272,15 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
   // since SiteHeader's PlayerMenuProvider bridge depends on this reference
   // to avoid re-publishing on every unrelated re-render of this hook.
   const handleLogOut = useCallback(() => {
+    // Tell the server this team is intentionally leaving, while the socket
+    // is still connected — removes its roster row so it doesn't linger as a
+    // stale /control entry (e.g. after logging back in under a new name,
+    // today's only way to "rename" a team). Best-effort: if the socket has
+    // already dropped, the emit is silently a no-op and the admin still has
+    // the manual kick as a fallback.
+    if (team) {
+      leaveSession(team.teamId);
+    }
     // Team name and team code deliberately survive logout — only the token
     // and join code (this specific game session) are cleared, so the join
     // form stays prefilled for playing as this team again another night.
@@ -280,7 +290,7 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     setCodeInput(codeFromUrl);
     setHasStoredIdentity(false);
     setActiveJoinCode(codeFromUrl || null);
-  }, [codeFromUrl]);
+  }, [codeFromUrl, team, leaveSession]);
 
   return {
     ...socket,

@@ -23,6 +23,7 @@ export const SOCKET_EVENTS = {
   JOIN_PLAYERS: 'game:join_players',
   GRADE_ANSWER: 'game:grade_answer',
   KICK_TEAM: 'game:kick_team',
+  LEAVE_SESSION: 'game:leave_session',
   AWARD_BONUS: 'game:award_bonus',
   SET_BREAK_END_TIME: 'game:set_break_end_time',
   SET_DISPLAY_TEXT_SCALE: 'game:set_display_text_scale',
@@ -445,6 +446,18 @@ export interface ActiveSessionSummary {
 }
 
 export interface KickTeamPayload {
+  teamId: number;
+}
+
+/**
+ * A team's own explicit "log out" — the app has no dedicated rename feature,
+ * so changing a team's display name means logging out and rejoining under a
+ * new name. Without this, the old identity's roster row lingers in
+ * TeamView/`/control` until an admin kicks it by hand; sending this first
+ * removes it automatically, mirroring what KICK_TEAM does server-side minus
+ * the forced disconnect (the caller is already leaving on its own).
+ */
+export interface LeaveSessionPayload {
   teamId: number;
 }
 

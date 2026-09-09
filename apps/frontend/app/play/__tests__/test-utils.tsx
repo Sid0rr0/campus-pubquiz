@@ -23,6 +23,7 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     submitAnswer: vi.fn(),
     liveAnswers: null,
     gradeAnswer: vi.fn(),
+    leaveSession: vi.fn(),
     myAnswers: {},
     myAnswerGrades: {},
     myBonusAwards: [],

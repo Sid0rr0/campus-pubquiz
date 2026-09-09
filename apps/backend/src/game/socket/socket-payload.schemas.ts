@@ -61,6 +61,10 @@ export const kickTeamPayloadSchema = z.object({
   teamId: positiveInt,
 });
 
+export const leaveSessionPayloadSchema = z.object({
+  teamId: positiveInt,
+});
+
 export const setBreakEndTimePayloadSchema = z.object({
   breakEndsAt: finiteNumber.nullable(),
 });
