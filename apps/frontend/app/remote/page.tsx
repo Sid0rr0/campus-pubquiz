@@ -2,11 +2,15 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { RevealQuestionView } from '@campus-pubquiz/types';
+import {
+  DEFAULT_DISPLAY_TEXT_SCALE,
+  type RevealQuestionView,
+} from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { useAuth } from '@/app/lib/use-auth';
 import { getAdvanceGating } from '@/app/control/advance-gating';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
+import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
 /**
@@ -69,6 +73,7 @@ function RemotePageContent() {
     sendAction,
     presenterContext,
     liveAnswers,
+    setDisplayTextScale,
   } = useGameSocket(
     'admin',
     isAuthenticated && Boolean(connectJoinCode),
@@ -142,7 +147,13 @@ function RemotePageContent() {
     );
   }
 
-  const { progress, joinCode, teams = [], answeredTeamIds = [] } = snapshot;
+  const {
+    progress,
+    joinCode,
+    teams = [],
+    answeredTeamIds = [],
+    displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
+  } = snapshot;
   const gameStatus = progress.status;
   const showAnswerStatus =
     gameStatus === 'question_open' || gameStatus === 'locking';
@@ -165,18 +176,21 @@ function RemotePageContent() {
   const leaderboardRevealCount = snapshot.leaderboardRevealCount ?? 0;
 
   return (
-    <main className="flex min-h-screen flex-col gap-4 bg-background p-4 pb-28 text-foreground">
+    <main className="flex min-h-screen flex-col gap-4 bg-background p-4 pt-0 pb-28 text-foreground">
       {connectionError && (
         <p role="alert" className="font-extrabold text-magenta">
           {connectionError}
         </p>
       )}
-      <div className="flex flex-col gap-1">
-        <p className="font-display text-lg">Presenter Remote</p>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-bold">{joinCode}</p>
         <p className="text-sm font-bold">
-          {joinCode} · {gameStatus} · R{progress.roundIndex + 1}Q
-          {progress.questionIndex + 1}
+          {gameStatus} · R{progress.roundIndex + 1}Q{progress.questionIndex + 1}
         </p>
+        <DisplayTextScaleControl
+          displayTextScale={displayTextScale}
+          onSetDisplayTextScale={setDisplayTextScale}
+        />
         <div className="flex gap-4">
           {showAnswerStatus && (
             <p className="text-sm font-bold text-cyan">
