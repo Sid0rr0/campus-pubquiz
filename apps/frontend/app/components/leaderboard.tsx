@@ -139,7 +139,7 @@ export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
             className={rowClasses(rankIndex)}
           >
             <span
-              className={`font-display w-16 shrink-0 text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+              className={`font-display w-16 shrink-0 whitespace-nowrap text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
               {label}
             </span>
