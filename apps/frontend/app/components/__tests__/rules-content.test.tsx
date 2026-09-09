@@ -33,7 +33,7 @@ describe('RulesContent', () => {
     expect(screen.getByText('House rule.')).toBeInTheDocument();
     expect(screen.getByText(/Selfie bonus:/)).toBeInTheDocument();
     expect(
-      screen.getByText(/tag @esn\.cut and @isc_hub\.cz/i),
+      screen.getByText(/tag @esn\.ctu and @isc_hub\.cz/i),
     ).toBeInTheDocument();
   });
 

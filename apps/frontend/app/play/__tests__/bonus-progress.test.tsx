@@ -62,7 +62,7 @@ describe('PlayPage — bonus points panel', () => {
       screen.getByText(/at minimum more than half your player count/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/tag @esn\.cut and @isc_hub\.cz/i),
+      screen.getByText(/tag @esn\.ctu and @isc_hub\.cz/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/1 \/ 2 times/i)).toBeInTheDocument();
     expect(screen.getByText(/0 \/ 1 times/i)).toBeInTheDocument();
