@@ -543,14 +543,7 @@ function AdminPageContent() {
               />
             </div>
             <section className="flex flex-col gap-3">
-              <h2 className="font-display text-xl">
-                Teams
-                {showAnswerStatus && (
-                  <span className="ml-2 text-sm font-bold text-cyan">
-                    {answeredTeamIds.length}/{teams.length} answered
-                  </span>
-                )}
-              </h2>
+              <h2 className="font-display text-xl">Teams</h2>
               <TeamsTable
                 joinCode={snapshot.joinCode}
                 teams={teams}

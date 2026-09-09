@@ -8,6 +8,7 @@ import type {
   TeamView,
 } from '@campus-pubquiz/types';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
+import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 import { Button } from '@/app/components/button';
 
 interface GradeOption {
@@ -130,6 +131,8 @@ export function AnswersPanel({
     answers.map((answer) => [answer.teamId, answer]),
   );
   const readOnly = question.type === 'closest_guess';
+  const correctCount = countCorrectAnswers(liveAnswers);
+  const answeredCount = answers.length;
 
   return (
     <section className="flex flex-col gap-3">
@@ -166,13 +169,19 @@ export function AnswersPanel({
           )}
         </div>
         <h2 className="font-display text-xl">{question.prompt}</h2>
-        <p className="text-sm font-bold text-green">
-          Correct answer:{' '}
-          {formatAnswerValue(
-            question.correctAnswer,
-            question.type,
-            question.options,
-          )}
+        <p className="flex gap-5 text-sm font-bold">
+          <span className="text-green">
+            Correct answer:{' '}
+            {formatAnswerValue(
+              question.correctAnswer,
+              question.type,
+              question.options,
+            )}
+          </span>
+          <span className="text-cyan">
+            {answeredCount}/{teams.length} answered
+          </span>
+          <span className="text-cyan">{correctCount} correct</span>
         </p>
       </div>
       <ul className="flex flex-col gap-2">

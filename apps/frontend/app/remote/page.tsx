@@ -7,6 +7,7 @@ import { useGameSocket } from '@/app/lib/use-game-socket';
 import { useAuth } from '@/app/lib/use-auth';
 import { getAdvanceGating } from '@/app/control/advance-gating';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
+import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
 /**
  * 0-based index of the round the current block started at, derived from
@@ -62,12 +63,17 @@ function RemotePageContent() {
     sessionCode,
   );
 
-  const { snapshot, connectionError, sendAction, presenterContext } =
-    useGameSocket(
-      'admin',
-      isAuthenticated && Boolean(connectJoinCode),
-      connectJoinCode ?? undefined,
-    );
+  const {
+    snapshot,
+    connectionError,
+    sendAction,
+    presenterContext,
+    liveAnswers,
+  } = useGameSocket(
+    'admin',
+    isAuthenticated && Boolean(connectJoinCode),
+    connectJoinCode ?? undefined,
+  );
   const connectedJoinCode = snapshot?.joinCode;
 
   const [prevSessionCode, setPrevSessionCode] = useState(sessionCode);
@@ -171,11 +177,18 @@ function RemotePageContent() {
           {joinCode} · {gameStatus} · R{progress.roundIndex + 1}Q
           {progress.questionIndex + 1}
         </p>
-        {showAnswerStatus && (
-          <p className="text-sm font-bold text-cyan">
-            {answeredTeamIds.length}/{teams.length} teams answered
-          </p>
-        )}
+        <div className="flex gap-4">
+          {showAnswerStatus && (
+            <p className="text-sm font-bold text-cyan">
+              {answeredTeamIds.length}/{teams.length} teams answered
+            </p>
+          )}
+          {liveAnswers && (
+            <p className="text-sm font-bold text-cyan">
+              {countCorrectAnswers(liveAnswers)} correct
+            </p>
+          )}
+        </div>
       </div>
 
       <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">

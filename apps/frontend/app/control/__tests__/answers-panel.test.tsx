@@ -39,6 +39,38 @@ function liveAnswers(
 }
 
 describe('AnswersPanel', () => {
+  it('shows how many teams have answered and how many are graded for full points', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: 'Paris',
+              pointsAwarded: 2,
+              gradedAt: '2026-01-01T00:00:00.000Z',
+            },
+            {
+              answerId: 42,
+              teamId: 2,
+              teamName: 'Beer Necessities',
+              value: 'London',
+              pointsAwarded: 0,
+              gradedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('2/2 answered')).toBeInTheDocument();
+    expect(screen.getByText('1 correct')).toBeInTheDocument();
+  });
+
   it('shows the round, question position and correct answer', () => {
     render(
       <AnswersPanel

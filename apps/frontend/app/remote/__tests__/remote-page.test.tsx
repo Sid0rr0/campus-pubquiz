@@ -191,6 +191,141 @@ describe('RemotePage — content', () => {
     expect(screen.getByText('2/3 teams answered')).toBeInTheDocument();
   });
 
+  it('shows how many teams answered correctly once graded', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 55,
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London'],
+        },
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
+          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+        ],
+        answeredTeamIds: [1, 2],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+      liveAnswers: {
+        questionId: 55,
+        question: {
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          points: 2,
+          correctAnswer: 'Paris',
+          roundTitle: 'Geography',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [
+          {
+            answerId: 1,
+            teamId: 1,
+            teamName: 'The Quizzards',
+            value: 'Paris',
+            pointsAwarded: 2,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            answerId: 2,
+            teamId: 2,
+            teamName: 'Beer Necessities',
+            value: 'London',
+            pointsAwarded: 0,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText(/1 correct/i)).toBeInTheDocument();
+  });
+
+  it('keeps showing the correct count once grading moves the question into break', () => {
+    // The count is most useful once the admin is actually grading in
+    // /control, which happens during 'break' — after the question has
+    // closed and answeredTeamIds/currentQuestion have already cleared. It
+    // must not be tied to showAnswerStatus the way the teams-answered line
+    // is, or it disappears exactly when it becomes meaningful.
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'break' }),
+        currentQuestion: null,
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
+          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+        ],
+        answeredTeamIds: [],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+      liveAnswers: {
+        questionId: 55,
+        question: {
+          type: 'free_text',
+          prompt: 'Capital of France?',
+          points: 2,
+          correctAnswer: 'Paris',
+          roundTitle: 'Geography',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [
+          {
+            answerId: 1,
+            teamId: 1,
+            teamName: 'The Quizzards',
+            value: 'Paris',
+            pointsAwarded: 2,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            answerId: 2,
+            teamId: 2,
+            teamName: 'Beer Necessities',
+            value: 'London',
+            pointsAwarded: 0,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText(/1 correct/i)).toBeInTheDocument();
+  });
+
+  it('omits the correct count when nothing has been submitted or graded yet', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 55,
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London'],
+        },
+        teams: [{ teamId: 1, teamName: 'The Quizzards', isConnected: true }],
+        answeredTeamIds: [],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+      liveAnswers: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.queryByText(/correct/i)).not.toBeInTheDocument();
+  });
+
   it('hides the answered count once the question is no longer open', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: baseSnapshot({
