@@ -35,6 +35,7 @@ import { TriviaHeader } from '@/app/display/trivia-header';
 
 interface HeaderContent {
   label?: string;
+  title?: string;
   badge?: string;
 }
 
@@ -47,31 +48,41 @@ interface HeaderContent {
  */
 function getHeaderContent(
   progress: GameProgress,
+  currentRoundTitle: string,
   breakQuestion:
-    | Pick<BlockQuestionView, 'roundNumber' | 'questionNumberInRound'>
+    | Pick<
+        BlockQuestionView,
+        'roundNumber' | 'questionNumberInRound' | 'roundTitle'
+      >
     | undefined,
-  revealRoundNumber: number | undefined,
-  revealQuestionNumber: number | undefined,
+  revealQuestion:
+    | Pick<
+        BlockRevealQuestionView,
+        'roundNumber' | 'questionNumberInRound' | 'roundTitle'
+      >
+    | undefined,
 ): HeaderContent {
   switch (progress.status) {
     case 'question_open':
     case 'locking':
       return {
         label: `ROUND ${progress.roundIndex + 1}`,
+        title: currentRoundTitle,
         badge: `QUESTION ${progress.questionIndex + 1}`,
       };
     case 'break':
       if (breakQuestion === undefined) return {};
       return {
         label: `ROUND ${breakQuestion.roundNumber}`,
+        title: breakQuestion.roundTitle,
         badge: `QUESTION ${breakQuestion.questionNumberInRound} (BREAK)`,
       };
     case 'reveal':
-      if (revealRoundNumber === undefined || revealQuestionNumber === undefined)
-        return {};
+      if (revealQuestion === undefined) return {};
       return {
-        label: `ROUND ${revealRoundNumber}`,
-        badge: `REVEALING ANSWERS · QUESTION ${revealQuestionNumber}`,
+        label: `ROUND ${revealQuestion.roundNumber}`,
+        title: revealQuestion.roundTitle,
+        badge: `REVEALING ANSWERS · QUESTION ${revealQuestion.questionNumberInRound}`,
       };
     default:
       return {};
@@ -208,9 +219,9 @@ function DisplayPageContent() {
   const breakRoundIntroQuestion = blockQuestions[progress.revealIndex];
   const headerContent = getHeaderContent(
     progress,
+    roundTitle,
     breakReviewQuestion,
-    revealQuestion?.roundNumber,
-    revealQuestion?.questionNumberInRound,
+    revealQuestion,
   );
 
   const screenKey = getScreenKey(
@@ -231,7 +242,11 @@ function DisplayPageContent() {
       }
     >
       {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
-      <TriviaHeader label={headerContent.label} badge={headerContent.badge} />
+      <TriviaHeader
+        label={headerContent.label}
+        title={headerContent.title}
+        badge={headerContent.badge}
+      />
       <AnimatePresence mode="wait">
         <motion.div
           key={screenKey}
