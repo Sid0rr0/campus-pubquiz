@@ -133,6 +133,9 @@ export type BlockRevealQuestionView = RevealQuestionView &
   QuestionPosition &
   QuestionRoundTitle;
 
+/** A not-yet-open question's position and its round's title — enough for a disabled picker slot labeled with the round it belongs to. */
+export type UpcomingQuestionPosition = QuestionPosition & QuestionRoundTitle;
+
 export interface RoundPoints {
   roundTitle: string;
   points: number;
@@ -176,11 +179,13 @@ export interface StateSnapshotPayload {
    */
   blockQuestions: BlockQuestionView[];
   /**
-   * Positions of the current round's remaining questions — not open yet,
-   * shown as disabled slots in the block picker so the whole round's shape
-   * is visible up front. Empty unless a question is open/locking.
+   * Positions (and round titles) of the current block's remaining
+   * questions — not open yet, shown as disabled slots in the block picker
+   * so the whole block's shape is visible up front, spanning every round up
+   * to and including the one that ends the block (breakAfter). Empty
+   * unless a question is open/locking.
    */
-  upcomingQuestions: QuestionPosition[];
+  upcomingQuestions: UpcomingQuestionPosition[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
   revealQuestions: BlockRevealQuestionView[];
   /**

@@ -26,6 +26,7 @@ export * from './game-state-types';
 export * from './game-state-structure';
 export {
   getBlockStartRoundIndex,
+  getBlockEndRoundIndex,
   isLastQuestionOfBreakAfterRound,
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';

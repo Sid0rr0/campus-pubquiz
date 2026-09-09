@@ -1,11 +1,12 @@
 import {
+  getBlockEndRoundIndex,
   getBlockStartRoundIndex,
   getRoundAndQuestionForBlockPosition,
   type BlockQuestionView,
   type BlockRevealQuestionView,
-  type QuestionPosition,
   type QuestionView,
   type RevealQuestionView,
+  type UpcomingQuestionPosition,
 } from '@campus-pubquiz/types';
 import {
   toBlockQuestionView,
@@ -185,17 +186,17 @@ export function getFurthestOpenPosition(session: SessionState): {
 }
 
 /**
- * Positions of the furthest-opened round's remaining questions, not open
- * yet — the whole round's shape, so the picker doesn't grow as questions
- * unlock. Based on furthestOpenIndex rather than the literal display
- * position, so stepping the display back with PREVIOUS doesn't re-mark
- * already-opened questions as upcoming. Round boundaries within a block
- * only advance through a round_intro screen, so these can only ever be
- * later in the furthest-opened round.
+ * Positions (and round titles) of the rest of the current block's
+ * questions, not open yet — the whole remaining block shape, spanning every
+ * round from the furthest-opened one through the round that ends the block
+ * (breakAfter), so the picker doesn't grow as questions or rounds unlock.
+ * Based on furthestOpenIndex rather than the literal display position, so
+ * stepping the display back with PREVIOUS doesn't re-mark already-opened
+ * questions as upcoming.
  */
 export function getUpcomingQuestionPositions(
   session: SessionState,
-): QuestionPosition[] {
+): UpcomingQuestionPosition[] {
   const { status } = session.progress;
   if (
     status !== 'question_open' &&
@@ -205,20 +206,33 @@ export function getUpcomingQuestionPositions(
     return [];
   }
   const target = getFurthestOpenPosition(session);
-  const round = session.seededGame.rounds[target.roundIndex];
-  if (!round) {
+  const rounds = session.seededGame.rounds;
+  if (!rounds[target.roundIndex]) {
     return [];
   }
-  const positions: QuestionPosition[] = [];
+  const context = getGameContext(session);
+  const blockEnd = getBlockEndRoundIndex(target.roundIndex, context);
+
+  const positions: UpcomingQuestionPosition[] = [];
   for (
-    let index = target.questionIndex + 1;
-    index < round.questions.length;
-    index += 1
+    let roundIndex = target.roundIndex;
+    roundIndex <= blockEnd;
+    roundIndex += 1
   ) {
-    positions.push({
-      roundNumber: target.roundIndex + 1,
-      questionNumberInRound: index + 1,
-    });
+    const round = rounds[roundIndex];
+    const startQuestionIndex =
+      roundIndex === target.roundIndex ? target.questionIndex + 1 : 0;
+    for (
+      let questionIndex = startQuestionIndex;
+      questionIndex < round.questions.length;
+      questionIndex += 1
+    ) {
+      positions.push({
+        roundNumber: roundIndex + 1,
+        questionNumberInRound: questionIndex + 1,
+        roundTitle: round.title,
+      });
+    }
   }
   return positions;
 }

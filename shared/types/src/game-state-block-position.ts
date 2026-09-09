@@ -17,6 +17,25 @@ export function getBlockStartRoundIndex(
   return 0;
 }
 
+/**
+ * Last round of the block containing `roundIndex`: the nearest round at or
+ * after `roundIndex` with `breakAfter` set (a breakAfter round always ends
+ * its own block), or the quiz's last round if none is found first — every
+ * quiz's final round is forced to break (see CLAUDE.md), so this always
+ * terminates.
+ */
+export function getBlockEndRoundIndex(
+  roundIndex: number,
+  context: GameContext,
+): number {
+  for (let index = roundIndex; index < context.rounds.length; index += 1) {
+    if (context.rounds[index].breakAfter) {
+      return index;
+    }
+  }
+  return context.rounds.length - 1;
+}
+
 /** True when `progress` is sitting on the last question of a round that grades after itself. */
 export function isLastQuestionOfBreakAfterRound(
   progress: GameProgress,

@@ -72,7 +72,11 @@ describe('GameStateService — block questions and upcoming questions', () => {
     expect(service.isQuestionOpenForAnswering(joinCode, 23)).toBe(true);
     // Only r2q2 has genuinely never been shown yet.
     expect(back.upcomingQuestions).toEqual([
-      { roundNumber: 2, questionNumberInRound: 2 },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Landmarks & Flags',
+      },
     ]);
   });
 
@@ -86,8 +90,16 @@ describe('GameStateService — block questions and upcoming questions', () => {
     expect(freshIntro.progress.status).toBe('round_intro');
     expect(freshIntro.blockQuestions.map((q) => q.id)).toEqual([21, 22]);
     expect(freshIntro.upcomingQuestions).toEqual([
-      { roundNumber: 2, questionNumberInRound: 1 },
-      { roundNumber: 2, questionNumberInRound: 2 },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 1,
+        roundTitle: 'Landmarks & Flags',
+      },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Landmarks & Flags',
+      },
     ]);
   });
 
@@ -110,7 +122,11 @@ describe('GameStateService — block questions and upcoming questions', () => {
     ]);
     expect(service.isQuestionOpenForAnswering(joinCode, 23)).toBe(true);
     expect(backOnIntroCard.upcomingQuestions).toEqual([
-      { roundNumber: 2, questionNumberInRound: 2 },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Landmarks & Flags',
+      },
     ]);
   });
 
@@ -178,21 +194,53 @@ describe('GameStateService — block questions and upcoming questions', () => {
     ]);
   });
 
-  it("exposes the current round's remaining question as upcoming while a question is open", async () => {
+  it('exposes the rest of the block — spanning every remaining round up to the break — as upcoming while a question is open', async () => {
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
     const r1q1 = await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
+    // Round 1 has no break, so round 2 (which does) is still part of the
+    // same block — its whole shape is upcoming too, not just round 1's.
     expect(r1q1.upcomingQuestions).toEqual([
-      { roundNumber: 1, questionNumberInRound: 2 },
+      {
+        roundNumber: 1,
+        questionNumberInRound: 2,
+        roundTitle: 'General Knowledge',
+      },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 1,
+        roundTitle: 'Landmarks & Flags',
+      },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Landmarks & Flags',
+      },
     ]);
 
     const r1q2 = await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    expect(r1q2.upcomingQuestions).toEqual([]);
+    expect(r1q2.upcomingQuestions).toEqual([
+      {
+        roundNumber: 2,
+        questionNumberInRound: 1,
+        roundTitle: 'Landmarks & Flags',
+      },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Landmarks & Flags',
+      },
+    ]);
 
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
     const r2q1 = await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
+    // Round 2 has a break, so the block ends here — nothing beyond it.
     expect(r2q1.upcomingQuestions).toEqual([
-      { roundNumber: 2, questionNumberInRound: 2 },
+      {
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Landmarks & Flags',
+      },
     ]);
 
     const r2q2 = await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
@@ -255,13 +303,13 @@ describe('GameStateService — block questions and upcoming questions', () => {
     await customService.applyAction(customJoinCode, 'ADVANCE'); // -> round_intro(0)
     const q1 = await customService.applyAction(customJoinCode, 'ADVANCE'); // -> q1
     expect(q1.upcomingQuestions).toEqual([
-      { roundNumber: 1, questionNumberInRound: 2 },
-      { roundNumber: 1, questionNumberInRound: 3 },
+      { roundNumber: 1, questionNumberInRound: 2, roundTitle: 'Triple Round' },
+      { roundNumber: 1, questionNumberInRound: 3, roundTitle: 'Triple Round' },
     ]);
 
     const q2 = await customService.applyAction(customJoinCode, 'ADVANCE'); // -> q2
     expect(q2.upcomingQuestions).toEqual([
-      { roundNumber: 1, questionNumberInRound: 3 },
+      { roundNumber: 1, questionNumberInRound: 3, roundTitle: 'Triple Round' },
     ]);
 
     const q3 = await customService.applyAction(customJoinCode, 'ADVANCE'); // -> q3

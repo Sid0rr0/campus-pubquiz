@@ -1,4 +1,7 @@
-import type { BlockQuestionView, QuestionPosition } from '@campus-pubquiz/types';
+import type {
+  BlockQuestionView,
+  UpcomingQuestionPosition,
+} from '@campus-pubquiz/types';
 
 export interface PickerSlot {
   key: string;
@@ -9,17 +12,21 @@ export interface PickerSlot {
 
 export interface PickerRound {
   roundNumber: number;
+  roundTitle: string;
   slots: PickerSlot[];
 }
 
-/** Groups the block's questions (plus the round's remaining upcoming slots, if any) by round, numbering each round's slots from 1 — so the whole round's shape is visible up front. */
+/** Groups the block's questions (plus every remaining round's upcoming slots up to the break, if any) by round, numbering each round's slots from 1 — so the whole block's shape is visible up front. */
 export function buildPickerRounds(
   blockQuestions: BlockQuestionView[],
-  upcomingQuestions: QuestionPosition[],
+  upcomingQuestions: UpcomingQuestionPosition[],
 ): PickerRound[] {
-  const flatSlots: Array<PickerSlot & { roundNumber: number }> = blockQuestions.map((question) => ({
+  const flatSlots: Array<
+    PickerSlot & { roundNumber: number; roundTitle: string }
+  > = blockQuestions.map((question) => ({
     key: `q-${question.id}`,
     roundNumber: question.roundNumber,
+    roundTitle: question.roundTitle,
     questionNumberInRound: question.questionNumberInRound,
     question,
   }));
@@ -27,6 +34,7 @@ export function buildPickerRounds(
     flatSlots.push({
       key: `upcoming-${upcomingQuestion.roundNumber}-${upcomingQuestion.questionNumberInRound}`,
       roundNumber: upcomingQuestion.roundNumber,
+      roundTitle: upcomingQuestion.roundTitle,
       questionNumberInRound: upcomingQuestion.questionNumberInRound,
       question: null,
     });
@@ -38,7 +46,11 @@ export function buildPickerRounds(
     if (lastRound && lastRound.roundNumber === slot.roundNumber) {
       lastRound.slots.push(slot);
     } else {
-      rounds.push({ roundNumber: slot.roundNumber, slots: [slot] });
+      rounds.push({
+        roundNumber: slot.roundNumber,
+        roundTitle: slot.roundTitle,
+        slots: [slot],
+      });
     }
   }
   return rounds;

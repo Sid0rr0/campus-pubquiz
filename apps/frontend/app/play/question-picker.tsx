@@ -19,13 +19,10 @@ export function QuestionPicker({
   return (
     <div className="flex flex-col gap-2">
       {pickerRounds.map((round) => (
-        <div
-          key={round.roundNumber}
-          className="flex flex-wrap items-center gap-2"
-        >
+        <div key={round.roundNumber} className="flex flex-col flex-wrap gap-2">
           {pickerRounds.length > 1 && (
             <span className="text-xs font-extrabold tracking-wide text-foreground/45">
-              R{round.roundNumber}
+              {round.roundTitle}
             </span>
           )}
           <nav
