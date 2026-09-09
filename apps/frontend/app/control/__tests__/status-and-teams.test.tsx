@@ -124,4 +124,53 @@ describe('AdminPage — status and teams', () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it('shows how many teams have answered next to the Teams heading', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'free_text',
+          prompt: 'Name a fruit',
+          points: 1,
+        },
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+        answeredTeamIds: ['team-1'],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    // The sidebar also has a "Teams (N)" heading — the main section's
+    // heading (next to the teams table) is the one without a team count in
+    // parens, so it's picked out by that rather than by role name alone.
+    const mainTeamsHeading = screen
+      .getAllByRole('heading', { name: /teams/i })
+      .find((heading) => !heading.textContent?.includes('('));
+    expect(mainTeamsHeading).toHaveTextContent('1/2 answered');
+  });
+
+  it('hides the answered count next to the Teams heading when no question is open', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        currentQuestion: null,
+        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+        answeredTeamIds: [],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    const mainTeamsHeading = screen
+      .getAllByRole('heading', { name: /teams/i })
+      .find((heading) => !heading.textContent?.includes('('));
+    expect(mainTeamsHeading).not.toHaveTextContent(/answered/i);
+  });
 });

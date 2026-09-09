@@ -136,8 +136,10 @@ function RemotePageContent() {
     );
   }
 
-  const { progress, joinCode } = snapshot;
+  const { progress, joinCode, teams = [], answeredTeamIds = [] } = snapshot;
   const gameStatus = progress.status;
+  const showAnswerStatus =
+    gameStatus === 'question_open' || gameStatus === 'locking';
   const hasActiveShowdown = snapshot.activeShowdown != null;
   const showdownRevealStep = snapshot.showdownRevealStep ?? 0;
   const revealIndex = progress.revealIndex ?? 0;
@@ -169,6 +171,11 @@ function RemotePageContent() {
           {joinCode} · {gameStatus} · R{progress.roundIndex + 1}Q
           {progress.questionIndex + 1}
         </p>
+        {showAnswerStatus && (
+          <p className="text-sm font-bold text-cyan">
+            {answeredTeamIds.length}/{teams.length} teams answered
+          </p>
+        )}
       </div>
 
       <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">

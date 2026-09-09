@@ -171,6 +171,42 @@ describe('RemotePage — content', () => {
     expect(screen.getByText('Nothing queued yet.')).toBeInTheDocument();
   });
 
+  it('shows how many teams have answered while a question is open', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
+          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+          { teamId: 3, teamName: 'Quiz Pistols', isConnected: true },
+        ],
+        answeredTeamIds: [1, 2],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('2/3 teams answered')).toBeInTheDocument();
+  });
+
+  it('hides the answered count once the question is no longer open', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'break' }),
+        teams: [{ teamId: 1, teamName: 'The Quizzards', isConnected: true }],
+        answeredTeamIds: [1],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.queryByText(/teams answered/i)).not.toBeInTheDocument();
+  });
+
   it('renders no grading, team, or leaderboard controls', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: baseSnapshot(),
