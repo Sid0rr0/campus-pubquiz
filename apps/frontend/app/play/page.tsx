@@ -360,59 +360,70 @@ function PlayPageContent() {
         hasMobileActionBar ? 'pb-24 md:pb-5' : 'pb-5'
       }`}
     >
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-sm font-extrabold tracking-wide text-foreground/55 mb-2">
-          Playing as {teamName}
-        </p>
-        <div className="hidden items-center gap-2 md:flex">
-          <Button
-            type="button"
-            variant="text-quiet"
-            onClick={openSettings}
-            className="flex"
-          >
-            <GearIcon aria-hidden="true" />
-            Settings
-          </Button>
-          <Button
-            type="button"
-            variant="text-quiet"
-            onClick={handleLogOut}
-            className="flex"
-          >
-            <ExitIcon aria-hidden="true" />
-            Change team
-          </Button>
+      {/* Order below is mobile-first (team identity sits last, under the
+          block browser) and reshuffled back to the original top-down
+          layout at md: identity header first, then error/status, then the
+          browser+panels row. */}
+      <div className="order-4 md:order-1">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <p className="text-sm font-extrabold tracking-wide text-foreground/55 mb-2">
+            Playing as {teamName}
+          </p>
+          <div className="hidden items-center gap-2 md:flex">
+            <Button
+              type="button"
+              variant="text-quiet"
+              onClick={openSettings}
+              className="flex"
+            >
+              <GearIcon aria-hidden="true" />
+              Settings
+            </Button>
+            <Button
+              type="button"
+              variant="text-quiet"
+              onClick={handleLogOut}
+              className="flex"
+            >
+              <ExitIcon aria-hidden="true" />
+              Change team
+            </Button>
+          </div>
         </div>
+        {team && (
+          <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">
+            Team code: {team.teamCode}
+            <CopyButton value={team.teamCode} /> — save it to play as this team
+            another night.
+          </p>
+        )}
       </div>
-      {team && (
-        <p className="mb-4 hidden flex-wrap items-center gap-1 text-xs text-foreground/45 md:flex">
-          Team code: {team.teamCode}
-          <CopyButton value={team.teamCode} /> — save it to play as this team
-          another night.
-        </p>
-      )}
       {connectionError && (
-        <p role="alert" className="mb-4 font-extrabold text-magenta">
+        <p
+          role="alert"
+          className="order-1 mb-4 font-extrabold text-magenta md:order-2"
+        >
           {connectionError}
         </p>
       )}
-      <GameStatusScreens
-        progress={progress}
-        isAnswerable={isAnswerable}
-        quizStructure={quizStructure}
-        roundTitle={roundTitle}
-        revealIntroRoundTitle={revealIntroRoundTitle}
-        breakRoundIntroRoundTitle={breakRoundIntroRoundTitle}
-        joinCode={snapshot.joinCode}
-        rules={settings.rules}
-        enabledBonusCategories={settings.enabledBonusCategories}
-        activeShowdown={activeShowdown}
-        showdownRevealStep={showdownRevealStep}
-        myTeamId={myTeamId}
-        onSubmitShowdownGuess={submitShowdownGuess}
-      />
-      <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start">
+      <div className="order-2 md:order-3">
+        <GameStatusScreens
+          progress={progress}
+          isAnswerable={isAnswerable}
+          quizStructure={quizStructure}
+          roundTitle={roundTitle}
+          revealIntroRoundTitle={revealIntroRoundTitle}
+          breakRoundIntroRoundTitle={breakRoundIntroRoundTitle}
+          joinCode={snapshot.joinCode}
+          rules={settings.rules}
+          enabledBonusCategories={settings.enabledBonusCategories}
+          activeShowdown={activeShowdown}
+          showdownRevealStep={showdownRevealStep}
+          myTeamId={myTeamId}
+          onSubmitShowdownGuess={submitShowdownGuess}
+        />
+      </div>
+      <div className="order-3 md:order-4 flex flex-col items-center gap-6 lg:flex-row lg:items-start">
         {showBlockBrowser && selectedQuestion && (
           <div className="md:min-w-0 md:flex-1">
             <QuestionBrowser

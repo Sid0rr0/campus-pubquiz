@@ -87,12 +87,14 @@ export function QuestionBrowser({
         </div>
       )}
       {totalPickerSlots > 1 && (
-        <QuestionPicker
-          pickerRounds={pickerRounds}
-          selectedQuestionId={selectedQuestion.id}
-          myAnswers={myAnswers}
-          onSelect={onSelectQuestion}
-        />
+        <div className="order-last md:order-0">
+          <QuestionPicker
+            pickerRounds={pickerRounds}
+            selectedQuestionId={selectedQuestion.id}
+            myAnswers={myAnswers}
+            onSelect={onSelectQuestion}
+          />
+        </div>
       )}
       {progress.status === 'reveal' && revealQuestion ? (
         <div className="flex flex-col items-center gap-6 text-center">
