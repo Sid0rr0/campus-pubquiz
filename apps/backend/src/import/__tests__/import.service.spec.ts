@@ -18,7 +18,21 @@ import {
   ImportLockedError,
   ImportService,
 } from '@/import/import.service';
+import { fetchSheetCsv, SheetFetchError } from '@/import/sheet-url-fetcher';
 import { QuizService } from '@/quiz/quiz.service';
+
+jest.mock('@/import/sheet-url-fetcher', () => ({
+  ...jest.requireActual<typeof import('@/import/sheet-url-fetcher')>(
+    '@/import/sheet-url-fetcher',
+  ),
+  fetchSheetCsv: jest.fn(),
+}));
+
+const mockedFetchSheetCsv = fetchSheetCsv as jest.MockedFunction<
+  typeof fetchSheetCsv
+>;
+
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/abc123/edit';
 
 const HEADER =
   'round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after';
@@ -87,6 +101,7 @@ describe('ImportService (Postgres integration)', () => {
 
   beforeEach(() => {
     em = orm.em.fork();
+    mockedFetchSheetCsv.mockReset();
   });
 
   afterEach(async () => {
@@ -355,6 +370,100 @@ describe('ImportService (Postgres integration)', () => {
       expect(audioQuestion?.answerMediaUrl).toBe(
         'https://example.com/song-answer.jpg',
       );
+    });
+  });
+
+  describe('previewFromUrl', () => {
+    it('fetches the sheet and validates it like preview()', async () => {
+      // Arrange
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockResolvedValue(VALID_CSV);
+
+      // Act
+      const preview = await importService.previewFromUrl(
+        SHEET_URL,
+        'Trivia Night',
+      );
+
+      // Assert
+      expect(preview.isImportable).toBe(true);
+      expect(preview.rounds.map((round) => round.title)).toEqual([
+        'History',
+        'Music',
+      ]);
+      expect(mockedFetchSheetCsv).toHaveBeenCalledWith('abc123', undefined);
+      const quizzes = await em.find(Quiz, {});
+      expect(quizzes).toHaveLength(0);
+    });
+
+    it('reports a fetch failure as an issue instead of throwing', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockRejectedValue(
+        new SheetFetchError('Could not fetch that sheet'),
+      );
+
+      const preview = await importService.previewFromUrl(SHEET_URL);
+
+      expect(preview.isImportable).toBe(false);
+      expect(preview.issues).toEqual([
+        {
+          rowNumber: 1,
+          field: 'sheetUrl',
+          message: 'Could not fetch that sheet',
+        },
+      ]);
+    });
+
+    it('rejects a URL that is not a docs.google.com spreadsheet link before fetching', async () => {
+      const { importService } = makeService();
+
+      const preview = await importService.previewFromUrl(
+        'https://evil.com/spreadsheets/d/abc123',
+      );
+
+      expect(preview.isImportable).toBe(false);
+      expect(preview.issues[0].field).toBe('sheetUrl');
+      expect(mockedFetchSheetCsv).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('confirmFromUrl', () => {
+    it('fetches the sheet then imports it like confirm()', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockResolvedValue(VALID_CSV);
+
+      const result = await importService.confirmFromUrl(
+        SHEET_URL,
+        'ABCDEF',
+        'Trivia Night',
+      );
+
+      expect(result.roundCount).toBe(2);
+      expect(result.questionCount).toBe(3);
+      const quizzes = await em.find(Quiz, {});
+      expect(quizzes).toHaveLength(1);
+    });
+
+    it('propagates a sheet fetch failure without writing anything', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockRejectedValue(
+        new SheetFetchError('Could not fetch that sheet'),
+      );
+
+      await expect(
+        importService.confirmFromUrl(SHEET_URL, 'ABCDEF', 'Trivia Night'),
+      ).rejects.toThrow(SheetFetchError);
+      const quizzes = await em.find(Quiz, {});
+      expect(quizzes).toHaveLength(0);
+    });
+
+    it('rejects importing while a quiz is running, without fetching the sheet', async () => {
+      const { importService } = makeService({ status: 'question_open' });
+
+      await expect(
+        importService.confirmFromUrl(SHEET_URL, 'ABCDEF', 'Trivia Night'),
+      ).rejects.toThrow(ImportLockedError);
+      expect(mockedFetchSheetCsv).not.toHaveBeenCalled();
     });
   });
 });

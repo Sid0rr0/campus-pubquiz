@@ -66,6 +66,19 @@ export interface ImportRequest {
   joinCode?: string;
 }
 
+/**
+ * Request body shared by POST /import/preview-from-url and
+ * POST /import/confirm-from-url. `sheetUrl` is a pasted Google Sheets link
+ * (e.g. `https://docs.google.com/spreadsheets/d/{id}/edit`) fetched
+ * server-side — see `sheet-url-fetcher.ts` for the SSRF-safe fetch. `joinCode`
+ * is required by confirm-from-url, ignored by preview-from-url.
+ */
+export interface ImportFromUrlRequest {
+  sheetUrl: string;
+  quizTitle?: string;
+  joinCode?: string;
+}
+
 export interface ImportConfirmResult {
   quizId: number;
   roundCount: number;

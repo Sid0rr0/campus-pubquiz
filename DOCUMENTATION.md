@@ -323,25 +323,49 @@ block locks.
 
 The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 
-- Start from scratch (one empty round) or seed the whole quiz from a CSV
-  upload — both offered on the empty-state screen.
+- Start from scratch (one empty round), seed the whole quiz from a CSV
+  upload, or paste a Google Sheets link — all three offered on the
+  empty-state screen.
 - Edit the quiz title; per round, edit its title, toggle `breakAfter`, reorder
   with up/down buttons (no drag-and-drop), delete, or add questions; per
   question, edit type/prompt/options/answer/points/media.
-- Re-import a CSV mid-edit at any time — it overwrites the current draft.
+- Re-import a CSV or re-fetch a Google Sheets link mid-edit at any time — it
+  overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
   server-side, surfacing structured issues per round/question on failure.
 
 **CSV import mechanics**: the browser reads the uploaded file's text directly
-(`file.text()`) and POSTs it to `POST /import/preview` — there is no
-server-side fetch of a pasted Google Sheets URL (an earlier plan called for
-that; it was changed specifically to avoid the SSRF surface a server-side
-fetch of a user-supplied URL would create). The parsed rounds/questions load
-straight into the in-page editable draft; saving goes through the normal quiz
-endpoints above. The backend also exposes `POST /import/confirm` (upserts a
-quiz directly, keyed by title, only while a session is `lobby`/`ended`), but
-the current frontend doesn't call it — the shipped flow is preview → edit →
-save.
+(`file.text()`) and POSTs it to `POST /import/preview`. The parsed
+rounds/questions load straight into the in-page editable draft; saving goes
+through the normal quiz endpoints above. The backend also exposes
+`POST /import/confirm` (upserts a quiz directly, keyed by title, only while a
+session is `lobby`/`ended`), but the current frontend doesn't call it — the
+shipped flow is preview → edit → save.
+
+**Google Sheets URL import mechanics**: `POST /import/preview-from-url` and
+`POST /import/confirm-from-url` accept a pasted `sheetUrl` instead of
+`csvText`. An earlier version of this rejected doing this server-side
+entirely, over the SSRF risk of fetching a user-supplied URL from the
+backend. The mitigation actually shipped: `sheet-url-fetcher.ts` never
+fetches the pasted string — it validates the URL is `https://docs.google.com`
+with a `/spreadsheets/d/{id}` path, extracts only the id (+ optional `gid`),
+and builds the fetch URL itself (`.../export?format=csv`), so the fetch
+target's host is always fixed at `docs.google.com` regardless of input.
+Google's export endpoint always 307-redirects to a per-request URL on its own
+CDN (`*.googleusercontent.com`) — even for a fully public sheet, before any
+sharing check runs — so the fetch uses `redirect: 'manual'` and follows
+**at most one hop**, only when the redirect target's host is
+`docs.google.com` or ends with `.googleusercontent.com`; anything else (a
+Google sign-in page for a non-public sheet, or a second redirect from the
+CDN itself) is treated as a fetch failure instead of being followed. That
+keeps the redirect target either fixed or restricted to Google's own
+infrastructure, never attacker-influenced. The fetch also has a request
+timeout and a response size cap. The route is gated by the same
+`SessionGuard`/`RolesGuard` as the rest of `/import/*` (admin/moderator
+only). This only works for sheets shared as "Anyone with the link can view"
+(or public) — a private sheet's export endpoint redirects to a Google
+sign-in page, which surfaces as a fetch failure with a message telling the
+admin to check sharing settings.
 
 Sheet row format (one row per question):
 

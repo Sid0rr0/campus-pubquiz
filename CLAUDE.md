@@ -57,7 +57,10 @@ Only admin actions advance the state. Clients in three rooms (`display`, `admin`
 
 ### Question import: Google Sheets → CSV
 
-Import works by uploading an **exported CSV file**.
+Import works by uploading an **exported CSV file**, or by pasting the
+**Google Sheets URL** directly (sheet must be shared "Anyone with the link
+can view"); the backend fetches it server-side with SSRF guards — see
+`DOCUMENTATION.md`'s "Google Sheets URL import mechanics" for details.
 
 Sheet format (one row per question):
 

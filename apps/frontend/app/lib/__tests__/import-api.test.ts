@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  confirmImport,
-  ImportApiError,
-  previewImport,
-} from '@/app/lib/import-api';
+import { previewImport, previewImportFromUrl } from '@/app/lib/import-api';
+
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/abc123/edit';
 
 const originalFetch = global.fetch;
 
@@ -58,39 +56,46 @@ describe('import-api', () => {
     });
   });
 
-  describe('confirmImport', () => {
-    it('posts to /import/confirm and returns the result', async () => {
-      const result = { quizId: 'quiz-1', roundCount: 2, questionCount: 5 };
-      global.fetch = vi.fn().mockResolvedValue({
+  describe('previewImportFromUrl', () => {
+    it('posts the sheet url with credentials and returns the preview', async () => {
+      const preview = {
+        quizTitle: 'Trivia Night',
+        rounds: [],
+        issues: [],
+        isImportable: true,
+      };
+      const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(result),
-      }) as unknown as typeof fetch;
+        json: () => Promise.resolve(preview),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
 
-      const response = await confirmImport(
-        'csv,text',
-        'Trivia Night',
-        'ABCDEF',
+      const result = await previewImportFromUrl(SHEET_URL, 'Trivia Night');
+
+      expect(result).toEqual(preview);
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/import/preview-from-url',
+        expect.objectContaining({
+          method: 'POST',
+          credentials: 'include',
+          body: JSON.stringify({
+            sheetUrl: SHEET_URL,
+            quizTitle: 'Trivia Night',
+          }),
+        }),
       );
-
-      expect(response).toEqual(result);
     });
 
-    it('attaches per-row issues from a 422 response to the thrown error', async () => {
-      const issues = [
-        { rowNumber: 2, field: 'answer', message: 'Missing answer' },
-      ];
+    it('throws ImportApiError with the server message on a fetch failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 422,
-        json: () => Promise.resolve({ message: 'Validation failed', issues }),
+        json: () => Promise.resolve({ message: 'Could not fetch that sheet' }),
       }) as unknown as typeof fetch;
 
-      const error = await confirmImport('csv', undefined, 'ABCDEF').catch(
-        (e: unknown) => e,
+      await expect(previewImportFromUrl(SHEET_URL, undefined)).rejects.toThrow(
+        'Could not fetch that sheet',
       );
-
-      expect(error).toBeInstanceOf(ImportApiError);
-      expect((error as ImportApiError).issues).toEqual(issues);
     });
   });
 });

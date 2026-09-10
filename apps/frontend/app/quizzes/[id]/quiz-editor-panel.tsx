@@ -1,18 +1,23 @@
 'use client';
 
-import { useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   CheckIcon,
   FilePlusIcon,
+  Link2Icon,
   PlusIcon,
   UploadIcon,
 } from '@radix-ui/react-icons';
-import type { QuizDraftIssue } from '@campus-pubquiz/types';
+import type { ImportPreview, QuizDraftIssue } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import { ImportApiError, previewImport } from '@/app/lib/import-api';
+import {
+  ImportApiError,
+  previewImport,
+  previewImportFromUrl,
+} from '@/app/lib/import-api';
 import {
   createQuiz,
   fetchQuizDraft,
@@ -77,6 +82,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
   const [importError, setImportError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [sheetUrlInput, setSheetUrlInput] = useState('');
 
   // Copies the draft into editable local state exactly once, when the
   // query's data first arrives — adjusted during render rather than in an
@@ -101,42 +107,54 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     setPhase('editor');
   }
 
+  function handleImportPreview(preview: ImportPreview): void {
+    const newRounds = preview.rounds.map((round) =>
+      roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
+    );
+    setRounds(newRounds);
+    if (!quizTitle.trim()) setQuizTitle(preview.quizTitle);
+    setPhase('editor');
+
+    const questionCount = newRounds.reduce(
+      (total, round) => total + round.questions.length,
+      0,
+    );
+    if (preview.issues.length > 0) {
+      setImportError(
+        `Imported with ${preview.issues.length} issue(s) to fix before saving — ` +
+          preview.issues
+            .map(
+              (issue) =>
+                `row ${issue.rowNumber} (${issue.field}): ${issue.message}`,
+            )
+            .join('; '),
+      );
+    } else {
+      toast.success(
+        `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${questionCount} question${questionCount === 1 ? '' : 's'} — review and edit below.`,
+      );
+    }
+  }
+
+  function handleImportError(error: unknown, fallback: string): void {
+    setImportError(
+      apiErrorMessage(error, ImportApiError, fallback) ?? fallback,
+    );
+  }
+
   const previewMutation = useMutation({
     mutationFn: (csvText: string) =>
       previewImport(csvText, quizTitle.trim() || undefined),
-    onSuccess: (preview) => {
-      const newRounds = preview.rounds.map((round) =>
-        roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
-      );
-      setRounds(newRounds);
-      if (!quizTitle.trim()) setQuizTitle(preview.quizTitle);
-      setPhase('editor');
+    onSuccess: handleImportPreview,
+    onError: (error) => handleImportError(error, 'Could not read that CSV.'),
+  });
 
-      const questionCount = newRounds.reduce(
-        (total, round) => total + round.questions.length,
-        0,
-      );
-      if (preview.issues.length > 0) {
-        setImportError(
-          `Imported with ${preview.issues.length} issue(s) to fix before saving — ` +
-            preview.issues
-              .map(
-                (issue) =>
-                  `row ${issue.rowNumber} (${issue.field}): ${issue.message}`,
-              )
-              .join('; '),
-        );
-      } else {
-        toast.success(
-          `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${questionCount} question${questionCount === 1 ? '' : 's'} — review and edit below.`,
-        );
-      }
-    },
+  const previewFromUrlMutation = useMutation({
+    mutationFn: (sheetUrl: string) =>
+      previewImportFromUrl(sheetUrl, quizTitle.trim() || undefined),
+    onSuccess: handleImportPreview,
     onError: (error) =>
-      setImportError(
-        apiErrorMessage(error, ImportApiError, 'Could not read that CSV.') ??
-          'Could not read that CSV.',
-      ),
+      handleImportError(error, 'Could not fetch that Google Sheet.'),
   });
 
   async function handleCsvFile(
@@ -149,6 +167,15 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     setImportError(null);
     const text = await file.text();
     previewMutation.mutate(text);
+  }
+
+  function handleSheetUrlSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const sheetUrl = sheetUrlInput.trim();
+    if (!sheetUrl) return;
+
+    setImportError(null);
+    previewFromUrlMutation.mutate(sheetUrl);
   }
 
   function updateRound(roundId: string, patch: Partial<EditorRound>): void {
@@ -239,8 +266,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           </p>
           <h1 className="font-display text-3xl">Build a new quiz</h1>
           <p className="mx-auto mt-3 max-w-md text-sm font-bold text-foreground/60">
-            Start from a blank round, or import a CSV of questions to edit from
-            there.
+            Start from a blank round, import a CSV of questions, or paste a
+            Google Sheets link to edit from there.
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-4">
@@ -262,6 +289,27 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
               className="hidden"
             />
           </label>
+          <form
+            onSubmit={handleSheetUrlSubmit}
+            className="flex min-h-16 min-w-72 items-center gap-2 rounded-2xl border-2 border-foreground bg-white px-4 text-foreground"
+          >
+            <Link2Icon aria-hidden="true" className="shrink-0" />
+            <input
+              type="url"
+              value={sheetUrlInput}
+              onChange={(event) => setSheetUrlInput(event.target.value)}
+              placeholder="Paste a Google Sheets link"
+              aria-label="Google Sheets link"
+              className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-foreground/40"
+            />
+            <Button
+              type="submit"
+              disabled={previewFromUrlMutation.isPending}
+              className="shrink-0 rounded-xl bg-foreground px-3 py-2 text-xs font-extrabold text-background disabled:opacity-50"
+            >
+              {previewFromUrlMutation.isPending ? 'Importing…' : 'Import'}
+            </Button>
+          </form>
         </div>
         {importError && (
           <p role="alert" className="font-extrabold text-magenta">
@@ -301,6 +349,28 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             className="hidden"
           />
         </label>
+        <form
+          onSubmit={handleSheetUrlSubmit}
+          className="flex min-h-10 min-w-56 items-center gap-1.5 rounded-xl border-2 border-background/50 px-3 text-background"
+        >
+          <Link2Icon aria-hidden="true" className="shrink-0" />
+          <input
+            type="url"
+            value={sheetUrlInput}
+            onChange={(event) => setSheetUrlInput(event.target.value)}
+            placeholder="Re-import from Google Sheets"
+            aria-label="Google Sheets link"
+            className="min-w-0 flex-1 bg-transparent text-xs font-bold outline-none placeholder:text-background/40"
+          />
+          <Button
+            type="submit"
+            disabled={previewFromUrlMutation.isPending}
+            size="sm"
+            className="shrink-0 rounded-lg bg-background/20 px-2 py-1 text-xs font-extrabold text-background disabled:opacity-50"
+          >
+            {previewFromUrlMutation.isPending ? '…' : 'Import'}
+          </Button>
+        </form>
         <Button
           type="button"
           onClick={() => handleSave()}

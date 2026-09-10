@@ -1,8 +1,4 @@
-import type {
-  ImportConfirmResult,
-  ImportPreview,
-  ImportRowIssue,
-} from '@campus-pubquiz/types';
+import type { ImportPreview, ImportRowIssue } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
@@ -23,10 +19,8 @@ interface ErrorBody {
 }
 
 async function postImport<T>(
-  path: 'preview' | 'confirm',
-  csvText: string,
-  quizTitle: string | undefined,
-  joinCode?: string,
+  path: 'preview' | 'preview-from-url',
+  body: Record<string, string | undefined>,
 ): Promise<T> {
   const response = await fetch(`${getBackendUrl()}/import/${path}`, {
     method: 'POST',
@@ -35,15 +29,15 @@ async function postImport<T>(
       'Content-Type': 'application/json',
       ...CSRF_HEADERS,
     },
-    body: JSON.stringify({ csvText, quizTitle, joinCode }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const body = (await response.json()) as ErrorBody;
+    const errorBody = (await response.json()) as ErrorBody;
     throw new ImportApiError(
-      body.message ?? 'Import request failed',
+      errorBody.message ?? 'Import request failed',
       response.status,
-      body.issues ?? [],
+      errorBody.issues ?? [],
     );
   }
 
@@ -54,13 +48,12 @@ export function previewImport(
   csvText: string,
   quizTitle: string | undefined,
 ): Promise<ImportPreview> {
-  return postImport<ImportPreview>('preview', csvText, quizTitle);
+  return postImport<ImportPreview>('preview', { csvText, quizTitle });
 }
 
-export function confirmImport(
-  csvText: string,
+export function previewImportFromUrl(
+  sheetUrl: string,
   quizTitle: string | undefined,
-  joinCode: string,
-): Promise<ImportConfirmResult> {
-  return postImport<ImportConfirmResult>('confirm', csvText, quizTitle, joinCode);
+): Promise<ImportPreview> {
+  return postImport<ImportPreview>('preview-from-url', { sheetUrl, quizTitle });
 }

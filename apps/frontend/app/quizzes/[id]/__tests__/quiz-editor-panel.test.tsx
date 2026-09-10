@@ -13,12 +13,14 @@ const {
   mockCreateQuiz,
   mockUpdateQuiz,
   mockPreviewImport,
+  mockPreviewImportFromUrl,
 } = vi.hoisted(() => ({
   routerRef: { push: vi.fn(), replace: vi.fn() },
   mockFetchQuizDraft: vi.fn(),
   mockCreateQuiz: vi.fn(),
   mockUpdateQuiz: vi.fn(),
   mockPreviewImport: vi.fn(),
+  mockPreviewImportFromUrl: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -44,8 +46,11 @@ vi.mock('@/app/lib/import-api', async () => {
   return {
     ...actual,
     previewImport: mockPreviewImport,
+    previewImportFromUrl: mockPreviewImportFromUrl,
   };
 });
+
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/abc123/edit';
 
 function makeCsvFile(
   contents = 'round,type,question,options,answer,points,media_url,notes\n',
@@ -61,6 +66,7 @@ describe('QuizEditorPanel', () => {
     mockCreateQuiz.mockReset();
     mockUpdateQuiz.mockReset();
     mockPreviewImport.mockReset();
+    mockPreviewImportFromUrl.mockReset();
   });
 
   it('shows the empty state for a new quiz and starts an editable round from scratch', async () => {
@@ -436,6 +442,55 @@ describe('QuizEditorPanel', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /could not read the csv file/i,
+    );
+  });
+
+  it('imports from a pasted Google Sheets url into the editable draft', async () => {
+    const user = userEvent.setup();
+    mockPreviewImportFromUrl.mockResolvedValue({
+      quizTitle: 'Imported Quiz',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              points: 2,
+            },
+          ],
+        },
+      ],
+      issues: [],
+      isImportable: true,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.type(screen.getByLabelText(/google sheets link/i), SHEET_URL);
+    await user.click(screen.getByRole('button', { name: /^import$/i }));
+
+    expect(await screen.findByDisplayValue('History')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/question prompt/i)).toHaveValue(
+      'Largest planet?',
+    );
+    expect(mockPreviewImportFromUrl).toHaveBeenCalledWith(SHEET_URL, undefined);
+    expect(mockCreateQuiz).not.toHaveBeenCalled();
+  });
+
+  it('shows a sheet fetch error without crashing', async () => {
+    const user = userEvent.setup();
+    mockPreviewImportFromUrl.mockRejectedValue(
+      new ImportApiError('Could not fetch that sheet', 422),
+    );
+
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.type(screen.getByLabelText(/google sheets link/i), SHEET_URL);
+    await user.click(screen.getByRole('button', { name: /^import$/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /could not fetch that sheet/i,
     );
   });
 });
