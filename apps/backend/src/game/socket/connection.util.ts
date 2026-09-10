@@ -12,13 +12,13 @@ import type { SessionService } from '@/auth/session.service';
 import { broadcastGameState } from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 
-export const VALID_ROOMS: string[] = [
+const VALID_ROOMS: string[] = [
   SOCKET_ROOMS.DISPLAY,
   SOCKET_ROOMS.ADMIN,
   SOCKET_ROOMS.PLAYERS,
 ];
 
-export async function resolveAdminUser(
+async function resolveAdminUser(
   cookieHeader: string | undefined,
   sessions: SessionService,
 ): Promise<AuthUser | null> {

@@ -14,11 +14,7 @@ import {
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 
-export type AuthStatus =
-  | 'checking'
-  | 'unauthenticated'
-  | 'pending'
-  | 'authenticated';
+type AuthStatus = 'checking' | 'unauthenticated' | 'pending' | 'authenticated';
 
 export interface UseAuthResult {
   user: AuthUser | null;

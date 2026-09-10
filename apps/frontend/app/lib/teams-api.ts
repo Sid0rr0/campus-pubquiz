@@ -28,7 +28,7 @@ async function throwApiError(
   throw new TeamsApiError(body.message ?? fallback, response.status);
 }
 
-export interface FetchTeamsParams {
+interface FetchTeamsParams {
   page: number;
   pageSize: number;
   sortBy: TeamsSortColumn;

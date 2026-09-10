@@ -6,12 +6,12 @@ import {
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
 
-export interface EditorOption {
+interface EditorOption {
   text: string;
   isCorrect: boolean;
 }
 
-export interface EditorMatchPair {
+interface EditorMatchPair {
   left: string;
   right: string;
 }

@@ -31,7 +31,7 @@ export function summarizeClosestGuess(
 }
 
 /** Resolves the seeded question a block-relative revealIndex points at, given roundIndex. */
-export function getRevealTargetQuestion(
+function getRevealTargetQuestion(
   session: SessionState,
   roundIndex: number,
   revealIndex: number,
@@ -52,7 +52,7 @@ export function getRevealTargetQuestion(
  * closest_guess with zero submissions, keeps today's single-shot behavior
  * (1 step: question + answer together immediately).
  */
-export function getRevealStepCount(
+function getRevealStepCount(
   question: RevealQuestionView | undefined,
   session: SessionState,
 ): number {

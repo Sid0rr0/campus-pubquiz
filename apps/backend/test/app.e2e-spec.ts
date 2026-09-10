@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '@/app.module';
 import { SeedService } from '@/db/seed.service';
-import { GameProgressRepository } from '@/game/game-progress.repository';
+import { GameProgressRepository } from '@/game/state/game-progress.repository';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;

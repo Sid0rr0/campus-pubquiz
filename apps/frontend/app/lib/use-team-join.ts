@@ -22,7 +22,7 @@ import {
   storedJoinOptions,
 } from '@/app/lib/team-storage';
 
-export interface UseTeamJoinResult extends UseGameSocketResult {
+interface UseTeamJoinResult extends UseGameSocketResult {
   teamName: string | null;
   nameInput: string;
   setNameInput: (value: string) => void;

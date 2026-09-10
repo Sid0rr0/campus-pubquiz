@@ -3,7 +3,7 @@ import type {
   UpcomingQuestionPosition,
 } from '@campus-pubquiz/types';
 
-export interface PickerSlot {
+interface PickerSlot {
   key: string;
   questionNumberInRound: number;
   /** Null for a not-yet-open slot — rendered as a disabled placeholder. */

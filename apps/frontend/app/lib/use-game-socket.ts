@@ -33,7 +33,7 @@ import {
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 
-export type GameSocketRole = 'display' | 'admin' | 'players';
+type GameSocketRole = 'display' | 'admin' | 'players';
 
 export interface JoinTeamOptions {
   teamToken?: string;

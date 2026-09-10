@@ -7,7 +7,7 @@ import type {
 import type { MyAnswerGrade } from '@/app/lib/use-game-socket';
 
 /** The current snapshot's reveal walk — lets points be gated to "shown on display yet", not just "block has started revealing". */
-export interface ActiveRevealWalk {
+interface ActiveRevealWalk {
   status: GameStatus;
   revealIndex: number;
   /** The block currently on the reveal walk, in display order — array position is compared against revealIndex. */

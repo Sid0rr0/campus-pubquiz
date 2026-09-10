@@ -20,7 +20,7 @@ const GID_PATTERN = /^\d+$/;
 // sign-in page for a non-public sheet) is rejected instead of followed.
 const TRUSTED_REDIRECT_HOST_SUFFIX = '.googleusercontent.com';
 
-export const SHEET_FETCH_TIMEOUT_MS = 10_000;
+const SHEET_FETCH_TIMEOUT_MS = 10_000;
 export const MAX_SHEET_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 const NOT_SHARED_MESSAGE =

@@ -5,7 +5,7 @@ import type { ButtonHTMLAttributes } from 'react';
 // else (danger outlines, pill actions, dark-drawer icons, one-off adaptive
 // colors, ...) turned out to be used once or twice and is cheaper to keep
 // as a plain className at its call site than to carry as a named variant.
-export type ButtonVariant =
+type ButtonVariant =
   | 'solid'
   | 'solid-flat'
   | 'outline'
@@ -19,14 +19,7 @@ export type ButtonVariant =
 // trigger), xl (one CTA tile), and pill (two bonus-form buttons) turned out
 // to be single-use and are cheaper to keep as a plain className at their
 // call site than to carry as a named size.
-export type ButtonSize =
-  | 'icon-sm'
-  | 'icon-md'
-  | 'icon-lg'
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg';
+type ButtonSize = 'icon-sm' | 'icon-md' | 'icon-lg' | 'xs' | 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

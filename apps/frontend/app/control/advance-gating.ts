@@ -1,6 +1,6 @@
 import type { GameStatus } from '@campus-pubquiz/types';
 
-export interface AdvanceGatingInput {
+interface AdvanceGatingInput {
   gameStatus: GameStatus | undefined;
   hasActiveShowdown: boolean;
   showdownRevealStep: number;
@@ -9,7 +9,7 @@ export interface AdvanceGatingInput {
   previousStatus: GameStatus | null | undefined;
 }
 
-export interface AdvanceGatingResult {
+interface AdvanceGatingResult {
   canAdvance: boolean;
   canGoToPreviousQuestion: boolean;
 }

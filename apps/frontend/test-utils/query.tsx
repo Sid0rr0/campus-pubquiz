@@ -11,7 +11,7 @@ import { AuthProvider } from '@/app/lib/use-auth';
  * A fresh client per render. A shared one would leak one test's cached
  * sessions/users into the next.
  */
-export function createTestQueryClient(): QueryClient {
+function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       // retry: false is load-bearing — with the default 3 retries and
@@ -23,7 +23,7 @@ export function createTestQueryClient(): QueryClient {
   });
 }
 
-export function QueryWrapper({ children }: { children: ReactNode }) {
+function QueryWrapper({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createTestQueryClient);
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

@@ -77,7 +77,7 @@ export interface SessionState {
 }
 
 /** One participating team's seat + guess within the active showdown round — the server-side cache backing ActiveShowdownView; the answer/guess fields are always held here in plaintext and only selectively projected out per showdownRevealStep by buildActiveShowdownView. */
-export interface ShowdownParticipantState {
+interface ShowdownParticipantState {
   teamId: number;
   teamName: string;
   seatIndex: number;
@@ -148,7 +148,7 @@ export function getGameContext(session: SessionState): GameContext {
 }
 
 /** Extracted from getGameContext so freshSessionState can compute a GameContext before a SessionState exists to hand it. */
-export function contextFromSeededGame(seededGame: SeededGame): GameContext {
+function contextFromSeededGame(seededGame: SeededGame): GameContext {
   return {
     rounds: seededGame.rounds.map((round) => ({
       questionCount: round.questions.length,

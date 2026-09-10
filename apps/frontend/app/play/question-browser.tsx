@@ -13,7 +13,7 @@ import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
 
-export interface QuestionNavigation {
+interface QuestionNavigation {
   canGoBack: boolean;
   canGoForward: boolean;
   onBack: () => void;

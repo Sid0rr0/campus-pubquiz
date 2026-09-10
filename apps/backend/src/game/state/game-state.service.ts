@@ -46,7 +46,6 @@ import type { TeamRosterEntry } from '@/team/team.service';
 
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
-export { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 
 @Injectable()
 export class GameStateService implements OnModuleInit {

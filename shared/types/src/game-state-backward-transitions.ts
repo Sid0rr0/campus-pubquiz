@@ -57,7 +57,7 @@ export function previousFromRoundIntro(
  * already aired live, so re-entering it re-shows them rather than reopening
  * anything for (re-)answering. Illegal when there is no earlier block.
  */
-export function enterPreviousBlockReveal(
+function enterPreviousBlockReveal(
   progress: GameProgress,
   context: GameContext,
 ): GameProgress {
