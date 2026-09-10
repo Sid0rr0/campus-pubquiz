@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '@/app.module';
 import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
+import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -21,6 +22,7 @@ describe('AppController (e2e)', () => {
             gameSessionId: 'session-1',
             joinCode: 'ABCDEF',
             rounds: [],
+            settings: DEFAULT_SESSION_SETTINGS,
           }),
       })
       .overrideProvider(GameProgressRepository)
@@ -32,6 +34,10 @@ describe('AppController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+  });
+
+  afterEach(async () => {
+    await app.close();
   });
 
   it('/ (GET)', () => {
