@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Select } from 'radix-ui';
 import type { ActiveSessionSummary } from '@campus-pubquiz/types';
@@ -45,6 +46,18 @@ export function LiveSessionSelect({
     : '';
   const hasSessions = sessions.length > 0;
 
+  // Touch-only Radix quirk: tapping the trigger while open first closes it
+  // via the content's outside-pointerdown dismiss, but the synthetic click
+  // that follows on touch devices reopens it immediately (Radix's touch
+  // path opens on click, not pointerdown) — net effect, tapping never
+  // closes it. The content also disables pointer-events on the rest of the
+  // page while open, so that outside-pointerdown's *target* isn't actually
+  // the trigger (hit-testing falls through to <html>) — compare the
+  // pointer's coordinates against the trigger's rect instead of its target.
+  // Flag it, then swallow that one reopening click.
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const suppressReopenRef = useRef(false);
+
   return (
     <div className="mt-2 flex flex-col gap-1">
       <label
@@ -67,9 +80,16 @@ export function LiveSessionSelect({
         }}
       >
         <Select.Trigger
+          ref={triggerRef}
           id="live-session-select-trigger"
           aria-labelledby="live-session-select-label"
           disabled={!hasSessions}
+          onClick={(event) => {
+            if (suppressReopenRef.current) {
+              suppressReopenRef.current = false;
+              event.preventDefault();
+            }
+          }}
           className="flex min-h-14 items-center justify-between rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold data-placeholder:text-foreground/45 disabled:opacity-60"
         >
           <Select.Value
@@ -83,6 +103,27 @@ export function LiveSessionSelect({
           <Select.Content
             position="popper"
             sideOffset={4}
+            onPointerDownOutside={(event) => {
+              const trigger = triggerRef.current;
+              if (!trigger) return;
+              const { clientX, clientY } = event.detail.originalEvent;
+              const rect = trigger.getBoundingClientRect();
+              const isOnTrigger =
+                clientX >= rect.left &&
+                clientX <= rect.right &&
+                clientY >= rect.top &&
+                clientY <= rect.bottom;
+              if (isOnTrigger) {
+                suppressReopenRef.current = true;
+                // Safety net: if the click that normally follows this
+                // pointerdown never arrives (e.g. the tap turns into a
+                // scroll and gets cancelled), don't leave the flag stuck
+                // and eat the next, unrelated open-tap.
+                setTimeout(() => {
+                  suppressReopenRef.current = false;
+                }, 500);
+              }
+            }}
             className="w-(--radix-select-trigger-width) overflow-hidden rounded-2xl border-2 border-foreground/15 bg-white shadow-lg"
           >
             <Select.Viewport className="p-1">
