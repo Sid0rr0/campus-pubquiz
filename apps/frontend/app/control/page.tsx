@@ -451,6 +451,7 @@ function AdminPageContent() {
         roundIndex={progress.roundIndex}
         questionIndex={progress.questionIndex}
         joinCode={snapshot.joinCode}
+        activeQuizId={activeQuizId}
         activeQuizTitle={activeQuizTitle}
         connectionError={connectionError}
         canStartQuiz={canStartQuiz}
@@ -484,6 +485,7 @@ function AdminPageContent() {
         roundIndex={progress.roundIndex}
         questionIndex={progress.questionIndex}
         joinCode={snapshot.joinCode}
+        activeQuizId={activeQuizId}
         activeQuizTitle={activeQuizTitle}
         connectionError={connectionError}
         canStartQuiz={canStartQuiz}

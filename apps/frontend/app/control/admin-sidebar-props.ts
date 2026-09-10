@@ -11,6 +11,7 @@ export interface AdminSidebarProps {
   roundIndex: number;
   questionIndex: number;
   joinCode: string;
+  activeQuizId: number | null;
   activeQuizTitle: string | null;
   connectionError: string | null;
   canStartQuiz: boolean;

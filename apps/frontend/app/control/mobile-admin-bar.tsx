@@ -8,6 +8,7 @@ import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { AdminActions } from '@/app/control/admin-actions';
 import { BreakEndTimeControl } from '@/app/control/break-end-time-control';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
+import { EditQuizLink } from '@/app/control/edit-quiz-link';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
 import { TeamsPanel } from '@/app/control/teams-panel';
 import { SessionStatusPanel } from '@/app/control/session-status-panel';
@@ -26,6 +27,7 @@ export function MobileAdminBar({
   roundIndex,
   questionIndex,
   joinCode,
+  activeQuizId,
   activeQuizTitle,
   connectionError,
   canStartQuiz,
@@ -128,6 +130,7 @@ export function MobileAdminBar({
               displayTextScale={displayTextScale}
               onSetDisplayTextScale={onSetDisplayTextScale}
             />
+            <EditQuizLink quizId={activeQuizId} />
             <ShowdownPanel
               isEligible={isShowdownEligible}
               activeShowdown={activeShowdown}
