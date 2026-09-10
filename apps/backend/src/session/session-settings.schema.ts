@@ -28,6 +28,7 @@ export const sessionSettingsPartialSchema = z
       .min(1, 'At least one bonus category must stay enabled'),
     autoplayMedia: z.boolean(),
     playLockCountdownSound: z.boolean(),
+    showRoundOverview: z.boolean(),
     rules: z
       .array(z.string().trim().min(1).max(RULE_MAX_LENGTH))
       .max(MAX_RULES),

@@ -153,6 +153,17 @@ export function SessionSettingsForm({
         Play countdown sound
       </label>
 
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.showRoundOverview}
+          onChange={(event) =>
+            onChange({ ...value, showRoundOverview: event.target.checked })
+          }
+        />
+        Show round overview after rules
+      </label>
+
       <div className="flex flex-wrap gap-4">
         <label className="flex flex-col gap-1 text-sm font-extrabold">
           Max players per team

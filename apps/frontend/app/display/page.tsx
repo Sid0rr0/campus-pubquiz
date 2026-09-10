@@ -31,6 +31,7 @@ import {
 } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RevealIntroScreen } from '@/app/display/reveal-intro-screen';
+import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
 import { TriviaHeader } from '@/app/display/trivia-header';
 
 interface HeaderContent {
@@ -199,6 +200,7 @@ function DisplayPageContent() {
     blockQuestions = [],
     revealQuestions = [],
     roundTitle = '',
+    roundTitles = [],
     questionLockAt = null,
     closestGuessRevealStep = 0,
     breakEndsAt = null,
@@ -285,6 +287,9 @@ function DisplayPageContent() {
                     extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
                   />
                 </div>
+              )}
+              {progress.status === 'round_overview' && (
+                <RoundOverviewScreen roundTitles={roundTitles} />
               )}
               {progress.status === 'round_intro' && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">

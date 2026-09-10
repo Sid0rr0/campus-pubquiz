@@ -30,6 +30,7 @@ export function getAdvanceGating({
 }: AdvanceGatingInput): AdvanceGatingResult {
   const canAdvance =
     gameStatus === 'rules' ||
+    gameStatus === 'round_overview' ||
     gameStatus === 'round_intro' ||
     gameStatus === 'question_open' ||
     gameStatus === 'locking' ||
@@ -40,6 +41,7 @@ export function getAdvanceGating({
     gameStatus === 'reveal' ||
     (gameStatus === 'ended' && hasActiveShowdown);
   const canGoToPreviousQuestion =
+    gameStatus === 'round_overview' ||
     gameStatus === 'round_intro' ||
     gameStatus === 'question_open' ||
     gameStatus === 'locking' ||

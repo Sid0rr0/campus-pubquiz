@@ -19,6 +19,9 @@ function getAdvanceLabel(progressStatus: GameStatus): string {
   if (progressStatus === 'rules') {
     return 'Begin Quiz';
   }
+  if (progressStatus === 'round_overview') {
+    return 'Continue';
+  }
   if (progressStatus === 'round_intro') {
     return 'Start Round';
   }

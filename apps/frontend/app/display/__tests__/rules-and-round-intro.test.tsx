@@ -59,6 +59,23 @@ describe('DisplayPage — rules and round intro', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
+  it('lists every round title on the round overview screen, before round 0 opens', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'round_overview' }),
+        currentQuestion: null,
+        roundTitles: ['General Knowledge', 'Picture Round', 'Music Round'],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('General Knowledge')).toBeInTheDocument();
+    expect(screen.getByText('Picture Round')).toBeInTheDocument();
+    expect(screen.getByText('Music Round')).toBeInTheDocument();
+  });
+
   it('shows the round name in big text on the round intro screen, before any question opens', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {

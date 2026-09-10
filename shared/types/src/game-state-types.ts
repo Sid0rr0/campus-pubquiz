@@ -1,6 +1,7 @@
 export type GameStatus =
   | 'lobby'
   | 'rules'
+  | 'round_overview'
   | 'round_intro'
   | 'question_open'
   | 'locking'
@@ -32,6 +33,15 @@ export interface RoundConfig {
 
 export interface GameContext {
   rounds: RoundConfig[];
+  /**
+   * Whether ADVANCE from 'rules' stops on a 'round_overview' screen (listing
+   * every round's title) before entering round 0's own 'round_intro' — the
+   * session-configurable "spoil the round lineup up front" toggle. Optional,
+   * like GameProgress.isMediaFullscreen, so existing GameContext literals
+   * across the codebase don't all need updating; undefined behaves as false
+   * (today's direct rules -> round_intro jump).
+   */
+  showRoundOverview?: boolean;
 }
 
 export interface GameProgress {

@@ -154,5 +154,6 @@ function contextFromSeededGame(seededGame: SeededGame): GameContext {
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
     })),
+    showRoundOverview: seededGame.settings.showRoundOverview,
   };
 }

@@ -93,6 +93,22 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(false);
   });
 
+  it('accepts a boolean showRoundOverview', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      showRoundOverview: false,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ showRoundOverview: false });
+  });
+
+  it('rejects a non-boolean showRoundOverview', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ showRoundOverview: 'yes' })
+        .success,
+    ).toBe(false);
+  });
+
   it('accepts a partial maxBonusAwardsPerCategory map', () => {
     const result = sessionSettingsPartialSchema.safeParse({
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },

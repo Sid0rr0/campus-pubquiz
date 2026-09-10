@@ -12,9 +12,10 @@ interface SessionStatusPanelProps {
   connectionError: string | null;
 }
 
-/** round_intro/break_round_intro/reveal_intro show a round's title card instead of a question; break_intro/break show a break card — R/Q there is the last question the round played, not what's actually on screen. */
+/** round_overview/round_intro/break_round_intro/reveal_intro show a round's title card instead of a question; break_intro/break show a break card — R/Q there is the last question the round played, not what's actually on screen. */
 function getDisplayCardMarker(progressStatus: GameStatus): 'T' | 'B' | null {
   switch (progressStatus) {
+    case 'round_overview':
     case 'round_intro':
     case 'break_round_intro':
     case 'reveal_intro':

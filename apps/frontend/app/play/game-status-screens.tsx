@@ -88,6 +88,15 @@ export function GameStatusScreens({
           />
         </div>
       )}
+      {!progress.isLeaderboardVisible &&
+        progress.status === 'round_overview' && (
+          <div className="mt-16 flex flex-col items-center gap-2 text-center">
+            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+            <h1 className="font-display text-2xl text-magenta">Rounds</h1>
+          </div>
+        )}
       {/* Only for a genuinely fresh round (nothing opened yet) - if Previous
           stepped the display back into an already-open round's intro card,
           isAnswerable is true and the block browser renders instead so

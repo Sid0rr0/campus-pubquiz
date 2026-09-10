@@ -24,16 +24,22 @@ export function previousFromQuestionOpen(progress: GameProgress): GameProgress {
 
 /**
  * Steps back from a round's intro card to whatever preceded it: the rules
- * screen before round 0, the previous round's last question if it ran in the
- * same open block (no break), or the previous block's last reveal question
- * if a break/reveal already ran.
+ * screen (or round_overview, when context.showRoundOverview) before round 0,
+ * the previous round's last question if it ran in the same open block (no
+ * break), or the previous block's last reveal question if a break/reveal
+ * already ran.
  */
 export function previousFromRoundIntro(
   progress: GameProgress,
   context: GameContext,
 ): GameProgress {
   if (progress.roundIndex === 0) {
-    return { ...progress, status: 'rules', questionIndex: 0, revealIndex: 0 };
+    return {
+      ...progress,
+      status: context.showRoundOverview ? 'round_overview' : 'rules',
+      questionIndex: 0,
+      revealIndex: 0,
+    };
   }
 
   const previousRoundIndex = progress.roundIndex - 1;

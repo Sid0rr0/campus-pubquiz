@@ -23,13 +23,47 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
     });
   });
 
-  it("shows round 0's intro card when advancing past the rules screen", () => {
+  it("shows round 0's intro card when advancing past the rules screen (showRoundOverview off/undefined)", () => {
     const rules: GameProgress = { ...lobby, status: 'rules' };
     const next = getNextGameState(
       rules,
       'ADVANCE',
       twoRoundsWithBreakAfterSecond,
     );
+    expect(next).toEqual({
+      status: 'round_intro',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    });
+  });
+
+  it('shows the round_overview screen when advancing past rules with showRoundOverview enabled', () => {
+    const rules: GameProgress = { ...lobby, status: 'rules' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+    };
+    const next = getNextGameState(rules, 'ADVANCE', context);
+    expect(next).toEqual({
+      status: 'round_overview',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    });
+  });
+
+  it("shows round 0's intro card when advancing past round_overview", () => {
+    const roundOverview: GameProgress = { ...lobby, status: 'round_overview' };
+    const context: GameContext = {
+      ...twoRoundsWithBreakAfterSecond,
+      showRoundOverview: true,
+    };
+    const next = getNextGameState(roundOverview, 'ADVANCE', context);
     expect(next).toEqual({
       status: 'round_intro',
       roundIndex: 0,

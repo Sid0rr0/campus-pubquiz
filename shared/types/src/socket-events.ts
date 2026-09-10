@@ -171,6 +171,8 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
+  /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
+  roundTitles: string[];
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the
@@ -500,6 +502,8 @@ export interface SessionSettings {
   autoplayMedia: boolean;
   /** Plays a ~60s countdown track during the 'locking' phase on /display and /admin, timed to end exactly at questionLockAt regardless of lockGraceSeconds. */
   playLockCountdownSound: boolean;
+  /** Whether ADVANCE from 'rules' shows a 'round_overview' screen (listing every round's title) before round 0's own 'round_intro' — lets an admin who doesn't want to spoil the round lineup turn it off. */
+  showRoundOverview: boolean;
   /** One entry per rendered /rules bullet line — display text only, no enforcement. */
   rules: string[];
   /** Caps how many times a single team may be awarded a given bonus category this session (e.g. shot: 2, selfie: 1); a category absent from the map has no cap. */
@@ -526,6 +530,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   ]) as BonusCategory[],
   autoplayMedia: true,
   playLockCountdownSound: true,
+  showRoundOverview: false,
   maxBonusAwardsPerCategory: Object.freeze({
     shot: 2,
     selfie: 1,

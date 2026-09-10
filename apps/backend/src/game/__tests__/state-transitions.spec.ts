@@ -62,6 +62,14 @@ describe('GameStateService — state transitions', () => {
     expect(snapshot.currentQuestion).toBeNull();
   });
 
+  it('always populates roundTitles with every round in the quiz, in order', () => {
+    const snapshot = service.getSnapshot(joinCode);
+    expect(snapshot.roundTitles).toEqual([
+      'General Knowledge',
+      'Landmarks & Flags',
+    ]);
+  });
+
   it('opens the first question of the first round when advancing past its intro card', async () => {
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)

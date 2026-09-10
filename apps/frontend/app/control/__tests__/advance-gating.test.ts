@@ -13,6 +13,7 @@ describe('getAdvanceGating', () => {
   it.each([
     ['lobby', false, false],
     ['rules', true, false],
+    ['round_overview', true, true],
     ['round_intro', true, true],
     ['question_open', true, true],
     ['locking', true, true],

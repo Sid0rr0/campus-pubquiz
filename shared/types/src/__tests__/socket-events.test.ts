@@ -275,6 +275,7 @@ describe('SessionSettings defaults', () => {
       enabledBonusCategories: ['shot', 'selfie', 'custom'],
       autoplayMedia: true,
       playLockCountdownSound: true,
+      showRoundOverview: false,
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,

@@ -97,6 +97,15 @@ export function getNextGameState(
       if (progress.status === 'rules') {
         return {
           ...progress,
+          status: context.showRoundOverview ? 'round_overview' : 'round_intro',
+          roundIndex: 0,
+          questionIndex: 0,
+          revealIndex: 0,
+        };
+      }
+      if (progress.status === 'round_overview') {
+        return {
+          ...progress,
           status: 'round_intro',
           roundIndex: 0,
           questionIndex: 0,
@@ -148,6 +157,13 @@ export function getNextGameState(
       return illegal(progress.status, action);
 
     case 'PREVIOUS':
+      if (progress.status === 'round_overview')
+        return {
+          ...progress,
+          status: 'rules',
+          questionIndex: 0,
+          revealIndex: 0,
+        };
       if (progress.status === 'round_intro')
         return previousFromRoundIntro(progress, context);
       if (progress.status === 'question_open')

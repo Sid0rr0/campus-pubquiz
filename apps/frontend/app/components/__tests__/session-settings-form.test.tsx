@@ -175,6 +175,23 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('toggles showRoundOverview off', async () => {
+    const onChange = vi.fn();
+    render(
+      <SessionSettingsForm
+        value={DEFAULT_SESSION_SETTINGS}
+        onChange={onChange}
+      />,
+    );
+
+    await userEvent.click(screen.getByLabelText(/show round overview/i));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      showRoundOverview: !DEFAULT_SESSION_SETTINGS.showRoundOverview,
+    });
+  });
+
   it('adds a new blank rule line', async () => {
     const onChange = vi.fn();
     render(
