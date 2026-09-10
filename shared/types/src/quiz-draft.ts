@@ -10,6 +10,13 @@ export interface QuizDraft {
   id: number;
   title: string;
   rounds: ImportRoundPreview[];
+  /** Present only when a session is currently live on this quiz — the editor uses it to lock already-shown/in-progress questions against editing. Absent when no session is live, matching today's behavior exactly. */
+  liveEdit?: QuizLiveEditState;
+}
+
+export interface QuizLiveEditState {
+  /** `Question.id`s that are already shown or in progress in a live session — safe to keep editing anything not in this list. */
+  lockedQuestionIds: number[];
 }
 
 /** One validation problem found in a `QuizDraftSaveRequest`. `questionIndex` is null for round-level issues (e.g. a blank round title). */

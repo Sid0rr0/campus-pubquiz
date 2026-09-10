@@ -25,6 +25,8 @@ interface EditorMatchPair {
  */
 export interface EditorQuestion {
   id: string;
+  /** The persisted `Question.id` this editor row was loaded from — undefined for a brand-new question. Distinct from `id` (a client-generated React key); see `ImportQuestionPreview.questionId`. */
+  dbId?: number;
   type: QuestionType;
   prompt: string;
   points: number;
@@ -96,6 +98,7 @@ export function questionFromPreview(
   const answerItems = isSort || isMatch ? splitPipeList(question.answer) : [];
   return {
     id,
+    ...(question.questionId !== undefined ? { dbId: question.questionId } : {}),
     type: question.type,
     prompt: question.prompt,
     points: question.points,
@@ -160,6 +163,7 @@ export function questionToPreview(
   const answerMediaUrl = question.answerMediaUrl.trim();
 
   return {
+    ...(question.dbId !== undefined ? { questionId: question.dbId } : {}),
     type: question.type,
     prompt: question.prompt.trim(),
     answer,

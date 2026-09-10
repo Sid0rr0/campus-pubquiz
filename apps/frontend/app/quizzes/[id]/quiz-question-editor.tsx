@@ -23,6 +23,10 @@ interface QuizQuestionEditorProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
+  /** A session is live on this quiz — reordering/deleting any question is disabled regardless of lock state. */
+  isLive: boolean;
+  /** This specific question is already shown/in progress in a live session — its fields are disabled. */
+  isLocked: boolean;
   onChange: (patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -84,6 +88,8 @@ export function QuizQuestionEditor({
   index,
   isFirst,
   isLast,
+  isLive,
+  isLocked,
   onChange,
   onDelete,
   onMoveUp,
@@ -190,14 +196,15 @@ export function QuizQuestionEditor({
         <textarea
           value={question.prompt}
           onChange={(event) => onChange({ prompt: event.target.value })}
+          disabled={isLocked}
           placeholder="Question prompt"
           rows={2}
-          className="min-w-0 flex-1 resize-y rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-bold text-foreground"
+          className="min-w-0 flex-1 resize-y rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-bold text-foreground disabled:opacity-50"
         />
         <Button
           type="button"
           onClick={onMoveUp}
-          disabled={isFirst}
+          disabled={isFirst || isLive}
           variant="icon"
           size="icon-sm"
           aria-label="Move question up"
@@ -208,7 +215,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onMoveDown}
-          disabled={isLast}
+          disabled={isLast || isLive}
           variant="icon"
           size="icon-sm"
           aria-label="Move question down"
@@ -219,6 +226,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onDelete}
+          disabled={isLive}
           variant="icon-danger"
           size="icon-sm"
           aria-label="Delete question"
@@ -228,6 +236,12 @@ export function QuizQuestionEditor({
         </Button>
       </div>
 
+      {isLocked && (
+        <p className="text-xs font-extrabold text-magenta">
+          Locked — already shown in the live session
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex overflow-hidden rounded-lg border-2 border-foreground/20">
           {QUESTION_TYPES.map((option) => (
@@ -235,6 +249,7 @@ export function QuizQuestionEditor({
               key={option.value}
               type="button"
               onClick={() => onChange({ type: option.value })}
+              disabled={isLocked}
               className={typeButtonClass(question.type === option.value)}
             >
               {option.label}
@@ -249,7 +264,8 @@ export function QuizQuestionEditor({
             onChange={(event) =>
               onChange({ points: Number(event.target.value) || 0 })
             }
-            className="w-16 rounded-lg border-2 border-foreground/25 px-2 py-1 text-sm font-extrabold text-foreground"
+            disabled={isLocked}
+            className="w-16 rounded-lg border-2 border-foreground/25 px-2 py-1 text-sm font-extrabold text-foreground disabled:opacity-50"
           />
         </label>
       </div>
@@ -262,6 +278,7 @@ export function QuizQuestionEditor({
                 type="radio"
                 checked={option.isCorrect}
                 onChange={() => setCorrectOption(optionIndex)}
+                disabled={isLocked}
                 aria-label={`Mark option ${optionIndex + 1} as correct`}
                 className="h-4 w-4 accent-green"
               />
@@ -270,13 +287,14 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateOption(optionIndex, event.target.value)
                 }
+                disabled={isLocked}
                 placeholder="Option text"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
               <Button
                 type="button"
                 onClick={() => removeOption(optionIndex)}
-                disabled={question.options.length <= 2}
+                disabled={isLocked || question.options.length <= 2}
                 variant="icon-danger"
                 size="icon-sm"
                 aria-label={`Remove option ${optionIndex + 1}`}
@@ -288,6 +306,7 @@ export function QuizQuestionEditor({
           <Button
             type="button"
             onClick={addOption}
+            disabled={isLocked}
             variant="outline-dashed"
             size="xs"
             className="self-start"
@@ -311,13 +330,14 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateSortItem(itemIndex, event.target.value)
                 }
+                disabled={isLocked}
                 placeholder="Item text"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
               <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, -1)}
-                disabled={itemIndex === 0}
+                disabled={isLocked || itemIndex === 0}
                 variant="icon"
                 size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} up`}
@@ -327,7 +347,9 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, 1)}
-                disabled={itemIndex === question.sortItems.length - 1}
+                disabled={
+                  isLocked || itemIndex === question.sortItems.length - 1
+                }
                 variant="icon"
                 size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} down`}
@@ -337,7 +359,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => removeSortItem(itemIndex)}
-                disabled={question.sortItems.length <= 2}
+                disabled={isLocked || question.sortItems.length <= 2}
                 variant="icon-danger"
                 size="icon-sm"
                 aria-label={`Remove item ${itemIndex + 1}`}
@@ -349,6 +371,7 @@ export function QuizQuestionEditor({
           <Button
             type="button"
             onClick={addSortItem}
+            disabled={isLocked}
             variant="outline-dashed"
             size="xs"
             className="self-start"
@@ -369,8 +392,9 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateMatchPair(pairIndex, 'left', event.target.value)
                 }
+                disabled={isLocked}
                 placeholder="Left item"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
               <span aria-hidden="true" className="font-display text-cyan">
                 →
@@ -380,13 +404,14 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateMatchPair(pairIndex, 'right', event.target.value)
                 }
+                disabled={isLocked}
                 placeholder="Right item"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
               <Button
                 type="button"
                 onClick={() => removeMatchPair(pairIndex)}
-                disabled={question.matchPairs.length <= 2}
+                disabled={isLocked || question.matchPairs.length <= 2}
                 variant="icon-danger"
                 size="icon-sm"
                 aria-label={`Remove pair ${pairIndex + 1}`}
@@ -398,6 +423,7 @@ export function QuizQuestionEditor({
           <Button
             type="button"
             onClick={addMatchPair}
+            disabled={isLocked}
             variant="outline-dashed"
             size="xs"
             className="self-start"
@@ -413,8 +439,9 @@ export function QuizQuestionEditor({
             type={question.type === 'closest_guess' ? 'number' : 'text'}
             value={question.correctText}
             onChange={(event) => onChange({ correctText: event.target.value })}
+            disabled={isLocked}
             placeholder="Accepted answer"
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
           />
         </label>
       )}
@@ -425,10 +452,11 @@ export function QuizQuestionEditor({
           <input
             value={question.mediaUrl}
             onChange={(event) => onChange({ mediaUrl: event.target.value })}
+            disabled={isLocked}
             placeholder={
               question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
             }
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
           />
         </label>
         <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
@@ -438,8 +466,9 @@ export function QuizQuestionEditor({
             onChange={(event) =>
               onChange({ answerMediaUrl: event.target.value })
             }
+            disabled={isLocked}
             placeholder="https://…"
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
           />
         </label>
       </div>
@@ -451,8 +480,9 @@ export function QuizQuestionEditor({
             <input
               value={clipStart}
               onChange={(event) => updateClip(event.target.value, clipEnd)}
+              disabled={isLocked}
               placeholder="1:22"
-              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
           </label>
           <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
@@ -460,8 +490,9 @@ export function QuizQuestionEditor({
             <input
               value={clipEnd}
               onChange={(event) => updateClip(clipStart, event.target.value)}
+              disabled={isLocked}
               placeholder="2:20"
-              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
           </label>
         </div>
@@ -480,8 +511,9 @@ export function QuizQuestionEditor({
               ),
             })
           }
+          disabled={isLocked}
           rows={1}
-          className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground"
+          className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         />
       </label>
     </div>

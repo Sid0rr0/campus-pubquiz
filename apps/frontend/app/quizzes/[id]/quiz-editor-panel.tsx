@@ -11,7 +11,11 @@ import {
   PlusIcon,
   UploadIcon,
 } from '@radix-ui/react-icons';
-import type { ImportPreview, QuizDraftIssue } from '@campus-pubquiz/types';
+import type {
+  ImportPreview,
+  QuizDraftIssue,
+  QuizLiveEditState,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import {
   ImportApiError,
@@ -41,6 +45,7 @@ interface QuizEditorPanelProps {
 type Phase = 'empty' | 'editor';
 
 const EMPTY_ISSUES: QuizDraftIssue[] = [];
+const EMPTY_LOCKED_QUESTION_IDS: ReadonlySet<number> = new Set();
 const SAVED_FLASH_MS = 1600;
 
 function issueLabel(issue: QuizDraftIssue): string {
@@ -83,6 +88,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [importError, setImportError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [sheetUrlInput, setSheetUrlInput] = useState('');
+  const [liveEditState, setLiveEditState] = useState<
+    QuizLiveEditState | undefined
+  >(undefined);
 
   // Copies the draft into editable local state exactly once, when the
   // query's data first arrives — adjusted during render rather than in an
@@ -99,8 +107,19 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
       ),
     );
+    setLiveEditState(draftQuery.data.liveEdit);
     setPhase('editor');
   }
+
+  const isLive = liveEditState !== undefined;
+  const lockedQuestionIds = liveEditState
+    ? new Set(liveEditState.lockedQuestionIds)
+    : EMPTY_LOCKED_QUESTION_IDS;
+
+  const refreshLockStateMutation = useMutation({
+    mutationFn: () => fetchQuizDraft(numericQuizId as number),
+    onSuccess: (draft) => setLiveEditState(draft.liveEdit),
+  });
 
   function startFromScratch(): void {
     setRounds([makeRound(crypto.randomUUID(), 'Round 1')]);
@@ -225,11 +244,16 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
     },
   });
-  const saveError = apiErrorMessage(
-    saveMutation.error,
-    QuizDraftApiError,
-    'Could not save the quiz.',
-  );
+  const isLiveEditConflict =
+    saveMutation.error instanceof QuizDraftApiError &&
+    saveMutation.error.status === 409;
+  const saveError = isLiveEditConflict
+    ? 'Someone advanced the live session while you were editing — refresh to see what changed, then try again.'
+    : apiErrorMessage(
+        saveMutation.error,
+        QuizDraftApiError,
+        'Could not save the quiz.',
+      );
   const saveIssues =
     saveMutation.error instanceof QuizDraftApiError
       ? saveMutation.error.issues
@@ -408,7 +432,28 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
               ))}
             </ul>
           )}
+          {isLiveEditConflict && (
+            <Button
+              type="button"
+              onClick={() => refreshLockStateMutation.mutate()}
+              disabled={refreshLockStateMutation.isPending}
+              size="sm"
+              className="mt-2 rounded-lg bg-foreground px-3 py-1.5 text-xs font-extrabold text-background disabled:opacity-50"
+            >
+              {refreshLockStateMutation.isPending
+                ? 'Refreshing…'
+                : 'Refresh lock state'}
+            </Button>
+          )}
         </div>
+      )}
+
+      {isLive && (
+        <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
+          A session is live on this quiz — only upcoming questions can be
+          edited, and rounds/questions can&apos;t be added, removed, or
+          reordered.
+        </p>
       )}
 
       <div className="mx-auto flex max-w-3xl flex-col gap-4 px-5 py-6">
@@ -418,6 +463,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             round={round}
             isFirst={index === 0}
             isLast={index === rounds.length - 1}
+            isLive={isLive}
+            lockedQuestionIds={lockedQuestionIds}
             onChange={(patch) => updateRound(round.id, patch)}
             onDelete={() => deleteRound(round.id)}
             onMoveUp={() => moveRound(round.id, -1)}
@@ -427,7 +474,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         <Button
           type="button"
           onClick={addRound}
-          className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background"
+          disabled={isLive}
+          className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background disabled:opacity-50"
         >
           <PlusIcon aria-hidden="true" />
           Add round

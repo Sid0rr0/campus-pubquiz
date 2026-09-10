@@ -253,6 +253,7 @@ describe('QuizService (Postgres integration)', () => {
             breakAfter: true,
             questions: [
               {
+                questionId: expect.any(Number) as number,
                 type: 'audio',
                 prompt: 'Name this song.',
                 answer: 'Bohemian Rhapsody',
@@ -386,6 +387,105 @@ describe('QuizService (Postgres integration)', () => {
 
       const quiz = await em.findOneOrFail(Quiz, { id: created.quizId });
       expect(quiz.title).toBe('Trivia Night');
+    });
+
+    it('upserts a question by questionId even after its position changes, preserving its row', async () => {
+      const created = await quizService.create('Trivia Night', [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Q1', answer: 'A1', points: 1 },
+            { type: 'free_text', prompt: 'Q2', answer: 'A2', points: 1 },
+          ],
+        },
+      ]);
+      const draft = await quizService.findDraftById(created.quizId);
+      const [q1, q2] = draft!.rounds[0].questions;
+
+      await quizService.update(created.quizId, 'Trivia Night', [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            {
+              questionId: q2.questionId,
+              type: 'free_text',
+              prompt: 'Q2',
+              answer: 'A2',
+              points: 1,
+            },
+            {
+              questionId: q1.questionId,
+              type: 'free_text',
+              prompt: 'Q1 edited',
+              answer: 'A1',
+              points: 1,
+            },
+          ],
+        },
+      ]);
+
+      const questions = await em.find(
+        Question,
+        {},
+        { orderBy: { orderIndex: 'asc' } },
+      );
+      expect(questions).toHaveLength(2);
+      expect(questions.map((question) => question.id).sort()).toEqual(
+        [q1.questionId, q2.questionId].sort(),
+      );
+      const editedQuestion = await em.findOneOrFail(Question, {
+        id: q1.questionId,
+      });
+      expect(editedQuestion.prompt).toBe('Q1 edited');
+      expect(editedQuestion.orderIndex).toBe(1);
+    });
+
+    it('creates a fresh row for a question without a questionId, alongside an updated existing one', async () => {
+      const created = await quizService.create('Trivia Night', [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Q1', answer: 'A1', points: 1 },
+          ],
+        },
+      ]);
+      const draft = await quizService.findDraftById(created.quizId);
+      const [q1] = draft!.rounds[0].questions;
+
+      await quizService.update(created.quizId, 'Trivia Night', [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            {
+              questionId: q1.questionId,
+              type: 'free_text',
+              prompt: 'Q1',
+              answer: 'A1',
+              points: 1,
+            },
+            {
+              type: 'free_text',
+              prompt: 'Q2 (new)',
+              answer: 'A2',
+              points: 1,
+            },
+          ],
+        },
+      ]);
+
+      const questions = await em.find(
+        Question,
+        {},
+        { orderBy: { orderIndex: 'asc' } },
+      );
+      expect(questions).toHaveLength(2);
+      expect(questions[0].id).toBe(q1.questionId);
+      expect(questions[1].prompt).toBe('Q2 (new)');
+      expect(questions[1].id).not.toBe(q1.questionId);
     });
   });
 });

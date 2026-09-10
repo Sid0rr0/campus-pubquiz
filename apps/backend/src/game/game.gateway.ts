@@ -219,6 +219,19 @@ export class GameGateway
    * (unlike socket handlers, which fork their own context — see
    * handleAdminAction above).
    */
+  /**
+   * Called by QuizController.update after persisting an in-place edit to a
+   * quiz with a live session on it — reloads that session's in-memory
+   * question snapshot from the DB and rebroadcasts the full state, so
+   * /display, /control, and /play pick up the correction without needing a
+   * reconnect. No @CreateRequestContext() needed, same reasoning as
+   * notifyBonusAwardsChanged above.
+   */
+  async notifyQuizEdited(joinCode: string): Promise<void> {
+    await this.gameState.reloadActiveQuiz(joinCode);
+    broadcastGameState(this.server, joinCode, this.gameState);
+  }
+
   async notifyBonusAwardsChanged(joinCode: string): Promise<void> {
     const gameSessionId = this.gameState.getGameSessionId(joinCode);
     const leaderboard =

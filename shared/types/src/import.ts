@@ -26,6 +26,14 @@ export interface ImportRowIssue {
 }
 
 export interface ImportQuestionPreview {
+  /**
+   * The persisted `Question.id`, present when this preview reflects an
+   * existing DB row (returned by `GET /quizzes/:id`); absent for CSV import
+   * previews and brand-new questions. Distinct from the frontend editor's own
+   * `EditorQuestion.id` (a client-generated React key) — kept as a separate
+   * name so the two are never confused.
+   */
+  questionId?: number;
   type: QuestionType;
   prompt: string;
   answer: string;

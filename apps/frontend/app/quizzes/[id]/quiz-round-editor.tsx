@@ -18,6 +18,10 @@ interface QuizRoundEditorProps {
   round: EditorRound;
   isFirst: boolean;
   isLast: boolean;
+  /** A session is live on this quiz — round/question add/delete/reorder controls are disabled entirely. */
+  isLive: boolean;
+  /** `dbId`s of questions already shown/in progress in a live session. */
+  lockedQuestionIds: ReadonlySet<number>;
   onChange: (patch: Partial<EditorRound>) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -28,6 +32,8 @@ export function QuizRoundEditor({
   round,
   isFirst,
   isLast,
+  isLive,
+  lockedQuestionIds,
   onChange,
   onDelete,
   onMoveUp,
@@ -98,7 +104,7 @@ export function QuizRoundEditor({
         <Button
           type="button"
           onClick={onMoveUp}
-          disabled={isFirst}
+          disabled={isFirst || isLive}
           variant="icon"
           size="icon-md"
           aria-label="Move round up"
@@ -108,7 +114,7 @@ export function QuizRoundEditor({
         <Button
           type="button"
           onClick={onMoveDown}
-          disabled={isLast}
+          disabled={isLast || isLive}
           variant="icon"
           size="icon-md"
           aria-label="Move round down"
@@ -118,6 +124,7 @@ export function QuizRoundEditor({
         <Button
           type="button"
           onClick={onDelete}
+          disabled={isLive}
           variant="icon-danger"
           size="icon-md"
           aria-label="Delete round"
@@ -134,6 +141,11 @@ export function QuizRoundEditor({
             index={index}
             isFirst={index === 0}
             isLast={index === round.questions.length - 1}
+            isLive={isLive}
+            isLocked={
+              question.dbId !== undefined &&
+              lockedQuestionIds.has(question.dbId)
+            }
             onChange={(patch) => updateQuestion(question.id, patch)}
             onDelete={() => deleteQuestion(question.id)}
             onMoveUp={() => moveQuestion(question.id, -1)}
@@ -145,6 +157,7 @@ export function QuizRoundEditor({
       <Button
         type="button"
         onClick={addQuestion}
+        disabled={isLive}
         variant="outline-dashed"
         size="xs"
         className="self-start"

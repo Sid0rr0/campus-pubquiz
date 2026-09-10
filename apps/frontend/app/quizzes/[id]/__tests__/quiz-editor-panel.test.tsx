@@ -397,6 +397,91 @@ describe('QuizEditorPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('disables locked question fields and structural controls while a session is live', async () => {
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: true,
+          questions: [
+            {
+              questionId: 1,
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              points: 2,
+            },
+          ],
+        },
+      ],
+      liveEdit: { lockedQuestionIds: [1] },
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+
+    expect(
+      await screen.findByText(/a session is live on this quiz/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/locked — already shown in the live session/i),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/question prompt/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /add round/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /add question/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /delete question/i }),
+    ).toBeDisabled();
+  });
+
+  it('shows a distinct message and a refresh action for a 409 live-edit conflict', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValueOnce({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [{ title: 'History', breakAfter: true, questions: [] }],
+      liveEdit: { lockedQuestionIds: [] },
+    });
+    mockUpdateQuiz.mockRejectedValue(
+      new QuizDraftApiError('Cannot save — 1 change(s) conflict', 409, [
+        {
+          roundIndex: 0,
+          questionIndex: 0,
+          field: 'prompt',
+          message: 'Cannot edit this question — it has already been shown',
+        },
+      ]),
+    );
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /refresh to see what changed/i,
+    );
+    expect(screen.queryByText(/^cannot save/i)).not.toBeInTheDocument();
+
+    mockFetchQuizDraft.mockResolvedValueOnce({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [{ title: 'History', breakAfter: true, questions: [] }],
+      liveEdit: { lockedQuestionIds: [42] },
+    });
+    await user.click(
+      screen.getByRole('button', { name: /refresh lock state/i }),
+    );
+
+    await waitFor(() => expect(mockFetchQuizDraft).toHaveBeenCalledTimes(2));
+    expect(
+      await screen.findByText(/a session is live on this quiz/i),
+    ).toBeInTheDocument();
+  });
+
   it('imports a csv into the editable draft instead of saving it directly', async () => {
     const user = userEvent.setup();
     mockPreviewImport.mockResolvedValue({

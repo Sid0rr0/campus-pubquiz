@@ -14,6 +14,10 @@ import {
 import { AnswerService } from '@/answer/answer.service';
 import { SeedService } from '@/db/seed.service';
 import {
+  getBlockSeededQuestions,
+  getPastRevealedQuestions,
+} from '@/game/state/block-questions.util';
+import {
   computeInitialRevealStep,
   tryStepClosestGuessReveal,
 } from '@/game/state/closest-guess-reveal.util';
@@ -172,6 +176,21 @@ export class GameStateService implements OnModuleInit {
       joinCode,
     );
     this.sessionStore.set(joinCode, { ...session, seededGame });
+  }
+
+  /**
+   * Question ids already shown or currently in progress in this session —
+   * every past block's questions plus the current block's furthest-opened
+   * position, the exact "already shown" boundary `BlockGradingService`
+   * already relies on. Used to lock those questions against live editing
+   * (`QuizController.update`); everything strictly ahead stays editable.
+   */
+  getShownOrInProgressQuestionIds(joinCode: string): number[] {
+    const session = this.sessionStore.get(joinCode);
+    return [
+      ...getPastRevealedQuestions(session),
+      ...getBlockSeededQuestions(session),
+    ].map((question) => question.id);
   }
 
   setLeaderboard(joinCode: string, leaderboard: LeaderboardEntry[]): void {

@@ -36,6 +36,7 @@ function toSummaryPayload(payload: unknown): QuestionPayload {
 function toQuestionPreview(question: Question): ImportQuestionPreview {
   const payload = question.payload as QuestionPayload;
   return {
+    questionId: question.id,
     type: question.type,
     prompt: question.prompt,
     answer: question.answer,
@@ -166,12 +167,17 @@ export class QuizService {
   /**
    * Upserts a quiz's rounds/questions by `orderIndex`, deleting anything
    * trimmed off the end — shared by CSV import (`ImportService.confirm`) and
-   * the manual/CSV-then-edited quiz editor's Save.
+   * the manual/CSV-then-edited quiz editor's Save. Questions carrying a
+   * `questionId` (an existing DB row, reordered/moved by the editor) are
+   * upserted keyed by `id` instead, preserving that row's identity — see
+   * `parkIdKeyedQuestions` for why they're moved out of the way first.
    */
   async syncRoundsAndQuestions(
     quizId: number,
     rounds: ImportRoundPreview[],
   ): Promise<void> {
+    await this.parkIdKeyedQuestions(rounds);
+
     for (const [roundIndex, round] of rounds.entries()) {
       // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set
       // timestamps explicitly (see TeamService.addToRoster for the same fix).
@@ -214,20 +220,40 @@ export class QuizService {
             : {}),
         };
         const questionNow = new Date();
-        await this.questions.upsert(
-          {
-            round: roundRow.id,
-            orderIndex: questionIndex,
-            type: question.type,
-            prompt: question.prompt,
-            answer: question.answer,
-            notes: question.notes ?? null,
-            payload,
-            points: question.points,
-            createdAt: questionNow,
-            updatedAt: questionNow,
-          },
-          {
+        const questionData = {
+          round: roundRow.id,
+          orderIndex: questionIndex,
+          type: question.type,
+          prompt: question.prompt,
+          answer: question.answer,
+          notes: question.notes ?? null,
+          payload,
+          points: question.points,
+          createdAt: questionNow,
+          updatedAt: questionNow,
+        };
+
+        if (question.questionId !== undefined) {
+          await this.questions.upsert(
+            { id: question.questionId, ...questionData },
+            {
+              onConflictFields: ['id'],
+              onConflictAction: 'merge',
+              onConflictMergeFields: [
+                'round',
+                'orderIndex',
+                'type',
+                'prompt',
+                'answer',
+                'notes',
+                'payload',
+                'points',
+                'updatedAt',
+              ],
+            },
+          );
+        } else {
+          await this.questions.upsert(questionData, {
             onConflictFields: ['round', 'orderIndex'],
             onConflictAction: 'merge',
             onConflictMergeFields: [
@@ -239,8 +265,8 @@ export class QuizService {
               'points',
               'updatedAt',
             ],
-          },
-        );
+          });
+        }
       }
 
       await this.questions.nativeDelete({
@@ -253,5 +279,30 @@ export class QuizService {
       quiz: quizId,
       orderIndex: { $gte: rounds.length },
     });
+  }
+
+  /**
+   * Moves every id-keyed question to a temporary, collision-free
+   * `orderIndex` before the main sync loop repositions it. Without this, two
+   * existing questions swapping places (or one moving into a slot another
+   * still occupies) would upsert straight into a `(round, orderIndex)` pair
+   * still held by a different row and trip the unique constraint —
+   * content-only upserts never had this problem since they always rewrote
+   * the row already anchored to that exact grid cell.
+   */
+  private async parkIdKeyedQuestions(
+    rounds: ImportRoundPreview[],
+  ): Promise<void> {
+    let tempOrderIndex = -1;
+    for (const round of rounds) {
+      for (const question of round.questions) {
+        if (question.questionId === undefined) continue;
+        await this.questions.nativeUpdate(
+          { id: question.questionId },
+          { orderIndex: tempOrderIndex },
+        );
+        tempOrderIndex -= 1;
+      }
+    }
   }
 }

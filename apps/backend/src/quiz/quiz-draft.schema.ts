@@ -13,6 +13,7 @@ const httpUrl = z.url({
 });
 
 const baseQuestionFields = {
+  questionId: z.number().int().positive().optional(),
   prompt: z.string().min(1, 'Missing question text'),
   answer: z.string().min(1, 'Missing answer'),
   notes: z.string().optional(),
