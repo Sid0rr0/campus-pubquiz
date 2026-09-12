@@ -40,6 +40,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
+    title: 'Remote',
+    paragraphs: [
+      'From the Sessions page, the Remote link opens a phone-friendly companion page for a session — the current question’s notes, a preview of what’s up next, and Previous/Advance/leaderboard controls, so a moderator can walk the room instead of staying at the laptop.',
+      'It shares the same admin connection as Control, so actions taken from either one stay in sync with the other and with the display.',
+    ],
+  },
+  {
     title: 'Keyboard shortcuts',
     paragraphs: [
       'Available anywhere on the admin page except while typing in a form field (so grading a text answer never gets hijacked by a stray arrow key):',
