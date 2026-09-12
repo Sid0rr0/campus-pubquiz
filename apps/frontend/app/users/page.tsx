@@ -3,20 +3,23 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
-import { GuideContent } from '@/app/control/guide/guide-content';
+import { UsersPanel } from '@/app/users/users-panel';
 
-export default function GuidePage() {
+export default function UsersPage() {
   const auth = useAuth();
   const router = useRouter();
-  const isAuthenticated = auth.status === 'authenticated';
+  const isAdmin =
+    auth.status === 'authenticated' && auth.user?.role === 'admin';
 
   useEffect(() => {
     if (auth.status === 'unauthenticated' || auth.status === 'pending') {
+      router.replace('/login');
+    } else if (auth.status === 'authenticated' && auth.user?.role !== 'admin') {
       router.replace('/control');
     }
-  }, [auth.status, router]);
+  }, [auth.status, auth.user, router]);
 
-  if (!isAuthenticated) {
+  if (!isAdmin) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>
@@ -24,9 +27,5 @@ export default function GuidePage() {
     );
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
-      <GuideContent />
-    </main>
-  );
+  return <UsersPanel />;
 }

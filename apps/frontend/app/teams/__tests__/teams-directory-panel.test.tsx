@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TeamsDirectoryPanel } from '@/app/control/teams/teams-directory-panel';
+import { TeamsDirectoryPanel } from '@/app/teams/teams-directory-panel';
 import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchTeams } = vi.hoisted(() => ({

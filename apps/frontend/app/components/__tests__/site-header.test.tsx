@@ -117,7 +117,7 @@ describe('SiteHeader', () => {
     );
     expect(screen.getByRole('link', { name: /^teams$/i })).toHaveAttribute(
       'href',
-      '/control/teams',
+      '/teams',
     );
   });
 
@@ -129,7 +129,7 @@ describe('SiteHeader', () => {
 
     expect(screen.getByRole('link', { name: /^users$/i })).toHaveAttribute(
       'href',
-      '/control/users',
+      '/users',
     );
   });
 

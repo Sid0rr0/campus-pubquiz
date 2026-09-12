@@ -19,7 +19,7 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
   return (
     <>
       <span className="text-magenta">{user.username}</span>
-      <Link href="/control/guide" className="flex items-center gap-1 underline">
+      <Link href="/guide" className="flex items-center gap-1 underline">
         <QuestionMarkCircledIcon aria-hidden="true" />
         Guide
       </Link>
@@ -28,16 +28,13 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
         Sessions
       </Link>
 
-      <Link href="/control/teams" className="flex items-center gap-1 underline">
+      <Link href="/teams" className="flex items-center gap-1 underline">
         <PersonIcon aria-hidden="true" />
         Teams
       </Link>
 
       {user.role === 'admin' && (
-        <Link
-          href="/control/users"
-          className="flex items-center gap-1 underline"
-        >
+        <Link href="/users" className="flex items-center gap-1 underline">
           <GearIcon aria-hidden="true" />
           Users
         </Link>

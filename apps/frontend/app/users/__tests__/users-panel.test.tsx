@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UsersPanel } from '@/app/control/users/users-panel';
+import { UsersPanel } from '@/app/users/users-panel';
 import { renderWithQuery } from '@/test-utils/query';
 
 const { mockFetchUsers, mockApproveUser, mockDeactivateUser } = vi.hoisted(

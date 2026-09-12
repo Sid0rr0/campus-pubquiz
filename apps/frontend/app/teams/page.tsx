@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/use-auth';
-import { TeamsDirectoryPanel } from '@/app/control/teams/teams-directory-panel';
+import { TeamsDirectoryPanel } from '@/app/teams/teams-directory-panel';
 
 export default function TeamsPage() {
   const auth = useAuth();
@@ -12,7 +12,7 @@ export default function TeamsPage() {
 
   useEffect(() => {
     if (auth.status === 'unauthenticated' || auth.status === 'pending') {
-      router.replace('/control');
+      router.replace('/login');
     }
   }, [auth.status, router]);
 
