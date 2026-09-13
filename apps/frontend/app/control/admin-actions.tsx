@@ -1,8 +1,9 @@
 'use client';
 
 import {
-  BarChartIcon,
   Cross2Icon,
+  EyeClosedIcon,
+  EyeOpenIcon,
   PlayIcon,
   StopIcon,
 } from '@radix-ui/react-icons';
@@ -24,7 +25,7 @@ interface AdminActionsProps {
   className?: string;
 }
 
-/** Start Quiz, Open/Close Leaderboard (+ fullscreen/replay media controls), End Quiz, Close Session — everything but Previous/Advance. */
+/** Start Quiz, Leaderboard toggle (+ fullscreen/replay media controls), End Quiz, Close Session — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canEndQuiz,
@@ -55,8 +56,12 @@ export function AdminActions({
           onClick={() => onAction('TOGGLE_LEADERBOARD')}
           className="flex-1"
         >
-          <BarChartIcon aria-hidden="true" />
-          {isLeaderboardVisible ? 'Close Leaderboard' : 'Open Leaderboard'}
+          {isLeaderboardVisible ? (
+            <EyeClosedIcon aria-hidden="true" />
+          ) : (
+            <EyeOpenIcon aria-hidden="true" />
+          )}
+          Leaderboard
         </Button>
         <MediaFullscreenToggle
           isMediaFullscreen={isMediaFullscreen}

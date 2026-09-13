@@ -38,7 +38,7 @@ export function MediaFullscreenToggle({
       aria-pressed={isMediaFullscreen}
       onClick={() => onAction('TOGGLE_MEDIA_FULLSCREEN')}
       className={[
-        // Matches size="lg"'s min-h-11 (the Previous/Advance/Open Leaderboard
+        // Matches size="lg"'s min-h-11 (the Previous/Advance/Leaderboard
         // buttons this sits beside) — the icon-lg size preset is h-9, shorter.
         'flex h-11 w-11 shrink-0 items-center justify-center',
         tone === 'dark'

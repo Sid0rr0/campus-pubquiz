@@ -44,7 +44,7 @@ describe('AdminPage — leaderboard', () => {
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
   });
 
-  it('shows "Open Leaderboard" and sends TOGGLE_LEADERBOARD when hidden', async () => {
+  it('shows "Leaderboard" and sends TOGGLE_LEADERBOARD when hidden', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: { progress: progress(), currentQuestion: null },
@@ -54,13 +54,13 @@ describe('AdminPage — leaderboard', () => {
     renderWithQuery(<AdminPage />);
 
     await userEvent.click(
-      screen.getByRole('button', { name: /open leaderboard/i }),
+      screen.getByRole('button', { name: /^leaderboard$/i }),
     );
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
 
-  it('shows "Close Leaderboard" and sends TOGGLE_LEADERBOARD when visible', async () => {
+  it('still shows "Leaderboard" and sends TOGGLE_LEADERBOARD when visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: {
@@ -73,7 +73,7 @@ describe('AdminPage — leaderboard', () => {
     renderWithQuery(<AdminPage />);
 
     await userEvent.click(
-      screen.getByRole('button', { name: /close leaderboard/i }),
+      screen.getByRole('button', { name: /^leaderboard$/i }),
     );
 
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
