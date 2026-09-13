@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, question } from './test-utils';
@@ -154,6 +154,77 @@ describe('DisplayPage — question display', () => {
     render(<DisplayPage />);
 
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
+  });
+
+  it('switches to a two-column layout once a portrait image loads', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const row = screen.getByTestId('question-prompt-media-row');
+    expect(row).toHaveAttribute('data-layout', 'stacked');
+
+    const image = screen.getByTestId('question-image');
+    Object.defineProperty(image, 'naturalWidth', { value: 600 });
+    Object.defineProperty(image, 'naturalHeight', { value: 900 });
+    fireEvent.load(image);
+
+    expect(row).toHaveAttribute('data-layout', 'two-column');
+    expect(screen.getByText('Capital of France?')).toBeInTheDocument();
+    expect(screen.getByTestId('question-image')).toBeInTheDocument();
+  });
+
+  it('stays in the stacked layout once a landscape image loads', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const image = screen.getByTestId('question-image');
+    Object.defineProperty(image, 'naturalWidth', { value: 900 });
+    Object.defineProperty(image, 'naturalHeight', { value: 600 });
+    fireEvent.load(image);
+
+    expect(screen.getByTestId('question-prompt-media-row')).toHaveAttribute(
+      'data-layout',
+      'stacked',
+    );
+  });
+
+  it('stays in the stacked layout for a portrait image while fullscreen', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({
+          status: 'question_open',
+          isMediaFullscreen: true,
+        }),
+        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const image = screen.getByTestId('question-image');
+    Object.defineProperty(image, 'naturalWidth', { value: 600 });
+    Object.defineProperty(image, 'naturalHeight', { value: 900 });
+    fireEvent.load(image);
+
+    expect(screen.getByTestId('question-prompt-media-row')).toHaveAttribute(
+      'data-layout',
+      'stacked',
+    );
   });
 
   it('shows how many teams have answered the open question', () => {

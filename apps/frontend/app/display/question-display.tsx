@@ -1,3 +1,4 @@
+import { useState, type SyntheticEvent } from 'react';
 import {
   extractYoutubeVideoId,
   splitPipeList,
@@ -200,9 +201,74 @@ export function QuestionDisplay({
       ? undefined
       : rawQuestionMediaUrl;
 
+  // Detected once the <img> actually loads — naturalWidth/naturalHeight
+  // reflect the real pixel dimensions regardless of CSS scaling. Reset
+  // whenever the media changes (tracked here rather than in an effect, so
+  // the stale orientation never paints even for one frame) so it can't leak
+  // from the previous question into this one before the new image loads.
+  const [questionImageOrientation, setQuestionImageOrientation] = useState<
+    'portrait' | 'landscape' | null
+  >(null);
+  const [orientationTrackedUrl, setOrientationTrackedUrl] =
+    useState(questionMediaUrl);
+  if (orientationTrackedUrl !== questionMediaUrl) {
+    setOrientationTrackedUrl(questionMediaUrl);
+    setQuestionImageOrientation(null);
+  }
+
+  function handleQuestionImageLoad(event: SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    setQuestionImageOrientation(
+      naturalHeight > naturalWidth ? 'portrait' : 'landscape',
+    );
+  }
+
+  // Side-by-side answer reveal and fullscreen already have their own
+  // deliberate layouts — the two-column treatment only applies to a plain
+  // question image shown inline.
+  const isPlainQuestionImage =
+    questionMediaUrl !== undefined &&
+    !questionYoutubeId &&
+    !isAudioUrl(questionMediaUrl) &&
+    !showSideBySideReveal;
+  const showTwoColumnLayout =
+    isPlainQuestionImage &&
+    !isFullscreen &&
+    questionImageOrientation === 'portrait';
+
   return (
     <>
-      <h1 className={promptClassName}>{prompt}</h1>
+      <div
+        data-testid={`${mediaTestIdPrefix}-prompt-media-row`}
+        data-layout={showTwoColumnLayout ? 'two-column' : 'stacked'}
+        className={
+          showTwoColumnLayout
+            ? 'flex w-full min-h-0 flex-1 items-center gap-8'
+            : 'contents'
+        }
+      >
+        <h1
+          className={
+            showTwoColumnLayout
+              ? `${promptClassName} flex-1 text-left`
+              : promptClassName
+          }
+        >
+          {prompt}
+        </h1>
+        {showTwoColumnLayout && (
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
+            <img
+              data-testid={`${mediaTestIdPrefix}-image`}
+              src={questionMediaUrl}
+              alt="Question image"
+              onLoad={handleQuestionImageLoad}
+              className="max-h-full max-w-full rounded-xl object-contain"
+            />
+          </div>
+        )}
+      </div>
       {questionMediaUrl && questionYoutubeId && (
         <div
           className={
@@ -249,6 +315,7 @@ export function QuestionDisplay({
       {questionMediaUrl &&
         !questionYoutubeId &&
         !isAudioUrl(questionMediaUrl) &&
+        !showTwoColumnLayout &&
         (showSideBySideReveal ? (
           <div className="flex w-full min-h-0 flex-1 items-stretch justify-center gap-6">
             <div className="flex min-h-0 min-w-0 flex-2 items-center justify-center">
@@ -282,6 +349,7 @@ export function QuestionDisplay({
               data-testid={`${mediaTestIdPrefix}-image`}
               src={questionMediaUrl}
               alt="Question image"
+              onLoad={handleQuestionImageLoad}
               className="max-h-full max-w-full rounded-xl object-contain"
             />
           </div>
