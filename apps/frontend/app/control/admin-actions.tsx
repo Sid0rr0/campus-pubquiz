@@ -10,6 +10,7 @@ import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
+import { ReplayMediaButton } from '@/app/control/replay-media-button';
 
 interface AdminActionsProps {
   canStartQuiz: boolean;
@@ -17,18 +18,20 @@ interface AdminActionsProps {
   canCloseSession: boolean;
   isLeaderboardVisible: boolean;
   isMediaFullscreen: boolean;
+  canReplayMedia: boolean;
   onAction: (action: GameAction) => void;
   onCloseSession: () => void;
   className?: string;
 }
 
-/** Start Quiz, Open/Close Leaderboard (+ fullscreen media toggle), End Quiz, Close Session — everything but Previous/Advance. */
+/** Start Quiz, Open/Close Leaderboard (+ fullscreen/replay media controls), End Quiz, Close Session — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canEndQuiz,
   canCloseSession,
   isLeaderboardVisible,
   isMediaFullscreen,
+  canReplayMedia,
   onAction,
   onCloseSession,
   className = '',
@@ -57,6 +60,11 @@ export function AdminActions({
         </Button>
         <MediaFullscreenToggle
           isMediaFullscreen={isMediaFullscreen}
+          onAction={onAction}
+          tone="dark"
+        />
+        <ReplayMediaButton
+          canReplay={canReplayMedia}
           onAction={onAction}
           tone="dark"
         />

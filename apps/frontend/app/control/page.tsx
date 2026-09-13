@@ -20,6 +20,7 @@ import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { useAuth } from '@/app/lib/use-auth';
+import { isYoutubeMediaUrl } from '@/app/display/question-display';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
@@ -435,6 +436,11 @@ function AdminPageContent() {
     progress.status === 'question_open' || progress.status === 'locking';
   const canEndQuiz = progress.status !== 'ended';
   const canCloseSession = progress.status === 'ended';
+  // currentQuestion (and with it its own media) is only populated while a
+  // question is actually open on /display — see getCurrentQuestion.
+  const canReplayMedia =
+    progress.status === 'question_open' &&
+    isYoutubeMediaUrl(currentQuestion?.mediaUrl);
   // Lets the admin pre-set the break end-time while still on the block's
   // last question, so it's already in place once the break screen appears —
   // see BreakEndTimeControl.
@@ -463,6 +469,7 @@ function AdminPageContent() {
         leaderboardRevealCount={leaderboardRevealCount}
         leaderboardTeamCount={leaderboard.length}
         isMediaFullscreen={progress.isMediaFullscreen ?? false}
+        canReplayMedia={canReplayMedia}
         onAction={sendAction}
         onCloseSession={handleCloseSession}
         teams={teams}
@@ -498,6 +505,7 @@ function AdminPageContent() {
         leaderboardRevealCount={leaderboardRevealCount}
         leaderboardTeamCount={leaderboard.length}
         isMediaFullscreen={progress.isMediaFullscreen ?? false}
+        canReplayMedia={canReplayMedia}
         onAction={sendAction}
         onCloseSession={handleCloseSession}
         teams={teams}

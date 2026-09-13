@@ -39,6 +39,7 @@ export function MobileAdminBar({
   leaderboardRevealCount,
   leaderboardTeamCount,
   isMediaFullscreen,
+  canReplayMedia,
   onAction,
   onCloseSession,
   teams,
@@ -119,6 +120,7 @@ export function MobileAdminBar({
               canCloseSession={canCloseSession}
               isLeaderboardVisible={isLeaderboardVisible}
               isMediaFullscreen={isMediaFullscreen}
+              canReplayMedia={canReplayMedia}
               onAction={handleDrawerAction}
               onCloseSession={handleDrawerCloseSession}
             />

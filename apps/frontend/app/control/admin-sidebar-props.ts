@@ -23,6 +23,7 @@ export interface AdminSidebarProps {
   leaderboardRevealCount: number;
   leaderboardTeamCount: number;
   isMediaFullscreen: boolean;
+  canReplayMedia: boolean;
   onAction: (action: GameAction) => void;
   onCloseSession: () => void;
   teams: TeamView[];

@@ -342,6 +342,51 @@ describe('RemotePage — content', () => {
     expect(screen.queryByText(/teams answered/i)).not.toBeInTheDocument();
   });
 
+  it('shows a Play Again button for an open YouTube question and dispatches REPLAY_MEDIA', () => {
+    const sendAction = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 55,
+          type: 'free_text',
+          prompt: 'Name this music video.',
+          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        },
+      }),
+      connectionError: null,
+      sendAction,
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /play video again/i }));
+
+    expect(sendAction).toHaveBeenCalledWith('REPLAY_MEDIA');
+  });
+
+  it('hides the Play Again button for a non-YouTube question', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 55,
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London'],
+        },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(
+      screen.queryByRole('button', { name: /play video again/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders no grading, team, or leaderboard controls', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: baseSnapshot(),

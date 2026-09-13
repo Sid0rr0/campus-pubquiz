@@ -19,7 +19,8 @@ export type GameAction =
   | 'END_QUIZ'
   | 'TOGGLE_LEADERBOARD'
   | 'REVEAL_NEXT_TEAM'
-  | 'TOGGLE_MEDIA_FULLSCREEN';
+  | 'TOGGLE_MEDIA_FULLSCREEN'
+  | 'REPLAY_MEDIA';
 
 export interface RoundConfig {
   questionCount: number;
@@ -58,6 +59,15 @@ export interface GameProgress {
    * the codebase don't all need updating; undefined behaves as false.
    */
   isMediaFullscreen?: boolean;
+  /**
+   * Bumped by REPLAY_MEDIA — /display remounts the current question's
+   * YouTube iframe whenever this changes, restarting playback from the
+   * beginning. Just a monotonic counter, not a boolean, so repeated replays
+   * (same value would otherwise no-op) always trigger a remount. Optional,
+   * like isMediaFullscreen, so existing GameProgress literals don't all need
+   * updating; undefined behaves as 0.
+   */
+  mediaReplayToken?: number;
   /**
    * Position within the just-finished block's flattened question list,
    * shown one at a time (same layout as question_open) during reveal, or

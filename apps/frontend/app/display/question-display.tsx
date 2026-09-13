@@ -28,6 +28,15 @@ export function isHttpUrl(url: string): boolean {
   return HTTP_URL_PATTERN.test(url);
 }
 
+/** Whether `url` is an http(s) URL that resolves to an embeddable YouTube video — the same inference QuestionDisplay uses to pick the iframe branch, exposed so /control and /remote can decide whether a "Play again" action has anything to act on. */
+export function isYoutubeMediaUrl(url: string | undefined): boolean {
+  return (
+    url !== undefined &&
+    isHttpUrl(url) &&
+    extractYoutubeVideoId(url) !== undefined
+  );
+}
+
 function buildYoutubeEmbedSrc(
   videoId: string,
   autoplay: boolean,
@@ -125,6 +134,8 @@ interface QuestionDisplayProps {
   promptClassName?: string;
   /** Admin-toggled (spacebar in /control) full-viewport overlay of the question's own image/YouTube media — see GameProgress.isMediaFullscreen. No-op when there's no question media to enlarge. */
   isFullscreen?: boolean;
+  /** GameProgress.mediaReplayToken — bumped by REPLAY_MEDIA. Folded into the YouTube iframe's `key` so incrementing it remounts the iframe and restarts playback; left out of the key the rest of the time so fullscreen toggling (which doesn't change this) keeps the same iframe per the comment below. */
+  mediaReplayToken?: number;
 }
 
 // Shared by question_open and reveal so the big screen shows each question
@@ -144,6 +155,7 @@ export function QuestionDisplay({
   autoplayMedia = true,
   promptClassName = 'text-balance font-display text-[calc(2.25rem*var(--display-text-scale,1))] leading-snug',
   isFullscreen = false,
+  mediaReplayToken = 0,
 }: QuestionDisplayProps) {
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
@@ -289,6 +301,7 @@ export function QuestionDisplay({
             }
           >
             <iframe
+              key={mediaReplayToken}
               data-testid={`${mediaTestIdPrefix}-youtube`}
               src={buildYoutubeEmbedSrc(
                 questionYoutubeId,

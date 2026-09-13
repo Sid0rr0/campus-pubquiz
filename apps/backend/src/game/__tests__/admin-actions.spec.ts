@@ -112,6 +112,25 @@ describe('GameGateway — admin actions', () => {
     );
   });
 
+  it('replays media and broadcasts the bumped mediaReplayToken', async () => {
+    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
+      token: TEST_SESSION_TOKEN,
+    });
+    await gateway.handleConnection(asSocket(admin));
+
+    await gateway.handleAdminAction(asSocket(admin), {
+      action: 'REPLAY_MEDIA',
+    });
+
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.STATE_UPDATED,
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
+        progress: expect.objectContaining({ mediaReplayToken: 1 }),
+      }),
+    );
+  });
+
   it('rejects an admin action from a non-admin client without broadcasting', async () => {
     const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
     await gateway.handleConnection(asSocket(display));

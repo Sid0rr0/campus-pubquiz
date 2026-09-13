@@ -206,6 +206,62 @@ describe('getNextGameState — media fullscreen', () => {
   });
 });
 
+describe('getNextGameState — media replay', () => {
+  it('bumps mediaReplayToken from undefined to 1', () => {
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      open,
+      'REPLAY_MEDIA',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...open, mediaReplayToken: 1 });
+  });
+
+  it('increments mediaReplayToken on repeated replays', () => {
+    const open: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+      mediaReplayToken: 1,
+    };
+    const next = getNextGameState(
+      open,
+      'REPLAY_MEDIA',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.mediaReplayToken).toBe(2);
+  });
+
+  it('does not clear an active media fullscreen when replaying', () => {
+    const openFullscreen: GameProgress = {
+      status: 'question_open',
+      roundIndex: 0,
+      questionIndex: 0,
+      isLeaderboardVisible: false,
+      isMediaFullscreen: true,
+      revealIndex: 0,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      openFullscreen,
+      'REPLAY_MEDIA',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaFullscreen).toBe(true);
+    expect(next.mediaReplayToken).toBe(1);
+  });
+});
+
 describe('getNextGameState — illegal transitions and config guards', () => {
   it('rejects advancing from the lobby', () => {
     expect(() =>

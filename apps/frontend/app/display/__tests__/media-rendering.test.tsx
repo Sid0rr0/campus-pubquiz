@@ -214,4 +214,36 @@ describe('DisplayPage — media rendering', () => {
 
     expect(screen.getByTestId('question-youtube')).toBe(iframeBeforeToggle);
   });
+
+  it('remounts the YouTube iframe when mediaReplayToken changes, restarting playback', () => {
+    const currentQuestion = {
+      id: 'r4q1',
+      type: 'free_text' as const,
+      prompt: 'Name this music video.',
+      mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      points: 3,
+    };
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open', mediaReplayToken: 1 }),
+        currentQuestion,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    const { rerender } = render(<DisplayPage />);
+    const iframeBeforeReplay = screen.getByTestId('question-youtube');
+
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'question_open', mediaReplayToken: 2 }),
+        currentQuestion,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    rerender(<DisplayPage />);
+
+    expect(screen.getByTestId('question-youtube')).not.toBe(iframeBeforeReplay);
+  });
 });

@@ -308,6 +308,7 @@ function DisplayPageContent() {
                   totalTeams={teams.length}
                   autoplayMedia={settings.autoplayMedia}
                   isFullscreen={progress.isMediaFullscreen}
+                  mediaReplayToken={progress.mediaReplayToken}
                 />
               )}
               {progress.status === 'locking' && questionLockAt !== null && (

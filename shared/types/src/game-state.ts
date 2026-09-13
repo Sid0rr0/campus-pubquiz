@@ -44,6 +44,16 @@ export function getNextGameState(
     };
   }
 
+  // A monotonic counter rather than a boolean toggle so /display can react
+  // to it with a `key` change — doesn't touch isMediaFullscreen, since
+  // replaying the video shouldn't exit fullscreen if it's already on.
+  if (action === 'REPLAY_MEDIA') {
+    return {
+      ...progress,
+      mediaReplayToken: (progress.mediaReplayToken ?? 0) + 1,
+    };
+  }
+
   // The fullscreen view is tied to whatever's currently on screen, so any
   // other action closes it rather than leaving it stuck over unrelated
   // content — every branch below spreads ...progress, so reassigning the

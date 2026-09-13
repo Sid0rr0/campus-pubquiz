@@ -26,6 +26,7 @@ export function DesktopSidebar({
   leaderboardRevealCount,
   leaderboardTeamCount,
   isMediaFullscreen,
+  canReplayMedia,
   onAction,
   onCloseSession,
   teams,
@@ -69,6 +70,7 @@ export function DesktopSidebar({
           canCloseSession={canCloseSession}
           isLeaderboardVisible={isLeaderboardVisible}
           isMediaFullscreen={isMediaFullscreen}
+          canReplayMedia={canReplayMedia}
           onAction={onAction}
           onCloseSession={onCloseSession}
         />

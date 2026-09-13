@@ -7,6 +7,7 @@ interface QuestionOpenScreenProps {
   totalTeams: number;
   autoplayMedia?: boolean;
   isFullscreen?: boolean;
+  mediaReplayToken?: number;
 }
 
 export function QuestionOpenScreen({
@@ -15,6 +16,7 @@ export function QuestionOpenScreen({
   totalTeams,
   autoplayMedia,
   isFullscreen,
+  mediaReplayToken,
 }: QuestionOpenScreenProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col px-16 py-8 text-center">
@@ -30,6 +32,7 @@ export function QuestionOpenScreen({
           mediaTestIdPrefix="question"
           autoplayMedia={autoplayMedia}
           isFullscreen={isFullscreen}
+          mediaReplayToken={mediaReplayToken}
         />
       </div>
       {totalTeams > 0 && (

@@ -11,6 +11,8 @@ import { useAuth } from '@/app/lib/use-auth';
 import { getAdvanceGating } from '@/app/control/advance-gating';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
+import { ReplayMediaButton } from '@/app/control/replay-media-button';
+import { isYoutubeMediaUrl } from '@/app/display/question-display';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
@@ -151,12 +153,18 @@ function RemotePageContent() {
   const {
     progress,
     joinCode,
+    currentQuestion,
     teams = [],
     answeredTeamIds = [],
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
   } = snapshot;
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
+  // currentQuestion (and with it its own media) is only populated while a
+  // question is actually open on /display — see getCurrentQuestion.
+  const canReplayMedia =
+    gameStatus === 'question_open' &&
+    isYoutubeMediaUrl(currentQuestion?.mediaUrl);
   const showAnswerStatus =
     gameStatus === 'question_open' || gameStatus === 'locking';
   const hasActiveShowdown = snapshot.activeShowdown != null;
@@ -245,6 +253,7 @@ function RemotePageContent() {
             isMediaFullscreen={isMediaFullscreen}
             onAction={sendAction}
           />
+          <ReplayMediaButton canReplay={canReplayMedia} onAction={sendAction} />
         </NavigationButtons>
       </div>
     </main>
