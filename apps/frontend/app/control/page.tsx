@@ -462,6 +462,7 @@ function AdminPageContent() {
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
         leaderboardTeamCount={leaderboard.length}
+        isMediaFullscreen={progress.isMediaFullscreen ?? false}
         onAction={sendAction}
         onCloseSession={handleCloseSession}
         teams={teams}
@@ -496,6 +497,7 @@ function AdminPageContent() {
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
         leaderboardTeamCount={leaderboard.length}
+        isMediaFullscreen={progress.isMediaFullscreen ?? false}
         onAction={sendAction}
         onCloseSession={handleCloseSession}
         teams={teams}

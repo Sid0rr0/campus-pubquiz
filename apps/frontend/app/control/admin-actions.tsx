@@ -9,23 +9,26 @@ import {
 import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
+import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 
 interface AdminActionsProps {
   canStartQuiz: boolean;
   canEndQuiz: boolean;
   canCloseSession: boolean;
   isLeaderboardVisible: boolean;
+  isMediaFullscreen: boolean;
   onAction: (action: GameAction) => void;
   onCloseSession: () => void;
   className?: string;
 }
 
-/** Start Quiz, Open/Close Leaderboard, End Quiz, Close Session — everything but Previous/Advance. */
+/** Start Quiz, Open/Close Leaderboard (+ fullscreen media toggle), End Quiz, Close Session — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canEndQuiz,
   canCloseSession,
   isLeaderboardVisible,
+  isMediaFullscreen,
   onAction,
   onCloseSession,
   className = '',
@@ -42,14 +45,22 @@ export function AdminActions({
           Start Quiz
         </Button>
       )}
-      <Button
-        variant="outline"
-        size="lg"
-        onClick={() => onAction('TOGGLE_LEADERBOARD')}
-      >
-        <BarChartIcon aria-hidden="true" />
-        {isLeaderboardVisible ? 'Close Leaderboard' : 'Open Leaderboard'}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => onAction('TOGGLE_LEADERBOARD')}
+          className="flex-1"
+        >
+          <BarChartIcon aria-hidden="true" />
+          {isLeaderboardVisible ? 'Close Leaderboard' : 'Open Leaderboard'}
+        </Button>
+        <MediaFullscreenToggle
+          isMediaFullscreen={isMediaFullscreen}
+          onAction={onAction}
+          tone="dark"
+        />
+      </div>
       {canEndQuiz && (
         <ConfirmDialog
           trigger={

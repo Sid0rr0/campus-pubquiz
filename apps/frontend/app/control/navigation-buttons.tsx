@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import type { GameAction, GameStatus } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -13,6 +14,8 @@ interface NavigationButtonsProps {
   leaderboardTeamCount: number;
   onAction: (action: GameAction) => void;
   className?: string;
+  /** Rendered between the Previous and Advance buttons — e.g. /remote's MediaFullscreenToggle. */
+  children?: ReactNode;
 }
 
 function getAdvanceLabel(progressStatus: GameStatus): string {
@@ -38,6 +41,7 @@ export function NavigationButtons({
   leaderboardTeamCount,
   onAction,
   className = '',
+  children,
 }: NavigationButtonsProps) {
   // While the board is up, Advance takes over revealing teams one at a time;
   // once every team has been shown, it hides the board instead of sitting
@@ -78,6 +82,7 @@ export function NavigationButtons({
           Previous
         </Button>
       )}
+      {children}
       {showAdvanceSlot && (
         <Button
           variant="outline"

@@ -38,6 +38,7 @@ export function MobileAdminBar({
   isLeaderboardVisible,
   leaderboardRevealCount,
   leaderboardTeamCount,
+  isMediaFullscreen,
   onAction,
   onCloseSession,
   teams,
@@ -117,6 +118,7 @@ export function MobileAdminBar({
               canEndQuiz={canEndQuiz}
               canCloseSession={canCloseSession}
               isLeaderboardVisible={isLeaderboardVisible}
+              isMediaFullscreen={isMediaFullscreen}
               onAction={handleDrawerAction}
               onCloseSession={handleDrawerCloseSession}
             />

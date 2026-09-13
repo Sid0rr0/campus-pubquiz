@@ -10,6 +10,7 @@ import { useGameSocket } from '@/app/lib/use-game-socket';
 import { useAuth } from '@/app/lib/use-auth';
 import { getAdvanceGating } from '@/app/control/advance-gating';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
+import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
@@ -154,6 +155,7 @@ function RemotePageContent() {
     answeredTeamIds = [],
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
   } = snapshot;
+  const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
   const showAnswerStatus =
     gameStatus === 'question_open' || gameStatus === 'locking';
@@ -238,7 +240,12 @@ function RemotePageContent() {
           leaderboardRevealCount={leaderboardRevealCount}
           leaderboardTeamCount={leaderboardTeamCount}
           onAction={sendAction}
-        />
+        >
+          <MediaFullscreenToggle
+            isMediaFullscreen={isMediaFullscreen}
+            onAction={sendAction}
+          />
+        </NavigationButtons>
       </div>
     </main>
   );
