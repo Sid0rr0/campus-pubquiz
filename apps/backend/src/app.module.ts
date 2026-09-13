@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { AuthController } from '@/auth/auth.controller';
@@ -28,6 +30,9 @@ import { ShowdownService } from '@/showdown/showdown.service';
 
 @Module({
   imports: [
+    // Must be the first module so Sentry's request-tracing hooks wrap
+    // everything else Nest registers.
+    SentryModule.forRoot(),
     // Only applied where routes opt in via @UseGuards(ThrottlerGuard) — the
     // login/register endpoints, which are now real password-based auth
     // targets rather than a single shared secret.
@@ -48,6 +53,9 @@ import { ShowdownService } from '@/showdown/showdown.service';
     BonusAwardMutationsController,
   ],
   providers: [
+    // Must be registered before any other exception filters so Sentry sees
+    // unhandled errors before a custom filter can swallow them.
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
     AppService,
     SeedService,
     TeamService,
