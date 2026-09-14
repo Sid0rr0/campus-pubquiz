@@ -199,9 +199,12 @@ export function toSaveRequest(
 ): QuizDraftSaveRequest {
   return {
     title: title.trim(),
-    rounds: rounds.map((round) => ({
+    rounds: rounds.map((round, index) => ({
       title: round.title.trim(),
-      breakAfter: round.breakAfter,
+      // The state machine has no way to reveal answers otherwise, so the
+      // last round's break is always forced on — see quiz.service.ts's
+      // forceLastRoundBreak, which enforces this again server-side.
+      breakAfter: index === rounds.length - 1 ? true : round.breakAfter,
       kahootMode: round.kahootMode,
       questions: round.questions.map(questionToPreview),
     })),

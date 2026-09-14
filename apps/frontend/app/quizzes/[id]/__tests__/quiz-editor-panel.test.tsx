@@ -317,7 +317,7 @@ describe('QuizEditorPanel', () => {
         rounds: [
           {
             title: 'Round 1',
-            breakAfter: false,
+            breakAfter: true,
             kahootMode: false,
             questions: [
               {

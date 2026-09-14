@@ -289,6 +289,19 @@ describe('QuizService (Postgres integration)', () => {
       await expect(em.find(Quiz, {})).resolves.toEqual([]);
     });
 
+    it("forces the last round's breakAfter to true even when submitted false, leaving earlier rounds as given", async () => {
+      const result = await quizService.create('Trivia Night', [
+        { ...VALID_ROUND, title: 'Round 1', breakAfter: false },
+        { ...VALID_ROUND, title: 'Round 2', breakAfter: false },
+      ]);
+
+      const draft = await quizService.findDraftById(result.quizId);
+      expect(draft?.rounds.map((round) => round.breakAfter)).toEqual([
+        false,
+        true,
+      ]);
+    });
+
     it('derives a YouTube clip range from notes into the question payload', async () => {
       const result = await quizService.create('Trivia Night', [
         {

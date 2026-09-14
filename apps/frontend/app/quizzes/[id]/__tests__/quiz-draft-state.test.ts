@@ -265,7 +265,7 @@ describe('toSaveRequest', () => {
       rounds: [
         {
           title: 'History',
-          breakAfter: false,
+          breakAfter: true,
           kahootMode: false,
           questions: [
             {
@@ -278,6 +278,24 @@ describe('toSaveRequest', () => {
         },
       ],
     });
+  });
+
+  it('forces breakAfter true on the last round even when unset, leaving earlier rounds as authored', () => {
+    const first = makeRound('r1', 'Round 1');
+    first.breakAfter = false;
+    first.questions = [
+      { ...makeQuestion('q1'), type: 'free_text', correctText: 'A' },
+    ];
+    const last = makeRound('r2', 'Round 2');
+    last.breakAfter = false;
+    last.questions = [
+      { ...makeQuestion('q2'), type: 'free_text', correctText: 'B' },
+    ];
+
+    const request = toSaveRequest('Trivia Night', [first, last]);
+
+    expect(request.rounds[0].breakAfter).toBe(false);
+    expect(request.rounds[1].breakAfter).toBe(true);
   });
 
   it('carries a true kahootMode through to the save request', () => {

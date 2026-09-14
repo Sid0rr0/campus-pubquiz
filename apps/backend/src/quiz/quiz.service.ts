@@ -67,6 +67,22 @@ export class QuizNotFoundError extends Error {
   }
 }
 
+/**
+ * The state machine has no way to reveal answers otherwise, so the last
+ * round's break is always forced on regardless of what was submitted —
+ * mirrors `assembleImportPreview`'s forcing (which only covers the CSV/Sheets
+ * preview step), but this is the one place both the manual quiz editor and
+ * import-confirm ultimately save through, so it's the actual guarantee.
+ */
+function forceLastRoundBreak(
+  rounds: ImportRoundPreview[],
+): ImportRoundPreview[] {
+  return rounds.map((round, index) => ({
+    ...round,
+    breakAfter: index === rounds.length - 1 ? true : round.breakAfter,
+  }));
+}
+
 @Injectable()
 export class QuizService {
   constructor(
@@ -124,14 +140,15 @@ export class QuizService {
     title: string,
     rounds: ImportRoundPreview[],
   ): Promise<QuizDraftSaveResult> {
-    const issues = validateQuizDraft({ title, rounds });
+    const normalizedRounds = forceLastRoundBreak(rounds);
+    const issues = validateQuizDraft({ title, rounds: normalizedRounds });
     if (issues.length > 0) throw new QuizDraftInvalidError(issues);
 
     const quiz = this.quizzes.create({ title: title.trim() });
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
-    await this.syncRoundsAndQuestions(quiz.id, rounds);
+    await this.syncRoundsAndQuestions(quiz.id, normalizedRounds);
 
-    return this.toSaveResult(quiz.id, rounds);
+    return this.toSaveResult(quiz.id, normalizedRounds);
   }
 
   async update(
@@ -139,7 +156,8 @@ export class QuizService {
     title: string,
     rounds: ImportRoundPreview[],
   ): Promise<QuizDraftSaveResult> {
-    const issues = validateQuizDraft({ title, rounds });
+    const normalizedRounds = forceLastRoundBreak(rounds);
+    const issues = validateQuizDraft({ title, rounds: normalizedRounds });
     if (issues.length > 0) throw new QuizDraftInvalidError(issues);
 
     const quiz = await this.quizzes.findOne({ id: quizId });
@@ -147,9 +165,9 @@ export class QuizService {
 
     quiz.title = title.trim();
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
-    await this.syncRoundsAndQuestions(quizId, rounds);
+    await this.syncRoundsAndQuestions(quizId, normalizedRounds);
 
-    return this.toSaveResult(quizId, rounds);
+    return this.toSaveResult(quizId, normalizedRounds);
   }
 
   private toSaveResult(

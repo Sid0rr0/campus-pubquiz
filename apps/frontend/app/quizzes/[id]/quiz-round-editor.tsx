@@ -92,10 +92,18 @@ export function QuizRoundEditor({
           placeholder="Round title"
           className="min-w-0 flex-1 rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-extrabold text-foreground"
         />
-        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+        <label
+          className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
+          title={
+            isLast
+              ? 'The last round always breaks so answers can be revealed'
+              : undefined
+          }
+        >
           <input
             type="checkbox"
-            checked={round.breakAfter}
+            checked={isLast || round.breakAfter}
+            disabled={isLast}
             onChange={(event) => onChange({ breakAfter: event.target.checked })}
             className="h-4 w-4"
           />
