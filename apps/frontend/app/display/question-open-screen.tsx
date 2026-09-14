@@ -1,5 +1,6 @@
 import type { QuestionView } from '@campus-pubquiz/types';
 import { QuestionDisplay } from '@/app/display/question-display';
+import { QuestionLockCountdown } from '@/app/display/question-lock-countdown';
 
 interface QuestionOpenScreenProps {
   question: QuestionView;
@@ -8,6 +9,8 @@ interface QuestionOpenScreenProps {
   autoplayMedia?: boolean;
   isFullscreen?: boolean;
   mediaReplayToken?: number;
+  /** Epoch-ms deadline when a kahootMode question auto-locks, or null/undefined when no timer is armed. */
+  kahootQuestionEndsAt?: number | null;
 }
 
 export function QuestionOpenScreen({
@@ -17,9 +20,16 @@ export function QuestionOpenScreen({
   autoplayMedia,
   isFullscreen,
   mediaReplayToken,
+  kahootQuestionEndsAt,
 }: QuestionOpenScreenProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col px-16 py-8 text-center">
+      {kahootQuestionEndsAt != null && (
+        <QuestionLockCountdown
+          key={`kahoot-ring-${kahootQuestionEndsAt}`}
+          lockAt={kahootQuestionEndsAt}
+        />
+      )}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8">
         <QuestionDisplay
           type={question.type}

@@ -73,6 +73,36 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('fires onChange with an updated kahootQuestionTimerSeconds', async () => {
+    const onChange = vi.fn();
+    renderControlled(DEFAULT_SESSION_SETTINGS, onChange);
+
+    const input = screen.getByLabelText(/kahoot question timer/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, '45');
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      kahootQuestionTimerSeconds: 45,
+    });
+  });
+
+  it('clears kahootQuestionTimerSeconds to null when the input is emptied', async () => {
+    const onChange = vi.fn();
+    renderControlled(
+      { ...DEFAULT_SESSION_SETTINGS, kahootQuestionTimerSeconds: 30 },
+      onChange,
+    );
+
+    const input = screen.getByLabelText(/kahoot question timer/i);
+    await userEvent.clear(input);
+
+    expect(onChange).toHaveBeenLastCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      kahootQuestionTimerSeconds: null,
+    });
+  });
+
   it('toggles a bonus category off', async () => {
     const onChange = vi.fn();
     render(

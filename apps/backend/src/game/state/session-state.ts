@@ -24,6 +24,8 @@ export interface SessionState {
   progress: GameProgress;
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   questionLockAt: number | null;
+  /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed — see computeKahootQuestionEndsAt. */
+  kahootQuestionEndsAt: number | null;
   /** Epoch-ms time the admin expects the break to end, or null when unset — see StateSnapshotPayload.breakEndsAt. */
   breakEndsAt: number | null;
   /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
@@ -122,6 +124,13 @@ export function freshSessionState(
       progress,
       seededGame.settings.lockGraceSeconds * 1000,
     ),
+    kahootQuestionEndsAt: computeKahootQuestionEndsAt(
+      progress,
+      contextFromSeededGame(seededGame),
+      seededGame.settings.kahootQuestionTimerSeconds,
+      livePhaseKey,
+      livePhaseKey !== null ? Date.now() : null,
+    ),
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     livePhaseKey,
@@ -151,6 +160,32 @@ export function computeQuestionLockAt(
   lockDurationMs: number,
 ): number | null {
   return progress.status === 'locking' ? Date.now() + lockDurationMs : null;
+}
+
+/**
+ * Recomputes the kahoot question auto-lock deadline: armed only while
+ * `question_open` IS the live frontier phase (not a Previous-revisited
+ * historical question — same displayedKey === livePhaseKey check
+ * resolveCurrentPhaseTimerView uses) in a kahootMode round, with a
+ * non-null per-session timer configured. Anchored to phaseStartedAt (the
+ * moment this question genuinely opened) rather than Date.now(), since —
+ * unlike computeQuestionLockAt's 'locking' countdown, which is always a
+ * fresh restart — this deadline has a real persisted anchor to stay
+ * accurate against (including across a backend restart).
+ */
+export function computeKahootQuestionEndsAt(
+  progress: GameProgress,
+  context: GameContext,
+  kahootQuestionTimerSeconds: number | null,
+  livePhaseKey: string | null,
+  phaseStartedAt: number | null,
+): number | null {
+  if (progress.status !== 'question_open') return null;
+  if (kahootQuestionTimerSeconds === null) return null;
+  if (!context.rounds[progress.roundIndex]?.kahootMode) return null;
+  if (phaseStartedAt === null) return null;
+  if (getTimedPhaseKey(progress, context) !== livePhaseKey) return null;
+  return phaseStartedAt + kahootQuestionTimerSeconds * 1000;
 }
 
 export function getGameContext(session: SessionState): GameContext {

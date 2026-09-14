@@ -75,6 +75,7 @@ function snapshot(
     joinCode: 'GHIJKL',
     teams: [],
     questionLockAt: null,
+    kahootQuestionEndsAt: null,
     closestGuessRevealStep: 0,
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,

@@ -77,6 +77,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
       }),
     ),
     questionLockAt: session.questionLockAt,
+    kahootQuestionEndsAt: session.kahootQuestionEndsAt,
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
     displayTextScale: session.displayTextScale,

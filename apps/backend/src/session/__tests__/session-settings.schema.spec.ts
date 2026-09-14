@@ -184,6 +184,41 @@ describe('sessionSettingsPartialSchema', () => {
         .success,
     ).toBe(false);
   });
+
+  it('accepts a positive kahootQuestionTimerSeconds', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      kahootQuestionTimerSeconds: 30,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ kahootQuestionTimerSeconds: 30 });
+  });
+
+  it('accepts a null kahootQuestionTimerSeconds', () => {
+    const result = sessionSettingsPartialSchema.safeParse({
+      kahootQuestionTimerSeconds: null,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ kahootQuestionTimerSeconds: null });
+  });
+
+  it('rejects a non-positive or non-integer kahootQuestionTimerSeconds', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ kahootQuestionTimerSeconds: 0 })
+        .success,
+    ).toBe(false);
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        kahootQuestionTimerSeconds: -5,
+      }).success,
+    ).toBe(false);
+    expect(
+      sessionSettingsPartialSchema.safeParse({
+        kahootQuestionTimerSeconds: 15.5,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe('resolveSessionSettings', () => {

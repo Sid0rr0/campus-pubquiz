@@ -15,6 +15,7 @@ import {
   PlusIcon,
 } from '@radix-ui/react-icons';
 import {
+  DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS,
   DEFAULT_SESSION_SETTINGS,
   type ActiveSessionSummary,
   type QuizzesListedPayload,
@@ -74,12 +75,18 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   // quiz becomes pending — adjusted during render rather than in an Effect,
   // same pattern AdminPageContent uses for its own pendingQuizId-driven reset.
   const [prevPendingQuizId, setPrevPendingQuizId] = useState(pendingQuizId);
+  const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
   if (pendingQuizId !== prevPendingQuizId) {
     setPrevPendingQuizId(pendingQuizId);
-    setSettings(DEFAULT_SESSION_SETTINGS);
+    setSettings({
+      ...DEFAULT_SESSION_SETTINGS,
+      kahootQuestionTimerSeconds: pendingQuiz?.rounds.some(
+        (round) => round.kahootMode,
+      )
+        ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
+        : null,
+    });
   }
-
-  const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
 
   const createMutation = useMutation({
     mutationFn: (variables: { quizId: number; settings: SessionSettings }) =>

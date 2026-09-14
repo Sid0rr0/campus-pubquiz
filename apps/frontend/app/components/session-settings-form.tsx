@@ -41,6 +41,16 @@ export function SessionSettingsForm({
     onChange({ ...value, maxBonusAwardsPerCategory });
   }
 
+  function updateKahootQuestionTimerSeconds(raw: string): void {
+    const trimmed = raw.trim();
+    const parsed = Number(trimmed);
+    onChange({
+      ...value,
+      kahootQuestionTimerSeconds:
+        trimmed === '' || !Number.isFinite(parsed) ? null : parsed,
+    });
+  }
+
   function updateRule(index: number, text: string): void {
     const rules = value.rules.map((rule, i) => (i === index ? text : rule));
     onChange({ ...value, rules });
@@ -71,6 +81,24 @@ export function SessionSettingsForm({
           }
           className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
         />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm font-extrabold">
+        Kahoot question timer (seconds)
+        <input
+          type="number"
+          min={1}
+          step={1}
+          placeholder="Unlimited"
+          value={value.kahootQuestionTimerSeconds ?? ''}
+          onChange={(event) =>
+            updateKahootQuestionTimerSeconds(event.target.value)
+          }
+          className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+        />
+        <span className="text-xs font-normal text-foreground/55">
+          Only applies to kahoot-mode rounds. Leave blank for unlimited time.
+        </span>
       </label>
 
       <div className="flex flex-col gap-1.5">

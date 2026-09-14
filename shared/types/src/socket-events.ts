@@ -223,6 +223,8 @@ export interface StateSnapshotPayload {
   teams: TeamView[];
   /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */
   questionLockAt: number | null;
+  /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
+  kahootQuestionEndsAt: number | null;
   /**
    * closest_guess only — which reveal sub-step (0-indexed) is shown for the
    * question currently at revealIndex. Ephemeral, like leaderboardRevealCount:
@@ -516,7 +518,12 @@ export interface SessionSettings {
   maxPlayersPerTeam: number;
   /** Points deducted per player beyond maxPlayersPerTeam — display text only, no enforcement. Shown in the generated first /rules bullet. */
   extraPlayerPenaltyPoints: number;
+  /** Seconds a kahootMode round's question stays open before auto-locking, or null for unlimited (no timer armed). */
+  kahootQuestionTimerSeconds: number | null;
 }
+
+/** Default prefill for kahootQuestionTimerSeconds when the frontend detects the quiz being started contains a kahootMode round — see session-picker-panel.tsx. */
+export const DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS = 30;
 
 // Frozen (including its array and map fields) so no code path can ever
 // mutate this shared singleton in place: every session created with default
@@ -541,6 +548,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   }) as Partial<Record<BonusCategory, number>>,
   maxPlayersPerTeam: 6,
   extraPlayerPenaltyPoints: 2,
+  kahootQuestionTimerSeconds: null,
   rules: Object.freeze([
     'No cheating.',
     'Please write your answers in English.',

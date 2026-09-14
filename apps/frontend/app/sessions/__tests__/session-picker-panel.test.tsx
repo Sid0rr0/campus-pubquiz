@@ -299,6 +299,66 @@ describe('SessionPickerPanel', () => {
     });
   });
 
+  it('prefills the kahoot question timer to 30s for a quiz with a kahootMode round', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        {
+          id: 2,
+          title: 'Speed Quiz',
+          rounds: [
+            {
+              title: 'Speed Round',
+              breakAfter: false,
+              kahootMode: true,
+              questions: [],
+            },
+          ],
+        },
+      ],
+    });
+    mockCreateSession.mockResolvedValue({
+      joinCode: 'GHIJKL',
+      quizId: 2,
+      quizTitle: 'Speed Quiz',
+      status: 'lobby',
+      teamCount: 0,
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+
+    expect(mockCreateSession).toHaveBeenCalledWith(2, {
+      ...DEFAULT_SESSION_SETTINGS,
+      kahootQuestionTimerSeconds: 30,
+    });
+  });
+
+  it('prefills the kahoot question timer to null for a quiz with no kahootMode round', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    mockCreateSession.mockResolvedValue({
+      joinCode: 'GHIJKL',
+      quizId: 2,
+      quizTitle: 'Imported Quiz',
+      status: 'lobby',
+      teamCount: 0,
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+
+    expect(mockCreateSession).toHaveBeenCalledWith(2, DEFAULT_SESSION_SETTINGS);
+  });
+
   it('does not create a session when the confirmation modal is cancelled', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,

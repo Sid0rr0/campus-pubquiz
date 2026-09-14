@@ -206,6 +206,7 @@ function DisplayPageContent() {
     isCurrentRoundKahoot = false,
     roundTitles = [],
     questionLockAt = null,
+    kahootQuestionEndsAt = null,
     closestGuessRevealStep = 0,
     breakEndsAt = null,
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
@@ -317,6 +318,7 @@ function DisplayPageContent() {
                   autoplayMedia={settings.autoplayMedia}
                   isFullscreen={progress.isMediaFullscreen}
                   mediaReplayToken={progress.mediaReplayToken}
+                  kahootQuestionEndsAt={kahootQuestionEndsAt}
                 />
               )}
               {progress.status === 'locking' && questionLockAt !== null && (

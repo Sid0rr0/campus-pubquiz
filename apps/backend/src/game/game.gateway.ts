@@ -68,6 +68,7 @@ export class GameGateway
 
   private readonly logger = new Logger(GameGateway.name);
   private readonly lockTimers = new QuestionLockTimerRegistry();
+  private readonly kahootQuestionTimers = new QuestionLockTimerRegistry();
 
   constructor(
     private readonly gameState: GameStateService,
@@ -81,6 +82,7 @@ export class GameGateway
 
   onModuleDestroy(): void {
     this.lockTimers.clearAll();
+    this.kahootQuestionTimers.clearAll();
   }
 
   @CreateRequestContext()
@@ -138,7 +140,7 @@ export class GameGateway
       joinCode,
       payload.action,
     );
-    this.rearmQuestionLockTimer(joinCode);
+    this.rearmTimers(joinCode);
   }
 
   /**
@@ -173,15 +175,44 @@ export class GameGateway
     );
 
     broadcastGameState(this.server, joinCode, this.gameState);
-    this.rearmQuestionLockTimer(joinCode);
+    this.rearmTimers(joinCode);
   }
 
-  /** (Re)arms this session's auto-lock timer to match GameStateService's current deadline, clearing any stale one first. */
-  private rearmQuestionLockTimer(joinCode: string): void {
+  /**
+   * Fires when a kahootMode question has been open for the session's
+   * settings.kahootQuestionTimerSeconds with no admin action — auto-locks it
+   * exactly as if the admin had clicked "Advance" themselves. Never enters
+   * reveal directly (advanceFromQuestionOpen always lands on 'locking'
+   * first), so unlike handleQuestionLockTimerExpired there's no
+   * syncTeamAnswersOnRevealEntry step here.
+   */
+  @CreateRequestContext()
+  private async handleKahootQuestionTimerExpired(
+    joinCode: string,
+  ): Promise<void> {
+    try {
+      await this.gameState.applyAction(joinCode, 'ADVANCE');
+    } catch (error) {
+      this.logger.error(
+        `Kahoot auto-lock ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
+    broadcastGameState(this.server, joinCode, this.gameState);
+    this.rearmTimers(joinCode);
+  }
+
+  /** (Re)arms both this session's auto-lock timers to match GameStateService's current deadlines, clearing any stale ones first. */
+  private rearmTimers(joinCode: string): void {
     this.lockTimers.rearm(
       joinCode,
       this.gameState.getQuestionLockAt(joinCode),
       () => void this.handleQuestionLockTimerExpired(joinCode),
+    );
+    this.kahootQuestionTimers.rearm(
+      joinCode,
+      this.gameState.getKahootQuestionEndsAt(joinCode),
+      () => void this.handleKahootQuestionTimerExpired(joinCode),
     );
   }
 

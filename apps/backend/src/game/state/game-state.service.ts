@@ -37,6 +37,7 @@ import { SessionCloseBlockedError } from '@/game/state/errors/session-close-bloc
 import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import {
   LOBBY_PROGRESS,
+  computeKahootQuestionEndsAt,
   computeQuestionLockAt,
   freshSessionState,
   getGameContext,
@@ -92,6 +93,17 @@ export class GameStateService implements OnModuleInit {
             livePhaseKey: saved.livePhaseKey,
             phaseStartedAt: saved.phaseStartedAt,
             phaseElapsedByKey: saved.phaseElapsedByKey,
+            // freshSessionState above already computed kahootQuestionEndsAt
+            // from a throwaway Date.now()-based livePhaseKey/phaseStartedAt
+            // guess — recompute it against the final saved fields, or a
+            // restart mid-kahoot-question would arm the wrong deadline.
+            kahootQuestionEndsAt: computeKahootQuestionEndsAt(
+              session.progress,
+              getGameContext(session),
+              session.seededGame.settings.kahootQuestionTimerSeconds,
+              saved.livePhaseKey,
+              saved.phaseStartedAt,
+            ),
           }
         : session,
     );
@@ -239,6 +251,11 @@ export class GameStateService implements OnModuleInit {
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   getQuestionLockAt(joinCode: string): number | null {
     return this.sessionStore.get(joinCode).questionLockAt;
+  }
+
+  /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed. */
+  getKahootQuestionEndsAt(joinCode: string): number | null {
+    return this.sessionStore.get(joinCode).kahootQuestionEndsAt;
   }
 
   /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
@@ -426,6 +443,13 @@ export class GameStateService implements OnModuleInit {
       questionLockAt: computeQuestionLockAt(
         progress,
         sessionWithGradingStatus.seededGame.settings.lockGraceSeconds * 1000,
+      ),
+      kahootQuestionEndsAt: computeKahootQuestionEndsAt(
+        progress,
+        getGameContext(session),
+        sessionWithGradingStatus.seededGame.settings.kahootQuestionTimerSeconds,
+        livePhaseKey,
+        phaseStartedAt,
       ),
       // A fresh break starting (the only path into 'break_intro') clears a
       // *stale* end-time left over from a previous break, so the display

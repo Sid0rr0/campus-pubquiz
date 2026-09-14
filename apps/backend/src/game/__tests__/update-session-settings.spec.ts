@@ -79,6 +79,34 @@ describe('GameStateService — updateSessionSettings', () => {
     );
   });
 
+  it('merges and persists kahootQuestionTimerSeconds', async () => {
+    await service.updateSessionSettings(joinCode, {
+      kahootQuestionTimerSeconds: 45,
+    });
+
+    expect(service.getSessionSettings(joinCode)).toEqual({
+      ...DEFAULT_SESSION_SETTINGS,
+      kahootQuestionTimerSeconds: 45,
+    });
+    expect(seedService.updateSettings).toHaveBeenCalledWith(101, {
+      ...DEFAULT_SESSION_SETTINGS,
+      kahootQuestionTimerSeconds: 45,
+    });
+  });
+
+  it('round-trips a null kahootQuestionTimerSeconds without being stripped', async () => {
+    await service.updateSessionSettings(joinCode, {
+      kahootQuestionTimerSeconds: 45,
+    });
+    await service.updateSessionSettings(joinCode, {
+      kahootQuestionTimerSeconds: null,
+    });
+
+    expect(
+      service.getSessionSettings(joinCode).kahootQuestionTimerSeconds,
+    ).toBe(null);
+  });
+
   it('reflects the updated settings in getSnapshot', async () => {
     await service.updateSessionSettings(joinCode, {
       rules: ['Just one rule.'],
