@@ -31,6 +31,8 @@ interface QuestionBrowserProps {
   revealQuestion?: BlockRevealQuestionView;
   /** closest_guess only — which reveal sub-step to show, 0 for every other type. */
   closestGuessRevealStep: number;
+  /** Active round's Kahoot-style speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
+  isKahootMode: boolean;
   myAnswers: Record<number, string>;
   /** Points awarded for the selected question's answer, null until graded. */
   myAnswerPoints: number | null;
@@ -54,6 +56,7 @@ export function QuestionBrowser({
   selectedQuestion,
   revealQuestion,
   closestGuessRevealStep,
+  isKahootMode,
   myAnswers,
   myAnswerPoints,
   onSelectQuestion,
@@ -169,6 +172,7 @@ export function QuestionBrowser({
               key={selectedQuestion.id}
               question={selectedQuestion}
               initialValue={myAnswers[selectedQuestion.id] ?? ''}
+              isKahootMode={isKahootMode}
               onSubmit={(value) =>
                 onSubmitAnswer(selectedQuestion.id, team.teamId, value)
               }

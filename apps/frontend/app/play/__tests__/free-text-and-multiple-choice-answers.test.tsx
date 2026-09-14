@@ -378,6 +378,130 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     );
   });
 
+  describe('Kahoot mode multiple-choice', () => {
+    function kahootSnapshot(overrides: Record<string, unknown> = {}) {
+      return {
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London', 'Berlin', 'Rome'],
+          points: 2,
+        },
+        isCurrentRoundKahoot: true,
+        ...overrides,
+      };
+    }
+
+    it('submits immediately on tap, with no Submit button and no "I don\'t know" button', async () => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      const submitAnswer = vi.fn();
+      mockUseGameSocket.mockReturnValue(
+        socketResult({
+          snapshot: kahootSnapshot(),
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+          submitAnswer,
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      expect(
+        screen.queryByRole('button', { name: /^submit$/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /i don't know/i }),
+      ).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
+
+      expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
+    });
+
+    it('locks every option after answering, so a second tap does not resubmit', async () => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      const submitAnswer = vi.fn();
+      mockUseGameSocket.mockReturnValue(
+        socketResult({
+          snapshot: kahootSnapshot(),
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+          submitAnswer,
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
+      expect(submitAnswer).toHaveBeenCalledTimes(1);
+
+      expect(screen.getByRole('button', { name: 'Paris' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'London' })).toBeDisabled();
+
+      await userEvent.click(screen.getByRole('button', { name: 'London' }));
+      expect(submitAnswer).toHaveBeenCalledTimes(1);
+    });
+
+    it('highlights the tapped option as chosen', async () => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      mockUseGameSocket.mockReturnValue(
+        socketResult({
+          snapshot: kahootSnapshot(),
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
+
+      expect(screen.getByRole('button', { name: 'Paris' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getByRole('button', { name: 'London' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('leaves non-Kahoot multiple-choice behavior untouched (Submit button, IDK button, staged pick)', async () => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      const submitAnswer = vi.fn();
+      mockUseGameSocket.mockReturnValue(
+        socketResult({
+          snapshot: kahootSnapshot({ isCurrentRoundKahoot: false }),
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+          submitAnswer,
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
+      expect(submitAnswer).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Paris' })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: /i don't know/i }),
+      ).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+      expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
+    });
+  });
+
   it('does not show an answer form before the team identity has been confirmed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(

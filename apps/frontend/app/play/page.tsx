@@ -229,6 +229,7 @@ function PlayPageContent() {
       maxQuestionsPerTopic: 0,
     },
     roundTitle = '',
+    isCurrentRoundKahoot = false,
     closestGuessRevealStep = 0,
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
@@ -437,6 +438,7 @@ function PlayPageContent() {
               selectedQuestion={selectedQuestion}
               revealQuestion={revealQuestion}
               closestGuessRevealStep={closestGuessRevealStep}
+              isKahootMode={isCurrentRoundKahoot}
               myAnswers={myAnswers}
               myAnswerPoints={selectedQuestionPoints}
               onSelectQuestion={setBrowsedQuestionId}

@@ -12,6 +12,8 @@ import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 interface AnswerFormProps {
   question: QuestionView;
   initialValue?: string;
+  /** Active round's Kahoot-style speed scoring flag — for multiple_choice, tap submits immediately and locks the pick, with no Submit or "I don't know" button. */
+  isKahootMode?: boolean;
   onSubmit: (value: string) => void;
 }
 
@@ -44,9 +46,11 @@ function IdkButton({ isChosen, onClick }: IdkButtonProps) {
 export function AnswerForm({
   question,
   initialValue = '',
+  isKahootMode = false,
   onSubmit,
 }: AnswerFormProps) {
   const [value, setValue] = useState(initialValue);
+  const [hasAnswered, setHasAnswered] = useState(initialValue !== '');
   const isIdk = initialValue === IDK_ANSWER_VALUE;
   const idkButton = (
     <IdkButton
@@ -84,6 +88,16 @@ export function AnswerForm({
 
   if (question.type === 'multiple_choice' && question.options) {
     const isSubmitted = value !== '' && value === initialValue;
+    function handleOptionClick(option: string) {
+      if (isKahootMode) {
+        if (hasAnswered) return;
+        setHasAnswered(true);
+        setValue(option);
+        onSubmit(option);
+        return;
+      }
+      setValue(option);
+    }
     return (
       <div className="flex flex-col gap-2.5">
         {question.options.map((option, index) => {
@@ -93,7 +107,8 @@ export function AnswerForm({
               key={index}
               type="button"
               aria-pressed={isChosen}
-              onClick={() => setValue(option)}
+              disabled={isKahootMode && hasAnswered}
+              onClick={() => handleOptionClick(option)}
               className={
                 isChosen
                   ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
@@ -113,12 +128,14 @@ export function AnswerForm({
             </Button>
           );
         })}
-        <SubmitAnswerButton
-          isSubmitted={isSubmitted}
-          disabled={value === ''}
-          onClick={() => onSubmit(value)}
-        />
-        {idkButton}
+        {!isKahootMode && (
+          <SubmitAnswerButton
+            isSubmitted={isSubmitted}
+            disabled={value === ''}
+            onClick={() => onSubmit(value)}
+          />
+        )}
+        {!isKahootMode && idkButton}
       </div>
     );
   }
