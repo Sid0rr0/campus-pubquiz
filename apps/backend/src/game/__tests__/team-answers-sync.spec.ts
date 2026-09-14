@@ -1,4 +1,8 @@
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  type TeamAnswerView,
+} from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
 import type { GameStateService } from '@/game/state/game-state.service';
 import {
@@ -178,7 +182,9 @@ describe('GameGateway — team answers sync on reveal entry', () => {
     expect(server.to).toHaveBeenCalledWith('socket-player');
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      expect.objectContaining({ answers: expect.any(Array) }),
+      expect.objectContaining({
+        answers: expect.any(Array) as TeamAnswerView[],
+      }),
     );
   });
 });
