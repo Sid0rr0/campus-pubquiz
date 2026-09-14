@@ -233,7 +233,18 @@ function DisplayPageContent() {
   // which falls back to a fresh `[]` literal every render whenever the
   // field is absent — that fresh reference would never match
   // previousLeaderboard and re-trigger this on every render).
+  //
+  // Only captures while the open question hasn't been graded yet
+  // (question_open/locking), not just "leaderboard hidden" — a kahootMode
+  // question's points land at the locking->reveal transition (see
+  // ensureKahootSpeedScored), before isLeaderboardVisible flips true for
+  // the between-questions board. Capturing on 'reveal' too would grab the
+  // already-updated totals one step early, leaving old === new and nothing
+  // to animate once the board appears.
+  const isBeforeGrading =
+    progress.status === 'question_open' || progress.status === 'locking';
   if (
+    isBeforeGrading &&
     !progress.isLeaderboardVisible &&
     snapshot.leaderboard !== undefined &&
     snapshot.leaderboard !== previousLeaderboard
