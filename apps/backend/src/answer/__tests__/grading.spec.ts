@@ -316,7 +316,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         .update({ updated_at: new Date(when) });
     }
 
-    it('gives full points to an instant answer and the 50% floor to one right at lock', async () => {
+    it('gives full points to an instant answer and the 70% floor to one right at lock', async () => {
       const mcQuestion = state.em.create(Question, {
         round: state.round,
         orderIndex: 1,
@@ -363,7 +363,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         10,
       );
       expect(answers.find((a) => a.teamId === teamSlow.id)?.pointsAwarded).toBe(
-        5,
+        7,
       );
     });
 

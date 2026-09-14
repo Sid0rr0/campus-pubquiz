@@ -15,10 +15,10 @@ import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.r
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 
-/** Floor on a correct kahootMode answer's score, regardless of how late it was submitted — the slowest correct answer still keeps half its points. */
-const KAHOOT_MIN_SCORE_FRACTION = 0.5;
+/** Floor on a correct kahootMode answer's score, regardless of how late it was submitted — the slowest correct answer still keeps 70% of its points. */
+const KAHOOT_MIN_SCORE_FRACTION = 0.7;
 /** Share of a correct kahootMode answer's points that scales with speed, on top of KAHOOT_MIN_SCORE_FRACTION — the two must sum to 1 so a same-instant answer scores full points. */
-const KAHOOT_SPEED_SCORE_FRACTION = 0.5;
+const KAHOOT_SPEED_SCORE_FRACTION = 0.3;
 
 export interface SubmittedAnswer {
   answerId: number;
@@ -256,7 +256,7 @@ export class AnswerService {
   /**
    * Rescales an already-graded kahootMode question's points by answer speed:
    * a team that answered the instant the question opened keeps 100% of
-   * `points`, one that answered right as it locked keeps a 50% floor, linear
+   * `points`, one that answered right as it locked keeps a 70% floor, linear
    * in between. Only touches rows already correct (pointsAwarded > 0) —
    * wrong answers stay at 0 regardless of speed. Uses `updatedAt` (not
    * `createdAt`) since submit()'s upsert already treats updatedAt as "last
