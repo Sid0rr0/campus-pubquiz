@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { LeaderboardEntry } from '@campus-pubquiz/types';
 import { Leaderboard } from '@/app/components/leaderboard';
@@ -299,5 +299,117 @@ describe('Leaderboard', () => {
     expect(screen.queryByText('Third Place')).not.toBeInTheDocument();
     expect(screen.queryByText('Second Place')).not.toBeInTheDocument();
     expect(screen.queryByText('First Place')).not.toBeInTheDocument();
+  });
+
+  describe('rank trend icons', () => {
+    it('shows no trend icon when currentRoundIndex is omitted', () => {
+      render(<Leaderboard entries={ENTRIES} />);
+
+      expect(screen.queryByLabelText('moved up')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('moved down')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('no change')).not.toBeInTheDocument();
+    });
+
+    it('shows an up arrow for a team that overtook another this round', () => {
+      // Before this round: Overtaker (10) trailed Leader (20). This round,
+      // Overtaker scored 15 and Leader scored 0, flipping the standings.
+      const entries: LeaderboardEntry[] = [
+        {
+          teamId: 1,
+          teamName: 'Overtaker',
+          totalPoints: 25,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 15 }],
+        },
+        {
+          teamId: 2,
+          teamName: 'Leader',
+          totalPoints: 20,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
+        },
+      ];
+      render(<Leaderboard entries={entries} currentRoundIndex={0} />);
+
+      const overtakerRow = screen.getByText('Overtaker').closest('li')!;
+      const leaderRow = screen.getByText('Leader').closest('li')!;
+      expect(within(overtakerRow).getByLabelText('moved up')).toHaveClass(
+        'text-green',
+      );
+      expect(within(leaderRow).getByLabelText('moved down')).toHaveClass(
+        'text-red-500',
+      );
+    });
+
+    it('shows a dash when a team keeps the same rank after the round', () => {
+      const entries: LeaderboardEntry[] = [
+        {
+          teamId: 1,
+          teamName: 'Steady Leader',
+          totalPoints: 30,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 10 }],
+        },
+        {
+          teamId: 2,
+          teamName: 'Steady Second',
+          totalPoints: 20,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 5 }],
+        },
+      ];
+      render(<Leaderboard entries={entries} currentRoundIndex={0} />);
+
+      const leaderRow = screen.getByText('Steady Leader').closest('li')!;
+      const secondRow = screen.getByText('Steady Second').closest('li')!;
+      expect(within(leaderRow).getByLabelText('no change')).toHaveClass(
+        'text-dark-blue/40',
+      );
+      expect(within(secondRow).getByLabelText('no change')).toHaveClass(
+        'text-dark-blue/40',
+      );
+    });
+
+    it('treats a team with no roundPoints entry for the round as scoring 0 that round', () => {
+      // Before this round both were tied for 1st (0 points each). Only
+      // Scorer's own dense rank stays 0 (still the top team, no longer
+      // tied); No Data's rank number gets pushed down to 1, a real drop.
+      const entries: LeaderboardEntry[] = [
+        {
+          teamId: 1,
+          teamName: 'Only Scorer',
+          totalPoints: 10,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 10 }],
+        },
+        {
+          teamId: 2,
+          teamName: 'No Data',
+          totalPoints: 0,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+      ];
+      render(<Leaderboard entries={entries} currentRoundIndex={0} />);
+
+      const scorerRow = screen.getByText('Only Scorer').closest('li')!;
+      const noDataRow = screen.getByText('No Data').closest('li')!;
+      expect(within(scorerRow).getByLabelText('no change')).toBeInTheDocument();
+      expect(
+        within(noDataRow).getByLabelText('moved down'),
+      ).toBeInTheDocument();
+    });
   });
 });

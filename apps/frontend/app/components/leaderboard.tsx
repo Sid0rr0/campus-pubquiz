@@ -20,6 +20,78 @@ interface LeaderboardProps {
    * it satisfies both. Omit to show every team.
    */
   maxRank?: number;
+  /**
+   * 0-indexed round (progress.roundIndex) this leaderboard reflects. Drives
+   * the per-team rank-trend icon comparing current standings to standings
+   * with just this round's points backed out. Omit to hide trend icons
+   * (e.g. the admin's always-visible preview, shown outside round context).
+   */
+  currentRoundIndex?: number;
+}
+
+type RankTrend = 'up' | 'down' | 'same';
+
+const RANK_TREND_LABELS: Record<RankTrend, string> = {
+  up: 'moved up',
+  down: 'moved down',
+  same: 'no change',
+};
+
+const RANK_TREND_GLYPHS: Record<RankTrend, string> = {
+  up: '▲',
+  down: '▼',
+  same: '–',
+};
+
+const RANK_TREND_COLOR_CLASSES: Record<RankTrend, string> = {
+  up: 'text-green',
+  down: 'text-red-500',
+  same: 'text-dark-blue/40',
+};
+
+function rankTrend(
+  currentRankIndex: number,
+  previousRankIndex: number,
+): RankTrend {
+  if (currentRankIndex < previousRankIndex) return 'up';
+  if (currentRankIndex > previousRankIndex) return 'down';
+  return 'same';
+}
+
+function RankTrendIcon({ trend }: { trend: RankTrend }) {
+  return (
+    <span
+      aria-label={RANK_TREND_LABELS[trend]}
+      className={`text-[calc(1.25rem*var(--display-text-scale,1))] ${RANK_TREND_COLOR_CLASSES[trend]}`}
+    >
+      {RANK_TREND_GLYPHS[trend]}
+    </span>
+  );
+}
+
+/** This team's cumulative total with just `roundIndex`'s points removed — the standing an "up/down since last round" comparison needs. */
+function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
+  return entry.totalPoints - (entry.roundPoints[roundIndex]?.points ?? 0);
+}
+
+/**
+ * Dense rank (0-indexed) per team by a score selector: teams sharing a score
+ * share a rank, matching how computeRankInfos groups ties for the current
+ * standings.
+ */
+function rankIndexByScore(
+  entries: LeaderboardEntry[],
+  scoreOf: (entry: LeaderboardEntry) => number,
+): Map<number, number> {
+  const distinctScoresDesc = Array.from(new Set(entries.map(scoreOf))).sort(
+    (a, b) => b - a,
+  );
+  const rankByScore = new Map(
+    distinctScoresDesc.map((score, index) => [score, index]),
+  );
+  return new Map(
+    entries.map((entry) => [entry.teamId, rankByScore.get(scoreOf(entry))!]),
+  );
 }
 
 const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
@@ -128,6 +200,7 @@ export function Leaderboard({
   entries,
   revealCount,
   maxRank,
+  currentRoundIndex,
 }: LeaderboardProps) {
   const visibleCount =
     revealCount === undefined
@@ -137,6 +210,12 @@ export function Leaderboard({
   // upward toward rank 1 as visibleCount increases.
   const sliceStart = entries.length - visibleCount;
   const rankInfos = computeRankInfos(entries);
+  const previousRankByTeamId =
+    currentRoundIndex === undefined
+      ? undefined
+      : rankIndexByScore(entries, (entry) =>
+          totalBeforeRound(entry, currentRoundIndex),
+        );
   const visibleEntries = entries
     .slice(sliceStart)
     .map((entry, offset) => ({ entry, index: sliceStart + offset }))
@@ -149,6 +228,7 @@ export function Leaderboard({
     <ol className="flex flex-col gap-2">
       {visibleEntries.map(({ entry, index }) => {
         const { rankIndex, label } = rankInfos[index];
+        const previousRankIndex = previousRankByTeamId?.get(entry.teamId);
         return (
           <motion.li
             key={entry.teamId}
@@ -158,6 +238,9 @@ export function Leaderboard({
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className={rowClasses(rankIndex)}
           >
+            {previousRankIndex !== undefined && (
+              <RankTrendIcon trend={rankTrend(rankIndex, previousRankIndex)} />
+            )}
             <span
               className={`font-display w-16 shrink-0 whitespace-nowrap text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >

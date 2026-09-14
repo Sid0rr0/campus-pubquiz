@@ -273,6 +273,7 @@ function DisplayPageContent() {
                 maxRank={
                   isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined
                 }
+                currentRoundIndex={progress.roundIndex}
               />
             </div>
           ) : (
