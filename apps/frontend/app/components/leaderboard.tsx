@@ -78,23 +78,48 @@ function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
 }
 
 /**
- * Dense rank (0-indexed) per team by a score selector: teams sharing a score
- * share a rank, matching how computeRankInfos groups ties for the current
- * standings.
+ * Competition-style rank groups (1st, 2nd, 2nd, 4th — never 1st, 2nd, 2nd,
+ * 3rd) over items already sorted by score descending: a tie group's rank
+ * index is its first member's position, so a tie pushes the next distinct
+ * group down by the tie's full size, not just one step.
+ */
+function tieGroups<T>(
+  sortedDesc: T[],
+  scoreOf: (item: T) => number,
+): Array<{ start: number; end: number }> {
+  const groups: Array<{ start: number; end: number }> = [];
+  let i = 0;
+  while (i < sortedDesc.length) {
+    let end = i;
+    while (
+      end + 1 < sortedDesc.length &&
+      scoreOf(sortedDesc[end + 1]) === scoreOf(sortedDesc[i])
+    ) {
+      end++;
+    }
+    groups.push({ start: i, end });
+    i = end + 1;
+  }
+  return groups;
+}
+
+/**
+ * Competition rank (0-indexed) per team by a score selector, using the same
+ * tie-grouping scheme as computeRankInfos for the current standings — so a
+ * trend comparison between the two never mismatches over a tie.
  */
 function rankIndexByScore(
   entries: LeaderboardEntry[],
   scoreOf: (entry: LeaderboardEntry) => number,
 ): Map<number, number> {
-  const distinctScoresDesc = Array.from(new Set(entries.map(scoreOf))).sort(
-    (a, b) => b - a,
-  );
-  const rankByScore = new Map(
-    distinctScoresDesc.map((score, index) => [score, index]),
-  );
-  return new Map(
-    entries.map((entry) => [entry.teamId, rankByScore.get(scoreOf(entry))!]),
-  );
+  const sortedDesc = [...entries].sort((a, b) => scoreOf(b) - scoreOf(a));
+  const rankByTeamId = new Map<number, number>();
+  for (const { start, end } of tieGroups(sortedDesc, scoreOf)) {
+    for (let index = start; index <= end; index++) {
+      rankByTeamId.set(sortedDesc[index].teamId, start);
+    }
+  }
+  return rankByTeamId;
 }
 
 const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
@@ -171,20 +196,14 @@ interface RankInfo {
  */
 function computeRankInfos(entries: LeaderboardEntry[]): RankInfo[] {
   const infos: RankInfo[] = [];
-  let i = 0;
-  while (i < entries.length) {
-    let end = i;
-    while (
-      end + 1 < entries.length &&
-      entries[end + 1].totalPoints === entries[i].totalPoints
-    ) {
-      end++;
+  for (const { start, end } of tieGroups(
+    entries,
+    (entry) => entry.totalPoints,
+  )) {
+    const label = start === end ? `${start + 1}.` : `${start + 1}.–${end + 1}.`;
+    for (let index = start; index <= end; index++) {
+      infos.push({ rankIndex: start, label });
     }
-    const label = i === end ? `${i + 1}.` : `${i + 1}.–${end + 1}.`;
-    for (let index = i; index <= end; index++) {
-      infos.push({ rankIndex: i, label });
-    }
-    i = end + 1;
   }
   return infos;
 }

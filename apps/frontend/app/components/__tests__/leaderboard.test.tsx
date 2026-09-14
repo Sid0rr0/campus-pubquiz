@@ -411,5 +411,51 @@ describe('Leaderboard', () => {
         within(noDataRow).getByLabelText('moved down'),
       ).toBeInTheDocument();
     });
+
+    it('shows an up arrow for a team that overtakes a fallen tied leader, even though a tie preceded it', () => {
+      // Before this round: Alpha and Bravo were tied for 1st (30 each),
+      // Climber trailed alone in 3rd (10). This round Climber scored 15 and
+      // Bravo scored -10, so Climber ends up in clear 2nd behind Alpha —
+      // genuinely ahead of where the tie had placed it.
+      const entries: LeaderboardEntry[] = [
+        {
+          teamId: 1,
+          teamName: 'Alpha',
+          totalPoints: 30,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
+        },
+        {
+          teamId: 3,
+          teamName: 'Climber',
+          totalPoints: 25,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: 15 }],
+        },
+        {
+          teamId: 2,
+          teamName: 'Bravo',
+          totalPoints: 20,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Round 1', points: -10 }],
+        },
+      ];
+      render(<Leaderboard entries={entries} currentRoundIndex={0} />);
+
+      const climberRow = screen.getByText('Climber').closest('li')!;
+      const bravoRow = screen.getByText('Bravo').closest('li')!;
+      expect(within(climberRow).getByLabelText('moved up')).toHaveClass(
+        'text-green',
+      );
+      expect(within(bravoRow).getByLabelText('moved down')).toHaveClass(
+        'text-red-500',
+      );
+    });
   });
 });
