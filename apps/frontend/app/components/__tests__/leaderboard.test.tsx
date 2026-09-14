@@ -329,6 +329,39 @@ describe('Leaderboard', () => {
     expect(screen.queryByText('Team 7')).not.toBeInTheDocument();
   });
 
+  it('still reaches rank 1 when a tie at the cutoff makes the capped pool one row bigger than revealCount', () => {
+    // Regression test: 7 teams, but 5th and 6th place are tied — so the top
+    // 5 *ranks* actually span 6 rows. The backend's revealCount (5) is a
+    // raw team count and doesn't know about that tie, so it's one short of
+    // the capped pool's true row count. The walk must still reach rank 1
+    // rather than spending its budget short by exactly the tied row.
+    // Scores put Team 1-4 in clear ranks 1-4, Team 5 and Team 6 tied for
+    // 5th-6th, and Team 7 clearly last.
+    const SEVEN_TEAMS_WITH_TIE: LeaderboardEntry[] = [
+      70, 60, 50, 40, 30, 30, 10,
+    ].map((totalPoints, index) => ({
+      teamId: index + 1,
+      teamName: `Team ${index + 1}`,
+      totalPoints,
+      bonusPoints: 0,
+      positiveBonusPoints: 0,
+      negativeBonusPoints: 0,
+      roundPoints: [],
+    }));
+    render(
+      <Leaderboard
+        entries={SEVEN_TEAMS_WITH_TIE}
+        revealCount={5}
+        maxRank={5}
+      />,
+    );
+
+    expect(screen.getByText('Team 1').closest('li')).toHaveTextContent('1.');
+    expect(screen.getByText('Team 5').closest('li')).toHaveTextContent('5.–6.');
+    expect(screen.getByText('Team 6').closest('li')).toHaveTextContent('5.–6.');
+    expect(screen.queryByText('Team 7')).not.toBeInTheDocument();
+  });
+
   describe('rank trend icons', () => {
     it('shows no trend icon when currentRoundIndex is omitted', () => {
       render(<Leaderboard entries={ENTRIES} />);

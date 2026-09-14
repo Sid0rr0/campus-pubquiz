@@ -269,6 +269,24 @@ interface LeaderboardRow {
   label: string;
 }
 
+/**
+ * Chunks rows (already grouped by rankIndex via computeRankInfos, so equal
+ * ranks are always contiguous) into one array per distinct rank — a tie
+ * becomes a single multi-row group instead of several one-row ones.
+ */
+function groupByRank(rows: LeaderboardRow[]): LeaderboardRow[][] {
+  const groups: LeaderboardRow[][] = [];
+  for (const row of rows) {
+    const currentGroup = groups.at(-1);
+    if (currentGroup && currentGroup[0].rankIndex === row.rankIndex) {
+      currentGroup.push(row);
+    } else {
+      groups.push([row]);
+    }
+  }
+  return groups;
+}
+
 export function Leaderboard({
   entries,
   revealCount,
@@ -334,20 +352,29 @@ export function Leaderboard({
     maxRank === undefined
       ? rows
       : rows.filter((row) => row.rankIndex < maxRank);
-  const visibleCount =
+  // revealCount is a raw team count, but KAHOOT_LEADERBOARD_TOP_N (and
+  // maxRank generally) counts *distinct ranks* — a tie counts once no
+  // matter how many teams share it. Walking rank groups instead of raw
+  // rows keeps that consistent: a tie at the cutoff (e.g. 5th-6th) makes
+  // cappedRows one row longer than revealCount expects, and grouping means
+  // that extra row rides along with its group instead of costing a whole
+  // extra reveal step — which would otherwise dock 1st place to pay for it.
+  const rankGroups = groupByRank(cappedRows);
+  const visibleGroupCount =
     revealCount === undefined
-      ? cappedRows.length
-      : Math.min(Math.max(revealCount, 0), cappedRows.length);
+      ? rankGroups.length
+      : Math.min(Math.max(revealCount, 0), rankGroups.length);
   // Reveals bottom-up: the visible slice always ends at last place (within
-  // the capped pool) and grows upward toward rank 1 as visibleCount grows.
-  const sliceStart = cappedRows.length - visibleCount;
+  // the capped pool) and grows upward toward rank 1 as visibleGroupCount
+  // grows, one whole rank group at a time.
+  const groupSliceStart = rankGroups.length - visibleGroupCount;
   const previousRankByTeamId =
     currentRoundIndex === undefined
       ? undefined
       : rankIndexByScore(entries, (entry) =>
           totalBeforeRound(entry, currentRoundIndex),
         );
-  const visibleRows = cappedRows.slice(sliceStart);
+  const visibleRows = rankGroups.slice(groupSliceStart).flat();
 
   return (
     <ol className="flex flex-col gap-2">
