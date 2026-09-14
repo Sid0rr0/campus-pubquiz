@@ -388,7 +388,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       expect(next).toEqual({ ...locking, status: 'reveal', revealIndex: 0 });
     });
 
-    it('advances from a mid-round reveal straight into the next question, no round_intro', () => {
+    it('advances from a mid-round reveal straight into the next question behind the leaderboard, no round_intro', () => {
       const revealing: GameProgress = {
         status: 'reveal',
         roundIndex: 1,
@@ -406,7 +406,9 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
         status: 'question_open',
         roundIndex: 1,
         questionIndex: 1,
-        isLeaderboardVisible: false,
+        // The next question is already open underneath, but the leaderboard
+        // (top 5, shown fully at once) covers it until TOGGLE_LEADERBOARD.
+        isLeaderboardVisible: true,
         revealIndex: 0,
         // Each kahoot question is its own one-question block, so its
         // block-relative position is always 0, not the flat quiz position.

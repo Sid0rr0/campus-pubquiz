@@ -471,6 +471,8 @@ export class GameStateService implements OnModuleInit {
         progress,
         sessionWithGradingStatus.leaderboard,
         sessionWithGradingStatus.leaderboardRevealCount,
+        getGameContext(session).rounds[progress.roundIndex]?.kahootMode ??
+          false,
       ),
       closestGuessRevealStep,
     };

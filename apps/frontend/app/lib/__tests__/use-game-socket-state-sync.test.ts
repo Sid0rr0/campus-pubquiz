@@ -192,6 +192,64 @@ describe('useGameSocket — state sync', () => {
     );
   });
 
+  it('does not seed seenQuestions with a kahoot question opened behind the leaderboard', async () => {
+    const { result } = renderHook(() => useGameSocket('players'));
+    const fakeSocket = getFakeSocket();
+    const q1 = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+    };
+    const q2Hidden = {
+      id: 2,
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+      roundTitle: 'Round 1',
+    };
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_UPDATED, {
+        progress: {
+          status: 'question_open',
+          roundIndex: 0,
+          questionIndex: 1,
+          isLeaderboardVisible: true,
+        },
+        isCurrentRoundKahoot: true,
+        currentQuestion: q2Hidden,
+        blockQuestions: [q2Hidden],
+        revealQuestions: [],
+      });
+    });
+    await waitFor(() => expect(result.current.snapshot).not.toBeNull());
+    expect(result.current.seenQuestions).toEqual({});
+
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.STATE_UPDATED, {
+        progress: {
+          status: 'question_open',
+          roundIndex: 0,
+          questionIndex: 1,
+          isLeaderboardVisible: false,
+        },
+        isCurrentRoundKahoot: true,
+        currentQuestion: q2Hidden,
+        blockQuestions: [q1, q2Hidden],
+        revealQuestions: [],
+      });
+    });
+    await waitFor(() =>
+      expect(result.current.seenQuestions).toEqual({ 1: q1, 2: q2Hidden }),
+    );
+  });
+
   it('seeds seenQuestions from already-finished blocks on a fresh STATE_SYNC, not just the current block', async () => {
     // Reproduces a team reconnecting (e.g. a page refresh) mid-round-3: the
     // very first STATE_SYNC this client ever sees only carries round 3 in

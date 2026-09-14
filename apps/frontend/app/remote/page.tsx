@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
+  KAHOOT_LEADERBOARD_TOP_N,
   type RevealQuestionView,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
@@ -157,6 +158,7 @@ function RemotePageContent() {
     teams = [],
     answeredTeamIds = [],
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
+    isCurrentRoundKahoot = false,
   } = snapshot;
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
@@ -182,7 +184,11 @@ function RemotePageContent() {
     activeBlockStartIndex,
     previousStatus: progress.previousStatus,
   });
-  const leaderboardTeamCount = snapshot.leaderboard?.length ?? 0;
+  // A kahootMode round's leaderboard only ever shows (and needs revealing
+  // through) its top 5 — see control/page.tsx's matching computation.
+  const leaderboardTeamCount = isCurrentRoundKahoot
+    ? Math.min(KAHOOT_LEADERBOARD_TOP_N, snapshot.leaderboard?.length ?? 0)
+    : (snapshot.leaderboard?.length ?? 0);
   const leaderboardRevealCount = snapshot.leaderboardRevealCount ?? 0;
 
   return (

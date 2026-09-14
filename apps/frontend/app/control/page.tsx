@@ -10,6 +10,7 @@ import {
   getBlockStartPosition,
   getTiedForFirst,
   isBreakPointQuestion,
+  KAHOOT_LEADERBOARD_TOP_N,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
@@ -327,7 +328,14 @@ function AdminPageContent() {
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
   const questionIndex = snapshot?.progress.questionIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
+  // A kahootMode round's leaderboard only ever shows (and needs revealing
+  // through) its top 5 — same cutoff the display enforces via maxRank — so
+  // the "Show Next Team"/"Hide Leaderboard" button switches after 5 clicks,
+  // not one per team, once there are more than 5.
+  const leaderboardTeamCount =
+    (snapshot?.isCurrentRoundKahoot ?? false)
+      ? Math.min(KAHOOT_LEADERBOARD_TOP_N, snapshot?.leaderboard?.length ?? 0)
+      : (snapshot?.leaderboard?.length ?? 0);
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
   const gameContext = {
     rounds: activeQuizRounds.map((round) => ({
@@ -473,7 +481,7 @@ function AdminPageContent() {
         canCloseSession={canCloseSession}
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
-        leaderboardTeamCount={leaderboard.length}
+        leaderboardTeamCount={leaderboardTeamCount}
         isMediaFullscreen={progress.isMediaFullscreen ?? false}
         canReplayMedia={canReplayMedia}
         onAction={sendAction}
@@ -509,7 +517,7 @@ function AdminPageContent() {
         canCloseSession={canCloseSession}
         isLeaderboardVisible={progress.isLeaderboardVisible}
         leaderboardRevealCount={leaderboardRevealCount}
-        leaderboardTeamCount={leaderboard.length}
+        leaderboardTeamCount={leaderboardTeamCount}
         isMediaFullscreen={progress.isMediaFullscreen ?? false}
         canReplayMedia={canReplayMedia}
         onAction={sendAction}

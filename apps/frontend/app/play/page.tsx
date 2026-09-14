@@ -299,10 +299,18 @@ function PlayPageContent() {
   // Previous steps the display back into a round whose questions are already
   // open (blockQuestions non-empty) — only a genuinely fresh round_intro
   // (nothing opened yet) blocks answering.
+  //
+  // The one exception: a kahootMode question opened behind the leaderboard
+  // (see advanceFromReveal) has never actually been shown yet — unlike the
+  // general case above, where the leaderboard only ever covers a question
+  // teams already saw and started answering, this question_open is brand
+  // new. Teams must wait for the same TOGGLE_LEADERBOARD that un-hides it on
+  // /display before they can see or answer it.
   const isAnswerable =
-    progress.status === 'question_open' ||
-    progress.status === 'locking' ||
-    (progress.status === 'round_intro' && blockQuestions.length > 0);
+    !(isCurrentRoundKahoot && progress.isLeaderboardVisible) &&
+    (progress.status === 'question_open' ||
+      progress.status === 'locking' ||
+      (progress.status === 'round_intro' && blockQuestions.length > 0));
   const isBreakOrReveal =
     progress.status === 'break_intro' ||
     progress.status === 'break' ||

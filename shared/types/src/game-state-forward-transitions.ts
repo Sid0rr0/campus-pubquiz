@@ -70,7 +70,10 @@ export function advanceFromReveal(
   // Kahoot rounds resolve one question at a time — after showing this
   // question's reveal, hop straight into the next question within the same
   // round (a fresh one-question block) instead of treating the round as a
-  // finished multi-question block.
+  // finished multi-question block. The next question is opened immediately
+  // but sits behind the leaderboard (isLeaderboardVisible: true), same as a
+  // finished block below — the admin reveals it via TOGGLE_LEADERBOARD once
+  // teams have seen the standings update.
   if (round.kahootMode && progress.questionIndex + 1 < round.questionCount) {
     const questionIndex = progress.questionIndex + 1;
     return {
@@ -78,6 +81,7 @@ export function advanceFromReveal(
       status: 'question_open',
       questionIndex,
       revealIndex: 0,
+      isLeaderboardVisible: true,
       furthestOpenIndex: Math.max(
         progress.furthestOpenIndex,
         getBlockPositionForQuestion(

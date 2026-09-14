@@ -1,8 +1,11 @@
 import { motion } from 'motion/react';
-import type { LeaderboardEntry } from '@campus-pubquiz/types';
+import {
+  KAHOOT_LEADERBOARD_TOP_N,
+  type LeaderboardEntry,
+} from '@campus-pubquiz/types';
 
-/** `maxRank` for a Kahoot round — only the top N distinct ranks are shown. */
-export const KAHOOT_LEADERBOARD_TOP_N = 5;
+/** `maxRank` for a Kahoot round — only the top N distinct ranks are shown. Re-exported here (from shared/types) so existing imports of this constant from this module keep working. */
+export { KAHOOT_LEADERBOARD_TOP_N };
 
 interface LeaderboardProps {
   entries: LeaderboardEntry[];

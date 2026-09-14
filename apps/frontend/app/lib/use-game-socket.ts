@@ -130,8 +130,17 @@ function mergeSeenQuestions(
   current: SeenQuestions,
   payload: StateSnapshotPayload,
 ): SeenQuestions {
+  // A kahootMode question opened behind the leaderboard (see
+  // advanceFromReveal) is already in blockQuestions server-side — needed so
+  // /display and /control can un-hide it the instant the leaderboard is
+  // dismissed — but a team's own seen-questions history must not leak its
+  // prompt early via the answered-questions panel. It's still just the one
+  // (kahoot blocks are always one question), so skipping all of
+  // blockQuestions here loses nothing else.
+  const isHiddenBehindKahootLeaderboard =
+    payload.isCurrentRoundKahoot && payload.progress.isLeaderboardVisible;
   const additions = [
-    ...(payload.blockQuestions ?? []),
+    ...(isHiddenBehindKahootLeaderboard ? [] : (payload.blockQuestions ?? [])),
     ...(payload.revealQuestions ?? []),
     ...(payload.pastRevealedQuestions ?? []),
   ];

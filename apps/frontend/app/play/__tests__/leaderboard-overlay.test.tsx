@@ -102,6 +102,50 @@ describe('PlayPage — leaderboard overlay', () => {
     expect(screen.queryByText(/leaderboard/i)).not.toBeInTheDocument();
   });
 
+  it('hides a kahoot question opened behind the leaderboard until the big screen reveals it', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({
+            status: 'question_open',
+            isLeaderboardVisible: true,
+          }),
+          isCurrentRoundKahoot: true,
+          currentQuestion: {
+            id: 'r1q2',
+            type: 'free_text',
+            prompt: 'Name a vegetable',
+            points: 1,
+          },
+          blockQuestions: [
+            {
+              id: 'r1q2',
+              type: 'free_text',
+              prompt: 'Name a vegetable',
+              points: 1,
+              roundNumber: 1,
+              questionNumberInRound: 2,
+              roundTitle: 'Round 1',
+            },
+          ],
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.queryByText('Name a vegetable')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /your answer/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
+  });
+
   it('still lets a team answer during the locking countdown while the leaderboard is toggled on', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseGameSocket.mockReturnValue(

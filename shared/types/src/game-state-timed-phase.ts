@@ -17,6 +17,19 @@ export function getTimedPhaseKey(
   context: GameContext,
 ): string | null {
   if (progress.status === 'question_open' || progress.status === 'locking') {
+    // A kahootMode question opened behind the leaderboard (see
+    // advanceFromReveal) isn't "live" yet — its answer-speed timer must not
+    // start ticking until the admin dismisses the leaderboard and the
+    // question is actually visible. Treating it as untimed here means the
+    // usual genuinely-new-phase logic in computePhaseTimerFields naturally
+    // arms a fresh full-duration timer the moment isLeaderboardVisible
+    // flips back to false, with no extra state needed.
+    if (
+      context.rounds[progress.roundIndex]?.kahootMode &&
+      progress.isLeaderboardVisible
+    ) {
+      return null;
+    }
     const blockStart = getBlockStartPosition(
       progress.roundIndex,
       progress.questionIndex,
