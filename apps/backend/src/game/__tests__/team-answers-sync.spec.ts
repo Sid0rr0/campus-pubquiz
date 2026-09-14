@@ -4,6 +4,7 @@ import type { GameStateService } from '@/game/state/game-state.service';
 import {
   TEST_SESSION_TOKEN,
   createFakeGameStateSeedService,
+  createFakeKahootSeedService,
   createMockSocket,
   createTestGateway,
   asSocket,
@@ -134,6 +135,50 @@ describe('GameGateway — team answers sync on reveal entry', () => {
     expect(server.emit).not.toHaveBeenCalledWith(
       SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
       expect.anything(),
+    );
+  });
+
+  // kahootMode collapses 'locking' straight into 'reveal', skipping
+  // 'reveal_intro' entirely (see getNextGameState) — without a matching
+  // branch in syncTeamAnswersOnRevealEntry, a kahootMode team's reveal
+  // screen would keep showing the pre-speed-scoring grade cached from
+  // ANSWER_RECEIVED at submit time instead of the rescaled points.
+  it("pushes the team's own answers privately when a kahootMode question collapses locking straight into reveal", async () => {
+    ({ gateway, server, answerService, gameStateService } =
+      await createTestGateway(createFakeKahootSeedService()));
+
+    const player = createMockSocket(
+      SOCKET_ROOMS.PLAYERS,
+      {},
+      'socket-player',
+      'KAHOOT',
+    );
+    await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-admin',
+      'KAHOOT',
+    );
+    await gateway.handleConnection(asSocket(admin));
+    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+
+    await advanceUntilStatus(
+      gateway,
+      gameStateService,
+      'KAHOOT',
+      admin,
+      'reveal',
+    );
+
+    expect(answerService.listForTeam).toHaveBeenCalledWith(103, 31);
+    expect(server.to).toHaveBeenCalledWith('socket-player');
+    expect(server.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+      expect.objectContaining({ answers: expect.any(Array) }),
     );
   });
 });
