@@ -50,6 +50,15 @@ export interface ImportQuestionPreview {
 export interface ImportRoundPreview {
   title: string;
   breakAfter: boolean;
+  /**
+   * Kahoot mode — see RoundConfig.kahootMode. Only settable through the
+   * manual quiz editor, never via CSV/Sheets import (there's no `kahoot_mode`
+   * column), so a CSV-assembled round never sets this. Optional, like
+   * breakAfter is required but this isn't, so the many existing
+   * ImportRoundPreview literals across the test suite don't all need
+   * updating; undefined behaves as false.
+   */
+  kahootMode?: boolean;
   questions: ImportQuestionPreview[];
 }
 

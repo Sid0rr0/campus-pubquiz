@@ -3,6 +3,7 @@ import {
   extractYoutubeVideoId,
   isSameMultiset,
   splitPipeList,
+  type QuestionType,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
@@ -117,6 +118,13 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
     ),
 ]);
 
+/** Question types that grade themselves the instant they're submitted — the only types a kahootMode round can carry, since its instant reveal has no admin-grading gate to wait through. */
+const KAHOOT_ALLOWED_TYPES: ReadonlyArray<QuestionType> = [
+  'multiple_choice',
+  'sort',
+  'match',
+];
+
 /**
  * Validates a full quiz draft (manual edits and/or a CSV-import preview
  * carried into the editor) before it's persisted. Never throws — every
@@ -164,10 +172,32 @@ export function validateQuizDraft(
         message: 'Round needs at least one question',
       });
     }
+    if (
+      round.kahootMode !== undefined &&
+      typeof round.kahootMode !== 'boolean'
+    ) {
+      issues.push({
+        roundIndex,
+        questionIndex: null,
+        field: 'kahootMode',
+        message: 'Kahoot mode must be true or false',
+      });
+    }
 
     round.questions.forEach((question, questionIndex) => {
       const parsed = questionPreviewSchema.safeParse(question);
-      if (parsed.success) return;
+      if (parsed.success) {
+        if (round.kahootMode && !KAHOOT_ALLOWED_TYPES.includes(question.type)) {
+          issues.push({
+            roundIndex,
+            questionIndex,
+            field: 'type',
+            message:
+              'Kahoot rounds only support multiple choice, sort, and match questions',
+          });
+        }
+        return;
+      }
       for (const issue of parsed.error.issues) {
         issues.push({
           roundIndex,

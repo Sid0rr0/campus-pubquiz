@@ -1,7 +1,11 @@
 import {
+  getBlockPositionForQuestion,
   getBlockQuestionCount,
-  getBlockStartRoundIndex,
+  getBlockStartPosition,
+  getPreviousQuestionPosition,
+  getRoundAndQuestionForBlockPosition,
   isFirstQuestionOfItsRound,
+  type QuestionPosition,
 } from './game-state-block-position';
 import {
   illegal,
@@ -12,10 +16,26 @@ import {
 /**
  * Steps back to the previous question, or — at a round's first question —
  * back to that round's intro card, since every round is now entered through
- * one. Never needs to jump across a round boundary directly.
+ * one. Never needs to jump across a round boundary directly. In a kahootMode
+ * round, the previous question is already locked/scored/revealed (each
+ * question is its own one-question block) — Previous re-enters its reveal
+ * rather than reopening it for (re-)answering.
  */
-export function previousFromQuestionOpen(progress: GameProgress): GameProgress {
+export function previousFromQuestionOpen(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const round = context.rounds[progress.roundIndex];
+
   if (progress.questionIndex > 0) {
+    if (round.kahootMode) {
+      return {
+        ...progress,
+        status: 'reveal',
+        questionIndex: progress.questionIndex - 1,
+        revealIndex: 0,
+      };
+    }
     return { ...progress, questionIndex: progress.questionIndex - 1 };
   }
 
@@ -26,8 +46,9 @@ export function previousFromQuestionOpen(progress: GameProgress): GameProgress {
  * Steps back from a round's intro card to whatever preceded it: the rules
  * screen (or round_overview, when context.showRoundOverview) before round 0,
  * the previous round's last question if it ran in the same open block (no
- * break), or the previous block's last reveal question if a break/reveal
- * already ran.
+ * break, and not kahootMode — a kahootMode round's questions are never
+ * reopenable once past), or the previous block's last reveal question if a
+ * break/reveal already ran.
  */
 export function previousFromRoundIntro(
   progress: GameProgress,
@@ -45,7 +66,7 @@ export function previousFromRoundIntro(
   const previousRoundIndex = progress.roundIndex - 1;
   const previousRound = context.rounds[previousRoundIndex];
 
-  if (!previousRound.breakAfter) {
+  if (!previousRound.breakAfter && !previousRound.kahootMode) {
     return {
       ...progress,
       status: 'question_open',
@@ -59,29 +80,50 @@ export function previousFromRoundIntro(
 
 /**
  * Jumps back into the last question of the block immediately before the one
- * containing `progress.roundIndex`, in 'reveal' status — that block's answers
- * already aired live, so re-entering it re-shows them rather than reopening
- * anything for (re-)answering. Illegal when there is no earlier block.
+ * starting at `progress.roundIndex`'s first question, in 'reveal' status —
+ * that block's answers already aired live, so re-entering it re-shows them
+ * rather than reopening anything for (re-)answering. Illegal when there is
+ * no earlier block.
  */
 function enterPreviousBlockReveal(
   progress: GameProgress,
   context: GameContext,
 ): GameProgress {
-  const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
-  if (blockStart === 0) {
-    illegal(progress.status, 'PREVIOUS');
-  }
-
-  const previousBlockLastRoundIndex = blockStart - 1;
-  const previousRound = context.rounds[previousBlockLastRoundIndex];
+  const currentBlockStart = getBlockStartPosition(
+    progress.roundIndex,
+    0,
+    context,
+  );
+  const previousBlockEnd = getPreviousQuestionPositionOrIllegal(
+    currentBlockStart,
+    progress,
+    context,
+  );
+  const revealIndex = getBlockPositionForQuestion(
+    previousBlockEnd.roundIndex,
+    previousBlockEnd.questionIndex,
+    context,
+  );
   return {
     ...progress,
     status: 'reveal',
-    roundIndex: previousBlockLastRoundIndex,
-    questionIndex: previousRound.questionCount - 1,
-    revealIndex:
-      getBlockQuestionCount(previousBlockLastRoundIndex, context) - 1,
+    roundIndex: previousBlockEnd.roundIndex,
+    questionIndex: previousBlockEnd.questionIndex,
+    revealIndex,
   };
+}
+
+/** The question right before `position`, or throws IllegalGameTransitionError when `position` is the quiz's very first question (no earlier block to cross into). */
+function getPreviousQuestionPositionOrIllegal(
+  position: QuestionPosition,
+  progress: GameProgress,
+  context: GameContext,
+): QuestionPosition {
+  const previous = getPreviousQuestionPosition(position, context);
+  if (previous === null) {
+    illegal(progress.status, 'PREVIOUS');
+  }
+  return previous;
 }
 
 /**
@@ -94,8 +136,17 @@ export function previousFromBlockReview(
   progress: GameProgress,
   context: GameContext,
 ): GameProgress {
-  const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
-  if (isFirstQuestionOfItsRound(blockStart, progress.revealIndex, context)) {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const { questionIndex } = getRoundAndQuestionForBlockPosition(
+    blockStart,
+    progress.revealIndex,
+    context,
+  );
+  if (isFirstQuestionOfItsRound(questionIndex)) {
     return { ...progress, status: 'break_round_intro' };
   }
   return { ...progress, revealIndex: progress.revealIndex - 1 };
@@ -125,14 +176,31 @@ export function previousFromBreakRoundIntro(
 /**
  * Steps back from a reveal question to its own round's intro card whenever
  * it's the first question of that round (mirroring previousFromQuestionOpen)
- * — otherwise just the previous reveal question in the same round.
+ * — otherwise just the previous reveal question in the same round. A
+ * kahootMode round never has a reveal_intro to step back to (it's collapsed
+ * away) — Previous instead re-opens the locking countdown for this same
+ * question.
  */
 export function previousFromReveal(
   progress: GameProgress,
   context: GameContext,
 ): GameProgress {
-  const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
-  if (isFirstQuestionOfItsRound(blockStart, progress.revealIndex, context)) {
+  const round = context.rounds[progress.roundIndex];
+  if (round.kahootMode) {
+    return { ...progress, status: 'locking' };
+  }
+
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const { questionIndex } = getRoundAndQuestionForBlockPosition(
+    blockStart,
+    progress.revealIndex,
+    context,
+  );
+  if (isFirstQuestionOfItsRound(questionIndex)) {
     return { ...progress, status: 'reveal_intro' };
   }
   return { ...progress, revealIndex: progress.revealIndex - 1 };
@@ -154,7 +222,12 @@ export function previousFromRevealIntro(
     return {
       ...progress,
       status: 'break',
-      revealIndex: getBlockQuestionCount(progress.roundIndex, context) - 1,
+      revealIndex:
+        getBlockQuestionCount(
+          progress.roundIndex,
+          progress.questionIndex,
+          context,
+        ) - 1,
     };
   }
   return {

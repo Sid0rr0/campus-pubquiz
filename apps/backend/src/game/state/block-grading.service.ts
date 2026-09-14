@@ -72,6 +72,61 @@ export class BlockGradingService {
     return { ...session, closestGuessSummaries: summaries, leaderboard };
   }
 
+  /**
+   * Rescales the just-locked question's points by answer speed, but only
+   * when leaving 'locking' for a kahootMode round — covers both the
+   * collapsed locking->reveal path and the ordinary locking->break_intro
+   * path (irrelevant there since a kahootMode round never takes it, but
+   * cheap to check generically). Reads the question's open timestamp from
+   * `session`'s phase-timer fields, which are still the pre-transition
+   * values at this point in applyAction (computePhaseTimerFields for the
+   * new progress hasn't run yet) — i.e. exactly when this question opened.
+   * Guarded by kahootSpeedScoredQuestionIds (same idempotency convention as
+   * ensureBlockGraded/closestGuessSummaries): without it, PREVIOUS from
+   * 'reveal' back into 'locking' followed by another ADVANCE would re-read
+   * Date.now() as a later "lockedAt" against the same phaseStartedAt,
+   * silently rescaling (inflating) already-awarded points. Recomputes the
+   * leaderboard afterward, same as ensureBlockGraded.
+   */
+  async ensureKahootSpeedScored(
+    session: SessionState,
+    newProgress: GameProgress,
+  ): Promise<SessionState> {
+    if (
+      session.progress.status !== 'locking' ||
+      newProgress.status === 'locking'
+    ) {
+      return session;
+    }
+    const round = session.seededGame.rounds[session.progress.roundIndex];
+    if (!round?.kahootMode || session.phaseStartedAt === null) return session;
+
+    const question = round.questions[session.progress.questionIndex];
+    if (session.kahootSpeedScoredQuestionIds.includes(question.id)) {
+      return session;
+    }
+
+    await this.answerService.applyKahootSpeedScoring(
+      session.seededGame.gameSessionId,
+      question.id,
+      session.phaseStartedAt,
+      Date.now(),
+      question.points,
+    );
+
+    const leaderboard = await this.answerService.computeLeaderboard(
+      session.seededGame.gameSessionId,
+    );
+    return {
+      ...session,
+      leaderboard,
+      kahootSpeedScoredQuestionIds: [
+        ...session.kahootSpeedScoredQuestionIds,
+        question.id,
+      ],
+    };
+  }
+
   /** Current-block question IDs (closest_guess excluded) with at least one ungraded submitted answer, read fresh from the DB. */
   async getUngradedBlockQuestionIds(session: SessionState): Promise<number[]> {
     const questionIds = getBlockSeededQuestions(session)

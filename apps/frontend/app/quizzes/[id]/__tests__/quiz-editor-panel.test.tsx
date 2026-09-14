@@ -318,6 +318,7 @@ describe('QuizEditorPanel', () => {
           {
             title: 'Round 1',
             breakAfter: false,
+            kahootMode: false,
             questions: [
               {
                 type: 'multiple_choice',
@@ -332,6 +333,44 @@ describe('QuizEditorPanel', () => {
       }),
     );
     expect(routerRef.replace).toHaveBeenCalledWith('/quizzes/42');
+  });
+
+  it('saves kahootMode: true after checking the Kahoot mode toggle', async () => {
+    const user = userEvent.setup();
+    mockCreateQuiz.mockResolvedValue({
+      quizId: 42,
+      roundCount: 1,
+      questionCount: 1,
+    });
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/untitled quiz/i),
+      'Trivia Night',
+    );
+    await user.click(screen.getByLabelText(/kahoot mode/i));
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+    await user.type(
+      screen.getByPlaceholderText(/question prompt/i),
+      'Capital of France?',
+    );
+    const options = screen.getAllByPlaceholderText(/option text/i);
+    await user.type(options[0], 'Paris');
+    await user.type(options[1], 'London');
+    await user.click(screen.getAllByLabelText(/mark option 1 as correct/i)[0]);
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockCreateQuiz).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rounds: [expect.objectContaining({ kahootMode: true })],
+        }),
+      ),
+    );
   });
 
   it('updates an existing quiz in place and shows a saved flash', async () => {

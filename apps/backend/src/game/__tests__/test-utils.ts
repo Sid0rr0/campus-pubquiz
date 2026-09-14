@@ -129,6 +129,54 @@ export function createFakeSeedService() {
   };
 }
 
+// A single kahootMode round, two multiple_choice questions — every question
+// locks, scores, and reveals on its own; the round's last question is
+// inherently a break point (kahootMode), so this is a complete, valid quiz
+// on its own with no other round needed.
+export const KAHOOT_SEEDED_GAME: SeededGame = {
+  quizId: 3,
+  gameSessionId: 103,
+  joinCode: 'KAHOOT',
+  rounds: [
+    {
+      id: 14,
+      title: 'Speed Round',
+      breakAfter: false,
+      kahootMode: true,
+      questions: [
+        {
+          id: 31,
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London'],
+          points: 10,
+          answer: 'Paris',
+        },
+        {
+          id: 32,
+          type: 'multiple_choice',
+          prompt: 'Capital of Italy?',
+          options: ['Rome', 'Milan'],
+          points: 10,
+          answer: 'Rome',
+        },
+      ],
+    },
+  ],
+  settings: DEFAULT_SESSION_SETTINGS,
+};
+
+export function createFakeKahootSeedService() {
+  return {
+    seed: jest.fn().mockResolvedValue(KAHOOT_SEEDED_GAME),
+    loadGame: jest.fn().mockResolvedValue(KAHOOT_SEEDED_GAME),
+    createSession: jest
+      .fn()
+      .mockResolvedValue({ gameSessionId: 103, joinCode: 'KAHOOT' }),
+    updateSettings: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
 export type MockSeedService = ReturnType<typeof createFakeSeedService>;
 
 export function asSeedService(mock: MockSeedService): SeedService {
@@ -297,6 +345,9 @@ export function createFakeAnswerService() {
     // that doesn't seed a closest_guess question. Override per-test with
     // .mockResolvedValueOnce(...) for tests that do.
     gradeClosestGuess: jest.fn().mockResolvedValue([]),
+    // Irrelevant to every fixture without a kahootMode round — exercised
+    // only by kahoot-focused tests, which assert on the call directly.
+    applyKahootSpeedScoring: jest.fn().mockResolvedValue(undefined),
     computeLeaderboard: jest.fn().mockResolvedValue([
       {
         teamId: 31,

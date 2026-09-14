@@ -45,27 +45,34 @@ describe('computePhaseTimerFields', () => {
     );
 
     expect(result).toEqual({
-      livePhaseKey: 'q:0:0',
+      livePhaseKey: 'q:0:0:0',
       phaseStartedAt: Date.now(),
       phaseElapsedByKey: {},
     });
   });
 
   it('is a no-op for a same-key sub-status change (question_open -> locking)', () => {
-    const newProgress = progressAt({ status: 'locking', questionIndex: 3 });
+    // Round 0 doesn't break, round 1 does, so they form one 4-question
+    // block; (roundIndex: 1, questionIndex: 1) is that block's flat
+    // position 3.
+    const newProgress = progressAt({
+      status: 'locking',
+      roundIndex: 1,
+      questionIndex: 1,
+    });
 
     const result = computePhaseTimerFields(
       newProgress,
       context,
-      'q:0:3',
+      'q:0:0:3',
       1_000,
-      { 'q:0:0': 5_000 },
+      { 'q:0:0:0': 5_000 },
     );
 
     expect(result).toEqual({
-      livePhaseKey: 'q:0:3',
+      livePhaseKey: 'q:0:0:3',
       phaseStartedAt: 1_000,
-      phaseElapsedByKey: { 'q:0:0': 5_000 },
+      phaseElapsedByKey: { 'q:0:0:0': 5_000 },
     });
   });
 
@@ -74,20 +81,20 @@ describe('computePhaseTimerFields', () => {
     const newProgress = progressAt({
       status: 'question_open',
       questionIndex: 0,
-    }); // already-closed q:0:0
+    }); // already-closed q:0:0:0
 
     const result = computePhaseTimerFields(
       newProgress,
       context,
-      'q:0:1', // the live frontier is q:0:1, not what's being displayed
+      'q:0:0:1', // the live frontier is q:0:0:1, not what's being displayed
       startedAt,
-      { 'q:0:0': 5_000 },
+      { 'q:0:0:0': 5_000 },
     );
 
     expect(result).toEqual({
-      livePhaseKey: 'q:0:1',
+      livePhaseKey: 'q:0:0:1',
       phaseStartedAt: startedAt,
-      phaseElapsedByKey: { 'q:0:0': 5_000 },
+      phaseElapsedByKey: { 'q:0:0:0': 5_000 },
     });
   });
 
@@ -98,13 +105,13 @@ describe('computePhaseTimerFields', () => {
     const result = computePhaseTimerFields(
       newProgress,
       context,
-      'q:0:0',
+      'q:0:0:0',
       startedAt,
       {},
     );
 
     expect(result).toEqual({
-      livePhaseKey: 'q:0:0',
+      livePhaseKey: 'q:0:0:0',
       phaseStartedAt: startedAt,
       phaseElapsedByKey: {},
     });
@@ -121,15 +128,15 @@ describe('computePhaseTimerFields', () => {
     const result = computePhaseTimerFields(
       newProgress,
       context,
-      'q:0:0',
+      'q:0:0:0',
       startedAt,
       {},
     );
 
     expect(result).toEqual({
-      livePhaseKey: 'q:0:1',
+      livePhaseKey: 'q:0:0:1',
       phaseStartedAt: Date.now(),
-      phaseElapsedByKey: { 'q:0:0': 7_000 },
+      phaseElapsedByKey: { 'q:0:0:0': 7_000 },
     });
   });
 
@@ -145,15 +152,15 @@ describe('computePhaseTimerFields', () => {
     const result = computePhaseTimerFields(
       newProgress,
       context,
-      'q:0:3',
+      'q:0:0:3',
       startedAt,
       {},
     );
 
     expect(result).toEqual({
-      livePhaseKey: 'b:0',
+      livePhaseKey: 'b:0:0',
       phaseStartedAt: Date.now(),
-      phaseElapsedByKey: { 'q:0:3': 9_000 },
+      phaseElapsedByKey: { 'q:0:0:3': 9_000 },
     });
   });
 

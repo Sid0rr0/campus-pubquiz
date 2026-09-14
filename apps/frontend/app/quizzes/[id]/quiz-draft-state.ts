@@ -43,6 +43,8 @@ export interface EditorRound {
   id: string;
   title: string;
   breakAfter: boolean;
+  /** See RoundConfig.kahootMode — only settable here, never via CSV/Sheets import. */
+  kahootMode: boolean;
   questions: EditorQuestion[];
 }
 
@@ -81,7 +83,7 @@ function shuffled<T>(items: T[]): T[] {
 }
 
 export function makeRound(id: string, title = ''): EditorRound {
-  return { id, title, breakAfter: false, questions: [] };
+  return { id, title, breakAfter: false, kahootMode: false, questions: [] };
 }
 
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
@@ -132,6 +134,9 @@ export function roundFromPreview(
     id,
     title: round.title,
     breakAfter: round.breakAfter,
+    // CSV/Sheets previews never carry kahootMode — it's only ever set by
+    // editing the round afterward in the manual editor.
+    kahootMode: round.kahootMode ?? false,
     questions: round.questions.map((question, index) =>
       questionFromPreview(makeQuestionId(index), question),
     ),
@@ -197,6 +202,7 @@ export function toSaveRequest(
     rounds: rounds.map((round) => ({
       title: round.title.trim(),
       breakAfter: round.breakAfter,
+      kahootMode: round.kahootMode,
       questions: round.questions.map(questionToPreview),
     })),
   };

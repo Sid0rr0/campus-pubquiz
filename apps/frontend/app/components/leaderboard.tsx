@@ -1,6 +1,9 @@
 import { motion } from 'motion/react';
 import type { LeaderboardEntry } from '@campus-pubquiz/types';
 
+/** `maxRank` for a Kahoot round — only the top N distinct ranks are shown. */
+export const KAHOOT_LEADERBOARD_TOP_N = 5;
+
 interface LeaderboardProps {
   entries: LeaderboardEntry[];
   /**
@@ -9,6 +12,14 @@ interface LeaderboardProps {
    * admin's own always-visible preview).
    */
   revealCount?: number;
+  /**
+   * Caps how many distinct ranks are shown (e.g. KAHOOT_LEADERBOARD_TOP_N
+   * for a Kahoot round) — rankIndex groups tied teams, so a tie spanning the
+   * cutoff either fully shows or fully hides together, never splits mid-tie.
+   * Composed with revealCount when both are given: an entry renders only if
+   * it satisfies both. Omit to show every team.
+   */
+  maxRank?: number;
 }
 
 const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
@@ -113,7 +124,11 @@ function rowClasses(rankIndex: number): string {
   return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/15 bg-white/60 px-5 py-1.5 text-dark-blue/70';
 }
 
-export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
+export function Leaderboard({
+  entries,
+  revealCount,
+  maxRank,
+}: LeaderboardProps) {
   const visibleCount =
     revealCount === undefined
       ? entries.length
@@ -121,13 +136,18 @@ export function Leaderboard({ entries, revealCount }: LeaderboardProps) {
   // Reveals bottom-up: the visible slice always ends at last place and grows
   // upward toward rank 1 as visibleCount increases.
   const sliceStart = entries.length - visibleCount;
-  const visibleEntries = entries.slice(sliceStart);
   const rankInfos = computeRankInfos(entries);
+  const visibleEntries = entries
+    .slice(sliceStart)
+    .map((entry, offset) => ({ entry, index: sliceStart + offset }))
+    .filter(
+      ({ index }) =>
+        maxRank === undefined || rankInfos[index].rankIndex < maxRank,
+    );
 
   return (
     <ol className="flex flex-col gap-2">
-      {visibleEntries.map((entry, offset) => {
-        const index = sliceStart + offset;
+      {visibleEntries.map(({ entry, index }) => {
         const { rankIndex, label } = rankInfos[index];
         return (
           <motion.li

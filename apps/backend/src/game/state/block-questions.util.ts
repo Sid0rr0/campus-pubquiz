@@ -1,6 +1,7 @@
 import {
-  getBlockEndRoundIndex,
-  getBlockStartRoundIndex,
+  getBlockEndPosition,
+  getBlockPositionForQuestion,
+  getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
   type BlockQuestionView,
   type BlockRevealQuestionView,
@@ -14,14 +15,19 @@ import {
 } from '@/game/state/game-state-views';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 
-/** Pairs a round's questions with their round-relative labels and (for closest_guess) cached summary — shared by getBlockSeededQuestions and getPastRevealedQuestions. */
+interface RoundQuestionEntry {
+  question: RevealQuestionView;
+  questionIndexInRound: number;
+}
+
+/** Pairs a round's questions with their round-relative labels and (for closest_guess) cached summary — shared by getBlockSeededQuestions and getPastRevealedQuestions. `questionIndexInRound` is each entry's actual index within its round (not necessarily starting at 0 — a kahootMode block can start mid-round), so questionNumberInRound stays correct even for a partial run. */
 function toRevealQuestionViews(
-  questions: RevealQuestionView[],
+  entries: RoundQuestionEntry[],
   roundNumber: number,
   roundTitle: string,
   session: SessionState,
 ): BlockRevealQuestionView[] {
-  return questions.map((question, questionOffset) => ({
+  return entries.map(({ question, questionIndexInRound }) => ({
     ...question,
     ...(question.type === 'closest_guess'
       ? {
@@ -32,7 +38,7 @@ function toRevealQuestionViews(
         }
       : {}),
     roundNumber,
-    questionNumberInRound: questionOffset + 1,
+    questionNumberInRound: questionIndexInRound + 1,
     roundTitle,
   }));
 }
@@ -93,59 +99,99 @@ export function getBlockSeededQuestions(
 
   const context = getGameContext(session);
   const rounds = session.seededGame.rounds;
-  const blockStart = getBlockStartRoundIndex(roundIndex, context);
+  const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
   const isOpenPhase =
     status === 'question_open' ||
     status === 'locking' ||
     status === 'round_intro';
-  const revealBoundary = isOpenPhase
-    ? getRoundAndQuestionForBlockPosition(
-        blockStart,
-        furthestOpenIndex,
-        context,
-      )
-    : { roundIndex, questionIndex };
+  const revealBoundaryPosition = isOpenPhase
+    ? furthestOpenIndex
+    : getBlockPositionForQuestion(roundIndex, questionIndex, context);
 
-  return rounds
-    .slice(blockStart, revealBoundary.roundIndex + 1)
-    .flatMap((round, offset) => {
-      const currentRoundIndex = blockStart + offset;
-      const isCurrentRound = currentRoundIndex === revealBoundary.roundIndex;
-      const isPartiallyRevealed = isOpenPhase && isCurrentRound;
-      const questions = isPartiallyRevealed
-        ? round.questions.slice(0, revealBoundary.questionIndex + 1)
-        : round.questions;
-      return toRevealQuestionViews(
-        questions,
-        currentRoundIndex + 1,
-        round.title,
-        session,
-      );
-    });
+  // furthestOpenIndex === -1: a fresh block, nothing opened yet.
+  if (revealBoundaryPosition < 0) return [];
+
+  const targets = Array.from(
+    { length: revealBoundaryPosition + 1 },
+    (_, position) =>
+      getRoundAndQuestionForBlockPosition(blockStart, position, context),
+  );
+
+  const groups = targets.reduce<
+    { roundIndex: number; entries: RoundQuestionEntry[] }[]
+  >((acc, target) => {
+    const entry: RoundQuestionEntry = {
+      question: rounds[target.roundIndex].questions[target.questionIndex],
+      questionIndexInRound: target.questionIndex,
+    };
+    const lastGroup = acc[acc.length - 1];
+    if (lastGroup && lastGroup.roundIndex === target.roundIndex) {
+      return [
+        ...acc.slice(0, -1),
+        {
+          roundIndex: lastGroup.roundIndex,
+          entries: [...lastGroup.entries, entry],
+        },
+      ];
+    }
+    return [...acc, { roundIndex: target.roundIndex, entries: [entry] }];
+  }, []);
+
+  return groups.flatMap((group) =>
+    toRevealQuestionViews(
+      group.entries,
+      group.roundIndex + 1,
+      rounds[group.roundIndex].title,
+      session,
+    ),
+  );
 }
 
 /**
- * Every question from blocks that finished before the current one — every
- * round strictly before the current block's start. A block can only be left
- * behind once its own break+reveal has completed (see getNextGameState), so
- * these are always safe to return with their correct answers regardless of
- * the current status. Gives a (re)connecting client (a phone that slept
- * through a round, a page refresh) the full answer history across every
- * already-finished round in one shot, rather than just the current block.
+ * Every question from blocks that finished before the current one: every
+ * round strictly before the current block's round, plus — when the current
+ * block starts mid-round (a kahootMode round's earlier questions, each its
+ * own already-finished block) — that round's questions before the block's
+ * start. A block can only be left behind once its own break+reveal has
+ * completed (see getNextGameState), so these are always safe to return with
+ * their correct answers regardless of the current status. Gives a
+ * (re)connecting client (a phone that slept through a round, a page refresh)
+ * the full answer history across every already-finished question, not just
+ * the current block.
  */
 export function getPastRevealedQuestions(
   session: SessionState,
 ): BlockRevealQuestionView[] {
   const context = getGameContext(session);
-  const blockStart = getBlockStartRoundIndex(
-    session.progress.roundIndex,
-    context,
+  const { roundIndex, questionIndex } = session.progress;
+  const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
+  const rounds = session.seededGame.rounds;
+
+  const views = rounds.slice(0, blockStart.roundIndex).flatMap((round, index) =>
+    toRevealQuestionViews(
+      round.questions.map((question, i) => ({
+        question,
+        questionIndexInRound: i,
+      })),
+      index + 1,
+      round.title,
+      session,
+    ),
   );
-  return session.seededGame.rounds
-    .slice(0, blockStart)
-    .flatMap((round, index) =>
-      toRevealQuestionViews(round.questions, index + 1, round.title, session),
-    );
+
+  if (blockStart.questionIndex === 0) return views;
+
+  const round = rounds[blockStart.roundIndex];
+  const partialRoundViews = toRevealQuestionViews(
+    round.questions
+      .slice(0, blockStart.questionIndex)
+      .map((question, i) => ({ question, questionIndexInRound: i })),
+    blockStart.roundIndex + 1,
+    round.title,
+    session,
+  );
+
+  return [...views, ...partialRoundViews];
 }
 
 /**
@@ -172,9 +218,17 @@ export function getFurthestOpenPosition(session: SessionState): {
   roundIndex: number;
   questionIndex: number;
 } {
-  const { status, roundIndex, furthestOpenIndex } = session.progress;
+  const { status, roundIndex, questionIndex, furthestOpenIndex } =
+    session.progress;
   const context = getGameContext(session);
-  const blockStart = getBlockStartRoundIndex(roundIndex, context);
+  const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
+  // -1 means no question in the current block has ever been opened —
+  // handled directly rather than through getRoundAndQuestionForBlockPosition
+  // (which only walks forward from blockStart), preserving the sentinel
+  // "nothing opened yet in this round" shape.
+  if (furthestOpenIndex < 0) {
+    return { roundIndex: blockStart.roundIndex, questionIndex: -1 };
+  }
   const furthest = getRoundAndQuestionForBlockPosition(
     blockStart,
     furthestOpenIndex,
@@ -188,11 +242,12 @@ export function getFurthestOpenPosition(session: SessionState): {
 /**
  * Positions (and round titles) of the rest of the current block's
  * questions, not open yet — the whole remaining block shape, spanning every
- * round from the furthest-opened one through the round that ends the block
- * (breakAfter), so the picker doesn't grow as questions or rounds unlock.
- * Based on furthestOpenIndex rather than the literal display position, so
- * stepping the display back with PREVIOUS doesn't re-mark already-opened
- * questions as upcoming.
+ * round from the furthest-opened one through the block's last question, so
+ * the picker doesn't grow as questions or rounds unlock. Based on
+ * furthestOpenIndex rather than the literal display position, so stepping
+ * the display back with PREVIOUS doesn't re-mark already-opened questions
+ * as upcoming. Naturally empty for a kahootMode round, whose block is
+ * always just the current question.
  */
 export function getUpcomingQuestionPositions(
   session: SessionState,
@@ -211,20 +266,28 @@ export function getUpcomingQuestionPositions(
     return [];
   }
   const context = getGameContext(session);
-  const blockEnd = getBlockEndRoundIndex(target.roundIndex, context);
+  const blockEnd = getBlockEndPosition(
+    target.roundIndex,
+    target.questionIndex,
+    context,
+  );
 
   const positions: UpcomingQuestionPosition[] = [];
   for (
     let roundIndex = target.roundIndex;
-    roundIndex <= blockEnd;
+    roundIndex <= blockEnd.roundIndex;
     roundIndex += 1
   ) {
     const round = rounds[roundIndex];
     const startQuestionIndex =
       roundIndex === target.roundIndex ? target.questionIndex + 1 : 0;
+    const endQuestionIndexExclusive =
+      roundIndex === blockEnd.roundIndex
+        ? blockEnd.questionIndex + 1
+        : round.questions.length;
     for (
       let questionIndex = startQuestionIndex;
-      questionIndex < round.questions.length;
+      questionIndex < endQuestionIndexExclusive;
       questionIndex += 1
     ) {
       positions.push({

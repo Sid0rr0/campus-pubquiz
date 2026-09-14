@@ -394,8 +394,12 @@ export class GameStateService implements OnModuleInit {
       }
     }
 
-    const gradedSession = await this.grading.ensureBlockGraded(
+    const speedScoredSession = await this.grading.ensureKahootSpeedScored(
       session,
+      progress,
+    );
+    const gradedSession = await this.grading.ensureBlockGraded(
+      speedScoredSession,
       progress,
     );
     const sessionWithGradingStatus =

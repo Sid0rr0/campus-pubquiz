@@ -7,9 +7,9 @@ import { toast } from 'sonner';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
-  getBlockStartRoundIndex,
+  getBlockStartPosition,
   getTiedForFirst,
-  isLastQuestionOfBreakAfterRound,
+  isBreakPointQuestion,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
@@ -325,6 +325,7 @@ function AdminPageContent() {
   }
 
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
+  const questionIndex = snapshot?.progress.questionIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   const leaderboardTeamCount = snapshot?.leaderboard?.length ?? 0;
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
@@ -332,14 +333,15 @@ function AdminPageContent() {
     rounds: activeQuizRounds.map((round) => ({
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
+      kahootMode: round.kahootMode,
     })),
   };
   // Rounds before the active block are already locked and graded; guard on
   // rounds.length so a stale/incomplete quiz list can never index past its
-  // own array inside getBlockStartRoundIndex.
+  // own array inside getBlockStartPosition.
   const activeBlockStartIndex =
     activeQuizRounds.length > roundIndex
-      ? getBlockStartRoundIndex(roundIndex, gameContext)
+      ? getBlockStartPosition(roundIndex, questionIndex, gameContext).roundIndex
       : 0;
   const canStartQuiz = gameStatus === 'lobby';
   // A showdown round can be created as early as the final block being fully
@@ -447,7 +449,11 @@ function AdminPageContent() {
   const isLastQuestionBeforeBreak =
     activeQuizRounds.length > roundIndex &&
     showAnswerStatus &&
-    isLastQuestionOfBreakAfterRound(progress, gameContext);
+    isBreakPointQuestion(
+      progress.roundIndex,
+      progress.questionIndex,
+      gameContext,
+    );
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">

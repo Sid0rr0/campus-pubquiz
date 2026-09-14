@@ -1,6 +1,6 @@
 import {
   getBlockPositionForQuestion,
-  getBlockStartRoundIndex,
+  getBlockStartPosition,
 } from './game-state-block-position';
 import type { GameContext, GameProgress } from './game-state-types';
 
@@ -17,20 +17,29 @@ export function getTimedPhaseKey(
   context: GameContext,
 ): string | null {
   if (progress.status === 'question_open' || progress.status === 'locking') {
-    const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
+    const blockStart = getBlockStartPosition(
+      progress.roundIndex,
+      progress.questionIndex,
+      context,
+    );
     const position = getBlockPositionForQuestion(
       progress.roundIndex,
       progress.questionIndex,
       context,
     );
-    return `q:${blockStart}:${position}`;
+    return `q:${blockStart.roundIndex}:${blockStart.questionIndex}:${position}`;
   }
   if (
     progress.status === 'break_intro' ||
     progress.status === 'break' ||
     progress.status === 'break_round_intro'
   ) {
-    return `b:${getBlockStartRoundIndex(progress.roundIndex, context)}`;
+    const blockStart = getBlockStartPosition(
+      progress.roundIndex,
+      progress.questionIndex,
+      context,
+    );
+    return `b:${blockStart.roundIndex}:${blockStart.questionIndex}`;
   }
   return null;
 }

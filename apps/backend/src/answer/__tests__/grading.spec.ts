@@ -1,3 +1,5 @@
+import { Answer } from '@/db/entities/answer.entity';
+import type { AnswerRepository } from '@/db/repositories/answer.repository';
 import { Question } from '@/db/entities/question.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
@@ -293,5 +295,114 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     ).rejects.toThrow(
       'closest_guess answers are graded automatically and cannot be graded manually',
     );
+  });
+
+  describe('applyKahootSpeedScoring', () => {
+    async function setAnsweredAt(
+      questionId: number,
+      teamId: number,
+      when: number,
+    ): Promise<void> {
+      const answerRepo = state.em.getRepository<Answer, AnswerRepository>(
+        Answer,
+      );
+      await answerRepo
+        .getKnex()('answers')
+        .where({
+          game_session_id: state.session.id,
+          question_id: questionId,
+          team_id: teamId,
+        })
+        .update({ updated_at: new Date(when) });
+    }
+
+    it('gives full points to an instant answer and the 50% floor to one right at lock', async () => {
+      const mcQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'Paris',
+        points: 10,
+        payload: { options: ['Paris', 'London'] },
+      });
+      await state.em.flush();
+      const teamFast = await insertTeam('Fast Team', 'token-fast');
+      const teamSlow = await insertTeam('Slow Team', 'token-slow');
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        teamFast.id,
+        'Paris',
+      );
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        teamSlow.id,
+        'Paris',
+      );
+
+      const questionOpenedAt = Date.now() - 10_000;
+      const lockedAt = Date.now();
+      await setAnsweredAt(mcQuestion.id, teamFast.id, questionOpenedAt);
+      await setAnsweredAt(mcQuestion.id, teamSlow.id, lockedAt);
+
+      await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        mcQuestion.id,
+        questionOpenedAt,
+        lockedAt,
+        mcQuestion.points,
+      );
+
+      const answers = await state.answerService.listForQuestion(
+        state.session.id,
+        mcQuestion.id,
+      );
+      expect(answers.find((a) => a.teamId === teamFast.id)?.pointsAwarded).toBe(
+        10,
+      );
+      expect(answers.find((a) => a.teamId === teamSlow.id)?.pointsAwarded).toBe(
+        5,
+      );
+    });
+
+    it('leaves an already-wrong answer at zero regardless of speed', async () => {
+      const mcQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'Paris',
+        points: 10,
+        payload: { options: ['Paris', 'London'] },
+      });
+      await state.em.flush();
+      const teamWrong = await insertTeam('Wrong Team', 'token-wrong');
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        teamWrong.id,
+        'London',
+      );
+
+      const questionOpenedAt = Date.now() - 10_000;
+      const lockedAt = Date.now();
+      await setAnsweredAt(mcQuestion.id, teamWrong.id, questionOpenedAt);
+
+      await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        mcQuestion.id,
+        questionOpenedAt,
+        lockedAt,
+        mcQuestion.points,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        mcQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(0);
+    });
   });
 });

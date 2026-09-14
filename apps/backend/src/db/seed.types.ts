@@ -7,6 +7,12 @@ export interface SeededRound {
   id: number;
   title: string;
   breakAfter: boolean;
+  /**
+   * See RoundConfig.kahootMode. Optional, like questionNotesById below, so
+   * the many existing SeededRound literals across the test suite don't all
+   * need updating; undefined behaves as false.
+   */
+  kahootMode?: boolean;
   // Carries the correct answer internally so reveal can show it; only
   // GameStateService's answer-free QuestionView projections leave the process.
   questions: RevealQuestionView[];

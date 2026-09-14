@@ -61,6 +61,15 @@ export interface SessionState {
   /** Cached per-question closest_guess grading/summary, keyed by questionId — computed once when a block locks, ephemeral like leaderboardRevealCount. */
   closestGuessSummaries: Record<number, ClosestGuessRevealData>;
   /**
+   * Question IDs already speed-scored by ensureKahootSpeedScored — guards
+   * against re-scoring (and re-inflating points) if the admin steps
+   * PREVIOUS back into 'locking' on a kahootMode question and then ADVANCE
+   * again, which would otherwise re-read Date.now() as a later "lockedAt"
+   * against the same unchanged phaseStartedAt. Ephemeral like
+   * closestGuessSummaries — resets on restart.
+   */
+  kahootSpeedScoredQuestionIds: number[];
+  /**
    * Current-block question IDs known to have at least one ungraded answer —
    * bulk-recomputed from the DB whenever applyAction enters a grading-status
    * (see GameStateService.refreshUngradedQuestionIds), and patched
@@ -125,6 +134,7 @@ export function freshSessionState(
     connectedTeamSockets: {},
     closestGuessRevealStep: 0,
     closestGuessSummaries: {},
+    kahootSpeedScoredQuestionIds: [],
     ungradedQuestionIds: [],
     activeShowdownRound: null,
     showdownRevealStep: 0,
@@ -153,6 +163,7 @@ function contextFromSeededGame(seededGame: SeededGame): GameContext {
     rounds: seededGame.rounds.map((round) => ({
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
+      kahootMode: round.kahootMode ?? false,
     })),
     showRoundOverview: seededGame.settings.showRoundOverview,
   };

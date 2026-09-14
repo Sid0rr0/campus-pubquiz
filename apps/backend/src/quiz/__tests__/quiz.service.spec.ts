@@ -127,6 +127,7 @@ describe('QuizService (Postgres integration)', () => {
       {
         title: 'Round 1',
         breakAfter: true,
+        kahootMode: false,
         questions: [
           {
             id: q1.id,
@@ -142,7 +143,7 @@ describe('QuizService (Postgres integration)', () => {
           },
         ],
       },
-      { title: 'Round 2', breakAfter: false, questions: [] },
+      { title: 'Round 2', breakAfter: false, kahootMode: false, questions: [] },
     ]);
   });
 
@@ -251,6 +252,7 @@ describe('QuizService (Postgres integration)', () => {
           {
             title: 'Music',
             breakAfter: true,
+            kahootMode: false,
             questions: [
               {
                 questionId: expect.any(Number) as number,

@@ -1,8 +1,10 @@
 import {
   getBlockPositionForQuestion,
   getBlockQuestionCount,
+  getBlockStartPosition,
+  getRoundAndQuestionForBlockPosition,
+  isBreakPointQuestion,
   isFirstQuestionOfItsRound,
-  getBlockStartRoundIndex,
 } from './game-state-block-position';
 import {
   InvalidQuizConfigError,
@@ -15,9 +17,15 @@ export function advanceFromQuestionOpen(
   context: GameContext,
 ): GameProgress {
   const round = context.rounds[progress.roundIndex];
+
+  if (
+    isBreakPointQuestion(progress.roundIndex, progress.questionIndex, context)
+  ) {
+    return { ...progress, status: 'locking' };
+  }
+
   const isLastQuestionInRound =
     progress.questionIndex + 1 >= round.questionCount;
-
   if (!isLastQuestionInRound) {
     const questionIndex = progress.questionIndex + 1;
     return {
@@ -35,10 +43,9 @@ export function advanceFromQuestionOpen(
     };
   }
 
-  if (round.breakAfter) {
-    return { ...progress, status: 'locking' };
-  }
-
+  // Last question of the round, but it isn't a break point (breakAfter:
+  // false, not kahootMode) — questions stay open and the block continues
+  // into the next round without locking anything yet.
   const isLastRound = progress.roundIndex + 1 >= context.rounds.length;
   if (isLastRound) {
     throw new InvalidQuizConfigError(
@@ -58,16 +65,47 @@ export function advanceFromReveal(
   progress: GameProgress,
   context: GameContext,
 ): GameProgress {
-  const blockStart = getBlockStartRoundIndex(progress.roundIndex, context);
+  const round = context.rounds[progress.roundIndex];
+
+  // Kahoot rounds resolve one question at a time — after showing this
+  // question's reveal, hop straight into the next question within the same
+  // round (a fresh one-question block) instead of treating the round as a
+  // finished multi-question block.
+  if (round.kahootMode && progress.questionIndex + 1 < round.questionCount) {
+    const questionIndex = progress.questionIndex + 1;
+    return {
+      ...progress,
+      status: 'question_open',
+      questionIndex,
+      revealIndex: 0,
+      furthestOpenIndex: Math.max(
+        progress.furthestOpenIndex,
+        getBlockPositionForQuestion(
+          progress.roundIndex,
+          questionIndex,
+          context,
+        ),
+      ),
+    };
+  }
+
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
   const blockQuestionCount = getBlockQuestionCount(
     progress.roundIndex,
+    progress.questionIndex,
     context,
   );
   if (progress.revealIndex + 1 < blockQuestionCount) {
     const nextRevealIndex = progress.revealIndex + 1;
     // Crossing into a new round within the same block: show that round's
     // name before its answers, same as round_intro before its questions.
-    if (isFirstQuestionOfItsRound(blockStart, nextRevealIndex, context)) {
+    const { questionIndex: nextQuestionIndex } =
+      getRoundAndQuestionForBlockPosition(blockStart, nextRevealIndex, context);
+    if (isFirstQuestionOfItsRound(nextQuestionIndex)) {
       return {
         ...progress,
         status: 'reveal_intro',

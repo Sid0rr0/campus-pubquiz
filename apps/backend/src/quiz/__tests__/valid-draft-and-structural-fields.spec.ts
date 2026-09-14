@@ -147,4 +147,106 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
       }),
     );
   });
+
+  describe('kahootMode rounds', () => {
+    it('allows a kahoot round whose questions are all auto-graded types', () => {
+      const request = makeRequest({
+        rounds: [
+          makeRound({
+            kahootMode: true,
+            questions: [
+              makeQuestion({
+                type: 'multiple_choice',
+                answer: 'Paris',
+                options: ['Paris', 'London'],
+              }),
+              makeQuestion({
+                type: 'sort',
+                answer: 'Mercury|Venus',
+                options: ['Venus', 'Mercury'],
+              }),
+              makeQuestion({
+                type: 'match',
+                answer: 'excalibur|shield',
+                options: ['arthur', 'captain america'],
+                matchTargets: ['shield', 'excalibur'],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([]);
+    });
+
+    it.each(['free_text', 'audio', 'youtube', 'closest_guess'] as const)(
+      'rejects a %s question in a kahoot round',
+      (type) => {
+        const overrides =
+          type === 'audio'
+            ? { mediaUrl: 'https://example.com/song.mp3' }
+            : type === 'youtube'
+              ? { mediaUrl: 'https://youtu.be/dQw4w9WgXcQ' }
+              : type === 'closest_guess'
+                ? { answer: '1000' }
+                : {};
+        const issues = validateQuizDraft(
+          makeRequest({
+            rounds: [
+              makeRound({
+                kahootMode: true,
+                questions: [makeQuestion({ type, ...overrides })],
+              }),
+            ],
+          }),
+        );
+
+        expect(issues).toContainEqual(
+          expect.objectContaining({
+            roundIndex: 0,
+            questionIndex: 0,
+            field: 'type',
+          }),
+        );
+      },
+    );
+
+    it('does not restrict question types in a non-kahoot round', () => {
+      const request = makeRequest({
+        rounds: [
+          makeRound({
+            kahootMode: false,
+            questions: [makeQuestion({ type: 'free_text' })],
+          }),
+        ],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([]);
+    });
+
+    it('rejects a non-boolean kahootMode value from a malformed request body', () => {
+      const request = makeRequest({
+        rounds: [
+          makeRound({
+            kahootMode: 'yes' as unknown as boolean,
+            questions: [
+              makeQuestion({
+                type: 'multiple_choice',
+                answer: 'Paris',
+                options: ['Paris', 'London'],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      expect(validateQuizDraft(request)).toContainEqual(
+        expect.objectContaining({
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'kahootMode',
+        }),
+      );
+    });
+  });
 });

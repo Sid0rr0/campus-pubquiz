@@ -101,6 +101,23 @@ export function QuizRoundEditor({
           />
           Break after
         </label>
+        <label
+          className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
+          title="Speed-based scoring, answer then reveal, leaderboard shows only the top teams"
+        >
+          <input
+            type="checkbox"
+            checked={round.kahootMode}
+            onChange={(event) => onChange({ kahootMode: event.target.checked })}
+            className="h-4 w-4"
+            aria-describedby={`kahoot-mode-hint-${round.id}`}
+          />
+          Kahoot mode
+        </label>
+        <span id={`kahoot-mode-hint-${round.id}`} className="sr-only">
+          Speed-based scoring, answer then reveal, leaderboard shows only the
+          top teams
+        </span>
         <Button
           type="button"
           onClick={onMoveUp}

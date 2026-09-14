@@ -225,4 +225,79 @@ describe('Leaderboard', () => {
       '5.',
     );
   });
+
+  it('caps the shown teams to maxRank', () => {
+    render(<Leaderboard entries={ENTRIES} maxRank={2} />);
+
+    expect(screen.getByText('First Place')).toBeInTheDocument();
+    expect(screen.getByText('Second Place')).toBeInTheDocument();
+    expect(screen.queryByText('Third Place')).not.toBeInTheDocument();
+  });
+
+  it('shows every team when maxRank is omitted', () => {
+    render(<Leaderboard entries={ENTRIES} maxRank={undefined} />);
+
+    expect(screen.getByText('First Place')).toBeInTheDocument();
+    expect(screen.getByText('Second Place')).toBeInTheDocument();
+    expect(screen.getByText('Third Place')).toBeInTheDocument();
+  });
+
+  it('shows a tie spanning the cutoff fully, rather than splitting it', () => {
+    const TIED: LeaderboardEntry[] = [
+      {
+        teamId: 1,
+        teamName: 'Sole Leader',
+        totalPoints: 30,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Tied A',
+        totalPoints: 20,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 3,
+        teamName: 'Tied B',
+        totalPoints: 20,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 4,
+        teamName: 'Last Place',
+        totalPoints: 5,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+    ];
+    // maxRank: 2 would naively cut off mid-tie (Tied A/B share rank 2) —
+    // both must show together since they're one tie group.
+    render(<Leaderboard entries={TIED} maxRank={2} />);
+
+    expect(screen.getByText('Sole Leader')).toBeInTheDocument();
+    expect(screen.getByText('Tied A')).toBeInTheDocument();
+    expect(screen.getByText('Tied B')).toBeInTheDocument();
+    expect(screen.queryByText('Last Place')).not.toBeInTheDocument();
+  });
+
+  it('composes maxRank with revealCount: an entry needs both to show', () => {
+    render(<Leaderboard entries={ENTRIES} revealCount={1} maxRank={2} />);
+
+    // revealCount: 1 alone would show only Third Place (last place); maxRank
+    // excludes it entirely (rank 3), so nothing renders yet.
+    expect(screen.queryByText('Third Place')).not.toBeInTheDocument();
+    expect(screen.queryByText('Second Place')).not.toBeInTheDocument();
+    expect(screen.queryByText('First Place')).not.toBeInTheDocument();
+  });
 });

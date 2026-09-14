@@ -15,6 +15,11 @@ import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.r
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 
+/** Floor on a correct kahootMode answer's score, regardless of how late it was submitted — the slowest correct answer still keeps half its points. */
+const KAHOOT_MIN_SCORE_FRACTION = 0.5;
+/** Share of a correct kahootMode answer's points that scales with speed, on top of KAHOOT_MIN_SCORE_FRACTION — the two must sum to 1 so a same-instant answer scores full points. */
+const KAHOOT_SPEED_SCORE_FRACTION = 0.5;
+
 export interface SubmittedAnswer {
   answerId: number;
   teamId: number;
@@ -246,6 +251,43 @@ export class AnswerService {
         gradedAt: row.gradedAt!.toISOString(),
       }))
       .sort((a, b) => a.teamName.localeCompare(b.teamName));
+  }
+
+  /**
+   * Rescales an already-graded kahootMode question's points by answer speed:
+   * a team that answered the instant the question opened keeps 100% of
+   * `points`, one that answered right as it locked keeps a 50% floor, linear
+   * in between. Only touches rows already correct (pointsAwarded > 0) —
+   * wrong answers stay at 0 regardless of speed. Uses `updatedAt` (not
+   * `createdAt`) since submit()'s upsert already treats updatedAt as "last
+   * resubmission time" for a team that revises before lock. Idempotent/
+   * recomputable, same convention as gradeClosestGuess.
+   */
+  async applyKahootSpeedScoring(
+    gameSessionId: number,
+    questionId: number,
+    questionOpenedAt: number,
+    lockedAt: number,
+    points: number,
+  ): Promise<void> {
+    const rows = await this.answers.find({
+      gameSession: gameSessionId,
+      question: questionId,
+      pointsAwarded: { $gt: 0 },
+    });
+    if (rows.length === 0) return;
+
+    const totalWindowMs = lockedAt - questionOpenedAt;
+    for (const row of rows) {
+      const elapsedMs = row.updatedAt.getTime() - questionOpenedAt;
+      const rawFraction = totalWindowMs > 0 ? elapsedMs / totalWindowMs : 0;
+      const fraction = 1 - Math.min(Math.max(rawFraction, 0), 1);
+      row.pointsAwarded = Math.round(
+        points *
+          (KAHOOT_MIN_SCORE_FRACTION + KAHOOT_SPEED_SCORE_FRACTION * fraction),
+      );
+    }
+    await this.answers.getEntityManager().flush();
   }
 
   async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {

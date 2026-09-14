@@ -56,6 +56,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
     roundTitle: getCurrentRoundTitle(session),
+    isCurrentRoundKahoot:
+      session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ??
+      false,
     roundTitles: session.seededGame.rounds.map((round) => round.title),
     currentQuestion: getCurrentQuestion(session),
     blockQuestions: getBlockQuestions(session),

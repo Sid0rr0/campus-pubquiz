@@ -5,7 +5,11 @@ import {
   type GameContext,
   type GameProgress,
 } from '../game-state';
-import { lobby, twoRoundsWithBreakAfterSecond } from './game-state-fixtures';
+import {
+  kahootRoundAfterNormalRound,
+  lobby,
+  twoRoundsWithBreakAfterSecond,
+} from './game-state-fixtures';
 
 describe('getNextGameState — backward (PREVIOUS) transitions', () => {
   it('rejects moving back from the rules screen', () => {
@@ -512,5 +516,69 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
     expect(() =>
       getNextGameState(ended, 'PREVIOUS', twoRoundsWithBreakAfterSecond),
     ).toThrow(IllegalGameTransitionError);
+  });
+
+  describe('kahootMode rounds', () => {
+    it("steps back from a kahoot question's reveal to its own locking countdown", () => {
+      const revealing: GameProgress = {
+        status: 'reveal',
+        roundIndex: 1,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      };
+      const next = getNextGameState(
+        revealing,
+        'PREVIOUS',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next).toEqual({ ...revealing, status: 'locking' });
+    });
+
+    it('re-enters the previous kahoot question’s reveal from a mid-round question_open, instead of reopening it', () => {
+      const open: GameProgress = {
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      };
+      const next = getNextGameState(
+        open,
+        'PREVIOUS',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next).toEqual({
+        status: 'reveal',
+        roundIndex: 1,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      });
+    });
+
+    it("steps back from a kahoot round's first question_open to its own round intro card", () => {
+      const open: GameProgress = {
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 0,
+      };
+      const next = getNextGameState(
+        open,
+        'PREVIOUS',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next).toEqual({
+        ...open,
+        status: 'round_intro',
+        questionIndex: 0,
+      });
+    });
   });
 });

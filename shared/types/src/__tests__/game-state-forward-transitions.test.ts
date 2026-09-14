@@ -4,7 +4,12 @@ import {
   type GameContext,
   type GameProgress,
 } from '../game-state';
-import { lobby, twoRoundsWithBreakAfterSecond } from './game-state-fixtures';
+import {
+  kahootRoundAfterNormalRound,
+  kahootRoundBeforeNormalRound,
+  lobby,
+  twoRoundsWithBreakAfterSecond,
+} from './game-state-fixtures';
 
 describe('getNextGameState — forward (ADVANCE) transitions', () => {
   it('starts the quiz into the rules screen before any question opens', () => {
@@ -345,6 +350,111 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       isLeaderboardVisible: true,
       revealIndex: 0,
       furthestOpenIndex: -1,
+    });
+  });
+
+  describe('kahootMode rounds', () => {
+    it('locks a kahoot question immediately, even mid-round', () => {
+      const open: GameProgress = {
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      };
+      const next = getNextGameState(
+        open,
+        'ADVANCE',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next).toEqual({ ...open, status: 'locking' });
+    });
+
+    it('collapses locking straight to reveal, skipping break/reveal_intro entirely', () => {
+      const locking: GameProgress = {
+        status: 'locking',
+        roundIndex: 1,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 0,
+      };
+      const next = getNextGameState(
+        locking,
+        'ADVANCE',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next).toEqual({ ...locking, status: 'reveal', revealIndex: 0 });
+    });
+
+    it('advances from a mid-round reveal straight into the next question, no round_intro', () => {
+      const revealing: GameProgress = {
+        status: 'reveal',
+        roundIndex: 1,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 0,
+      };
+      const next = getNextGameState(
+        revealing,
+        'ADVANCE',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next).toEqual({
+        status: 'question_open',
+        roundIndex: 1,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        // Each kahoot question is its own one-question block, so its
+        // block-relative position is always 0, not the flat quiz position.
+        furthestOpenIndex: 0,
+      });
+    });
+
+    it("moves to the next round's intro once the kahoot round's last question is revealed", () => {
+      const revealing: GameProgress = {
+        status: 'reveal',
+        roundIndex: 0,
+        questionIndex: 1,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 1,
+      };
+      const next = getNextGameState(
+        revealing,
+        'ADVANCE',
+        kahootRoundBeforeNormalRound,
+      );
+      expect(next).toEqual({
+        status: 'round_intro',
+        roundIndex: 1,
+        questionIndex: 0,
+        isLeaderboardVisible: true,
+        revealIndex: 0,
+        furthestOpenIndex: -1,
+      });
+    });
+
+    it('ends the quiz once the last kahoot round question of the last round is revealed', () => {
+      const revealing: GameProgress = {
+        status: 'reveal',
+        roundIndex: 1,
+        questionIndex: 2,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 2,
+      };
+      const next = getNextGameState(
+        revealing,
+        'ADVANCE',
+        kahootRoundAfterNormalRound,
+      );
+      expect(next.status).toBe('ended');
+      expect(next.previousStatus).toBe('reveal');
+      expect(next.isLeaderboardVisible).toBe(true);
     });
   });
 });

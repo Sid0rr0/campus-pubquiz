@@ -61,6 +61,8 @@ function snapshot(
       maxQuestionsPerTopic: 1,
     },
     roundTitle: '',
+    isCurrentRoundKahoot: false,
+    roundTitles: [],
     currentQuestion: null,
     blockQuestions: [],
     upcomingQuestions: [],

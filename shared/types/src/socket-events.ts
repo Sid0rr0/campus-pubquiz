@@ -171,6 +171,8 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
+  /** Whether the round at `progress.roundIndex` has kahootMode set — drives /display's top-5-only leaderboard while it's active. */
+  isCurrentRoundKahoot: boolean;
   /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
   roundTitles: string[];
   currentQuestion: QuestionView | null;
@@ -421,6 +423,8 @@ export interface QuizSummaryQuestion {
 export interface QuizSummaryRound {
   title: string;
   breakAfter: boolean;
+  /** See RoundConfig.kahootMode — optional so existing QuizSummaryRound literals don't all need updating; undefined behaves as false. */
+  kahootMode?: boolean;
   questions: QuizSummaryQuestion[];
 }
 

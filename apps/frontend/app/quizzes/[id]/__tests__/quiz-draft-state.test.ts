@@ -38,6 +38,7 @@ describe('makeQuestion / makeRound', () => {
       id: 'r1',
       title: 'Round 1',
       breakAfter: false,
+      kahootMode: false,
       questions: [],
     });
   });
@@ -216,6 +217,32 @@ describe('roundFromPreview', () => {
     ]);
     expect(editorRound.title).toBe('History');
     expect(editorRound.breakAfter).toBe(true);
+    expect(editorRound.kahootMode).toBe(false);
+  });
+
+  it('carries a true kahootMode through from the preview', () => {
+    const round: ImportRoundPreview = {
+      title: 'Speed Round',
+      breakAfter: true,
+      kahootMode: true,
+      questions: [
+        {
+          type: 'multiple_choice',
+          prompt: 'Q1',
+          answer: 'A',
+          points: 1,
+          options: ['A', 'B'],
+        },
+      ],
+    };
+
+    const editorRound = roundFromPreview(
+      'r1',
+      round,
+      (index) => `r1-q${index}`,
+    );
+
+    expect(editorRound.kahootMode).toBe(true);
   });
 });
 
@@ -239,6 +266,7 @@ describe('toSaveRequest', () => {
         {
           title: 'History',
           breakAfter: false,
+          kahootMode: false,
           questions: [
             {
               type: 'free_text',
@@ -250,5 +278,25 @@ describe('toSaveRequest', () => {
         },
       ],
     });
+  });
+
+  it('carries a true kahootMode through to the save request', () => {
+    const round = makeRound('r1', 'Speed Round');
+    round.kahootMode = true;
+    round.questions = [
+      {
+        ...makeQuestion('q1'),
+        type: 'multiple_choice',
+        prompt: 'Q1',
+        options: [
+          { text: 'A', isCorrect: true },
+          { text: 'B', isCorrect: false },
+        ],
+      },
+    ];
+
+    const request = toSaveRequest('Trivia Night', [round]);
+
+    expect(request.rounds[0].kahootMode).toBe(true);
   });
 });

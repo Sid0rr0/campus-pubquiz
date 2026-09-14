@@ -1,5 +1,5 @@
 import {
-  getBlockStartRoundIndex,
+  getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
   type AnswerView,
   type ClosestGuessRevealData,
@@ -30,17 +30,18 @@ export function summarizeClosestGuess(
   };
 }
 
-/** Resolves the seeded question a block-relative revealIndex points at, given roundIndex. */
+/** Resolves the seeded question a block-relative revealIndex points at, given the (roundIndex, questionIndex) the block is currently pinned to. */
 function getRevealTargetQuestion(
   session: SessionState,
   roundIndex: number,
+  questionIndex: number,
   revealIndex: number,
 ): RevealQuestionView | undefined {
   const context = getGameContext(session);
-  const blockStart = getBlockStartRoundIndex(roundIndex, context);
-  const { roundIndex: targetRound, questionIndex } =
+  const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
+  const { roundIndex: targetRound, questionIndex: targetQuestion } =
     getRoundAndQuestionForBlockPosition(blockStart, revealIndex, context);
-  return session.seededGame.rounds[targetRound]?.questions[questionIndex];
+  return session.seededGame.rounds[targetRound]?.questions[targetQuestion];
 }
 
 /**
@@ -69,6 +70,7 @@ export function tryStepClosestGuessReveal(
   const question = getRevealTargetQuestion(
     session,
     session.progress.roundIndex,
+    session.progress.questionIndex,
     session.progress.revealIndex,
   );
   const totalSteps = getRevealStepCount(question, session);
@@ -94,6 +96,7 @@ export function computeInitialRevealStep(
   const question = getRevealTargetQuestion(
     session,
     progress.roundIndex,
+    progress.questionIndex,
     progress.revealIndex,
   );
   const totalSteps = getRevealStepCount(question, session);

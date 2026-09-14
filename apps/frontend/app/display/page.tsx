@@ -17,7 +17,10 @@ import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
-import { Leaderboard } from '@/app/components/leaderboard';
+import {
+  KAHOOT_LEADERBOARD_TOP_N,
+  Leaderboard,
+} from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
@@ -200,6 +203,7 @@ function DisplayPageContent() {
     blockQuestions = [],
     revealQuestions = [],
     roundTitle = '',
+    isCurrentRoundKahoot = false,
     roundTitles = [],
     questionLockAt = null,
     closestGuessRevealStep = 0,
@@ -266,6 +270,9 @@ function DisplayPageContent() {
               <Leaderboard
                 entries={leaderboard}
                 revealCount={leaderboardRevealCount}
+                maxRank={
+                  isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined
+                }
               />
             </div>
           ) : (

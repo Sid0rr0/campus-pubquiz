@@ -15,7 +15,7 @@ import { RoundRepository } from '@/db/repositories/round.repository';
 @Entity({ tableName: 'rounds', repository: () => RoundRepository })
 @Unique({ properties: ['quiz', 'orderIndex'] })
 export class Round extends BaseEntity {
-  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'breakAfter';
+  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'breakAfter' | 'kahootMode';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
   quiz!: Quiz;
@@ -28,6 +28,9 @@ export class Round extends BaseEntity {
 
   @Property({ default: false })
   breakAfter: boolean = false;
+
+  @Property({ default: false })
+  kahootMode: boolean = false;
 
   @OneToMany(() => Question, (question) => question.round)
   questions = new Collection<Question>(this);

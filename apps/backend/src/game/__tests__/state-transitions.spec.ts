@@ -4,6 +4,7 @@ import {
   createFakeOrm,
   createFakeGameProgressRepository,
   createFakeGameStateSeedService,
+  createFakeKahootSeedService,
   createFakeAnswerService,
   asSeedService,
   asGameProgressRepository,
@@ -302,5 +303,141 @@ describe('GameStateService — state transitions', () => {
       previousStatus: null,
     });
     expect(restored.currentQuestion?.id).toBe(21);
+  });
+
+  describe('kahootMode round', () => {
+    let kahootService: GameStateService;
+    let answerService: ReturnType<typeof createFakeAnswerService>;
+    let kahootJoinCode: string;
+
+    beforeEach(async () => {
+      answerService = createFakeAnswerService();
+      // Simulates "there is an ungraded answer somewhere in this block" —
+      // if the kahoot locking->reveal collapse ever accidentally routed
+      // through the break/break_intro ungraded-answers gate, this would
+      // make ADVANCE reject with UngradedAnswersError.
+      answerService.listUngradedQuestionIds.mockResolvedValue([999]);
+      kahootService = new GameStateService(
+        asSeedService(createFakeKahootSeedService()),
+        asGameProgressRepository(createFakeGameProgressRepository()),
+        createFakeOrm(),
+        asAnswerService(answerService),
+        asShowdownService(createFakeShowdownService()),
+      );
+      await kahootService.onModuleInit();
+      kahootJoinCode = 'KAHOOT';
+    });
+
+    it('locks, speed-scores, and reveals each question one at a time, skipping break/reveal_intro entirely', async () => {
+      await kahootService.applyAction(kahootJoinCode, 'START_QUIZ');
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> round_intro
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> question_open q0
+
+      const locking = await kahootService.applyAction(
+        kahootJoinCode,
+        'ADVANCE',
+      );
+      expect(locking.progress.status).toBe('locking');
+      expect(locking.currentQuestion?.id).toBe(31);
+
+      const reveal = await kahootService.applyAction(kahootJoinCode, 'ADVANCE');
+      expect(reveal.progress.status).toBe('reveal');
+      expect(reveal.progress.revealIndex).toBe(0);
+      expect(answerService.applyKahootSpeedScoring).toHaveBeenCalledWith(
+        103,
+        31,
+        expect.any(Number),
+        expect.any(Number),
+        10,
+      );
+
+      const nextOpen = await kahootService.applyAction(
+        kahootJoinCode,
+        'ADVANCE',
+      );
+      expect(nextOpen.progress.status).toBe('question_open');
+      expect(nextOpen.progress.questionIndex).toBe(1);
+      expect(nextOpen.currentQuestion?.id).toBe(32);
+
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> locking q1
+      const secondReveal = await kahootService.applyAction(
+        kahootJoinCode,
+        'ADVANCE',
+      );
+      expect(secondReveal.progress.status).toBe('reveal');
+      expect(answerService.applyKahootSpeedScoring).toHaveBeenCalledWith(
+        103,
+        32,
+        expect.any(Number),
+        expect.any(Number),
+        10,
+      );
+
+      const endedSnapshot = await kahootService.applyAction(
+        kahootJoinCode,
+        'ADVANCE',
+      );
+      expect(endedSnapshot.progress.status).toBe('ended');
+    });
+
+    it('never checks for ungraded answers, since the locking->reveal collapse never passes through break/break_intro', async () => {
+      await kahootService.applyAction(kahootJoinCode, 'START_QUIZ');
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> round_intro
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> question_open q0
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> locking
+
+      // Would reject with UngradedAnswersError if this ever routed through
+      // the break/break_intro gate — answerService.listUngradedQuestionIds
+      // is stubbed above to report a fake ungraded answer.
+      await expect(
+        kahootService.applyAction(kahootJoinCode, 'ADVANCE'),
+      ).resolves.toMatchObject({ progress: { status: 'reveal' } });
+    });
+
+    it('steps backward through kahoot questions with PREVIOUS', async () => {
+      await kahootService.applyAction(kahootJoinCode, 'START_QUIZ');
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> round_intro
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> question_open q0
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> locking q0
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> reveal q0
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> question_open q1
+
+      const backToReveal = await kahootService.applyAction(
+        kahootJoinCode,
+        'PREVIOUS',
+      );
+      expect(backToReveal.progress.status).toBe('reveal');
+      expect(backToReveal.progress.questionIndex).toBe(0);
+
+      const backToLocking = await kahootService.applyAction(
+        kahootJoinCode,
+        'PREVIOUS',
+      );
+      expect(backToLocking.progress.status).toBe('locking');
+      expect(backToLocking.progress.questionIndex).toBe(0);
+    });
+
+    it('does not re-score a question if PREVIOUS reopens locking and ADVANCE re-reveals it', async () => {
+      await kahootService.applyAction(kahootJoinCode, 'START_QUIZ');
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> round_intro
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> question_open q0
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> locking q0
+      await kahootService.applyAction(kahootJoinCode, 'ADVANCE'); // -> reveal q0 (scores once)
+      await kahootService.applyAction(kahootJoinCode, 'PREVIOUS'); // -> back to locking q0
+
+      const revealAgain = await kahootService.applyAction(
+        kahootJoinCode,
+        'ADVANCE',
+      ); // -> reveal q0 again
+      expect(revealAgain.progress.status).toBe('reveal');
+      expect(answerService.applyKahootSpeedScoring).toHaveBeenCalledTimes(1);
+      expect(answerService.applyKahootSpeedScoring).toHaveBeenCalledWith(
+        103,
+        31,
+        expect.any(Number),
+        expect.any(Number),
+        10,
+      );
+    });
   });
 });

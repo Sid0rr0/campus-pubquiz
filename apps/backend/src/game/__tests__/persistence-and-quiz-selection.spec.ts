@@ -94,9 +94,9 @@ describe('GameStateService — persistence and quiz selection', () => {
         furthestOpenIndex: 1,
       },
       {
-        livePhaseKey: 'q:0:1',
+        livePhaseKey: 'q:0:0:1',
         phaseStartedAt: 1_700_000_000_000,
-        phaseElapsedByKey: { 'q:0:0': 12_345 },
+        phaseElapsedByKey: { 'q:0:0:0': 12_345 },
       },
     );
     const rehydratedService = new GameStateService(

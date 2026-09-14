@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
-    <svg role="img" aria-label={title} data-testid="qr-code" data-value={value} />
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
   ),
 }));
 
@@ -30,7 +35,10 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('shows a completion message once the quiz has ended', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress({ status: 'ended' }), currentQuestion: null },
+      snapshot: {
+        progress: progress({ status: 'ended' }),
+        currentQuestion: null,
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -41,7 +49,10 @@ describe('DisplayPage — completion and leaderboard', () => {
   it('shows the leaderboard overlay whenever isLeaderboardVisible is true, regardless of status', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
-        progress: progress({ status: 'question_open', isLeaderboardVisible: true }),
+        progress: progress({
+          status: 'question_open',
+          isLeaderboardVisible: true,
+        }),
         currentQuestion: question,
       },
       connectionError: null,
@@ -57,8 +68,18 @@ describe('DisplayPage — completion and leaderboard', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0 },
+          {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            totalPoints: 5,
+            bonusPoints: 0,
+          },
+          {
+            teamId: 'team-2',
+            teamName: 'Second Place',
+            totalPoints: 3,
+            bonusPoints: 0,
+          },
         ],
         leaderboardRevealCount: 2,
       },
@@ -80,8 +101,18 @@ describe('DisplayPage — completion and leaderboard', () => {
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
-          { teamId: 'team-1', teamName: 'The Quizzards', totalPoints: 5, bonusPoints: 0 },
-          { teamId: 'team-2', teamName: 'Second Place', totalPoints: 3, bonusPoints: 0 },
+          {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            totalPoints: 5,
+            bonusPoints: 0,
+          },
+          {
+            teamId: 'team-2',
+            teamName: 'Second Place',
+            totalPoints: 3,
+            bonusPoints: 0,
+          },
         ],
         leaderboardRevealCount: 1,
       },
@@ -92,5 +123,49 @@ describe('DisplayPage — completion and leaderboard', () => {
 
     expect(screen.getByText('Second Place')).toBeInTheDocument();
     expect(screen.queryByText('The Quizzards')).not.toBeInTheDocument();
+  });
+
+  const SIX_TEAMS = Array.from({ length: 6 }, (_, index) => ({
+    teamId: `team-${index + 1}`,
+    teamName: `Team ${index + 1}`,
+    totalPoints: 6 - index,
+    bonusPoints: 0,
+  }));
+
+  it('caps the leaderboard to the top 5 while a kahoot round is active', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+        leaderboard: SIX_TEAMS,
+        leaderboardRevealCount: 6,
+        isCurrentRoundKahoot: true,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    for (let index = 1; index <= 5; index += 1) {
+      expect(screen.getByText(`Team ${index}`)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Team 6')).not.toBeInTheDocument();
+  });
+
+  it('shows every team when the current round is not kahoot mode', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+        leaderboard: SIX_TEAMS,
+        leaderboardRevealCount: 6,
+        isCurrentRoundKahoot: false,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Team 6')).toBeInTheDocument();
   });
 });

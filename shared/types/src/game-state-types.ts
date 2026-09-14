@@ -30,6 +30,14 @@ export interface RoundConfig {
    * breakAfter round locks every question since the previous breakAfter round.
    */
   breakAfter: boolean;
+  /**
+   * Kahoot mode: every question in this round is its own one-question block —
+   * it locks, scores by answer speed, and reveals immediately, then the next
+   * question opens directly (no round_intro/break in between). Optional, like
+   * GameProgress.isMediaFullscreen, so the many existing RoundConfig literals
+   * across the test suite don't all need updating; undefined behaves as false.
+   */
+  kahootMode?: boolean;
 }
 
 export interface GameContext {

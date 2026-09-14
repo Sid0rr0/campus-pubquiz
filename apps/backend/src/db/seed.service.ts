@@ -122,6 +122,7 @@ export class SeedService {
         id: roundRow.id,
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
+        kahootMode: roundRow.kahootMode,
         questions: questionRows.map((row) => ({
           id: row.id,
           type: row.type,
@@ -191,6 +192,7 @@ export class SeedService {
         id: roundRow.id,
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
+        kahootMode: roundRow.kahootMode,
         questions,
         // The hardcoded fixture carries no notes — matches what a subsequent
         // loadGame() would read back (Question.notes defaults to null),

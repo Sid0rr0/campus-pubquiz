@@ -91,6 +91,7 @@ export class QuizService {
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
+        kahootMode: round.kahootMode,
         questions: round.questions.getItems().map((question) => ({
           id: question.id,
           type: question.type,
@@ -113,6 +114,7 @@ export class QuizService {
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
+        kahootMode: round.kahootMode,
         questions: round.questions.getItems().map(toQuestionPreview),
       })),
     };
@@ -188,13 +190,19 @@ export class QuizService {
           title: round.title,
           orderIndex: roundIndex,
           breakAfter: round.breakAfter,
+          kahootMode: round.kahootMode ?? false,
           createdAt: roundNow,
           updatedAt: roundNow,
         },
         {
           onConflictFields: ['quiz', 'orderIndex'],
           onConflictAction: 'merge',
-          onConflictMergeFields: ['title', 'breakAfter', 'updatedAt'],
+          onConflictMergeFields: [
+            'title',
+            'breakAfter',
+            'kahootMode',
+            'updatedAt',
+          ],
         },
       );
 

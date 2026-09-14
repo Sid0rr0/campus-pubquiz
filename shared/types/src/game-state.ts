@@ -25,9 +25,11 @@ import {
 export * from './game-state-types';
 export * from './game-state-structure';
 export {
-  getBlockStartRoundIndex,
-  getBlockEndRoundIndex,
-  isLastQuestionOfBreakAfterRound,
+  getBlockStartPosition,
+  getBlockEndPosition,
+  getBlockPositionForQuestion,
+  getBlockQuestionCount,
+  isBreakPointQuestion,
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
 export { getTimedPhaseKey } from './game-state-timed-phase';
@@ -136,13 +138,27 @@ export function getNextGameState(
       if (progress.status === 'question_open')
         return advanceFromQuestionOpen(progress, context);
       if (progress.status === 'locking') {
+        const round = context.rounds[progress.roundIndex];
+        const revealIndex =
+          getBlockQuestionCount(
+            progress.roundIndex,
+            progress.questionIndex,
+            context,
+          ) - 1;
+        // Kahoot rounds skip break_intro/break/reveal_intro entirely — every
+        // question is auto-graded, so there's never a manual-grading gate to
+        // wait through, and the "fewer clicks" design collapses straight to
+        // this question's own reveal.
+        if (round.kahootMode) {
+          return { ...progress, status: 'reveal', revealIndex };
+        }
         return {
           ...progress,
           status: 'break_intro',
           // Pins to the block's last question — the one that just locked —
           // so PREVIOUS reveals it directly instead of starting pinned to
           // the block's first question.
-          revealIndex: getBlockQuestionCount(progress.roundIndex, context) - 1,
+          revealIndex,
         };
       }
       // Skips straight to revealing, same as 'break' already does from any
@@ -177,7 +193,7 @@ export function getNextGameState(
       if (progress.status === 'round_intro')
         return previousFromRoundIntro(progress, context);
       if (progress.status === 'question_open')
-        return previousFromQuestionOpen(progress);
+        return previousFromQuestionOpen(progress, context);
       if (progress.status === 'locking')
         return { ...progress, status: 'question_open' };
       // Reveals the specific just-locked question at the same revealIndex —
