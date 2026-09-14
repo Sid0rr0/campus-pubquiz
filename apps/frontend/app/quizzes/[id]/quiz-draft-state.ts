@@ -61,7 +61,7 @@ export function makeQuestion(id: string): EditorQuestion {
     id,
     type: 'multiple_choice',
     prompt: '',
-    points: 1,
+    points: 1000,
     notes: '',
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],

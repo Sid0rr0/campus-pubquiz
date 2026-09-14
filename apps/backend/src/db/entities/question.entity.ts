@@ -36,6 +36,6 @@ export class Question extends BaseEntity {
   @Property({ type: 'jsonb' })
   payload: Record<string, unknown> = {};
 
-  @Property({ default: 1 })
-  points: number = 1;
+  @Property({ default: 1000 })
+  points: number = 1000;
 }

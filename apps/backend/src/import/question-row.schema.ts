@@ -21,7 +21,7 @@ const QUESTION_TYPES: readonly QuestionType[] = [
   'closest_guess',
 ];
 
-const DEFAULT_POINTS = 1;
+const DEFAULT_POINTS = 1000;
 
 const httpUrl = z.url({
   protocol: /^https?$/,

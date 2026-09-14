@@ -347,7 +347,7 @@ describe('GameStateService — state transitions', () => {
         103,
         31,
         expect.any(Number),
-        expect.any(Number),
+        null,
         10,
       );
 
@@ -369,7 +369,7 @@ describe('GameStateService — state transitions', () => {
         103,
         32,
         expect.any(Number),
-        expect.any(Number),
+        null,
         10,
       );
 
@@ -435,7 +435,7 @@ describe('GameStateService — state transitions', () => {
         103,
         31,
         expect.any(Number),
-        expect.any(Number),
+        null,
         10,
       );
     });

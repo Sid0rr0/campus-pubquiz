@@ -316,7 +316,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         .update({ updated_at: new Date(when) });
     }
 
-    it('gives full points to an instant answer and the 70% floor to one right at lock', async () => {
+    it('gives full points to an instant answer and the 50% floor to one right at the timer', async () => {
       const mcQuestion = state.em.create(Question, {
         round: state.round,
         orderIndex: 1,
@@ -342,7 +342,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         'Paris',
       );
 
-      const questionOpenedAt = Date.now() - 10_000;
+      const questionTimerSeconds = 10;
+      const questionOpenedAt = Date.now() - questionTimerSeconds * 1000;
       const lockedAt = Date.now();
       await setAnsweredAt(mcQuestion.id, teamFast.id, questionOpenedAt);
       await setAnsweredAt(mcQuestion.id, teamSlow.id, lockedAt);
@@ -351,7 +352,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         state.session.id,
         mcQuestion.id,
         questionOpenedAt,
-        lockedAt,
+        questionTimerSeconds,
         mcQuestion.points,
       );
 
@@ -363,8 +364,45 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         10,
       );
       expect(answers.find((a) => a.teamId === teamSlow.id)?.pointsAwarded).toBe(
-        7,
+        5,
       );
+    });
+
+    it('leaves points untouched when no question timer is configured (unlimited)', async () => {
+      const mcQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'Paris',
+        points: 10,
+        payload: { options: ['Paris', 'London'] },
+      });
+      await state.em.flush();
+      const teamSlow = await insertTeam('Slow Team', 'token-slow');
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        teamSlow.id,
+        'Paris',
+      );
+
+      const questionOpenedAt = Date.now() - 10_000;
+      await setAnsweredAt(mcQuestion.id, teamSlow.id, Date.now());
+
+      await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        mcQuestion.id,
+        questionOpenedAt,
+        null,
+        mcQuestion.points,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        mcQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(10);
     });
 
     it('leaves an already-wrong answer at zero regardless of speed', async () => {
@@ -386,15 +424,15 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         'London',
       );
 
-      const questionOpenedAt = Date.now() - 10_000;
-      const lockedAt = Date.now();
+      const questionTimerSeconds = 10;
+      const questionOpenedAt = Date.now() - questionTimerSeconds * 1000;
       await setAnsweredAt(mcQuestion.id, teamWrong.id, questionOpenedAt);
 
       await state.answerService.applyKahootSpeedScoring(
         state.session.id,
         mcQuestion.id,
         questionOpenedAt,
-        lockedAt,
+        questionTimerSeconds,
         mcQuestion.points,
       );
 

@@ -44,12 +44,12 @@ describe('parseQuestionRow - multiple choice and common fields', () => {
     }
   });
 
-  it('defaults empty points to 1', () => {
+  it('defaults empty points to 1000', () => {
     const result = parseQuestionRow(makeRow({ points: '' }));
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.question.points).toBe(1);
+      expect(result.question.points).toBe(1000);
     }
   });
 

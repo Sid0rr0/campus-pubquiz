@@ -15,11 +15,6 @@ import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.r
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 
-/** Floor on a correct kahootMode answer's score, regardless of how late it was submitted — the slowest correct answer still keeps 70% of its points. */
-const KAHOOT_MIN_SCORE_FRACTION = 0.7;
-/** Share of a correct kahootMode answer's points that scales with speed, on top of KAHOOT_MIN_SCORE_FRACTION — the two must sum to 1 so a same-instant answer scores full points. */
-const KAHOOT_SPEED_SCORE_FRACTION = 0.3;
-
 export interface SubmittedAnswer {
   answerId: number;
   teamId: number;
@@ -254,22 +249,31 @@ export class AnswerService {
   }
 
   /**
-   * Rescales an already-graded kahootMode question's points by answer speed:
-   * a team that answered the instant the question opened keeps 100% of
-   * `points`, one that answered right as it locked keeps a 70% floor, linear
-   * in between. Only touches rows already correct (pointsAwarded > 0) —
-   * wrong answers stay at 0 regardless of speed. Uses `updatedAt` (not
-   * `createdAt`) since submit()'s upsert already treats updatedAt as "last
-   * resubmission time" for a team that revises before lock. Idempotent/
-   * recomputable, same convention as gradeClosestGuess.
+   * Rescales an already-graded kahootMode question's points by answer speed,
+   * using Kahoot's own scoring formula: score = round((1 - (responseTime /
+   * questionTimer) / 2) * points) — a same-instant answer keeps 100% of
+   * `points`, one that answers right as the timer runs out keeps a 50%
+   * floor, linear in between. `questionTimer` is the session's configured
+   * `kahootQuestionTimerSeconds` (the real, fixed timer), not however long
+   * the question actually stayed open — so a manual early lock doesn't
+   * distort the ratio the way using the actual elapsed window would. When
+   * no timer is configured (unlimited), speed conveys no information, so
+   * every correct answer keeps full points. Only touches rows already
+   * correct (pointsAwarded > 0) — wrong answers stay at 0 regardless of
+   * speed. Uses `updatedAt` (not `createdAt`) since submit()'s upsert
+   * already treats updatedAt as "last resubmission time" for a team that
+   * revises before lock. Idempotent/recomputable, same convention as
+   * gradeClosestGuess.
    */
   async applyKahootSpeedScoring(
     gameSessionId: number,
     questionId: number,
     questionOpenedAt: number,
-    lockedAt: number,
+    questionTimerSeconds: number | null,
     points: number,
   ): Promise<void> {
+    if (questionTimerSeconds === null) return;
+
     const rows = await this.answers.find({
       gameSession: gameSessionId,
       question: questionId,
@@ -277,15 +281,14 @@ export class AnswerService {
     });
     if (rows.length === 0) return;
 
-    const totalWindowMs = lockedAt - questionOpenedAt;
+    const questionTimerMs = questionTimerSeconds * 1000;
     for (const row of rows) {
-      const elapsedMs = row.updatedAt.getTime() - questionOpenedAt;
-      const rawFraction = totalWindowMs > 0 ? elapsedMs / totalWindowMs : 0;
-      const fraction = 1 - Math.min(Math.max(rawFraction, 0), 1);
-      row.pointsAwarded = Math.round(
-        points *
-          (KAHOOT_MIN_SCORE_FRACTION + KAHOOT_SPEED_SCORE_FRACTION * fraction),
+      const responseTimeMs = row.updatedAt.getTime() - questionOpenedAt;
+      const rawFraction = Math.min(
+        Math.max(responseTimeMs / questionTimerMs, 0),
+        1,
       );
+      row.pointsAwarded = Math.round(points * (1 - rawFraction / 2));
     }
     await this.answers.getEntityManager().flush();
   }

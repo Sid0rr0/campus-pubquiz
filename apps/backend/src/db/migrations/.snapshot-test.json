@@ -728,7 +728,7 @@
           "length": null,
           "precision": null,
           "scale": null,
-          "default": "'{\"rules\": [\"Max 6 players per team — every additional player costs the team −2 points.\", \"No cheating.\", \"Please write your answers in English (Czech and Slovak also accepted if necessary).\", \"In case of disagreements, the organizers have the final word.\", \"Want to contest something? Come with a credible source.\"], \"autoplayMedia\": true, \"lockGraceSeconds\": 60, \"enabledBonusCategories\": [\"shot\", \"selfie\", \"custom\"]}'",
+          "default": "'{\"rules\": [\"No cheating.\", \"Please write your answers in English.\", \"In case of disagreements, the organizers have the final word.\", \"Want to contest something? Come with a credible source.\", \"In case of no correct answers, the moderator CAN award a bonus point to the team with the funniest answer.\"], \"autoplayMedia\": true, \"lockGraceSeconds\": 60, \"maxPlayersPerTeam\": 6, \"showRoundOverview\": false, \"enabledBonusCategories\": [\"shot\", \"selfie\", \"custom\"], \"playLockCountdownSound\": true, \"extraPlayerPenaltyPoints\": 2, \"maxBonusAwardsPerCategory\": {\"shot\": 2, \"selfie\": 1}, \"kahootQuestionTimerSeconds\": null}'",
           "comment": null,
           "enumItems": [],
           "mappedType": "json"
@@ -1014,7 +1014,7 @@
           "length": null,
           "precision": 32,
           "scale": 0,
-          "default": "1",
+          "default": "1000",
           "comment": null,
           "enumItems": [],
           "mappedType": "integer"

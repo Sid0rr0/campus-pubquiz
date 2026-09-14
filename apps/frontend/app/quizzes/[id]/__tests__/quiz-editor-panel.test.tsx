@@ -324,7 +324,7 @@ describe('QuizEditorPanel', () => {
                 type: 'multiple_choice',
                 prompt: 'Capital of France?',
                 answer: 'Paris',
-                points: 1,
+                points: 1000,
                 options: ['Paris', 'London'],
               },
             ],

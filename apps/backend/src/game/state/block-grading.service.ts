@@ -82,11 +82,13 @@ export class BlockGradingService {
    * values at this point in applyAction (computePhaseTimerFields for the
    * new progress hasn't run yet) — i.e. exactly when this question opened.
    * Guarded by kahootSpeedScoredQuestionIds (same idempotency convention as
-   * ensureBlockGraded/closestGuessSummaries): without it, PREVIOUS from
-   * 'reveal' back into 'locking' followed by another ADVANCE would re-read
-   * Date.now() as a later "lockedAt" against the same phaseStartedAt,
-   * silently rescaling (inflating) already-awarded points. Recomputes the
-   * leaderboard afterward, same as ensureBlockGraded.
+   * ensureBlockGraded/closestGuessSummaries): the formula itself is
+   * deterministic given phaseStartedAt/kahootQuestionTimerSeconds/points, so
+   * a redundant re-run (e.g. PREVIOUS from 'reveal' back into 'locking'
+   * followed by another ADVANCE) would recompute the same result, but the
+   * guard still skips the pointless extra DB write and leaderboard
+   * recompute. Recomputes the leaderboard afterward, same as
+   * ensureBlockGraded.
    */
   async ensureKahootSpeedScored(
     session: SessionState,
@@ -110,7 +112,7 @@ export class BlockGradingService {
       session.seededGame.gameSessionId,
       question.id,
       session.phaseStartedAt,
-      Date.now(),
+      session.seededGame.settings.kahootQuestionTimerSeconds,
       question.points,
     );
 
