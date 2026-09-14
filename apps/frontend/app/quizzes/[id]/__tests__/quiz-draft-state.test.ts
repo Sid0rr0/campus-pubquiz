@@ -12,6 +12,7 @@ import {
   questionToPreview,
   roundFromPreview,
   toSaveRequest,
+  withSyncedQuestionIds,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 
 describe('makeQuestion / makeRound', () => {
@@ -316,5 +317,76 @@ describe('toSaveRequest', () => {
     const request = toSaveRequest('Trivia Night', [round]);
 
     expect(request.rounds[0].kahootMode).toBe(true);
+  });
+});
+
+describe('withSyncedQuestionIds', () => {
+  it('backfills dbId onto a question that had none, leaving every other field untouched', () => {
+    const edited = {
+      ...makeQuestion('q1'),
+      type: 'free_text' as const,
+      prompt: 'edited since saving',
+      correctText: 'A',
+    };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [edited] }];
+    const freshRounds: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [
+          {
+            questionId: 42,
+            type: 'free_text',
+            prompt: 'edited since saving',
+            answer: 'A',
+            points: 1000,
+          },
+        ],
+      },
+    ];
+
+    const synced = withSyncedQuestionIds(rounds, freshRounds);
+
+    expect(synced[0].questions[0].dbId).toBe(42);
+    expect(synced[0].questions[0].prompt).toBe('edited since saving');
+    expect(synced[0].questions[0].id).toBe('q1');
+  });
+
+  it('leaves an already-known dbId alone even if the fresh round disagrees', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      dbId: 7,
+      type: 'free_text' as const,
+      correctText: 'A',
+    };
+    const rounds = [{ ...makeRound('r1', 'History'), questions: [question] }];
+    const freshRounds: ImportRoundPreview[] = [
+      {
+        title: 'History',
+        breakAfter: true,
+        questions: [
+          {
+            questionId: 999,
+            type: 'free_text',
+            prompt: '',
+            answer: 'A',
+            points: 1000,
+          },
+        ],
+      },
+    ];
+
+    const synced = withSyncedQuestionIds(rounds, freshRounds);
+
+    expect(synced[0].questions[0].dbId).toBe(7);
+  });
+
+  it('is a no-op when there is no matching fresh round (e.g. a round added locally after the last save)', () => {
+    const question = { ...makeQuestion('q1'), type: 'free_text' as const };
+    const rounds = [{ ...makeRound('r1', 'New round'), questions: [question] }];
+
+    const synced = withSyncedQuestionIds(rounds, []);
+
+    expect(synced).toEqual(rounds);
   });
 });

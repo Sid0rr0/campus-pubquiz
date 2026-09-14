@@ -193,6 +193,34 @@ export function questionToPreview(
   };
 }
 
+/**
+ * Backfills server-assigned `dbId`s onto whichever questions were brand-new
+ * as of the last save, matching `freshRounds` (the draft as reloaded right
+ * after that save) to `rounds` by position. Deliberately touches nothing
+ * else — a wholesale state replace here would discard whatever the admin
+ * typed in the moment between clicking Save and this reload landing, which
+ * is what previously made a second save look like it silently did nothing.
+ */
+export function withSyncedQuestionIds(
+  rounds: EditorRound[],
+  freshRounds: ImportRoundPreview[],
+): EditorRound[] {
+  return rounds.map((round, roundIndex) => {
+    const freshQuestions = freshRounds[roundIndex]?.questions;
+    if (!freshQuestions) return round;
+    return {
+      ...round,
+      questions: round.questions.map((question, questionIndex) => {
+        if (question.dbId !== undefined) return question;
+        const freshId = freshQuestions[questionIndex]?.questionId;
+        return freshId === undefined
+          ? question
+          : { ...question, dbId: freshId };
+      }),
+    };
+  });
+}
+
 export function toSaveRequest(
   title: string,
   rounds: EditorRound[],

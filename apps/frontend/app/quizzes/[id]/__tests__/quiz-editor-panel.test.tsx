@@ -409,6 +409,80 @@ describe('QuizEditorPanel', () => {
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
 
+  it('keeps in-progress edits and lets a second save go through after the post-save background refetch lands', async () => {
+    const user = userEvent.setup();
+    const baseQuestion = {
+      questionId: 1,
+      type: 'free_text',
+      prompt: 'original prompt',
+      answer: 'A',
+      points: 1,
+    };
+    mockFetchQuizDraft.mockResolvedValueOnce({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        { title: 'History', breakAfter: true, questions: [baseQuestion] },
+      ],
+    });
+    // What the post-save cache invalidation refetches — a distinct object
+    // reference from the initial load, as a real second HTTP response
+    // would be, reflecting the just-saved 'v1' prompt.
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: true,
+          questions: [{ ...baseQuestion, prompt: 'v1' }],
+        },
+      ],
+    });
+    mockUpdateQuiz.mockResolvedValue({
+      quizId: 5,
+      roundCount: 1,
+      questionCount: 1,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    const saveButton = screen.getByRole('button', { name: /save quiz/i });
+    const promptInput = screen.getByPlaceholderText(/question prompt/i);
+    await user.clear(promptInput);
+    await user.type(promptInput, 'v1');
+    await user.click(saveButton);
+
+    await waitFor(() => expect(mockUpdateQuiz).toHaveBeenCalledTimes(1));
+    // Let the invalidateQueries-triggered background refetch resolve.
+    await waitFor(() => expect(mockFetchQuizDraft).toHaveBeenCalledTimes(2));
+
+    // The question field must survive that refetch untouched — same node,
+    // same in-progress value — rather than being remounted/reset.
+    const promptInputAfterRefetch =
+      screen.getByPlaceholderText(/question prompt/i);
+    expect(promptInputAfterRefetch).toBe(promptInput);
+    expect(promptInputAfterRefetch).toHaveValue('v1');
+
+    await user.clear(promptInputAfterRefetch);
+    await user.type(promptInputAfterRefetch, 'v2');
+    await user.click(saveButton);
+
+    await waitFor(() =>
+      expect(mockUpdateQuiz).toHaveBeenLastCalledWith(
+        5,
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({
+              questions: [expect.objectContaining({ prompt: 'v2' })],
+            }),
+          ],
+        }),
+      ),
+    );
+  });
+
   it('shows validation issues from a rejected save without crashing', async () => {
     const user = userEvent.setup();
     mockCreateQuiz.mockRejectedValue(

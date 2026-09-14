@@ -34,6 +34,7 @@ import {
   makeRound,
   roundFromPreview,
   toSaveRequest,
+  withSyncedQuestionIds,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 import { QuizRoundEditor } from '@/app/quizzes/[id]/quiz-round-editor';
@@ -64,10 +65,12 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     queryKey: queryKeys.quizzes.draft(numericQuizId ?? -1),
     queryFn: () => fetchQuizDraft(numericQuizId as number),
     enabled: numericQuizId !== null,
-    // The draft is copied once into editable local state below. A background
-    // refetch returning new data would silently clobber unsaved edits, so
-    // never refetch while mounted — and drop it on unmount so leaving and
-    // coming back reloads fresh.
+    // The draft is copied into editable local state below (see
+    // hydratedQuizId/mergedDraft state below) — staleTime Infinity just avoids
+    // pointless background refetches while mounted; a post-save
+    // invalidateQueries still forces one, and that's fine, since the sync
+    // logic below only merges dbIds in rather than re-copying. gcTime 0
+    // drops it on unmount so leaving and coming back reloads fresh.
     staleTime: Infinity,
     gcTime: 0,
   });
@@ -92,15 +95,21 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     QuizLiveEditState | undefined
   >(undefined);
 
-  // Copies the draft into editable local state exactly once, when the
-  // query's data first arrives — adjusted during render rather than in an
-  // Effect, the same idiom used elsewhere in this codebase (e.g.
-  // AdminPageContent's session-switch resets). staleTime Infinity on the
-  // query means `data` never changes identity after that first success, so
-  // this only ever fires once per quizId.
-  const [copiedDraft, setCopiedDraft] = useState(draftQuery.data);
-  if (draftQuery.data && draftQuery.data !== copiedDraft) {
-    setCopiedDraft(draftQuery.data);
+  // Copies the draft into editable local state exactly once per quizId —
+  // adjusted during render rather than in an Effect, the same idiom used
+  // elsewhere in this codebase (e.g. AdminPageContent's session-switch
+  // resets). Guarded by quizId rather than by `draftQuery.data` identity:
+  // a post-save cache invalidation (see saveMutation below) refetches this
+  // same query and hands back a new object identity every time, and
+  // re-copying on every one of those would wipe out whatever the admin
+  // typed since the save — which is what made a second save look broken.
+  const [hydratedQuizId, setHydratedQuizId] = useState<
+    number | null | undefined
+  >(undefined);
+  const [mergedDraft, setMergedDraft] = useState(draftQuery.data);
+  if (draftQuery.data && hydratedQuizId !== numericQuizId) {
+    setHydratedQuizId(numericQuizId);
+    setMergedDraft(draftQuery.data);
     setQuizTitle(draftQuery.data.title);
     setRounds(
       draftQuery.data.rounds.map((round) =>
@@ -109,6 +118,15 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     );
     setLiveEditState(draftQuery.data.liveEdit);
     setPhase('editor');
+  } else if (draftQuery.data && draftQuery.data !== mergedDraft) {
+    // A background refetch of the same quiz (e.g. the post-save cache
+    // invalidation below) — backfill any newly-assigned question dbIds
+    // rather than re-copying the whole draft, so it can't clobber edits
+    // made since the fetch was kicked off.
+    setMergedDraft(draftQuery.data);
+    setRounds((current) =>
+      withSyncedQuestionIds(current, draftQuery.data!.rounds),
+    );
   }
 
   const isLive = liveEditState !== undefined;
