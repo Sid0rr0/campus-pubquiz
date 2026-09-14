@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -11,6 +11,7 @@ import {
   type BlockQuestionView,
   type BlockRevealQuestionView,
   type GameProgress,
+  type LeaderboardEntry,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
@@ -156,6 +157,14 @@ function DisplayPageContent() {
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
 
+  // Standings from the most recent snapshot where the leaderboard was
+  // hidden — i.e. exactly the board as it stood right before whatever just
+  // updated it. Feeds the Kahoot between-questions leaderboard's old->new
+  // animation (see isBetweenKahootQuestions below).
+  const [previousLeaderboard, setPreviousLeaderboard] = useState<
+    LeaderboardEntry[]
+  >([]);
+
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) still needs the picker's error message on screen, so this only
   // strips the bad ?code= from the address bar rather than navigating away —
@@ -215,6 +224,23 @@ function DisplayPageContent() {
     showdownRevealStep = 0,
   } = snapshot;
 
+  // Adjusted directly during render (React's sanctioned "remember info from
+  // a previous render" pattern, guarded so it only fires on an actual
+  // change) rather than in an effect — an effect would only capture this a
+  // tick later, after isLeaderboardVisible has already flipped true, which
+  // is too late for the animation below to have an old state to open on.
+  // Compares snapshot.leaderboard itself (not the `leaderboard` local above,
+  // which falls back to a fresh `[]` literal every render whenever the
+  // field is absent — that fresh reference would never match
+  // previousLeaderboard and re-trigger this on every render).
+  if (
+    !progress.isLeaderboardVisible &&
+    snapshot.leaderboard !== undefined &&
+    snapshot.leaderboard !== previousLeaderboard
+  ) {
+    setPreviousLeaderboard(snapshot.leaderboard);
+  }
+
   const revealQuestion = revealQuestions[progress.revealIndex];
   // The specific block question under review — every position shows its own
   // content (including the block's last, just-locked question), so Previous
@@ -240,6 +266,16 @@ function DisplayPageContent() {
   );
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
+  // The leaderboard shown between one Kahoot question and the next (the
+  // next question is already open underneath, hidden until the admin
+  // dismisses this board) — the one case that should animate from the old
+  // standings rather than snap straight to the new ones. Every other
+  // leaderboard view (round-end, end-of-quiz, even for a Kahoot round's
+  // last question) keeps its existing one-by-one suspense reveal.
+  const isBetweenKahootQuestions =
+    isCurrentRoundKahoot &&
+    progress.status === 'question_open' &&
+    progress.isLeaderboardVisible;
 
   return (
     <main
@@ -270,6 +306,9 @@ function DisplayPageContent() {
               </h1>
               <Leaderboard
                 entries={leaderboard}
+                previousEntries={
+                  isBetweenKahootQuestions ? previousLeaderboard : undefined
+                }
                 revealCount={leaderboardRevealCount}
                 maxRank={
                   isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined

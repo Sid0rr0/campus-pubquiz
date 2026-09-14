@@ -1,4 +1,5 @@
-import { motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
+import { animate, motion } from 'motion/react';
 import {
   KAHOOT_LEADERBOARD_TOP_N,
   type LeaderboardEntry,
@@ -30,6 +31,16 @@ interface LeaderboardProps {
    * (e.g. the admin's always-visible preview, shown outside round context).
    */
   currentRoundIndex?: number;
+  /**
+   * Standings exactly as they were before `entries`' current point totals
+   * were applied — e.g. the board right before a Kahoot question's results
+   * landed. When given, the leaderboard opens on this old state, holds it,
+   * counts each team's score up to its new total, then reorders rows into
+   * their new standings, instead of rendering straight at the final state.
+   * Omit for every other leaderboard view (the round-end/quiz-end reveal,
+   * the admin's own preview), which should still render `entries` directly.
+   */
+  previousEntries?: LeaderboardEntry[];
 }
 
 type RankTrend = 'up' | 'down' | 'same';
@@ -218,39 +229,130 @@ function rowClasses(rankIndex: number): string {
   return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/15 bg-white/60 px-5 py-1.5 text-dark-blue/70';
 }
 
+/** How long the old standings hold on screen, unanimated, before scores start counting up. */
+const OLD_STATE_HOLD_MS = 900;
+/** How long score counting up takes, and how long the old row order is kept before rows reorder into the new standings. */
+const SCORE_COUNT_UP_MS = 900;
+
+/** The three-beat sequence `previousEntries` drives: hold the old board, count scores up in place, then reorder rows. Skips straight to 'settled' when there's no old state to animate from. */
+type TransitionPhase = 'old' | 'counting' | 'settled';
+
+/** A point total that counts up from its previous value instead of snapping, whenever `value` changes after mount. */
+function AnimatedTotal({
+  value,
+  className,
+}: {
+  value: number;
+  className: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const previousValueRef = useRef(value);
+
+  useEffect(() => {
+    const from = previousValueRef.current;
+    previousValueRef.current = value;
+    if (from === value) return undefined;
+    const controls = animate(from, value, {
+      duration: SCORE_COUNT_UP_MS / 1000,
+      ease: 'easeOut',
+      onUpdate: (latest) => setDisplayValue(Math.round(latest)),
+    });
+    return () => controls.stop();
+  }, [value]);
+
+  return <span className={className}>{displayValue}</span>;
+}
+
+interface LeaderboardRow {
+  entry: LeaderboardEntry;
+  rankIndex: number;
+  label: string;
+}
+
 export function Leaderboard({
   entries,
   revealCount,
   maxRank,
   currentRoundIndex,
+  previousEntries,
 }: LeaderboardProps) {
+  const hasOldState = previousEntries !== undefined;
+  const [phase, setPhase] = useState<TransitionPhase>(
+    hasOldState ? 'old' : 'settled',
+  );
+
+  useEffect(() => {
+    if (!hasOldState) return undefined;
+    const toCounting = setTimeout(
+      () => setPhase('counting'),
+      OLD_STATE_HOLD_MS,
+    );
+    const toSettled = setTimeout(
+      () => setPhase('settled'),
+      OLD_STATE_HOLD_MS + SCORE_COUNT_UP_MS,
+    );
+    return () => {
+      clearTimeout(toCounting);
+      clearTimeout(toSettled);
+    };
+    // Deliberately only depends on hasOldState, not entries/previousEntries:
+    // this sequence should play once per mount (a fresh leaderboard screen),
+    // not restart on every snapshot broadcast while it's on screen.
+  }, [hasOldState]);
+
+  const newRankInfos = computeRankInfos(entries);
+  // Rows for 'old'/'counting': same teams, same order, and same rank labels
+  // as the pre-update board — only 'counting' swaps in each team's new total
+  // (looked up by id) so the number can count up while its row stays put.
+  // Rows for 'settled' (or when there's no old state at all): entries in
+  // their own current order, ranked fresh — today's behavior, unanimated.
+  let rows: LeaderboardRow[];
+  if (phase === 'settled' || previousEntries === undefined) {
+    rows = entries.map((entry, index) => ({ entry, ...newRankInfos[index] }));
+  } else {
+    const entriesByTeamId = new Map(
+      entries.map((entry) => [entry.teamId, entry]),
+    );
+    const oldRankInfos = computeRankInfos(previousEntries);
+    rows = previousEntries.map((oldEntry, index) => ({
+      entry:
+        phase === 'counting'
+          ? (entriesByTeamId.get(oldEntry.teamId) ?? oldEntry)
+          : oldEntry,
+      ...oldRankInfos[index],
+    }));
+  }
+
   const visibleCount =
     revealCount === undefined
-      ? entries.length
-      : Math.min(Math.max(revealCount, 0), entries.length);
+      ? rows.length
+      : Math.min(Math.max(revealCount, 0), rows.length);
   // Reveals bottom-up: the visible slice always ends at last place and grows
   // upward toward rank 1 as visibleCount increases.
-  const sliceStart = entries.length - visibleCount;
-  const rankInfos = computeRankInfos(entries);
+  const sliceStart = rows.length - visibleCount;
   const previousRankByTeamId =
     currentRoundIndex === undefined
       ? undefined
       : rankIndexByScore(entries, (entry) =>
           totalBeforeRound(entry, currentRoundIndex),
         );
-  const visibleEntries = entries
+  const visibleRows = rows
     .slice(sliceStart)
-    .map((entry, offset) => ({ entry, index: sliceStart + offset }))
-    .filter(
-      ({ index }) =>
-        maxRank === undefined || rankInfos[index].rankIndex < maxRank,
-    );
+    .filter((row) => maxRank === undefined || row.rankIndex < maxRank);
 
   return (
     <ol className="flex flex-col gap-2">
-      {visibleEntries.map(({ entry, index }) => {
-        const { rankIndex, label } = rankInfos[index];
-        const previousRankIndex = previousRankByTeamId?.get(entry.teamId);
+      {visibleRows.map(({ entry, rankIndex, label }) => {
+        // Only compares against the pre-round trend once standings have
+        // settled into their final order — during 'old'/'counting' the row
+        // is still sitting at its old rank, which would compare against the
+        // wrong basis and show a misleading arrow.
+        const previousRankIndex =
+          phase === 'settled'
+            ? previousRankByTeamId?.get(entry.teamId)
+            : undefined;
+        const totalPointsClassName =
+          'font-display text-[calc(2rem*var(--display-text-scale,1))]';
         return (
           <motion.li
             key={entry.teamId}
@@ -277,9 +379,14 @@ export function Leaderboard({
               positiveBonusPoints={entry.positiveBonusPoints}
               negativeBonusPoints={entry.negativeBonusPoints}
             />
-            <span className="font-display text-[calc(2rem*var(--display-text-scale,1))]">
-              {entry.totalPoints}
-            </span>
+            {hasOldState ? (
+              <AnimatedTotal
+                value={entry.totalPoints}
+                className={totalPointsClassName}
+              />
+            ) : (
+              <span className={totalPointsClassName}>{entry.totalPoints}</span>
+            )}
           </motion.li>
         );
       })}

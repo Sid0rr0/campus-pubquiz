@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardEntry } from '@campus-pubquiz/types';
 import { Leaderboard } from '@/app/components/leaderboard';
 
@@ -456,6 +456,90 @@ describe('Leaderboard', () => {
       expect(within(bravoRow).getByLabelText('moved down')).toHaveClass(
         'text-red-500',
       );
+    });
+  });
+
+  describe('previousEntries (Kahoot between-questions old-state animation)', () => {
+    const OLD_ENTRIES: LeaderboardEntry[] = [
+      {
+        teamId: 2,
+        teamName: 'Runner Up',
+        totalPoints: 15,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 1,
+        teamName: 'Challenger',
+        totalPoints: 10,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+    ];
+    // This question's results flip the standings: Challenger scored big and
+    // overtakes Runner Up, who scored nothing.
+    const NEW_ENTRIES: LeaderboardEntry[] = [
+      {
+        teamId: 1,
+        teamName: 'Challenger',
+        totalPoints: 40,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+      {
+        teamId: 2,
+        teamName: 'Runner Up',
+        totalPoints: 15,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      },
+    ];
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('opens on the old standings — old order and old totals — not the new ones', () => {
+      render(
+        <Leaderboard entries={NEW_ENTRIES} previousEntries={OLD_ENTRIES} />,
+      );
+
+      const rows = screen.getAllByRole('listitem');
+      expect(rows[0]).toHaveTextContent('Runner Up');
+      expect(rows[0]).toHaveTextContent('15');
+      expect(rows[1]).toHaveTextContent('Challenger');
+      expect(rows[1]).toHaveTextContent('10');
+    });
+
+    it('settles into the new standings, reordered, once the transition finishes', () => {
+      vi.useFakeTimers();
+      render(
+        <Leaderboard entries={NEW_ENTRIES} previousEntries={OLD_ENTRIES} />,
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(5_000);
+      });
+
+      const rows = screen.getAllByRole('listitem');
+      expect(rows[0]).toHaveTextContent('Challenger');
+      expect(rows[1]).toHaveTextContent('Runner Up');
+    });
+
+    it('renders entries directly with no old-state hold when previousEntries is omitted', () => {
+      render(<Leaderboard entries={NEW_ENTRIES} />);
+
+      const rows = screen.getAllByRole('listitem');
+      expect(rows[0]).toHaveTextContent('Challenger');
+      expect(rows[0]).toHaveTextContent('40');
     });
   });
 });
