@@ -73,12 +73,14 @@ describe('DisplayPage — completion and leaderboard', () => {
             teamName: 'The Quizzards',
             totalPoints: 5,
             bonusPoints: 0,
+            roundPoints: [],
           },
           {
             teamId: 'team-2',
             teamName: 'Second Place',
             totalPoints: 3,
             bonusPoints: 0,
+            roundPoints: [],
           },
         ],
         leaderboardRevealCount: 2,
@@ -106,12 +108,14 @@ describe('DisplayPage — completion and leaderboard', () => {
             teamName: 'The Quizzards',
             totalPoints: 5,
             bonusPoints: 0,
+            roundPoints: [],
           },
           {
             teamId: 'team-2',
             teamName: 'Second Place',
             totalPoints: 3,
             bonusPoints: 0,
+            roundPoints: [],
           },
         ],
         leaderboardRevealCount: 1,
@@ -130,6 +134,7 @@ describe('DisplayPage — completion and leaderboard', () => {
     teamName: `Team ${index + 1}`,
     totalPoints: 6 - index,
     bonusPoints: 0,
+    roundPoints: [],
   }));
 
   it('caps the leaderboard to the top 5 while a kahoot round is active', () => {

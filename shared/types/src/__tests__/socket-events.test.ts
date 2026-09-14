@@ -279,6 +279,7 @@ describe('SessionSettings defaults', () => {
       maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,
+      kahootQuestionTimerSeconds: null,
       rules: [
         'No cheating.',
         'Please write your answers in English.',
