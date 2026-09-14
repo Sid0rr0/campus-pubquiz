@@ -323,22 +323,31 @@ export function Leaderboard({
     }));
   }
 
+  // maxRank narrows the pool first — the reveal walk then counts up from the
+  // worst-ranked team *within that pool* toward rank 1, so a capped Kahoot
+  // leaderboard (top 5 of, say, a 7-team game) actually reaches rank 1 once
+  // the walk finishes. Filtering after slicing instead (as this used to)
+  // spends revealCount's whole budget walking up from the true last place,
+  // so a revealCount capped at 5 for 7 teams would slice out ranks 3-7 and
+  // then filter that down to just ranks 3-5 — ranks 1 and 2 never appear.
+  const cappedRows =
+    maxRank === undefined
+      ? rows
+      : rows.filter((row) => row.rankIndex < maxRank);
   const visibleCount =
     revealCount === undefined
-      ? rows.length
-      : Math.min(Math.max(revealCount, 0), rows.length);
-  // Reveals bottom-up: the visible slice always ends at last place and grows
-  // upward toward rank 1 as visibleCount increases.
-  const sliceStart = rows.length - visibleCount;
+      ? cappedRows.length
+      : Math.min(Math.max(revealCount, 0), cappedRows.length);
+  // Reveals bottom-up: the visible slice always ends at last place (within
+  // the capped pool) and grows upward toward rank 1 as visibleCount grows.
+  const sliceStart = cappedRows.length - visibleCount;
   const previousRankByTeamId =
     currentRoundIndex === undefined
       ? undefined
       : rankIndexByScore(entries, (entry) =>
           totalBeforeRound(entry, currentRoundIndex),
         );
-  const visibleRows = rows
-    .slice(sliceStart)
-    .filter((row) => maxRank === undefined || row.rankIndex < maxRank);
+  const visibleRows = cappedRows.slice(sliceStart);
 
   return (
     <ol className="flex flex-col gap-2">

@@ -157,6 +157,29 @@ describe('DisplayPage — completion and leaderboard', () => {
     expect(screen.queryByText('Team 6')).not.toBeInTheDocument();
   });
 
+  it('reaches ranks 1-2 with the realistic reveal count the backend actually sends (capped at 5, not the full roster)', () => {
+    // Regression test: computeLeaderboardRevealCount caps revealCount at
+    // min(KAHOOT_LEADERBOARD_TOP_N, leaderboard.length) — 5 here, not 6 —
+    // for the Kahoot between-questions leaderboard's immediate full reveal.
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ isLeaderboardVisible: true }),
+        currentQuestion: null,
+        leaderboard: SIX_TEAMS,
+        leaderboardRevealCount: 5,
+        isCurrentRoundKahoot: true,
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    for (let index = 1; index <= 5; index += 1) {
+      expect(screen.getByText(`Team ${index}`)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Team 6')).not.toBeInTheDocument();
+  });
+
   it('shows every team when the current round is not kahoot mode', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {

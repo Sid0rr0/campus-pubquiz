@@ -291,14 +291,42 @@ describe('Leaderboard', () => {
     expect(screen.queryByText('Last Place')).not.toBeInTheDocument();
   });
 
-  it('composes maxRank with revealCount: an entry needs both to show', () => {
+  it('walks the reveal up from the worst rank within the maxRank-capped pool, not the full roster', () => {
+    // maxRank: 2 first narrows the pool to First/Second Place (Third is
+    // never a candidate); revealCount: 1 then reveals the worst of *that*
+    // pool — Second Place — not Third Place, which was already excluded.
     render(<Leaderboard entries={ENTRIES} revealCount={1} maxRank={2} />);
 
-    // revealCount: 1 alone would show only Third Place (last place); maxRank
-    // excludes it entirely (rank 3), so nothing renders yet.
-    expect(screen.queryByText('Third Place')).not.toBeInTheDocument();
-    expect(screen.queryByText('Second Place')).not.toBeInTheDocument();
+    expect(screen.getByText('Second Place')).toBeInTheDocument();
     expect(screen.queryByText('First Place')).not.toBeInTheDocument();
+    expect(screen.queryByText('Third Place')).not.toBeInTheDocument();
+  });
+
+  it('reaches the actual top ranks once revealCount covers the whole capped pool, even with more teams below the cutoff', () => {
+    // Regression test: with 7 teams and maxRank: 5, the real backend caps
+    // revealCount at exactly 5 (the size of the capped pool) for the
+    // Kahoot between-questions leaderboard's immediate full reveal. The
+    // walk must reach ranks 1-2, not get stuck on ranks 3-5 because it
+    // spent its budget counting up from the full roster's last place.
+    const SEVEN_TEAMS: LeaderboardEntry[] = Array.from(
+      { length: 7 },
+      (_, index) => ({
+        teamId: index + 1,
+        teamName: `Team ${index + 1}`,
+        totalPoints: 7 - index,
+        bonusPoints: 0,
+        positiveBonusPoints: 0,
+        negativeBonusPoints: 0,
+        roundPoints: [],
+      }),
+    );
+    render(<Leaderboard entries={SEVEN_TEAMS} revealCount={5} maxRank={5} />);
+
+    for (let index = 1; index <= 5; index += 1) {
+      expect(screen.getByText(`Team ${index}`)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Team 6')).not.toBeInTheDocument();
+    expect(screen.queryByText('Team 7')).not.toBeInTheDocument();
   });
 
   describe('rank trend icons', () => {
