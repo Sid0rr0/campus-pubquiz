@@ -35,3 +35,6 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Local dev-script state
+scripts/.simulated-teams.json
