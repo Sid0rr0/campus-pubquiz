@@ -20,6 +20,7 @@ import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
 import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { Button } from '@/app/components/button';
+import { computeRankInfos } from '@/app/components/leaderboard';
 
 interface TeamsTableProps {
   joinCode: string;
@@ -105,9 +106,18 @@ export function TeamsTable({
     entries.find((entry) => entry.teamId === viewingAwardsTeamId) ?? null;
   const viewingCodeTeam =
     entries.find((entry) => entry.teamId === viewingCodeTeamId) ?? null;
+  // Same tie-aware rank labels the /display leaderboard uses, e.g. "2.–3."
+  // for a two-way tie — entries is already sorted by totalPoints desc, so
+  // rankInfos stays index-aligned with it.
+  const rankInfos = useMemo(() => computeRankInfos(entries), [entries]);
   const columns = useMemo(
     () =>
       helper.columns([
+        helper.display({
+          id: 'position',
+          header: 'Position',
+          cell: (context) => rankInfos[context.row.index]?.label ?? '',
+        }),
         helper.accessor('teamName', { header: 'Team' }),
         ...roundTitles.map((roundTitle, index) =>
           helper.accessor((entry) => pointsForRound(entry, roundTitle), {
@@ -167,7 +177,7 @@ export function TeamsTable({
           },
         }),
       ]),
-    [roundTitles],
+    [roundTitles, rankInfos],
   );
   const table = useTable({
     features,

@@ -88,7 +88,7 @@ describe('TeamsTable', () => {
     });
   });
 
-  it('renders a header row with Team, numbered round columns, Bonus, Total, and Actions', () => {
+  it('renders a header row with Position, Team, numbered round columns, Bonus, Total, and Actions', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
@@ -100,6 +100,9 @@ describe('TeamsTable', () => {
       />,
     );
 
+    expect(
+      screen.getByRole('columnheader', { name: 'Position' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('columnheader', { name: 'Team' }),
     ).toBeInTheDocument();
@@ -140,6 +143,24 @@ describe('TeamsTable', () => {
     const secondPlaceRow = screen.getByText('Second Place').closest('tr')!;
     expect(within(secondPlaceRow).getAllByText('6')).toHaveLength(2); // round 1 and total
     expect(within(secondPlaceRow).getAllByText('0')).toHaveLength(2); // round 2 and bonus
+  });
+
+  it("shows each team's position ranked by total points, tied teams sharing a range", () => {
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        teams={TEAMS}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    const quizzardsRow = screen.getByText('The Quizzards').closest('tr')!;
+    expect(within(quizzardsRow).getByText('1.')).toBeInTheDocument();
+    const secondPlaceRow = screen.getByText('Second Place').closest('tr')!;
+    expect(within(secondPlaceRow).getByText('2.')).toBeInTheDocument();
   });
 
   it('shows a joined team with zeros when the leaderboard has not been computed for it yet', () => {

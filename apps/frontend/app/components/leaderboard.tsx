@@ -226,7 +226,7 @@ function BonusIndicator({
   );
 }
 
-interface RankInfo {
+export interface RankInfo {
   /** 0-indexed position of this tie group's first entry — drives styling. */
   rankIndex: number;
   /** Display label: "1." for a clear rank, or "2.–4." for a 3-way tie spanning those places. */
@@ -238,7 +238,7 @@ interface RankInfo {
  * the same score into one tied rank, e.g. three teams tied for 2nd-4th all
  * get the label "2.–4." and the next team is ranked 5th, not 4th.
  */
-function computeRankInfos(entries: LeaderboardEntry[]): RankInfo[] {
+export function computeRankInfos(entries: LeaderboardEntry[]): RankInfo[] {
   const infos: RankInfo[] = [];
   for (const { start, end } of tieGroups(
     entries,
