@@ -111,6 +111,19 @@ export function QuizQuestionEditor({
     onChange({ notes: composeNotesWithClip(freeNotes, nextStart, nextEnd) });
   }
 
+  function normalizedOptionText(text: string): string {
+    return text.trim();
+  }
+
+  function isDuplicateOption(optionIndex: number): boolean {
+    const normalized = normalizedOptionText(question.options[optionIndex].text);
+    if (normalized === '') return false;
+    return question.options.some(
+      (option, i) =>
+        i !== optionIndex && normalizedOptionText(option.text) === normalized,
+    );
+  }
+
   function updateOption(optionIndex: number, text: string): void {
     onChange({
       options: question.options.map((option, i) =>
@@ -272,37 +285,48 @@ export function QuizQuestionEditor({
 
       {isMc ? (
         <div className="flex flex-col gap-2">
-          {question.options.map((option, optionIndex) => (
-            <div key={optionIndex} className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={option.isCorrect}
-                onChange={() => setCorrectOption(optionIndex)}
-                disabled={isLocked}
-                aria-label={`Mark option ${optionIndex + 1} as correct`}
-                className="h-4 w-4 accent-green"
-              />
-              <input
-                value={option.text}
-                onChange={(event) =>
-                  updateOption(optionIndex, event.target.value)
-                }
-                disabled={isLocked}
-                placeholder="Option text"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-              />
-              <Button
-                type="button"
-                onClick={() => removeOption(optionIndex)}
-                disabled={isLocked || question.options.length <= 2}
-                variant="icon-danger"
-                size="icon-sm"
-                aria-label={`Remove option ${optionIndex + 1}`}
-              >
-                <Cross2Icon aria-hidden="true" />
-              </Button>
-            </div>
-          ))}
+          {question.options.map((option, optionIndex) => {
+            const isDuplicate = isDuplicateOption(optionIndex);
+            return (
+              <div key={optionIndex} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={option.isCorrect}
+                  onChange={() => setCorrectOption(optionIndex)}
+                  disabled={isLocked}
+                  aria-label={`Mark option ${optionIndex + 1} as correct`}
+                  className="h-4 w-4 accent-green"
+                />
+                <input
+                  value={option.text}
+                  onChange={(event) =>
+                    updateOption(optionIndex, event.target.value)
+                  }
+                  disabled={isLocked}
+                  placeholder="Option text"
+                  aria-invalid={isDuplicate}
+                  className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50 ${
+                    isDuplicate ? 'border-magenta' : 'border-foreground/20'
+                  }`}
+                />
+                <Button
+                  type="button"
+                  onClick={() => removeOption(optionIndex)}
+                  disabled={isLocked || question.options.length <= 2}
+                  variant="icon-danger"
+                  size="icon-sm"
+                  aria-label={`Remove option ${optionIndex + 1}`}
+                >
+                  <Cross2Icon aria-hidden="true" />
+                </Button>
+              </div>
+            );
+          })}
+          {question.options.some((_, i) => isDuplicateOption(i)) && (
+            <p className="text-xs font-extrabold text-magenta">
+              Options must be unique
+            </p>
+          )}
           <Button
             type="button"
             onClick={addOption}

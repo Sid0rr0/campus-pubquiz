@@ -154,6 +154,58 @@ describe('validateQuizDraft - per-question-type field validation', () => {
     );
   });
 
+  it('reports a multiple choice question with duplicate options', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'multiple_choice',
+                answer: 'Paris',
+                options: ['Paris', 'London', 'Paris'],
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: 0,
+        field: 'options',
+      }),
+    );
+  });
+
+  it('allows multiple choice options that differ only by case', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'multiple_choice',
+                answer: 'Paris',
+                options: ['Paris', 'paris'],
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).not.toContainEqual(
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: 0,
+        field: 'options',
+      }),
+    );
+  });
+
   it('reports a multiple choice answer that is not one of the options', () => {
     const issues = validateQuizDraft(
       makeRequest({

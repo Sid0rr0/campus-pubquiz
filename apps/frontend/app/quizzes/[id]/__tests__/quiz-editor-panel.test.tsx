@@ -335,6 +335,47 @@ describe('QuizEditorPanel', () => {
     expect(routerRef.replace).toHaveBeenCalledWith('/quizzes/42');
   });
 
+  it('warns when two multiple-choice options are exactly the same', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+
+    const options = screen.getAllByPlaceholderText(/option text/i);
+    await user.type(options[0], 'Paris');
+    await user.type(options[1], 'Paris');
+
+    expect(
+      await screen.findByText(/options must be unique/i),
+    ).toBeInTheDocument();
+
+    await user.clear(options[1]);
+    await user.type(options[1], 'London');
+
+    expect(
+      screen.queryByText(/options must be unique/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not warn when multiple-choice options differ only by case', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+
+    const options = screen.getAllByPlaceholderText(/option text/i);
+    await user.type(options[0], 'Paris');
+    await user.type(options[1], 'paris');
+
+    expect(
+      screen.queryByText(/options must be unique/i),
+    ).not.toBeInTheDocument();
+  });
+
   it('saves kahootMode: true after checking the Kahoot mode toggle', async () => {
     const user = userEvent.setup();
     mockCreateQuiz.mockResolvedValue({

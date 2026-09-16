@@ -47,7 +47,14 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
     .refine((question) => question.options.includes(question.answer), {
       path: ['answer'],
       error: 'Answer must be one of the options',
-    }),
+    })
+    .refine(
+      (question) => {
+        const normalized = question.options.map((option) => option.trim());
+        return new Set(normalized).size === normalized.length;
+      },
+      { path: ['options'], error: 'Options must not repeat' },
+    ),
   z.object({
     type: z.literal('audio'),
     ...baseQuestionFields,
