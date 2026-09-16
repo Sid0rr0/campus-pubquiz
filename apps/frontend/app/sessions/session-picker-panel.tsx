@@ -1,27 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  createColumnHelper,
+  createSortedRowModel,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_datetime,
+  tableFeatures,
+  useTable,
+  type SortingState,
+} from '@tanstack/react-table';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Dialog, Tabs } from 'radix-ui';
+import { Dialog, DropdownMenu, Tabs } from 'radix-ui';
 import {
   ArrowRightIcon,
   CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   Cross2Icon,
+  DotsVerticalIcon,
   ExternalLinkIcon,
   Pencil1Icon,
   PlayIcon,
   PlusIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
 import {
   DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS,
   DEFAULT_SESSION_SETTINGS,
   type ActiveSessionSummary,
+  type QuizSummary,
   type QuizzesListedPayload,
   type SessionSettings,
 } from '@campus-pubquiz/types';
-import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
+import { useAuth } from '@/app/lib/use-auth';
+import { deleteQuiz, fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import {
   closeSession,
   createSession,
@@ -31,9 +47,19 @@ import {
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
+import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { RoundsList } from '@/app/components/rounds-list';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { CopyButton } from '@/app/components/copy-button';
+
+const quizTableFeatures = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+});
+const quizColumnHelper = createColumnHelper<
+  typeof quizTableFeatures,
+  QuizSummary
+>();
 
 const EMPTY_SESSIONS: ActiveSessionSummary[] = [];
 const EMPTY_QUIZZES: QuizzesListedPayload['quizzes'] = [];
@@ -45,6 +71,9 @@ interface SessionPickerPanelProps {
 
 /** Landing screen shown when the admin hasn't pinned a specific session via `?code=` yet — lists every session currently running in the process and offers to start a new one. */
 export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
+  const auth = useAuth();
+  const isAdmin =
+    auth.status === 'authenticated' && auth.user?.role === 'admin';
   const queryClient = useQueryClient();
   const sessionsQuery = useQuery({
     queryKey: queryKeys.sessions.list(),
@@ -120,6 +149,30 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       ),
   });
 
+  // Most-recently-edited quiz on top by default — the quiz an admin just
+  // saved is the one they're about to start a session from.
+  const [quizSorting, setQuizSorting] = useState<SortingState>([
+    { id: 'updatedAt', desc: true },
+  ]);
+
+  const [deletingQuiz, setDeletingQuiz] = useState<QuizSummary | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: (quizId: number) => deleteQuiz(quizId),
+    onSuccess: () => {
+      // Deleting a quiz cascades (at the DB level) to every game_session
+      // ever run from it, including ended ones the Running Sessions list
+      // still shows — refresh both lists, not just quizzes.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+      setDeletingQuiz(null);
+    },
+    onError: (deleteError) =>
+      toast.error(
+        apiErrorMessage(deleteError, QuizApiError, 'Could not delete quiz') ??
+          'Could not delete quiz',
+      ),
+  });
+
   function handleConfirmCreate(): void {
     if (pendingQuizId === null) return;
     createMutation.mutate({ quizId: pendingQuizId, settings });
@@ -128,6 +181,107 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   function handleClose(joinCode: string): void {
     closeMutation.mutate(joinCode);
   }
+
+  const quizColumns = useMemo(
+    () =>
+      quizColumnHelper.columns([
+        quizColumnHelper.accessor('title', {
+          header: 'Quiz',
+          sortFn: sortFn_alphanumeric,
+          cell: (context) => {
+            const quiz = context.row.original;
+            const questionCount = quiz.rounds.reduce(
+              (sum, round) => sum + round.questions.length,
+              0,
+            );
+            return (
+              <span className="font-extrabold">
+                {quiz.title} ({quiz.rounds.length} rounds | {questionCount}{' '}
+                total questions)
+              </span>
+            );
+          },
+        }),
+        quizColumnHelper.accessor('updatedAt', {
+          header: 'Edited',
+          sortFn: sortFn_datetime,
+          cell: (context) => new Date(context.getValue()).toLocaleString(),
+        }),
+        quizColumnHelper.display({
+          id: 'actions',
+          header: 'Actions',
+          cell: (context) => {
+            const quiz = context.row.original;
+            return (
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  disabled={createMutation.isPending}
+                  variant="solid-flat"
+                  onClick={() => setPendingQuizId(quiz.id)}
+                  className="flex min-h-8 items-center gap-1.5 px-4 disabled:opacity-40"
+                >
+                  <PlayIcon aria-hidden="true" />
+                  Start
+                </Button>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-md"
+                      aria-label={`Actions for ${quiz.title}`}
+                      className="rounded-lg border-2 border-foreground/15 text-foreground/70"
+                    >
+                      <DotsVerticalIcon aria-hidden="true" />
+                    </Button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      align="end"
+                      className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
+                    >
+                      <DropdownMenu.Item asChild>
+                        <Link
+                          href={`/quizzes/${quiz.id}`}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+                        >
+                          <Pencil1Icon aria-hidden="true" />
+                          Edit
+                        </Link>
+                      </DropdownMenu.Item>
+                      {isAdmin && (
+                        <DropdownMenu.Item
+                          onSelect={() => setDeletingQuiz(quiz)}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-magenta outline-none data-highlighted:bg-magenta/10"
+                        >
+                          <TrashIcon aria-hidden="true" />
+                          Delete
+                        </DropdownMenu.Item>
+                      )}
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              </div>
+            );
+          },
+        }),
+      ]),
+    [createMutation.isPending, isAdmin],
+  );
+
+  const quizTable = useTable({
+    features: quizTableFeatures,
+    columns: quizColumns,
+    data: quizzes,
+    getRowId: (quiz) => String(quiz.id),
+    // Without this, the toggle cycle is desc -> unsorted -> asc: on the
+    // "unsorted" click, sorting[0] becomes undefined and the table falls
+    // back to insertion order instead of a real sort. Locking the cycle to
+    // asc <-> desc keeps every click a distinct sort and never silently
+    // drops the most-recently-edited-first default.
+    enableSortingRemoval: false,
+    state: { sorting: quizSorting },
+    onSortingChange: setQuizSorting,
+  });
 
   return (
     <main className="flex min-h-screen justify-center w-full gap-6 bg-background p-6 text-foreground">
@@ -156,7 +310,8 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                   <span className="flex items-center gap-1 text-xs text-foreground/55">
                     {session.status} · {session.teamCount} teams ·{' '}
                     {session.joinCode}
-                    <CopyButton value={session.joinCode} />
+                    <CopyButton value={session.joinCode} />· Started{' '}
+                    {new Date(session.startedAt).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -205,43 +360,61 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
               New Quiz
             </Link>
           </div>
-          <ul className="flex flex-col gap-2">
-            {quizzes.map((quiz) => (
-              <li
-                key={quiz.id}
-                className="flex items-center gap-2 min-h-11 flex-1 justify-between rounded-xl border border-foreground/15 bg-white px-4 font-extrabold "
-              >
-                <span>
-                  {quiz.title} ({quiz.rounds.length} rounds |{' '}
-                  {quiz.rounds.reduce(
-                    (sum, round) => sum + round.questions.length,
-                    0,
-                  )}{' '}
-                  total questions)
-                </span>
-
-                <div className="flex gap-2">
-                  <Link
-                    href={`/quizzes/${quiz.id}`}
-                    className="flex min-h-8 shrink-0 items-center gap-1 rounded-xl border border-foreground/30 px-2 text-sm font-bold"
-                  >
-                    <Pencil1Icon aria-hidden="true" />
-                    Edit
-                  </Link>
-
-                  <Button
-                    disabled={createMutation.isPending}
-                    variant="solid-flat"
-                    onClick={() => setPendingQuizId(quiz.id)}
-                    className="flex min-h-8 items-center gap-1.5 px-4 disabled:opacity-40"
-                  >
-                    <PlayIcon aria-hidden="true" />
-                    Start
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {quizzes.length === 0 ? (
+            <p className="text-sm text-foreground/55">No quizzes yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-foreground/15">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  {quizTable.getHeaderGroups().map((headerGroup) => (
+                    <tr
+                      key={headerGroup.id}
+                      className="border-b border-foreground/15 bg-foreground/5"
+                    >
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-4 py-2 font-display text-sm text-foreground/70"
+                        >
+                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                            <button
+                              type="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                              className="flex items-center gap-1"
+                            >
+                              <quizTable.FlexRender header={header} />
+                              {header.column.getIsSorted() === 'asc' && (
+                                <ChevronUpIcon aria-hidden="true" />
+                              )}
+                              {header.column.getIsSorted() === 'desc' && (
+                                <ChevronDownIcon aria-hidden="true" />
+                              )}
+                            </button>
+                          ) : (
+                            <quizTable.FlexRender header={header} />
+                          )}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {quizTable.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-foreground/10 last:border-b-0"
+                    >
+                      {row.getAllCells().map((cell) => (
+                        <td key={cell.id} className="px-4 py-2">
+                          <quizTable.FlexRender cell={cell} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
       <Dialog.Root
@@ -304,6 +477,22 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      <ConfirmDialog
+        open={deletingQuiz !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setDeletingQuiz(null);
+        }}
+        title={`Delete "${deletingQuiz?.title}"?`}
+        description="This permanently deletes the quiz, including every session ever run from it. This can't be undone."
+        confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+        onConfirm={() => {
+          if (!deletingQuiz) return;
+          const { title } = deletingQuiz;
+          deleteMutation.mutate(deletingQuiz.id, {
+            onSuccess: () => toast.success(`Deleted "${title}"`),
+          });
+        }}
+      />
     </main>
   );
 }

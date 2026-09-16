@@ -5,8 +5,16 @@ import { AlertDialog } from 'radix-ui';
 import { Button } from '@/app/components/button';
 
 interface ConfirmDialogProps {
-  /** The element that opens the dialog — rendered via `asChild`, so it must accept a ref and forward its props (e.g. a `Button`). */
-  trigger: ReactNode;
+  /**
+   * The element that opens the dialog — rendered via `asChild`, so it must
+   * accept a ref and forward its props (e.g. a `Button`). Omit it and pass
+   * `open`/`onOpenChange` instead when something other than a plain trigger
+   * click should open the dialog (e.g. a dropdown menu item, which closes
+   * its own menu on select before the dialog would mount).
+   */
+  trigger?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: string;
   description: ReactNode;
   confirmLabel: string;
@@ -14,9 +22,11 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
 }
 
-/** A destructive/irreversible action gated behind an "are you sure?" dialog — shared by Close Session, End Quiz, and Kick team. */
+/** A destructive/irreversible action gated behind an "are you sure?" dialog — shared by Close Session, End Quiz, Kick team, and Delete quiz. */
 export function ConfirmDialog({
   trigger,
+  open,
+  onOpenChange,
   title,
   description,
   confirmLabel,
@@ -24,8 +34,8 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   return (
-    <AlertDialog.Root>
-      <AlertDialog.Trigger asChild>{trigger}</AlertDialog.Trigger>
+    <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
+      {trigger && <AlertDialog.Trigger asChild>{trigger}</AlertDialog.Trigger>}
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
         <AlertDialog.Content className="fixed left-1/2 top-1/2 z-40 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-3 rounded-xl border bg-foreground p-5 text-background">

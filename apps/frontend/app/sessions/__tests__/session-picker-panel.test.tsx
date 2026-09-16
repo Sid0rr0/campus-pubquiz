@@ -2,8 +2,9 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
+import { DEFAULT_SESSION_SETTINGS, type AuthUser } from '@campus-pubquiz/types';
 import { SessionPickerPanel } from '@/app/sessions/session-picker-panel';
+import type { UseAuthResult } from '@/app/lib/use-auth';
 import { renderWithQuery } from '@/test-utils/query';
 
 const {
@@ -11,11 +12,15 @@ const {
   mockCreateSession,
   mockCloseSession,
   mockFetchQuizzes,
+  mockDeleteQuiz,
+  mockUseAuth,
 } = vi.hoisted(() => ({
   mockFetchSessions: vi.fn(),
   mockCreateSession: vi.fn(),
   mockCloseSession: vi.fn(),
   mockFetchQuizzes: vi.fn(),
+  mockDeleteQuiz: vi.fn(),
+  mockUseAuth: vi.fn(),
 }));
 
 vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
@@ -31,8 +36,41 @@ vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
-  return { ...actual, fetchQuizzes: mockFetchQuizzes };
+  return {
+    ...actual,
+    fetchQuizzes: mockFetchQuizzes,
+    deleteQuiz: mockDeleteQuiz,
+  };
 });
+
+vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
+
+const ADMIN_USER: AuthUser = {
+  id: 1,
+  username: 'admin',
+  role: 'admin',
+  status: 'active',
+};
+
+const MODERATOR_USER: AuthUser = {
+  id: 2,
+  username: 'moderator',
+  role: 'moderator',
+  status: 'active',
+};
+
+function authResult(overrides: Partial<UseAuthResult> = {}): UseAuthResult {
+  return {
+    user: ADMIN_USER,
+    status: 'authenticated',
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    clearError: vi.fn(),
+    ...overrides,
+  };
+}
 
 describe('SessionPickerPanel', () => {
   beforeEach(() => {
@@ -40,8 +78,11 @@ describe('SessionPickerPanel', () => {
     mockCreateSession.mockReset();
     mockCloseSession.mockReset();
     mockFetchQuizzes.mockReset();
+    mockDeleteQuiz.mockReset();
+    mockUseAuth.mockReset();
     mockFetchSessions.mockResolvedValue([]);
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
+    mockUseAuth.mockReturnValue(authResult());
   });
 
   it('shows a message when no sessions are running', async () => {
@@ -60,6 +101,7 @@ describe('SessionPickerPanel', () => {
         quizTitle: 'Campus Pub Quiz Night',
         status: 'lobby',
         teamCount: 3,
+        startedAt: '2026-09-16T12:00:00.000Z',
       },
     ]);
     renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
@@ -68,6 +110,30 @@ describe('SessionPickerPanel', () => {
       await screen.findByText('Campus Pub Quiz Night'),
     ).toBeInTheDocument();
     expect(screen.getByText(/lobby · 3 teams · abcdef/i)).toBeInTheDocument();
+  });
+
+  it('shows when each running session was started', async () => {
+    mockFetchSessions.mockResolvedValue([
+      {
+        joinCode: 'ABCDEF',
+        quizId: 1,
+        quizTitle: 'Campus Pub Quiz Night',
+        status: 'lobby',
+        teamCount: 3,
+        startedAt: '2026-09-16T12:00:00.000Z',
+      },
+    ]);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText('Campus Pub Quiz Night');
+    expect(
+      screen.getByText(
+        new RegExp(
+          `started ${new Date('2026-09-16T12:00:00.000Z').toLocaleString()}`,
+          'i',
+        ),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('opens a session when its Control button is clicked', async () => {
@@ -170,7 +236,7 @@ describe('SessionPickerPanel', () => {
     );
   });
 
-  it('links each listed quiz to its editor', async () => {
+  it('links each listed quiz to its editor from the actions menu', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: null,
       quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
@@ -178,10 +244,190 @@ describe('SessionPickerPanel', () => {
     renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
 
     await screen.findByText(/imported quiz/i);
-    expect(screen.getByRole('link', { name: /edit/i })).toHaveAttribute(
-      'href',
-      '/quizzes/2',
+    await userEvent.click(
+      screen.getByRole('button', { name: /actions for imported quiz/i }),
     );
+
+    expect(
+      await screen.findByRole('menuitem', { name: /edit/i }),
+    ).toHaveAttribute('href', '/quizzes/2');
+  });
+
+  it("shows the quiz's last-edited date and time", async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        {
+          id: 2,
+          title: 'Imported Quiz',
+          updatedAt: '2026-09-16T14:32:00.000Z',
+          rounds: [],
+        },
+      ],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/imported quiz/i);
+    expect(
+      screen.getByText(new Date('2026-09-16T14:32:00.000Z').toLocaleString()),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Delete in the actions menu for an admin and deletes the quiz on confirm', async () => {
+    mockUseAuth.mockReturnValue(authResult({ user: ADMIN_USER }));
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    mockDeleteQuiz.mockResolvedValue(undefined);
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/imported quiz/i);
+    await userEvent.click(
+      screen.getByRole('button', { name: /actions for imported quiz/i }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: /delete/i }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+
+    await waitFor(() => expect(mockDeleteQuiz).toHaveBeenCalledWith(2));
+  });
+
+  it('shows a success toast naming the quiz after it is deleted', async () => {
+    mockUseAuth.mockReturnValue(authResult({ user: ADMIN_USER }));
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    mockDeleteQuiz.mockResolvedValue(undefined);
+    renderWithQuery(
+      <>
+        <SessionPickerPanel onOpenSession={vi.fn()} />
+        <Toaster />
+      </>,
+    );
+
+    await screen.findByText(/imported quiz/i);
+    await userEvent.click(
+      screen.getByRole('button', { name: /actions for imported quiz/i }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: /delete/i }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+
+    expect(
+      await screen.findByText('Deleted "Imported Quiz"'),
+    ).toBeInTheDocument();
+  });
+
+  it('hides Delete from the actions menu for a non-admin', async () => {
+    mockUseAuth.mockReturnValue(authResult({ user: MODERATOR_USER }));
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/imported quiz/i);
+    await userEvent.click(
+      screen.getByRole('button', { name: /actions for imported quiz/i }),
+    );
+
+    expect(
+      screen.queryByRole('menuitem', { name: /delete/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('defaults the quiz table to most-recently-edited first', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        {
+          id: 1,
+          title: 'Older Quiz',
+          updatedAt: '2020-01-01T00:00:00.000Z',
+          rounds: [],
+        },
+        {
+          id: 2,
+          title: 'Newer Quiz',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          rounds: [],
+        },
+      ],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/older quiz/i);
+    const [firstRow] = screen.getAllByRole('row').slice(1);
+
+    expect(firstRow.textContent).toContain('Newer Quiz');
+  });
+
+  it('sorts the quiz table by name when the Quiz header is clicked', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        { id: 1, title: 'Zebra Quiz', rounds: [] },
+        { id: 2, title: 'Alpha Quiz', rounds: [] },
+      ],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/zebra quiz/i);
+    function rowTitles(): string[] {
+      return screen
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.textContent ?? '');
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: /^quiz$/i }));
+    const afterFirstClick = rowTitles();
+    await userEvent.click(screen.getByRole('button', { name: /^quiz$/i }));
+    const afterSecondClick = rowTitles();
+
+    expect(afterFirstClick).not.toEqual(afterSecondClick);
+    expect(afterFirstClick).toEqual([...afterSecondClick].reverse());
+  });
+
+  it('sorts the quiz table by edited date when the Edited header is clicked', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [
+        {
+          id: 1,
+          title: 'Older Quiz',
+          updatedAt: '2020-01-01T00:00:00.000Z',
+          rounds: [],
+        },
+        {
+          id: 2,
+          title: 'Newer Quiz',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          rounds: [],
+        },
+      ],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await screen.findByText(/older quiz/i);
+    function rowTitles(): string[] {
+      return screen
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.textContent ?? '');
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: /^edited$/i }));
+    const afterFirstClick = rowTitles();
+    await userEvent.click(screen.getByRole('button', { name: /^edited$/i }));
+    const afterSecondClick = rowTitles();
+
+    expect(afterFirstClick).not.toEqual(afterSecondClick);
+    expect(afterFirstClick).toEqual([...afterSecondClick].reverse());
   });
 
   it('shows a confirmation modal with the quiz rounds and questions before creating a session', async () => {

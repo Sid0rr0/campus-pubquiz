@@ -104,8 +104,18 @@ describe('QuizService (Postgres integration)', () => {
     expect(quizzes).toHaveLength(2);
     expect(quizzes).toEqual(
       expect.arrayContaining([
-        { id: quizA.id, title: 'Campus Pub Quiz Night', rounds: [] },
-        { id: quizB.id, title: 'Imported Quiz', rounds: [] },
+        {
+          id: quizA.id,
+          title: 'Campus Pub Quiz Night',
+          updatedAt: expect.any(String) as string,
+          rounds: [],
+        },
+        {
+          id: quizB.id,
+          title: 'Imported Quiz',
+          updatedAt: expect.any(String) as string,
+          rounds: [],
+        },
       ]),
     );
   });
@@ -501,6 +511,24 @@ describe('QuizService (Postgres integration)', () => {
       expect(questions[0].id).toBe(q1.questionId);
       expect(questions[1].prompt).toBe('Q2 (new)');
       expect(questions[1].id).not.toBe(q1.questionId);
+    });
+  });
+
+  describe('remove', () => {
+    it('deletes the quiz and its rounds/questions', async () => {
+      const quiz = await insertQuiz('Campus Pub Quiz Night');
+      const round = await insertRound(quiz, 'Round 1', 0);
+      await insertQuestion(round, 'Name a fruit', 0, { answer: 'Banana' });
+
+      await quizService.remove(quiz.id);
+
+      await expect(em.find(Quiz, {})).resolves.toEqual([]);
+      await expect(em.find(Round, {})).resolves.toEqual([]);
+      await expect(em.find(Question, {})).resolves.toEqual([]);
+    });
+
+    it('throws QuizNotFoundError for a missing quiz', async () => {
+      await expect(quizService.remove(999)).rejects.toThrow(QuizNotFoundError);
     });
   });
 });

@@ -21,6 +21,7 @@ function makeController() {
     findDraftById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    remove: jest.fn(),
   };
   const gameState = {
     getActiveQuizId: jest.fn().mockReturnValue(1),
@@ -51,8 +52,18 @@ describe('QuizController', () => {
   it('returns the active quiz id alongside the quiz list', async () => {
     const { controller, quizService, gameState } = makeController();
     const quizzes: QuizSummary[] = [
-      { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
-      { id: 2, title: 'Imported Quiz', rounds: [] },
+      {
+        id: 1,
+        title: 'Campus Pub Quiz Night',
+        updatedAt: '2026-09-16T00:00:00.000Z',
+        rounds: [],
+      },
+      {
+        id: 2,
+        title: 'Imported Quiz',
+        updatedAt: '2026-09-16T00:00:00.000Z',
+        rounds: [],
+      },
     ];
     quizService.list.mockResolvedValue(quizzes);
     gameState.getActiveQuizId.mockReturnValue(1);
@@ -66,7 +77,12 @@ describe('QuizController', () => {
   it('returns a null active quiz id when no joinCode is given', async () => {
     const { controller, quizService, gameState } = makeController();
     const quizzes: QuizSummary[] = [
-      { id: 1, title: 'Campus Pub Quiz Night', rounds: [] },
+      {
+        id: 1,
+        title: 'Campus Pub Quiz Night',
+        updatedAt: '2026-09-16T00:00:00.000Z',
+        rounds: [],
+      },
     ];
     quizService.list.mockResolvedValue(quizzes);
 
@@ -335,6 +351,50 @@ describe('QuizController', () => {
         editedRounds,
       );
       expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF');
+    });
+  });
+
+  describe('remove', () => {
+    it('is admin-only', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- inspected for metadata only, never invoked
+      const removeHandler = QuizController.prototype.remove;
+      const roles = Reflect.getMetadata('roles', removeHandler) as
+        | unknown[]
+        | undefined;
+      expect(roles).toEqual(['admin']);
+    });
+
+    it('deletes the quiz when no session is live on it', async () => {
+      const { controller, quizService, gameState } = makeController();
+      gameState.listSessions.mockReturnValue([]);
+      quizService.remove.mockResolvedValue(undefined);
+
+      await controller.remove(1);
+
+      expect(quizService.remove).toHaveBeenCalledWith(1);
+    });
+
+    it('rejects with 409 when a live session is running on this quiz', async () => {
+      const { controller, quizService, gameState } = makeController();
+      gameState.listSessions.mockReturnValue([
+        {
+          joinCode: 'ABCDEF',
+          quizId: 1,
+          status: 'question_open',
+          teamCount: 2,
+        },
+      ]);
+
+      await expect(controller.remove(1)).rejects.toThrow(ConflictException);
+      expect(quizService.remove).not.toHaveBeenCalled();
+    });
+
+    it('maps a missing quiz to 404', async () => {
+      const { controller, quizService, gameState } = makeController();
+      gameState.listSessions.mockReturnValue([]);
+      quizService.remove.mockRejectedValue(new QuizNotFoundError(999));
+
+      await expect(controller.remove(999)).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -2,7 +2,9 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   ParseIntPipe,
@@ -19,6 +21,7 @@ import type {
   QuizDraftSaveResult,
   QuizzesListedPayload,
 } from '@campus-pubquiz/types';
+import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { GameGateway } from '@/game/game.gateway';
@@ -99,6 +102,23 @@ export class QuizController {
       }
 
       return result;
+    } catch (error) {
+      throw this.toHttpError(error);
+    }
+  }
+
+  @Delete(':id')
+  @Roles('admin')
+  @HttpCode(204)
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    const liveJoinCodes = this.getLiveSessionJoinCodes(id);
+    if (liveJoinCodes.length > 0) {
+      throw new ConflictException(
+        'Cannot delete a quiz with a live session running — close the session first',
+      );
+    }
+    try {
+      await this.quizService.remove(id);
     } catch (error) {
       throw this.toHttpError(error);
     }

@@ -104,6 +104,7 @@ export class QuizService {
     return quizzes.map((quiz) => ({
       id: quiz.id,
       title: quiz.title,
+      updatedAt: quiz.updatedAt.toISOString(),
       rounds: quiz.rounds.getItems().map((round) => ({
         title: round.title,
         breakAfter: round.breakAfter,
@@ -168,6 +169,13 @@ export class QuizService {
     await this.syncRoundsAndQuestions(quizId, normalizedRounds);
 
     return this.toSaveResult(quizId, normalizedRounds);
+  }
+
+  /** Deletes a quiz and, via the DB's `game_sessions.quiz_id` cascade rule, every session ever run from it. Callers must reject this while a live session is running — see QuizController.remove. */
+  async remove(quizId: number): Promise<void> {
+    const quiz = await this.quizzes.findOne({ id: quizId });
+    if (!quiz) throw new QuizNotFoundError(quizId);
+    await this.quizzes.getEntityManager().removeAndFlush(quiz);
   }
 
   private toSaveResult(

@@ -90,6 +90,19 @@ export class SeedService {
     return { gameSessionId: session.id, joinCode: session.joinCode };
   }
 
+  /** Session start times for the admin session picker's "Started" column — GameStateService knows joinCode but not GameSession metadata. */
+  async findStartedAtByJoinCodes(
+    joinCodes: string[],
+  ): Promise<Map<string, Date>> {
+    if (joinCodes.length === 0) return new Map();
+    const sessions = await this.gameSessions.find({
+      joinCode: { $in: joinCodes },
+    });
+    return new Map(
+      sessions.map((session) => [session.joinCode, session.createdAt]),
+    );
+  }
+
   /** Merges the given settings into an existing session's row — the lobby-settings-update flow's persistence step. */
   async updateSettings(
     gameSessionId: number,

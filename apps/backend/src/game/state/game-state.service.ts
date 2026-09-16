@@ -123,8 +123,8 @@ export class GameStateService implements OnModuleInit {
     return this.sessionStore.get(joinCode).seededGame.quizId;
   }
 
-  /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles are filled in by the caller — this service only knows quizId, not quiz metadata. */
-  listSessions(): Omit<ActiveSessionSummary, 'quizTitle'>[] {
+  /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles and start times are filled in by the caller — this service only knows quizId, not quiz/GameSession metadata. */
+  listSessions(): Omit<ActiveSessionSummary, 'quizTitle' | 'startedAt'>[] {
     return this.sessionStore.values().map((session) => ({
       joinCode: session.seededGame.joinCode,
       quizId: session.seededGame.quizId,

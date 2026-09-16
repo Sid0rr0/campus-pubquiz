@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
+import { deleteQuiz, fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 
 const originalFetch = global.fetch;
 
@@ -43,6 +43,37 @@ describe('quiz-api', () => {
         'Invalid or expired session',
       );
       expect((error as QuizApiError).status).toBe(401);
+    });
+  });
+
+  describe('deleteQuiz', () => {
+    it('sends a DELETE to /quizzes/:id with the session cookie', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await deleteQuiz(2);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/quizzes/2',
+        expect.objectContaining({ method: 'DELETE', credentials: 'include' }),
+      );
+    });
+
+    it('throws QuizApiError with the server message when the response is not ok', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () =>
+          Promise.resolve({
+            message:
+              'Cannot delete a quiz with a live session running — close the session first',
+          }),
+      }) as unknown as typeof fetch;
+
+      const error = await deleteQuiz(2).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(QuizApiError);
+      expect((error as QuizApiError).status).toBe(409);
     });
   });
 });

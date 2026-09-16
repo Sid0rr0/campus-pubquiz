@@ -154,4 +154,49 @@ describe('SeedService (Postgres integration)', () => {
     );
     expect(reloaded.rounds[0].questions[0].answer).toBe(fixtureQuestion.answer);
   });
+
+  describe('findStartedAtByJoinCodes', () => {
+    it('maps each join code to its session row createdAt', async () => {
+      const first = await seedService.seed();
+      const second = await seedService.createSession(first.quizId);
+
+      const startedAtByJoinCode = await seedService.findStartedAtByJoinCodes([
+        first.joinCode,
+        second.joinCode,
+      ]);
+
+      const firstRow = await em.findOneOrFail(GameSession, {
+        id: first.gameSessionId,
+      });
+      const secondRow = await em.findOneOrFail(GameSession, {
+        id: second.gameSessionId,
+      });
+      expect(startedAtByJoinCode.get(first.joinCode)).toEqual(
+        firstRow.createdAt,
+      );
+      expect(startedAtByJoinCode.get(second.joinCode)).toEqual(
+        secondRow.createdAt,
+      );
+    });
+
+    it('omits join codes that do not exist rather than throwing', async () => {
+      const first = await seedService.seed();
+
+      const startedAtByJoinCode = await seedService.findStartedAtByJoinCodes([
+        first.joinCode,
+        'NOPE12',
+      ]);
+
+      expect(startedAtByJoinCode.size).toBe(1);
+      expect(startedAtByJoinCode.has('NOPE12')).toBe(false);
+    });
+
+    it('returns an empty map without querying for an empty join code list', async () => {
+      const startedAtByJoinCode = await seedService.findStartedAtByJoinCodes(
+        [],
+      );
+
+      expect(startedAtByJoinCode.size).toBe(0);
+    });
+  });
 });

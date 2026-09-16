@@ -433,6 +433,8 @@ export interface QuizSummaryRound {
 export interface QuizSummary {
   id: number;
   title: string;
+  /** ISO timestamp of the quiz's last edit, for the /sessions "Edited" column. */
+  updatedAt: string;
   rounds: QuizSummaryRound[];
 }
 
@@ -456,6 +458,8 @@ export interface ActiveSessionSummary {
   quizTitle: string;
   status: GameStatus;
   teamCount: number;
+  /** ISO timestamp the session was created (POST /sessions), for the "Started" display. */
+  startedAt: string;
 }
 
 export interface KickTeamPayload {

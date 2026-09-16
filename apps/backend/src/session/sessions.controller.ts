@@ -18,6 +18,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
+import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
 import {
   GameStateService,
@@ -54,6 +55,7 @@ export class SessionsController {
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
     private readonly gameGateway: GameGateway,
+    private readonly seedService: SeedService,
   ) {}
 
   /**
@@ -85,12 +87,18 @@ export class SessionsController {
     );
     const snapshot = await this.gameState.createSession(quizId, settings);
     const titles = await this.quizService.findTitles([quizId]);
+    const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
+      [snapshot.joinCode],
+    );
     return {
       joinCode: snapshot.joinCode,
       quizId,
       quizTitle: titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE,
       status: snapshot.progress.status,
       teamCount: snapshot.teams.length,
+      startedAt: (
+        startedAtByJoinCode.get(snapshot.joinCode) ?? new Date()
+      ).toISOString(),
     };
   }
 
@@ -133,14 +141,20 @@ export class SessionsController {
   }
 
   private async summarize(
-    sessions: Omit<ActiveSessionSummary, 'quizTitle'>[],
+    sessions: Omit<ActiveSessionSummary, 'quizTitle' | 'startedAt'>[],
   ): Promise<ActiveSessionSummary[]> {
     const titles = await this.quizService.findTitles(
       sessions.map((session) => session.quizId),
     );
+    const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
+      sessions.map((session) => session.joinCode),
+    );
     return sessions.map((session) => ({
       ...session,
       quizTitle: titles.get(session.quizId) ?? UNKNOWN_QUIZ_TITLE,
+      startedAt: (
+        startedAtByJoinCode.get(session.joinCode) ?? new Date(0)
+      ).toISOString(),
     }));
   }
 }
