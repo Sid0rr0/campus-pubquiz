@@ -21,7 +21,9 @@ const QUESTION_TYPES: readonly QuestionType[] = [
   'closest_guess',
 ];
 
-const DEFAULT_POINTS = 1000;
+// CSV/Sheets rows never carry kahootMode (it's manual-editor-only), so a
+// blank points cell always falls back to the non-kahoot default.
+const DEFAULT_POINTS = 1;
 
 const httpUrl = z.url({
   protocol: /^https?$/,

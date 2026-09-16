@@ -60,7 +60,10 @@ export function QuizRoundEditor({
 
   function addQuestion(): void {
     onChange({
-      questions: [...round.questions, makeQuestion(crypto.randomUUID())],
+      questions: [
+        ...round.questions,
+        makeQuestion(crypto.randomUUID(), round.kahootMode),
+      ],
     });
   }
 

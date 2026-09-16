@@ -56,12 +56,13 @@ export function makeMatchPair(left = '', right = ''): EditorMatchPair {
   return { left, right };
 }
 
-export function makeQuestion(id: string): EditorQuestion {
+/** Kahoot rounds default new questions to 1000 points (Kahoot's own convention); every other round defaults to 1. */
+export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
   return {
     id,
     type: 'multiple_choice',
     prompt: '',
-    points: 1000,
+    points: isKahoot ? 1000 : 1,
     notes: '',
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],

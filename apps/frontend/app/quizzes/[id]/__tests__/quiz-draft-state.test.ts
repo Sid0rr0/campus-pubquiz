@@ -23,7 +23,7 @@ describe('makeQuestion / makeRound', () => {
       id: 'q1',
       type: 'multiple_choice',
       prompt: '',
-      points: 1000,
+      points: 1,
       notes: '',
       options: [makeOption(), makeOption()],
       sortItems: ['', ''],
@@ -32,6 +32,12 @@ describe('makeQuestion / makeRound', () => {
       mediaUrl: '',
       answerMediaUrl: '',
     });
+  });
+
+  it('defaults a kahoot round question to 1000 points', () => {
+    const question = makeQuestion('q1', true);
+
+    expect(question.points).toBe(1000);
   });
 
   it('creates a blank round with no questions', () => {
@@ -273,7 +279,7 @@ describe('toSaveRequest', () => {
               type: 'free_text',
               prompt: 'Largest planet?',
               answer: 'Jupiter',
-              points: 1000,
+              points: 1,
             },
           ],
         },
