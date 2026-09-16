@@ -242,7 +242,7 @@ describe('Leaderboard', () => {
     expect(screen.getByText('Third Place')).toBeInTheDocument();
   });
 
-  it('shows a tie spanning the cutoff fully, rather than splitting it', () => {
+  it('caps to maxRank teams even when that splits a tie at the cutoff', () => {
     const TIED: LeaderboardEntry[] = [
       {
         teamId: 1,
@@ -281,13 +281,15 @@ describe('Leaderboard', () => {
         roundPoints: [],
       },
     ];
-    // maxRank: 2 would naively cut off mid-tie (Tied A/B share rank 2) —
-    // both must show together since they're one tie group.
+    // maxRank: 2 is a hard cap on team count — Tied A and Tied B share rank
+    // 2, but only one of them (whichever sorts first) fits within the cap;
+    // the leaderboard never shows more than 2 rows here.
     render(<Leaderboard entries={TIED} maxRank={2} />);
 
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.getByText('Sole Leader')).toBeInTheDocument();
     expect(screen.getByText('Tied A')).toBeInTheDocument();
-    expect(screen.getByText('Tied B')).toBeInTheDocument();
+    expect(screen.queryByText('Tied B')).not.toBeInTheDocument();
     expect(screen.queryByText('Last Place')).not.toBeInTheDocument();
   });
 
@@ -329,12 +331,11 @@ describe('Leaderboard', () => {
     expect(screen.queryByText('Team 7')).not.toBeInTheDocument();
   });
 
-  it('still reaches rank 1 when a tie at the cutoff makes the capped pool one row bigger than revealCount', () => {
-    // Regression test: 7 teams, but 5th and 6th place are tied — so the top
-    // 5 *ranks* actually span 6 rows. The backend's revealCount (5) is a
-    // raw team count and doesn't know about that tie, so it's one short of
-    // the capped pool's true row count. The walk must still reach rank 1
-    // rather than spending its budget short by exactly the tied row.
+  it('drops the losing side of a tie at the cutoff rather than growing past maxRank', () => {
+    // 7 teams, but 5th and 6th place are tied. maxRank: 5 is a hard cap, so
+    // only one of the tied pair fits — the leaderboard never shows more
+    // than 5 rows, and the walk still reaches rank 1 once revealCount
+    // covers the whole (now exactly 5-row) capped pool.
     // Scores put Team 1-4 in clear ranks 1-4, Team 5 and Team 6 tied for
     // 5th-6th, and Team 7 clearly last.
     const SEVEN_TEAMS_WITH_TIE: LeaderboardEntry[] = [
@@ -356,9 +357,10 @@ describe('Leaderboard', () => {
       />,
     );
 
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
     expect(screen.getByText('Team 1').closest('li')).toHaveTextContent('1.');
     expect(screen.getByText('Team 5').closest('li')).toHaveTextContent('5.–6.');
-    expect(screen.getByText('Team 6').closest('li')).toHaveTextContent('5.–6.');
+    expect(screen.queryByText('Team 6')).not.toBeInTheDocument();
     expect(screen.queryByText('Team 7')).not.toBeInTheDocument();
   });
 
@@ -518,6 +520,114 @@ describe('Leaderboard', () => {
         'text-red-500',
       );
     });
+
+    it('uses trendBaseline over the currentRoundIndex approximation for a Kahoot round-end reveal', () => {
+      // Regression test: a Kahoot round-end/quiz-end reveal never gets
+      // previousEntries (it keeps its one-by-one suspense walk rather than
+      // animating — see display/page.tsx), so it used to fall back to
+      // currentRoundIndex's "this round's points backed out" approximation.
+      // That backs out the *entire* round, not just the last question, so
+      // whenever a round holds the totality of every team's points (e.g.
+      // the quiz's first round), every team's backed-out baseline collapses
+      // to the same value — misreading "we're all still tied where we
+      // started" as "everyone but the leader fell". trendBaseline (the
+      // actual captured previous leaderboard) must take priority instead.
+      const oldStandings: LeaderboardEntry[] = [
+        {
+          teamId: 1,
+          teamName: 'Sim Team 1',
+          totalPoints: 2890,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 2890 }],
+        },
+        {
+          teamId: 4,
+          teamName: 'Sim Team 4',
+          totalPoints: 2874,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 2874 }],
+        },
+        {
+          teamId: 5,
+          teamName: 'Sim Team 5',
+          totalPoints: 1905,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 1905 }],
+        },
+        {
+          teamId: 2,
+          teamName: 'Sim Team 2',
+          totalPoints: 1903,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 1903 }],
+        },
+        {
+          teamId: 8,
+          teamName: 'Sim Team 8',
+          totalPoints: 1000,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 1000 }],
+        },
+      ];
+      const newStandings: LeaderboardEntry[] = [
+        {
+          ...oldStandings[1],
+          totalPoints: 3836,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 3836 }],
+        },
+        {
+          ...oldStandings[0],
+          totalPoints: 2890,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 2890 }],
+        },
+        {
+          ...oldStandings[2],
+          totalPoints: 2849,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 2849 }],
+        },
+        {
+          ...oldStandings[4],
+          totalPoints: 1920,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 1920 }],
+        },
+        {
+          ...oldStandings[3],
+          totalPoints: 1903,
+          roundPoints: [{ roundTitle: 'Kahoot', points: 1903 }],
+        },
+      ];
+
+      render(
+        <Leaderboard
+          entries={newStandings}
+          trendBaseline={oldStandings}
+          currentRoundIndex={0}
+        />,
+      );
+
+      const expectations: [string, 'moved up' | 'moved down' | 'no change'][] =
+        [
+          ['Sim Team 4', 'moved up'],
+          ['Sim Team 1', 'moved down'],
+          ['Sim Team 5', 'no change'],
+          ['Sim Team 8', 'moved up'],
+          ['Sim Team 2', 'moved down'],
+        ];
+      for (const [name, trend] of expectations) {
+        const row = screen.getByText(name).closest('li')!;
+        expect(within(row).getByLabelText(trend)).toBeInTheDocument();
+      }
+    });
   });
 
   describe('previousEntries (Kahoot between-questions old-state animation)', () => {
@@ -601,6 +711,285 @@ describe('Leaderboard', () => {
       const rows = screen.getAllByRole('listitem');
       expect(rows[0]).toHaveTextContent('Challenger');
       expect(rows[0]).toHaveTextContent('40');
+    });
+
+    describe('previousEntries as an empty array (no leaderboard computed yet)', () => {
+      it('opens on every current team at 0 points instead of on no rows at all', () => {
+        render(<Leaderboard entries={NEW_ENTRIES} previousEntries={[]} />);
+
+        const rows = screen.getAllByRole('listitem');
+        expect(rows).toHaveLength(NEW_ENTRIES.length);
+        expect(screen.getByText('Challenger').closest('li')).toHaveTextContent(
+          '0',
+        );
+        expect(screen.getByText('Runner Up').closest('li')).toHaveTextContent(
+          '0',
+        );
+      });
+
+      it('settles into the real order once the count-up transition finishes', () => {
+        vi.useFakeTimers();
+        render(<Leaderboard entries={NEW_ENTRIES} previousEntries={[]} />);
+
+        act(() => {
+          vi.advanceTimersByTime(5_000);
+        });
+
+        const rows = screen.getAllByRole('listitem');
+        expect(rows[0]).toHaveTextContent('Challenger');
+        expect(rows[1]).toHaveTextContent('Runner Up');
+      });
+
+      it('caps the zeroed stand-in board to maxRank, showing only the eventual top teams', () => {
+        const sevenTeams: LeaderboardEntry[] = Array.from(
+          { length: 7 },
+          (_, index) => ({
+            teamId: index + 1,
+            teamName: `Team ${index + 1}`,
+            totalPoints: 7 - index,
+            bonusPoints: 0,
+            positiveBonusPoints: 0,
+            negativeBonusPoints: 0,
+            roundPoints: [],
+          }),
+        );
+
+        render(
+          <Leaderboard
+            entries={sevenTeams}
+            previousEntries={[]}
+            revealCount={5}
+            maxRank={5}
+          />,
+        );
+
+        for (let index = 1; index <= 5; index += 1) {
+          const row = screen.getByText(`Team ${index}`).closest('li')!;
+          expect(row).toHaveTextContent('0');
+        }
+        expect(screen.queryByText('Team 6')).not.toBeInTheDocument();
+        expect(screen.queryByText('Team 7')).not.toBeInTheDocument();
+      });
+
+      it('shows an up arrow for every team, since there is no real prior standing to fall from', () => {
+        vi.useFakeTimers();
+        render(
+          <Leaderboard
+            entries={NEW_ENTRIES}
+            previousEntries={[]}
+            currentRoundIndex={0}
+          />,
+        );
+
+        act(() => {
+          vi.advanceTimersByTime(5_000);
+        });
+
+        for (const name of ['Challenger', 'Runner Up']) {
+          const row = screen.getByText(name).closest('li')!;
+          expect(within(row).getByLabelText('moved up')).toHaveClass(
+            'text-green',
+          );
+        }
+      });
+    });
+
+    it('caps to the same maxRank teams throughout the animation, chosen by final standing', () => {
+      // Regression test: before this question, all 8 teams had distinct
+      // scores (no ties at all). This question's results flip that — two
+      // teams pull far ahead, and the other six all end up tied at 0. The
+      // maxRank cap must be based on the *final* standings, not on the old
+      // (untied) ones — otherwise the pool held/counted up during the
+      // animation could be a different 5 teams than the ones the board
+      // actually settles into (here it happens to coincide: C, D, E are
+      // both in the old top 5 and among the first 5 of the final board).
+      const oldEntries: LeaderboardEntry[] = [
+        {
+          teamId: 1,
+          teamName: 'Team A',
+          totalPoints: 50,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 2,
+          teamName: 'Team B',
+          totalPoints: 40,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 3,
+          teamName: 'Team C',
+          totalPoints: 30,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 4,
+          teamName: 'Team D',
+          totalPoints: 20,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 5,
+          teamName: 'Team E',
+          totalPoints: 10,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 6,
+          teamName: 'Team F',
+          totalPoints: 9,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 7,
+          teamName: 'Team G',
+          totalPoints: 8,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+        {
+          teamId: 8,
+          teamName: 'Team H',
+          totalPoints: 7,
+          bonusPoints: 0,
+          positiveBonusPoints: 0,
+          negativeBonusPoints: 0,
+          roundPoints: [],
+        },
+      ];
+      const newEntries: LeaderboardEntry[] = [
+        { ...oldEntries[0], totalPoints: 100 },
+        { ...oldEntries[1], totalPoints: 90 },
+        { ...oldEntries[2], totalPoints: 0 },
+        { ...oldEntries[3], totalPoints: 0 },
+        { ...oldEntries[4], totalPoints: 0 },
+        { ...oldEntries[5], totalPoints: 0 },
+        { ...oldEntries[6], totalPoints: 0 },
+        { ...oldEntries[7], totalPoints: 0 },
+      ];
+
+      render(
+        <Leaderboard
+          entries={newEntries}
+          previousEntries={oldEntries}
+          revealCount={5}
+          maxRank={5}
+        />,
+      );
+
+      expect(screen.getAllByRole('listitem')).toHaveLength(5);
+      for (const name of ['A', 'B', 'C', 'D', 'E']) {
+        expect(screen.getByText(`Team ${name}`)).toBeInTheDocument();
+      }
+      for (const name of ['F', 'G', 'H']) {
+        expect(screen.queryByText(`Team ${name}`)).not.toBeInTheDocument();
+      }
+    });
+
+    describe('rank trend icons driven by previousEntries', () => {
+      it('shows an up arrow for every team on the first-ever reveal, when every team was still tied beforehand', () => {
+        const tiedOldEntries: LeaderboardEntry[] = [
+          {
+            teamId: 1,
+            teamName: 'Alpha',
+            totalPoints: 0,
+            bonusPoints: 0,
+            positiveBonusPoints: 0,
+            negativeBonusPoints: 0,
+            roundPoints: [],
+          },
+          {
+            teamId: 2,
+            teamName: 'Bravo',
+            totalPoints: 0,
+            bonusPoints: 0,
+            positiveBonusPoints: 0,
+            negativeBonusPoints: 0,
+            roundPoints: [],
+          },
+          {
+            teamId: 3,
+            teamName: 'Charlie',
+            totalPoints: 0,
+            bonusPoints: 0,
+            positiveBonusPoints: 0,
+            negativeBonusPoints: 0,
+            roundPoints: [],
+          },
+        ];
+        const newEntries: LeaderboardEntry[] = [
+          { ...tiedOldEntries[0], totalPoints: 30 },
+          { ...tiedOldEntries[1], totalPoints: 10 },
+          { ...tiedOldEntries[2], totalPoints: 0 },
+        ];
+
+        vi.useFakeTimers();
+        render(
+          <Leaderboard
+            entries={newEntries}
+            previousEntries={tiedOldEntries}
+            currentRoundIndex={0}
+          />,
+        );
+        act(() => {
+          vi.advanceTimersByTime(5_000);
+        });
+
+        for (const name of ['Alpha', 'Bravo', 'Charlie']) {
+          const row = screen.getByText(name).closest('li')!;
+          expect(within(row).getByLabelText('moved up')).toHaveClass(
+            'text-green',
+          );
+        }
+      });
+
+      it('compares against the actual old board, not the current round backed out, once teams have pulled apart', () => {
+        // Backing this round's points out of the current totals would net
+        // every team back to the same OLD_ENTRIES totals here too (since
+        // roundPoints is empty on both fixtures) — asserting the real
+        // per-team trend confirms previousEntries, not that fallback, is
+        // what actually drove the comparison.
+        vi.useFakeTimers();
+        render(
+          <Leaderboard
+            entries={NEW_ENTRIES}
+            previousEntries={OLD_ENTRIES}
+            currentRoundIndex={0}
+          />,
+        );
+        act(() => {
+          vi.advanceTimersByTime(5_000);
+        });
+
+        const challengerRow = screen.getByText('Challenger').closest('li')!;
+        const runnerUpRow = screen.getByText('Runner Up').closest('li')!;
+        expect(within(challengerRow).getByLabelText('moved up')).toHaveClass(
+          'text-green',
+        );
+        expect(within(runnerUpRow).getByLabelText('moved down')).toHaveClass(
+          'text-red-500',
+        );
+      });
     });
   });
 });

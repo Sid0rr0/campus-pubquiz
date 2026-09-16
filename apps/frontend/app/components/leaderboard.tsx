@@ -5,7 +5,7 @@ import {
   type LeaderboardEntry,
 } from '@campus-pubquiz/types';
 
-/** `maxRank` for a Kahoot round — only the top N distinct ranks are shown. Re-exported here (from shared/types) so existing imports of this constant from this module keep working. */
+/** `maxRank` for a Kahoot round — at most N teams are shown. Re-exported here (from shared/types) so existing imports of this constant from this module keep working. */
 export { KAHOOT_LEADERBOARD_TOP_N };
 
 interface LeaderboardProps {
@@ -17,18 +17,23 @@ interface LeaderboardProps {
    */
   revealCount?: number;
   /**
-   * Caps how many distinct ranks are shown (e.g. KAHOOT_LEADERBOARD_TOP_N
-   * for a Kahoot round) — rankIndex groups tied teams, so a tie spanning the
-   * cutoff either fully shows or fully hides together, never splits mid-tie.
+   * A hard cap on how many teams are shown (e.g. KAHOOT_LEADERBOARD_TOP_N
+   * for a Kahoot round) — the first `maxRank` by final standing, splitting a
+   * tie at the cutoff rather than growing the list to fit it whole.
    * Composed with revealCount when both are given: an entry renders only if
    * it satisfies both. Omit to show every team.
    */
   maxRank?: number;
   /**
    * 0-indexed round (progress.roundIndex) this leaderboard reflects. Drives
-   * the per-team rank-trend icon comparing current standings to standings
-   * with just this round's points backed out. Omit to hide trend icons
-   * (e.g. the admin's always-visible preview, shown outside round context).
+   * the per-team rank-trend icon as a last resort, comparing current
+   * standings to standings with just this round's points backed out, when
+   * neither `previousEntries` nor `trendBaseline` supplies a real prior
+   * snapshot to compare against instead (see those below — for a Kahoot
+   * round this approximation is normally superseded, since "this round"
+   * can span several questions and back out far more than just the last
+   * one). Omit entirely to hide trend icons (e.g. the admin's always-visible
+   * preview, shown outside round context).
    */
   currentRoundIndex?: number;
   /**
@@ -37,10 +42,27 @@ interface LeaderboardProps {
    * landed. When given, the leaderboard opens on this old state, holds it,
    * counts each team's score up to its new total, then reorders rows into
    * their new standings, instead of rendering straight at the final state.
-   * Omit for every other leaderboard view (the round-end/quiz-end reveal,
-   * the admin's own preview), which should still render `entries` directly.
+   * Also doubles as the trend-icon basis (see `trendBaseline`, which this
+   * takes priority over). Omit for every other leaderboard view (the
+   * round-end/quiz-end reveal, the admin's own preview), which should still
+   * render `entries` directly. An empty array (rather than omitting the
+   * prop) means the same animation is wanted but no real old board exists
+   * yet — the game's very first Kahoot question, before any leaderboard has
+   * ever been computed — and is treated as every currently-shown team
+   * starting from 0.
    */
   previousEntries?: LeaderboardEntry[];
+  /**
+   * Real prior standings to compare against for the trend icon, for a view
+   * that shouldn't animate from them (unlike `previousEntries`) — the
+   * round-end/quiz-end reveal for a Kahoot round, which keeps its normal
+   * one-team-at-a-time suspense walk rather than the between-questions
+   * view's animated hold-then-settle. Superseded by `previousEntries` when
+   * that's also given; falls back to `currentRoundIndex`'s approximation
+   * when neither is. Same `[]`-means-no-board-yet handling as
+   * `previousEntries`.
+   */
+  trendBaseline?: LeaderboardEntry[];
 }
 
 type RankTrend = 'up' | 'down' | 'same';
@@ -133,6 +155,17 @@ function rankIndexByScore(
   return rankByTeamId;
 }
 
+/**
+ * True once at least two teams have pulled apart in score — false while
+ * every team is still tied (e.g. everyone on 0 before the game's first
+ * Kahoot question). A board with no established order yet has nothing for a
+ * team to have fallen from, so every team shows as having moved up onto it
+ * rather than some landing on a misleading dash/down arrow relative to a tie.
+ */
+function hasEstablishedOrder(entries: LeaderboardEntry[]): boolean {
+  return new Set(entries.map((entry) => entry.totalPoints)).size > 1;
+}
+
 const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
 
 /** Above this magnitude, bonus points render as a number + star instead of one star per point. */
@@ -219,6 +252,74 @@ function computeRankInfos(entries: LeaderboardEntry[]): RankInfo[] {
   return infos;
 }
 
+function zeroedOutEntry(entry: LeaderboardEntry): LeaderboardEntry {
+  return {
+    ...entry,
+    totalPoints: 0,
+    bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    roundPoints: [],
+  };
+}
+
+/**
+ * Full-roster old board used for *trend* comparisons: `previousEntries`
+ * itself, or — when it was passed as `[]` (no leaderboard has ever been
+ * computed yet, e.g. the game's first Kahoot question) — the whole current
+ * roster zeroed out. Always the full roster, never capped to `maxRank`: a
+ * team's trend arrow compares its rank among every team, not just the
+ * on-screen top N.
+ */
+function fullOldEntriesForTrend(
+  entries: LeaderboardEntry[],
+  previousEntries: LeaderboardEntry[] | undefined,
+): LeaderboardEntry[] | undefined {
+  if (previousEntries === undefined) return undefined;
+  if (previousEntries.length > 0 || entries.length === 0)
+    return previousEntries;
+  return entries.map(zeroedOutEntry);
+}
+
+/**
+ * The exact teams that will end up on screen once the board settles — the
+ * first `maxRank` of `entries` by final standing, a hard cap on team count
+ * that splits a tie at the cutoff rather than growing the pool to fit it —
+ * each paired with its value on `fullOldEntries` where one exists, or 0 for
+ * a team with no prior record there (new to the board, or `fullOldEntries`
+ * is the all-zero stand-in above). Deliberately capped by the *final*
+ * standing, not by re-deriving a cap from `fullOldEntries`'s own ranking:
+ * the old board can have no ties at all where the new one has a large tied
+ * group (e.g. two teams pull ahead and everyone else collapses to 0 on this
+ * question) — if the cap were computed from the old, untied ranks instead,
+ * the pool that holds/counts up on screen could end up entirely different
+ * teams than the ones the board actually settles into.
+ */
+function oldPoolEntries(
+  entries: LeaderboardEntry[],
+  fullOldEntries: LeaderboardEntry[],
+  maxRank: number | undefined,
+): LeaderboardEntry[] {
+  const finalPoolTeamIds = new Set(
+    (maxRank === undefined ? entries : entries.slice(0, maxRank)).map(
+      (entry) => entry.teamId,
+    ),
+  );
+  const oldByTeamId = new Map(
+    fullOldEntries.map((entry) => [entry.teamId, entry]),
+  );
+  const fromOldBoard = fullOldEntries.filter((entry) =>
+    finalPoolTeamIds.has(entry.teamId),
+  );
+  const newcomers = entries
+    .filter(
+      (entry) =>
+        finalPoolTeamIds.has(entry.teamId) && !oldByTeamId.has(entry.teamId),
+    )
+    .map(zeroedOutEntry);
+  return [...fromOldBoard, ...newcomers];
+}
+
 function rowClasses(rankIndex: number): string {
   if (rankIndex === 0) {
     return 'flex items-center gap-4 rounded-xl border-[3px] border-magenta bg-white px-5 py-2 shadow-[0_3px_0_#ec008c]';
@@ -293,6 +394,7 @@ export function Leaderboard({
   maxRank,
   currentRoundIndex,
   previousEntries,
+  trendBaseline,
 }: LeaderboardProps) {
   const hasOldState = previousEntries !== undefined;
   const [phase, setPhase] = useState<TransitionPhase>(
@@ -319,28 +421,7 @@ export function Leaderboard({
   }, [hasOldState]);
 
   const newRankInfos = computeRankInfos(entries);
-  // Rows for 'old'/'counting': same teams, same order, and same rank labels
-  // as the pre-update board — only 'counting' swaps in each team's new total
-  // (looked up by id) so the number can count up while its row stays put.
-  // Rows for 'settled' (or when there's no old state at all): entries in
-  // their own current order, ranked fresh — today's behavior, unanimated.
-  let rows: LeaderboardRow[];
-  if (phase === 'settled' || previousEntries === undefined) {
-    rows = entries.map((entry, index) => ({ entry, ...newRankInfos[index] }));
-  } else {
-    const entriesByTeamId = new Map(
-      entries.map((entry) => [entry.teamId, entry]),
-    );
-    const oldRankInfos = computeRankInfos(previousEntries);
-    rows = previousEntries.map((oldEntry, index) => ({
-      entry:
-        phase === 'counting'
-          ? (entriesByTeamId.get(oldEntry.teamId) ?? oldEntry)
-          : oldEntry,
-      ...oldRankInfos[index],
-    }));
-  }
-
+  const fullOldEntries = fullOldEntriesForTrend(entries, previousEntries);
   // maxRank narrows the pool first — the reveal walk then counts up from the
   // worst-ranked team *within that pool* toward rank 1, so a capped Kahoot
   // leaderboard (top 5 of, say, a 7-team game) actually reaches rank 1 once
@@ -348,32 +429,98 @@ export function Leaderboard({
   // spends revealCount's whole budget walking up from the true last place,
   // so a revealCount capped at 5 for 7 teams would slice out ranks 3-7 and
   // then filter that down to just ranks 3-5 — ranks 1 and 2 never appear.
-  const cappedRows =
-    maxRank === undefined
-      ? rows
-      : rows.filter((row) => row.rankIndex < maxRank);
-  // revealCount is a raw team count, but KAHOOT_LEADERBOARD_TOP_N (and
-  // maxRank generally) counts *distinct ranks* — a tie counts once no
-  // matter how many teams share it. Walking rank groups instead of raw
-  // rows keeps that consistent: a tie at the cutoff (e.g. 5th-6th) makes
-  // cappedRows one row longer than revealCount expects, and grouping means
-  // that extra row rides along with its group instead of costing a whole
-  // extra reveal step — which would otherwise dock 1st place to pay for it.
+  //
+  // maxRank is a hard cap on team count: the first `maxRank` entries by
+  // final standing, splitting a tie at the cutoff rather than growing the
+  // pool to fit it whole — the display never shows more than `maxRank` rows.
+  //
+  // Rows for 'old'/'counting': the pool is capped by *final* standing
+  // (oldPoolEntries), then held at each team's old value — only 'counting'
+  // swaps in the new total (looked up by id) so the number can count up
+  // while its row stays put. Capping by final standing rather than
+  // re-deriving a cap from the old board's own ranking matters whenever the
+  // old board had no ties where the new one does (see oldPoolEntries' docs)
+  // — using the old ranking here could hold/count up an entirely different
+  // set of teams than the one the board actually settles into. Rows for
+  // 'settled' (or when there's no old state at all): entries in their own
+  // current order, capped and ranked fresh.
+  const isAnimatingOldState =
+    phase !== 'settled' && fullOldEntries !== undefined;
+  let cappedRows: LeaderboardRow[];
+  if (!isAnimatingOldState) {
+    const freshRows = entries.map((entry, index) => ({
+      entry,
+      ...newRankInfos[index],
+    }));
+    cappedRows =
+      maxRank === undefined ? freshRows : freshRows.slice(0, maxRank);
+  } else {
+    const pool = oldPoolEntries(entries, fullOldEntries, maxRank).sort(
+      (a, b) => b.totalPoints - a.totalPoints,
+    );
+    const oldRankInfos = computeRankInfos(pool);
+    const entriesByTeamId = new Map(
+      entries.map((entry) => [entry.teamId, entry]),
+    );
+    cappedRows = pool.map((oldEntry, index) => ({
+      entry:
+        phase === 'counting'
+          ? (entriesByTeamId.get(oldEntry.teamId) ?? oldEntry)
+          : oldEntry,
+      ...oldRankInfos[index],
+    }));
+  }
+  // revealCount is a raw team count too, but counted in terms of *distinct
+  // ranks* within the already-capped pool — a tie counts once no matter how
+  // many teams share it. Walking rank groups instead of raw rows keeps that
+  // consistent: a tie that survives the maxRank cut still reveals as one
+  // step, not one click per tied team.
   const rankGroups = groupByRank(cappedRows);
+  // While holding/counting the old board, oldPoolEntries has already picked
+  // exactly the final pool that belongs on screen — that set doesn't grow
+  // incrementally in this phase (the Kahoot leaderboard this animation is
+  // for always reveals its whole capped pool at once — see
+  // computeLeaderboardRevealCount's isKahootRound branch), and its own tie
+  // structure over *old* scores can group very differently from the final
+  // one (see oldPoolEntries' docs), so revealCount's bottom-up walk isn't a
+  // meaningful cut here — only a real, settled reveal walk (which never has
+  // an old state to animate from) uses it.
   const visibleGroupCount =
-    revealCount === undefined
+    isAnimatingOldState || revealCount === undefined
       ? rankGroups.length
       : Math.min(Math.max(revealCount, 0), rankGroups.length);
   // Reveals bottom-up: the visible slice always ends at last place (within
   // the capped pool) and grows upward toward rank 1 as visibleGroupCount
   // grows, one whole rank group at a time.
   const groupSliceStart = rankGroups.length - visibleGroupCount;
+  // The board exactly as it stood before this update — from previousEntries
+  // when it's driving the animation, or trendBaseline otherwise — is the
+  // more accurate trend basis whenever one is available (a Kahoot round can
+  // hold several questions, so backing this round's points out of the
+  // current total would net out earlier questions in the same round too,
+  // not just this one). Falls back to the round-backed-out approximation
+  // only when neither is given (the non-Kahoot round-end/quiz-end reveal,
+  // which has no old snapshot to compare against).
+  const trendOldEntries =
+    fullOldEntries ?? fullOldEntriesForTrend(entries, trendBaseline);
   const previousRankByTeamId =
-    currentRoundIndex === undefined
-      ? undefined
-      : rankIndexByScore(entries, (entry) =>
-          totalBeforeRound(entry, currentRoundIndex),
-        );
+    trendOldEntries !== undefined
+      ? rankIndexByScore(trendOldEntries, (entry) => entry.totalPoints)
+      : currentRoundIndex === undefined
+        ? undefined
+        : rankIndexByScore(entries, (entry) =>
+            totalBeforeRound(entry, currentRoundIndex),
+          );
+  // Once teams have actually pulled apart, a shared start (everyone tied,
+  // usually at 0) can't tell a team that took the lead from one that merely
+  // held its ground — comparing ranks against that tie would wrongly hand
+  // out a dash to the new leader and a down arrow to everyone else. Forcing
+  // "up" for the whole board sidesteps that until a real order exists to
+  // compare against.
+  const forceUpTrend =
+    trendOldEntries !== undefined &&
+    trendOldEntries.length > 1 &&
+    !hasEstablishedOrder(trendOldEntries);
   const visibleRows = rankGroups.slice(groupSliceStart).flat();
 
   return (
@@ -399,7 +546,11 @@ export function Leaderboard({
             className={rowClasses(rankIndex)}
           >
             {previousRankIndex !== undefined && (
-              <RankTrendIcon trend={rankTrend(rankIndex, previousRankIndex)} />
+              <RankTrendIcon
+                trend={
+                  forceUpTrend ? 'up' : rankTrend(rankIndex, previousRankIndex)
+                }
+              />
             )}
             <span
               className={`font-display w-16 shrink-0 whitespace-nowrap text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}

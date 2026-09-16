@@ -320,6 +320,17 @@ function DisplayPageContent() {
                 previousEntries={
                   isBetweenKahootQuestions ? previousLeaderboard : undefined
                 }
+                // For a Kahoot round's own round-end/quiz-end reveal (not
+                // caught by isBetweenKahootQuestions above, so it keeps its
+                // one-by-one suspense walk rather than animating), the trend
+                // icon still needs the real captured standings — comparing
+                // to "this round's points backed out" via currentRoundIndex
+                // would net out every question in the round, not just the
+                // last one, producing a bogus shared baseline whenever the
+                // round is the quiz's first (see currentRoundIndex's docs).
+                trendBaseline={
+                  isCurrentRoundKahoot ? previousLeaderboard : undefined
+                }
                 revealCount={leaderboardRevealCount}
                 maxRank={
                   isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined
