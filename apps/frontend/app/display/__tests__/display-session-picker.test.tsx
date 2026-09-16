@@ -76,19 +76,6 @@ describe('DisplaySessionPicker', () => {
     );
   });
 
-  it('surfaces a connectionError prop from a stale/unknown code', () => {
-    renderWithQuery(
-      <DisplaySessionPicker
-        onSelectSession={vi.fn()}
-        connectionError="Unknown game session code"
-      />,
-    );
-
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      /unknown game session code/i,
-    );
-  });
-
   it('refreshes the list on demand', async () => {
     mockFetchPublicSessions.mockResolvedValue([]);
     renderWithQuery(<DisplaySessionPicker onSelectSession={vi.fn()} />);

@@ -166,10 +166,9 @@ function DisplayPageContent() {
   >([]);
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
-  // ended) still needs the picker's error message on screen, so this only
-  // strips the bad ?code= from the address bar rather than navigating away —
-  // connectionError itself persists past the redirect (see use-game-socket's
-  // early return when `enabled` is false).
+  // ended) silently falls back to the plain picker rather than surfacing a
+  // "connection error" for what's normal end-of-game cleanup — this just
+  // strips the bad ?code= from the address bar.
   useEffect(() => {
     if (codeFromUrl && connectionError) {
       router.replace('/display');
@@ -179,7 +178,6 @@ function DisplayPageContent() {
   if (!codeFromUrl || connectionError) {
     return (
       <DisplaySessionPicker
-        connectionError={connectionError}
         onSelectSession={(joinCode) =>
           router.replace(`/display?code=${joinCode}`)
         }

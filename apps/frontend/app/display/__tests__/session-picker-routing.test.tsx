@@ -21,13 +21,10 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/app/display/display-session-picker', () => ({
   DisplaySessionPicker: ({
     onSelectSession,
-    connectionError,
   }: {
     onSelectSession: (joinCode: string) => void;
-    connectionError?: string | null;
   }) => (
     <div>
-      {connectionError && <p role="alert">{connectionError}</p>}
       <button type="button" onClick={() => onSelectSession('NEWCODE')}>
         Pick session
       </button>
@@ -41,25 +38,37 @@ describe('DisplayPage — session picker routing', () => {
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
     mockUseGameSocket.mockReset();
-    mockUseGameSocket.mockReturnValue({ snapshot: null, connectionError: null, sendAction: vi.fn() });
+    mockUseGameSocket.mockReturnValue({
+      snapshot: null,
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
   });
 
   it('shows the session picker when no ?code= is in the URL', async () => {
     render(<DisplayPage />);
 
-    expect(await screen.findByRole('button', { name: /pick session/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /pick session/i }),
+    ).toBeInTheDocument();
   });
 
   it('does not connect the socket until a session code is known', () => {
     render(<DisplayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('display', false, undefined);
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
+      'display',
+      false,
+      undefined,
+    );
   });
 
   it('replaces the URL with the chosen session when picked', async () => {
     render(<DisplayPage />);
 
-    await userEvent.click(await screen.findByRole('button', { name: /pick session/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /pick session/i }),
+    );
 
     expect(routerRef.replace).toHaveBeenCalledWith('/display?code=NEWCODE');
   });
@@ -68,10 +77,14 @@ describe('DisplayPage — session picker routing', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<DisplayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('display', true, 'ABCDEF');
+    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
+      'display',
+      true,
+      'ABCDEF',
+    );
   });
 
-  it('falls back to the picker with the connection error when the code is unknown or stale', async () => {
+  it('falls back to the picker with no error banner when the code is unknown or stale', async () => {
     searchParamsRef.current = new URLSearchParams('code=STALE1');
     mockUseGameSocket.mockReturnValue({
       snapshot: null,
@@ -80,7 +93,10 @@ describe('DisplayPage — session picker routing', () => {
     });
     render(<DisplayPage />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/unknown game session code/i);
+    expect(
+      await screen.findByRole('button', { name: /pick session/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('cleans the bad code from the URL when the code is unknown or stale', async () => {
@@ -92,7 +108,7 @@ describe('DisplayPage — session picker routing', () => {
     });
     render(<DisplayPage />);
 
-    await screen.findByRole('alert');
+    await screen.findByRole('button', { name: /pick session/i });
     expect(routerRef.replace).toHaveBeenCalledWith('/display');
   });
 });

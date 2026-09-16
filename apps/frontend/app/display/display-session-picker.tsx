@@ -13,8 +13,6 @@ const EMPTY_SESSIONS: ActiveSessionSummary[] = [];
 
 interface DisplaySessionPickerProps {
   onSelectSession: (joinCode: string) => void;
-  /** Surfaced when a code from the URL/QR turned out to be unknown or closed, so the operator knows why they landed here. */
-  connectionError?: string | null;
 }
 
 /**
@@ -26,7 +24,6 @@ interface DisplaySessionPickerProps {
  */
 export function DisplaySessionPicker({
   onSelectSession,
-  connectionError,
 }: DisplaySessionPickerProps) {
   const sessionsQuery = useQuery({
     queryKey: queryKeys.sessions.public(),
@@ -50,11 +47,6 @@ export function DisplaySessionPicker({
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-16 py-10 text-foreground">
       <h1 className="font-display text-3xl">Pick a game to display</h1>
-      {connectionError && (
-        <p role="alert" className="text-center font-extrabold text-magenta">
-          {connectionError}
-        </p>
-      )}
       {error && (
         <p role="alert" className="text-center font-extrabold text-magenta">
           {error}
