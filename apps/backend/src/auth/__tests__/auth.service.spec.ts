@@ -14,6 +14,7 @@ import type { User } from '@/db/entities/user.entity';
 function createFakeUserRepository(users: Partial<User>[] = []) {
   const flush = jest.fn().mockResolvedValue(undefined);
   const persistAndFlush = jest.fn().mockResolvedValue(undefined);
+  const removeAndFlush = jest.fn().mockResolvedValue(undefined);
   const create = jest.fn((data: Record<string, unknown>) => ({ ...data }));
   const findOne = jest.fn((where: number | Record<string, unknown>) => {
     if (typeof where === 'number') {
@@ -32,9 +33,14 @@ function createFakeUserRepository(users: Partial<User>[] = []) {
     create,
     findOne,
     findAll,
-    getEntityManager: jest.fn(() => ({ persistAndFlush, flush })),
+    getEntityManager: jest.fn(() => ({
+      persistAndFlush,
+      flush,
+      removeAndFlush,
+    })),
     persistAndFlush,
     flush,
+    removeAndFlush,
   };
 }
 
@@ -268,6 +274,36 @@ describe('AuthService', () => {
       );
 
       await expect(service.deactivate(999)).rejects.toThrow(UserNotFoundError);
+    });
+  });
+
+  describe('deny', () => {
+    it('deletes the pending user', async () => {
+      const user: Partial<User> = {
+        id: 5,
+        username: 'bob',
+        role: 'moderator',
+        status: 'pending',
+      };
+      const repo = createFakeUserRepository([user]);
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      await service.deny(5);
+
+      expect(repo.removeAndFlush).toHaveBeenCalledWith(user);
+    });
+
+    it('throws UserNotFoundError for an unknown user id', async () => {
+      const repo = createFakeUserRepository([]);
+      const service = new AuthService(
+        repo as unknown as UserRepository,
+        createFakeSessionService() as unknown as SessionService,
+      );
+
+      await expect(service.deny(999)).rejects.toThrow(UserNotFoundError);
     });
   });
 

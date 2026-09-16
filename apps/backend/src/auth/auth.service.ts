@@ -116,6 +116,12 @@ export class AuthService {
     await this.sessions.revokeAllForUser(userId);
   }
 
+  async deny(userId: number): Promise<void> {
+    const user = await this.users.findOne(userId);
+    if (!user) throw new UserNotFoundError(userId);
+    await this.users.getEntityManager().removeAndFlush(user);
+  }
+
   async listUsers(): Promise<UsersListedPayload> {
     const all = await this.users.findAll({ orderBy: { createdAt: 'asc' } });
     const toItem = (user: User): UserListItem => ({

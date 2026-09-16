@@ -3,9 +3,14 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
+import { CheckIcon, Cross2Icon, LockClosedIcon } from '@radix-ui/react-icons';
 import type { UserRole } from '@campus-pubquiz/types';
-import { approveUser, deactivateUser, fetchUsers } from '@/app/lib/auth-api';
+import {
+  approveUser,
+  deactivateUser,
+  denyUser,
+  fetchUsers,
+} from '@/app/lib/auth-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
@@ -54,6 +59,16 @@ export function UsersPanel() {
       ),
   });
 
+  const denyMutation = useMutation({
+    mutationFn: (userId: number) => denyUser(userId),
+    onSuccess: invalidateUsers,
+    onError: (denyError) =>
+      toast.error(
+        apiErrorMessage(denyError, Error, 'Could not deny user') ??
+          'Could not deny user',
+      ),
+  });
+
   function handleApprove(userId: number): void {
     const role = roleSelections[userId] ?? 'moderator';
     approveMutation.mutate({ userId, role });
@@ -61,6 +76,10 @@ export function UsersPanel() {
 
   function handleDeactivate(userId: number): void {
     deactivateMutation.mutate(userId);
+  }
+
+  function handleDeny(userId: number): void {
+    denyMutation.mutate(userId);
   }
 
   if (!users) {
@@ -121,6 +140,15 @@ export function UsersPanel() {
               >
                 <CheckIcon aria-hidden="true" />
                 Approve
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleDeny(pendingUser.id)}
+                className="rounded-lg border-2 border-magenta font-extrabold text-magenta"
+              >
+                <Cross2Icon aria-hidden="true" />
+                Deny
               </Button>
             </li>
           ))}

@@ -63,4 +63,16 @@ export class UsersController {
       throw error;
     }
   }
+
+  @Post(':id/deny')
+  async deny(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    try {
+      await this.authService.deny(id);
+    } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
+  }
 }

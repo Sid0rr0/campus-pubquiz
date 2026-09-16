@@ -3,6 +3,7 @@ import {
   approveUser,
   AuthApiError,
   deactivateUser,
+  denyUser,
   fetchMe,
   fetchUsers,
   login,
@@ -161,6 +162,22 @@ describe('auth-api', () => {
 
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:3000/users/5/deactivate',
+        expect.objectContaining({ method: 'POST', credentials: 'include' }),
+      );
+    });
+  });
+
+  describe('denyUser', () => {
+    it('posts to the deny endpoint', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await denyUser(5);
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/users/5/deny',
         expect.objectContaining({ method: 'POST', credentials: 'include' }),
       );
     });

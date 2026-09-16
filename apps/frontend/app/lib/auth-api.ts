@@ -22,12 +22,18 @@ interface ErrorBody {
   message?: string;
 }
 
-async function throwApiError(response: Response, fallback: string): Promise<never> {
+async function throwApiError(
+  response: Response,
+  fallback: string,
+): Promise<never> {
   const body = (await response.json().catch(() => ({}))) as ErrorBody;
   throw new AuthApiError(body.message ?? fallback, response.status);
 }
 
-export async function register(username: string, password: string): Promise<RegisterResponse> {
+export async function register(
+  username: string,
+  password: string,
+): Promise<RegisterResponse> {
   const response = await fetch(`${getBackendUrl()}/auth/register`, {
     method: 'POST',
     credentials: 'include',
@@ -38,7 +44,10 @@ export async function register(username: string, password: string): Promise<Regi
   return (await response.json()) as RegisterResponse;
 }
 
-export async function login(username: string, password: string): Promise<LoginResponse> {
+export async function login(
+  username: string,
+  password: string,
+): Promise<LoginResponse> {
   const response = await fetch(`${getBackendUrl()}/auth/login`, {
     method: 'POST',
     credentials: 'include',
@@ -67,7 +76,9 @@ export async function fetchMe(signal?: AbortSignal): Promise<MeResponse> {
   return (await response.json()) as MeResponse;
 }
 
-export async function fetchUsers(signal?: AbortSignal): Promise<UsersListedPayload> {
+export async function fetchUsers(
+  signal?: AbortSignal,
+): Promise<UsersListedPayload> {
   const response = await fetch(`${getBackendUrl()}/users`, {
     credentials: 'include',
     signal,
@@ -76,7 +87,10 @@ export async function fetchUsers(signal?: AbortSignal): Promise<UsersListedPaylo
   return (await response.json()) as UsersListedPayload;
 }
 
-export async function approveUser(userId: number, role: UserRole): Promise<void> {
+export async function approveUser(
+  userId: number,
+  role: UserRole,
+): Promise<void> {
   const response = await fetch(`${getBackendUrl()}/users/${userId}/approve`, {
     method: 'POST',
     credentials: 'include',
@@ -87,10 +101,22 @@ export async function approveUser(userId: number, role: UserRole): Promise<void>
 }
 
 export async function deactivateUser(userId: number): Promise<void> {
-  const response = await fetch(`${getBackendUrl()}/users/${userId}/deactivate`, {
+  const response = await fetch(
+    `${getBackendUrl()}/users/${userId}/deactivate`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: CSRF_HEADERS,
+    },
+  );
+  if (!response.ok) return throwApiError(response, 'Could not deactivate user');
+}
+
+export async function denyUser(userId: number): Promise<void> {
+  const response = await fetch(`${getBackendUrl()}/users/${userId}/deny`, {
     method: 'POST',
     credentials: 'include',
     headers: CSRF_HEADERS,
   });
-  if (!response.ok) return throwApiError(response, 'Could not deactivate user');
+  if (!response.ok) return throwApiError(response, 'Could not deny user');
 }

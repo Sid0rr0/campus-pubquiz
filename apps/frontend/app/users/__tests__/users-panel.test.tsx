@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UsersPanel } from '@/app/users/users-panel';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchUsers, mockApproveUser, mockDeactivateUser } = vi.hoisted(
-  () => ({
+const { mockFetchUsers, mockApproveUser, mockDeactivateUser, mockDenyUser } =
+  vi.hoisted(() => ({
     mockFetchUsers: vi.fn(),
     mockApproveUser: vi.fn(),
     mockDeactivateUser: vi.fn(),
-  }),
-);
+    mockDenyUser: vi.fn(),
+  }));
 
 vi.mock('@/app/lib/auth-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/auth-api')>();
@@ -19,6 +19,7 @@ vi.mock('@/app/lib/auth-api', async (importOriginal) => {
     fetchUsers: mockFetchUsers,
     approveUser: mockApproveUser,
     deactivateUser: mockDeactivateUser,
+    denyUser: mockDenyUser,
   };
 });
 
@@ -49,6 +50,7 @@ describe('UsersPanel', () => {
     mockFetchUsers.mockReset();
     mockApproveUser.mockReset();
     mockDeactivateUser.mockReset();
+    mockDenyUser.mockReset();
     mockFetchUsers.mockResolvedValue(PAYLOAD);
   });
 
@@ -72,6 +74,17 @@ describe('UsersPanel', () => {
       expect(mockApproveUser).toHaveBeenCalledWith(5, 'admin'),
     );
     expect(mockFetchUsers).toHaveBeenCalledTimes(2);
+  });
+
+  it('denies a pending user', async () => {
+    const user = userEvent.setup();
+    mockDenyUser.mockResolvedValue(undefined);
+    renderWithQuery(<UsersPanel />);
+    await waitFor(() => screen.getByText('bob'));
+
+    await user.click(screen.getByRole('button', { name: /deny/i }));
+
+    await waitFor(() => expect(mockDenyUser).toHaveBeenCalledWith(5));
   });
 
   it('deactivates an active user', async () => {

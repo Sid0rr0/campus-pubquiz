@@ -10,6 +10,7 @@ function makeController() {
     listUsers: jest.fn(),
     approve: jest.fn(),
     deactivate: jest.fn(),
+    deny: jest.fn(),
   };
   const controller = new UsersController(authService as unknown as AuthService);
   return { controller, authService };
@@ -86,6 +87,23 @@ describe('UsersController', () => {
       await expect(controller.deactivate(999)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('deny', () => {
+    it('denies the given user id', async () => {
+      const { controller, authService } = makeController();
+
+      await controller.deny(5);
+
+      expect(authService.deny).toHaveBeenCalledWith(5);
+    });
+
+    it('maps UserNotFoundError to a 404', async () => {
+      const { controller, authService } = makeController();
+      authService.deny.mockRejectedValue(new UserNotFoundError(999));
+
+      await expect(controller.deny(999)).rejects.toThrow(NotFoundException);
     });
   });
 });
