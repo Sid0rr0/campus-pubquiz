@@ -397,6 +397,24 @@ describe('QuizService (Postgres integration)', () => {
       expect(questions[0].points).toBe(5);
     });
 
+    it('bumps updatedAt when only a question changes, even if the title is unchanged', async () => {
+      const created = await quizService.create('Trivia Night', [VALID_ROUND]);
+      const quizBefore = await em.findOneOrFail(Quiz, { id: created.quizId });
+      const updatedAtBefore = quizBefore.updatedAt.getTime();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      await quizService.update(created.quizId, 'Trivia Night', [
+        {
+          ...VALID_ROUND,
+          questions: [{ ...VALID_ROUND.questions[0], prompt: 'Edited prompt' }],
+        },
+      ]);
+
+      em.clear();
+      const quizAfter = await em.findOneOrFail(Quiz, { id: created.quizId });
+      expect(quizAfter.updatedAt.getTime()).toBeGreaterThan(updatedAtBefore);
+    });
+
     it('rejects updating a quiz that does not exist', async () => {
       await expect(
         quizService.update(999_999, 'Trivia Night', [VALID_ROUND]),

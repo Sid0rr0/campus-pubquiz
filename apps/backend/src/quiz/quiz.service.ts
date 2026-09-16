@@ -165,6 +165,11 @@ export class QuizService {
     if (!quiz) throw new QuizNotFoundError(quizId);
 
     quiz.title = title.trim();
+    // Editing a round/question alone leaves `title` unchanged, so MikroORM
+    // sees no dirty property on `quiz` and skips the UPDATE — the onUpdate
+    // hook (which only fires on an actual UPDATE) would then never bump
+    // `updatedAt`, even though the rounds/questions underneath did change.
+    quiz.updatedAt = new Date();
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
     await this.syncRoundsAndQuestions(quizId, normalizedRounds);
 
