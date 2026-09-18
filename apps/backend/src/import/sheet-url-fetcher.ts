@@ -34,6 +34,14 @@ export interface ParsedGoogleSheetUrl {
   gid?: string;
 }
 
+export interface SheetCsvResult {
+  csvText: string;
+  /** The sheet's own title, e.g. "Trivia Night - Round 1", read from the
+   * export response's filename rather than asked of the caller — Google's
+   * CSV export never includes it in the body itself. */
+  sheetName?: string;
+}
+
 function extractGid(url: URL): string | undefined {
   const candidate =
     url.searchParams.get('gid') ?? /gid=(\d+)/.exec(url.hash)?.[1];
@@ -106,6 +114,40 @@ async function readBodyWithLimit(response: Response): Promise<string> {
   return text;
 }
 
+/**
+ * Google's export response names the file
+ * `filename*=UTF-8''Trivia%20Night%20-%20Round%201.csv`, i.e.
+ * "{spreadsheet title} - {sheet/tab title}.csv" (falling back to the plain
+ * ASCII `filename=` when the UTF-8 form is absent or undecodable). Only the
+ * spreadsheet title — the sheet the user actually pasted a link to — is
+ * wanted, so the trailing " - {tab}" segment is dropped along with ".csv".
+ */
+function parseSheetName(contentDisposition: string | null): string | undefined {
+  if (!contentDisposition) return undefined;
+
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+  if (utf8Match) {
+    try {
+      return extractSpreadsheetTitle(decodeURIComponent(utf8Match[1]));
+    } catch {
+      // Malformed percent-encoding — fall through to the ASCII filename.
+    }
+  }
+
+  const asciiMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+  return asciiMatch ? extractSpreadsheetTitle(asciiMatch[1]) : undefined;
+}
+
+function extractSpreadsheetTitle(filename: string): string | undefined {
+  const withoutExtension = filename.replace(/\.csv$/i, '').trim();
+  const tabSeparatorIndex = withoutExtension.lastIndexOf(' - ');
+  const title =
+    tabSeparatorIndex === -1
+      ? withoutExtension
+      : withoutExtension.slice(0, tabSeparatorIndex).trim();
+  return title.length > 0 ? title : undefined;
+}
+
 function isTrustedRedirectHost(hostname: string): boolean {
   return (
     hostname === 'googleusercontent.com' ||
@@ -165,7 +207,7 @@ async function followTrustedRedirect(
 export async function fetchSheetCsv(
   spreadsheetId: string,
   gid?: string,
-): Promise<string> {
+): Promise<SheetCsvResult> {
   const exportUrl = buildExportUrl(spreadsheetId, gid);
   let response = await fetchWithTimeout(exportUrl);
 
@@ -182,5 +224,7 @@ export async function fetchSheetCsv(
     throw new SheetFetchError(NOT_SHARED_MESSAGE);
   }
 
-  return readBodyWithLimit(response);
+  const sheetName = parseSheetName(response.headers.get('content-disposition'));
+  const csvText = await readBodyWithLimit(response);
+  return { csvText, sheetName };
 }

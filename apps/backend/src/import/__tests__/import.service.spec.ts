@@ -377,7 +377,7 @@ describe('ImportService (Postgres integration)', () => {
     it('fetches the sheet and validates it like preview()', async () => {
       // Arrange
       const { importService } = makeService();
-      mockedFetchSheetCsv.mockResolvedValue(VALID_CSV);
+      mockedFetchSheetCsv.mockResolvedValue({ csvText: VALID_CSV });
 
       // Act
       const preview = await importService.previewFromUrl(
@@ -394,6 +394,33 @@ describe('ImportService (Postgres integration)', () => {
       expect(mockedFetchSheetCsv).toHaveBeenCalledWith('abc123', undefined);
       const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(0);
+    });
+
+    it('names the quiz after the sheet when no title was given', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockResolvedValue({
+        csvText: VALID_CSV,
+        sheetName: 'Trivia Night',
+      });
+
+      const preview = await importService.previewFromUrl(SHEET_URL);
+
+      expect(preview.quizTitle).toBe('Trivia Night');
+    });
+
+    it('prefers an explicitly given title over the sheet name', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockResolvedValue({
+        csvText: VALID_CSV,
+        sheetName: 'Trivia Night',
+      });
+
+      const preview = await importService.previewFromUrl(
+        SHEET_URL,
+        'Custom Title',
+      );
+
+      expect(preview.quizTitle).toBe('Custom Title');
     });
 
     it('reports a fetch failure as an issue instead of throwing', async () => {
@@ -430,7 +457,7 @@ describe('ImportService (Postgres integration)', () => {
   describe('confirmFromUrl', () => {
     it('fetches the sheet then imports it like confirm()', async () => {
       const { importService } = makeService();
-      mockedFetchSheetCsv.mockResolvedValue(VALID_CSV);
+      mockedFetchSheetCsv.mockResolvedValue({ csvText: VALID_CSV });
 
       const result = await importService.confirmFromUrl(
         SHEET_URL,
@@ -442,6 +469,19 @@ describe('ImportService (Postgres integration)', () => {
       expect(result.questionCount).toBe(3);
       const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(1);
+    });
+
+    it('names the quiz after the sheet when no title was given', async () => {
+      const { importService } = makeService();
+      mockedFetchSheetCsv.mockResolvedValue({
+        csvText: VALID_CSV,
+        sheetName: 'Trivia Night',
+      });
+
+      const result = await importService.confirmFromUrl(SHEET_URL, 'ABCDEF');
+
+      const quiz = await em.findOneOrFail(Quiz, { id: result.quizId });
+      expect(quiz.title).toBe('Trivia Night');
     });
 
     it('propagates a sheet fetch failure without writing anything', async () => {

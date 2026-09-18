@@ -14,6 +14,7 @@ import {
   fetchSheetCsv,
   parseGoogleSheetUrl,
   SheetFetchError,
+  type SheetCsvResult,
 } from '@/import/sheet-url-fetcher';
 import { QuizService } from '@/quiz/quiz.service';
 
@@ -79,8 +80,8 @@ export class ImportService {
   ): Promise<ImportPreview> {
     const title = quizTitle?.trim() || DEFAULT_QUIZ_TITLE;
     try {
-      const csvText = await this.fetchSheetCsvText(sheetUrl);
-      return this.preview(csvText, quizTitle);
+      const { csvText, sheetName } = await this.fetchSheetCsvText(sheetUrl);
+      return this.preview(csvText, quizTitle ?? sheetName);
     } catch (error) {
       const message =
         error instanceof SheetFetchError
@@ -123,8 +124,8 @@ export class ImportService {
     // Check the lock before fetching, so a locked game never triggers an
     // outbound request to Google for a sheet that can't be imported anyway.
     this.assertImportable(joinCode);
-    const csvText = await this.fetchSheetCsvText(sheetUrl);
-    return this.confirmCsv(csvText, joinCode, quizTitle);
+    const { csvText, sheetName } = await this.fetchSheetCsvText(sheetUrl);
+    return this.confirmCsv(csvText, joinCode, quizTitle ?? sheetName);
   }
 
   private assertImportable(joinCode: string): void {
@@ -134,7 +135,7 @@ export class ImportService {
     }
   }
 
-  private async fetchSheetCsvText(sheetUrl: string): Promise<string> {
+  private async fetchSheetCsvText(sheetUrl: string): Promise<SheetCsvResult> {
     const { spreadsheetId, gid } = parseGoogleSheetUrl(sheetUrl);
     return fetchSheetCsv(spreadsheetId, gid);
   }

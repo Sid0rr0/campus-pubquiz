@@ -106,7 +106,7 @@ describe('fetchSheetCsv redirect handling', () => {
     const result = await fetchSheetCsv('abc123');
 
     // Assert
-    expect(result).toBe(csvText);
+    expect(result.csvText).toBe(csvText);
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       'https://docs.google.com/spreadsheets/d/abc123/export?format=csv',
@@ -207,6 +207,53 @@ describe('fetchSheetCsv', () => {
     );
 
     await expect(fetchSheetCsv('abc123')).rejects.toThrow(SheetFetchError);
+  });
+
+  it("extracts just the spreadsheet's own name, dropping the sheet/tab name, from the export response's UTF-8 filename", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('a,b\n1,2\n', {
+        status: 200,
+        headers: {
+          'content-type': 'text/csv',
+          'content-disposition':
+            'attachment; filename="TriviaNight-Round1.csv"; ' +
+            "filename*=UTF-8''Trivia%20Night%20-%20Round%201.csv",
+        },
+      }),
+    );
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.sheetName).toBe('Trivia Night');
+  });
+
+  it('falls back to the ASCII filename when no UTF-8 filename is present', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('a,b\n1,2\n', {
+        status: 200,
+        headers: {
+          'content-type': 'text/csv',
+          'content-disposition': 'attachment; filename="Trivia Night.csv"',
+        },
+      }),
+    );
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.sheetName).toBe('Trivia Night');
+  });
+
+  it('leaves the sheet name undefined when the response has no content-disposition header', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response('a,b\n1,2\n', {
+        status: 200,
+        headers: { 'content-type': 'text/csv' },
+      }),
+    );
+
+    const result = await fetchSheetCsv('abc123');
+
+    expect(result.sheetName).toBeUndefined();
   });
 
   it('throws when the response body exceeds the size limit', async () => {
