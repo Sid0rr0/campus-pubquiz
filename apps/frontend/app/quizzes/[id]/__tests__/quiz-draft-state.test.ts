@@ -8,6 +8,7 @@ import {
   makeOption,
   makeQuestion,
   makeRound,
+  mergeRoundsFromPreview,
   questionFromPreview,
   questionToPreview,
   roundFromPreview,
@@ -323,6 +324,73 @@ describe('toSaveRequest', () => {
     const request = toSaveRequest('Trivia Night', [round]);
 
     expect(request.rounds[0].kahootMode).toBe(true);
+  });
+});
+
+describe('mergeRoundsFromPreview', () => {
+  it('appends a preview round with a new title as a brand-new round', () => {
+    const current = [makeRound('r1', 'History')];
+    current[0].questions = [
+      { ...makeQuestion('q1'), type: 'free_text', correctText: 'A' },
+    ];
+    const preview: ImportRoundPreview[] = [
+      {
+        title: 'Geography',
+        breakAfter: true,
+        questions: [
+          { type: 'free_text', prompt: 'Q2', answer: 'B', points: 1 },
+        ],
+      },
+    ];
+    let idCount = 0;
+    const makeId = () => `id${idCount++}`;
+
+    const merged = mergeRoundsFromPreview(current, preview, makeId);
+
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toBe(current[0]);
+    expect(merged[1].title).toBe('Geography');
+    expect(merged[1].questions).toHaveLength(1);
+    expect(merged[1].questions[0].prompt).toBe('Q2');
+  });
+
+  it('appends questions onto an existing round matched by title, ignoring case and whitespace', () => {
+    const current = [makeRound('r1', ' History ')];
+    current[0].breakAfter = true;
+    current[0].questions = [
+      { ...makeQuestion('q1'), type: 'free_text', correctText: 'A' },
+    ];
+    const preview: ImportRoundPreview[] = [
+      {
+        title: 'history',
+        breakAfter: false,
+        questions: [
+          { type: 'free_text', prompt: 'Q2', answer: 'B', points: 2 },
+        ],
+      },
+    ];
+
+    const merged = mergeRoundsFromPreview(current, preview, () =>
+      crypto.randomUUID(),
+    );
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].title).toBe(' History ');
+    // Matching round keeps its own settings — the preview's breakAfter is ignored.
+    expect(merged[0].breakAfter).toBe(true);
+    expect(merged[0].questions).toHaveLength(2);
+    expect(merged[0].questions[1].prompt).toBe('Q2');
+  });
+
+  it('leaves the current rounds untouched given an empty preview', () => {
+    const current = [makeRound('r1', 'History')];
+
+    const merged = mergeRoundsFromPreview(current, [], () =>
+      crypto.randomUUID(),
+    );
+
+    expect(merged).toEqual(current);
+    expect(merged).not.toBe(current);
   });
 });
 

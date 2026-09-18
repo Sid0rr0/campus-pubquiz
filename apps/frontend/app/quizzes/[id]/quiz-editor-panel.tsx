@@ -32,6 +32,7 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import {
   makeRound,
+  mergeRoundsFromPreview,
   roundFromPreview,
   toSaveRequest,
   withSyncedQuestionIds,
@@ -91,6 +92,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [importError, setImportError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [sheetUrlInput, setSheetUrlInput] = useState('');
+  const [appendImport, setAppendImport] = useState(false);
   const [liveEditState, setLiveEditState] = useState<
     QuizLiveEditState | undefined
   >(undefined);
@@ -145,14 +147,21 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   }
 
   function handleImportPreview(preview: ImportPreview): void {
-    const newRounds = preview.rounds.map((round) =>
-      roundFromPreview(crypto.randomUUID(), round, () => crypto.randomUUID()),
-    );
+    const isAppending = appendImport && phase === 'editor';
+    const newRounds = isAppending
+      ? mergeRoundsFromPreview(rounds, preview.rounds, () =>
+          crypto.randomUUID(),
+        )
+      : preview.rounds.map((round) =>
+          roundFromPreview(crypto.randomUUID(), round, () =>
+            crypto.randomUUID(),
+          ),
+        );
     setRounds(newRounds);
     if (!quizTitle.trim()) setQuizTitle(preview.quizTitle);
     setPhase('editor');
 
-    const questionCount = newRounds.reduce(
+    const importedQuestionCount = preview.rounds.reduce(
       (total, round) => total + round.questions.length,
       0,
     );
@@ -166,9 +175,13 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             )
             .join('; '),
       );
+    } else if (isAppending) {
+      toast.success(
+        `Added ${importedQuestionCount} question${importedQuestionCount === 1 ? '' : 's'} from ${preview.rounds.length} round${preview.rounds.length === 1 ? '' : 's'} to the quiz — review and edit below.`,
+      );
     } else {
       toast.success(
-        `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${questionCount} question${questionCount === 1 ? '' : 's'} — review and edit below.`,
+        `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${importedQuestionCount} question${importedQuestionCount === 1 ? '' : 's'} — review and edit below.`,
       );
     }
   }
@@ -381,6 +394,14 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           {questionCount} question
           {questionCount === 1 ? '' : 's'}
         </span>
+        <label className="flex min-h-10 cursor-pointer items-center gap-1.5 whitespace-nowrap px-1 text-xs font-bold text-background/80">
+          <input
+            type="checkbox"
+            checked={appendImport}
+            onChange={(event) => setAppendImport(event.target.checked)}
+          />
+          Add to quiz instead of replacing
+        </label>
         <label className="flex min-h-10 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-background/50 px-4 text-xs font-extrabold text-background">
           <UploadIcon aria-hidden="true" />
           Import CSV
@@ -400,7 +421,11 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             type="url"
             value={sheetUrlInput}
             onChange={(event) => setSheetUrlInput(event.target.value)}
-            placeholder="Re-import from Google Sheets"
+            placeholder={
+              appendImport
+                ? 'Add more from Google Sheets'
+                : 'Re-import from Google Sheets'
+            }
             aria-label="Google Sheets link"
             className="min-w-0 flex-1 bg-transparent text-xs font-bold outline-none placeholder:text-background/40"
           />

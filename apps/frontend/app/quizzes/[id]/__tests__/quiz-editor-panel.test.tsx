@@ -669,6 +669,72 @@ describe('QuizEditorPanel', () => {
     expect(mockCreateQuiz).not.toHaveBeenCalled();
   });
 
+  it('adds a csv import to the existing draft instead of replacing it when "add to quiz" is checked', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              points: 2,
+            },
+          ],
+        },
+      ],
+    });
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'Ignored title',
+      rounds: [
+        {
+          title: 'Geography',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Longest river?',
+              answer: 'Nile',
+              points: 1,
+            },
+          ],
+        },
+      ],
+      issues: [],
+      isImportable: true,
+    });
+
+    renderWithQuery(
+      <>
+        <QuizEditorPanel quizId="5" />
+        <Toaster />
+      </>,
+    );
+    await screen.findByDisplayValue('Trivia Night');
+
+    await user.click(
+      screen.getByRole('checkbox', {
+        name: /add to quiz instead of replacing/i,
+      }),
+    );
+    const input = screen.getByLabelText(/import csv/i);
+    await user.upload(input, makeCsvFile());
+
+    expect(await screen.findByDisplayValue('Geography')).toBeInTheDocument();
+    // The pre-existing round and its question survive the import.
+    expect(screen.getByDisplayValue('History')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Largest planet?')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Longest river?')).toBeInTheDocument();
+    // The imported quizTitle is ignored — the existing title isn't overwritten.
+    expect(screen.getByDisplayValue('Trivia Night')).toBeInTheDocument();
+    expect(await screen.findByText(/added 1 question/i)).toBeInTheDocument();
+  });
+
   it('shows a csv import error without crashing', async () => {
     const user = userEvent.setup();
     mockPreviewImport.mockRejectedValue(

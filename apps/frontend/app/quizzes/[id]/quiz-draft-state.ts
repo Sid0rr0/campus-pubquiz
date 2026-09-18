@@ -144,6 +144,42 @@ export function roundFromPreview(
   };
 }
 
+/**
+ * Merges an imported CSV/Sheets preview into the rounds already in the editor,
+ * rather than replacing them — lets an admin import just a round or a batch of
+ * questions to add to a quiz they're already editing. A preview round whose
+ * title matches an existing round (case/whitespace-insensitive) has its
+ * questions appended to that round; every other preview round is added as a
+ * brand-new round at the end. Existing rounds' own settings (breakAfter,
+ * kahootMode) are left untouched by a match.
+ */
+export function mergeRoundsFromPreview(
+  currentRounds: EditorRound[],
+  previewRounds: ImportRoundPreview[],
+  makeId: () => string,
+): EditorRound[] {
+  const merged = [...currentRounds];
+  for (const previewRound of previewRounds) {
+    const matchIndex = merged.findIndex(
+      (round) =>
+        round.title.trim().toLowerCase() ===
+        previewRound.title.trim().toLowerCase(),
+    );
+    if (matchIndex === -1) {
+      merged.push(roundFromPreview(makeId(), previewRound, () => makeId()));
+      continue;
+    }
+    const importedQuestions = previewRound.questions.map((question) =>
+      questionFromPreview(makeId(), question),
+    );
+    merged[matchIndex] = {
+      ...merged[matchIndex],
+      questions: [...merged[matchIndex].questions, ...importedQuestions],
+    };
+  }
+  return merged;
+}
+
 /** Converts editable state back into the API shape — derives `answer` from whichever option is marked correct, trims text, and drops blank optional fields. */
 export function questionToPreview(
   question: EditorQuestion,
