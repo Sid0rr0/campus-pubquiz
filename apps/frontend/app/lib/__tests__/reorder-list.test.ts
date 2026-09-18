@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reorderOnDragEnd } from '@/app/lib/reorder-list';
+import { reorderById, reorderOnDragEnd } from '@/app/lib/reorder-list';
 
 describe('reorderOnDragEnd', () => {
   it("moves the dragged item to the dropped-on item's position", () => {
@@ -34,5 +34,33 @@ describe('reorderOnDragEnd', () => {
     const order = ['Mercury', 'Venus', 'Earth'];
 
     expect(reorderOnDragEnd(order, 'Venus', 'Mars')).toBeNull();
+  });
+});
+
+describe('reorderById', () => {
+  const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+
+  it("moves the dragged item to the dropped-on item's position", () => {
+    const next = reorderById(items, 'c', 'a');
+
+    expect(next).toEqual([{ id: 'c' }, { id: 'a' }, { id: 'b' }]);
+  });
+
+  it('moves an item forward when dropped later in the list', () => {
+    const next = reorderById(items, 'a', 'c');
+
+    expect(next).toEqual([{ id: 'b' }, { id: 'c' }, { id: 'a' }]);
+  });
+
+  it('returns null when dropped on itself', () => {
+    expect(reorderById(items, 'b', 'b')).toBeNull();
+  });
+
+  it('returns null when the dragged id is not in the list', () => {
+    expect(reorderById(items, 'z', 'b')).toBeNull();
+  });
+
+  it('returns null when the drop target id is not in the list', () => {
+    expect(reorderById(items, 'b', 'z')).toBeNull();
   });
 });

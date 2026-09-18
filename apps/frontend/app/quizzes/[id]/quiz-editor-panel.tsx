@@ -38,6 +38,7 @@ import {
   withSyncedQuestionIds,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
+import { QuizOutline } from '@/app/quizzes/[id]/quiz-outline';
 import { QuizRoundEditor } from '@/app/quizzes/[id]/quiz-round-editor';
 
 interface QuizEditorPanelProps {
@@ -499,30 +500,40 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         </p>
       )}
 
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-5 py-6">
-        {rounds.map((round, index) => (
-          <QuizRoundEditor
-            key={round.id}
-            round={round}
-            isFirst={index === 0}
-            isLast={index === rounds.length - 1}
-            isLive={isLive}
-            lockedQuestionIds={lockedQuestionIds}
-            onChange={(patch) => updateRound(round.id, patch)}
-            onDelete={() => deleteRound(round.id)}
-            onMoveUp={() => moveRound(round.id, -1)}
-            onMoveDown={() => moveRound(round.id, 1)}
-          />
-        ))}
-        <Button
-          type="button"
-          onClick={addRound}
-          disabled={isLive}
-          className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background disabled:opacity-50"
-        >
-          <PlusIcon aria-hidden="true" />
-          Add round
-        </Button>
+      <div className="mx-auto flex max-w-6xl gap-6 px-5 py-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          {rounds.map((round, index) => (
+            <QuizRoundEditor
+              key={round.id}
+              round={round}
+              isFirst={index === 0}
+              isLast={index === rounds.length - 1}
+              isLive={isLive}
+              lockedQuestionIds={lockedQuestionIds}
+              onChange={(patch) => updateRound(round.id, patch)}
+              onDelete={() => deleteRound(round.id)}
+              onMoveUp={() => moveRound(round.id, -1)}
+              onMoveDown={() => moveRound(round.id, 1)}
+            />
+          ))}
+          <Button
+            type="button"
+            onClick={addRound}
+            disabled={isLive}
+            className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background disabled:opacity-50"
+          >
+            <PlusIcon aria-hidden="true" />
+            Add round
+          </Button>
+        </div>
+        <QuizOutline
+          rounds={rounds}
+          isLive={isLive}
+          onReorderRounds={setRounds}
+          onReorderQuestions={(roundId, questions) =>
+            updateRound(roundId, { questions })
+          }
+        />
       </div>
     </main>
   );
