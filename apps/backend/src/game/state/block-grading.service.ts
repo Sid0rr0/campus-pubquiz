@@ -113,6 +113,8 @@ export class BlockGradingService {
       question.id,
       session.phaseStartedAt,
       session.seededGame.settings.kahootQuestionTimerSeconds,
+      question.type,
+      question.answer,
       question.points,
     );
 

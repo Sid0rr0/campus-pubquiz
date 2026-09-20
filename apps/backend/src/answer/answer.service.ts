@@ -6,6 +6,7 @@ import type {
   QuestionType,
   TeamAnswerView,
 } from '@campus-pubquiz/types';
+import { splitPipeList } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -54,6 +55,42 @@ const AUTO_GRADED_TYPES: readonly QuestionType[] = [
   'match',
 ];
 
+/**
+ * multiple_choice/sort are all-or-nothing (one exact-match correct value) —
+ * and so is anything else that reaches here, since only multiple_choice,
+ * sort, and match are ever auto-graded (AUTO_GRADED_TYPES above); the `else`
+ * branch below is a catch-all for those two, not an enumerated case, so a
+ * future auto-graded type would silently get exact-match grading unless
+ * this function is taught about it explicitly. match instead awards partial
+ * credit per correctly paired item — both `value` and `question.answer` are
+ * the pipe-joined right-hand items in the question's `options` (left-hand)
+ * order (see question-row.schema.ts's toCanonicalMatchAnswer and
+ * AnswerForm's match UI), so comparing them positionally counts correctly
+ * matched pairs directly. Points split evenly across pairs and round to the
+ * nearest whole point (e.g. 4 points/4 pairs, 1 correct -> 1 point).
+ * `pointsAwarded` is stored as an integer, so when `points` is smaller than
+ * the pair count, distinct partial-credit levels can round to the same
+ * value (e.g. 1 point/4 pairs: both 0-of-4 and 1-of-4 correct round to 0) —
+ * author match questions with points >= pair count for meaningful partial
+ * credit.
+ */
+function computeAutoGradedPoints(
+  type: QuestionType,
+  value: string,
+  answer: string,
+  points: number,
+): number {
+  if (type === 'match') {
+    const answerPairs = splitPipeList(answer);
+    const submittedPairs = splitPipeList(value);
+    const correctPairs = answerPairs.filter(
+      (rightItem, index) => rightItem === submittedPairs[index],
+    ).length;
+    return Math.round((points * correctPairs) / answerPairs.length);
+  }
+  return value === answer ? points : 0;
+}
+
 @Injectable()
 export class AnswerService {
   constructor(
@@ -74,13 +111,20 @@ export class AnswerService {
     const question = await this.questions.findOneOrFail(questionId, {
       fields: ['type', 'answer', 'points'],
     });
-    // Multiple choice, sort, and match all have one exact-match correct
-    // value (enforced at import/save time — see question-row.schema.ts and
-    // quiz-draft.schema.ts), so they can be graded the instant they're
-    // submitted — no admin judgement call needed like free_text/audio
-    // require.
+    // Multiple choice, sort, and match are all gradable without admin
+    // judgement the instant they're submitted (enforced at import/save time
+    // — see question-row.schema.ts and quiz-draft.schema.ts), unlike
+    // free_text/audio. multiple_choice/sort are all-or-nothing; match splits
+    // points per correctly paired item — see computeAutoGradedPoints.
     const isAutoGraded = AUTO_GRADED_TYPES.includes(question.type);
-    const isCorrect = isAutoGraded && value === question.answer;
+    const pointsAwarded = isAutoGraded
+      ? computeAutoGradedPoints(
+          question.type,
+          value,
+          question.answer,
+          question.points,
+        )
+      : 0;
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
@@ -91,7 +135,7 @@ export class AnswerService {
         question: questionId,
         team: teamId,
         value,
-        pointsAwarded: isCorrect ? question.points : 0,
+        pointsAwarded,
         ...(isAutoGraded ? { gradedAt: now } : {}),
         createdAt: now,
         updatedAt: now,
@@ -181,9 +225,12 @@ export class AnswerService {
       { id: answerId, gameSession: gameSessionId },
       { populate: ['question'] },
     );
-    if (answer.question.type === 'closest_guess') {
+    if (
+      answer.question.type === 'closest_guess' ||
+      answer.question.type === 'match'
+    ) {
       throw new Error(
-        'closest_guess answers are graded automatically and cannot be graded manually',
+        `${answer.question.type} answers are graded automatically and cannot be graded manually`,
       );
     }
     answer.pointsAwarded = pointsAwarded;
@@ -263,13 +310,23 @@ export class AnswerService {
    * speed. Uses `updatedAt` (not `createdAt`) since submit()'s upsert
    * already treats updatedAt as "last resubmission time" for a team that
    * revises before lock. Idempotent/recomputable, same convention as
-   * gradeClosestGuess.
+   * gradeClosestGuess — each call recomputes speed-scaling from the row's
+   * pre-scaling auto-graded points (via computeAutoGradedPoints against the
+   * stored value/answer), not from whatever pointsAwarded currently holds,
+   * so a redundant re-run never compounds the scaling on top of itself. That
+   * matters for `match`, whose auto-graded points are already a partial
+   * fraction of `points` (see computeAutoGradedPoints) rather than always
+   * the full amount. `questionType`/`answer`/`points` are passed in rather
+   * than re-fetched — the caller (kahootMode's question-lock transition)
+   * already has them from the seeded game's RevealQuestionView.
    */
   async applyKahootSpeedScoring(
     gameSessionId: number,
     questionId: number,
     questionOpenedAt: number,
     questionTimerSeconds: number | null,
+    questionType: QuestionType,
+    answer: string,
     points: number,
   ): Promise<void> {
     if (questionTimerSeconds === null) return;
@@ -283,12 +340,18 @@ export class AnswerService {
 
     const questionTimerMs = questionTimerSeconds * 1000;
     for (const row of rows) {
+      const basePoints = computeAutoGradedPoints(
+        questionType,
+        row.value,
+        answer,
+        points,
+      );
       const responseTimeMs = row.updatedAt.getTime() - questionOpenedAt;
       const rawFraction = Math.min(
         Math.max(responseTimeMs / questionTimerMs, 0),
         1,
       );
-      row.pointsAwarded = Math.round(points * (1 - rawFraction / 2));
+      row.pointsAwarded = Math.round(basePoints * (1 - rawFraction / 2));
     }
     await this.answers.getEntityManager().flush();
   }

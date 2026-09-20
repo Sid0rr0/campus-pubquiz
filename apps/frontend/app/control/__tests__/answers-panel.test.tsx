@@ -351,6 +351,45 @@ describe('AnswersPanel', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows a read-only auto-graded badge instead of grade buttons for match, since points split per correctly matched pair', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          question: {
+            type: 'match',
+            prompt: 'Match the hero to their weapon.',
+            points: 4,
+            correctAnswer: 'excalibur|shield',
+            options: ['arthur', 'captain america'],
+            roundTitle: 'Heroes',
+            roundNumber: 1,
+            questionNumberInRound: 1,
+            totalQuestionsInRound: 1,
+          },
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: 'excalibur|excalibur',
+              pointsAwarded: 2,
+              gradedAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('2 pts (auto-graded)')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: /grade the quizzards full points/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it('omits the previous/next controls when no nav is given', () => {
     render(
       <AnswersPanel

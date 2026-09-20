@@ -348,6 +348,8 @@ describe('GameStateService — state transitions', () => {
         31,
         expect.any(Number),
         null,
+        'multiple_choice',
+        'Paris',
         10,
       );
 
@@ -370,6 +372,8 @@ describe('GameStateService — state transitions', () => {
         32,
         expect.any(Number),
         null,
+        'multiple_choice',
+        'Rome',
         10,
       );
 
@@ -436,6 +440,8 @@ describe('GameStateService — state transitions', () => {
         31,
         expect.any(Number),
         null,
+        'multiple_choice',
+        'Paris',
         10,
       );
     });

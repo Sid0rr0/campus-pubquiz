@@ -297,6 +297,35 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     );
   });
 
+  it('rejects manually grading a match answer via grade()', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america'],
+        matchTargets: ['shield', 'excalibur'],
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('Team A', 'token-a');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield',
+    );
+
+    await expect(
+      state.answerService.grade(state.session.id, submitted.answerId, 4),
+    ).rejects.toThrow(
+      'match answers are graded automatically and cannot be graded manually',
+    );
+  });
+
   describe('applyKahootSpeedScoring', () => {
     async function setAnsweredAt(
       questionId: number,
@@ -353,6 +382,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         mcQuestion.id,
         questionOpenedAt,
         questionTimerSeconds,
+        mcQuestion.type,
+        mcQuestion.answer,
         mcQuestion.points,
       );
 
@@ -395,6 +426,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         mcQuestion.id,
         questionOpenedAt,
         null,
+        mcQuestion.type,
+        mcQuestion.answer,
         mcQuestion.points,
       );
 
@@ -433,6 +466,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         mcQuestion.id,
         questionOpenedAt,
         questionTimerSeconds,
+        mcQuestion.type,
+        mcQuestion.answer,
         mcQuestion.points,
       );
 
@@ -441,6 +476,50 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         mcQuestion.id,
       );
       expect(answer.pointsAwarded).toBe(0);
+    });
+
+    it('scales a partially correct match answer from its pre-speed-scaling partial credit, not full points', async () => {
+      const matchQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'match',
+        prompt: 'Match the hero to their weapon.',
+        answer: 'excalibur|shield|web|hammer',
+        points: 4,
+        payload: {
+          options: ['arthur', 'captain america', 'spiderman', 'thor'],
+          matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+        },
+      });
+      await state.em.flush();
+      const team = await insertTeam('The Quizzards', 'token-1');
+      await state.answerService.submit(
+        state.session.id,
+        matchQuestion.id,
+        team.id,
+        'excalibur|shield|excalibur|excalibur',
+      );
+
+      const questionTimerSeconds = 10;
+      const questionOpenedAt = Date.now() - questionTimerSeconds * 1000;
+      const lockedAt = Date.now();
+      await setAnsweredAt(matchQuestion.id, team.id, lockedAt);
+
+      await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        matchQuestion.id,
+        questionOpenedAt,
+        questionTimerSeconds,
+        matchQuestion.type,
+        matchQuestion.answer,
+        matchQuestion.points,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        matchQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(1);
     });
   });
 });

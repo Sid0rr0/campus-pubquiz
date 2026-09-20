@@ -208,6 +208,37 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.gradedAt).not.toBeNull();
   });
 
+  it('auto-grades a partially correct match answer on submit, splitting points per correctly matched pair', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield|web|hammer',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america', 'spiderman', 'thor'],
+        matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|excalibur|excalibur|excalibur',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      matchQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
   it('leaves free_text answers ungraded on submit (unaffected by multiple choice auto-grading)', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
 
