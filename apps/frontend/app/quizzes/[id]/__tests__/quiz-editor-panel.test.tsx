@@ -14,6 +14,7 @@ const {
   mockUpdateQuiz,
   mockPreviewImport,
   mockPreviewImportFromUrl,
+  mockDownloadTextFile,
 } = vi.hoisted(() => ({
   routerRef: { push: vi.fn(), replace: vi.fn() },
   mockFetchQuizDraft: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockUpdateQuiz: vi.fn(),
   mockPreviewImport: vi.fn(),
   mockPreviewImportFromUrl: vi.fn(),
+  mockDownloadTextFile: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -50,6 +52,10 @@ vi.mock('@/app/lib/import-api', async () => {
   };
 });
 
+vi.mock('@/app/lib/download-text-file', () => ({
+  downloadTextFile: mockDownloadTextFile,
+}));
+
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/abc123/edit';
 
 function makeCsvFile(
@@ -67,6 +73,7 @@ describe('QuizEditorPanel', () => {
     mockUpdateQuiz.mockReset();
     mockPreviewImport.mockReset();
     mockPreviewImportFromUrl.mockReset();
+    mockDownloadTextFile.mockReset();
   });
 
   it('shows the empty state for a new quiz and starts an editable round from scratch', async () => {
@@ -112,6 +119,53 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue(
       'Jupiter',
     );
+  });
+
+  it('exports the editor draft, including unsaved edits, as a csv download', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'History',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Largest planet?',
+              answer: 'Jupiter',
+              points: 2,
+            },
+          ],
+        },
+      ],
+    });
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    const promptInput = await screen.findByPlaceholderText(/question prompt/i);
+    await user.clear(promptInput);
+    await user.type(promptInput, 'Biggest planet?');
+
+    await user.click(screen.getByRole('button', { name: /export csv/i }));
+
+    expect(mockDownloadTextFile).toHaveBeenCalledTimes(1);
+    const [filename, content, mimeType] = mockDownloadTextFile.mock
+      .calls[0] as [string, string, string];
+    expect(filename).toBe('trivia-night.csv');
+    expect(mimeType).toBe('text/csv;charset=utf-8');
+    expect(content).toContain(
+      'History,free_text,Biggest planet?,,Jupiter,2,,,,1',
+    );
+  });
+
+  it('disables csv export until the quiz has a question', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+
+    expect(screen.getByRole('button', { name: /export csv/i })).toBeDisabled();
   });
 
   it('selecting the YouTube video type shows the clip inputs and requires a media url', async () => {

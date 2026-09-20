@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   CheckIcon,
+  DownloadIcon,
   FilePlusIcon,
   Link2Icon,
   PlusIcon,
@@ -29,7 +30,9 @@ import {
   updateQuiz,
 } from '@/app/lib/quiz-draft-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
+import { downloadTextFile } from '@/app/lib/download-text-file';
 import { queryKeys } from '@/app/lib/query-keys';
+import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
 import {
   makeRound,
   mergeRoundsFromPreview,
@@ -50,6 +53,7 @@ type Phase = 'empty' | 'editor';
 const EMPTY_ISSUES: QuizDraftIssue[] = [];
 const EMPTY_LOCKED_QUESTION_IDS: ReadonlySet<number> = new Set();
 const SAVED_FLASH_MS = 1600;
+const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
 
 function issueLabel(issue: QuizDraftIssue): string {
   if (issue.roundIndex === -1) return `Quiz (${issue.field}): ${issue.message}`;
@@ -295,6 +299,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     saveMutation.mutate(toSaveRequest(quizTitle, rounds));
   }
 
+  // Exports what's in the editor right now (unsaved edits included), not the
+  // last-saved copy — the CSV is a snapshot of the draft the admin is looking at.
+  function handleExportCsv(): void {
+    const request = toSaveRequest(quizTitle, rounds);
+    downloadTextFile(
+      csvFilename(request.title),
+      quizToCsv(request.rounds),
+      CSV_MIME_TYPE,
+    );
+  }
+
   if (numericQuizId !== null && draftQuery.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
@@ -439,6 +454,16 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             {previewFromUrlMutation.isPending ? '…' : 'Import'}
           </Button>
         </form>
+        <Button
+          type="button"
+          onClick={handleExportCsv}
+          disabled={questionCount === 0}
+          size="md"
+          className="rounded-xl border-2 border-background/50 text-xs font-extrabold text-background whitespace-nowrap disabled:opacity-50"
+        >
+          <DownloadIcon aria-hidden="true" />
+          Export CSV
+        </Button>
         <Button
           type="button"
           onClick={() => handleSave()}

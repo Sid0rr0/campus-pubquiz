@@ -333,6 +333,15 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
   server-side, surfacing structured issues per round/question on failure.
+- Export the quiz's questions with **Export CSV** in the header bar.
+
+**CSV export mechanics**: purely client-side — `quizToCsv`
+(`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
+draft (unsaved edits included) into the same 10-column format the importer
+reads, so an exported file re-imports as-is. `break_after` lands on each
+breaking round's last row; `match` answers are rebuilt as `left+right` pairs.
+Rounds with no questions are omitted, and `kahootMode` has no column, so it
+isn't exported.
 
 **CSV import mechanics**: the browser reads the uploaded file's text directly
 (`file.text()`) and POSTs it to `POST /import/preview`. The parsed
