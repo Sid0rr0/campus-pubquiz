@@ -535,7 +535,9 @@ describe('AnswersPanel', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows a read-only auto-graded badge instead of grade buttons for match, since points split per correctly matched pair', () => {
+  it('lets the quiz master override the auto-graded score of a match answer', async () => {
+    const user = userEvent.setup();
+    const onGrade = vi.fn();
     render(
       <AnswersPanel
         liveAnswers={liveAnswers({
@@ -556,22 +558,29 @@ describe('AnswersPanel', () => {
               teamId: 1,
               teamName: 'The Quizzards',
               value: 'excalibur|excalibur',
-              pointsAwarded: 2,
+              pointsAwarded: 1,
               gradedAt: '2026-01-01T00:00:00.000Z',
             },
           ],
         })}
         teams={TEAMS}
-        onGrade={vi.fn()}
+        onGrade={onGrade}
       />,
     );
 
-    expect(screen.getByText('2 pts (auto-graded)')).toBeInTheDocument();
+    // The auto-graded 1 point isn't 0/half/full, so the Custom button shows it.
     expect(
-      screen.queryByRole('button', {
-        name: /grade the quizzards full points/i,
+      screen.getByRole('button', {
+        name: /grade the quizzards custom points/i,
       }),
-    ).not.toBeInTheDocument();
+    ).toHaveTextContent('✓ 1');
+    expect(screen.queryByText(/auto-graded/i)).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: /grade the quizzards full points/i }),
+    );
+
+    expect(onGrade).toHaveBeenCalledWith(41, 4);
   });
 
   it('omits the previous/next controls when no nav is given', () => {

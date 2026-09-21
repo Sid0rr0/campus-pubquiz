@@ -297,7 +297,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     );
   });
 
-  it('rejects manually grading a match answer via grade()', async () => {
+  it('lets the admin override the auto-graded points of a match answer via grade()', async () => {
     const matchQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -319,11 +319,21 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       'excalibur|shield',
     );
 
-    await expect(
-      state.answerService.grade(state.session.id, submitted.answerId, 4),
-    ).rejects.toThrow(
-      'match answers are graded automatically and cannot be graded manually',
+    // Submitted answer is fully correct (4/4), auto-graded at submit time;
+    // the quiz master then knocks it down to 3.
+    expect(submitted.pointsAwarded).toBe(4);
+    const graded = await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      3,
     );
+
+    expect(graded).toEqual({ questionId: matchQuestion.id });
+    const answers = await state.answerService.listForQuestion(
+      state.session.id,
+      matchQuestion.id,
+    );
+    expect(answers.find((a) => a.teamId === team.id)?.pointsAwarded).toBe(3);
   });
 
   describe('applyKahootSpeedScoring', () => {

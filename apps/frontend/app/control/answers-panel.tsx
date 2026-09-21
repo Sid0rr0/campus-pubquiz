@@ -41,7 +41,7 @@ interface AnswerRowProps {
   /** match only: the left-hand items, so the team's right-hand picks can be paired back to them for display. */
   questionOptions?: string[];
   maxPoints: number;
-  /** closest_guess and match are graded automatically by a formula rather than a single right/wrong the three quick-grade buttons can represent (match splits points per correctly matched pair) — show the computed result instead of grade buttons, and never call onGrade. */
+  /** closest_guess is graded automatically in one batch across all teams, so a single answer can't be overridden — show the computed result instead of grade buttons, and never call onGrade. (match is also auto-graded, but its per-pair partial credit stays editable through the normal grade controls.) */
   readOnly: boolean;
   onGrade: (answerId: number, points: number) => void;
 }
@@ -148,8 +148,7 @@ export function AnswersPanel({
   const answersByTeamId = new Map(
     answers.map((answer) => [answer.teamId, answer]),
   );
-  const readOnly =
-    question.type === 'closest_guess' || question.type === 'match';
+  const readOnly = question.type === 'closest_guess';
   const correctCount = countCorrectAnswers(liveAnswers);
   const answeredCount = answers.length;
 

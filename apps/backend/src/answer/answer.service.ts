@@ -225,12 +225,12 @@ export class AnswerService {
       { id: answerId, gameSession: gameSessionId },
       { populate: ['question'] },
     );
-    if (
-      answer.question.type === 'closest_guess' ||
-      answer.question.type === 'match'
-    ) {
+    // match is auto-graded at submit time too, but its per-pair partial credit
+    // is only a starting point — the quiz master may override it here.
+    // closest_guess can't be overridden: it's recomputed as a batch.
+    if (answer.question.type === 'closest_guess') {
       throw new Error(
-        `${answer.question.type} answers are graded automatically and cannot be graded manually`,
+        'closest_guess answers are graded automatically and cannot be graded manually',
       );
     }
     answer.pointsAwarded = pointsAwarded;
