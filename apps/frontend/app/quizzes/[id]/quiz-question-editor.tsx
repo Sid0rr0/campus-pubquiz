@@ -12,6 +12,7 @@ import {
   type QuestionType,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { MediaUrlField } from '@/app/quizzes/[id]/media-url-field';
 import {
   makeMatchPair,
   makeOption,
@@ -471,30 +472,23 @@ export function QuizQuestionEditor({
       )}
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
-          Media URL{needsMediaUrl ? ' (required)' : ''}
-          <input
-            value={question.mediaUrl}
-            onChange={(event) => onChange({ mediaUrl: event.target.value })}
-            disabled={isLocked}
-            placeholder={
-              question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
-            }
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-          />
-        </label>
-        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
-          Answer media URL
-          <input
-            value={question.answerMediaUrl}
-            onChange={(event) =>
-              onChange({ answerMediaUrl: event.target.value })
-            }
-            disabled={isLocked}
-            placeholder="https://…"
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-          />
-        </label>
+        <MediaUrlField
+          label="Media URL"
+          isRequired={needsMediaUrl}
+          value={question.mediaUrl}
+          onChange={(mediaUrl) => onChange({ mediaUrl })}
+          disabled={isLocked}
+          placeholder={
+            question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
+          }
+        />
+        <MediaUrlField
+          label="Answer media URL"
+          value={question.answerMediaUrl}
+          onChange={(answerMediaUrl) => onChange({ answerMediaUrl })}
+          disabled={isLocked}
+          placeholder="https://…"
+        />
       </div>
 
       {isYoutubeMedia && (

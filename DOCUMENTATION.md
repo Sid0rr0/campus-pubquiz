@@ -376,6 +376,28 @@ only). This only works for sheets shared as "Anyone with the link can view"
 sign-in page, which surfaces as a fetch failure with a message telling the
 admin to check sharing settings.
 
+**Image uploads**: next to each media URL field in the editor, an upload
+button sends the chosen image to `POST /media` (multipart field `file`,
+admin/moderator only, 5 MB cap) and fills the field with the returned public
+URL — everything downstream still just sees a plain `mediaUrl`. The backend
+ignores the uploader's filename and claimed MIME type: `detectImageType`
+sniffs the real format from the file's magic bytes (JPEG, PNG, GIF, WebP,
+AVIF — SVG is refused, it can carry scripts) and `MediaService` stores it
+under `quiz-media/<uuid>.<ext>`, so an answer image's URL can't be guessed
+before reveal. Storage sits behind the `MediaStorage` interface
+(`apps/backend/src/media/media-storage.ts`); `MEDIA_STORAGE_PROVIDER` picks
+the driver in `create-media-storage.ts`. Only `vercel-blob` ships — create a
+**public** Blob store and set `BLOB_READ_WRITE_TOKEN`. With no token the app
+still boots and uploads answer 503.
+
+To swap in Cloudflare R2 (or any S3-compatible store): add
+`r2-media-storage.ts` implementing `MediaStorage.put()` (store `data` at
+`key` with `contentType`, return the public URL — R2 speaks S3, so
+`@aws-sdk/client-s3` works), add an `'r2'` case in `createMediaStorage`,
+and set `MEDIA_STORAGE_PROVIDER=r2` plus that driver's credentials. Nothing
+else changes; URLs already stored in quizzes keep working because they are
+plain links.
+
 Sheet row format (one row per question):
 
 ```

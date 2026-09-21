@@ -74,6 +74,10 @@ round | type | question | options | answer | points | media_url | answer_media_u
 
 `break_after` is optional and per-row; a round grades after itself once any of its rows has `break_after` = `1` (blank/`0` = no break). The last round always breaks regardless of its `break_after` cells — the state machine has no way to reveal answers otherwise, so import forces it on rather than requiring authors to remember it.
 
+### Media: uploaded images behind `MediaStorage`
+
+The quiz editor uploads images through `POST /media`, which stores them via the `MediaStorage` interface (`apps/backend/src/media/`) and returns a public URL that lands in `mediaUrl`/`answerMediaUrl` like any pasted link — nothing downstream knows an upload happened. Only Vercel Blob ships; swapping providers (e.g. Cloudflare R2) means one new driver + one case in `createMediaStorage`, selected by `MEDIA_STORAGE_PROVIDER` — see `DOCUMENTATION.md`. Using `@vercel/blob` from the backend is just an HTTP client; it doesn't conflict with the "backend never on Vercel" rule below. Never trust the client's filename/MIME: type is sniffed from magic bytes and keys are server-generated UUIDs.
+
 ### Hosting: Cloud
 
 Both apps deployed together with Postgres. Venue internet is a hard dependency — mitigation is that phones on mobile data just work, and a phone hotspot can carry the two PCs if Wi-Fi dies. **Do not deploy the backend to Vercel** — serverless and Socket.IO are incompatible.

@@ -7,3 +7,4 @@ export * from './team';
 export * from './quiz-draft';
 export * from './youtube';
 export * from './sort-match';
+export * from './media';

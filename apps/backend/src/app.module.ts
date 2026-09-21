@@ -25,6 +25,10 @@ import { QuizService } from '@/quiz/quiz.service';
 import { QuizController } from '@/quiz/quiz.controller';
 import { ImportController } from '@/import/import.controller';
 import { ImportService } from '@/import/import.service';
+import { createMediaStorage } from '@/media/create-media-storage';
+import { MEDIA_STORAGE } from '@/media/media-storage';
+import { MediaController } from '@/media/media.controller';
+import { MediaService } from '@/media/media.service';
 import { SessionsController } from '@/session/sessions.controller';
 import { ShowdownService } from '@/showdown/showdown.service';
 
@@ -45,6 +49,7 @@ import { ShowdownService } from '@/showdown/showdown.service';
     AuthController,
     UsersController,
     ImportController,
+    MediaController,
     QuizController,
     SessionsController,
     AnswerController,
@@ -66,6 +71,8 @@ import { ShowdownService } from '@/showdown/showdown.service';
     GameStateService,
     GameGateway,
     ImportService,
+    { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
+    MediaService,
     ShowdownService,
   ],
 })
