@@ -280,8 +280,192 @@ describe('AnswersPanel', () => {
     const fullPointsButton = screen.getByRole('button', {
       name: /grade the quizzards full points/i,
     });
-    expect(fullPointsButton).toHaveTextContent('✓ 2');
+    expect(fullPointsButton).toHaveTextContent('✓ Full (2)');
     expect(fullPointsButton).toBeEnabled();
+  });
+
+  it('labels the quick buttons Custom, 0, Half (amount) and Full (amount)', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers()}
+        teams={[TEAMS[0]]}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    const labels = screen
+      .getAllByRole('button', { name: /grade the quizzards/i })
+      .map((button) => button.textContent);
+    expect(labels).toEqual(['Custom', '0', 'Half (1)', 'Full (2)']);
+  });
+
+  describe('custom points', () => {
+    const CUSTOM_BUTTON = /grade the quizzards custom points/i;
+    const CUSTOM_INPUT = /custom points for the quizzards/i;
+
+    it('keeps the custom input hidden until Custom is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={[TEAMS[0]]}
+          onGrade={vi.fn()}
+        />,
+      );
+      expect(screen.queryByLabelText(CUSTOM_INPUT)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      expect(screen.getByLabelText(CUSTOM_INPUT)).toBeInTheDocument();
+    });
+
+    it('hides the input again, without grading, when Custom is clicked and the amount was not changed', async () => {
+      const user = userEvent.setup();
+      const onGrade = vi.fn();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={[TEAMS[0]]}
+          onGrade={onGrade}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      expect(screen.queryByLabelText(CUSTOM_INPUT)).not.toBeInTheDocument();
+      expect(onGrade).not.toHaveBeenCalled();
+    });
+
+    it('turns Custom into Confirm once the amount is changed, and grades with that amount on confirm', async () => {
+      const user = userEvent.setup();
+      const onGrade = vi.fn();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={[TEAMS[0]]}
+          onGrade={onGrade}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      await user.clear(screen.getByLabelText(CUSTOM_INPUT));
+      await user.type(screen.getByLabelText(CUSTOM_INPUT), '1.5');
+      const confirmButton = screen.getByRole('button', {
+        name: /confirm the quizzards custom points/i,
+      });
+      expect(confirmButton).toHaveTextContent('Confirm');
+      await user.click(confirmButton);
+
+      expect(onGrade).toHaveBeenCalledWith(41, 1.5);
+      expect(screen.queryByLabelText(CUSTOM_INPUT)).not.toBeInTheDocument();
+    });
+
+    it('confirms when Enter is pressed in the input', async () => {
+      const user = userEvent.setup();
+      const onGrade = vi.fn();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={[TEAMS[0]]}
+          onGrade={onGrade}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      await user.clear(screen.getByLabelText(CUSTOM_INPUT));
+      await user.type(screen.getByLabelText(CUSTOM_INPUT), '3{Enter}');
+
+      expect(onGrade).toHaveBeenCalledWith(41, 3);
+    });
+
+    it('goes back to Custom when the amount is edited back to its starting value', async () => {
+      const user = userEvent.setup();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={[TEAMS[0]]}
+          onGrade={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+      await user.clear(screen.getByLabelText(CUSTOM_INPUT));
+      await user.type(screen.getByLabelText(CUSTOM_INPUT), '3');
+
+      await user.clear(screen.getByLabelText(CUSTOM_INPUT));
+      await user.type(screen.getByLabelText(CUSTOM_INPUT), '0');
+
+      expect(
+        screen.getByRole('button', { name: CUSTOM_BUTTON }),
+      ).toHaveTextContent('Custom');
+    });
+
+    it('does not offer Confirm for an empty or negative amount', async () => {
+      const user = userEvent.setup();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={[TEAMS[0]]}
+          onGrade={vi.fn()}
+        />,
+      );
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      await user.clear(screen.getByLabelText(CUSTOM_INPUT));
+      expect(
+        screen.queryByRole('button', { name: /confirm the quizzards/i }),
+      ).not.toBeInTheDocument();
+
+      await user.type(screen.getByLabelText(CUSTOM_INPUT), '-1');
+      expect(
+        screen.queryByRole('button', { name: /confirm the quizzards/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('starts the input at the amount already awarded', async () => {
+      const user = userEvent.setup();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: 'Paris',
+                pointsAwarded: 1.5,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          })}
+          teams={[TEAMS[0]]}
+          onGrade={vi.fn()}
+        />,
+      );
+      expect(
+        screen.getByRole('button', { name: CUSTOM_BUTTON }),
+      ).toHaveTextContent('✓ 1.5');
+
+      await user.click(screen.getByRole('button', { name: CUSTOM_BUTTON }));
+
+      expect(screen.getByLabelText(CUSTOM_INPUT)).toHaveValue(1.5);
+    });
+
+    it('disables Custom for a team that has not answered', () => {
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers()}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.getByRole('button', {
+          name: /grade beer necessities custom points/i,
+        }),
+      ).toBeDisabled();
+    });
   });
 
   it('allows changing an already-graded answer to a different point value', async () => {

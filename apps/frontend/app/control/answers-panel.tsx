@@ -10,6 +10,7 @@ import type {
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 import { Button } from '@/app/components/button';
+import { CustomGradeControl } from '@/app/control/custom-grade-control';
 
 interface GradeOption {
   display: string;
@@ -20,8 +21,16 @@ interface GradeOption {
 function gradeOptions(maxPoints: number): GradeOption[] {
   return [
     { display: '0', ariaSuffix: '0 points', value: 0 },
-    { display: '½', ariaSuffix: 'half points', value: maxPoints / 2 },
-    { display: String(maxPoints), ariaSuffix: 'full points', value: maxPoints },
+    {
+      display: `Half (${maxPoints / 2})`,
+      ariaSuffix: 'half points',
+      value: maxPoints / 2,
+    },
+    {
+      display: `Full (${maxPoints})`,
+      ariaSuffix: 'full points',
+      value: maxPoints,
+    },
   ];
 }
 
@@ -78,7 +87,16 @@ function AnswerRow({
               Awarded {answer.pointsAwarded} points
             </span>
           )}
-          <div className="flex gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <CustomGradeControl
+              teamName={teamName}
+              currentAmount={hasAnswered ? answer.pointsAwarded : 0}
+              isSelected={isGraded && !matchesAGradeOption}
+              isDisabled={!hasAnswered}
+              onConfirm={(amount) =>
+                hasAnswered && onGrade(answer.answerId, amount)
+              }
+            />
             {options.map(({ display, ariaSuffix, value }) => {
               const isSelected = isGraded && answer.pointsAwarded === value;
               return (
@@ -91,11 +109,11 @@ function AnswerRow({
                   onClick={() => hasAnswered && onGrade(answer.answerId, value)}
                   className={
                     isSelected
-                      ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green font-extrabold text-white'
-                      : 'flex h-9 min-w-11 items-center justify-center'
+                      ? 'flex h-9 min-w-11 items-center justify-center rounded-lg bg-green px-3 font-extrabold whitespace-nowrap text-white'
+                      : 'flex h-9 min-w-11 items-center justify-center px-3 whitespace-nowrap'
                   }
                 >
-                  {isSelected ? `✓ ${value}` : display}
+                  {isSelected ? `✓ ${display}` : display}
                 </Button>
               );
             })}

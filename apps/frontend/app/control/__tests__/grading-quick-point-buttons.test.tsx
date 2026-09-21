@@ -195,7 +195,7 @@ describe('AdminPage — grading quick point buttons', () => {
     const fullPointsButton = screen.getByRole('button', {
       name: /grade the quizzards full points/i,
     });
-    expect(fullPointsButton).toHaveTextContent('✓ 2');
+    expect(fullPointsButton).toHaveTextContent('✓ Full (2)');
     expect(fullPointsButton).toBeEnabled();
     expect(
       screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
