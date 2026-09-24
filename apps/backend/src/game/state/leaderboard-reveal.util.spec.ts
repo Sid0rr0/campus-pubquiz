@@ -106,4 +106,25 @@ describe('computeLeaderboardRevealCount', () => {
     );
     expect(result).toBe(0);
   });
+
+  it('reveals tied teams together, needing one click per distinct rank', () => {
+    // Points 30, 20, 20, 20, 10, 10 → three distinct ranks.
+    const tiedTeams = leaderboardOfSize(6).map((entry, index) => ({
+      ...entry,
+      totalPoints: [30, 20, 20, 20, 10, 10][index],
+    }));
+
+    let revealCount = 0;
+    for (let click = 1; click <= 5; click++) {
+      revealCount = computeLeaderboardRevealCount(
+        'ADVANCE',
+        true,
+        progress({ status: 'round_intro', isLeaderboardVisible: true }),
+        tiedTeams,
+        revealCount,
+        false,
+      );
+      expect(revealCount).toBe(Math.min(click, 3));
+    }
+  });
 });

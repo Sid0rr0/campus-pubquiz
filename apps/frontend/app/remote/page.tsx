@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
-  KAHOOT_LEADERBOARD_TOP_N,
+  getLeaderboardRevealStepCount,
   type RevealQuestionView,
   type ScreenPreview,
 } from '@campus-pubquiz/types';
@@ -209,11 +209,12 @@ function RemotePageContent() {
     activeBlockStartIndex,
     previousStatus: progress.previousStatus,
   });
-  // A kahootMode round's leaderboard only ever shows (and needs revealing
-  // through) its top 5 — see control/page.tsx's matching computation.
-  const leaderboardTeamCount = isCurrentRoundKahoot
-    ? Math.min(KAHOOT_LEADERBOARD_TOP_N, snapshot.leaderboard?.length ?? 0)
-    : (snapshot.leaderboard?.length ?? 0);
+  // One reveal step per distinct rank (ties reveal together), capped to a
+  // kahootMode round's top 5 — see control/page.tsx's matching computation.
+  const leaderboardTeamCount = getLeaderboardRevealStepCount(
+    snapshot.leaderboard ?? [],
+    isCurrentRoundKahoot,
+  );
   const leaderboardRevealCount = snapshot.leaderboardRevealCount ?? 0;
 
   return (

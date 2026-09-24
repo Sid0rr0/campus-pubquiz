@@ -1,5 +1,5 @@
 import {
-  KAHOOT_LEADERBOARD_TOP_N,
+  getLeaderboardRevealStepCount,
   getBreakNumber,
   getNextGameState,
   getQuizStructureSummary,
@@ -109,12 +109,10 @@ export function describeScreen(session: SessionState): ScreenPreview {
   }
 }
 
-function getLeaderboardTeamCount(session: SessionState): number {
+function getLeaderboardRevealSteps(session: SessionState): number {
   const isKahoot =
     session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ?? false;
-  return isKahoot
-    ? Math.min(KAHOOT_LEADERBOARD_TOP_N, session.leaderboard.length)
-    : session.leaderboard.length;
+  return getLeaderboardRevealStepCount(session.leaderboard, isKahoot);
 }
 
 /** The progress plain ADVANCE (START_QUIZ from the lobby) moves to, or null when it's illegal here. */
@@ -157,11 +155,11 @@ export function describeNextScreen(
   const { progress } = session;
 
   if (progress.isLeaderboardVisible) {
-    const teamCount = getLeaderboardTeamCount(session);
-    if (session.leaderboardRevealCount < teamCount) {
+    const stepCount = getLeaderboardRevealSteps(session);
+    if (session.leaderboardRevealCount < stepCount) {
       return {
         heading: 'Leaderboard',
-        body: `Next team (${session.leaderboardRevealCount + 1} of ${teamCount})`,
+        body: `Next place (${session.leaderboardRevealCount + 1} of ${stepCount})`,
       };
     }
     return describeScreen({

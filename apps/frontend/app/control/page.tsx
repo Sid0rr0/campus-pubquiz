@@ -10,7 +10,7 @@ import {
   getBlockStartPosition,
   getTiedForFirst,
   isBreakPointQuestion,
-  KAHOOT_LEADERBOARD_TOP_N,
+  getLeaderboardRevealStepCount,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
@@ -340,14 +340,14 @@ function AdminPageContent() {
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
   const questionIndex = snapshot?.progress.questionIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  // A kahootMode round's leaderboard only ever shows (and needs revealing
-  // through) its top 5 — same cutoff the display enforces via maxRank — so
-  // the "Show Next Team"/"Hide Leaderboard" button switches after 5 clicks,
-  // not one per team, once there are more than 5.
-  const leaderboardTeamCount =
-    (snapshot?.isCurrentRoundKahoot ?? false)
-      ? Math.min(KAHOOT_LEADERBOARD_TOP_N, snapshot?.leaderboard?.length ?? 0)
-      : (snapshot?.leaderboard?.length ?? 0);
+  // Reveal steps, not teams: tied teams share a rank and appear together in
+  // one step, and a kahootMode round only reveals through its top 5 — same
+  // cutoff the display enforces via maxRank — so "Show Next Team" switches
+  // to "Hide Leaderboard" once every distinct rank on screen is shown.
+  const leaderboardTeamCount = getLeaderboardRevealStepCount(
+    snapshot?.leaderboard ?? [],
+    snapshot?.isCurrentRoundKahoot ?? false,
+  );
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
   const gameContext = {
     rounds: activeQuizRounds.map((round) => ({

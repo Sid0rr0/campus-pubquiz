@@ -1,5 +1,5 @@
 import {
-  KAHOOT_LEADERBOARD_TOP_N,
+  getLeaderboardRevealStepCount,
   type GameAction,
   type GameProgress,
   type LeaderboardEntry,
@@ -7,8 +7,10 @@ import {
 
 /**
  * Toggling the board resets the reveal to nothing shown; from then on,
- * ADVANCE and REVEAL_NEXT_TEAM both step the reveal forward one team at a
- * time (bottom-up) — whichever button the admin has on screen works.
+ * ADVANCE and REVEAL_NEXT_TEAM both step the reveal forward one rank at a
+ * time (bottom-up) — whichever button the admin has on screen works. Teams
+ * tied on points share a rank and appear together in one step, so a tie
+ * never costs the admin extra clicks that change nothing on screen.
  *
  * A kahootMode round's leaderboard only ever needs revealing up to its
  * top-5 cutoff (KAHOOT_LEADERBOARD_TOP_N, same one the display's maxRank
@@ -30,9 +32,10 @@ export function computeLeaderboardRevealCount(
   currentRevealCount: number,
   isKahootRound: boolean,
 ): number {
-  const revealTarget = isKahootRound
-    ? Math.min(KAHOOT_LEADERBOARD_TOP_N, leaderboard.length)
-    : leaderboard.length;
+  const revealTarget = getLeaderboardRevealStepCount(
+    leaderboard,
+    isKahootRound,
+  );
   if (
     isKahootRound &&
     newProgress.status === 'question_open' &&

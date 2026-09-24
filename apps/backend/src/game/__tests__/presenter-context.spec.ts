@@ -196,7 +196,7 @@ describe('GameStateService — getPresenterContext', () => {
       expect(screens()).toMatchObject({
         current: 'Leaderboard',
         next: 'Leaderboard',
-        nextBody: 'Next team (1 of 1)',
+        nextBody: 'Next place (1 of 1)',
       });
 
       await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
@@ -223,7 +223,7 @@ describe('GameStateService — getPresenterContext', () => {
       await advance(1); // -> leaderboard over round_intro(1)
       expect(screens()).toMatchObject({
         current: 'Leaderboard',
-        nextBody: 'Next team (1 of 1)',
+        nextBody: 'Next place (1 of 1)',
       });
 
       await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');

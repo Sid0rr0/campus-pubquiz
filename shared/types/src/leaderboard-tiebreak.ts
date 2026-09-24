@@ -4,6 +4,23 @@ import type { LeaderboardEntry } from './socket-events';
 export const KAHOOT_LEADERBOARD_TOP_N = 5;
 
 /**
+ * How many Advance/REVEAL_NEXT_TEAM steps the bottom-up leaderboard reveal
+ * takes — one per *distinct rank*, not per team, so a tie reveals in a
+ * single step (matching the display's Leaderboard, which walks whole rank
+ * groups). A kahootMode round only counts ranks within its top-N cutoff.
+ * Assumes `leaderboard` is sorted by totalPoints desc (computeLeaderboard).
+ */
+export function getLeaderboardRevealStepCount(
+  leaderboard: LeaderboardEntry[],
+  isKahootRound: boolean,
+): number {
+  const pool = isKahootRound
+    ? leaderboard.slice(0, KAHOOT_LEADERBOARD_TOP_N)
+    : leaderboard;
+  return new Set(pool.map((entry) => entry.totalPoints)).size;
+}
+
+/**
  * Every team sharing the top `totalPoints` on the leaderboard, when 2 or
  * more of them are tied — empty when there's a single outright leader (or
  * no leaderboard at all). Order is preserved from `leaderboard` itself,
