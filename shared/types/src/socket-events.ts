@@ -382,11 +382,21 @@ export interface AdminQuestionContext {
  * broadcastGameState's tri-room emit — players and the display must never
  * receive next-question content or host notes.
  */
+/** A short description of one /display screen, as shown on /remote. */
+export interface ScreenPreview {
+  heading: string;
+  body?: string;
+  /** Full question content (including the correct answer) when the screen is an open question. */
+  question?: RevealQuestionView;
+}
+
 export interface PresenterContextPayload {
   /** Host-only notes for the currently open question, or null when none is open or none were authored. */
   currentQuestionNotes: string | null;
-  /** Full content (including the correct answer) of the question right after the furthest-opened one — crosses round boundaries within the quiz, so it's still populated on a round's last question. Null only once nothing is left in the quiz. */
-  nextQuestion: RevealQuestionView | null;
+  /** What /display is showing right now. */
+  currentScreen: ScreenPreview;
+  /** What /display will show after the remote's Advance button is pressed, or null when Advance has nowhere left to go. */
+  nextScreen: ScreenPreview | null;
 }
 
 export interface AnswersUpdatedPayload {

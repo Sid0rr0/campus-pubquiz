@@ -206,8 +206,7 @@ export function getBlockQuestions(session: SessionState): BlockQuestionView[] {
 
 /**
  * The (roundIndex, questionIndex) of the furthest question ever opened in
- * the current block — shared by getUpcomingQuestionPositions and
- * buildPresenterContext's next-question preview.
+ * the current block — used by getUpcomingQuestionPositions.
  *
  * During round_intro, furthestOpenIndex may still point at an earlier
  * round (a fresh round_intro reached by ADVANCE, nothing open in the new

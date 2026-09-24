@@ -51,12 +51,16 @@ describe('useGameSocket — presenter context', () => {
     const fakeSocket = getFakeSocket();
     const payload = {
       currentQuestionNotes: 'Remind teams: EU capitals only.',
-      nextQuestion: {
-        id: 2,
-        type: 'free_text' as const,
-        prompt: 'Name a planet',
-        points: 1,
-        answer: 'Jupiter',
+      currentScreen: { heading: 'R1 Q1' },
+      nextScreen: {
+        heading: 'R1 Q2',
+        question: {
+          id: 2,
+          type: 'free_text' as const,
+          prompt: 'Name a planet',
+          points: 1,
+          answer: 'Jupiter',
+        },
       },
     };
 
@@ -80,7 +84,8 @@ describe('useGameSocket — presenter context', () => {
     act(() => {
       firstSocket.trigger(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, {
         currentQuestionNotes: 'note',
-        nextQuestion: null,
+        currentScreen: { heading: 'Lobby' },
+        nextScreen: null,
       });
     });
     await waitFor(() => expect(result.current.presenterContext).not.toBeNull());

@@ -23,7 +23,8 @@ describe('broadcastGameState', () => {
   } as unknown as StateSnapshotPayload;
   const presenterContext: PresenterContextPayload = {
     currentQuestionNotes: 'note',
-    nextQuestion: null,
+    currentScreen: { heading: 'Lobby' },
+    nextScreen: null,
   };
 
   function createFakeGameState() {

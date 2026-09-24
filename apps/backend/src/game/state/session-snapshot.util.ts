@@ -3,7 +3,6 @@ import {
   getTimedPhaseKey,
   type AdminQuestionContext,
   type PresenterContextPayload,
-  type RevealQuestionView,
   type StateSnapshotPayload,
   type TeamView,
 } from '@campus-pubquiz/types';
@@ -13,12 +12,15 @@ import {
   getBlockQuestions,
   getCurrentQuestion,
   getCurrentRoundTitle,
-  getFurthestOpenPosition,
   getPastRevealedQuestions,
   getRevealQuestions,
   getUpcomingQuestionPositions,
 } from '@/game/state/block-questions.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
+import {
+  describeNextScreen,
+  describeScreen,
+} from '@/game/state/screen-preview.util';
 import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
 
 /**
@@ -114,33 +116,8 @@ export function isQuestionOpenForAnswering(
 }
 
 /**
- * The question immediately after (roundIndex, questionIndex) — walking
- * forward into subsequent rounds when the given position is a round's last
- * question, so a presenter on a round's final question still sees a
- * preview instead of "nothing queued". Null only once nothing at all is
- * left in the quiz.
- */
-function getQuestionAfter(
-  rounds: SeededRound[],
-  roundIndex: number,
-  questionIndex: number,
-): RevealQuestionView | null {
-  let currentRoundIndex = roundIndex;
-  let nextQuestionIndex = questionIndex + 1;
-  while (currentRoundIndex < rounds.length) {
-    const round = rounds[currentRoundIndex];
-    if (nextQuestionIndex < round.questions.length) {
-      return round.questions[nextQuestionIndex];
-    }
-    currentRoundIndex += 1;
-    nextQuestionIndex = 0;
-  }
-  return null;
-}
-
-/**
- * Host notes for the open question + a preview of the next question, for
- * the /remote presenter view alone. Callers MUST only forward this over an
+ * Host notes for the open question + what /display shows now and after the
+ * next Advance, for the /remote presenter view alone. Callers MUST only forward this over an
  * admin-room-only channel (PRESENTER_CONTEXT_UPDATED) — never through the
  * broadcast snapshot.
  */
@@ -154,14 +131,11 @@ export function buildPresenterContext(
       ? (currentRound.questionNotesById?.[currentQuestion.id] ?? null)
       : null;
 
-  const target = getFurthestOpenPosition(session);
-  const nextQuestion = getQuestionAfter(
-    session.seededGame.rounds,
-    target.roundIndex,
-    target.questionIndex,
-  );
-
-  return { currentQuestionNotes, nextQuestion };
+  return {
+    currentQuestionNotes,
+    currentScreen: describeScreen(session),
+    nextScreen: describeNextScreen(session),
+  };
 }
 
 /**

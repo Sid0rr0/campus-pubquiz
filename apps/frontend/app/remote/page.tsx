@@ -6,6 +6,7 @@ import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   KAHOOT_LEADERBOARD_TOP_N,
   type RevealQuestionView,
+  type ScreenPreview,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { useAuth } from '@/app/lib/use-auth';
@@ -53,6 +54,21 @@ function NextQuestionPreview({ question }: { question: RevealQuestionView }) {
       <p className="text-xs text-foreground/70">
         Answer: <span className="font-bold">{question.answer}</span>
       </p>
+    </div>
+  );
+}
+
+function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-sm font-bold">{screen.heading}</p>
+      {screen.question ? (
+        <NextQuestionPreview question={screen.question} />
+      ) : (
+        screen.body && (
+          <p className="text-sm text-foreground/70">{screen.body}</p>
+        )
+      )}
     </div>
   );
 }
@@ -223,6 +239,17 @@ function RemotePageContent() {
 
       <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
         <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+          On display
+        </h2>
+        {presenterContext ? (
+          <ScreenPreviewCard screen={presenterContext.currentScreen} />
+        ) : (
+          <p className="text-sm text-foreground/50">Loading…</p>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
+        <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
           Notes
         </h2>
         {presenterContext?.currentQuestionNotes ? (
@@ -238,8 +265,8 @@ function RemotePageContent() {
         <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
           Up next
         </h2>
-        {presenterContext?.nextQuestion ? (
-          <NextQuestionPreview question={presenterContext.nextQuestion} />
+        {presenterContext?.nextScreen ? (
+          <ScreenPreviewCard screen={presenterContext.nextScreen} />
         ) : (
           <p className="text-sm text-foreground/50">Nothing queued yet.</p>
         )}

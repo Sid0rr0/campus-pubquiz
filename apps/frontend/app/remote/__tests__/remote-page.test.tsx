@@ -1,7 +1,10 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GameProgress } from '@campus-pubquiz/types';
+import type {
+  GameProgress,
+  PresenterContextPayload,
+} from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
@@ -64,6 +67,17 @@ function baseSnapshot(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function presenterContext(
+  overrides: Partial<PresenterContextPayload> = {},
+): PresenterContextPayload {
+  return {
+    currentQuestionNotes: null,
+    currentScreen: { heading: 'R1 Q1' },
+    nextScreen: null,
+    ...overrides,
+  };
+}
+
 describe('RemotePage — content', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
@@ -111,10 +125,9 @@ describe('RemotePage — content', () => {
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
-      presenterContext: {
+      presenterContext: presenterContext({
         currentQuestionNotes: 'Remind teams: EU capitals only.',
-        nextQuestion: null,
-      },
+      }),
     });
     renderWithQuery(<RemotePage />);
 
@@ -128,31 +141,68 @@ describe('RemotePage — content', () => {
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
-      presenterContext: { currentQuestionNotes: null, nextQuestion: null },
+      presenterContext: presenterContext(),
     });
     renderWithQuery(<RemotePage />);
 
     expect(screen.getByText('No notes for this question.')).toBeInTheDocument();
   });
 
-  it('shows a preview of the next question when present', () => {
+  it('shows what the display is currently showing', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
-      presenterContext: {
-        currentQuestionNotes: null,
-        nextQuestion: {
-          id: 22,
-          type: 'free_text',
-          prompt: 'Name the largest planet in the solar system.',
-          points: 2,
-          answer: 'Jupiter',
-        },
-      },
+      presenterContext: presenterContext({
+        currentScreen: { heading: 'Break 1', body: 'After round 2' },
+      }),
     });
     renderWithQuery(<RemotePage />);
 
+    expect(screen.getByText('Break 1')).toBeInTheDocument();
+    expect(screen.getByText('After round 2')).toBeInTheDocument();
+  });
+
+  it('previews the next screen', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot(),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        nextScreen: {
+          heading: 'Revealing · Round 1 title',
+          body: 'Geography',
+        },
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('Revealing · Round 1 title')).toBeInTheDocument();
+    expect(screen.getByText('Geography')).toBeInTheDocument();
+    expect(screen.queryByText('Nothing queued yet.')).not.toBeInTheDocument();
+  });
+
+  it('shows the full question preview when the next screen is a question', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot(),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({
+        nextScreen: {
+          heading: 'R1 Q2',
+          question: {
+            id: 22,
+            type: 'free_text',
+            prompt: 'Name the largest planet in the solar system.',
+            points: 2,
+            answer: 'Jupiter',
+          },
+        },
+      }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('R1 Q2')).toBeInTheDocument();
     expect(
       screen.getByText('Name the largest planet in the solar system.'),
     ).toBeInTheDocument();
@@ -164,7 +214,7 @@ describe('RemotePage — content', () => {
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
-      presenterContext: { currentQuestionNotes: null, nextQuestion: null },
+      presenterContext: presenterContext(),
     });
     renderWithQuery(<RemotePage />);
 

@@ -35,7 +35,7 @@ describe('buildSnapshot — presenter-only content never leaks into the broadcas
     await service.onModuleInit();
   });
 
-  it('never contains note text or a "questionNotesById"/"nextQuestion" key at any point across the whole quiz', async () => {
+  it('never contains note text or a "questionNotesById"/"nextScreen" key at any point across the whole quiz', async () => {
     const actions = [
       'START_QUIZ',
       'ADVANCE', // round_intro(0)
@@ -56,7 +56,7 @@ describe('buildSnapshot — presenter-only content never leaks into the broadcas
 
       expect(serialized).not.toContain('Remind teams: EU capitals only.');
       expect(serialized).not.toContain('questionNotesById');
-      expect(serialized).not.toContain('nextQuestion');
+      expect(serialized).not.toContain('nextScreen');
     }
   });
 });
