@@ -583,6 +583,171 @@ describe('AnswersPanel', () => {
     expect(onGrade).toHaveBeenCalledWith(41, 4);
   });
 
+  describe('ordering by grading status', () => {
+    function teamNamesInOrder(container: HTMLElement): string[] {
+      return Array.from(container.querySelectorAll('li')).map(
+        (row) => row.querySelector('span')?.textContent ?? '',
+      );
+    }
+
+    it('shows ungraded and unanswered teams above graded teams, regardless of roster order', () => {
+      const { container } = render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: 'Paris',
+                pointsAwarded: 2,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(teamNamesInOrder(container)).toEqual([
+        'Beer Necessities',
+        'The Quizzards',
+      ]);
+    });
+
+    it('moves a team below ungraded teams once it is graded', () => {
+      const { container, rerender } = render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: 'Paris',
+                pointsAwarded: 0,
+                gradedAt: null,
+              },
+              {
+                answerId: 42,
+                teamId: 2,
+                teamName: 'Beer Necessities',
+                value: 'London',
+                pointsAwarded: 0,
+                gradedAt: null,
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+      expect(teamNamesInOrder(container)).toEqual([
+        'The Quizzards',
+        'Beer Necessities',
+      ]);
+
+      rerender(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: 'Paris',
+                pointsAwarded: 2,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+              },
+              {
+                answerId: 42,
+                teamId: 2,
+                teamName: 'Beer Necessities',
+                value: 'London',
+                pointsAwarded: 0,
+                gradedAt: null,
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(teamNamesInOrder(container)).toEqual([
+        'Beer Necessities',
+        'The Quizzards',
+      ]);
+    });
+
+    it('moves a graded team back to the top once its answer is changed and ungraded again', () => {
+      const { container, rerender } = render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: 'Paris',
+                pointsAwarded: 2,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+              },
+              {
+                answerId: 42,
+                teamId: 2,
+                teamName: 'Beer Necessities',
+                value: 'London',
+                pointsAwarded: 2,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+      expect(teamNamesInOrder(container)).toEqual([
+        'The Quizzards',
+        'Beer Necessities',
+      ]);
+
+      // The Quizzards changed their answer, which resets it to ungraded.
+      rerender(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: 'Rome',
+                pointsAwarded: 0,
+                gradedAt: null,
+              },
+              {
+                answerId: 42,
+                teamId: 2,
+                teamName: 'Beer Necessities',
+                value: 'London',
+                pointsAwarded: 2,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(teamNamesInOrder(container)).toEqual([
+        'The Quizzards',
+        'Beer Necessities',
+      ]);
+    });
+  });
+
   it('omits the previous/next controls when no nav is given', () => {
     render(
       <AnswersPanel

@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
+import { motion } from 'motion/react';
 import type {
   AnswerView,
   AnswersUpdatedPayload,
@@ -16,6 +17,10 @@ interface GradeOption {
   display: string;
   ariaSuffix: string;
   value: number;
+}
+
+function isUngraded(answer: AnswerView | null): boolean {
+  return answer === null || answer.gradedAt === null;
 }
 
 function gradeOptions(maxPoints: number): GradeOption[] {
@@ -63,7 +68,9 @@ function AnswerRow({
     options.some((option) => option.value === answer.pointsAwarded);
 
   return (
-    <li
+    <motion.li
+      layout
+      transition={{ duration: 0.3, ease: 'easeOut' }}
       className={
         hasAnswered
           ? 'flex items-center gap-3.5 rounded-xl border border-foreground/15 bg-white px-4 py-3'
@@ -120,7 +127,7 @@ function AnswerRow({
           </div>
         </>
       )}
-    </li>
+    </motion.li>
   );
 }
 
@@ -151,6 +158,11 @@ export function AnswersPanel({
   const readOnly = question.type === 'closest_guess';
   const correctCount = countCorrectAnswers(liveAnswers);
   const answeredCount = answers.length;
+  const sortedTeams = [...teams].sort((a, b) => {
+    const aUngraded = isUngraded(answersByTeamId.get(a.teamId) ?? null);
+    const bUngraded = isUngraded(answersByTeamId.get(b.teamId) ?? null);
+    return Number(bUngraded) - Number(aUngraded);
+  });
 
   return (
     <section className="flex flex-col gap-3">
@@ -203,7 +215,7 @@ export function AnswersPanel({
         </p>
       </div>
       <ul className="flex flex-col gap-2">
-        {teams.map((team) => (
+        {sortedTeams.map((team) => (
           <AnswerRow
             key={team.teamId}
             teamName={team.teamName}
