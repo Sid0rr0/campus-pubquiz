@@ -18,7 +18,7 @@ import { AnswerRepository } from '@/db/repositories/answer.repository';
 // isn't a usable prefix of the unique index above (team is its 3rd column).
 @Index({ properties: ['gameSession', 'team'] })
 export class Answer extends BaseEntity {
-  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'pointsAwarded';
+  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'pointsAwarded' | 'gradedAt';
 
   @ManyToOne(() => GameSession, { deleteRule: 'cascade' })
   gameSession!: GameSession;
@@ -40,5 +40,5 @@ export class Answer extends BaseEntity {
   pointsAwarded: number = 0;
 
   @Property({ type: 'timestamptz', nullable: true })
-  gradedAt?: Date;
+  gradedAt: Date | null = null;
 }

@@ -100,6 +100,57 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(secondGrade.gradedAt).not.toBe(firstGrade.gradedAt);
   });
 
+  it('resets points and gradedAt when a team changes an already-graded free_text answer', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Mango',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.value).toBe('Mango');
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).toBeNull();
+  });
+
+  it('keeps an already-graded answer intact when resubmitted with the same value', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
   it('gradeClosestGuess awards full points to the single closest guess', async () => {
     const guessQuestion = state.em.create(Question, {
       round: state.round,

@@ -126,6 +126,19 @@ export class AnswerService {
         )
       : 0;
 
+    // The admin can grade free_text/audio/youtube answers as soon as they
+    // land (grade() has no status gate — see control's "Grade Questions"
+    // panel), well before the block locks. A team can then revise its answer
+    // (last-write-wins, allowed until lock) — if that revision changes the
+    // value, any manual grade already given belongs to the *old* value and
+    // must not silently carry over onto the new one.
+    const existing = await this.answers.findOne(
+      { gameSession: gameSessionId, question: questionId, team: teamId },
+      { fields: ['value'] },
+    );
+    const resetsGrading =
+      !isAutoGraded && existing !== null && existing.value !== value;
+
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
     const now = new Date();
@@ -137,15 +150,17 @@ export class AnswerService {
         value,
         pointsAwarded,
         ...(isAutoGraded ? { gradedAt: now } : {}),
+        ...(resetsGrading ? { gradedAt: null } : {}),
         createdAt: now,
         updatedAt: now,
       },
       {
         onConflictFields: ['gameSession', 'question', 'team'],
         onConflictAction: 'merge',
-        onConflictMergeFields: isAutoGraded
-          ? ['value', 'updatedAt', 'pointsAwarded', 'gradedAt']
-          : ['value', 'updatedAt'],
+        onConflictMergeFields:
+          isAutoGraded || resetsGrading
+            ? ['value', 'updatedAt', 'pointsAwarded', 'gradedAt']
+            : ['value', 'updatedAt'],
       },
     );
 
