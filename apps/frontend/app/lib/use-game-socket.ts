@@ -104,6 +104,16 @@ export interface UseGameSocketResult {
    */
   setLiveAnswers: (payload: AnswersUpdatedPayload | null) => void;
   /**
+   * Admin-only: tells the hook which question's answers the caller is
+   * currently displaying, so a live ANSWERS_UPDATED broadcast for some
+   * *other* question (e.g. a team's answer to the still-open current
+   * question arriving while the admin is browsing an earlier, already-locked
+   * question to grade it) doesn't clobber `liveAnswers` out from under the
+   * one on screen. Pass null to accept whatever arrives (e.g. before a
+   * question is selected).
+   */
+  focusAnswersQuestionId: (questionId: number | null) => void;
+  /**
    * Timestamp of the most recent successful (re)connection, including the
    * first one. Transient, request-driven data (e.g. the admin page's
    * REST-fetched `liveAnswers`) isn't part of the `STATE_SYNC` snapshot the
@@ -216,6 +226,9 @@ export function useGameSocket(
   const [kicked, setKicked] = useState(false);
   const [bonusAwardError, setBonusAwardError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // See `focusAnswersQuestionId` below — a ref (not state) since it only
+  // filters an event handler and must never trigger the connect Effect.
+  const focusedAnswersQuestionIdRef = useRef<number | null>(null);
   // Set right before an AWARD_BONUS emit, cleared on the next STATE_UPDATED
   // (success) or 'exception' (failure) — lets the generic exception handler
   // below tell a bonus-award rejection apart from any other action-level
@@ -236,6 +249,7 @@ export function useGameSocket(
       setConnectionError(null);
       setTeam(null);
       setLiveAnswers(null);
+      focusedAnswersQuestionIdRef.current = null;
       setPresenterContext(null);
       setMyAnswers({});
       setMyAnswerGrades({});
@@ -320,6 +334,18 @@ export function useGameSocket(
     socket.on(
       SOCKET_EVENTS.ANSWERS_UPDATED,
       (payload: AnswersUpdatedPayload) => {
+        const focusedQuestionId = focusedAnswersQuestionIdRef.current;
+        if (
+          focusedQuestionId !== null &&
+          payload.questionId !== focusedQuestionId
+        ) {
+          // A late/out-of-order broadcast for a question the admin isn't
+          // currently grading (e.g. a team answering the still-open current
+          // question while an earlier locked one is on screen) — dropping it
+          // keeps the panel on screen showing what it already was, instead
+          // of a mismatch hiding it entirely.
+          return;
+        }
         setLiveAnswers(payload);
       },
     );
@@ -462,6 +488,10 @@ export function useGameSocket(
     [],
   );
 
+  const focusAnswersQuestionId = useCallback((questionId: number | null) => {
+    focusedAnswersQuestionIdRef.current = questionId;
+  }, []);
+
   return {
     snapshot,
     connectionError,
@@ -484,6 +514,7 @@ export function useGameSocket(
     myBonusAwards,
     seenQuestions,
     setLiveAnswers,
+    focusAnswersQuestionId,
     reconnectedAt,
     sessionClosed,
     kicked,

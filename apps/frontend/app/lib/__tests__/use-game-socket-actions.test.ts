@@ -132,6 +132,68 @@ describe('useGameSocket — admin and player actions', () => {
     await waitFor(() => expect(result.current.liveAnswers).toEqual(payload));
   });
 
+  it('ignores an ANSWERS_UPDATED broadcast for a question other than the focused one', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+    const focusedQuestionPayload = {
+      questionId: 1,
+      answers: [
+        {
+          answerId: 'answer-1',
+          teamId: 'team-1',
+          teamName: 'The Quizzards',
+          value: 'Banana',
+          pointsAwarded: 0,
+          gradedAt: null,
+        },
+      ],
+    };
+
+    act(() => {
+      result.current.focusAnswersQuestionId(1);
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, focusedQuestionPayload);
+    });
+    await waitFor(() =>
+      expect(result.current.liveAnswers).toEqual(focusedQuestionPayload),
+    );
+
+    act(() => {
+      // A team answering some other question (e.g. the still-open current
+      // question) while the admin is grading question 1 — must not replace
+      // question 1's answers on screen.
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, {
+        questionId: 2,
+        answers: [],
+      });
+    });
+
+    expect(result.current.liveAnswers).toEqual(focusedQuestionPayload);
+  });
+
+  it('adopts an ANSWERS_UPDATED broadcast that matches the newly focused question', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.focusAnswersQuestionId(1);
+    });
+
+    const otherQuestionPayload = { questionId: 2, answers: [] };
+    act(() => {
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, otherQuestionPayload);
+    });
+    expect(result.current.liveAnswers).toBeNull();
+
+    act(() => {
+      result.current.focusAnswersQuestionId(2);
+      fakeSocket.trigger(SOCKET_EVENTS.ANSWERS_UPDATED, otherQuestionPayload);
+    });
+
+    await waitFor(() =>
+      expect(result.current.liveAnswers).toEqual(otherQuestionPayload),
+    );
+  });
+
   it('gradeAnswer emits a GRADE_ANSWER event with answerId and pointsAwarded', () => {
     const { result } = renderHook(() => useGameSocket('admin'));
     const fakeSocket = getFakeSocket();

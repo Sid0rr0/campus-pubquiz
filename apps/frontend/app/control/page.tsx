@@ -83,6 +83,7 @@ function AdminPageContent() {
     setDisplayTextScale,
     createShowdownRound,
     setLiveAnswers = () => {},
+    focusAnswersQuestionId = () => {},
     reconnectedAt,
   } = useGameSocket(
     'admin',
@@ -280,6 +281,17 @@ function AdminPageContent() {
     if (!answersQuery.data) return;
     setLiveAnswers(answersQuery.data);
   }, [answersQuery.data, setLiveAnswers]);
+
+  useEffect(() => {
+    // Keeps the socket from folding a live ANSWERS_UPDATED broadcast for a
+    // different question (e.g. a team answering the still-open current
+    // question while the admin browses an earlier one to grade it) into
+    // `liveAnswers` — without this, that broadcast replaces the answers
+    // panel's data with the wrong question's, which then fails the
+    // `liveAnswers.questionId === selectedQuestionId` check below and makes
+    // the whole grading panel disappear until something else refreshes it.
+    focusAnswersQuestionId(effectiveQuestionId);
+  }, [effectiveQuestionId, focusAnswersQuestionId]);
 
   useEffect(() => {
     // `liveAnswers` isn't part of the STATE_SYNC snapshot the server resends

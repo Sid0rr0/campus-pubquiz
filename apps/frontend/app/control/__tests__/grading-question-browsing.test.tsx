@@ -175,6 +175,61 @@ describe('AdminPage — grading question browsing', () => {
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
 
+  it('tells the socket which question is focused, so a live update for a different one is ignored', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: 'quiz-1',
+      quizzes: [
+        {
+          id: 'quiz-1',
+          title: 'Campus Pub Quiz Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: [
+                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const focusAnswersQuestionId = vi.fn();
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        joinCode: 'TESTCODE',
+        progress: progress({ status: 'break', questionIndex: 1 }),
+        currentQuestion: null,
+        blockQuestions: [
+          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+      setLiveAnswers: vi.fn(),
+      focusAnswersQuestionId,
+      liveAnswers: null,
+      gradeAnswer: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    await vi.waitFor(() =>
+      expect(focusAnswersQuestionId).toHaveBeenCalledWith('r1q1'),
+    );
+
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: /grade question 2 of round 1/i,
+      }),
+    );
+
+    await vi.waitFor(() =>
+      expect(focusAnswersQuestionId).toHaveBeenCalledWith('r1q2'),
+    );
+  });
+
   it('shows a not-yet-graded dot only on questions listed in ungradedQuestionIds', async () => {
     mockFetchQuizzes.mockResolvedValue({
       activeQuizId: 'quiz-1',
