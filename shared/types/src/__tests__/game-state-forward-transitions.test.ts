@@ -182,7 +182,7 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
     expect(next).toEqual({ ...locking, status: 'break_intro', revealIndex: 3 }); // last of 4 questions in the 2-round block
   });
 
-  it('skips straight to reveal_intro when Advance is pressed from break_intro', () => {
+  it('skips straight to reveal_intro when Advance is pressed from break_intro, already pinned to the last question', () => {
     const breakIntro: GameProgress = {
       status: 'break_intro',
       roundIndex: 1,
@@ -203,7 +203,10 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
     });
   });
 
-  it('moves from break to a reveal round intro card once Advance is pressed, before any answer is shown', () => {
+  it('steps forward one question at a time from break, mirroring Previous, instead of leaving straight to reveal', () => {
+    // Browsed back (via Previous) to the block's first question — advancing
+    // from here should return to the next question in the same block, not
+    // re-attempt to leave the whole block into reveal.
     const grading: GameProgress = {
       status: 'break',
       roundIndex: 1,
@@ -217,8 +220,79 @@ describe('getNextGameState — forward (ADVANCE) transitions', () => {
       'ADVANCE',
       twoRoundsWithBreakAfterSecond,
     );
+    expect(next).toEqual({ ...grading, revealIndex: 1 });
+  });
+
+  it('pauses on the next round title card when stepping forward from break crosses a round boundary', () => {
+    // revealIndex 1 is round 0's last question; the next position (2) is
+    // round 1's first — mirroring how advanceFromReveal pauses on
+    // reveal_intro at the same crossing.
+    const grading: GameProgress = {
+      status: 'break',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 1,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      grading,
+      'ADVANCE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({
+      ...grading,
+      status: 'break_round_intro',
+      revealIndex: 2,
+    });
+  });
+
+  it("moves from break to a reveal round intro card once Advance is pressed from the block's last question, before any answer is shown", () => {
+    const grading: GameProgress = {
+      status: 'break',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 3,
+      furthestOpenIndex: 0,
+    };
+    const next = getNextGameState(
+      grading,
+      'ADVANCE',
+      twoRoundsWithBreakAfterSecond,
+    );
     expect(next.status).toBe('reveal_intro');
     expect(next.revealIndex).toBe(0);
+  });
+
+  it('does not trip the ungraded-answers gate by walking Previous then Advance back to the same break position', () => {
+    // Regression for the bug where browsing backward with Previous and then
+    // pressing Advance re-attempted the full "leave break" transition on
+    // every click, permanently blocking on ungraded answers even though the
+    // admin never intended to leave the block. revealIndex 1 (round 0's
+    // second question) isn't the first question of its round, so Previous
+    // just decrements and Advance should land right back where it started.
+    const grading: GameProgress = {
+      status: 'break',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      revealIndex: 1,
+      furthestOpenIndex: 0,
+    };
+    const afterPrevious = getNextGameState(
+      grading,
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(afterPrevious).toEqual({ ...grading, revealIndex: 0 });
+
+    const afterAdvance = getNextGameState(
+      afterPrevious,
+      'ADVANCE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(afterAdvance).toEqual(grading);
   });
 
   it('moves from a reveal round intro card into reveal once Advance is pressed again, same position', () => {

@@ -1,4 +1,5 @@
 import {
+  advanceFromBlockReview,
   advanceFromQuestionOpen,
   advanceFromReveal,
 } from './game-state-forward-transitions';
@@ -161,16 +162,17 @@ export function getNextGameState(
           revealIndex,
         };
       }
-      // Skips straight to revealing, same as 'break' already does from any
-      // position — the admin doesn't need to step into the specific
-      // just-locked question via ADVANCE; that's what PREVIOUS is for.
-      if (progress.status === 'break_intro') {
-        return { ...progress, status: 'reveal_intro', revealIndex: 0 };
-      }
-      if (progress.status === 'break') {
-        // Reveal always opens on the block's first round's intro card before
-        // any answer is shown, same as round_intro precedes question_open.
-        return { ...progress, status: 'reveal_intro', revealIndex: 0 };
+      // break_intro is always pinned to the block's last question (see
+      // 'locking' above), so this always falls into advanceFromBlockReview's
+      // "already at the last question" branch and leaves straight to
+      // reveal_intro — same outcome as before, just routed through the
+      // shared helper. 'break' itself steps forward one question at a time,
+      // mirroring how Previous steps backward, so browsing back with
+      // Previous and forward again with Advance lands back where you were
+      // instead of re-attempting to leave the block (and re-tripping the
+      // ungraded-answers gate) on every click.
+      if (progress.status === 'break_intro' || progress.status === 'break') {
+        return advanceFromBlockReview(progress, context);
       }
       // Resumes into the specific question that was paused on, same as
       // reveal_intro resuming into 'reveal' at the same revealIndex.

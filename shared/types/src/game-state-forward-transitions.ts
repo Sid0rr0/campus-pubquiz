@@ -61,6 +61,51 @@ export function advanceFromQuestionOpen(
   };
 }
 
+/**
+ * Steps forward within the current block during break review — the mirror
+ * of previousFromBlockReview — pausing on the next round's title card
+ * (break_round_intro) whenever the next position crosses into a new round,
+ * exactly like advanceFromReveal does for reveal's round boundaries. Only
+ * once already on the block's last question does Advance attempt the real
+ * "leave break" step into reveal_intro, the one moment GameStateService
+ * checks for ungraded answers — browsing backward with Previous and then
+ * forward again with Advance must never trip that gate on its own.
+ */
+export function advanceFromBlockReview(
+  progress: GameProgress,
+  context: GameContext,
+): GameProgress {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const blockQuestionCount = getBlockQuestionCount(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  if (progress.revealIndex + 1 < blockQuestionCount) {
+    const nextRevealIndex = progress.revealIndex + 1;
+    const { questionIndex: nextQuestionIndex } =
+      getRoundAndQuestionForBlockPosition(blockStart, nextRevealIndex, context);
+    if (isFirstQuestionOfItsRound(nextQuestionIndex)) {
+      return {
+        ...progress,
+        status: 'break_round_intro',
+        revealIndex: nextRevealIndex,
+      };
+    }
+    return { ...progress, revealIndex: nextRevealIndex };
+  }
+
+  // Already on the block's last question — nothing left to step forward
+  // into, so this is the real "leave break" transition into reveal. Always
+  // opens on the block's first round's intro card before any answer is
+  // shown, same as round_intro precedes question_open.
+  return { ...progress, status: 'reveal_intro', revealIndex: 0 };
+}
+
 export function advanceFromReveal(
   progress: GameProgress,
   context: GameContext,
