@@ -16,8 +16,14 @@ import {
 } from '@/app/quizzes/[id]/quiz-draft-state';
 import { QuizQuestionEditor } from '@/app/quizzes/[id]/quiz-question-editor';
 
+/** DOM id for the round's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-round button. */
+export function roundAnchorId(roundId: string): string {
+  return `round-${roundId}`;
+}
+
 interface QuizRoundEditorProps {
   round: EditorRound;
+  index: number;
   isFirst: boolean;
   isLast: boolean;
   /** A session is live on this quiz — round/question add/delete/reorder controls are disabled entirely. */
@@ -34,6 +40,7 @@ interface QuizRoundEditorProps {
 
 export function QuizRoundEditor({
   round,
+  index,
   isFirst,
   isLast,
   isLive,
@@ -95,8 +102,14 @@ export function QuizRoundEditor({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-foreground/15 bg-white p-4">
+    <div
+      id={roundAnchorId(round.id)}
+      className="scroll-mt-28 flex flex-col gap-4 rounded-2xl border border-foreground/15 bg-white p-4"
+    >
       <div className="flex flex-wrap items-center gap-3">
+        <span className="shrink-0 rounded-full bg-foreground/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-foreground/60">
+          Round {index + 1}
+        </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <input
             value={round.title}

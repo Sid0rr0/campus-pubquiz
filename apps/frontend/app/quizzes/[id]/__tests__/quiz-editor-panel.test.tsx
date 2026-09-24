@@ -158,6 +158,25 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  it('labels each round and delimits every round, upgrading to a break divider once breakAfter is set', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /add round/i }));
+
+    expect(screen.getByText('Round 1')).toBeInTheDocument();
+    expect(screen.getByText('Round 2')).toBeInTheDocument();
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    expect(screen.queryByText('Break')).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByLabelText(/break after/i)[0]);
+
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    expect(screen.getByText('Break')).toBeInTheDocument();
+  });
+
   it('disables csv export until the quiz has a question', async () => {
     const user = userEvent.setup();
     renderWithQuery(<QuizEditorPanel quizId="new" />);

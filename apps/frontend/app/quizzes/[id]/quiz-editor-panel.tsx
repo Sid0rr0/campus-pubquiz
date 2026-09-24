@@ -551,21 +551,43 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
 
       <div className="mx-auto flex max-w-6xl gap-6 px-5 py-6">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          {rounds.map((round, index) => (
-            <QuizRoundEditor
-              key={round.id}
-              round={round}
-              isFirst={index === 0}
-              isLast={index === rounds.length - 1}
-              isLive={isLive}
-              lockedQuestionIds={lockedQuestionIds}
-              issues={saveIssues.filter((issue) => issue.roundIndex === index)}
-              onChange={(patch) => updateRound(round.id, patch)}
-              onDelete={() => deleteRound(round.id)}
-              onMoveUp={() => moveRound(round.id, -1)}
-              onMoveDown={() => moveRound(round.id, 1)}
-            />
-          ))}
+          {rounds.map((round, index) => {
+            const isLast = index === rounds.length - 1;
+            return (
+              <div key={round.id} className="flex flex-col gap-4">
+                <QuizRoundEditor
+                  round={round}
+                  index={index}
+                  isFirst={index === 0}
+                  isLast={isLast}
+                  isLive={isLive}
+                  lockedQuestionIds={lockedQuestionIds}
+                  issues={saveIssues.filter(
+                    (issue) => issue.roundIndex === index,
+                  )}
+                  onChange={(patch) => updateRound(round.id, patch)}
+                  onDelete={() => deleteRound(round.id)}
+                  onMoveUp={() => moveRound(round.id, -1)}
+                  onMoveDown={() => moveRound(round.id, 1)}
+                />
+                {!isLast &&
+                  (round.breakAfter ? (
+                    <div
+                      role="separator"
+                      className="flex items-center gap-4 py-2"
+                    >
+                      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
+                      <span className="shrink-0 rounded-full bg-magenta px-5 py-2 text-sm font-extrabold uppercase tracking-wide text-white">
+                        Break
+                      </span>
+                      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
+                    </div>
+                  ) : (
+                    <div role="separator" className="h-1 bg-foreground" />
+                  ))}
+              </div>
+            );
+          })}
           <FieldErrors issues={fieldIssues(quizLevelIssues, 'rounds')} />
           <Button
             type="button"

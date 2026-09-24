@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { QuizOutline } from '@/app/quizzes/[id]/quiz-outline';
 import { makeQuestion, makeRound } from '@/app/quizzes/[id]/quiz-draft-state';
+import { questionAnchorId } from '@/app/quizzes/[id]/quiz-question-editor';
+import { roundAnchorId } from '@/app/quizzes/[id]/quiz-round-editor';
 
 function roundWithQuestions(
   id: string,
@@ -135,6 +138,74 @@ describe('QuizOutline', () => {
     );
 
     expect(screen.getAllByText('Break after this round')).toHaveLength(1);
+  });
+
+  it('scrolls the matching round card into view when its title is clicked', async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    const user = userEvent.setup();
+    const rounds = [
+      roundWithQuestions('round-1', 'General Knowledge', ['Question 1']),
+    ];
+    const target = document.createElement('div');
+    target.id = roundAnchorId('round-1');
+    document.body.appendChild(target);
+
+    render(
+      <QuizOutline
+        rounds={rounds}
+        isLive={false}
+        onReorderRounds={vi.fn()}
+        onReorderQuestions={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Jump to round 1, General Knowledge',
+      }),
+    );
+
+    expect(target.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'start',
+    });
+
+    target.remove();
+  });
+
+  it('scrolls the matching question card into view when its preview is clicked', async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    const user = userEvent.setup();
+    const rounds = [
+      roundWithQuestions('round-1', 'General Knowledge', [
+        'What is the capital of France?',
+      ]),
+    ];
+    const target = document.createElement('div');
+    target.id = questionAnchorId('round-1-What is the capital of France?');
+    document.body.appendChild(target);
+
+    render(
+      <QuizOutline
+        rounds={rounds}
+        isLive={false}
+        onReorderRounds={vi.fn()}
+        onReorderQuestions={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Jump to question 1, What is the capital of France?',
+      }),
+    );
+
+    expect(target.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'start',
+    });
+
+    target.remove();
   });
 
   it('disables every drag handle while a session is live', () => {

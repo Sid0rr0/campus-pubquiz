@@ -21,6 +21,11 @@ import {
   type EditorQuestion,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 
+/** DOM id for the question's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-question button. */
+export function questionAnchorId(questionId: string): string {
+  return `question-${questionId}`;
+}
+
 interface QuizQuestionEditorProps {
   question: EditorQuestion;
   index: number;
@@ -222,7 +227,10 @@ export function QuizQuestionEditor({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-foreground/10 p-4">
+    <div
+      id={questionAnchorId(question.id)}
+      className="scroll-mt-28 flex flex-col gap-3 rounded-2xl border border-foreground/10 p-4"
+    >
       <div className="flex items-start gap-3">
         <span className="mt-1 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-cyan text-xs font-extrabold text-white">
           {index + 1}
