@@ -335,6 +335,33 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   server-side, surfacing structured issues per round/question on failure.
 - Export the quiz's questions with **Export CSV** in the header bar.
 
+**Editing a live quiz**: a quiz can be edited at any time, including while a
+session on it is running (any status other than `lobby`/`ended`). Two rules
+apply while live, enforced by `findLiveEditViolations`
+(`apps/backend/src/quiz/live-edit-guard.ts`) as a `409` and mirrored in the
+editor's disabled controls:
+
+- **No structural changes** — rounds/questions can't be added, removed, or
+  reordered. Game progress is positional (`roundIndex`/`questionIndex`), so a
+  shift would move the game onto a different question, and deleting a
+  question cascades to its teams' answers.
+- **Already-shown questions keep their type and choices** (`type`, `options`,
+  `matchTargets`) — that's what teams answered against, and auto-grading is
+  exact-match, so e.g. fixing an option's spelling would zero every team that
+  picked it. Their prompt, answer, points, notes, and media stay editable.
+
+After the save, every live session reloads its in-memory quiz and rebroadcasts.
+If a shown question's `answer` or `points` changed, its existing answers are
+re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
+(`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
+manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
+speed scaling from the per-answer multipliers recorded when the question was
+scored (lost on a backend restart, after which a regraded kahoot question gets
+unscaled points); an already-graded `closest_guess` re-runs its batch;
+human-graded types keep the admin's grades. The editor keeps sort/match
+display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
+reshuffle what players see.
+
 **CSV export mechanics**: purely client-side — `quizToCsv`
 (`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
 draft (unsaved edits included) into the same 10-column format the importer

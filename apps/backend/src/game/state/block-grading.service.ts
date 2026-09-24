@@ -1,5 +1,5 @@
 import type { GameProgress, GameStatus } from '@campus-pubquiz/types';
-import { AnswerService } from '@/answer/answer.service';
+import { AnswerService, AUTO_GRADED_TYPES } from '@/answer/answer.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -81,7 +81,7 @@ export class BlockGradingService {
    * `session`'s phase-timer fields, which are still the pre-transition
    * values at this point in applyAction (computePhaseTimerFields for the
    * new progress hasn't run yet) — i.e. exactly when this question opened.
-   * Guarded by kahootSpeedScoredQuestionIds (same idempotency convention as
+   * Guarded by kahootSpeedMultipliers (same idempotency convention as
    * ensureBlockGraded/closestGuessSummaries): the formula itself is
    * deterministic given phaseStartedAt/kahootQuestionTimerSeconds/points, so
    * a redundant re-run (e.g. PREVIOUS from 'reveal' back into 'locking'
@@ -104,11 +104,11 @@ export class BlockGradingService {
     if (!round?.kahootMode || session.phaseStartedAt === null) return session;
 
     const question = round.questions[session.progress.questionIndex];
-    if (session.kahootSpeedScoredQuestionIds.includes(question.id)) {
+    if (session.kahootSpeedMultipliers[question.id] !== undefined) {
       return session;
     }
 
-    await this.answerService.applyKahootSpeedScoring(
+    const multipliers = await this.answerService.applyKahootSpeedScoring(
       session.seededGame.gameSessionId,
       question.id,
       session.phaseStartedAt,
@@ -124,11 +124,77 @@ export class BlockGradingService {
     return {
       ...session,
       leaderboard,
-      kahootSpeedScoredQuestionIds: [
-        ...session.kahootSpeedScoredQuestionIds,
-        question.id,
-      ],
+      kahootSpeedMultipliers: {
+        ...session.kahootSpeedMultipliers,
+        [question.id]: multipliers,
+      },
     };
+  }
+
+  /**
+   * Re-grades already-shown questions after a live edit changed their
+   * answer/points — `session.seededGame` must already be reloaded, since
+   * that's where the corrected key is read from. Auto-graded types re-score
+   * every answer (re-applying any recorded kahoot speed multipliers; a kahoot
+   * question not yet speed-scored is left for its scoring at lock);
+   * closest_guess re-runs its batch only if it was already graded (otherwise
+   * the normal lock flow grades it with the new key); human-graded types keep
+   * the admin's judgement. Recomputes the leaderboard if anything changed.
+   */
+  async regradeQuestions(
+    session: SessionState,
+    questionIds: readonly number[],
+  ): Promise<SessionState> {
+    const { gameSessionId } = session.seededGame;
+    const questions = session.seededGame.rounds
+      .flatMap((round) =>
+        round.questions.map((question) => ({
+          question,
+          isKahoot: round.kahootMode === true,
+        })),
+      )
+      .filter(({ question }) => questionIds.includes(question.id));
+
+    let summaries = session.closestGuessSummaries;
+    let hasRegraded = false;
+    for (const { question, isKahoot } of questions) {
+      const speedMultipliers = session.kahootSpeedMultipliers[question.id];
+      // A kahoot question not yet speed-scored gets graded against the
+      // corrected key at lock (ensureKahootSpeedScored) — regrading it now
+      // would bump updatedAt, which that scoring reads as response time.
+      if (isKahoot && speedMultipliers === undefined) continue;
+      if (AUTO_GRADED_TYPES.includes(question.type)) {
+        await this.answerService.regradeAutoGraded(
+          gameSessionId,
+          question.id,
+          question.type,
+          question.answer,
+          question.points,
+          speedMultipliers ?? {},
+        );
+        hasRegraded = true;
+      } else if (
+        question.type === 'closest_guess' &&
+        summaries[question.id] !== undefined
+      ) {
+        const graded = await this.answerService.gradeClosestGuess(
+          gameSessionId,
+          question.id,
+          question.answer,
+          question.points,
+        );
+        summaries = {
+          ...summaries,
+          [question.id]: summarizeClosestGuess(graded),
+        };
+        hasRegraded = true;
+      }
+    }
+    if (!hasRegraded) return session;
+
+    const leaderboard =
+      await this.answerService.computeLeaderboard(gameSessionId);
+    return { ...session, closestGuessSummaries: summaries, leaderboard };
   }
 
   /** Current-block question IDs (closest_guess excluded) with at least one ungraded submitted answer, read fresh from the DB. */

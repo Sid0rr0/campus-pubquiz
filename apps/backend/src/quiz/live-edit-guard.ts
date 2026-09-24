@@ -14,23 +14,25 @@ export class QuizLiveEditBlockedError extends Error {
   }
 }
 
-const COMPARABLE_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
+/** What teams already answered against — changing any of these on a shown question would make existing submissions meaningless (e.g. an MC option typo fix would zero every team that picked it, since grading is exact-match). */
+const LOCKED_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'type',
-  'prompt',
-  'answer',
-  'notes',
-  'points',
   'options',
   'matchTargets',
-  'mediaUrl',
-  'answerMediaUrl',
+];
+
+/** Inputs to auto-grading — a change on a shown question means existing answers need re-scoring. */
+const GRADING_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
+  'answer',
+  'points',
 ];
 
 function diffQuestionFields(
   current: ImportQuestionPreview,
   incoming: ImportQuestionPreview,
+  fields: (keyof ImportQuestionPreview)[],
 ): string[] {
-  return COMPARABLE_QUESTION_FIELDS.filter(
+  return fields.filter(
     (field) =>
       JSON.stringify(current[field]) !== JSON.stringify(incoming[field]),
   );
@@ -40,10 +42,11 @@ function diffQuestionFields(
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Fix-in-place only: any
  * structural change (adding/removing/reordering rounds or questions) is
- * rejected outright, regardless of lock state, and a field edit on a
- * question in `lockedQuestionIds` (already shown or in progress) is
- * rejected too — everything else (an upcoming question's fields) is left
- * alone. Returns the existing `QuizDraftIssue[]` shape so the editor's
+ * rejected outright, regardless of lock state — game progress is positional,
+ * so a shift would move the game onto a different question. A question in
+ * `lockedQuestionIds` (already shown or in progress) can still have its
+ * prompt/answer/points/notes/media fixed, but not its type or choices (see
+ * LOCKED_QUESTION_FIELDS); an upcoming question can be edited freely. Returns the existing `QuizDraftIssue[]` shape so the editor's
  * existing issue-rendering UI needs no changes; empty when the incoming
  * draft is safe to save as-is.
  */
@@ -110,12 +113,14 @@ export function findLiveEditViolations(
         for (const field of diffQuestionFields(
           currentQuestion,
           incomingQuestion,
+          LOCKED_QUESTION_FIELDS,
         )) {
           issues.push({
             roundIndex,
             questionIndex,
             field,
-            message: 'Cannot edit this question — it has already been shown',
+            message:
+              "Cannot change this question's type or choices — teams have already answered it",
           });
         }
       }
@@ -123,4 +128,36 @@ export function findLiveEditViolations(
   }
 
   return issues;
+}
+
+/**
+ * Ids of locked (already shown/in-progress) questions whose answer or points
+ * differ between the persisted and incoming drafts — their existing answers
+ * need re-grading once the save lands. Pairs questions by position, which is
+ * only meaningful once findLiveEditViolations has confirmed the structure is
+ * unchanged; the questionId check below keeps it safe regardless.
+ */
+export function findRegradeQuestionIds(
+  currentRounds: ImportRoundPreview[],
+  incomingRounds: ImportRoundPreview[],
+  lockedQuestionIds: readonly number[],
+): number[] {
+  const lockedIds = new Set(lockedQuestionIds);
+  return currentRounds.flatMap((currentRound, roundIndex) =>
+    currentRound.questions.flatMap((currentQuestion, questionIndex) => {
+      const incomingQuestion =
+        incomingRounds[roundIndex]?.questions[questionIndex];
+      const { questionId } = currentQuestion;
+      const needsRegrade =
+        questionId !== undefined &&
+        lockedIds.has(questionId) &&
+        incomingQuestion?.questionId === questionId &&
+        diffQuestionFields(
+          currentQuestion,
+          incomingQuestion,
+          GRADING_QUESTION_FIELDS,
+        ).length > 0;
+      return needsRegrade ? [questionId] : [];
+    }),
+  );
 }

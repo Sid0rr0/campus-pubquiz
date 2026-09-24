@@ -63,14 +63,18 @@ export interface SessionState {
   /** Cached per-question closest_guess grading/summary, keyed by questionId — computed once when a block locks, ephemeral like leaderboardRevealCount. */
   closestGuessSummaries: Record<number, ClosestGuessRevealData>;
   /**
-   * Question IDs already speed-scored by ensureKahootSpeedScored — guards
+   * Per-answer speed multipliers (question id -> answer id -> multiplier)
+   * recorded by ensureKahootSpeedScored. A question's presence guards
    * against re-scoring (and re-inflating points) if the admin steps
    * PREVIOUS back into 'locking' on a kahootMode question and then ADVANCE
    * again, which would otherwise re-read Date.now() as a later "lockedAt"
-   * against the same unchanged phaseStartedAt. Ephemeral like
-   * closestGuessSummaries — resets on restart.
+   * against the same unchanged phaseStartedAt. The multipliers themselves
+   * let regradeQuestions re-apply speed scaling after a live answer-key fix
+   * (response times can't be re-derived once scoring bumps updatedAt).
+   * Ephemeral like closestGuessSummaries — resets on restart, after which a
+   * regraded kahoot question falls back to unscaled points.
    */
-  kahootSpeedScoredQuestionIds: number[];
+  kahootSpeedMultipliers: Record<number, Record<number, number>>;
   /**
    * Current-block question IDs known to have at least one ungraded answer —
    * bulk-recomputed from the DB whenever applyAction enters a grading-status
@@ -143,7 +147,7 @@ export function freshSessionState(
     connectedTeamSockets: {},
     closestGuessRevealStep: 0,
     closestGuessSummaries: {},
-    kahootSpeedScoredQuestionIds: [],
+    kahootSpeedMultipliers: {},
     ungradedQuestionIds: [],
     activeShowdownRound: null,
     showdownRevealStep: 0,

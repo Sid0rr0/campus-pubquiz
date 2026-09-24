@@ -49,7 +49,7 @@ interface RoundTotalRow {
   total: string | number;
 }
 
-const AUTO_GRADED_TYPES: readonly QuestionType[] = [
+export const AUTO_GRADED_TYPES: readonly QuestionType[] = [
   'multiple_choice',
   'sort',
   'match',
@@ -255,6 +255,47 @@ export class AnswerService {
   }
 
   /**
+   * Re-scores every existing answer to an auto-graded question (see
+   * AUTO_GRADED_TYPES) against a corrected answer key/points — used after a
+   * live edit to an already-shown question. Deliberately overwrites any
+   * manual override (e.g. adjusted match partial credit): the key it was
+   * judged against just changed, and the admin can override again in break.
+   * `type`/`answer`/`points` are passed in, same as applyKahootSpeedScoring.
+   * `speedMultipliers` (answer id -> multiplier, as returned by
+   * applyKahootSpeedScoring) re-applies a kahootMode question's speed
+   * scaling; an answer missing from it keeps unscaled points.
+   */
+  async regradeAutoGraded(
+    gameSessionId: number,
+    questionId: number,
+    type: QuestionType,
+    answer: string,
+    points: number,
+    speedMultipliers: Readonly<Record<number, number>> = {},
+  ): Promise<void> {
+    const rows = await this.answers.find({
+      gameSession: gameSessionId,
+      question: questionId,
+    });
+    if (rows.length === 0) return;
+
+    const now = new Date();
+    for (const row of rows) {
+      const basePoints = computeAutoGradedPoints(
+        type,
+        row.value,
+        answer,
+        points,
+      );
+      row.pointsAwarded = Math.round(
+        basePoints * (speedMultipliers[row.id] ?? 1),
+      );
+      row.gradedAt = now;
+    }
+    await this.answers.getEntityManager().flush();
+  }
+
+  /**
    * Batch-grades every submitted guess for a closest_guess question against
    * the correct numeric answer: every team tied for the smallest distance
    * gets full question points (no splitting), everyone else gets zero. Can
@@ -320,9 +361,9 @@ export class AnswerService {
    * the question actually stayed open — so a manual early lock doesn't
    * distort the ratio the way using the actual elapsed window would. When
    * no timer is configured (unlimited), speed conveys no information, so
-   * every correct answer keeps full points. Only touches rows already
-   * correct (pointsAwarded > 0) — wrong answers stay at 0 regardless of
-   * speed. Uses `updatedAt` (not `createdAt`) since submit()'s upsert
+   * every correct answer keeps full points. Re-scores every row against
+   * `answer` (so a key corrected before lock counts) — wrong answers stay at
+   * 0 regardless of speed. Uses `updatedAt` (not `createdAt`) since submit()'s upsert
    * already treats updatedAt as "last resubmission time" for a team that
    * revises before lock. Idempotent/recomputable, same convention as
    * gradeClosestGuess — each call recomputes speed-scaling from the row's
@@ -334,6 +375,13 @@ export class AnswerService {
    * the full amount. `questionType`/`answer`/`points` are passed in rather
    * than re-fetched — the caller (kahootMode's question-lock transition)
    * already has them from the seeded game's RevealQuestionView.
+   *
+   * Returns every answer's speed multiplier (answer id -> `1 - fraction / 2`),
+   * wrong answers included, for the caller to keep: the flush below bumps
+   * `updatedAt` (TimestampedEntity's onUpdate hook), so the response times
+   * can't be recovered afterwards — regradeAutoGraded needs these to re-apply
+   * speed scaling if the answer key is corrected later. Empty when no timer
+   * is configured (speed conveys nothing, so nothing to re-apply).
    */
   async applyKahootSpeedScoring(
     gameSessionId: number,
@@ -343,17 +391,28 @@ export class AnswerService {
     questionType: QuestionType,
     answer: string,
     points: number,
-  ): Promise<void> {
-    if (questionTimerSeconds === null) return;
+  ): Promise<Record<number, number>> {
+    if (questionTimerSeconds === null) return {};
 
     const rows = await this.answers.find({
       gameSession: gameSessionId,
       question: questionId,
-      pointsAwarded: { $gt: 0 },
     });
-    if (rows.length === 0) return;
+    if (rows.length === 0) return {};
 
     const questionTimerMs = questionTimerSeconds * 1000;
+    const multipliers: Record<number, number> = {};
+    for (const row of rows) {
+      const responseTimeMs = row.updatedAt.getTime() - questionOpenedAt;
+      const rawFraction = Math.min(
+        Math.max(responseTimeMs / questionTimerMs, 0),
+        1,
+      );
+      multipliers[row.id] = 1 - rawFraction / 2;
+    }
+    // Every row is re-scored against `answer` (not just rows already > 0):
+    // the key may have been corrected by a live edit since submit() graded
+    // them. A wrong answer's base is 0, so it stays 0 regardless of speed.
     for (const row of rows) {
       const basePoints = computeAutoGradedPoints(
         questionType,
@@ -361,14 +420,10 @@ export class AnswerService {
         answer,
         points,
       );
-      const responseTimeMs = row.updatedAt.getTime() - questionOpenedAt;
-      const rawFraction = Math.min(
-        Math.max(responseTimeMs / questionTimerMs, 0),
-        1,
-      );
-      row.pointsAwarded = Math.round(basePoints * (1 - rawFraction / 2));
+      row.pointsAwarded = Math.round(basePoints * multipliers[row.id]);
     }
     await this.answers.getEntityManager().flush();
+    return multipliers;
   }
 
   async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {

@@ -191,6 +191,20 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
+   * Re-grades already-shown questions whose answer/points were corrected by
+   * a live edit — call after reloadActiveQuiz, so the corrected key is what
+   * gets graded against. See BlockGradingService.regradeQuestions.
+   */
+  async regradeQuestions(
+    joinCode: string,
+    questionIds: readonly number[],
+  ): Promise<void> {
+    const session = this.sessionStore.get(joinCode);
+    const regraded = await this.grading.regradeQuestions(session, questionIds);
+    this.sessionStore.set(joinCode, regraded);
+  }
+
+  /**
    * Question ids already shown or currently in progress in this session —
    * every past block's questions plus the current block's furthest-opened
    * position, the exact "already shown" boundary `BlockGradingService`

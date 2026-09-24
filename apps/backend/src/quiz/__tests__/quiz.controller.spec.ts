@@ -210,7 +210,7 @@ describe('QuizController', () => {
       expect(gameGateway.notifyQuizEdited).not.toHaveBeenCalled();
     });
 
-    it('rejects a save that edits a locked question with 409, without persisting', async () => {
+    it("rejects a save that changes a locked question's type with 409, without persisting", async () => {
       const { controller, quizService, gameState, gameGateway } =
         makeController();
       gameState.listSessions.mockReturnValue([
@@ -251,8 +251,8 @@ describe('QuizController', () => {
             questions: [
               {
                 questionId: 10,
-                type: 'free_text',
-                prompt: 'Edited prompt',
+                type: 'audio',
+                prompt: 'Original prompt',
                 answer: 'Original answer',
                 points: 1,
               },
@@ -268,7 +268,7 @@ describe('QuizController', () => {
             expect.objectContaining({
               roundIndex: 0,
               questionIndex: 0,
-              field: 'prompt',
+              field: 'type',
             }),
           ],
         });
@@ -350,7 +350,50 @@ describe('QuizController', () => {
         'Trivia Night',
         editedRounds,
       );
-      expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF');
+      expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF', []);
+    });
+
+    it('saves a corrected answer on a locked question and asks each live session to regrade it', async () => {
+      const { controller, quizService, gameState, gameGateway } =
+        makeController();
+      gameState.listSessions.mockReturnValue([
+        { joinCode: 'ABCDEF', quizId: 1, status: 'break', teamCount: 2 },
+        { joinCode: 'GHIJKL', quizId: 1, status: 'reveal', teamCount: 3 },
+      ]);
+      gameState.getShownOrInProgressQuestionIds.mockReturnValue([10]);
+      const lockedQuestion = {
+        questionId: 10,
+        type: 'multiple_choice' as const,
+        prompt: 'Capital of France?',
+        answer: 'London',
+        points: 1,
+        options: ['Paris', 'London'],
+      };
+      quizService.findDraftById.mockResolvedValue({
+        id: 1,
+        title: 'Trivia Night',
+        rounds: [
+          { title: 'Round 1', breakAfter: true, questions: [lockedQuestion] },
+        ],
+      });
+      const result = { quizId: 1, roundCount: 1, questionCount: 1 };
+      quizService.update.mockResolvedValue(result);
+
+      await expect(
+        controller.update(1, {
+          title: 'Trivia Night',
+          rounds: [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: [{ ...lockedQuestion, answer: 'Paris' }],
+            },
+          ],
+        }),
+      ).resolves.toBe(result);
+
+      expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF', [10]);
+      expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('GHIJKL', [10]);
     });
   });
 

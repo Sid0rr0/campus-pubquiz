@@ -145,7 +145,8 @@ export function createSessionAwareAnswerService() {
     }),
     listUngradedQuestionIds: jest.fn().mockResolvedValue([]),
     gradeClosestGuess: jest.fn().mockResolvedValue([]),
-    applyKahootSpeedScoring: jest.fn().mockResolvedValue(undefined),
+    applyKahootSpeedScoring: jest.fn().mockResolvedValue({}),
+    regradeAutoGraded: jest.fn().mockResolvedValue(undefined),
     computeLeaderboard: jest.fn((gameSessionId: number) => {
       const answer = answersBySession[gameSessionId];
       return Promise.resolve([
