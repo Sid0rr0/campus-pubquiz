@@ -15,6 +15,7 @@ import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
 import { isYoutubeMediaUrl } from '@/app/display/question-display';
+import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
@@ -34,10 +35,6 @@ function getActiveBlockStartIndex(
 function NextQuestionPreview({ question }: { question: RevealQuestionView }) {
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <p className="text-xs font-extrabold tracking-wide text-magenta uppercase">
-        {question.type.replace(/_/g, ' ')} — {question.points} pt
-        {question.points === 1 ? '' : 's'}
-      </p>
       <p className="font-bold">{question.prompt}</p>
       {question.options && question.options.length > 0 && (
         <ul className="list-disc pl-5">
@@ -58,18 +55,29 @@ function NextQuestionPreview({ question }: { question: RevealQuestionView }) {
   );
 }
 
-function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
+// The heading (e.g. "R1 Q2") and, when the screen is a question, its type +
+// points — pulled out of the card body so it can sit on the same line as
+// the section's own "On display"/"Up next" label instead of its own row.
+function ScreenSummaryLine({ screen }: { screen: ScreenPreview }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm font-bold">{screen.heading}</p>
-      {screen.question ? (
-        <NextQuestionPreview question={screen.question} />
-      ) : (
-        screen.body && (
-          <p className="text-sm text-foreground/70">{screen.body}</p>
-        )
+    <div className="flex items-baseline gap-2">
+      <span className="text-sm font-bold">{screen.heading}</span>
+      {screen.question && (
+        <span className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+          {screen.question.type.replace(/_/g, ' ')} — {screen.question.points}{' '}
+          pt
+          {screen.question.points === 1 ? '' : 's'}
+        </span>
       )}
     </div>
+  );
+}
+
+function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
+  return screen.question ? (
+    <NextQuestionPreview question={screen.question} />
+  ) : (
+    screen.body && <p className="text-sm text-foreground/70">{screen.body}</p>
   );
 }
 
@@ -169,12 +177,13 @@ function RemotePageContent() {
 
   const {
     progress,
-    joinCode,
     currentQuestion,
     teams = [],
     answeredTeamIds = [],
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
     isCurrentRoundKahoot = false,
+    phaseStartedAt = null,
+    phaseElapsedMs = null,
   } = snapshot;
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
@@ -208,22 +217,14 @@ function RemotePageContent() {
   const leaderboardRevealCount = snapshot.leaderboardRevealCount ?? 0;
 
   return (
-    <main className="flex min-h-screen flex-col gap-4 bg-background p-4 pt-0 pb-28 text-foreground">
+    <main className="flex min-h-screen flex-col gap-2 bg-background p-2 pt-0 pb-28 text-foreground">
       {connectionError && (
         <p role="alert" className="font-extrabold text-magenta">
           {connectionError}
         </p>
       )}
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-bold">{joinCode}</p>
-        <p className="text-sm font-bold">
-          {gameStatus} · R{progress.roundIndex + 1}Q{progress.questionIndex + 1}
-        </p>
-        <DisplayTextScaleControl
-          displayTextScale={displayTextScale}
-          onSetDisplayTextScale={setDisplayTextScale}
-        />
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center justify-between">
           {showAnswerStatus && (
             <p className="text-sm font-bold text-cyan">
               {answeredTeamIds.length}/{teams.length} teams answered
@@ -234,13 +235,22 @@ function RemotePageContent() {
               {countCorrectAnswers(liveAnswers)} correct
             </p>
           )}
+          <PhaseTimer
+            phaseStartedAt={phaseStartedAt}
+            phaseElapsedMs={phaseElapsedMs}
+          />
         </div>
       </div>
 
       <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
-        <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
-          On display
-        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+            On display
+          </h2>
+          {presenterContext && (
+            <ScreenSummaryLine screen={presenterContext.currentScreen} />
+          )}
+        </div>
         {presenterContext ? (
           <ScreenPreviewCard screen={presenterContext.currentScreen} />
         ) : (
@@ -262,15 +272,25 @@ function RemotePageContent() {
       </section>
 
       <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">
-        <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
-          Up next
-        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
+            Up next
+          </h2>
+          {presenterContext?.nextScreen && (
+            <ScreenSummaryLine screen={presenterContext.nextScreen} />
+          )}
+        </div>
         {presenterContext?.nextScreen ? (
           <ScreenPreviewCard screen={presenterContext.nextScreen} />
         ) : (
           <p className="text-sm text-foreground/50">Nothing queued yet.</p>
         )}
       </section>
+
+      <DisplayTextScaleControl
+        displayTextScale={displayTextScale}
+        onSetDisplayTextScale={setDisplayTextScale}
+      />
 
       <div className="fixed inset-x-0 bottom-0 border-t-2 border-foreground/10 bg-background p-3">
         <NavigationButtons

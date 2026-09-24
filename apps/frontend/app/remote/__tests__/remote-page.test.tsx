@@ -392,6 +392,54 @@ describe('RemotePage — content', () => {
     expect(screen.queryByText(/teams answered/i)).not.toBeInTheDocument();
   });
 
+  it('shows the elapsed time while a question/break is live', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        phaseStartedAt: Date.now() - 5_000,
+        phaseElapsedMs: null,
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByTestId('phase-timer')).toHaveTextContent('0:05');
+  });
+
+  it('shows the final elapsed time once the phase is no longer live', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        phaseStartedAt: null,
+        phaseElapsedMs: 125_000,
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByTestId('phase-timer')).toHaveTextContent('2:05');
+  });
+
+  it('shows no elapsed time for an untimed status', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'reveal' }),
+        phaseStartedAt: null,
+        phaseElapsedMs: null,
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.queryByTestId('phase-timer')).not.toBeInTheDocument();
+  });
+
   it('shows a Play Again button for an open YouTube question and dispatches REPLAY_MEDIA', () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
