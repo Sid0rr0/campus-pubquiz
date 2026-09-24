@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import type { GameStatus } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
@@ -83,6 +84,7 @@ export function BreakEndTimeControl({
     const parsed = parseTimeInputValue(inputValue);
     if (parsed !== null) {
       onSetBreakEndTime(parsed);
+      toast.success(`Break end time set to ${toTimeInputValue(parsed)}`);
     }
   }
 
