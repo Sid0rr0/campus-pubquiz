@@ -187,6 +187,69 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     ]);
   });
 
+  it('keeps a saved sort question’s display order when its items are unchanged, even if the correct order changes', () => {
+    const loaded = questionFromPreview('q1', {
+      questionId: 7,
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      options: ['Venus', 'Earth', 'Mercury'],
+    });
+
+    const saved = questionToPreview({
+      ...loaded,
+      sortItems: ['Venus', 'Mercury', 'Earth'],
+    });
+
+    expect(saved.options).toEqual(['Venus', 'Earth', 'Mercury']);
+    expect(saved.answer).toBe('Venus|Mercury|Earth');
+  });
+
+  it('reshuffles a saved sort question once its item set changes', () => {
+    const loaded = questionFromPreview('q1', {
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      options: ['Venus', 'Earth', 'Mercury'],
+    });
+
+    const saved = questionToPreview({
+      ...loaded,
+      sortItems: ['Mercury', 'Venus', 'Mars'],
+    });
+
+    expect([...(saved.options ?? [])].sort()).toEqual([
+      'Mars',
+      'Mercury',
+      'Venus',
+    ]);
+  });
+
+  it('keeps a saved match question’s target order when its right-hand items are unchanged, even if re-paired', () => {
+    const loaded = questionFromPreview('q1', {
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield|hammer',
+      points: 3,
+      options: ['arthur', 'captain america', 'thor'],
+      matchTargets: ['hammer', 'excalibur', 'shield'],
+    });
+
+    const saved = questionToPreview({
+      ...loaded,
+      matchPairs: [
+        { left: 'arthur', right: 'excalibur' },
+        { left: 'captain america', right: 'hammer' },
+        { left: 'thor', right: 'shield' },
+      ],
+    });
+
+    expect(saved.matchTargets).toEqual(['hammer', 'excalibur', 'shield']);
+    expect(saved.answer).toBe('excalibur|hammer|shield');
+  });
+
   it('omits notes/mediaUrl/answerMediaUrl when left blank', () => {
     const question = makeQuestion('q1');
     question.prompt = 'Largest planet?';
