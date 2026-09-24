@@ -21,6 +21,17 @@ vi.mock('@/app/lib/teams-api', async (importOriginal) => {
   return { ...actual, fetchTeamCode: mockFetchTeamCode };
 });
 
+vi.mock('qrcode.react', () => ({
+  QRCodeSVG: ({ value, title }: { value: string; title?: string }) => (
+    <svg
+      role="img"
+      aria-label={title}
+      data-testid="qr-code"
+      data-value={value}
+    />
+  ),
+}));
+
 const JOIN_CODE = 'ABCDEF';
 const ROUND_TITLES = ['Animals', 'History'];
 
@@ -329,5 +340,9 @@ describe('TeamsTable', () => {
     ).toBeInTheDocument();
     expect(mockFetchTeamCode).toHaveBeenCalledWith(1, expect.anything());
     expect(await screen.findByText('ZEBRA1')).toBeInTheDocument();
+    expect(screen.getByTestId('qr-code')).toHaveAttribute(
+      'data-value',
+      `${window.location.origin}/play?teamCode=ZEBRA1&name=The%20Quizzards&code=${JOIN_CODE}`,
+    );
   });
 });

@@ -42,12 +42,16 @@ interface UseTeamJoinResult extends UseGameSocketResult {
  * stored identity on mount, connecting the socket once a join code is known,
  * persisting the team token/code once accepted, and resubmitting on retry.
  */
-export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
+export function useTeamJoin(
+  codeFromUrl: string,
+  teamCodeFromUrl: string = '',
+  nameFromUrl: string = '',
+): UseTeamJoinResult {
   const router = useRouter();
   const [teamName, setTeamName] = useState<string | null>(null);
-  const [nameInput, setNameInput] = useState('');
+  const [nameInput, setNameInput] = useState(nameFromUrl);
   const [codeInput, setCodeInput] = useState(codeFromUrl);
-  const [teamCodeInput, setTeamCodeInput] = useState('');
+  const [teamCodeInput, setTeamCodeInput] = useState(teamCodeFromUrl);
   const [hasStoredIdentity, setHasStoredIdentity] = useState(false);
   const [activeJoinCode, setActiveJoinCode] = useState<string | null>(
     codeFromUrl || null,
@@ -116,8 +120,11 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
     if (storedName) {
       const storedOptions = storedJoinOptions();
       // Pre-fills the join form in case this reconnect attempt fails and we
-      // fall back to showing it - the team shouldn't have to retype everything.
-      setNameInput(storedName);
+      // fall back to showing it - the team shouldn't have to retype
+      // everything. Only fills the gap when the URL didn't already pin a
+      // name — mirrors teamCode/joinCode's precedence: a fresh QR scan for a
+      // specific team should win over whatever team last played on this device.
+      setNameInput((current) => current || storedName);
       if (storedOptions.joinCode) {
         setCodeInput(storedOptions.joinCode);
         // Only fills the gap when the URL didn't already pin a code — the URL
@@ -126,8 +133,12 @@ export function useTeamJoin(codeFromUrl: string): UseTeamJoinResult {
           (current) => current ?? storedOptions.joinCode ?? null,
         );
       }
-      if (storedOptions.teamCode) {
-        setTeamCodeInput(storedOptions.teamCode);
+      const storedTeamCode = storedOptions.teamCode;
+      if (storedTeamCode) {
+        // Only fills the gap when the URL didn't already pin a code — mirrors
+        // activeJoinCode's precedence: a fresh QR scan for a specific team
+        // should win over whatever team last played on this device.
+        setTeamCodeInput((current) => current || storedTeamCode);
       }
     }
     // The actual joinTeam call happens in the effect below, once the socket
