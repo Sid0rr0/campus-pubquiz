@@ -616,6 +616,32 @@ describe('AnswersPanel', () => {
       ]);
     });
 
+    it('shows teams with ungraded answers above teams that have not answered yet', () => {
+      const { container } = render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            answers: [
+              {
+                answerId: 42,
+                teamId: 2,
+                teamName: 'Beer Necessities',
+                value: 'London',
+                pointsAwarded: 0,
+                gradedAt: null,
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(teamNamesInOrder(container)).toEqual([
+        'Beer Necessities',
+        'The Quizzards',
+      ]);
+    });
+
     it('moves a team below ungraded teams once it is graded', () => {
       const { container, rerender } = render(
         <AnswersPanel

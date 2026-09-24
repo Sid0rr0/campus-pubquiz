@@ -19,8 +19,11 @@ interface GradeOption {
   value: number;
 }
 
-function isUngraded(answer: AnswerView | null): boolean {
-  return answer === null || answer.gradedAt === null;
+// Lower sorts first: answers awaiting grading, then teams yet to answer,
+// then already-graded answers.
+function gradingSortRank(answer: AnswerView | null): number {
+  if (answer === null) return 1;
+  return answer.gradedAt === null ? 0 : 2;
 }
 
 function gradeOptions(maxPoints: number): GradeOption[] {
@@ -158,11 +161,11 @@ export function AnswersPanel({
   const readOnly = question.type === 'closest_guess';
   const correctCount = countCorrectAnswers(liveAnswers);
   const answeredCount = answers.length;
-  const sortedTeams = [...teams].sort((a, b) => {
-    const aUngraded = isUngraded(answersByTeamId.get(a.teamId) ?? null);
-    const bUngraded = isUngraded(answersByTeamId.get(b.teamId) ?? null);
-    return Number(bUngraded) - Number(aUngraded);
-  });
+  const sortedTeams = [...teams].sort(
+    (a, b) =>
+      gradingSortRank(answersByTeamId.get(a.teamId) ?? null) -
+      gradingSortRank(answersByTeamId.get(b.teamId) ?? null),
+  );
 
   return (
     <section className="flex flex-col gap-3">
