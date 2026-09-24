@@ -26,7 +26,7 @@ interface QuizQuestionEditorProps {
   isLast: boolean;
   /** A session is live on this quiz — reordering/deleting any question is disabled regardless of lock state. */
   isLive: boolean;
-  /** This specific question is already shown/in progress in a live session — its fields are disabled. */
+  /** This specific question is already shown/in progress in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
   isLocked: boolean;
   onChange: (patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
@@ -210,7 +210,6 @@ export function QuizQuestionEditor({
         <textarea
           value={question.prompt}
           onChange={(event) => onChange({ prompt: event.target.value })}
-          disabled={isLocked}
           placeholder="Question prompt"
           rows={2}
           className="min-w-0 flex-1 resize-y rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-bold text-foreground disabled:opacity-50"
@@ -252,7 +251,8 @@ export function QuizQuestionEditor({
 
       {isLocked && (
         <p className="text-xs font-extrabold text-magenta">
-          Locked — already shown in the live session
+          Already shown — its type and choices are fixed; changing the answer or
+          points re-scores auto-graded answers
         </p>
       )}
 
@@ -278,7 +278,6 @@ export function QuizQuestionEditor({
             onChange={(event) =>
               onChange({ points: Number(event.target.value) || 0 })
             }
-            disabled={isLocked}
             className="w-16 rounded-lg border-2 border-foreground/25 px-2 py-1 text-sm font-extrabold text-foreground disabled:opacity-50"
           />
         </label>
@@ -294,7 +293,6 @@ export function QuizQuestionEditor({
                   type="radio"
                   checked={option.isCorrect}
                   onChange={() => setCorrectOption(optionIndex)}
-                  disabled={isLocked}
                   aria-label={`Mark option ${optionIndex + 1} as correct`}
                   className="h-4 w-4 accent-green"
                 />
@@ -362,7 +360,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, -1)}
-                disabled={isLocked || itemIndex === 0}
+                disabled={itemIndex === 0}
                 variant="icon"
                 size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} up`}
@@ -372,9 +370,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, 1)}
-                disabled={
-                  isLocked || itemIndex === question.sortItems.length - 1
-                }
+                disabled={itemIndex === question.sortItems.length - 1}
                 variant="icon"
                 size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} down`}
@@ -429,7 +425,6 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateMatchPair(pairIndex, 'right', event.target.value)
                 }
-                disabled={isLocked}
                 placeholder="Right item"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
@@ -464,7 +459,6 @@ export function QuizQuestionEditor({
             type={question.type === 'closest_guess' ? 'number' : 'text'}
             value={question.correctText}
             onChange={(event) => onChange({ correctText: event.target.value })}
-            disabled={isLocked}
             placeholder="Accepted answer"
             className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
           />
@@ -477,7 +471,6 @@ export function QuizQuestionEditor({
           isRequired={needsMediaUrl}
           value={question.mediaUrl}
           onChange={(mediaUrl) => onChange({ mediaUrl })}
-          disabled={isLocked}
           placeholder={
             question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
           }
@@ -486,7 +479,6 @@ export function QuizQuestionEditor({
           label="Answer media URL"
           value={question.answerMediaUrl}
           onChange={(answerMediaUrl) => onChange({ answerMediaUrl })}
-          disabled={isLocked}
           placeholder="https://…"
         />
       </div>
@@ -498,7 +490,6 @@ export function QuizQuestionEditor({
             <input
               value={clipStart}
               onChange={(event) => updateClip(event.target.value, clipEnd)}
-              disabled={isLocked}
               placeholder="1:22"
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
@@ -508,7 +499,6 @@ export function QuizQuestionEditor({
             <input
               value={clipEnd}
               onChange={(event) => updateClip(clipStart, event.target.value)}
-              disabled={isLocked}
               placeholder="2:20"
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
@@ -529,7 +519,6 @@ export function QuizQuestionEditor({
               ),
             })
           }
-          disabled={isLocked}
           rows={1}
           className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         />

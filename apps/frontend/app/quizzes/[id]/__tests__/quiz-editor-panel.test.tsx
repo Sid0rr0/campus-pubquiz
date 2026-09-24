@@ -605,7 +605,7 @@ describe('QuizEditorPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('disables locked question fields and structural controls while a session is live', async () => {
+  it('keeps an already-shown question fixable while locking its type, choices and the quiz structure', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
@@ -616,10 +616,11 @@ describe('QuizEditorPanel', () => {
           questions: [
             {
               questionId: 1,
-              type: 'free_text',
+              type: 'multiple_choice',
               prompt: 'Largest planet?',
-              answer: 'Jupiter',
+              answer: 'Saturn',
               points: 2,
+              options: ['Jupiter', 'Saturn'],
             },
           ],
         },
@@ -632,10 +633,17 @@ describe('QuizEditorPanel', () => {
     expect(
       await screen.findByText(/a session is live on this quiz/i),
     ).toBeInTheDocument();
+    expect(screen.getByText(/already shown/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/question prompt/i)).toBeEnabled();
+    expect(screen.getByLabelText(/points/i)).toBeEnabled();
     expect(
-      screen.getByText(/locked — already shown in the live session/i),
-    ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/question prompt/i)).toBeDisabled();
+      screen.getByRole('radio', { name: /mark option 1 as correct/i }),
+    ).toBeEnabled();
+    for (const optionInput of screen.getAllByPlaceholderText(/option text/i)) {
+      expect(optionInput).toBeDisabled();
+    }
+    expect(screen.getByRole('button', { name: /add option/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /free text/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /add round/i })).toBeDisabled();
     expect(
       screen.getByRole('button', { name: /add question/i }),

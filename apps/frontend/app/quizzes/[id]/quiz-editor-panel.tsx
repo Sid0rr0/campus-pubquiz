@@ -519,9 +519,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
 
       {isLive && (
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
-          A session is live on this quiz — only upcoming questions can be
-          edited, and rounds/questions can&apos;t be added, removed, or
-          reordered.
+          A session is live on this quiz — questions can still be edited, but
+          already-shown ones keep their type and choices, and rounds/questions
+          can&apos;t be added, removed, or reordered. Correcting a shown
+          question&apos;s answer or points re-scores its auto-graded answers.
         </p>
       )}
 
