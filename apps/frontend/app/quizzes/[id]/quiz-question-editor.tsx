@@ -10,8 +10,10 @@ import {
 import {
   extractYoutubeVideoId,
   type QuestionType,
+  type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import { MediaUrlField } from '@/app/quizzes/[id]/media-url-field';
 import {
   makeMatchPair,
@@ -28,11 +30,25 @@ interface QuizQuestionEditorProps {
   isLive: boolean;
   /** This specific question is already shown/in progress in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
   isLocked: boolean;
+  /** Validation issues from the last rejected save that apply to this question, shown next to the field each one names. */
+  issues: QuizDraftIssue[];
   onChange: (patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
+
+/** Fields rendered with their own inline `FieldErrors` below — anything else lands in the catch-all at the bottom of the card so an issue never goes unseen. */
+const PLACED_ISSUE_FIELDS = new Set([
+  'prompt',
+  'points',
+  'answer',
+  'options',
+  'matchTargets',
+  'mediaUrl',
+  'answerMediaUrl',
+  'type',
+]);
 
 const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'multiple_choice', label: 'Multiple choice' },
@@ -91,11 +107,15 @@ export function QuizQuestionEditor({
   isLast,
   isLive,
   isLocked,
+  issues,
   onChange,
   onDelete,
   onMoveUp,
   onMoveDown,
 }: QuizQuestionEditorProps) {
+  const otherIssues = issues.filter(
+    (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
+  );
   const isMc = question.type === 'multiple_choice';
   const isSort = question.type === 'sort';
   const isMatch = question.type === 'match';
@@ -248,6 +268,7 @@ export function QuizQuestionEditor({
           <TrashIcon aria-hidden="true" />
         </Button>
       </div>
+      <FieldErrors issues={fieldIssues(issues, 'prompt')} />
 
       {isLocked && (
         <p className="text-xs font-extrabold text-magenta">
@@ -282,6 +303,8 @@ export function QuizQuestionEditor({
           />
         </label>
       </div>
+      <FieldErrors issues={fieldIssues(issues, 'type')} />
+      <FieldErrors issues={fieldIssues(issues, 'points')} />
 
       {isMc ? (
         <div className="flex flex-col gap-2">
@@ -326,6 +349,8 @@ export function QuizQuestionEditor({
               Options must be unique
             </p>
           )}
+          <FieldErrors issues={fieldIssues(issues, 'options')} />
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
           <Button
             type="button"
             onClick={addOption}
@@ -389,6 +414,8 @@ export function QuizQuestionEditor({
               </Button>
             </div>
           ))}
+          <FieldErrors issues={fieldIssues(issues, 'options')} />
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
           <Button
             type="button"
             onClick={addSortItem}
@@ -451,36 +478,50 @@ export function QuizQuestionEditor({
             <PlusIcon aria-hidden="true" />
             Add pair
           </Button>
+          <FieldErrors issues={fieldIssues(issues, 'options')} />
+          <FieldErrors issues={fieldIssues(issues, 'matchTargets')} />
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
         </div>
       ) : (
-        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
-          Correct answer
-          <input
-            type={question.type === 'closest_guess' ? 'number' : 'text'}
-            value={question.correctText}
-            onChange={(event) => onChange({ correctText: event.target.value })}
-            placeholder="Accepted answer"
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-          />
+        <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
+          <span className="flex items-center gap-2">
+            Correct answer
+            <input
+              type={question.type === 'closest_guess' ? 'number' : 'text'}
+              value={question.correctText}
+              onChange={(event) =>
+                onChange({ correctText: event.target.value })
+              }
+              placeholder="Accepted answer"
+              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+            />
+          </span>
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
         </label>
       )}
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <MediaUrlField
-          label="Media URL"
-          isRequired={needsMediaUrl}
-          value={question.mediaUrl}
-          onChange={(mediaUrl) => onChange({ mediaUrl })}
-          placeholder={
-            question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
-          }
-        />
-        <MediaUrlField
-          label="Answer media URL"
-          value={question.answerMediaUrl}
-          onChange={(answerMediaUrl) => onChange({ answerMediaUrl })}
-          placeholder="https://…"
-        />
+        <div className="flex flex-col gap-1">
+          <MediaUrlField
+            label="Media URL"
+            isRequired={needsMediaUrl}
+            value={question.mediaUrl}
+            onChange={(mediaUrl) => onChange({ mediaUrl })}
+            placeholder={
+              question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
+            }
+          />
+          <FieldErrors issues={fieldIssues(issues, 'mediaUrl')} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <MediaUrlField
+            label="Answer media URL"
+            value={question.answerMediaUrl}
+            onChange={(answerMediaUrl) => onChange({ answerMediaUrl })}
+            placeholder="https://…"
+          />
+          <FieldErrors issues={fieldIssues(issues, 'answerMediaUrl')} />
+        </div>
       </div>
 
       {isYoutubeMedia && (
@@ -523,6 +564,7 @@ export function QuizQuestionEditor({
           className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         />
       </label>
+      <FieldErrors issues={otherIssues} />
     </div>
   );
 }

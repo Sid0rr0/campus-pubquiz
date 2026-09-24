@@ -605,6 +605,40 @@ describe('QuizEditorPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('toasts the save failure and shows an inline error next to the offending field', async () => {
+    const user = userEvent.setup();
+    mockCreateQuiz.mockRejectedValue(
+      new QuizDraftApiError('Validation failed', 422, [
+        {
+          roundIndex: 0,
+          questionIndex: 0,
+          field: 'prompt',
+          message: 'Missing question text',
+        },
+      ]),
+    );
+    renderWithQuery(
+      <>
+        <QuizEditorPanel quizId="new" />
+        <Toaster />
+      </>,
+    );
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    // The toast carries the issue count and is distinct from the persisted
+    // top-of-page banner, which shows the bare error message.
+    expect(await screen.findByText(/1 issue.*see below/i)).toBeInTheDocument();
+    // The message appears both in the top summary list and inline next to
+    // the question's prompt field.
+    const promptErrors = await screen.findAllByText(/missing question text/i);
+    expect(promptErrors.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('keeps an already-shown question fixable while locking its type, choices and the quiz structure', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,

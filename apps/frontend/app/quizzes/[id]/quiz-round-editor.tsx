@@ -6,7 +6,9 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
+import type { QuizDraftIssue } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   makeQuestion,
   type EditorQuestion,
@@ -22,6 +24,8 @@ interface QuizRoundEditorProps {
   isLive: boolean;
   /** `dbId`s of questions already shown/in progress in a live session. */
   lockedQuestionIds: ReadonlySet<number>;
+  /** Validation issues from the last rejected save that apply to this round (round-level and per-question). */
+  issues: QuizDraftIssue[];
   onChange: (patch: Partial<EditorRound>) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -34,11 +38,15 @@ export function QuizRoundEditor({
   isLast,
   isLive,
   lockedQuestionIds,
+  issues,
   onChange,
   onDelete,
   onMoveUp,
   onMoveDown,
 }: QuizRoundEditorProps) {
+  const roundLevelIssues = issues.filter(
+    (issue) => issue.questionIndex === null,
+  );
   function updateQuestion(
     questionId: string,
     patch: Partial<EditorQuestion>,
@@ -89,12 +97,15 @@ export function QuizRoundEditor({
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-foreground/15 bg-white p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          value={round.title}
-          onChange={(event) => onChange({ title: event.target.value })}
-          placeholder="Round title"
-          className="min-w-0 flex-1 rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-extrabold text-foreground"
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <input
+            value={round.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            placeholder="Round title"
+            className="w-full rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-extrabold text-foreground"
+          />
+          <FieldErrors issues={fieldIssues(roundLevelIssues, 'title')} />
+        </div>
         <label
           className="flex items-center gap-2 text-xs font-extrabold text-foreground/60"
           title={
@@ -129,6 +140,7 @@ export function QuizRoundEditor({
           Speed-based scoring, answer then reveal, leaderboard shows only the
           top teams
         </span>
+        <FieldErrors issues={fieldIssues(roundLevelIssues, 'kahootMode')} />
         <Button
           type="button"
           onClick={onMoveUp}
@@ -161,6 +173,8 @@ export function QuizRoundEditor({
         </Button>
       </div>
 
+      <FieldErrors issues={fieldIssues(roundLevelIssues, 'questions')} />
+
       <div className="flex flex-col gap-3">
         {round.questions.map((question, index) => (
           <QuizQuestionEditor
@@ -174,6 +188,7 @@ export function QuizRoundEditor({
               question.dbId !== undefined &&
               lockedQuestionIds.has(question.dbId)
             }
+            issues={issues.filter((issue) => issue.questionIndex === index)}
             onChange={(patch) => updateQuestion(question.id, patch)}
             onDelete={() => deleteQuestion(question.id)}
             onMoveUp={() => moveQuestion(question.id, -1)}
