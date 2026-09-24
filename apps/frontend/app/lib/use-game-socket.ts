@@ -234,6 +234,13 @@ export function useGameSocket(
   // below tell a bonus-award rejection apart from any other action-level
   // WsException without the backend needing to tag which action failed.
   const pendingBonusAwardRef = useRef(false);
+  // Same pattern for ADVANCE — e.g. rejected with UngradedAnswersError when
+  // the admin tries to leave a break screen with ungraded answers still
+  // outstanding. Surfaced as a toast (like bonusAwardError) rather than the
+  // persistent connectionError banner, since it's a transient, actionable
+  // rejection the admin/presenter can retry after grading, not a dropped
+  // connection.
+  const pendingAdvanceRef = useRef(false);
 
   // A fresh connect (first mount, or `role`/`joinCode`/`retryKey` identity
   // change) starts from a clean slate — otherwise the previous identity's
@@ -271,6 +278,7 @@ export function useGameSocket(
     });
     socketRef.current = socket;
     pendingBonusAwardRef.current = false;
+    pendingAdvanceRef.current = false;
     focusedAnswersQuestionIdRef.current = null;
 
     socket.on('connect', () => {
@@ -287,6 +295,7 @@ export function useGameSocket(
       setSnapshot(payload);
       setSeenQuestions((current) => mergeSeenQuestions(current, payload));
       pendingBonusAwardRef.current = false;
+      pendingAdvanceRef.current = false;
     });
 
     socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
@@ -395,6 +404,11 @@ export function useGameSocket(
         toast.error(message);
         return;
       }
+      if (pendingAdvanceRef.current) {
+        pendingAdvanceRef.current = false;
+        toast.error(getExceptionMessage(payload));
+        return;
+      }
       setConnectionError(getExceptionMessage(payload));
     });
 
@@ -404,6 +418,7 @@ export function useGameSocket(
   }, [enabled, role, joinCode, retryKey]);
 
   const sendAction = useCallback((action: GameAction) => {
+    pendingAdvanceRef.current = action === 'ADVANCE';
     const payload: AdminActionPayload = { action };
     socketRef.current?.emit(SOCKET_EVENTS.ADMIN_ACTION, payload);
   }, []);

@@ -178,4 +178,42 @@ describe('useGameSocket — connection errors', () => {
     });
     await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(2));
   });
+
+  it('routes a rejected ADVANCE call (e.g. ungraded answers) to a toast instead of connectionError', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.sendAction('ADVANCE');
+      fakeSocket.trigger('exception', {
+        message:
+          'Cannot reveal yet: 2 question(s) still have ungraded answers.',
+      });
+    });
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Cannot reveal yet: 2 question(s) still have ungraded answers.',
+    );
+    expect(result.current.connectionError).toBeNull();
+  });
+
+  it('does not toast a rejection for a non-ADVANCE action, leaving it on connectionError', async () => {
+    const { result } = renderHook(() => useGameSocket('admin'));
+    const fakeSocket = getFakeSocket();
+
+    act(() => {
+      result.current.sendAction('PREVIOUS');
+      fakeSocket.trigger('exception', {
+        message: 'Cannot go back from this state',
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current.connectionError).toBe(
+        'Cannot go back from this state',
+      ),
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
 });
