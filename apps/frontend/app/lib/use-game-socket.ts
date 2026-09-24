@@ -249,7 +249,6 @@ export function useGameSocket(
       setConnectionError(null);
       setTeam(null);
       setLiveAnswers(null);
-      focusedAnswersQuestionIdRef.current = null;
       setPresenterContext(null);
       setMyAnswers({});
       setMyAnswerGrades({});
@@ -272,6 +271,7 @@ export function useGameSocket(
     });
     socketRef.current = socket;
     pendingBonusAwardRef.current = false;
+    focusedAnswersQuestionIdRef.current = null;
 
     socket.on('connect', () => {
       setReconnectedAt(Date.now());
