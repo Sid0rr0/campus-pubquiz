@@ -76,6 +76,64 @@ describe('assembleImportPreview', () => {
     expect(preview.rounds[1].breakAfter).toBe(true);
   });
 
+  it('takes the first non-blank category/author cell per round and omits them when every cell is blank', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History', category: '', author: '' }),
+      makeRow({
+        rowNumber: 3,
+        round: 'History',
+        question: 'Name this flag.',
+        category: 'Geography',
+        author: 'Alex',
+      }),
+      makeRow({
+        rowNumber: 4,
+        round: 'History',
+        question: 'Name this king.',
+        category: 'History',
+        author: 'Sam',
+      }),
+      makeRow({
+        rowNumber: 5,
+        round: 'Music',
+        question: 'Name this song.',
+        category: '',
+        author: '',
+      }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.rounds[0].category).toBe('Geography');
+    expect(preview.rounds[0].author).toBe('Alex');
+    expect(preview.rounds[1].category).toBeUndefined();
+    expect(preview.rounds[1].author).toBeUndefined();
+  });
+
+  it('leaves category unset for a cell that is not one of the fixed list, rather than blocking the import', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History', category: 'Royalty' }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.issues).toEqual([]);
+    expect(preview.rounds[0].category).toBeUndefined();
+  });
+
+  it('accepts a category cell regardless of casing, normalizing it to the canonical spelling', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History', category: 'science & nature' }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.rounds[0].category).toBe('Science & nature');
+  });
+
   it('reports issues from every broken row and blocks the import', () => {
     const rows: SheetRow[] = [
       makeRow({ rowNumber: 2, breakAfter: '1' }),

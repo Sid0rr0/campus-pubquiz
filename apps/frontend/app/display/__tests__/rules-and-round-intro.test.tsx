@@ -59,12 +59,14 @@ describe('DisplayPage — rules and round intro', () => {
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
   });
 
-  it('lists every round title on the round overview screen, before round 0 opens', () => {
+  it('lists every round title, category, and author on the round overview screen, before round 0 opens', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'round_overview' }),
         currentQuestion: null,
         roundTitles: ['General Knowledge', 'Picture Round', 'Music Round'],
+        roundCategories: ['General knowledge', '', ''],
+        roundAuthors: ['', 'Sam', ''],
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -74,14 +76,18 @@ describe('DisplayPage — rules and round intro', () => {
     expect(screen.getByText('General Knowledge')).toBeInTheDocument();
     expect(screen.getByText('Picture Round')).toBeInTheDocument();
     expect(screen.getByText('Music Round')).toBeInTheDocument();
+    expect(screen.getByText(/General knowledge/)).toBeInTheDocument();
+    expect(screen.getByText(/by Sam/)).toBeInTheDocument();
   });
 
-  it('shows the round name in big text on the round intro screen, before any question opens', () => {
+  it('shows the round name, category, and author on the round intro screen, before any question opens', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'round_intro', roundIndex: 1 }),
         currentQuestion: null,
         roundTitle: 'Picture Round',
+        roundCategory: 'Film & TV',
+        roundAuthor: 'Sam',
       },
       connectionError: null,
       sendAction: vi.fn(),
@@ -90,5 +96,7 @@ describe('DisplayPage — rules and round intro', () => {
 
     expect(screen.getByText('Picture Round')).toBeInTheDocument();
     expect(screen.getByText(/round 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/Film & TV/)).toBeInTheDocument();
+    expect(screen.getByText(/by Sam/)).toBeInTheDocument();
   });
 });

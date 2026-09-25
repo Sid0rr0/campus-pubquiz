@@ -136,6 +136,8 @@ export class SeedService {
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
         kahootMode: roundRow.kahootMode,
+        category: roundRow.category ?? undefined,
+        author: roundRow.author ?? undefined,
         questions: questionRows.map((row) => ({
           id: row.id,
           type: row.type,

@@ -210,8 +210,12 @@ function DisplayPageContent() {
     blockQuestions = [],
     revealQuestions = [],
     roundTitle = '',
+    roundCategory = '',
+    roundAuthor = '',
     isCurrentRoundKahoot = false,
     roundTitles = [],
+    roundCategories = [],
+    roundAuthors = [],
     questionLockAt = null,
     kahootQuestionEndsAt = null,
     closestGuessRevealStep = 0,
@@ -357,16 +361,26 @@ function DisplayPageContent() {
                 </div>
               )}
               {progress.status === 'round_overview' && (
-                <RoundOverviewScreen roundTitles={roundTitles} />
+                <RoundOverviewScreen
+                  roundTitles={roundTitles}
+                  roundCategories={roundCategories}
+                  roundAuthors={roundAuthors}
+                />
               )}
               {progress.status === 'round_intro' && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
                   <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
                     ROUND {progress.roundIndex + 1}
+                    {roundCategory ? ` — ${roundCategory}` : ''}
                   </p>
                   <h1 className="text-balance font-display text-[calc(3.75rem*var(--display-text-scale,1))] text-magenta">
                     {roundTitle}
                   </h1>
+                  {roundAuthor && (
+                    <p className="text-[calc(1.125rem*var(--display-text-scale,1))] font-bold text-foreground/60">
+                      by {roundAuthor}
+                    </p>
+                  )}
                 </div>
               )}
               {progress.status === 'question_open' && currentQuestion && (

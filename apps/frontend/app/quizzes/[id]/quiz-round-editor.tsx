@@ -6,7 +6,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
-import type { QuizDraftIssue } from '@campus-pubquiz/types';
+import { ROUND_CATEGORIES, type QuizDraftIssue } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
@@ -184,6 +184,34 @@ export function QuizRoundEditor({
         >
           <TrashIcon aria-hidden="true" />
         </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <select
+            value={round.category}
+            onChange={(event) => onChange({ category: event.target.value })}
+            aria-label="Category"
+            className="w-full rounded-lg border-2 border-foreground/15 px-3 py-2 text-sm font-bold text-foreground"
+          >
+            <option value="">Category (optional)</option>
+            {ROUND_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <FieldErrors issues={fieldIssues(roundLevelIssues, 'category')} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <input
+            value={round.author}
+            onChange={(event) => onChange({ author: event.target.value })}
+            placeholder="Author (optional)"
+            className="w-full rounded-lg border-2 border-foreground/15 px-3 py-2 text-sm font-bold text-foreground"
+          />
+          <FieldErrors issues={fieldIssues(roundLevelIssues, 'author')} />
+        </div>
       </div>
 
       <FieldErrors issues={fieldIssues(roundLevelIssues, 'questions')} />

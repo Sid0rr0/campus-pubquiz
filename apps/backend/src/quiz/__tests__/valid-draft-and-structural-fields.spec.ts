@@ -249,4 +249,38 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
       );
     });
   });
+
+  describe('category', () => {
+    it('accepts a category from the fixed list', () => {
+      const request = makeRequest({
+        rounds: [
+          makeRound({
+            category: 'Science & nature',
+            questions: [makeQuestion({ type: 'free_text', answer: 'Jupiter' })],
+          }),
+        ],
+      });
+
+      expect(validateQuizDraft(request)).toEqual([]);
+    });
+
+    it('rejects a category that is not one of the fixed list', () => {
+      const request = makeRequest({
+        rounds: [
+          makeRound({
+            category: 'Sci-fi',
+            questions: [makeQuestion({ type: 'free_text', answer: 'Jupiter' })],
+          }),
+        ],
+      });
+
+      expect(validateQuizDraft(request)).toContainEqual(
+        expect.objectContaining({
+          roundIndex: 0,
+          questionIndex: null,
+          field: 'category',
+        }),
+      );
+    });
+  });
 });

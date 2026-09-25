@@ -48,6 +48,10 @@ export interface EditorRound {
   breakAfter: boolean;
   /** See RoundConfig.kahootMode — only settable here, never via CSV/Sheets import. */
   kahootMode: boolean;
+  /** Round topic/theme — one of ROUND_CATEGORIES, or '' meaning unset. Picked from a fixed `<select>` in the editor. */
+  category: string;
+  /** Who wrote this round's questions — optional, blank string means unset. */
+  author: string;
   questions: EditorQuestion[];
 }
 
@@ -103,7 +107,15 @@ function displayOrderFor(
 }
 
 export function makeRound(id: string, title = ''): EditorRound {
-  return { id, title, breakAfter: false, kahootMode: false, questions: [] };
+  return {
+    id,
+    title,
+    breakAfter: false,
+    kahootMode: false,
+    category: '',
+    author: '',
+    questions: [],
+  };
 }
 
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
@@ -163,6 +175,8 @@ export function roundFromPreview(
     // CSV/Sheets previews never carry kahootMode — it's only ever set by
     // editing the round afterward in the manual editor.
     kahootMode: round.kahootMode ?? false,
+    category: round.category ?? '',
+    author: round.author ?? '',
     questions: round.questions.map((question, index) =>
       questionFromPreview(makeQuestionId(index), question),
     ),
@@ -176,7 +190,7 @@ export function roundFromPreview(
  * title matches an existing round (case/whitespace-insensitive) has its
  * questions appended to that round; every other preview round is added as a
  * brand-new round at the end. Existing rounds' own settings (breakAfter,
- * kahootMode) are left untouched by a match.
+ * kahootMode, category, author) are left untouched by a match.
  */
 export function mergeRoundsFromPreview(
   currentRounds: EditorRound[],
@@ -301,6 +315,8 @@ export function toSaveRequest(
       // forceLastRoundBreak, which enforces this again server-side.
       breakAfter: index === rounds.length - 1 ? true : round.breakAfter,
       kahootMode: round.kahootMode,
+      ...(round.category.trim() ? { category: round.category.trim() } : {}),
+      ...(round.author.trim() ? { author: round.author.trim() } : {}),
       questions: round.questions.map(questionToPreview),
     })),
   };

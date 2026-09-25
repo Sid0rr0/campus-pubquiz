@@ -47,6 +47,8 @@ describe('makeQuestion / makeRound', () => {
       title: 'Round 1',
       breakAfter: false,
       kahootMode: false,
+      category: '',
+      author: '',
       questions: [],
     });
   });

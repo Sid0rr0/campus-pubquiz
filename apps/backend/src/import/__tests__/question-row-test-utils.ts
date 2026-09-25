@@ -13,6 +13,8 @@ export function makeRow(overrides: Partial<SheetRow> = {}): SheetRow {
     answerMediaUrl: '',
     notes: '',
     breakAfter: '',
+    category: '',
+    author: '',
     ...overrides,
   };
 }

@@ -487,6 +487,50 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  it('saves category and author after picking a category and typing an author into the round editor', async () => {
+    const user = userEvent.setup();
+    mockCreateQuiz.mockResolvedValue({
+      quizId: 42,
+      roundCount: 1,
+      questionCount: 1,
+    });
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/untitled quiz/i),
+      'Trivia Night',
+    );
+    await user.selectOptions(screen.getByLabelText(/category/i), 'Geography');
+    await user.type(
+      screen.getByPlaceholderText(/author \(optional\)/i),
+      'Alex',
+    );
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+    await user.type(
+      screen.getByPlaceholderText(/question prompt/i),
+      'Capital of France?',
+    );
+    const options = screen.getAllByPlaceholderText(/option text/i);
+    await user.type(options[0], 'Paris');
+    await user.type(options[1], 'London');
+    await user.click(screen.getAllByLabelText(/mark option 1 as correct/i)[0]);
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockCreateQuiz).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({ category: 'Geography', author: 'Alex' }),
+          ],
+        }),
+      ),
+    );
+  });
+
   it('updates an existing quiz in place and shows a saved flash', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({

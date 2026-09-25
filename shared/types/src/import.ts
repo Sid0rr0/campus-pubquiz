@@ -17,6 +17,8 @@ export interface SheetRow {
   answerMediaUrl: string;
   notes: string;
   breakAfter: string;
+  category: string;
+  author: string;
 }
 
 export interface ImportRowIssue {
@@ -59,6 +61,10 @@ export interface ImportRoundPreview {
    * updating; undefined behaves as false.
    */
   kahootMode?: boolean;
+  /** Round topic/theme — one of ROUND_CATEGORIES, or unset. Shown on the big screen's round_intro/round_overview alongside the title. */
+  category?: string;
+  /** Who wrote this round's questions — optional, shown on the big screen's round_intro/round_overview alongside the title. */
+  author?: string;
   questions: ImportQuestionPreview[];
 }
 
