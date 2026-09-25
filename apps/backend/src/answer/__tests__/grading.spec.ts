@@ -54,7 +54,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       state.question.id,
     );
     expect(answer.pointsAwarded).toBe(0);
-    expect(answer.gradedAt).toBeNull();
+    expect(answer.gradedAt).not.toBeNull();
   });
 
   it('grades an answer with half points', async () => {
@@ -100,11 +100,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(secondGrade.gradedAt).not.toBe(firstGrade.gradedAt);
   });
 
-  it('resets points and gradedAt when a team changes an already-graded free_text answer', async () => {
+  it('resets points and gradedAt when a team changes an already-graded audio answer', async () => {
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Reference answer',
+      points: 1,
+    });
+    await state.em.flush();
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
       team.id,
       'Banana',
     );
@@ -112,21 +121,84 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
       team.id,
       'Mango',
     );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
     );
     expect(answer.value).toBe('Mango');
     expect(answer.pointsAwarded).toBe(0);
     expect(answer.gradedAt).toBeNull();
   });
 
-  it('keeps an already-graded answer intact when resubmitted with the same value', async () => {
+  it('keeps an already-graded audio answer intact when resubmitted with the same value', async () => {
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Reference answer',
+      points: 1,
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      audioQuestion.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    await state.answerService.submit(
+      state.session.id,
+      audioQuestion.id,
+      team.id,
+      'Banana',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      audioQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('re-grades a free_text answer against the answer key on every resubmission, discarding a manual override', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    // Resubmitting (even the same wrong value) re-runs auto-grading against
+    // the answer key, same as multiple_choice/sort/match — it does not
+    // preserve the admin's manual override, unlike the human-graded types
+    // above.
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('re-grades (rather than resets) a free_text answer when the team changes it after manual grading', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
@@ -140,13 +212,14 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       state.session.id,
       state.question.id,
       team.id,
-      'Banana',
+      'Apple',
     );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
       state.question.id,
     );
+    expect(answer.value).toBe('Apple');
     expect(answer.pointsAwarded).toBe(1);
     expect(answer.gradedAt).not.toBeNull();
   });
@@ -427,6 +500,39 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         mcQuestion.id,
       );
       expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(2);
+      expect(answers.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(0);
+      expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
+    });
+
+    it('re-scores every free_text answer case-insensitively against a corrected answer key', async () => {
+      const teamA = await insertTeam('Team A', 'token-a');
+      const teamB = await insertTeam('Team B', 'token-b');
+      await state.answerService.submit(
+        state.session.id,
+        state.question.id,
+        teamA.id,
+        'pear',
+      );
+      await state.answerService.submit(
+        state.session.id,
+        state.question.id,
+        teamB.id,
+        'APPLE',
+      );
+
+      await state.answerService.regradeAutoGraded(
+        state.session.id,
+        state.question.id,
+        'free_text',
+        'Pear',
+        1,
+      );
+
+      const answers = await state.answerService.listForQuestion(
+        state.session.id,
+        state.question.id,
+      );
+      expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(1);
       expect(answers.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(0);
       expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
     });

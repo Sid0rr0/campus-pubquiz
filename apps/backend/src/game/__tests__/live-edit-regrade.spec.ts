@@ -18,6 +18,27 @@ import {
 type FakeAnswerService = ReturnType<typeof createFakeAnswerService>;
 type FakeSeedService = ReturnType<typeof createFakeGameStateSeedService>;
 
+const HUMAN_GRADED_GAME: SeededGame = {
+  ...GAME_STATE_FIXTURE_SEEDED_GAME,
+  rounds: [
+    {
+      id: 11,
+      title: 'General Knowledge',
+      breakAfter: false,
+      questions: [
+        {
+          id: 22,
+          type: 'audio',
+          prompt: 'Name that tune',
+          points: 2,
+          answer: 'Reference answer',
+        },
+      ],
+      questionNotesById: { 22: null },
+    },
+  ],
+};
+
 const CLOSEST_GUESS_GAME: SeededGame = {
   ...GAME_STATE_FIXTURE_SEEDED_GAME,
   rounds: [
@@ -76,6 +97,18 @@ describe('GameStateService.regradeQuestions', () => {
 
   it('leaves a human-graded question alone, without touching the leaderboard', async () => {
     const answerService = createFakeAnswerService();
+    const seedService = createFakeGameStateSeedService();
+    seedService.seed.mockResolvedValue(HUMAN_GRADED_GAME);
+    const service = await createService(seedService, answerService);
+
+    await service.regradeQuestions('ABCDEF', [22]);
+
+    expect(answerService.regradeAutoGraded).not.toHaveBeenCalled();
+    expect(answerService.computeLeaderboard).not.toHaveBeenCalled();
+  });
+
+  it('re-scores a free_text question against the reloaded answer key, same as the other auto-graded types', async () => {
+    const answerService = createFakeAnswerService();
     const service = await createService(
       createFakeGameStateSeedService(),
       answerService,
@@ -83,8 +116,15 @@ describe('GameStateService.regradeQuestions', () => {
 
     await service.regradeQuestions('ABCDEF', [22]);
 
-    expect(answerService.regradeAutoGraded).not.toHaveBeenCalled();
-    expect(answerService.computeLeaderboard).not.toHaveBeenCalled();
+    expect(answerService.regradeAutoGraded).toHaveBeenCalledWith(
+      101,
+      22,
+      'free_text',
+      'Jupiter',
+      2,
+      {},
+    );
+    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
   });
 
   it('re-applies the speed multipliers recorded when a kahoot question was scored', async () => {

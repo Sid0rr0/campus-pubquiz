@@ -65,8 +65,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'Grading happens during the break, in the teams/answers table.',
     ],
     bullets: [
-      'Free text, and YouTube questions need your judgement — grade each answer by hand.',
-      'Multiple choice, sort, and match are auto-graded the moment a team submits.',
+      'Audio and YouTube questions need your judgement — grade each answer by hand.',
+      'Multiple choice, sort, match, and free text are auto-graded the moment a team submits (free text matches case- and whitespace-insensitively) — you can still override any of them by hand.',
       'Closest guess is graded in one batch once the question locks: every team tied for the smallest distance gets full points, everyone else gets zero.',
     ],
   },
@@ -101,9 +101,9 @@ const GUIDE_SECTIONS: GuideSection[] = [
       'CSV columns: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after. One row per question; a round grades (breaks) after itself once any of its rows has break_after = 1 — the last round always breaks regardless, since the game can’t reveal answers otherwise.',
     ],
     bullets: [
-      'free_text — no options; answer is graded by hand, so it just needs to be the reference text.',
+      'free_text — no options; auto-graded against the answer text (case- and whitespace-insensitive), overridable by hand.',
       'multiple_choice — options pipe-separated (e.g. Paris|London|Berlin); answer must match one option exactly.',
-      'audio — media_url is required (any http audio link); graded by hand like free_text.',
+      'audio — media_url is required (any http audio link); graded by hand.',
       'youtube — media_url must be a youtube.com/youtu.be link; notes can clip it, e.g. {start: "0:10", end: "0:25"}.',
       'sort — options pipe-separated in any order; answer lists them pipe-separated in the correct order.',
       'match — options packs both lists as left1|left2+right1|right2; answer pairs them left+right, pipe-separated (e.g. Paris+France|Tokyo+Japan).',

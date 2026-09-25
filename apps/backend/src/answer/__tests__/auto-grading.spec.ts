@@ -239,7 +239,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.gradedAt).not.toBeNull();
   });
 
-  it('leaves free_text answers ungraded on submit (unaffected by multiple choice auto-grading)', async () => {
+  it('auto-grades an exact-match free_text answer on submit, awarding full points', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
 
     await state.answerService.submit(
@@ -253,7 +253,84 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       state.session.id,
       state.question.id,
     );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades a free_text answer case-insensitively', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'aPPLE',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades a free_text answer with leading/trailing whitespace trimmed', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      '  Apple  ',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('auto-grades an incorrect free_text answer on submit as zero points', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
     expect(answer.pointsAwarded).toBe(0);
-    expect(answer.gradedAt).toBeNull();
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('re-grades a free_text answer when the team revises it before locking', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Apple',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
   });
 });

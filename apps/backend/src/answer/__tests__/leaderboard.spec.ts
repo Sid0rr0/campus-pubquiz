@@ -69,10 +69,23 @@ describe('AnswerService (Postgres integration) - leaderboard', () => {
   });
 
   it('treats ungraded answers as zero points in the leaderboard', async () => {
+    // free_text is auto-graded now (see answer.service.ts's
+    // AUTO_GRADED_TYPES), so an audio question is used here to keep
+    // testing a genuinely *ungraded* (never-scored) answer, rather than an
+    // auto-graded free_text answer that just happens to score zero.
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Reference answer',
+      points: 1,
+    });
+    await state.em.flush();
     const team = await insertTeam('The Quizzards', 'token-1');
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
       team.id,
       'Banana',
     );

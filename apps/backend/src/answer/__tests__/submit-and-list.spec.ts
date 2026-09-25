@@ -107,22 +107,19 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     );
 
     expect(answers).toHaveLength(2);
-    expect(answers).toEqual(
-      expect.arrayContaining([
-        {
-          questionId: state.question.id,
-          value: 'Banana',
-          pointsAwarded: 0,
-          gradedAt: null,
-        },
-        {
-          questionId: question2.id,
-          value: 'Carrot',
-          pointsAwarded: 0,
-          gradedAt: null,
-        },
-      ]),
+    // Both questions are free_text, so both are auto-graded immediately on
+    // submit — 'Banana' mismatches state.question's answer ('Apple'),
+    // 'Carrot' exactly matches question2's, hence the differing points.
+    const firstAnswer = answers.find(
+      (answer) => answer.questionId === state.question.id,
     );
+    const secondAnswer = answers.find(
+      (answer) => answer.questionId === question2.id,
+    );
+    expect(firstAnswer).toMatchObject({ value: 'Banana', pointsAwarded: 0 });
+    expect(firstAnswer?.gradedAt).not.toBeNull();
+    expect(secondAnswer).toMatchObject({ value: 'Carrot', pointsAwarded: 1 });
+    expect(secondAnswer?.gradedAt).not.toBeNull();
   });
 
   it('returns an empty list for a team that has not answered anything', async () => {
@@ -136,18 +133,27 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     expect(answers).toEqual([]);
   });
 
-  it('lists answers with zero points and a null gradedAt before grading', async () => {
+  it('lists a human-graded answer with zero points and a null gradedAt before grading', async () => {
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Reference answer',
+      points: 1,
+    });
+    await state.em.flush();
     const team = await insertTeam('The Quizzards', 'token-1');
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
       team.id,
       'Banana',
     );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
     );
     expect(answer.pointsAwarded).toBe(0);
     expect(answer.gradedAt).toBeNull();

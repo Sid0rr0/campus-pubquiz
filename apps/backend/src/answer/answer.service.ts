@@ -53,26 +53,33 @@ export const AUTO_GRADED_TYPES: readonly QuestionType[] = [
   'multiple_choice',
   'sort',
   'match',
+  'free_text',
 ];
 
+function normalizeFreeText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 /**
- * multiple_choice/sort are all-or-nothing (one exact-match correct value) —
- * and so is anything else that reaches here, since only multiple_choice,
- * sort, and match are ever auto-graded (AUTO_GRADED_TYPES above); the `else`
- * branch below is a catch-all for those two, not an enumerated case, so a
- * future auto-graded type would silently get exact-match grading unless
- * this function is taught about it explicitly. match instead awards partial
- * credit per correctly paired item — both `value` and `question.answer` are
- * the pipe-joined right-hand items in the question's `options` (left-hand)
- * order (see question-row.schema.ts's toCanonicalMatchAnswer and
- * AnswerForm's match UI), so comparing them positionally counts correctly
- * matched pairs directly. Points split evenly across pairs and round to the
- * nearest whole point (e.g. 4 points/4 pairs, 1 correct -> 1 point).
- * `pointsAwarded` is stored as an integer, so when `points` is smaller than
- * the pair count, distinct partial-credit levels can round to the same
- * value (e.g. 1 point/4 pairs: both 0-of-4 and 1-of-4 correct round to 0) —
- * author match questions with points >= pair count for meaningful partial
- * credit.
+ * Three grading strategies, one per shape of auto-graded answer:
+ * - multiple_choice/sort: all-or-nothing, exact (case-sensitive) match.
+ * - free_text: all-or-nothing too, but compared trimmed + case-insensitive
+ *   (normalizeFreeText) since teams retype the answer freely rather than
+ *   picking from fixed options — "Paris"/" paris "/"PARIS" all match.
+ * - match: partial credit per correctly paired item — both `value` and
+ *   `question.answer` are the pipe-joined right-hand items in the
+ *   question's `options` (left-hand) order (see question-row.schema.ts's
+ *   toCanonicalMatchAnswer and AnswerForm's match UI), so comparing them
+ *   positionally counts correctly matched pairs directly. Points split
+ *   evenly across pairs and round to the nearest whole point (e.g. 4
+ *   points/4 pairs, 1 correct -> 1 point). `pointsAwarded` is stored as an
+ *   integer, so when `points` is smaller than the pair count, distinct
+ *   partial-credit levels can round to the same value (e.g. 1 point/4
+ *   pairs: both 0-of-4 and 1-of-4 correct round to 0) — author match
+ *   questions with points >= pair count for meaningful partial credit.
+ *
+ * Any future addition to AUTO_GRADED_TYPES needs an explicit branch here —
+ * there's no safe generic fallback across these three strategies.
  */
 function computeAutoGradedPoints(
   type: QuestionType,
@@ -87,6 +94,9 @@ function computeAutoGradedPoints(
       (rightItem, index) => rightItem === submittedPairs[index],
     ).length;
     return Math.round((points * correctPairs) / answerPairs.length);
+  }
+  if (type === 'free_text') {
+    return normalizeFreeText(value) === normalizeFreeText(answer) ? points : 0;
   }
   return value === answer ? points : 0;
 }
@@ -111,11 +121,12 @@ export class AnswerService {
     const question = await this.questions.findOneOrFail(questionId, {
       fields: ['type', 'answer', 'points'],
     });
-    // Multiple choice, sort, and match are all gradable without admin
-    // judgement the instant they're submitted (enforced at import/save time
-    // — see question-row.schema.ts and quiz-draft.schema.ts), unlike
-    // free_text/audio. multiple_choice/sort are all-or-nothing; match splits
-    // points per correctly paired item — see computeAutoGradedPoints.
+    // Multiple choice, sort, match, and free_text are all gradable without
+    // admin judgement the instant they're submitted (enforced at
+    // import/save time — see question-row.schema.ts and
+    // quiz-draft.schema.ts), unlike audio/youtube. multiple_choice/sort/
+    // free_text are all-or-nothing; match splits points per correctly
+    // paired item — see computeAutoGradedPoints.
     const isAutoGraded = AUTO_GRADED_TYPES.includes(question.type);
     const pointsAwarded = isAutoGraded
       ? computeAutoGradedPoints(
@@ -126,12 +137,14 @@ export class AnswerService {
         )
       : 0;
 
-    // The admin can grade free_text/audio/youtube answers as soon as they
-    // land (grade() has no status gate — see control's "Grade Questions"
-    // panel), well before the block locks. A team can then revise its answer
-    // (last-write-wins, allowed until lock) — if that revision changes the
-    // value, any manual grade already given belongs to the *old* value and
-    // must not silently carry over onto the new one.
+    // The admin can grade audio/youtube answers (the remaining non-auto-
+    // graded types) as soon as they land (grade() has no status gate — see
+    // control's "Grade Questions" panel), well before the block locks. A
+    // team can then revise its answer (last-write-wins, allowed until lock)
+    // — if that revision changes the value, any manual grade already given
+    // belongs to the *old* value and must not silently carry over onto the
+    // new one. Auto-graded types (including free_text) skip this entirely:
+    // every resubmission is just re-graded against its new value below.
     const existing = await this.answers.findOne(
       { gameSession: gameSessionId, question: questionId, team: teamId },
       { fields: ['value'] },
