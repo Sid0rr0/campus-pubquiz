@@ -3,7 +3,7 @@ import type { ImportRoundPreview } from '@campus-pubquiz/types';
 import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
 
 const HEADER =
-  'round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after';
+  'round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author';
 const BOM = '﻿';
 
 function roundOf(
@@ -39,7 +39,7 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'General Knowledge,free_text,What is the capital of France?,,Paris,1,,,,',
+      'General Knowledge,free_text,What is the capital of France?,,Paris,1,,,,,,',
     ]);
   });
 
@@ -59,7 +59,7 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'Round 1,multiple_choice,Red planet?,Mars|Venus|Jupiter,Mars,2,,,,',
+      'Round 1,multiple_choice,Red planet?,Mars|Venus|Jupiter,Mars,2,,,,,,',
     ]);
   });
 
@@ -79,7 +79,7 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'Round 1,sort,Oldest first,Inception|Jaws|Titanic,Jaws|Titanic|Inception,3,,,,',
+      'Round 1,sort,Oldest first,Inception|Jaws|Titanic,Jaws|Titanic|Inception,3,,,,,,',
     ]);
   });
 
@@ -101,7 +101,7 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'Round 1,match,Capitals,Paris|Tokyo|Cairo+Japan|Egypt|France,Paris+France|Tokyo+Japan|Cairo+Egypt,3,,,,',
+      'Round 1,match,Capitals,Paris|Tokyo|Cairo+Japan|Egypt|France,Paris+France|Tokyo+Japan|Cairo+Egypt,3,,,,,,',
     ]);
   });
 
@@ -123,7 +123,7 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'Round 1,youtube,Which movie?,,Sample,2,https://youtu.be/dQw4w9WgXcQ,https://example.com/poster.jpg,jot,',
+      'Round 1,youtube,Which movie?,,Sample,2,https://youtu.be/dQw4w9WgXcQ,https://example.com/poster.jpg,jot,,,',
     ]);
   });
 
@@ -145,7 +145,7 @@ describe('quizToCsv', () => {
 
     expect(csv.replace(BOM, '')).toBe(
       `${HEADER}\r\n` +
-        '"Music, Movies",free_text,"Which band released ""Abbey Road""?\nName them.",,The Beatles,1,,,"{start: ""55"", end: ""88""}",',
+        '"Music, Movies",free_text,"Which band released ""Abbey Road""?\nName them.",,The Beatles,1,,,"{start: ""55"", end: ""88""}",,,',
     );
   });
 
@@ -172,9 +172,9 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'A,free_text,q1,,a,1,,,,',
-      'A,free_text,q2,,a,1,,,,1',
-      'B,free_text,q3,,a,1,,,,',
+      'A,free_text,q1,,a,1,,,,,,',
+      'A,free_text,q2,,a,1,,,,1,,',
+      'B,free_text,q3,,a,1,,,,,,',
     ]);
   });
 

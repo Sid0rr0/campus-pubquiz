@@ -171,10 +171,18 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
+  /** Category/topic of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
+  roundCategory: string;
+  /** Author of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
+  roundAuthor: string;
   /** Whether the round at `progress.roundIndex` has kahootMode set — drives /display's top-5-only leaderboard while it's active. */
   isCurrentRoundKahoot: boolean;
   /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
   roundTitles: string[];
+  /** Category of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
+  roundCategories: string[];
+  /** Author of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
+  roundAuthors: string[];
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the

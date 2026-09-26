@@ -33,6 +33,7 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { downloadTextFile } from '@/app/lib/download-text-file';
 import { queryKeys } from '@/app/lib/query-keys';
 import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
+import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   makeRound,
   mergeRoundsFromPreview,
@@ -54,6 +55,19 @@ const EMPTY_ISSUES: QuizDraftIssue[] = [];
 const EMPTY_LOCKED_QUESTION_IDS: ReadonlySet<number> = new Set();
 const SAVED_FLASH_MS = 1600;
 const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
+const LIVE_EDIT_CONFLICT_MESSAGE =
+  'Someone advanced the live session while you were editing — refresh to see what changed, then try again.';
+
+/** The message shown for a rejected save, both in the toast fired from `onError` and in the persisted banner rendered from `saveMutation.error`. */
+function saveErrorMessage(error: unknown): string {
+  if (error instanceof QuizDraftApiError && error.status === 409) {
+    return LIVE_EDIT_CONFLICT_MESSAGE;
+  }
+  return (
+    apiErrorMessage(error, QuizDraftApiError, 'Could not save the quiz.') ??
+    'Could not save the quiz.'
+  );
+}
 
 function issueLabel(issue: QuizDraftIssue): string {
   if (issue.roundIndex === -1) return `Quiz (${issue.field}): ${issue.message}`;
@@ -279,21 +293,27 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       toast.success('Quiz saved');
       void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
     },
+    onError: (error) => {
+      const issueCount =
+        error instanceof QuizDraftApiError ? error.issues.length : 0;
+      toast.error(
+        issueCount > 0
+          ? `${saveErrorMessage(error)} (${issueCount} issue${issueCount === 1 ? '' : 's'} — see below)`
+          : saveErrorMessage(error),
+      );
+    },
   });
   const isLiveEditConflict =
     saveMutation.error instanceof QuizDraftApiError &&
     saveMutation.error.status === 409;
-  const saveError = isLiveEditConflict
-    ? 'Someone advanced the live session while you were editing — refresh to see what changed, then try again.'
-    : apiErrorMessage(
-        saveMutation.error,
-        QuizDraftApiError,
-        'Could not save the quiz.',
-      );
+  const saveError = saveMutation.error
+    ? saveErrorMessage(saveMutation.error)
+    : null;
   const saveIssues =
     saveMutation.error instanceof QuizDraftApiError
       ? saveMutation.error.issues
       : EMPTY_ISSUES;
+  const quizLevelIssues = saveIssues.filter((issue) => issue.roundIndex === -1);
 
   function handleSave(): void {
     saveMutation.mutate(toSaveRequest(quizTitle, rounds));
@@ -399,12 +419,15 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 bg-foreground px-5 py-4 text-background">
-        <input
-          value={quizTitle}
-          onChange={(event) => setQuizTitle(event.target.value)}
-          placeholder="Untitled quiz"
-          className="min-w-48 flex-1 border-b-2 border-background/40 bg-transparent px-1 py-1 font-display text-xl text-background outline-none"
-        />
+        <div className="flex min-w-48 flex-1 flex-col gap-0.5">
+          <input
+            value={quizTitle}
+            onChange={(event) => setQuizTitle(event.target.value)}
+            placeholder="Untitled quiz"
+            className="w-full border-b-2 border-background/40 bg-transparent px-1 py-1 font-display text-xl text-background outline-none"
+          />
+          <FieldErrors issues={fieldIssues(quizLevelIssues, 'title')} />
+        </div>
         <span className="whitespace-nowrap text-xs font-bold text-background/60">
           {rounds.length} round{rounds.length === 1 ? '' : 's'} ·{' '}
           {questionCount} question
@@ -519,28 +542,53 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
 
       {isLive && (
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
-          A session is live on this quiz — only upcoming questions can be
-          edited, and rounds/questions can&apos;t be added, removed, or
-          reordered.
+          A session is live on this quiz — questions can still be edited, but
+          already-shown ones keep their type and choices, and rounds/questions
+          can&apos;t be added, removed, or reordered. Correcting a shown
+          question&apos;s answer or points re-scores its auto-graded answers.
         </p>
       )}
 
       <div className="mx-auto flex max-w-6xl gap-6 px-5 py-6">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          {rounds.map((round, index) => (
-            <QuizRoundEditor
-              key={round.id}
-              round={round}
-              isFirst={index === 0}
-              isLast={index === rounds.length - 1}
-              isLive={isLive}
-              lockedQuestionIds={lockedQuestionIds}
-              onChange={(patch) => updateRound(round.id, patch)}
-              onDelete={() => deleteRound(round.id)}
-              onMoveUp={() => moveRound(round.id, -1)}
-              onMoveDown={() => moveRound(round.id, 1)}
-            />
-          ))}
+          {rounds.map((round, index) => {
+            const isLast = index === rounds.length - 1;
+            return (
+              <div key={round.id} className="flex flex-col gap-4">
+                <QuizRoundEditor
+                  round={round}
+                  index={index}
+                  isFirst={index === 0}
+                  isLast={isLast}
+                  isLive={isLive}
+                  lockedQuestionIds={lockedQuestionIds}
+                  issues={saveIssues.filter(
+                    (issue) => issue.roundIndex === index,
+                  )}
+                  onChange={(patch) => updateRound(round.id, patch)}
+                  onDelete={() => deleteRound(round.id)}
+                  onMoveUp={() => moveRound(round.id, -1)}
+                  onMoveDown={() => moveRound(round.id, 1)}
+                />
+                {!isLast &&
+                  (round.breakAfter ? (
+                    <div
+                      role="separator"
+                      className="flex items-center gap-4 py-2"
+                    >
+                      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
+                      <span className="shrink-0 rounded-full bg-magenta px-5 py-2 text-sm font-extrabold uppercase tracking-wide text-white">
+                        Break
+                      </span>
+                      <div className="h-1 flex-1 rounded-full bg-magenta/30" />
+                    </div>
+                  ) : (
+                    <div role="separator" className="h-1 bg-foreground" />
+                  ))}
+              </div>
+            );
+          })}
+          <FieldErrors issues={fieldIssues(quizLevelIssues, 'rounds')} />
           <Button
             type="button"
             onClick={addRound}

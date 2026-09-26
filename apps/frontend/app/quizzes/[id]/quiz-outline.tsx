@@ -21,6 +21,8 @@ import type {
   EditorQuestion,
   EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
+import { questionAnchorId } from '@/app/quizzes/[id]/quiz-question-editor';
+import { roundAnchorId } from '@/app/quizzes/[id]/quiz-round-editor';
 
 interface QuizOutlineProps {
   rounds: EditorRound[];
@@ -63,6 +65,12 @@ function OutlineQuestionRow({
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: question.id, disabled: isLive });
 
+  function handleJumpToQuestion(): void {
+    document
+      .getElementById(questionAnchorId(question.id))
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <li
       ref={setNodeRef}
@@ -80,7 +88,14 @@ function OutlineQuestionRow({
         <DragHandleDots2Icon aria-hidden="true" />
       </button>
       <span className="shrink-0 text-foreground/40">{index + 1}.</span>
-      <span className="truncate">{questionPreview(question.prompt)}</span>
+      <button
+        type="button"
+        onClick={handleJumpToQuestion}
+        aria-label={`Jump to question ${index + 1}, ${questionPreview(question.prompt)}`}
+        className="min-w-0 flex-1 truncate text-left hover:text-magenta hover:underline"
+      >
+        {questionPreview(question.prompt)}
+      </button>
     </li>
   );
 }
@@ -117,6 +132,12 @@ function OutlineRoundRow({
     onReorderQuestions(round.id, reordered);
   }
 
+  function handleJumpToRound(): void {
+    document
+      .getElementById(roundAnchorId(round.id))
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <li
       ref={setNodeRef}
@@ -134,9 +155,14 @@ function OutlineRoundRow({
         >
           <DragHandleDots2Icon aria-hidden="true" />
         </button>
-        <span className="truncate font-display text-xs text-foreground">
+        <button
+          type="button"
+          onClick={handleJumpToRound}
+          aria-label={`Jump to round ${index + 1}, ${round.title.trim() || 'Untitled round'}`}
+          className="min-w-0 flex-1 truncate text-left font-display text-xs text-foreground hover:text-magenta hover:underline"
+        >
           {index + 1}. {round.title.trim() || 'Untitled round'}
-        </span>
+        </button>
       </div>
       {round.questions.length > 0 && (
         <DndContext

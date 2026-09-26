@@ -1,5 +1,8 @@
 import type { ImportRoundPreview } from '@campus-pubquiz/types';
-import { findLiveEditViolations } from '@/quiz/live-edit-guard';
+import {
+  findLiveEditViolations,
+  findRegradeQuestionIds,
+} from '@/quiz/live-edit-guard';
 
 function round(
   overrides: Partial<ImportRoundPreview> = {},
@@ -168,7 +171,7 @@ describe('findLiveEditViolations', () => {
     expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
   });
 
-  it('rejects each individually-diffed field on a locked question', () => {
+  it('allows fixing the prompt, answer, points, notes and media of a locked question', () => {
     const current = [round()];
     const incoming = [
       round({
@@ -176,9 +179,12 @@ describe('findLiveEditViolations', () => {
           {
             questionId: 1,
             type: 'free_text',
-            prompt: 'Different prompt',
-            answer: 'Different answer',
-            points: 99,
+            prompt: 'Corrected Q1',
+            answer: 'Corrected A1',
+            points: 5,
+            notes: 'accept spelling variants',
+            mediaUrl: 'https://example.com/q1.png',
+            answerMediaUrl: 'https://example.com/a1.png',
           },
           {
             questionId: 2,
@@ -191,25 +197,51 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
+    expect(findLiveEditViolations(current, incoming, [1])).toEqual([]);
+  });
+
+  it('rejects changing the type or choices of a locked question', () => {
+    const current = [
+      round({
+        questions: [
+          {
+            questionId: 1,
+            type: 'match',
+            prompt: 'Match them',
+            answer: 'x|y',
+            points: 2,
+            options: ['a', 'b'],
+            matchTargets: ['y', 'x'],
+          },
+        ],
+      }),
+    ];
+    const incoming = [
+      round({
+        questions: [
+          {
+            questionId: 1,
+            type: 'sort',
+            prompt: 'Match them',
+            answer: 'x|y',
+            points: 2,
+            options: ['a', 'c'],
+            matchTargets: ['y', 'z'],
+          },
+        ],
+      }),
+    ];
+
     const issues = findLiveEditViolations(current, incoming, [1]);
 
-    expect(issues).toEqual([
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: 0,
-        field: 'prompt',
-      }),
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: 0,
-        field: 'answer',
-      }),
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: 0,
-        field: 'points',
-      }),
+    expect(issues.map((issue) => issue.field)).toEqual([
+      'type',
+      'options',
+      'matchTargets',
     ]);
+    expect(issues[0]).toEqual(
+      expect.objectContaining({ roundIndex: 0, questionIndex: 0 }),
+    );
   });
 
   it('allows editing a question that is unlocked here even if it would be locked elsewhere', () => {
@@ -236,5 +268,51 @@ describe('findLiveEditViolations', () => {
     ];
 
     expect(findLiveEditViolations(current, incoming, [1])).toEqual([]);
+  });
+});
+
+describe('findRegradeQuestionIds', () => {
+  function withFirstQuestion(
+    overrides: Partial<ImportRoundPreview['questions'][number]>,
+  ): ImportRoundPreview[] {
+    const base = round();
+    return [
+      {
+        ...base,
+        questions: [{ ...base.questions[0], ...overrides }, base.questions[1]],
+      },
+    ];
+  }
+
+  it('returns a locked question whose answer changed', () => {
+    expect(
+      findRegradeQuestionIds(
+        [round()],
+        withFirstQuestion({ answer: 'B' }),
+        [1],
+      ),
+    ).toEqual([1]);
+  });
+
+  it('returns a locked question whose points changed', () => {
+    expect(
+      findRegradeQuestionIds([round()], withFirstQuestion({ points: 3 }), [1]),
+    ).toEqual([1]);
+  });
+
+  it('ignores a locked question whose grading inputs are unchanged', () => {
+    expect(
+      findRegradeQuestionIds(
+        [round()],
+        withFirstQuestion({ prompt: 'Typo fixed' }),
+        [1],
+      ),
+    ).toEqual([]);
+  });
+
+  it('ignores an unlocked question even if its answer changed', () => {
+    expect(
+      findRegradeQuestionIds([round()], withFirstQuestion({ answer: 'B' }), []),
+    ).toEqual([]);
   });
 });

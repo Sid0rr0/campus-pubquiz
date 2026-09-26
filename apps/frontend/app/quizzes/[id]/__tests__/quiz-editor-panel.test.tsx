@@ -158,6 +158,25 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  it('labels each round and delimits every round, upgrading to a break divider once breakAfter is set', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /add round/i }));
+
+    expect(screen.getByText('Round 1')).toBeInTheDocument();
+    expect(screen.getByText('Round 2')).toBeInTheDocument();
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    expect(screen.queryByText('Break')).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByLabelText(/break after/i)[0]);
+
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    expect(screen.getByText('Break')).toBeInTheDocument();
+  });
+
   it('disables csv export until the quiz has a question', async () => {
     const user = userEvent.setup();
     renderWithQuery(<QuizEditorPanel quizId="new" />);
@@ -468,6 +487,50 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  it('saves category and author after picking a category and typing an author into the round editor', async () => {
+    const user = userEvent.setup();
+    mockCreateQuiz.mockResolvedValue({
+      quizId: 42,
+      roundCount: 1,
+      questionCount: 1,
+    });
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+
+    await user.type(
+      screen.getByPlaceholderText(/untitled quiz/i),
+      'Trivia Night',
+    );
+    await user.selectOptions(screen.getByLabelText(/category/i), 'Geography');
+    await user.type(
+      screen.getByPlaceholderText(/author \(optional\)/i),
+      'Alex',
+    );
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+    await user.type(
+      screen.getByPlaceholderText(/question prompt/i),
+      'Capital of France?',
+    );
+    const options = screen.getAllByPlaceholderText(/option text/i);
+    await user.type(options[0], 'Paris');
+    await user.type(options[1], 'London');
+    await user.click(screen.getAllByLabelText(/mark option 1 as correct/i)[0]);
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockCreateQuiz).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({ category: 'Geography', author: 'Alex' }),
+          ],
+        }),
+      ),
+    );
+  });
+
   it('updates an existing quiz in place and shows a saved flash', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({
@@ -605,7 +668,41 @@ describe('QuizEditorPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('disables locked question fields and structural controls while a session is live', async () => {
+  it('toasts the save failure and shows an inline error next to the offending field', async () => {
+    const user = userEvent.setup();
+    mockCreateQuiz.mockRejectedValue(
+      new QuizDraftApiError('Validation failed', 422, [
+        {
+          roundIndex: 0,
+          questionIndex: 0,
+          field: 'prompt',
+          message: 'Missing question text',
+        },
+      ]),
+    );
+    renderWithQuery(
+      <>
+        <QuizEditorPanel quizId="new" />
+        <Toaster />
+      </>,
+    );
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /add question/i }));
+
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    // The toast carries the issue count and is distinct from the persisted
+    // top-of-page banner, which shows the bare error message.
+    expect(await screen.findByText(/1 issue.*see below/i)).toBeInTheDocument();
+    // The message appears both in the top summary list and inline next to
+    // the question's prompt field.
+    const promptErrors = await screen.findAllByText(/missing question text/i);
+    expect(promptErrors.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('keeps an already-shown question fixable while locking its type, choices and the quiz structure', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
@@ -616,10 +713,11 @@ describe('QuizEditorPanel', () => {
           questions: [
             {
               questionId: 1,
-              type: 'free_text',
+              type: 'multiple_choice',
               prompt: 'Largest planet?',
-              answer: 'Jupiter',
+              answer: 'Saturn',
               points: 2,
+              options: ['Jupiter', 'Saturn'],
             },
           ],
         },
@@ -632,10 +730,17 @@ describe('QuizEditorPanel', () => {
     expect(
       await screen.findByText(/a session is live on this quiz/i),
     ).toBeInTheDocument();
+    expect(screen.getByText(/already shown/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/question prompt/i)).toBeEnabled();
+    expect(screen.getByLabelText(/points/i)).toBeEnabled();
     expect(
-      screen.getByText(/locked — already shown in the live session/i),
-    ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/question prompt/i)).toBeDisabled();
+      screen.getByRole('radio', { name: /mark option 1 as correct/i }),
+    ).toBeEnabled();
+    for (const optionInput of screen.getAllByPlaceholderText(/option text/i)) {
+      expect(optionInput).toBeDisabled();
+    }
+    expect(screen.getByRole('button', { name: /add option/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /free text/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /add round/i })).toBeDisabled();
     expect(
       screen.getByRole('button', { name: /add question/i }),

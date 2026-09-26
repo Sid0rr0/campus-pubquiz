@@ -253,13 +253,20 @@ export class GameGateway
   /**
    * Called by QuizController.update after persisting an in-place edit to a
    * quiz with a live session on it — reloads that session's in-memory
-   * question snapshot from the DB and rebroadcasts the full state, so
-   * /display, /control, and /play pick up the correction without needing a
-   * reconnect. No @CreateRequestContext() needed, same reasoning as
-   * notifyBonusAwardsChanged above.
+   * question snapshot from the DB, re-grades `regradeQuestionIds` (already-
+   * shown questions whose answer/points were corrected) against it, and
+   * rebroadcasts the full state, so /display, /control, and /play pick up
+   * the correction without needing a reconnect. No @CreateRequestContext()
+   * needed, same reasoning as notifyBonusAwardsChanged above.
    */
-  async notifyQuizEdited(joinCode: string): Promise<void> {
+  async notifyQuizEdited(
+    joinCode: string,
+    regradeQuestionIds: readonly number[] = [],
+  ): Promise<void> {
     await this.gameState.reloadActiveQuiz(joinCode);
+    if (regradeQuestionIds.length > 0) {
+      await this.gameState.regradeQuestions(joinCode, regradeQuestionIds);
+    }
     broadcastGameState(this.server, joinCode, this.gameState);
   }
 

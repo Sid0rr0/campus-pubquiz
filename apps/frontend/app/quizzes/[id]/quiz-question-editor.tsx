@@ -10,14 +10,21 @@ import {
 import {
   extractYoutubeVideoId,
   type QuestionType,
+  type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import { MediaUrlField } from '@/app/quizzes/[id]/media-url-field';
 import {
   makeMatchPair,
   makeOption,
   type EditorQuestion,
 } from '@/app/quizzes/[id]/quiz-draft-state';
+
+/** DOM id for the question's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-question button. */
+export function questionAnchorId(questionId: string): string {
+  return `question-${questionId}`;
+}
 
 interface QuizQuestionEditorProps {
   question: EditorQuestion;
@@ -26,13 +33,27 @@ interface QuizQuestionEditorProps {
   isLast: boolean;
   /** A session is live on this quiz — reordering/deleting any question is disabled regardless of lock state. */
   isLive: boolean;
-  /** This specific question is already shown/in progress in a live session — its fields are disabled. */
+  /** This specific question is already shown/in progress in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
   isLocked: boolean;
+  /** Validation issues from the last rejected save that apply to this question, shown next to the field each one names. */
+  issues: QuizDraftIssue[];
   onChange: (patch: Partial<EditorQuestion>) => void;
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
 }
+
+/** Fields rendered with their own inline `FieldErrors` below — anything else lands in the catch-all at the bottom of the card so an issue never goes unseen. */
+const PLACED_ISSUE_FIELDS = new Set([
+  'prompt',
+  'points',
+  'answer',
+  'options',
+  'matchTargets',
+  'mediaUrl',
+  'answerMediaUrl',
+  'type',
+]);
 
 const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'multiple_choice', label: 'Multiple choice' },
@@ -91,11 +112,15 @@ export function QuizQuestionEditor({
   isLast,
   isLive,
   isLocked,
+  issues,
   onChange,
   onDelete,
   onMoveUp,
   onMoveDown,
 }: QuizQuestionEditorProps) {
+  const otherIssues = issues.filter(
+    (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
+  );
   const isMc = question.type === 'multiple_choice';
   const isSort = question.type === 'sort';
   const isMatch = question.type === 'match';
@@ -202,7 +227,10 @@ export function QuizQuestionEditor({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-foreground/10 p-4">
+    <div
+      id={questionAnchorId(question.id)}
+      className="scroll-mt-28 flex flex-col gap-3 rounded-2xl border border-foreground/10 p-4"
+    >
       <div className="flex items-start gap-3">
         <span className="mt-1 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-cyan text-xs font-extrabold text-white">
           {index + 1}
@@ -210,7 +238,6 @@ export function QuizQuestionEditor({
         <textarea
           value={question.prompt}
           onChange={(event) => onChange({ prompt: event.target.value })}
-          disabled={isLocked}
           placeholder="Question prompt"
           rows={2}
           className="min-w-0 flex-1 resize-y rounded-lg border-2 border-foreground/25 px-3 py-2 text-sm font-bold text-foreground disabled:opacity-50"
@@ -249,10 +276,12 @@ export function QuizQuestionEditor({
           <TrashIcon aria-hidden="true" />
         </Button>
       </div>
+      <FieldErrors issues={fieldIssues(issues, 'prompt')} />
 
       {isLocked && (
         <p className="text-xs font-extrabold text-magenta">
-          Locked — already shown in the live session
+          Already shown — its type and choices are fixed; changing the answer or
+          points re-scores auto-graded answers
         </p>
       )}
 
@@ -278,11 +307,12 @@ export function QuizQuestionEditor({
             onChange={(event) =>
               onChange({ points: Number(event.target.value) || 0 })
             }
-            disabled={isLocked}
             className="w-16 rounded-lg border-2 border-foreground/25 px-2 py-1 text-sm font-extrabold text-foreground disabled:opacity-50"
           />
         </label>
       </div>
+      <FieldErrors issues={fieldIssues(issues, 'type')} />
+      <FieldErrors issues={fieldIssues(issues, 'points')} />
 
       {isMc ? (
         <div className="flex flex-col gap-2">
@@ -294,7 +324,6 @@ export function QuizQuestionEditor({
                   type="radio"
                   checked={option.isCorrect}
                   onChange={() => setCorrectOption(optionIndex)}
-                  disabled={isLocked}
                   aria-label={`Mark option ${optionIndex + 1} as correct`}
                   className="h-4 w-4 accent-green"
                 />
@@ -328,6 +357,8 @@ export function QuizQuestionEditor({
               Options must be unique
             </p>
           )}
+          <FieldErrors issues={fieldIssues(issues, 'options')} />
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
           <Button
             type="button"
             onClick={addOption}
@@ -362,7 +393,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, -1)}
-                disabled={isLocked || itemIndex === 0}
+                disabled={itemIndex === 0}
                 variant="icon"
                 size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} up`}
@@ -372,9 +403,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => moveSortItem(itemIndex, 1)}
-                disabled={
-                  isLocked || itemIndex === question.sortItems.length - 1
-                }
+                disabled={itemIndex === question.sortItems.length - 1}
                 variant="icon"
                 size="icon-sm"
                 aria-label={`Move item ${itemIndex + 1} down`}
@@ -393,6 +422,8 @@ export function QuizQuestionEditor({
               </Button>
             </div>
           ))}
+          <FieldErrors issues={fieldIssues(issues, 'options')} />
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
           <Button
             type="button"
             onClick={addSortItem}
@@ -429,7 +460,6 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateMatchPair(pairIndex, 'right', event.target.value)
                 }
-                disabled={isLocked}
                 placeholder="Right item"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
@@ -456,39 +486,50 @@ export function QuizQuestionEditor({
             <PlusIcon aria-hidden="true" />
             Add pair
           </Button>
+          <FieldErrors issues={fieldIssues(issues, 'options')} />
+          <FieldErrors issues={fieldIssues(issues, 'matchTargets')} />
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
         </div>
       ) : (
-        <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
-          Correct answer
-          <input
-            type={question.type === 'closest_guess' ? 'number' : 'text'}
-            value={question.correctText}
-            onChange={(event) => onChange({ correctText: event.target.value })}
-            disabled={isLocked}
-            placeholder="Accepted answer"
-            className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-          />
+        <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
+          <span className="flex items-center gap-2">
+            Correct answer
+            <input
+              type={question.type === 'closest_guess' ? 'number' : 'text'}
+              value={question.correctText}
+              onChange={(event) =>
+                onChange({ correctText: event.target.value })
+              }
+              placeholder="Accepted answer"
+              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+            />
+          </span>
+          <FieldErrors issues={fieldIssues(issues, 'answer')} />
         </label>
       )}
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <MediaUrlField
-          label="Media URL"
-          isRequired={needsMediaUrl}
-          value={question.mediaUrl}
-          onChange={(mediaUrl) => onChange({ mediaUrl })}
-          disabled={isLocked}
-          placeholder={
-            question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
-          }
-        />
-        <MediaUrlField
-          label="Answer media URL"
-          value={question.answerMediaUrl}
-          onChange={(answerMediaUrl) => onChange({ answerMediaUrl })}
-          disabled={isLocked}
-          placeholder="https://…"
-        />
+        <div className="flex flex-col gap-1">
+          <MediaUrlField
+            label="Media URL"
+            isRequired={needsMediaUrl}
+            value={question.mediaUrl}
+            onChange={(mediaUrl) => onChange({ mediaUrl })}
+            placeholder={
+              question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
+            }
+          />
+          <FieldErrors issues={fieldIssues(issues, 'mediaUrl')} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <MediaUrlField
+            label="Answer media URL"
+            value={question.answerMediaUrl}
+            onChange={(answerMediaUrl) => onChange({ answerMediaUrl })}
+            placeholder="https://…"
+          />
+          <FieldErrors issues={fieldIssues(issues, 'answerMediaUrl')} />
+        </div>
       </div>
 
       {isYoutubeMedia && (
@@ -498,7 +539,6 @@ export function QuizQuestionEditor({
             <input
               value={clipStart}
               onChange={(event) => updateClip(event.target.value, clipEnd)}
-              disabled={isLocked}
               placeholder="1:22"
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
@@ -508,7 +548,6 @@ export function QuizQuestionEditor({
             <input
               value={clipEnd}
               onChange={(event) => updateClip(clipStart, event.target.value)}
-              disabled={isLocked}
               placeholder="2:20"
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
@@ -529,11 +568,11 @@ export function QuizQuestionEditor({
               ),
             })
           }
-          disabled={isLocked}
           rows={1}
           className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         />
       </label>
+      <FieldErrors issues={otherIssues} />
     </div>
   );
 }

@@ -347,7 +347,8 @@ export function createFakeAnswerService() {
     gradeClosestGuess: jest.fn().mockResolvedValue([]),
     // Irrelevant to every fixture without a kahootMode round — exercised
     // only by kahoot-focused tests, which assert on the call directly.
-    applyKahootSpeedScoring: jest.fn().mockResolvedValue(undefined),
+    applyKahootSpeedScoring: jest.fn().mockResolvedValue({}),
+    regradeAutoGraded: jest.fn().mockResolvedValue(undefined),
     computeLeaderboard: jest.fn().mockResolvedValue([
       {
         teamId: 31,

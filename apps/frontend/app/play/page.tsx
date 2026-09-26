@@ -31,6 +31,8 @@ function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get('code') ?? '';
+  const teamCodeFromUrl = searchParams.get('teamCode') ?? '';
+  const nameFromUrl = searchParams.get('name') ?? '';
   const {
     teamName,
     nameInput,
@@ -53,7 +55,7 @@ function PlayPageContent() {
     seenQuestions = {},
     handleJoin,
     handleLogOut,
-  } = useTeamJoin(codeFromUrl);
+  } = useTeamJoin(codeFromUrl, teamCodeFromUrl, nameFromUrl);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Stable reference (like handleLogOut) so the publish effect below doesn't
   // re-fire on every unrelated re-render.

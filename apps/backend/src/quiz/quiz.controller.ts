@@ -28,6 +28,7 @@ import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/state/game-state.service';
 import {
   findLiveEditViolations,
+  findRegradeQuestionIds,
   QuizLiveEditBlockedError,
 } from '@/quiz/live-edit-guard';
 import {
@@ -91,14 +92,15 @@ export class QuizController {
   ): Promise<QuizDraftSaveResult> {
     try {
       const liveJoinCodes = this.getLiveSessionJoinCodes(id);
-      if (liveJoinCodes.length > 0) {
-        await this.assertNoLiveEditViolations(id, body, liveJoinCodes);
-      }
+      const regradeQuestionIds =
+        liveJoinCodes.length > 0
+          ? await this.checkLiveEdit(id, body, liveJoinCodes)
+          : [];
 
       const result = await this.quizService.update(id, body.title, body.rounds);
 
       for (const joinCode of liveJoinCodes) {
-        await this.gameGateway.notifyQuizEdited(joinCode);
+        await this.gameGateway.notifyQuizEdited(joinCode, regradeQuestionIds);
       }
 
       return result;
@@ -124,13 +126,19 @@ export class QuizController {
     }
   }
 
-  private async assertNoLiveEditViolations(
+  /**
+   * Rejects a save that would break a live session (see
+   * findLiveEditViolations), otherwise returns the already-shown questions
+   * whose answer/points changed — each live session re-grades those after
+   * the save lands.
+   */
+  private async checkLiveEdit(
     quizId: number,
     body: QuizDraftSaveRequest,
     liveJoinCodes: string[],
-  ): Promise<void> {
+  ): Promise<number[]> {
     const currentDraft = await this.quizService.findDraftById(quizId);
-    if (!currentDraft) return; // quizService.update below reports the 404
+    if (!currentDraft) return []; // quizService.update below reports the 404
 
     const lockedQuestionIds = this.getLockedQuestionIds(liveJoinCodes);
     const issues = findLiveEditViolations(
@@ -141,6 +149,11 @@ export class QuizController {
     if (issues.length > 0) {
       throw new QuizLiveEditBlockedError(issues);
     }
+    return findRegradeQuestionIds(
+      currentDraft.rounds,
+      body.rounds,
+      lockedQuestionIds,
+    );
   }
 
   /** Join codes of every currently-running session on `quizId` — lobby/ended sessions can't be broken by an editor save, so they're excluded. */

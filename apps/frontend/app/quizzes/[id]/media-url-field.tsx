@@ -13,7 +13,7 @@ interface MediaUrlFieldProps {
   label: string;
   value: string;
   placeholder: string;
-  disabled: boolean;
+  disabled?: boolean;
   isRequired?: boolean;
   onChange: (url: string) => void;
 }
@@ -28,7 +28,7 @@ export function MediaUrlField({
   label,
   value,
   placeholder,
-  disabled,
+  disabled = false,
   isRequired = false,
   onChange,
 }: MediaUrlFieldProps) {

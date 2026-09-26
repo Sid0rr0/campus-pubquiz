@@ -21,7 +21,8 @@ interface EditorMatchPair {
  * `multiple_choice`; `sortItems` (entered in *correct* order) for `sort`;
  * `matchPairs` for `match`; `correctText` holds the answer for the remaining
  * types. Saving shuffles `sortItems`/the right side of `matchPairs` into a
- * fresh display order — see questionToPreview.
+ * fresh display order unless `savedDisplayOrder` still holds the same items
+ * — see questionToPreview.
  */
 export interface EditorQuestion {
   id: string;
@@ -37,6 +38,8 @@ export interface EditorQuestion {
   correctText: string;
   mediaUrl: string;
   answerMediaUrl: string;
+  /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an already-shown question). */
+  savedDisplayOrder?: string[];
 }
 
 export interface EditorRound {
@@ -45,6 +48,10 @@ export interface EditorRound {
   breakAfter: boolean;
   /** See RoundConfig.kahootMode — only settable here, never via CSV/Sheets import. */
   kahootMode: boolean;
+  /** Round topic/theme — one of ROUND_CATEGORIES, or '' meaning unset. Picked from a fixed `<select>` in the editor. */
+  category: string;
+  /** Who wrote this round's questions — optional, blank string means unset. */
+  author: string;
   questions: EditorQuestion[];
 }
 
@@ -83,8 +90,32 @@ function shuffled<T>(items: T[]): T[] {
   return copy;
 }
 
+function hasSameItems(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedB = [...b].sort();
+  return [...a].sort().every((item, index) => item === sortedB[index]);
+}
+
+/** Keeps the last-saved display order while it still holds exactly `items`; otherwise picks a fresh shuffle. */
+function displayOrderFor(
+  items: string[],
+  savedDisplayOrder: string[] | undefined,
+): string[] {
+  return savedDisplayOrder && hasSameItems(items, savedDisplayOrder)
+    ? [...savedDisplayOrder]
+    : shuffled(items);
+}
+
 export function makeRound(id: string, title = ''): EditorRound {
-  return { id, title, breakAfter: false, kahootMode: false, questions: [] };
+  return {
+    id,
+    title,
+    breakAfter: false,
+    kahootMode: false,
+    category: '',
+    author: '',
+    questions: [],
+  };
 }
 
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
@@ -96,9 +127,14 @@ export function questionFromPreview(
   const isSort = question.type === 'sort';
   const isMatch = question.type === 'match';
   // sortItems/matchPairs reconstruct from `answer` (the correct order/pairing),
-  // not `options`/`matchTargets` (the display order) — re-saving picks a fresh
-  // display shuffle, same as a freshly authored question.
+  // not `options`/`matchTargets` (the display order) — that display order is
+  // kept aside in savedDisplayOrder so re-saving doesn't reshuffle it.
   const answerItems = isSort || isMatch ? splitPipeList(question.answer) : [];
+  const savedDisplayOrder = isSort
+    ? question.options
+    : isMatch
+      ? question.matchTargets
+      : undefined;
   return {
     id,
     ...(question.questionId !== undefined ? { dbId: question.questionId } : {}),
@@ -123,6 +159,7 @@ export function questionFromPreview(
     correctText: isMc || isSort || isMatch ? '' : question.answer,
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
+    ...(savedDisplayOrder ? { savedDisplayOrder: [...savedDisplayOrder] } : {}),
   };
 }
 
@@ -138,6 +175,8 @@ export function roundFromPreview(
     // CSV/Sheets previews never carry kahootMode — it's only ever set by
     // editing the round afterward in the manual editor.
     kahootMode: round.kahootMode ?? false,
+    category: round.category ?? '',
+    author: round.author ?? '',
     questions: round.questions.map((question, index) =>
       questionFromPreview(makeQuestionId(index), question),
     ),
@@ -151,7 +190,7 @@ export function roundFromPreview(
  * title matches an existing round (case/whitespace-insensitive) has its
  * questions appended to that round; every other preview round is added as a
  * brand-new round at the end. Existing rounds' own settings (breakAfter,
- * kahootMode) are left untouched by a match.
+ * kahootMode, category, author) are left untouched by a match.
  */
 export function mergeRoundsFromPreview(
   currentRounds: EditorRound[],
@@ -218,11 +257,16 @@ export function questionToPreview(
             .filter((text) => text !== ''),
         }
       : {}),
-    ...(isSort ? { options: shuffled(sortItems) } : {}),
+    ...(isSort
+      ? { options: displayOrderFor(sortItems, question.savedDisplayOrder) }
+      : {}),
     ...(isMatch
       ? {
           options: matchPairs.map((pair) => pair.left),
-          matchTargets: shuffled(matchPairs.map((pair) => pair.right)),
+          matchTargets: displayOrderFor(
+            matchPairs.map((pair) => pair.right),
+            question.savedDisplayOrder,
+          ),
         }
       : {}),
     ...(mediaUrl ? { mediaUrl } : {}),
@@ -271,6 +315,8 @@ export function toSaveRequest(
       // forceLastRoundBreak, which enforces this again server-side.
       breakAfter: index === rounds.length - 1 ? true : round.breakAfter,
       kahootMode: round.kahootMode,
+      ...(round.category.trim() ? { category: round.category.trim() } : {}),
+      ...(round.author.trim() ? { author: round.author.trim() } : {}),
       questions: round.questions.map(questionToPreview),
     })),
   };

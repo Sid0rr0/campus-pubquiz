@@ -19,6 +19,8 @@ describe('parseQuestionRow - multiple choice and common fields', () => {
       ok: true,
       roundTitle: 'Round 1',
       roundBreakAfter: false,
+      roundCategory: '',
+      roundAuthor: '',
       question: {
         type: 'multiple_choice',
         prompt: 'Capital of France?',

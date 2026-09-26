@@ -8,3 +8,4 @@ export * from './quiz-draft';
 export * from './youtube';
 export * from './sort-match';
 export * from './media';
+export * from './round-category';

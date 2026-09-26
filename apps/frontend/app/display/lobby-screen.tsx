@@ -18,7 +18,7 @@ export function LobbyScreen({
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
       <TeamRoster teams={teams} />
-      <h1 className="font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
+      <h1 className="font-display text-display-4xl">
         Waiting for the quiz to start…
       </h1>
       {joinCode && (
@@ -30,15 +30,15 @@ export function LobbyScreen({
               size={QR_SIZE_PX}
             />
           </div>
-          <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
+          <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
             SCAN TO JOIN — OR GO TO /PLAY AND FIND A GAME WITH THE CODE
           </p>
           <p className="flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center">
-            <span className="font-display text-[calc(1.25rem*var(--display-text-scale,1))] tracking-widest text-magenta wrap-break-word">
+            <span className="font-display text-display-xl tracking-widest text-magenta wrap-break-word">
               {joinCode}
             </span>
           </p>
-          <p className="text-[calc(1.5rem*var(--display-text-scale,1))] font-semibold">
+          <p className="text-display-2xl font-semibold">
             Make teams of up to {maxPlayersPerTeam} players, only one device
             connects per team.
           </p>

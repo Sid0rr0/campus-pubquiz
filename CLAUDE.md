@@ -45,15 +45,15 @@ Only admin actions advance the state. Clients in three rooms (`display`, `admin`
 
 `QuestionType` (`shared/types`) is the single source of truth — seven types, each with different grading:
 
-- **`free_text`** — any typed answer. Always human-graded by the admin during `break`; there's no auto-match to fall back to.
+- **`free_text`** — any typed answer. Auto-graded at `SUBMIT_ANSWER` time against the stored answer, compared trimmed and case-insensitively (so "Paris"/" paris "/"PARIS" all match) — not tied to fixed `options` the way `multiple_choice` is, so it can't be exact-match case-sensitive the way that type is.
 - **`multiple_choice`** — pick one of `options`. Auto-graded at `SUBMIT_ANSWER` time by exact match against the stored answer.
-- **`audio`** — an audio `mediaUrl` plays on `/display`; the question itself can be any answer style but is treated like `free_text` for grading (human-graded).
-- **`youtube`** — a YouTube `mediaUrl`, optionally clipped to `mediaStartSeconds`/`mediaEndSeconds` (derived from the CSV `notes` column). Human-graded like `free_text`.
+- **`audio`** — an audio `mediaUrl` plays on `/display`; the question itself can be any answer style but is human-graded, same as `youtube`.
+- **`youtube`** — a YouTube `mediaUrl`, optionally clipped to `mediaStartSeconds`/`mediaEndSeconds` (derived from the CSV `notes` column). Human-graded, same as `audio`.
 - **`sort`** — teams reorder `options` into what they think is the correct order; graded by exact match against the pipe-joined correct order, at submit time.
 - **`match`** — teams pair `options` (left) with `matchTargets` (right); graded at submit time by comparing the pipe-joined submitted pairing against the correct one position-by-position, awarding partial credit per correctly matched pair (question points split evenly across pairs and rounded, e.g. 4 points/4 pairs with 1 correct → 1 point).
 - **`closest_guess`** — teams submit a number; the correct answer is numeric. Unlike every other type this can't be graded per-answer as it arrives — it's graded in one batch (`gradeClosestGuess`) once the question locks, comparing every team's guess by distance from the target. Every team tied for smallest distance gets full points, no partial credit; everyone else gets zero.
 
-`multiple_choice`/`sort`/`match` are auto-graded (`AUTO_GRADED_TYPES` in `answer.service.ts`), and the admin can still override any of them per answer during `break` (notably `match`, to adjust its per-pair partial credit); `free_text`/`audio`/`youtube` need the admin's judgment; `closest_guess` is auto-graded but deferred to a batch pass and is the one type that can't be overridden per answer (`AnswerService.grade` rejects it). Any type can carry `mediaUrl`/`answerMediaUrl` — image vs. audio vs. YouTube is inferred from the URL, not tied to a specific type (there is deliberately no dedicated `picture` type).
+`multiple_choice`/`sort`/`match`/`free_text` are auto-graded (`AUTO_GRADED_TYPES` in `answer.service.ts`), and the admin can still override any of them per answer during `break` (notably `match`, to adjust its per-pair partial credit, or `free_text`, for an answer the exact-match missed — a synonym, a typo the admin wants to accept); `audio`/`youtube` need the admin's judgment; `closest_guess` is auto-graded but deferred to a batch pass and is the one type that can't be overridden per answer (`AnswerService.grade` rejects it). Any type can carry `mediaUrl`/`answerMediaUrl` — image vs. audio vs. YouTube is inferred from the URL, not tied to a specific type (there is deliberately no dedicated `picture` type).
 
 ### Question import: Google Sheets → CSV
 
@@ -91,6 +91,7 @@ One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz 
 - **JSON payload column** — flexible for new question types; requires per-type Zod validation at import time or crashes will happen live on stage.
 - **Last-write-wins answers** — teams can revise until question locks. This is the desired pub-quiz behavior.
 - **localStorage tokens** — private browsing or cleared storage loses team identity (this now also applies to admin/moderator session tokens, matching the existing team-token precedent). Admin needs a "re-link phone to team" escape hatch.
+- **Live answer-key fixes overwrite manual overrides** — correcting a shown auto-graded question's answer/points during a live session re-scores every answer to it, discarding any per-answer override (e.g. adjusted `match` partial credit); the admin re-overrides in break if needed. Kahoot speed multipliers live in memory only, so a regrade after a backend restart gives unscaled points.
 - **Grading isn't attributed on `Answer` rows** — sessions identify who's connected to the admin room, but grading a specific answer doesn't yet stamp a `gradedBy` user id. Smaller residual tradeoff now that per-user accounts exist; fine until an audit trail of who-graded-what is needed.
 
 Completed-milestone implementation detail (including which question types exist) lives in `.claude/tdd/milestone-*.tdd.md`, not here — this file only tracks decisions and constraints future work must respect, since a changelog of finished work goes stale (and duplicates git history and code) faster than anyone remembers to update it.

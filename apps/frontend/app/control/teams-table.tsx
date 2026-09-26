@@ -270,6 +270,7 @@ export function TeamsTable({
       <TeamCodeModal
         teamId={viewingCodeTeamId}
         teamName={viewingCodeTeam?.teamName ?? ''}
+        joinCode={joinCode}
         onOpenChange={(open) => {
           if (!open) setViewingCodeTeamId(null);
         }}

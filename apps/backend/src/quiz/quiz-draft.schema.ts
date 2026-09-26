@@ -3,6 +3,7 @@ import {
   extractYoutubeVideoId,
   isSameMultiset,
   splitPipeList,
+  ROUND_CATEGORIES,
   type QuestionType,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
@@ -188,6 +189,25 @@ export function validateQuizDraft(
         questionIndex: null,
         field: 'kahootMode',
         message: 'Kahoot mode must be true or false',
+      });
+    }
+    if (
+      round.category !== undefined &&
+      !(ROUND_CATEGORIES as readonly string[]).includes(round.category)
+    ) {
+      issues.push({
+        roundIndex,
+        questionIndex: null,
+        field: 'category',
+        message: `Category must be one of: ${ROUND_CATEGORIES.join(', ')}`,
+      });
+    }
+    if (round.author !== undefined && typeof round.author !== 'string') {
+      issues.push({
+        roundIndex,
+        questionIndex: null,
+        field: 'author',
+        message: 'Author must be text',
       });
     }
 

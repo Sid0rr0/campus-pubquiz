@@ -335,13 +335,40 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
   server-side, surfacing structured issues per round/question on failure.
 - Export the quiz's questions with **Export CSV** in the header bar.
 
+**Editing a live quiz**: a quiz can be edited at any time, including while a
+session on it is running (any status other than `lobby`/`ended`). Two rules
+apply while live, enforced by `findLiveEditViolations`
+(`apps/backend/src/quiz/live-edit-guard.ts`) as a `409` and mirrored in the
+editor's disabled controls:
+
+- **No structural changes** — rounds/questions can't be added, removed, or
+  reordered. Game progress is positional (`roundIndex`/`questionIndex`), so a
+  shift would move the game onto a different question, and deleting a
+  question cascades to its teams' answers.
+- **Already-shown questions keep their type and choices** (`type`, `options`,
+  `matchTargets`) — that's what teams answered against, and auto-grading is
+  exact-match, so e.g. fixing an option's spelling would zero every team that
+  picked it. Their prompt, answer, points, notes, and media stay editable.
+
+After the save, every live session reloads its in-memory quiz and rebroadcasts.
+If a shown question's `answer` or `points` changed, its existing answers are
+re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
+(`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
+manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
+speed scaling from the per-answer multipliers recorded when the question was
+scored (lost on a backend restart, after which a regraded kahoot question gets
+unscaled points); an already-graded `closest_guess` re-runs its batch;
+human-graded types keep the admin's grades. The editor keeps sort/match
+display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
+reshuffle what players see.
+
 **CSV export mechanics**: purely client-side — `quizToCsv`
 (`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
-draft (unsaved edits included) into the same 10-column format the importer
-reads, so an exported file re-imports as-is. `break_after` lands on each
-breaking round's last row; `match` answers are rebuilt as `left+right` pairs.
-Rounds with no questions are omitted, and `kahootMode` has no column, so it
-isn't exported.
+draft (unsaved edits included) into the same 12-column format the importer
+reads, so an exported file re-imports as-is. `break_after`, `category`, and
+`author` all land on each round's last row; `match` answers are rebuilt as
+`left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
+has no column, so it isn't exported.
 
 **CSV import mechanics**: the browser reads the uploaded file's text directly
 (`file.text()`) and POSTs it to `POST /import/preview`. The parsed
@@ -401,7 +428,7 @@ plain links.
 Sheet row format (one row per question):
 
 ```
-round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
+round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author
 ```
 
 `type` is one of the seven [Question Types](#question-types) above — see
@@ -410,7 +437,20 @@ required for `audio`/`youtube`, optional otherwise. `answer_media_url` is
 optional on any type (shown alongside the correct answer during reveal).
 `break_after` is `''`/`0`/`1`; the **last round's break is always forced on**
 regardless of its cells, since the state machine has no other way to ever
-reveal it.
+reveal it. `category` and `author` are optional, round-level metadata (a
+topic/theme and who wrote the round) shown on the big screen's round intro
+and round overview — like `break_after`, they're resolved per round rather
+than per row: the first non-blank cell seen for a round wins, conventionally
+put on its last row. `category` is matched against a fixed list —
+General knowledge, History, Geography, Science & nature, Sports, Music,
+Film & TV, Literature & books, Art & culture, News, Food & drink, Other
+(`ROUND_CATEGORIES` in `shared/types/src/round-category.ts`) —
+case-insensitively and normalized to the canonical spelling; a cell that
+doesn't match anything in the list is silently left blank rather than
+blocking the import (an unrecognized category is a typo, not something
+worth stopping an admin's import over). The manual quiz editor offers the
+same list as a `<select>`, so it can never produce an invalid value.
+`author` stays free text.
 
 ## Persistence and Restart Resilience
 

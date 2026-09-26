@@ -13,6 +13,10 @@ export interface SeededRound {
    * need updating; undefined behaves as false.
    */
   kahootMode?: boolean;
+  /** Round topic/theme — see Round.category. Optional, like kahootMode above. */
+  category?: string;
+  /** Who wrote this round's questions — see Round.author. Optional, like kahootMode above. */
+  author?: string;
   // Carries the correct answer internally so reveal can show it; only
   // GameStateService's answer-free QuestionView projections leave the process.
   questions: RevealQuestionView[];

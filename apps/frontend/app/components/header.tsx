@@ -19,7 +19,7 @@ export function Header({
     >
       <Link
         href="/"
-        className="font-display text-xl font-extrabold text-magenta"
+        className="font-display text-display-xl font-extrabold text-magenta"
       >
         Campus Pub Quiz
       </Link>
@@ -28,7 +28,7 @@ export function Header({
           {center}
         </div>
       )}
-      <div className="flex items-center gap-3 text-sm font-extrabold tracking-wide">
+      <div className="flex items-center gap-3 text-display-sm font-extrabold tracking-wide">
         {children}
       </div>
     </header>

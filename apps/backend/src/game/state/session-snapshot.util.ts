@@ -58,10 +58,18 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
     roundTitle: getCurrentRoundTitle(session),
+    roundCategory:
+      session.seededGame.rounds[session.progress.roundIndex]?.category ?? '',
+    roundAuthor:
+      session.seededGame.rounds[session.progress.roundIndex]?.author ?? '',
     isCurrentRoundKahoot:
       session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ??
       false,
     roundTitles: session.seededGame.rounds.map((round) => round.title),
+    roundCategories: session.seededGame.rounds.map(
+      (round) => round.category ?? '',
+    ),
+    roundAuthors: session.seededGame.rounds.map((round) => round.author ?? ''),
     currentQuestion: getCurrentQuestion(session),
     blockQuestions: getBlockQuestions(session),
     upcomingQuestions: getUpcomingQuestionPositions(session),

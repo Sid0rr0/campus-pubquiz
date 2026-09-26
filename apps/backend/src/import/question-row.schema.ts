@@ -4,6 +4,7 @@ import {
   extractYoutubeVideoId,
   isSameMultiset,
   splitPipeList,
+  ROUND_CATEGORIES,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRowIssue,
@@ -30,6 +31,20 @@ const httpUrl = z.url({
   error: 'Media URL must be a valid http(s) URL',
 });
 
+// Case-insensitive lookup so "science & nature" in a sheet still resolves to
+// the canonical "Science & nature" — authors shouldn't have to match casing
+// exactly.
+const ROUND_CATEGORY_BY_LOWERCASE = new Map(
+  ROUND_CATEGORIES.map((category) => [category.toLowerCase(), category]),
+);
+
+/** Resolves a raw category cell to its canonical casing, or '' if it's blank or doesn't match any known category — an unrecognized category is left blank rather than blocking the import. */
+function resolveCategoryCell(rawCategory: string): string {
+  const trimmed = rawCategory.trim();
+  if (trimmed === '') return trimmed;
+  return ROUND_CATEGORY_BY_LOWERCASE.get(trimmed.toLowerCase()) ?? '';
+}
+
 // Schema keys use the sheet column names so Zod issue paths map straight to
 // the ImportRowIssue.field the quiz author sees in the preview table.
 const baseFields = {
@@ -44,6 +59,10 @@ const baseFields = {
   break_after: z.enum(['', '0', '1'], {
     error: 'break_after must be "1", "0", or blank',
   }),
+  // Always '' or a canonical ROUND_CATEGORIES value by the time it reaches
+  // here — resolveCategoryCell already blanked out anything unrecognized.
+  category: z.string(),
+  author: z.string().optional(),
 };
 
 const questionRowSchema = z.discriminatedUnion('type', [
@@ -144,6 +163,10 @@ export type ParsedQuestionRow =
       ok: true;
       roundTitle: string;
       roundBreakAfter: boolean;
+      /** Blank ('') when the row's category cell is empty. */
+      roundCategory: string;
+      /** Blank ('') when the row's author cell is empty. */
+      roundAuthor: string;
       question: ImportQuestionPreview;
     }
   | { ok: false; issues: ImportRowIssue[] };
@@ -247,6 +270,8 @@ function toCandidate(row: SheetRow, type: QuestionType): unknown {
     answer_media_url:
       row.answerMediaUrl.trim() === '' ? undefined : row.answerMediaUrl.trim(),
     break_after: row.breakAfter.trim(),
+    category: resolveCategoryCell(row.category),
+    author: row.author.trim() === '' ? undefined : row.author.trim(),
   };
 }
 
@@ -283,7 +308,8 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     };
   }
 
-  const { round, question, notes, points, break_after } = parsed.data;
+  const { round, question, notes, points, break_after, category, author } =
+    parsed.data;
   const answer =
     parsed.data.type === 'sort'
       ? splitPipeList(parsed.data.answer).join('|')
@@ -298,6 +324,8 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     ok: true,
     roundTitle: round,
     roundBreakAfter: break_after === '1',
+    roundCategory: category ?? '',
+    roundAuthor: author ?? '',
     question: {
       type: parsed.data.type,
       prompt: question,
@@ -327,7 +355,10 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
  * break_after = "1"; blank/"0" rows don't grade a break on their own. The
  * state machine requires the final round to end in a grading break, so the
  * last round's break is always forced on regardless of its break_after
- * cells — authors don't need to remember to mark it.
+ * cells — authors don't need to remember to mark it. `category`/`author`
+ * are round-level metadata too: the first non-blank cell seen for a round
+ * wins, so authors only need to fill it in on one row (conventionally the
+ * last, matching where `break_after` is put).
  */
 export function assembleImportPreview(
   quizTitle: string,
@@ -336,6 +367,8 @@ export function assembleImportPreview(
   const issues: ImportRowIssue[] = [];
   const questionsByRound = new Map<string, ImportQuestionPreview[]>();
   const breakAfterByRound = new Map<string, boolean>();
+  const categoryByRound = new Map<string, string>();
+  const authorByRound = new Map<string, string>();
 
   for (const row of rows) {
     const result = parseQuestionRow(row);
@@ -350,6 +383,12 @@ export function assembleImportPreview(
       (breakAfterByRound.get(result.roundTitle) ?? false) ||
         result.roundBreakAfter,
     );
+    if (result.roundCategory && !categoryByRound.has(result.roundTitle)) {
+      categoryByRound.set(result.roundTitle, result.roundCategory);
+    }
+    if (result.roundAuthor && !authorByRound.has(result.roundTitle)) {
+      authorByRound.set(result.roundTitle, result.roundAuthor);
+    }
   }
 
   const roundTitles = [...questionsByRound.keys()];
@@ -359,6 +398,10 @@ export function assembleImportPreview(
       index === roundTitles.length - 1
         ? true
         : (breakAfterByRound.get(title) ?? false),
+    ...(categoryByRound.has(title)
+      ? { category: categoryByRound.get(title) }
+      : {}),
+    ...(authorByRound.has(title) ? { author: authorByRound.get(title) } : {}),
     questions: questionsByRound.get(title) ?? [],
   }));
 

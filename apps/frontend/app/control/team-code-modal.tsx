@@ -10,6 +10,8 @@ interface TeamCodeModalProps {
   /** null closes the dialog — same convention TeamsTable already uses for its other per-team dialogs. */
   teamId: number | null;
   teamName: string;
+  /** The live session's join code, folded into the dialog's QR code so scanning it prefills both fields on /play. */
+  joinCode?: string;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -17,6 +19,7 @@ interface TeamCodeModalProps {
 export function TeamCodeModal({
   teamId,
   teamName,
+  joinCode,
   onOpenChange,
 }: TeamCodeModalProps) {
   const isOpen = teamId !== null;
@@ -38,6 +41,7 @@ export function TeamCodeModal({
       open={isOpen}
       teamName={teamName}
       code={codeQuery.data?.code ?? null}
+      joinCode={joinCode}
       error={error}
       onOpenChange={onOpenChange}
     />

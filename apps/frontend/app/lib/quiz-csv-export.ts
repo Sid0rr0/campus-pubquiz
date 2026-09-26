@@ -16,6 +16,8 @@ const CSV_HEADER = [
   'answer_media_url',
   'notes',
   'break_after',
+  'category',
+  'author',
 ];
 
 /** Lets Excel read the file as UTF-8; the importer strips it (`bom: true`). */
@@ -64,6 +66,11 @@ function questionRow(
     // A round breaks once any of its rows says so; the last row is where
     // authors conventionally put it (see sample-quiz-import.csv).
     isLastInRound && round.breakAfter ? '1' : '',
+    // category/author are round-level metadata; only the last row carries
+    // them, matching break_after's convention and the importer's "first
+    // non-blank cell wins" grouping.
+    isLastInRound ? (round.category ?? '') : '',
+    isLastInRound ? (round.author ?? '') : '',
   ];
 }
 

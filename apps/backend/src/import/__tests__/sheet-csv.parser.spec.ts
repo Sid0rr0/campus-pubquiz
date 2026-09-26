@@ -29,6 +29,8 @@ describe('parseSheetCsv', () => {
         answerMediaUrl: '',
         notes: '',
         breakAfter: '1',
+        category: '',
+        author: '',
       },
       {
         rowNumber: 3,
@@ -42,6 +44,8 @@ describe('parseSheetCsv', () => {
         answerMediaUrl: '',
         notes: '',
         breakAfter: '',
+        category: '',
+        author: '',
       },
     ]);
   });

@@ -81,11 +81,11 @@ export function RulesContent({
 
   return (
     <div className="flex flex-col gap-6 text-center">
-      <h1 className="font-display text-[calc(1.875rem*var(--display-text-scale,1))]">
+      <h1 className="font-display text-display-3xl">
         <span className="text-magenta">Rules</span>
       </h1>
       {quizStructure && (
-        <p className="text-balance font-display text-[calc(1.25rem*var(--display-text-scale,1))]">
+        <p className="text-balance font-display text-display-xl">
           {getQuizStructureText(quizStructure)}
         </p>
       )}
@@ -93,7 +93,7 @@ export function RulesContent({
         {displayedRules.map((rule) => (
           <li
             key={rule}
-            className="flex items-start gap-3 text-[calc(1.125rem*var(--display-text-scale,1))] font-bold"
+            className="flex items-start gap-3 text-display-lg font-bold"
           >
             <span aria-hidden="true" className="text-cyan">
               •

@@ -54,7 +54,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       state.question.id,
     );
     expect(answer.pointsAwarded).toBe(0);
-    expect(answer.gradedAt).toBeNull();
+    expect(answer.gradedAt).not.toBeNull();
   });
 
   it('grades an answer with half points', async () => {
@@ -100,11 +100,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(secondGrade.gradedAt).not.toBe(firstGrade.gradedAt);
   });
 
-  it('resets points and gradedAt when a team changes an already-graded free_text answer', async () => {
+  it('resets points and gradedAt when a team changes an already-graded audio answer', async () => {
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Reference answer',
+      points: 1,
+    });
+    await state.em.flush();
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
       team.id,
       'Banana',
     );
@@ -112,21 +121,84 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
       team.id,
       'Mango',
     );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
-      state.question.id,
+      audioQuestion.id,
     );
     expect(answer.value).toBe('Mango');
     expect(answer.pointsAwarded).toBe(0);
     expect(answer.gradedAt).toBeNull();
   });
 
-  it('keeps an already-graded answer intact when resubmitted with the same value', async () => {
+  it('keeps an already-graded audio answer intact when resubmitted with the same value', async () => {
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Reference answer',
+      points: 1,
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      audioQuestion.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    await state.answerService.submit(
+      state.session.id,
+      audioQuestion.id,
+      team.id,
+      'Banana',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      audioQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('re-grades a free_text answer against the answer key on every resubmission, discarding a manual override', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    // Resubmitting (even the same wrong value) re-runs auto-grading against
+    // the answer key, same as multiple_choice/sort/match — it does not
+    // preserve the admin's manual override, unlike the human-graded types
+    // above.
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('re-grades (rather than resets) a free_text answer when the team changes it after manual grading', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
@@ -140,13 +212,14 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       state.session.id,
       state.question.id,
       team.id,
-      'Banana',
+      'Apple',
     );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
       state.question.id,
     );
+    expect(answer.value).toBe('Apple');
     expect(answer.pointsAwarded).toBe(1);
     expect(answer.gradedAt).not.toBeNull();
   });
@@ -387,6 +460,122 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answers.find((a) => a.teamId === team.id)?.pointsAwarded).toBe(3);
   });
 
+  describe('regradeAutoGraded', () => {
+    it('re-scores every multiple_choice answer against a corrected answer key', async () => {
+      const mcQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'London',
+        points: 2,
+        payload: { options: ['Paris', 'London'] },
+      });
+      await state.em.flush();
+      const teamA = await insertTeam('Team A', 'token-a');
+      const teamB = await insertTeam('Team B', 'token-b');
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        teamA.id,
+        'Paris',
+      );
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        teamB.id,
+        'London',
+      );
+
+      await state.answerService.regradeAutoGraded(
+        state.session.id,
+        mcQuestion.id,
+        'multiple_choice',
+        'Paris',
+        2,
+      );
+
+      const answers = await state.answerService.listForQuestion(
+        state.session.id,
+        mcQuestion.id,
+      );
+      expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(2);
+      expect(answers.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(0);
+      expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
+    });
+
+    it('re-scores every free_text answer case-insensitively against a corrected answer key', async () => {
+      const teamA = await insertTeam('Team A', 'token-a');
+      const teamB = await insertTeam('Team B', 'token-b');
+      await state.answerService.submit(
+        state.session.id,
+        state.question.id,
+        teamA.id,
+        'pear',
+      );
+      await state.answerService.submit(
+        state.session.id,
+        state.question.id,
+        teamB.id,
+        'APPLE',
+      );
+
+      await state.answerService.regradeAutoGraded(
+        state.session.id,
+        state.question.id,
+        'free_text',
+        'Pear',
+        1,
+      );
+
+      const answers = await state.answerService.listForQuestion(
+        state.session.id,
+        state.question.id,
+      );
+      expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(1);
+      expect(answers.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(0);
+      expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
+    });
+
+    it('re-scores match partial credit against new points, replacing a manual override', async () => {
+      const matchQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'match',
+        prompt: 'Match the hero to their weapon.',
+        answer: 'excalibur|shield',
+        points: 4,
+        payload: {
+          options: ['arthur', 'captain america'],
+          matchTargets: ['shield', 'excalibur'],
+        },
+      });
+      await state.em.flush();
+      const team = await insertTeam('Team A', 'token-a');
+      const submitted = await state.answerService.submit(
+        state.session.id,
+        matchQuestion.id,
+        team.id,
+        'excalibur|excalibur',
+      );
+      await state.answerService.grade(state.session.id, submitted.answerId, 4);
+
+      await state.answerService.regradeAutoGraded(
+        state.session.id,
+        matchQuestion.id,
+        'match',
+        'excalibur|shield',
+        6,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        matchQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(3);
+    });
+  });
+
   describe('applyKahootSpeedScoring', () => {
     async function setAnsweredAt(
       questionId: number,
@@ -438,7 +627,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       await setAnsweredAt(mcQuestion.id, teamFast.id, questionOpenedAt);
       await setAnsweredAt(mcQuestion.id, teamSlow.id, lockedAt);
 
-      await state.answerService.applyKahootSpeedScoring(
+      const multipliers = await state.answerService.applyKahootSpeedScoring(
         state.session.id,
         mcQuestion.id,
         questionOpenedAt,
@@ -458,6 +647,99 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       expect(answers.find((a) => a.teamId === teamSlow.id)?.pointsAwarded).toBe(
         5,
       );
+      const answerIdOf = (teamId: number) =>
+        answers.find((a) => a.teamId === teamId)!.answerId;
+      expect(multipliers).toEqual({
+        [answerIdOf(teamFast.id)]: 1,
+        [answerIdOf(teamSlow.id)]: 0.5,
+      });
+    });
+
+    it('returns a speed multiplier for a wrong answer too, so a later regrade can scale it', async () => {
+      const mcQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'London',
+        points: 10,
+        payload: { options: ['Paris', 'London'] },
+      });
+      await state.em.flush();
+      const team = await insertTeam('Fast Team', 'token-fast');
+      const submitted = await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        team.id,
+        'Paris',
+      );
+      const questionTimerSeconds = 10;
+      const questionOpenedAt = Date.now() - questionTimerSeconds * 1000;
+      await setAnsweredAt(mcQuestion.id, team.id, questionOpenedAt);
+
+      const multipliers = await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        mcQuestion.id,
+        questionOpenedAt,
+        questionTimerSeconds,
+        mcQuestion.type,
+        mcQuestion.answer,
+        mcQuestion.points,
+      );
+      await state.answerService.regradeAutoGraded(
+        state.session.id,
+        mcQuestion.id,
+        'multiple_choice',
+        'Paris',
+        10,
+        multipliers,
+      );
+
+      expect(multipliers).toEqual({ [submitted.answerId]: 1 });
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        mcQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(10);
+    });
+
+    it('scores against the answer key it is given, so a correction made before lock counts', async () => {
+      const mcQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'London',
+        points: 10,
+        payload: { options: ['Paris', 'London'] },
+      });
+      await state.em.flush();
+      const team = await insertTeam('Fast Team', 'token-fast');
+      await state.answerService.submit(
+        state.session.id,
+        mcQuestion.id,
+        team.id,
+        'Paris',
+      );
+      const questionTimerSeconds = 10;
+      const questionOpenedAt = Date.now() - questionTimerSeconds * 1000;
+      await setAnsweredAt(mcQuestion.id, team.id, questionOpenedAt);
+
+      await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        mcQuestion.id,
+        questionOpenedAt,
+        questionTimerSeconds,
+        'multiple_choice',
+        'Paris',
+        10,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        mcQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(10);
     });
 
     it('leaves points untouched when no question timer is configured (unlimited)', async () => {

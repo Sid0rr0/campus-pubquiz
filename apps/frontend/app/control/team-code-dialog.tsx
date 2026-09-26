@@ -1,8 +1,11 @@
 'use client';
 
+import { QRCodeSVG } from 'qrcode.react';
 import { Dialog } from 'radix-ui';
 import { Button } from '@/app/components/button';
 import { CopyButton } from '@/app/components/copy-button';
+
+const QR_SIZE_PX = 180;
 
 interface TeamCodeDialogProps {
   /** false closes the dialog. */
@@ -10,6 +13,8 @@ interface TeamCodeDialogProps {
   teamName: string;
   /** null while the code is still loading. */
   code: string | null;
+  /** The live session's join code, when known — folded into the QR value so scanning it prefills both fields on /play, not just the team code. */
+  joinCode?: string | null;
   error?: string | null;
   onOpenChange: (open: boolean) => void;
 }
@@ -19,6 +24,7 @@ export function TeamCodeDialog({
   open,
   teamName,
   code,
+  joinCode,
   error,
   onOpenChange,
 }: TeamCodeDialogProps) {
@@ -39,11 +45,20 @@ export function TeamCodeDialog({
             <p className="text-sm text-background/60">Loading…</p>
           )}
           {!error && code !== null && (
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-2xl font-extrabold tracking-widest">
-                {code}
-              </span>
-              <CopyButton value={code} />
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-2xl font-extrabold tracking-widest">
+                  {code}
+                </span>
+                <CopyButton value={code} />
+              </div>
+              <div className="rounded-xl border-2 border-background/20 bg-white p-3">
+                <QRCodeSVG
+                  value={`${window.location.origin}/play?teamCode=${code}&name=${encodeURIComponent(teamName)}${joinCode ? `&code=${joinCode}` : ''}`}
+                  title="Team code QR code"
+                  size={QR_SIZE_PX}
+                />
+              </div>
             </div>
           )}
           <Button
