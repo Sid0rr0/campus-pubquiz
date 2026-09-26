@@ -828,6 +828,62 @@ describe('QuizEditorPanel', () => {
     expect(mockCreateQuiz).not.toHaveBeenCalled();
   });
 
+  it('defaults the quiz title to the csv file name on the first import', async () => {
+    const user = userEvent.setup();
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'science-round',
+      rounds: [{ title: 'Science', breakAfter: true, questions: [] }],
+      issues: [],
+      isImportable: true,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    const input = screen.getByLabelText(/import csv/i);
+    await user.upload(
+      input,
+      new File([''], 'science-round.csv', { type: 'text/csv' }),
+    );
+
+    expect(await screen.findByDisplayValue('Science')).toBeInTheDocument();
+    expect(mockPreviewImport).toHaveBeenCalledWith(
+      expect.any(String),
+      'science-round',
+    );
+    expect(screen.getByDisplayValue('science-round')).toBeInTheDocument();
+  });
+
+  it('keeps the existing quiz title when importing a csv into a quiz that already has one', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [{ title: 'History', breakAfter: true, questions: [] }],
+    });
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'Trivia Night',
+      rounds: [{ title: 'Geography', breakAfter: true, questions: [] }],
+      issues: [],
+      isImportable: true,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    const input = screen.getByLabelText(/import csv/i);
+    await user.upload(
+      input,
+      new File([''], 'other-file-name.csv', { type: 'text/csv' }),
+    );
+
+    await screen.findByDisplayValue('Geography');
+    // The existing title wins over the newly uploaded file's name.
+    expect(mockPreviewImport).toHaveBeenCalledWith(
+      expect.any(String),
+      'Trivia Night',
+    );
+    expect(screen.getByDisplayValue('Trivia Night')).toBeInTheDocument();
+  });
+
   it('adds a csv import to the existing draft instead of replacing it when "add to quiz" is checked', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({

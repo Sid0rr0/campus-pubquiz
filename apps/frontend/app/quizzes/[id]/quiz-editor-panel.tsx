@@ -212,8 +212,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   }
 
   const previewMutation = useMutation({
-    mutationFn: (csvText: string) =>
-      previewImport(csvText, quizTitle.trim() || undefined),
+    mutationFn: ({ csvText, title }: { csvText: string; title: string }) =>
+      previewImport(csvText, title || undefined),
     onSuccess: handleImportPreview,
     onError: (error) => handleImportError(error, 'Could not read that CSV.'),
   });
@@ -235,7 +235,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
 
     setImportError(null);
     const text = await file.text();
-    previewMutation.mutate(text);
+    // Only a brand-new quiz (no title yet) picks up the file name — once a
+    // title exists, later imports (replace or add) must not overwrite it.
+    const title = quizTitle.trim() || file.name.replace(/\.csv$/i, '');
+    previewMutation.mutate({ csvText: text, title });
   }
 
   function handleSheetUrlSubmit(event: FormEvent<HTMLFormElement>): void {
