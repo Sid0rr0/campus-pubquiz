@@ -211,7 +211,7 @@ function BonusIndicator({
     return null;
   }
   return (
-    <span className="flex items-center gap-1.5">
+    <span className="flex items-center gap-[calc(0.375rem*var(--display-text-scale,1))]">
       <BonusStars
         magnitude={positiveBonusPoints}
         colorClass="text-yellow"
@@ -322,12 +322,12 @@ function oldPoolEntries(
 
 function rowClasses(rankIndex: number): string {
   if (rankIndex === 0) {
-    return 'flex items-center gap-4 rounded-xl border-[3px] border-magenta bg-white px-5 py-2 shadow-[0_3px_0_#ec008c]';
+    return 'flex items-center gap-3 rounded-xl border-[3px] border-magenta bg-white px-3 py-2 shadow-[0_3px_0_#ec008c]';
   }
   if (rankIndex < 3) {
-    return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/25 bg-white px-5 py-1.5';
+    return 'flex items-center gap-3 rounded-xl border-2 border-dark-blue/25 bg-white px-3 py-1';
   }
-  return 'flex items-center gap-4 rounded-xl border-2 border-dark-blue/15 bg-white/60 px-5 py-1.5 text-dark-blue/70';
+  return 'flex items-center gap-3 rounded-xl border-2 border-dark-blue/15 bg-white/60 px-3 py-1 text-dark-blue/70';
 }
 
 /** How long the old standings hold on screen, unanimated, before scores start counting up. */
@@ -553,7 +553,7 @@ export function Leaderboard({
               />
             )}
             <span
-              className={`font-display w-16 shrink-0 whitespace-nowrap text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+              className={`font-display w-[2.5em] shrink-0 whitespace-nowrap text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
               {label}
             </span>

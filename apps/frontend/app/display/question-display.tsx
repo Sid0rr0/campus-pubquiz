@@ -281,6 +281,12 @@ export function QuestionDisplay({
           </div>
         )}
       </div>
+      {isRevealing && !isSort && !isMatch && (
+        <p className="font-extrabold text-[calc(1.75rem*var(--display-text-scale,1))]">
+          <span className="font-body text-foreground/55">Answer{': '}</span>
+          {correctAnswer}
+        </p>
+      )}
       {questionMediaUrl && questionYoutubeId && (
         <div
           className={
@@ -555,12 +561,6 @@ export function QuestionDisplay({
             );
           })}
         </ul>
-      )}
-      {isRevealing && !isSort && !isMatch && (
-        <p className="font-extrabold text-[calc(1.5rem*var(--display-text-scale,1))]">
-          <span className="font-body text-foreground/55">Answer{': '}</span>
-          {correctAnswer}
-        </p>
       )}
       {isRevealing && !showSideBySideReveal && answerMediaUrl && (
         <div className="flex w-full min-h-0 flex-1 items-center justify-center">

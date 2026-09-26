@@ -13,11 +13,21 @@ interface TriviaHeaderProps {
 export function TriviaHeader({ label, title, badge }: TriviaHeaderProps) {
   return (
     <Header
-      center={title && <span className="text-xl font-extrabold">{title}</span>}
+      center={
+        title && (
+          <span className="text-[calc(1.25rem*var(--display-text-scale,1))] font-extrabold">
+            {title}
+          </span>
+        )
+      }
     >
-      {label && <span className="text-md">{label}</span>}
+      {label && (
+        <span className="text-[calc(0.875rem*var(--display-text-scale,1))]">
+          {label}
+        </span>
+      )}
       {badge && (
-        <span className="rounded-lg bg-foreground px-3 py-1 text-background text-md">
+        <span className="rounded-lg bg-foreground px-3 py-1 text-[calc(0.875rem*var(--display-text-scale,1))] text-background">
           {badge}
         </span>
       )}

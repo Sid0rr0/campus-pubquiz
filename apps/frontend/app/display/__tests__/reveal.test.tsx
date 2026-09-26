@@ -227,6 +227,34 @@ describe('DisplayPage — reveal', () => {
     );
   });
 
+  it('places the answer text above the picture on reveal', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r2q1',
+            type: 'free_text',
+            prompt: 'Which landmark?',
+            mediaUrl: 'https://example.com/landmark.jpg',
+            points: 3,
+            answer: 'Eiffel Tower',
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    const answer = screen.getByText('Eiffel Tower');
+    const image = screen.getByTestId('reveal-image');
+    expect(
+      answer.compareDocumentPosition(image) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('shows both media_url and answer_media_url side by side on reveal when the question media is an image', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
