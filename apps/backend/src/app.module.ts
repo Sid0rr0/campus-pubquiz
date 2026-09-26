@@ -31,6 +31,8 @@ import { MediaController } from '@/media/media.controller';
 import { MediaService } from '@/media/media.service';
 import { SessionsController } from '@/session/sessions.controller';
 import { ShowdownService } from '@/showdown/showdown.service';
+import { StatsController } from '@/stats/stats.controller';
+import { StatsService } from '@/stats/stats.service';
 
 @Module({
   imports: [
@@ -56,6 +58,7 @@ import { ShowdownService } from '@/showdown/showdown.service';
     TeamsController,
     BonusAwardsController,
     BonusAwardMutationsController,
+    StatsController,
   ],
   providers: [
     // Must be registered before any other exception filters so Sentry sees
@@ -74,6 +77,7 @@ import { ShowdownService } from '@/showdown/showdown.service';
     { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
     MediaService,
     ShowdownService,
+    StatsService,
   ],
 })
 export class AppModule {}

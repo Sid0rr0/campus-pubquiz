@@ -9,3 +9,4 @@ export * from './youtube';
 export * from './sort-match';
 export * from './media';
 export * from './round-category';
+export * from './stats';

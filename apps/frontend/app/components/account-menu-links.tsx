@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  BarChartIcon,
   ExitIcon,
   GearIcon,
   ListBulletIcon,
@@ -14,7 +15,7 @@ interface AccountMenuLinksProps {
   onLogout: () => void;
 }
 
-/** Username, the moderator Guide link, Sessions/Teams links (admin and moderator), the admin-only Users link, and Log out — shared by the site header nav (desktop) and the mobile admin drawer (where the site header is hidden). Renders flat so each caller controls its own layout/sizing wrapper. */
+/** Username, the moderator Guide link, Sessions/Teams/Stats links (admin and moderator), the admin-only Users link, and Log out — shared by the site header nav (desktop) and the mobile admin drawer (where the site header is hidden). Renders flat so each caller controls its own layout/sizing wrapper. */
 export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
   return (
     <>
@@ -31,6 +32,11 @@ export function AccountMenuLinks({ user, onLogout }: AccountMenuLinksProps) {
       <Link href="/teams" className="flex items-center gap-1 underline">
         <PersonIcon aria-hidden="true" />
         Teams
+      </Link>
+
+      <Link href="/stats" className="flex items-center gap-1 underline">
+        <BarChartIcon aria-hidden="true" />
+        Stats
       </Link>
 
       {user.role === 'admin' && (

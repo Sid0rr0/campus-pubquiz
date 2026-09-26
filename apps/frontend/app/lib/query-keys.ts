@@ -54,4 +54,8 @@ export const queryKeys = {
     forTeam: (joinCode: string, teamId: number) =>
       ['bonusAwards', joinCode, teamId] as const,
   },
+  stats: {
+    all: ['stats'] as const,
+    sessions: () => ['stats', 'sessions'] as const,
+  },
 } as const;
