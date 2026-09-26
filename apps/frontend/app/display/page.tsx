@@ -314,7 +314,7 @@ function DisplayPageContent() {
         >
           {progress.isLeaderboardVisible ? (
             <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
-              <h1 className="text-center font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
+              <h1 className="text-center font-display text-display-4xl">
                 <span className="text-magenta">Leaderboard</span>
               </h1>
               <Leaderboard
@@ -369,15 +369,15 @@ function DisplayPageContent() {
               )}
               {progress.status === 'round_intro' && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-                  <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
+                  <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
                     ROUND {progress.roundIndex + 1}
                     {roundCategory ? ` — ${roundCategory}` : ''}
                   </p>
-                  <h1 className="text-balance font-display text-[calc(3.75rem*var(--display-text-scale,1))] text-magenta">
+                  <h1 className="text-balance font-display text-display-6xl text-magenta">
                     {roundTitle}
                   </h1>
                   {roundAuthor && (
-                    <p className="text-[calc(1.125rem*var(--display-text-scale,1))] font-bold text-foreground/60">
+                    <p className="text-display-lg font-bold text-foreground/60">
                       by {roundAuthor}
                     </p>
                   )}
@@ -488,7 +488,7 @@ function DisplayPageContent() {
                   </div>
                 ) : (
                   <div className="flex flex-1 items-center justify-center px-16 text-center">
-                    <h1 className="font-display text-[calc(2.25rem*var(--display-text-scale,1))]">
+                    <h1 className="font-display text-display-4xl">
                       Quiz complete!
                     </h1>
                   </div>

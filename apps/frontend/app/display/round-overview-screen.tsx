@@ -14,7 +14,7 @@ export function RoundOverviewScreen({
 }: RoundOverviewScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-      <h1 className="font-display text-[calc(1.875rem*var(--display-text-scale,1))]">
+      <h1 className="font-display text-display-3xl">
         <span className="text-magenta">Rounds</span>
       </h1>
       <ol className="mx-auto flex max-w-[calc(36rem*var(--display-text-scale,1))] flex-col gap-3 text-left">
@@ -24,7 +24,7 @@ export function RoundOverviewScreen({
           return (
             <li
               key={`${index}-${title}`}
-              className="flex items-start gap-3 text-[calc(1.5rem*var(--display-text-scale,1))] font-bold"
+              className="flex items-start gap-3 text-display-2xl font-bold"
             >
               <span aria-hidden="true" className="text-cyan">
                 {index + 1}.
@@ -33,7 +33,7 @@ export function RoundOverviewScreen({
                 <span>{title}</span>
                 {category && <span className="ml-2 text-cyan">{category}</span>}
                 {author && (
-                  <span className="block text-[calc(1rem*var(--display-text-scale,1))] font-bold text-foreground/60">
+                  <span className="block text-display-base font-bold text-foreground/60">
                     by {author}
                   </span>
                 )}

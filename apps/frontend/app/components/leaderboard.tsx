@@ -98,7 +98,7 @@ function RankTrendIcon({ trend }: { trend: RankTrend }) {
   return (
     <span
       aria-label={RANK_TREND_LABELS[trend]}
-      className={`text-[calc(1.25rem*var(--display-text-scale,1))] ${RANK_TREND_COLOR_CLASSES[trend]}`}
+      className={`text-display-xl ${RANK_TREND_COLOR_CLASSES[trend]}`}
     >
       {RANK_TREND_GLYPHS[trend]}
     </span>
@@ -192,7 +192,7 @@ function BonusStars({
   return (
     <span
       aria-label={`${bonusPoints} bonus points`}
-      className={`text-[calc(1.125rem*var(--display-text-scale,1))] font-extrabold ${colorClass}`}
+      className={`text-display-lg font-extrabold ${colorClass}`}
     >
       {bonusStarLabel(magnitude)}
     </span>
@@ -534,8 +534,7 @@ export function Leaderboard({
           phase === 'settled'
             ? previousRankByTeamId?.get(entry.teamId)
             : undefined;
-        const totalPointsClassName =
-          'font-display text-[calc(2rem*var(--display-text-scale,1))]';
+        const totalPointsClassName = 'font-display text-display-3xl';
         return (
           <motion.li
             key={entry.teamId}
@@ -553,13 +552,11 @@ export function Leaderboard({
               />
             )}
             <span
-              className={`font-display w-[2.5em] shrink-0 whitespace-nowrap text-[calc(2rem*var(--display-text-scale,1))] ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+              className={`font-display w-[2.5em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
               {label}
             </span>
-            <span
-              className={`flex-1 font-bold ${rankIndex === 0 ? 'text-[calc(2rem*var(--display-text-scale,1))]' : 'text-[calc(1.75rem*var(--display-text-scale,1))]'}`}
-            >
+            <span className="flex-1 font-bold text-display-3xl">
               {entry.teamName}
             </span>
             <BonusIndicator

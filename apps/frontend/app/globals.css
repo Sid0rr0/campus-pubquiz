@@ -17,6 +17,16 @@
   --color-yellow: #ffc60b;
   --font-display: var(--font-technika);
   --font-body: var(--font-technika);
+
+  /* Scale with the /display text-size control (--display-text-scale, set inline on /display) */
+  --text-display-sm: calc(0.875rem * var(--display-text-scale, 1));
+  --text-display-base: calc(1rem * var(--display-text-scale, 1));
+  --text-display-lg: calc(1.125rem * var(--display-text-scale, 1));
+  --text-display-xl: calc(1.25rem * var(--display-text-scale, 1));
+  --text-display-2xl: calc(1.5rem * var(--display-text-scale, 1));
+  --text-display-3xl: calc(1.875rem * var(--display-text-scale, 1));
+  --text-display-4xl: calc(2.25rem * var(--display-text-scale, 1));
+  --text-display-6xl: calc(3.75rem * var(--display-text-scale, 1));
 }
 
 body {

@@ -15,10 +15,10 @@ export function BreakRoundIntroScreen({
 }: BreakRoundIntroScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-      <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
+      <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
         ROUND {roundNumber}
       </p>
-      <h1 className="text-balance font-display text-[calc(3.75rem*var(--display-text-scale,1))] text-magenta">
+      <h1 className="text-balance font-display text-display-6xl text-magenta">
         {roundTitle}
       </h1>
     </div>

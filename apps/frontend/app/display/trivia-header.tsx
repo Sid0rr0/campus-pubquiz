@@ -14,20 +14,12 @@ export function TriviaHeader({ label, title, badge }: TriviaHeaderProps) {
   return (
     <Header
       center={
-        title && (
-          <span className="text-[calc(1.25rem*var(--display-text-scale,1))] font-extrabold">
-            {title}
-          </span>
-        )
+        title && <span className="text-display-xl font-extrabold">{title}</span>
       }
     >
-      {label && (
-        <span className="text-[calc(0.875rem*var(--display-text-scale,1))]">
-          {label}
-        </span>
-      )}
+      {label && <span className="text-display-sm">{label}</span>}
       {badge && (
-        <span className="rounded-lg bg-foreground px-3 py-1 text-[calc(0.875rem*var(--display-text-scale,1))] text-background">
+        <span className="rounded-lg bg-foreground px-3 py-1 text-display-sm text-background">
           {badge}
         </span>
       )}

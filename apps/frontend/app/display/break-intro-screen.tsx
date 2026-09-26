@@ -37,14 +37,14 @@ export function BreakIntroScreen({
 }: BreakIntroScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-10 text-center">
-      <p className="text-[calc(0.875rem*var(--display-text-scale,1))] font-extrabold tracking-wide text-foreground/55">
+      <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
         ROUND {roundNumber}
       </p>
-      <h1 className="text-balance font-display text-[calc(3.75rem*var(--display-text-scale,1))] text-magenta">
+      <h1 className="text-balance font-display text-display-6xl text-magenta">
         BREAK {breakNumber}
       </h1>
       {breakEndsAt != null && (
-        <p className="font-display text-[calc(1.5rem*var(--display-text-scale,1))]">
+        <p className="font-display text-display-2xl">
           Back at {formatBreakEndTime(breakEndsAt)}
         </p>
       )}
