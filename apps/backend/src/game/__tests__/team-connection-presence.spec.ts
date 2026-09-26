@@ -85,6 +85,39 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('lets a reconnecting device take over its own stale socket the server still thinks is live', async () => {
+    // The phone's network dropped/slept and it reconnected on a fresh socket
+    // before the server's ping timeout noticed the old one was dead.
+    const playerA = await joinAsPlayer('socket-a');
+    const playerB = await connectPlayer(gateway, server, 'socket-b');
+
+    await gateway.handleJoinPlayers(asSocket(playerB), {
+      teamName: 'The Quizzards',
+      joinCode: 'ABCDEF',
+      previousSocketId: 'socket-a',
+    });
+
+    expect(playerA.disconnect).toHaveBeenCalledWith(true);
+    expect(playerB.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.JOIN_ACCEPTED,
+      expect.objectContaining({ teamId: 31 }),
+    );
+  });
+
+  it('still rejects a second device that names some other socket as its previous one', async () => {
+    const playerA = await joinAsPlayer('socket-a');
+    const playerB = await connectPlayer(gateway, server, 'socket-b');
+
+    await expect(
+      gateway.handleJoinPlayers(asSocket(playerB), {
+        teamName: 'The Quizzards',
+        joinCode: 'ABCDEF',
+        previousSocketId: 'socket-zzz',
+      }),
+    ).rejects.toThrow(/already connected/i);
+    expect(playerA.disconnect).not.toHaveBeenCalled();
+  });
+
   it('broadcasts STATE_UPDATED when a connected team disconnects', async () => {
     const playerA = await joinAsPlayer('socket-a');
     server.to.mockClear();

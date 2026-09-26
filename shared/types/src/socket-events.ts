@@ -331,6 +331,8 @@ export interface JoinPlayersPayload {
   teamToken?: string;
   teamCode?: string;
   joinCode?: string;
+  /** The socket id this device held the team on before an auto-reconnect — lets the server hand the team over from that stale socket (still "live" until its ping timeout notices it's dead) instead of rejecting the rejoin as a second device. */
+  previousSocketId?: string;
 }
 
 export interface TeamAnswerView {

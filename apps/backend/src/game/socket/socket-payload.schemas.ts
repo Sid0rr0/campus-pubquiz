@@ -45,6 +45,11 @@ export const joinPlayersPayloadSchema = z.object({
   teamToken: z.string().min(1).max(JOIN_CREDENTIAL_MAX_LENGTH).optional(),
   teamCode: z.string().min(1).max(JOIN_CREDENTIAL_MAX_LENGTH).optional(),
   joinCode: z.string().min(1).max(JOIN_CREDENTIAL_MAX_LENGTH).optional(),
+  previousSocketId: z
+    .string()
+    .min(1)
+    .max(JOIN_CREDENTIAL_MAX_LENGTH)
+    .optional(),
 });
 
 export const submitAnswerPayloadSchema = z.object({

@@ -98,6 +98,14 @@ describe('useGameSocket — admin and player actions', () => {
     const fakeSocket = getFakeSocket();
 
     act(() => {
+      // Answers are only sent once the server has linked this socket to a team.
+      fakeSocket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 1,
+        teamName: 'The Quizzards',
+        teamToken: 'team-token-1',
+      });
+    });
+    act(() => {
       result.current.submitAnswer(1, 1, 'Banana');
     });
 

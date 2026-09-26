@@ -34,14 +34,21 @@ export async function joinPlayerTeam(
       joinCode,
       team.id,
     );
-    const isLiveElsewhere =
-      existingSocketId &&
-      existingSocketId !== client.id &&
-      deps.server.sockets.sockets.get(existingSocketId)?.connected;
-    if (isLiveElsewhere) {
-      throw new WsException(
-        `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
-      );
+    const existingSocket =
+      existingSocketId && existingSocketId !== client.id
+        ? deps.server.sockets.sockets.get(existingSocketId)
+        : undefined;
+    if (existingSocket?.connected) {
+      // This same device auto-reconnecting on a fresh socket before our ping
+      // timeout noticed its old one died (network switch, phone waking up).
+      // Socket ids are random and never shared with other clients, so only
+      // the device that actually held that socket can name it here.
+      if (payload.previousSocketId !== existingSocketId) {
+        throw new WsException(
+          `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
+        );
+      }
+      existingSocket.disconnect(true);
     }
     deps.gameState.setTeamConnected(joinCode, team.id, client.id);
 

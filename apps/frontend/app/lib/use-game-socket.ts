@@ -35,6 +35,12 @@ import { getBackendUrl } from '@/app/lib/backend-url';
 
 type GameSocketRole = 'display' | 'admin' | 'players';
 
+/** How long a submitted answer may go unconfirmed (no ANSWER_RECEIVED or 'exception') before the socket is treated as silently dead — e.g. a network switch or a phone waking from sleep, where socket.io can still believe it's connected until its ~45s ping timeout. */
+export const SUBMIT_CONFIRM_TIMEOUT_MS = 5000;
+const RECONNECTING_MESSAGE = 'Connection lost — reconnecting…';
+const NOT_CONNECTED_MESSAGE =
+  "You're not connected right now — hang on while we reconnect, then try again.";
+
 export interface JoinTeamOptions {
   teamToken?: string;
   teamCode?: string;
@@ -124,6 +130,8 @@ export interface UseGameSocketResult {
   reconnectedAt: number | null;
   /** The joinCode of this session once its admin closes it, or null otherwise — players-room consumers use this to drop their identity and return to the join screen. */
   sessionClosed: string | null;
+  /** Players-only: true while the server has this socket registered as the team's (JOIN_ACCEPTED on the current connection) — false while disconnected or mid-rejoin, when answers can't be accepted. */
+  isTeamLinked: boolean;
   /** True once this team's own socket has been kicked by the admin — players-room consumers use this to drop their identity and return to the join screen with a notice. */
   kicked: boolean;
   /** The message from the most recent rejected awardBonus call (admin-only) — surfaced separately from connectionError so callers can show it as a toast next to the award form instead of the persistent connection banner. */
@@ -186,6 +194,15 @@ function buildMyAnswerGrades(
   );
 }
 
+/** Only a *different* earlier socket is worth naming — a rejoin on the same socket needs no handover. */
+function getPreviousSocketId(
+  linkedSocketId: string | null,
+  currentSocketId: string | undefined,
+): string | undefined {
+  if (!linkedSocketId || linkedSocketId === currentSocketId) return undefined;
+  return linkedSocketId;
+}
+
 function getExceptionMessage(payload: unknown): string {
   if (typeof payload === 'string') return payload;
   if (payload && typeof payload === 'object' && 'message' in payload) {
@@ -225,7 +242,20 @@ export function useGameSocket(
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
   const [bonusAwardError, setBonusAwardError] = useState<string | null>(null);
+  const [isTeamLinked, setIsTeamLinked] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+  // Mirrors isTeamLinked for submitAnswer, which must check it synchronously.
+  const isTeamLinkedRef = useRef(false);
+  // The socket id the server last registered this team on — sent back as
+  // `previousSocketId` on a rejoin so the server can hand the team over from
+  // that stale socket instead of rejecting this device as a second one.
+  const linkedSocketIdRef = useRef<string | null>(null);
+  // The most recent answer not yet confirmed by ANSWER_RECEIVED/'exception' —
+  // resent once the team is linked again after a forced reconnect.
+  const pendingSubmitRef = useRef<SubmitAnswerPayload | null>(null);
+  const submitConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   // See `focusAnswersQuestionId` below — a ref (not state) since it only
   // filters an event handler and must never trigger the connect Effect.
   const focusedAnswersQuestionIdRef = useRef<number | null>(null);
@@ -264,8 +294,42 @@ export function useGameSocket(
       setSessionClosed(null);
       setKicked(false);
       setBonusAwardError(null);
+      setIsTeamLinked(false);
     }
   }
+
+  const clearSubmitConfirmTimer = useCallback(() => {
+    if (submitConfirmTimerRef.current !== null) {
+      clearTimeout(submitConfirmTimerRef.current);
+      submitConfirmTimerRef.current = null;
+    }
+  }, []);
+
+  const setTeamLinked = useCallback((value: boolean) => {
+    isTeamLinkedRef.current = value;
+    setIsTeamLinked(value);
+  }, []);
+
+  // Emits the answer and arms a confirmation timer: if the server never
+  // replies, the socket is dead without knowing it, so force a fresh
+  // connection — the rejoin that follows resends this answer.
+  const sendAnswer = useCallback(
+    (payload: SubmitAnswerPayload) => {
+      const socket = socketRef.current;
+      if (!socket) return;
+      pendingSubmitRef.current = payload;
+      clearSubmitConfirmTimer();
+      submitConfirmTimerRef.current = setTimeout(() => {
+        submitConfirmTimerRef.current = null;
+        setTeamLinked(false);
+        setConnectionError(RECONNECTING_MESSAGE);
+        socket.disconnect();
+        socket.connect();
+      }, SUBMIT_CONFIRM_TIMEOUT_MS);
+      socket.emit(SOCKET_EVENTS.SUBMIT_ANSWER, payload);
+    },
+    [clearSubmitConfirmTimer, setTeamLinked],
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -280,6 +344,9 @@ export function useGameSocket(
     pendingBonusAwardRef.current = false;
     pendingAdvanceRef.current = false;
     focusedAnswersQuestionIdRef.current = null;
+    isTeamLinkedRef.current = false;
+    linkedSocketIdRef.current = null;
+    pendingSubmitRef.current = null;
 
     socket.on('connect', () => {
       setReconnectedAt(Date.now());
@@ -303,6 +370,11 @@ export function useGameSocket(
       setMyAnswers(buildMyAnswers(payload.answers ?? []));
       setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
       setMyBonusAwards(payload.bonusAwards ?? []);
+      linkedSocketIdRef.current = socket.id ?? null;
+      setTeamLinked(true);
+      if (pendingSubmitRef.current) {
+        sendAnswer(pendingSubmitRef.current);
+      }
       // A confirmed join supersedes any earlier join-related error (e.g. a
       // losing duplicate request's "already registered") — without this the
       // stale banner stays up over an otherwise-successfully-connected game.
@@ -312,6 +384,8 @@ export function useGameSocket(
     socket.on(
       SOCKET_EVENTS.ANSWER_RECEIVED,
       (payload: AnswerReceivedPayload) => {
+        pendingSubmitRef.current = null;
+        clearSubmitConfirmTimer();
         setMyAnswers((current) => ({
           ...current,
           [payload.questionId]: payload.value,
@@ -384,14 +458,25 @@ export function useGameSocket(
     });
 
     socket.on('disconnect', (reason: string) => {
-      if (reason !== 'io client disconnect') {
+      setTeamLinked(false);
+      // Any unconfirmed answer stays pending and is resent after the rejoin.
+      clearSubmitConfirmTimer();
+      if (reason === 'io client disconnect') return;
+      if (reason === 'io server disconnect') {
+        // The server refused this socket — socket.io won't retry on its own.
         setConnectionError(
           (currentError) => currentError ?? `Disconnected: ${reason}`,
         );
+        return;
       }
+      setConnectionError(RECONNECTING_MESSAGE);
     });
 
     socket.on('exception', (payload: unknown) => {
+      // A rejected submit (e.g. answers locked) still proves the connection
+      // is alive — nothing to reconnect or resend.
+      pendingSubmitRef.current = null;
+      clearSubmitConfirmTimer();
       if (pendingBonusAwardRef.current) {
         pendingBonusAwardRef.current = false;
         // Called directly (not via state + useToastOnError) so repeat
@@ -413,9 +498,18 @@ export function useGameSocket(
     });
 
     return () => {
+      clearSubmitConfirmTimer();
       socket.disconnect();
     };
-  }, [enabled, role, joinCode, retryKey]);
+  }, [
+    enabled,
+    role,
+    joinCode,
+    retryKey,
+    clearSubmitConfirmTimer,
+    sendAnswer,
+    setTeamLinked,
+  ]);
 
   const sendAction = useCallback((action: GameAction) => {
     pendingAdvanceRef.current = action === 'ADVANCE';
@@ -430,6 +524,10 @@ export function useGameSocket(
         teamToken: options.teamToken,
         teamCode: options.teamCode,
         joinCode: options.joinCode,
+        previousSocketId: getPreviousSocketId(
+          linkedSocketIdRef.current,
+          socketRef.current?.id,
+        ),
       };
       socketRef.current?.emit(SOCKET_EVENTS.JOIN_PLAYERS, payload);
     },
@@ -438,10 +536,13 @@ export function useGameSocket(
 
   const submitAnswer = useCallback(
     (questionId: number, teamId: number, value: string) => {
-      const payload: SubmitAnswerPayload = { questionId, teamId, value };
-      socketRef.current?.emit(SOCKET_EVENTS.SUBMIT_ANSWER, payload);
+      if (!isTeamLinkedRef.current) {
+        toast.error(NOT_CONNECTED_MESSAGE);
+        return;
+      }
+      sendAnswer({ questionId, teamId, value });
     },
-    [],
+    [sendAnswer],
   );
 
   const gradeAnswer = useCallback((answerId: number, pointsAwarded: number) => {
@@ -533,6 +634,7 @@ export function useGameSocket(
     reconnectedAt,
     sessionClosed,
     kicked,
+    isTeamLinked,
     bonusAwardError,
   };
 }
