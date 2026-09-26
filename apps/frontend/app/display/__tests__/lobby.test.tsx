@@ -87,7 +87,7 @@ describe('DisplayPage — lobby', () => {
     expect(screen.getByText('ABCDEF')).toBeInTheDocument();
   });
 
-  it('shows the max team size and one-device-per-team note in the lobby', () => {
+  it('shows the max team size, one-device-per-team note, and extra-player penalty in the lobby', () => {
     mockUseGameSocket.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'lobby' }),
@@ -101,7 +101,7 @@ describe('DisplayPage — lobby', () => {
 
     expect(
       screen.getByText(
-        'Make teams of up to 6 players, only one device connects per team.',
+        'Make teams of up to 6 players, only one device connects per team. Every additional player costs the team −2 points.',
       ),
     ).toBeInTheDocument();
   });
@@ -145,6 +145,37 @@ describe('DisplayPage — lobby', () => {
     expect(screen.getByText('The Quizzards')).toBeInTheDocument();
     expect(screen.getByText('Beer Necessities')).toBeInTheDocument();
     expect(screen.getByText('2 TEAMS JOINED')).toBeInTheDocument();
+  });
+
+  it('scrolls the team names as a looping marquee when they overflow the screen width', () => {
+    const scrollWidthSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockReturnValue(2000);
+    const clientWidthSpy = vi
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(1000);
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        currentQuestion: null,
+        joinCode: 'ABCDEF',
+        teams: [
+          { teamId: 'team-1', teamName: 'The Quizzards' },
+          { teamId: 'team-2', teamName: 'Beer Necessities' },
+        ],
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+
+    render(<DisplayPage />);
+
+    const copies = screen.getAllByText('The Quizzards');
+    expect(copies).toHaveLength(2);
+    expect(copies[1].closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(copies[0].closest('.animate-marquee')).not.toBeNull();
+    scrollWidthSpy.mockRestore();
+    clientWidthSpy.mockRestore();
   });
 
   it('uses the singular "TEAM" when exactly one team has joined', () => {

@@ -347,6 +347,7 @@ function DisplayPageContent() {
                   teams={teams}
                   joinCode={codeFromUrl}
                   maxPlayersPerTeam={settings.maxPlayersPerTeam}
+                  extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
                 />
               )}
               {progress.status === 'rules' && (
