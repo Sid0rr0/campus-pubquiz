@@ -1,5 +1,14 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import type { PlayedSessionStats } from '@campus-pubquiz/types';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
+import type {
+  PlayedSessionStats,
+  SessionDetailStats,
+} from '@campus-pubquiz/types';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsService } from '@/stats/stats.service';
@@ -13,5 +22,12 @@ export class StatsController {
   @Get('sessions')
   async listPlayedSessions(): Promise<PlayedSessionStats[]> {
     return this.statsService.listPlayedSessions();
+  }
+
+  @Get('sessions/:id')
+  async getSessionDetail(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<SessionDetailStats> {
+    return this.statsService.getSessionDetail(id);
   }
 }

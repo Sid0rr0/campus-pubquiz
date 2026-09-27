@@ -267,6 +267,11 @@ export class GameStateService implements OnModuleInit {
     return this.sessionStore.get(joinCode).questionLockAt;
   }
 
+  /** Epoch-ms the currently-live timed phase started — the same value ensureKahootSpeedScored anchors its response-time math to. Null when the current phase (e.g. a non-question status) isn't timed. */
+  getPhaseStartedAt(joinCode: string): number | null {
+    return this.sessionStore.get(joinCode).phaseStartedAt;
+  }
+
   /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed. */
   getKahootQuestionEndsAt(joinCode: string): number | null {
     return this.sessionStore.get(joinCode).kahootQuestionEndsAt;

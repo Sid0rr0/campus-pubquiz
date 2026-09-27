@@ -53,6 +53,16 @@ describe('PlayedSessionsPanel', () => {
     expect(screen.getByText('15 — The Quizzards')).toBeInTheDocument();
   });
 
+  it('links the quiz title to its session detail page', async () => {
+    renderWithQuery(<PlayedSessionsPanel />);
+
+    await waitFor(() => screen.getByText('Quiz Night'));
+    expect(screen.getByRole('link', { name: 'Quiz Night' })).toHaveAttribute(
+      'href',
+      '/stats/1',
+    );
+  });
+
   it('shows a dash for a session with no teams (null winner)', async () => {
     renderWithQuery(<PlayedSessionsPanel />);
 

@@ -17,6 +17,7 @@ import {
   type SortingState,
   type Updater,
 } from '@tanstack/react-table';
+import Link from 'next/link';
 import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 import type { PlayedSessionStats } from '@campus-pubquiz/types';
 import { fetchPlayedSessions, StatsApiError } from '@/app/lib/stats-api';
@@ -60,6 +61,14 @@ export function PlayedSessionsPanel() {
         helper.accessor('quizTitle', {
           header: 'Quiz',
           sortFn: sortFn_alphanumeric,
+          cell: (context) => (
+            <Link
+              href={`/stats/${context.row.original.gameSessionId}`}
+              className="underline-offset-2 hover:underline"
+            >
+              {context.getValue()}
+            </Link>
+          ),
         }),
         helper.accessor('playedAt', {
           header: 'Date',

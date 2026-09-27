@@ -202,4 +202,50 @@ describe('StatsService (Postgres integration)', () => {
       older.id,
     ]);
   });
+
+  describe('getSessionDetail', () => {
+    it('throws NotFoundException for a session that does not exist', async () => {
+      await expect(statsService.getSessionDetail(999999)).rejects.toThrow(
+        'Ended session 999999 does not exist',
+      );
+    });
+
+    it('throws NotFoundException for a session that is not ended', async () => {
+      const { quiz } = await createQuiz('Quiz F', [[1]]);
+      const lobby = await createSession(quiz, 'LOBBY2', 'lobby');
+
+      await expect(statsService.getSessionDetail(lobby.id)).rejects.toThrow(
+        `Ended session ${lobby.id} does not exist`,
+      );
+    });
+
+    it('wires session/team/round/question/answer/bonus rows into the computed detail', async () => {
+      const { quiz, questions } = await createQuiz('Quiz G', [[5, 5]]);
+      const session = await createSession(quiz, 'DETAIL1', 'ended');
+      const [q1, q2] = questions[0];
+      const teamA = await joinTeam(session, 'Team A');
+      const teamB = await joinTeam(session, 'Team B');
+      await grade(session, q1, teamA, 5);
+      await grade(session, q2, teamB, 0);
+      await awardBonus(session, teamA, 2);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.gameSessionId).toBe(session.id);
+      expect(result.quizTitle).toBe('Quiz G');
+      expect(result.teamCount).toBe(2);
+      expect(result.maxPoints).toBe(10);
+      expect(result.standings.map((s) => s.teamName)).toEqual([
+        'Team A',
+        'Team B',
+      ]);
+      expect(result.standings[0]).toMatchObject({
+        teamName: 'Team A',
+        answerPoints: 5,
+        bonusPoints: 2,
+        total: 7,
+      });
+      expect(result.questions).toHaveLength(2);
+    });
+  });
 });

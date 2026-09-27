@@ -18,7 +18,12 @@ import { AnswerRepository } from '@/db/repositories/answer.repository';
 // isn't a usable prefix of the unique index above (team is its 3rd column).
 @Index({ properties: ['gameSession', 'team'] })
 export class Answer extends BaseEntity {
-  [OptionalProps]?: 'createdAt' | 'updatedAt' | 'pointsAwarded' | 'gradedAt';
+  [OptionalProps]?:
+    | 'createdAt'
+    | 'updatedAt'
+    | 'pointsAwarded'
+    | 'gradedAt'
+    | 'responseMs';
 
   @ManyToOne(() => GameSession, { deleteRule: 'cascade' })
   gameSession!: GameSession;
@@ -41,4 +46,10 @@ export class Answer extends BaseEntity {
 
   @Property({ type: 'timestamptz', nullable: true })
   gradedAt: Date | null = null;
+
+  // Final (last-write-wins) submission time minus the question's open time
+  // (GameStateService.getPhaseStartedAt) — null for answers submitted before
+  // this column existed, or when the question had no tracked open time.
+  @Property({ type: 'integer', nullable: true })
+  responseMs: number | null = null;
 }

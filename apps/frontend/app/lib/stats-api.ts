@@ -1,4 +1,7 @@
-import type { PlayedSessionStats } from '@campus-pubquiz/types';
+import type {
+  PlayedSessionStats,
+  SessionDetailStats,
+} from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 
 export class StatsApiError extends Error {
@@ -34,4 +37,18 @@ export async function fetchPlayedSessions(
     return throwApiError(response, 'Could not load session stats');
   }
   return (await response.json()) as PlayedSessionStats[];
+}
+
+export async function fetchSessionDetail(
+  gameSessionId: number,
+  signal?: AbortSignal,
+): Promise<SessionDetailStats> {
+  const response = await fetch(
+    `${getBackendUrl()}/stats/sessions/${gameSessionId}`,
+    { credentials: 'include', signal },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not load session detail');
+  }
+  return (await response.json()) as SessionDetailStats;
 }

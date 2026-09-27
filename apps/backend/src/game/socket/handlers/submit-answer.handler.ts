@@ -33,11 +33,16 @@ export async function submitTeamAnswer(
     throw new WsException('You may only submit answers for your own team');
   }
 
+  const phaseStartedAt = deps.gameState.getPhaseStartedAt(joinCode);
+  const responseMs =
+    phaseStartedAt === null ? null : Date.now() - phaseStartedAt;
+
   const submitted = await deps.answerService.submit(
     deps.gameState.getGameSessionId(joinCode),
     payload.questionId,
     payload.teamId,
     payload.value,
+    responseMs,
   );
 
   client.emit(SOCKET_EVENTS.ANSWER_RECEIVED, {

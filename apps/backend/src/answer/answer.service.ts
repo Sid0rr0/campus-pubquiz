@@ -117,6 +117,7 @@ export class AnswerService {
     questionId: number,
     teamId: number,
     value: string,
+    responseMs: number | null = null,
   ): Promise<SubmittedAnswer> {
     const question = await this.questions.findOneOrFail(questionId, {
       fields: ['type', 'answer', 'points'],
@@ -162,6 +163,7 @@ export class AnswerService {
         team: teamId,
         value,
         pointsAwarded,
+        responseMs,
         ...(isAutoGraded ? { gradedAt: now } : {}),
         ...(resetsGrading ? { gradedAt: null } : {}),
         createdAt: now,
@@ -172,8 +174,8 @@ export class AnswerService {
         onConflictAction: 'merge',
         onConflictMergeFields:
           isAutoGraded || resetsGrading
-            ? ['value', 'updatedAt', 'pointsAwarded', 'gradedAt']
-            : ['value', 'updatedAt'],
+            ? ['value', 'updatedAt', 'pointsAwarded', 'gradedAt', 'responseMs']
+            : ['value', 'updatedAt', 'responseMs'],
       },
     );
 

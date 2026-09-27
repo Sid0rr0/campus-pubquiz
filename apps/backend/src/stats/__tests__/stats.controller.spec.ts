@@ -2,11 +2,15 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsController } from '@/stats/stats.controller';
 import type { StatsService } from '@/stats/stats.service';
-import type { PlayedSessionStats } from '@campus-pubquiz/types';
+import type {
+  PlayedSessionStats,
+  SessionDetailStats,
+} from '@campus-pubquiz/types';
 
 function makeController() {
   const statsService = {
     listPlayedSessions: jest.fn(),
+    getSessionDetail: jest.fn(),
   };
   const controller = new StatsController(
     statsService as unknown as StatsService,
@@ -47,6 +51,43 @@ describe('StatsController', () => {
 
       await expect(controller.listPlayedSessions()).resolves.toBe(payload);
       expect(statsService.listPlayedSessions).toHaveBeenCalledWith();
+    });
+  });
+
+  describe('getSessionDetail', () => {
+    it('delegates to statsService.getSessionDetail with the parsed id', async () => {
+      const { controller, statsService } = makeController();
+      const payload = {
+        gameSessionId: 1,
+        joinCode: 'ABCDEF',
+        quizTitle: 'Quiz Night',
+        playedAt: '2026-01-01T00:00:00.000Z',
+        teamCount: 1,
+        maxPoints: 10,
+        difficulty: { averagePercent: 80, label: 'Easy' },
+        standings: [],
+        rounds: [],
+        questions: [],
+        highlights: {
+          hardestQuestionId: null,
+          easiestQuestionId: null,
+          hardestRoundId: null,
+          allCorrectQuestionIds: [],
+          noneCorrectQuestionIds: [],
+          fastestAnswer: null,
+          fastestTeam: null,
+          bonus: {
+            total: 0,
+            byCategory: { shot: 0, selfie: 0, custom: 0 },
+            count: 0,
+          },
+          winningMargin: null,
+        },
+      } as unknown as SessionDetailStats;
+      statsService.getSessionDetail.mockResolvedValue(payload);
+
+      await expect(controller.getSessionDetail(1)).resolves.toBe(payload);
+      expect(statsService.getSessionDetail).toHaveBeenCalledWith(1);
     });
   });
 });

@@ -1,3 +1,4 @@
+import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
 import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
 
@@ -131,6 +132,66 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     );
 
     expect(answers).toEqual([]);
+  });
+
+  it('stores the responseMs passed to submit', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+      4200,
+    );
+
+    const row = await state.em.findOneOrFail(Answer, {
+      gameSession: state.session.id,
+      question: state.question.id,
+    });
+    expect(row.responseMs).toBe(4200);
+  });
+
+  it('defaults responseMs to null when not passed', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+
+    const row = await state.em.findOneOrFail(Answer, {
+      gameSession: state.session.id,
+      question: state.question.id,
+    });
+    expect(row.responseMs).toBeNull();
+  });
+
+  it('overwrites responseMs on a revised submission', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+      4200,
+    );
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Apple',
+      1000,
+    );
+
+    const row = await state.em.findOneOrFail(Answer, {
+      gameSession: state.session.id,
+      question: state.question.id,
+    });
+    expect(row.responseMs).toBe(1000);
   });
 
   it('lists a human-graded answer with zero points and a null gradedAt before grading', async () => {

@@ -149,6 +149,22 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "datetime"
+        },
+        "response_ms": {
+          "name": "response_ms",
+          "type": "int4",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": 32,
+          "scale": 0,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
         }
       },
       "name": "answers",

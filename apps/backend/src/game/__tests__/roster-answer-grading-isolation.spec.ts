@@ -62,6 +62,7 @@ describe('GameGateway — concurrent sessions: roster, answer, and grading isola
       501,
       61,
       'foo',
+      expect.any(Number),
     );
     expect(state.answerService.submit).toHaveBeenNthCalledWith(
       2,
@@ -69,6 +70,7 @@ describe('GameGateway — concurrent sessions: roster, answer, and grading isola
       502,
       62,
       'bar',
+      expect.any(Number),
     );
     expect(
       state.gameStateService.getSnapshot('AAAAAA').answeredTeamIds,

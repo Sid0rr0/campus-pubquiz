@@ -38,7 +38,13 @@ describe('GameGateway — submit answer', () => {
       value: 'Banana',
     });
 
-    expect(answerService.submit).toHaveBeenCalledWith(101, 21, 31, 'Banana');
+    expect(answerService.submit).toHaveBeenCalledWith(
+      101,
+      21,
+      31,
+      'Banana',
+      expect.any(Number),
+    );
     expect(server.to).toHaveBeenCalledWith(
       sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
     );

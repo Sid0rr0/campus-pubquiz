@@ -1,8 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type { PlayedSessionStats } from '@campus-pubquiz/types';
+import type {
+  BonusCategory,
+  PlayedSessionStats,
+  QuestionType,
+  SessionDetailStats,
+} from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { computeSessionDetail } from '@/stats/session-detail.calc';
 
 interface PlayedSessionRow {
   gameSessionId: number;
@@ -13,6 +19,50 @@ interface PlayedSessionRow {
   maxPoints: string | number;
   winnerTeamName: string | null;
   winnerAnswerPoints: string | number | null;
+}
+
+interface SessionHeaderRow {
+  gameSessionId: number;
+  joinCode: string;
+  quizId: number;
+  quizTitle: string;
+  playedAt: string | Date;
+}
+
+interface SessionTeamRow {
+  teamId: number;
+  teamName: string;
+}
+
+interface SessionRoundRow {
+  roundId: number;
+  title: string;
+  category: string | null;
+  orderIndex: number;
+}
+
+interface SessionQuestionRow {
+  questionId: number;
+  roundId: number;
+  orderIndex: number;
+  prompt: string;
+  type: QuestionType;
+  points: string | number;
+}
+
+interface SessionAnswerRow {
+  questionId: number;
+  teamId: number;
+  teamName: string;
+  pointsAwarded: string | number;
+  gradedAt: string | Date | null;
+  responseMs: string | number | null;
+}
+
+interface SessionBonusRow {
+  teamId: number;
+  category: BonusCategory;
+  points: string | number;
 }
 
 @Injectable()
@@ -108,5 +158,106 @@ export class StatsService {
       winnerAnswerPoints:
         row.winnerAnswerPoints === null ? null : Number(row.winnerAnswerPoints),
     }));
+  }
+
+  async getSessionDetail(gameSessionId: number): Promise<SessionDetailStats> {
+    const knex = this.gameSessions.getKnex();
+
+    const header = (await knex('game_sessions as gs')
+      .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
+      .where('gs.id', gameSessionId)
+      .where('gs.status', 'ended')
+      .select(
+        'gs.id as gameSessionId',
+        'gs.join_code as joinCode',
+        'gs.quiz_id as quizId',
+        'qz.title as quizTitle',
+        'gs.created_at as playedAt',
+      )
+      .first()) as SessionHeaderRow | undefined;
+    if (!header) {
+      throw new NotFoundException(
+        `Ended session ${gameSessionId} does not exist`,
+      );
+    }
+
+    const teams = (await knex('game_session_teams as gst')
+      .join('teams as t', 't.id', 'gst.team_id')
+      .where('gst.game_session_id', gameSessionId)
+      .select('t.id as teamId', 't.name as teamName')) as SessionTeamRow[];
+
+    const rounds = (await knex('rounds as r')
+      .where('r.quiz_id', header.quizId)
+      .select(
+        'r.id as roundId',
+        'r.title',
+        'r.category',
+        'r.order_index as orderIndex',
+      )) as SessionRoundRow[];
+
+    const questions = (await knex('questions as q')
+      .join('rounds as r', 'r.id', 'q.round_id')
+      .where('r.quiz_id', header.quizId)
+      .select(
+        'q.id as questionId',
+        'q.round_id as roundId',
+        'q.order_index as orderIndex',
+        'q.prompt',
+        'q.type',
+        'q.points',
+      )) as SessionQuestionRow[];
+
+    const answers = (await knex('answers as a')
+      .join('teams as t', 't.id', 'a.team_id')
+      .where('a.game_session_id', gameSessionId)
+      .select(
+        'a.question_id as questionId',
+        'a.team_id as teamId',
+        't.name as teamName',
+        'a.points_awarded as pointsAwarded',
+        'a.graded_at as gradedAt',
+        'a.response_ms as responseMs',
+      )) as SessionAnswerRow[];
+
+    const bonusAwards = (await knex('bonus_awards')
+      .where('game_session_id', gameSessionId)
+      .select('team_id as teamId', 'category', 'points')) as SessionBonusRow[];
+
+    return computeSessionDetail({
+      session: {
+        gameSessionId: header.gameSessionId,
+        joinCode: header.joinCode,
+        quizTitle: header.quizTitle,
+        playedAt: header.playedAt,
+      },
+      teams,
+      rounds: rounds.map((r) => ({
+        roundId: r.roundId,
+        title: r.title,
+        category: r.category,
+        orderIndex: r.orderIndex,
+      })),
+      questions: questions.map((q) => ({
+        questionId: q.questionId,
+        roundId: q.roundId,
+        orderIndex: q.orderIndex,
+        prompt: q.prompt,
+        type: q.type,
+        points: Number(q.points),
+      })),
+      answers: answers.map((a) => ({
+        questionId: a.questionId,
+        teamId: a.teamId,
+        teamName: a.teamName,
+        pointsAwarded: Number(a.pointsAwarded),
+        gradedAt: a.gradedAt,
+        responseMs: a.responseMs === null ? null : Number(a.responseMs),
+      })),
+      bonusAwards: bonusAwards.map((b) => ({
+        teamId: b.teamId,
+        category: b.category,
+        points: Number(b.points),
+      })),
+    });
   }
 }

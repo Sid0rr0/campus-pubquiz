@@ -57,5 +57,7 @@ export const queryKeys = {
   stats: {
     all: ['stats'] as const,
     sessions: () => ['stats', 'sessions'] as const,
+    session: (gameSessionId: number) =>
+      ['stats', 'sessions', gameSessionId] as const,
   },
 } as const;

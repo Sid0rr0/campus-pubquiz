@@ -85,6 +85,12 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
       value: 'Rome',
     });
 
-    expect(answerService.submit).toHaveBeenCalledWith(103, 32, 31, 'Rome');
+    expect(answerService.submit).toHaveBeenCalledWith(
+      103,
+      32,
+      31,
+      'Rome',
+      expect.any(Number),
+    );
   });
 });
