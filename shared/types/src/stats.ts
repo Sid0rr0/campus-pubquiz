@@ -50,7 +50,10 @@ export interface SessionDetailQuestionRow {
   points: number;
   answeredCount: number;
   correctCount: number;
-  correctRate: number; // correctCount / teamCount
+  // correctCount / teamCount — except for `match`, where partial credit makes
+  // a binary rate misleading, so it's points earned / points achievable
+  // (teamCount * points) instead.
+  correctRate: number;
   fastestResponseMs: number | null;
 }
 

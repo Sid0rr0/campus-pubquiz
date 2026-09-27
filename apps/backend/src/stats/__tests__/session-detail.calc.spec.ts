@@ -131,6 +131,50 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].correctCount).toBe(1);
   });
 
+  it('derives correctRate from points percentage for match questions, not binary correctness', () => {
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team A' },
+          { teamId: 2, teamName: 'Team B' },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Match Q',
+            type: 'match',
+            points: 4,
+          },
+        ],
+        answers: [
+          {
+            questionId: 10,
+            teamId: 1,
+            teamName: 'Team A',
+            pointsAwarded: 1, // 1-of-4 pairs correct
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            responseMs: null,
+          },
+          {
+            questionId: 10,
+            teamId: 2,
+            teamName: 'Team B',
+            pointsAwarded: 3, // 3-of-4 pairs correct
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            responseMs: null,
+          },
+        ],
+      }),
+    );
+
+    // Both teams have partial credit, so correctCount stays binary (2), but
+    // correctRate reflects points earned (1 + 3) / achievable (2 * 4) = 50%.
+    expect(result.questions[0].correctCount).toBe(2);
+    expect(result.questions[0].correctRate).toBeCloseTo(0.5);
+  });
+
   it('breaks correctRate ties for hardest/easiest toward the earlier question', () => {
     const result = computeSessionDetail(
       buildInput({

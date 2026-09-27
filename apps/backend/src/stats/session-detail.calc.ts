@@ -265,6 +265,10 @@ export function computeSessionDetail(
       const timedResponses = questionAnswers
         .map((a) => a.responseMs)
         .filter((ms): ms is number => ms !== null);
+      // `match` awards partial credit per pair, so a binary correct/incorrect
+      // rate hides how close teams got — use points earned ÷ points
+      // achievable instead, same idea as a round's pointsPercent.
+      const achievableQuestionPoints = teamCount * question.points;
       return {
         questionId: question.questionId,
         roundTitle: roundTitleById.get(question.roundId) ?? '',
@@ -275,9 +279,14 @@ export function computeSessionDetail(
         answeredCount: questionAnswers.length,
         correctCount: questionAnswers.filter(isCorrect).length,
         correctRate:
-          teamCount > 0
-            ? questionAnswers.filter(isCorrect).length / teamCount
-            : 0,
+          question.type === 'match'
+            ? achievableQuestionPoints > 0
+              ? questionAnswers.reduce((sum, a) => sum + a.pointsAwarded, 0) /
+                achievableQuestionPoints
+              : 0
+            : teamCount > 0
+              ? questionAnswers.filter(isCorrect).length / teamCount
+              : 0,
         fastestResponseMs:
           timedResponses.length > 0 ? Math.min(...timedResponses) : null,
       };
