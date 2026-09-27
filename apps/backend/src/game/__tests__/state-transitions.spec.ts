@@ -351,6 +351,7 @@ describe('GameStateService — state transitions', () => {
         'multiple_choice',
         'Paris',
         10,
+        undefined,
       );
 
       const nextOpen = await kahootService.applyAction(
@@ -375,6 +376,7 @@ describe('GameStateService — state transitions', () => {
         'multiple_choice',
         'Rome',
         10,
+        undefined,
       );
 
       const endedSnapshot = await kahootService.applyAction(
@@ -443,6 +445,7 @@ describe('GameStateService — state transitions', () => {
         'multiple_choice',
         'Paris',
         10,
+        undefined,
       );
     });
   });

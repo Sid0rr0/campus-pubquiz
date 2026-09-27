@@ -64,6 +64,15 @@ export type QuestionType =
   | 'match'
   | 'closest_guess';
 
+/**
+ * Match only: how computeAutoGradedPoints scores a submitted pairing.
+ * `partial` (the default) splits `points` evenly across correctly paired
+ * items, rounded (see computeAutoGradedPoints). `all_or_nothing` instead
+ * awards full points when every pair is correct, half points (rounded) when
+ * exactly one pair is wrong, and zero otherwise.
+ */
+export type MatchScoringMode = 'partial' | 'all_or_nothing';
+
 export interface QuestionView {
   id: number;
   type: QuestionType;
@@ -77,6 +86,8 @@ export interface QuestionView {
   options?: string[];
   /** Match only: the right-hand items, in the order shown to players. */
   matchTargets?: string[];
+  /** Match only: undefined behaves as 'partial'. */
+  matchScoringMode?: MatchScoringMode;
   mediaUrl?: string;
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */
   mediaStartSeconds?: number;

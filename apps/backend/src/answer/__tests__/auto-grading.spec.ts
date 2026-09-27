@@ -239,6 +239,101 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.gradedAt).not.toBeNull();
   });
 
+  it('all_or_nothing match scoring: awards full points when every pair is correct', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield|web|hammer',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america', 'spiderman', 'thor'],
+        matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+        matchScoringMode: 'all_or_nothing',
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield|web|hammer',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      matchQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(4);
+  });
+
+  it('all_or_nothing match scoring: awards half points (rounded) when exactly one pair is wrong', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield|web|hammer',
+      points: 5,
+      payload: {
+        options: ['arthur', 'captain america', 'spiderman', 'thor'],
+        matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+        matchScoringMode: 'all_or_nothing',
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    // Only the last pair (hammer) is wrong — 3 of 4 correct, exactly one miss.
+    await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield|web|web',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      matchQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(3); // round(5 / 2)
+  });
+
+  it('all_or_nothing match scoring: awards zero points when two or more pairs are wrong', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield|web|hammer',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america', 'spiderman', 'thor'],
+        matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+        matchScoringMode: 'all_or_nothing',
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    // Two pairs wrong (web/hammer swapped).
+    await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield|hammer|web',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      matchQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(0);
+  });
+
   it('auto-grades an exact-match free_text answer on submit, awarding full points', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
 

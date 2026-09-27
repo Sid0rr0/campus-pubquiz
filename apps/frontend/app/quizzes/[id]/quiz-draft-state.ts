@@ -2,6 +2,7 @@ import {
   splitPipeList,
   type ImportQuestionPreview,
   type ImportRoundPreview,
+  type MatchScoringMode,
   type QuestionType,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
@@ -35,6 +36,8 @@ export interface EditorQuestion {
   options: EditorOption[];
   sortItems: string[];
   matchPairs: EditorMatchPair[];
+  /** Match only — see MatchScoringMode. Defaults to 'partial'. */
+  matchScoringMode: MatchScoringMode;
   correctText: string;
   mediaUrl: string;
   answerMediaUrl: string;
@@ -74,6 +77,7 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     options: [makeOption(), makeOption()],
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
+    matchScoringMode: 'partial',
     correctText: '',
     mediaUrl: '',
     answerMediaUrl: '',
@@ -156,6 +160,7 @@ export function questionFromPreview(
             makeMatchPair(left, answerItems[index] ?? ''),
           )
         : [makeMatchPair(), makeMatchPair()],
+    matchScoringMode: question.matchScoringMode ?? 'partial',
     correctText: isMc || isSort || isMatch ? '' : question.answer,
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
@@ -267,6 +272,7 @@ export function questionToPreview(
             matchPairs.map((pair) => pair.right),
             question.savedDisplayOrder,
           ),
+          matchScoringMode: question.matchScoringMode,
         }
       : {}),
     ...(mediaUrl ? { mediaUrl } : {}),

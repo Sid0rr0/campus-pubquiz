@@ -128,6 +128,57 @@ describe('validateQuizDraft - per-question-type field validation', () => {
     );
   });
 
+  it('accepts a match question with an explicit matchScoringMode', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'match',
+                answer: 'excalibur|shield',
+                options: ['arthur', 'captain america'],
+                matchTargets: ['shield', 'excalibur'],
+                matchScoringMode: 'all_or_nothing',
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).toEqual([]);
+  });
+
+  it('reports a match question with an invalid matchScoringMode', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'match',
+                answer: 'excalibur|shield',
+                options: ['arthur', 'captain america'],
+                matchTargets: ['shield', 'excalibur'],
+                // @ts-expect-error deliberately invalid for this test
+                matchScoringMode: 'half_credit',
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: 0,
+        field: 'matchScoringMode',
+      }),
+    );
+  });
+
   it('reports a multiple choice question with fewer than two options', () => {
     const issues = validateQuizDraft(
       makeRequest({

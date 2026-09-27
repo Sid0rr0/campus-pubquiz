@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
   LeaderboardEntry,
+  MatchScoringMode,
   QuestionType,
   TeamAnswerView,
 } from '@campus-pubquiz/types';
@@ -66,17 +67,21 @@ function normalizeFreeText(value: string): string {
  * - free_text: all-or-nothing too, but compared trimmed + case-insensitive
  *   (normalizeFreeText) since teams retype the answer freely rather than
  *   picking from fixed options — "Paris"/" paris "/"PARIS" all match.
- * - match: partial credit per correctly paired item — both `value` and
- *   `question.answer` are the pipe-joined right-hand items in the
- *   question's `options` (left-hand) order (see question-row.schema.ts's
- *   toCanonicalMatchAnswer and AnswerForm's match UI), so comparing them
- *   positionally counts correctly matched pairs directly. Points split
- *   evenly across pairs and round to the nearest whole point (e.g. 4
- *   points/4 pairs, 1 correct -> 1 point). `pointsAwarded` is stored as an
- *   integer, so when `points` is smaller than the pair count, distinct
- *   partial-credit levels can round to the same value (e.g. 1 point/4
- *   pairs: both 0-of-4 and 1-of-4 correct round to 0) — author match
- *   questions with points >= pair count for meaningful partial credit.
+ * - match: `value` and `question.answer` are the pipe-joined right-hand
+ *   items in the question's `options` (left-hand) order (see
+ *   question-row.schema.ts's toCanonicalMatchAnswer and AnswerForm's match
+ *   UI), so comparing them positionally counts correctly matched pairs
+ *   directly. How that count becomes points depends on `matchScoringMode`
+ *   (Question.payload.matchScoringMode, undefined behaves as 'partial'):
+ *   - 'partial' (default): points split evenly across pairs and rounded
+ *     (e.g. 4 points/4 pairs, 1 correct -> 1 point). `pointsAwarded` is
+ *     stored as an integer, so when `points` is smaller than the pair
+ *     count, distinct partial-credit levels can round to the same value
+ *     (e.g. 1 point/4 pairs: both 0-of-4 and 1-of-4 correct round to 0) —
+ *     author match questions with points >= pair count for meaningful
+ *     partial credit.
+ *   - 'all_or_nothing': full points when every pair is correct, half points
+ *     (rounded) when exactly one pair is wrong, zero otherwise.
  *
  * Any future addition to AUTO_GRADED_TYPES needs an explicit branch here —
  * there's no safe generic fallback across these three strategies.
@@ -86,19 +91,30 @@ function computeAutoGradedPoints(
   value: string,
   answer: string,
   points: number,
+  matchScoringMode: MatchScoringMode = 'partial',
 ): number {
   if (type === 'match') {
     const answerPairs = splitPipeList(answer);
     const submittedPairs = splitPipeList(value);
-    const correctPairs = answerPairs.filter(
+    const correctPairCount = answerPairs.filter(
       (rightItem, index) => rightItem === submittedPairs[index],
     ).length;
-    return Math.round((points * correctPairs) / answerPairs.length);
+    if (matchScoringMode === 'all_or_nothing') {
+      const wrongPairCount = answerPairs.length - correctPairCount;
+      if (wrongPairCount === 0) return points;
+      if (wrongPairCount === 1) return Math.round(points / 2);
+      return 0;
+    }
+    return Math.round((points * correctPairCount) / answerPairs.length);
   }
   if (type === 'free_text') {
     return normalizeFreeText(value) === normalizeFreeText(answer) ? points : 0;
   }
   return value === answer ? points : 0;
+}
+
+interface QuestionPayload {
+  matchScoringMode?: MatchScoringMode;
 }
 
 @Injectable()
@@ -120,14 +136,14 @@ export class AnswerService {
     responseMs: number | null = null,
   ): Promise<SubmittedAnswer> {
     const question = await this.questions.findOneOrFail(questionId, {
-      fields: ['type', 'answer', 'points'],
+      fields: ['type', 'answer', 'points', 'payload'],
     });
     // Multiple choice, sort, match, and free_text are all gradable without
     // admin judgement the instant they're submitted (enforced at
     // import/save time — see question-row.schema.ts and
     // quiz-draft.schema.ts), unlike audio/youtube. multiple_choice/sort/
-    // free_text are all-or-nothing; match splits points per correctly
-    // paired item — see computeAutoGradedPoints.
+    // free_text are all-or-nothing; match's scoring depends on
+    // matchScoringMode — see computeAutoGradedPoints.
     const isAutoGraded = AUTO_GRADED_TYPES.includes(question.type);
     const pointsAwarded = isAutoGraded
       ? computeAutoGradedPoints(
@@ -135,6 +151,7 @@ export class AnswerService {
           value,
           question.answer,
           question.points,
+          (question.payload as QuestionPayload).matchScoringMode,
         )
       : 0;
 
@@ -276,9 +293,11 @@ export class AnswerService {
    * manual override (e.g. adjusted match partial credit): the key it was
    * judged against just changed, and the admin can override again in break.
    * `type`/`answer`/`points` are passed in, same as applyKahootSpeedScoring.
-   * `speedMultipliers` (answer id -> multiplier, as returned by
-   * applyKahootSpeedScoring) re-applies a kahootMode question's speed
-   * scaling; an answer missing from it keeps unscaled points.
+   * `matchScoringMode` is match's only, ignored for every other type (same
+   * as computeAutoGradedPoints). `speedMultipliers` (answer id -> multiplier,
+   * as returned by applyKahootSpeedScoring) re-applies a kahootMode
+   * question's speed scaling; an answer missing from it keeps unscaled
+   * points.
    */
   async regradeAutoGraded(
     gameSessionId: number,
@@ -286,6 +305,7 @@ export class AnswerService {
     type: QuestionType,
     answer: string,
     points: number,
+    matchScoringMode?: MatchScoringMode,
     speedMultipliers: Readonly<Record<number, number>> = {},
   ): Promise<void> {
     const rows = await this.answers.find({
@@ -301,6 +321,7 @@ export class AnswerService {
         row.value,
         answer,
         points,
+        matchScoringMode,
       );
       row.pointsAwarded = Math.round(
         basePoints * (speedMultipliers[row.id] ?? 1),
@@ -390,6 +411,8 @@ export class AnswerService {
    * the full amount. `questionType`/`answer`/`points` are passed in rather
    * than re-fetched — the caller (kahootMode's question-lock transition)
    * already has them from the seeded game's RevealQuestionView.
+   * `matchScoringMode` is match's only, ignored for every other type (same
+   * as computeAutoGradedPoints).
    *
    * Returns every answer's speed multiplier (answer id -> `1 - fraction / 2`),
    * wrong answers included, for the caller to keep: the flush below bumps
@@ -406,6 +429,7 @@ export class AnswerService {
     questionType: QuestionType,
     answer: string,
     points: number,
+    matchScoringMode?: MatchScoringMode,
   ): Promise<Record<number, number>> {
     if (questionTimerSeconds === null) return {};
 
@@ -434,6 +458,7 @@ export class AnswerService {
         row.value,
         answer,
         points,
+        matchScoringMode,
       );
       row.pointsAwarded = Math.round(basePoints * multipliers[row.id]);
     }

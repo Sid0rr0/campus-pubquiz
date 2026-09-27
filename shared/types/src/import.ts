@@ -1,4 +1,4 @@
-import type { QuestionType } from './socket-events';
+import type { MatchScoringMode, QuestionType } from './socket-events';
 
 /**
  * One data row of the imported sheet, raw cell strings as exported by the
@@ -44,6 +44,8 @@ export interface ImportQuestionPreview {
   options?: string[];
   /** Match only: the right-hand items, in the order shown to players. */
   matchTargets?: string[];
+  /** Match only: undefined behaves as 'partial'. Never CSV-settable — like RoundConfig.kahootMode, only settable through the manual quiz editor. */
+  matchScoringMode?: MatchScoringMode;
   mediaUrl?: string;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;

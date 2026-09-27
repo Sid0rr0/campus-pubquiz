@@ -90,6 +90,7 @@ describe('GameStateService.regradeQuestions', () => {
       'multiple_choice',
       'Paris',
       2,
+      undefined,
       {},
     );
     expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
@@ -122,6 +123,7 @@ describe('GameStateService.regradeQuestions', () => {
       'free_text',
       'Jupiter',
       2,
+      undefined,
       {},
     );
     expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
@@ -150,6 +152,7 @@ describe('GameStateService.regradeQuestions', () => {
       'multiple_choice',
       'Paris',
       10,
+      undefined,
       { 501: 0.75 },
     );
   });
@@ -235,6 +238,7 @@ describe('GameGateway.notifyQuizEdited', () => {
       'multiple_choice',
       'Paris',
       2,
+      undefined,
       {},
     );
     const [loadOrder] = seedService.loadGame.mock.invocationCallOrder;

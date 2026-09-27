@@ -116,6 +116,7 @@ export class BlockGradingService {
       question.type,
       question.answer,
       question.points,
+      question.matchScoringMode,
     );
 
     const leaderboard = await this.answerService.computeLeaderboard(
@@ -170,6 +171,7 @@ export class BlockGradingService {
           question.type,
           question.answer,
           question.points,
+          question.matchScoringMode,
           speedMultipliers ?? {},
         );
         hasRegraded = true;

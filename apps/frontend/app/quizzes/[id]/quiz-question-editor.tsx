@@ -9,6 +9,7 @@ import {
 } from '@radix-ui/react-icons';
 import {
   extractYoutubeVideoId,
+  type MatchScoringMode,
   type QuestionType,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
@@ -50,6 +51,7 @@ const PLACED_ISSUE_FIELDS = new Set([
   'answer',
   'options',
   'matchTargets',
+  'matchScoringMode',
   'mediaUrl',
   'answerMediaUrl',
   'type',
@@ -486,6 +488,28 @@ export function QuizQuestionEditor({
             <PlusIcon aria-hidden="true" />
             Add pair
           </Button>
+          <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
+            Scoring
+            <select
+              value={question.matchScoringMode}
+              onChange={(event) =>
+                onChange({
+                  matchScoringMode: event.target.value as MatchScoringMode,
+                })
+              }
+              disabled={isLocked}
+              className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+            >
+              <option value="partial">
+                Partial credit — points split evenly across correct pairs
+              </option>
+              <option value="all_or_nothing">
+                All or nothing — full points, or half if exactly one pair is
+                wrong, else zero
+              </option>
+            </select>
+            <FieldErrors issues={fieldIssues(issues, 'matchScoringMode')} />
+          </label>
           <FieldErrors issues={fieldIssues(issues, 'options')} />
           <FieldErrors issues={fieldIssues(issues, 'matchTargets')} />
           <FieldErrors issues={fieldIssues(issues, 'answer')} />

@@ -300,6 +300,16 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([1]);
   });
 
+  it('returns a locked question whose matchScoringMode changed', () => {
+    expect(
+      findRegradeQuestionIds(
+        [round()],
+        withFirstQuestion({ matchScoringMode: 'all_or_nothing' }),
+        [1],
+      ),
+    ).toEqual([1]);
+  });
+
   it('ignores a locked question whose grading inputs are unchanged', () => {
     expect(
       findRegradeQuestionIds(

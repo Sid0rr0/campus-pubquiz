@@ -574,6 +574,47 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       );
       expect(answer.pointsAwarded).toBe(3);
     });
+
+    it('re-scores a match answer under all_or_nothing scoring when the answer key is corrected', async () => {
+      const matchQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'match',
+        prompt: 'Match the hero to their weapon.',
+        answer: 'excalibur|shield|web|hammer',
+        points: 4,
+        payload: {
+          options: ['arthur', 'captain america', 'spiderman', 'thor'],
+          matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+          matchScoringMode: 'all_or_nothing',
+        },
+      });
+      await state.em.flush();
+      const team = await insertTeam('Team A', 'token-a');
+      // Submitted against the original key: 3 of 4 correct (hammer wrong).
+      await state.answerService.submit(
+        state.session.id,
+        matchQuestion.id,
+        team.id,
+        'excalibur|shield|web|web',
+      );
+
+      // Corrected key makes the submission fully correct.
+      await state.answerService.regradeAutoGraded(
+        state.session.id,
+        matchQuestion.id,
+        'match',
+        'excalibur|shield|web|web',
+        4,
+        'all_or_nothing',
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        matchQuestion.id,
+      );
+      expect(answer.pointsAwarded).toBe(4);
+    });
   });
 
   describe('applyKahootSpeedScoring', () => {
@@ -862,6 +903,54 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         state.session.id,
         matchQuestion.id,
       );
+      expect(answer.pointsAwarded).toBe(1);
+    });
+
+    it('scales an all_or_nothing match answer from its pre-speed-scaling half credit, not full points', async () => {
+      const matchQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'match',
+        prompt: 'Match the hero to their weapon.',
+        answer: 'excalibur|shield|web|hammer',
+        points: 4,
+        payload: {
+          options: ['arthur', 'captain america', 'spiderman', 'thor'],
+          matchTargets: ['shield', 'excalibur', 'web', 'hammer'],
+          matchScoringMode: 'all_or_nothing',
+        },
+      });
+      await state.em.flush();
+      const team = await insertTeam('The Quizzards', 'token-1');
+      // Exactly one pair wrong (hammer) -> 2 points base (round(4 / 2)).
+      await state.answerService.submit(
+        state.session.id,
+        matchQuestion.id,
+        team.id,
+        'excalibur|shield|web|web',
+      );
+
+      const questionTimerSeconds = 10;
+      const questionOpenedAt = Date.now() - questionTimerSeconds * 1000;
+      const lockedAt = Date.now();
+      await setAnsweredAt(matchQuestion.id, team.id, lockedAt);
+
+      await state.answerService.applyKahootSpeedScoring(
+        state.session.id,
+        matchQuestion.id,
+        questionOpenedAt,
+        questionTimerSeconds,
+        matchQuestion.type,
+        matchQuestion.answer,
+        matchQuestion.points,
+        'all_or_nothing',
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        matchQuestion.id,
+      );
+      // Base 2 points, answered right at the timer -> 50% floor -> round(2 * 0.5) = 1.
       expect(answer.pointsAwarded).toBe(1);
     });
   });

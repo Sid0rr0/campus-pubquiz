@@ -107,6 +107,7 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
       matchTargets: z
         .array(z.string().min(1))
         .min(2, 'Provide at least two right items'),
+      matchScoringMode: z.enum(['partial', 'all_or_nothing']).optional(),
       mediaUrl: httpUrl.optional(),
     })
     .refine(

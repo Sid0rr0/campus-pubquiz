@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DEFAULT_SESSION_SETTINGS,
+  type MatchScoringMode,
   type SessionSettings,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -23,6 +24,7 @@ import type {
 interface QuestionPayload {
   options?: string[];
   matchTargets?: string[];
+  matchScoringMode?: MatchScoringMode;
   mediaUrl?: string;
   answerMediaUrl?: string;
   mediaStartSeconds?: number;
@@ -36,6 +38,7 @@ function toViewPayload(payload: unknown): QuestionPayload {
   const {
     options,
     matchTargets,
+    matchScoringMode,
     mediaUrl,
     answerMediaUrl,
     mediaStartSeconds,
@@ -44,6 +47,7 @@ function toViewPayload(payload: unknown): QuestionPayload {
   return {
     ...(options !== undefined ? { options } : {}),
     ...(matchTargets !== undefined ? { matchTargets } : {}),
+    ...(matchScoringMode !== undefined ? { matchScoringMode } : {}),
     ...(mediaUrl !== undefined ? { mediaUrl } : {}),
     ...(answerMediaUrl !== undefined ? { answerMediaUrl } : {}),
     ...(mediaStartSeconds !== undefined ? { mediaStartSeconds } : {}),

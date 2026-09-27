@@ -29,6 +29,7 @@ describe('makeQuestion / makeRound', () => {
       options: [makeOption(), makeOption()],
       sortItems: ['', ''],
       matchPairs: [makeMatchPair(), makeMatchPair()],
+      matchScoringMode: 'partial',
       correctText: '',
       mediaUrl: '',
       answerMediaUrl: '',
@@ -227,6 +228,39 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
       'Mercury',
       'Venus',
     ]);
+  });
+
+  it('defaults matchScoringMode to partial when a saved match question has none', () => {
+    const preview: ImportQuestionPreview = {
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+    };
+
+    const question = questionFromPreview('q1', preview);
+
+    expect(question.matchScoringMode).toBe('partial');
+  });
+
+  it('round-trips an explicit matchScoringMode through questionFromPreview/questionToPreview', () => {
+    const preview: ImportQuestionPreview = {
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+      matchScoringMode: 'all_or_nothing',
+    };
+
+    const question = questionFromPreview('q1', preview);
+    expect(question.matchScoringMode).toBe('all_or_nothing');
+
+    const saved = questionToPreview(question);
+    expect(saved.matchScoringMode).toBe('all_or_nothing');
   });
 
   it('keeps a saved match question’s target order when its right-hand items are unchanged, even if re-paired', () => {

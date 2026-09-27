@@ -5,6 +5,7 @@ import {
   parseYoutubeClipFromNotes,
   type ImportQuestionPreview,
   type ImportRoundPreview,
+  type MatchScoringMode,
   type QuizDraft,
   type QuizDraftIssue,
   type QuizDraftSaveResult,
@@ -21,6 +22,7 @@ import { validateQuizDraft } from '@/quiz/quiz-draft.schema';
 interface QuestionPayload {
   options?: string[];
   matchTargets?: string[];
+  matchScoringMode?: MatchScoringMode;
   mediaUrl?: string;
   answerMediaUrl?: string;
 }
@@ -44,6 +46,9 @@ function toQuestionPreview(question: Question): ImportQuestionPreview {
     ...(question.notes ? { notes: question.notes } : {}),
     ...(payload.options ? { options: payload.options } : {}),
     ...(payload.matchTargets ? { matchTargets: payload.matchTargets } : {}),
+    ...(payload.matchScoringMode
+      ? { matchScoringMode: payload.matchScoringMode }
+      : {}),
     ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}),
     ...(payload.answerMediaUrl
       ? { answerMediaUrl: payload.answerMediaUrl }
@@ -252,6 +257,9 @@ export class QuizService {
           ...(question.options ? { options: question.options } : {}),
           ...(question.matchTargets
             ? { matchTargets: question.matchTargets }
+            : {}),
+          ...(question.matchScoringMode
+            ? { matchScoringMode: question.matchScoringMode }
             : {}),
           ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
           ...(question.answerMediaUrl

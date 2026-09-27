@@ -25,6 +25,7 @@ const LOCKED_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
 const GRADING_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'answer',
   'points',
+  'matchScoringMode',
 ];
 
 function diffQuestionFields(
