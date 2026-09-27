@@ -247,5 +247,27 @@ describe('StatsService (Postgres integration)', () => {
       });
       expect(result.questions).toHaveLength(2);
     });
+
+    it('still counts a team that was kicked/left after answering, so correctRate cannot exceed 100%', async () => {
+      const { quiz, questions } = await createQuiz('Quiz H', [[10]]);
+      const session = await createSession(quiz, 'KICKED1', 'ended');
+      const [q1] = questions[0];
+      const teamA = await joinTeam(session, 'Team A');
+      const teamB = await joinTeam(session, 'Team B');
+      await grade(session, q1, teamA, 10);
+      await grade(session, q1, teamB, 10);
+
+      // Team B leaves/gets kicked after answering: roster row is hard-deleted,
+      // but its graded answer remains (TeamService.removeFromRoster).
+      await em.nativeDelete(GameSessionTeam, {
+        gameSession: session,
+        team: teamB,
+      });
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.teamCount).toBe(2);
+      expect(result.questions[0].correctRate).toBe(1);
+    });
   });
 });

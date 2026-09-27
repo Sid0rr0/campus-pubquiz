@@ -181,9 +181,26 @@ export class StatsService {
       );
     }
 
-    const teams = (await knex('game_session_teams as gst')
-      .join('teams as t', 't.id', 'gst.team_id')
-      .where('gst.game_session_id', gameSessionId)
+    // Kicking a team or a team leaving mid-session hard-deletes its
+    // game_session_teams roster row (TeamService.removeFromRoster), but its
+    // already-graded answers/bonuses stay — so the roster alone would
+    // undercount teamCount and inflate correctRate/pointsPercent past 100%
+    // for anyone who answered before being removed. Union in every team that
+    // left a mark on this session, not just the current roster.
+    const teamIdsInSession = knex('game_session_teams')
+      .where('game_session_id', gameSessionId)
+      .select('team_id')
+      .union([
+        knex('answers')
+          .where('game_session_id', gameSessionId)
+          .select('team_id'),
+        knex('bonus_awards')
+          .where('game_session_id', gameSessionId)
+          .select('team_id'),
+      ]);
+
+    const teams = (await knex('teams as t')
+      .whereIn('t.id', teamIdsInSession)
       .select('t.id as teamId', 't.name as teamName')) as SessionTeamRow[];
 
     const rounds = (await knex('rounds as r')
