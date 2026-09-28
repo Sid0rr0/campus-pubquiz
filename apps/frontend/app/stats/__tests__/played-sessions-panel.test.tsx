@@ -1,18 +1,50 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PlayedSessionStats } from '@campus-pubquiz/types';
+import type { AuthUser, PlayedSessionStats } from '@campus-pubquiz/types';
 import { PlayedSessionsPanel } from '@/app/stats/played-sessions-panel';
+import type { UseAuthResult } from '@/app/lib/use-auth';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchPlayedSessions } = vi.hoisted(() => ({
-  mockFetchPlayedSessions: vi.fn(),
-}));
+const { mockFetchPlayedSessions, mockDeleteSession, mockUseAuth } = vi.hoisted(
+  () => ({
+    mockFetchPlayedSessions: vi.fn(),
+    mockDeleteSession: vi.fn(),
+    mockUseAuth: vi.fn(),
+  }),
+);
 
 vi.mock('@/app/lib/stats-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/stats-api')>();
-  return { ...actual, fetchPlayedSessions: mockFetchPlayedSessions };
+  return {
+    ...actual,
+    fetchPlayedSessions: mockFetchPlayedSessions,
+    deleteSession: mockDeleteSession,
+  };
 });
+
+vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
+
+const ADMIN_USER: AuthUser = {
+  id: 1,
+  username: 'admin',
+  role: 'admin',
+  status: 'active',
+};
+
+function authResult(overrides: Partial<UseAuthResult> = {}): UseAuthResult {
+  return {
+    user: null,
+    status: 'unauthenticated',
+    error: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    clearError: vi.fn(),
+    ...overrides,
+  };
+}
 
 const SESSIONS = [
   {
@@ -40,7 +72,10 @@ const SESSIONS = [
 describe('PlayedSessionsPanel', () => {
   beforeEach(() => {
     mockFetchPlayedSessions.mockReset();
+    mockDeleteSession.mockReset();
+    mockUseAuth.mockReset();
     mockFetchPlayedSessions.mockResolvedValue(SESSIONS);
+    mockUseAuth.mockReturnValue(authResult());
   });
 
   it('lists every played session once loaded', async () => {
@@ -131,6 +166,56 @@ describe('PlayedSessionsPanel', () => {
       expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
       expect(screen.getAllByRole('row')).toHaveLength(6); // header + 5 rows
       expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    });
+  });
+
+  describe('delete session', () => {
+    it('hides the Actions column for a non-admin', async () => {
+      renderWithQuery(<PlayedSessionsPanel />);
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      expect(
+        screen.queryByRole('button', { name: /delete quiz night/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows a Delete action for an admin and deletes the session on confirm', async () => {
+      mockUseAuth.mockReturnValue(
+        authResult({ user: ADMIN_USER, status: 'authenticated' }),
+      );
+      mockDeleteSession.mockResolvedValue(undefined);
+      renderWithQuery(<PlayedSessionsPanel />);
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      await userEvent.click(
+        screen.getByRole('button', { name: /delete quiz night/i }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+
+      await waitFor(() => expect(mockDeleteSession).toHaveBeenCalledWith(1));
+    });
+
+    it('shows a success toast naming the session after it is deleted', async () => {
+      mockUseAuth.mockReturnValue(
+        authResult({ user: ADMIN_USER, status: 'authenticated' }),
+      );
+      mockDeleteSession.mockResolvedValue(undefined);
+      renderWithQuery(
+        <>
+          <PlayedSessionsPanel />
+          <Toaster />
+        </>,
+      );
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      await userEvent.click(
+        screen.getByRole('button', { name: /delete quiz night/i }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+
+      expect(
+        await screen.findByText('Deleted "Quiz Night"'),
+      ).toBeInTheDocument();
     });
   });
 });

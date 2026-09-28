@@ -270,4 +270,49 @@ describe('StatsService (Postgres integration)', () => {
       expect(result.questions[0].correctRate).toBe(1);
     });
   });
+
+  describe('deleteSession', () => {
+    it('throws NotFoundException for a session that does not exist', async () => {
+      await expect(statsService.deleteSession(999999)).rejects.toThrow(
+        'Ended session 999999 does not exist',
+      );
+    });
+
+    it('throws NotFoundException for a session that is not ended', async () => {
+      const { quiz } = await createQuiz('Quiz I', [[1]]);
+      const lobby = await createSession(quiz, 'LOBBY3', 'lobby');
+
+      await expect(statsService.deleteSession(lobby.id)).rejects.toThrow(
+        `Ended session ${lobby.id} does not exist`,
+      );
+    });
+
+    it('removes the session and every answer/bonus/roster row tied to it via cascade', async () => {
+      const { quiz, questions } = await createQuiz('Quiz J', [[5]]);
+      const session = await createSession(quiz, 'DELETE1', 'ended');
+      const [q1] = questions[0];
+      const teamA = await joinTeam(session, 'Team A');
+      await grade(session, q1, teamA, 5);
+      await awardBonus(session, teamA, 2);
+
+      await statsService.deleteSession(session.id);
+
+      expect(await em.findOne(GameSession, { id: session.id })).toBeNull();
+      expect(await em.count(Answer, { gameSession: session.id })).toBe(0);
+      expect(await em.count(BonusAward, { gameSession: session.id })).toBe(0);
+      expect(await em.count(GameSessionTeam, { gameSession: session.id })).toBe(
+        0,
+      );
+    });
+
+    it('leaves other sessions untouched', async () => {
+      const { quiz } = await createQuiz('Quiz K', [[1]]);
+      const toDelete = await createSession(quiz, 'DELETE2', 'ended');
+      const toKeep = await createSession(quiz, 'KEEP1', 'ended');
+
+      await statsService.deleteSession(toDelete.id);
+
+      expect(await em.findOne(GameSession, { id: toKeep.id })).not.toBeNull();
+    });
+  });
 });

@@ -11,6 +11,7 @@ function makeController() {
   const statsService = {
     listPlayedSessions: jest.fn(),
     getSessionDetail: jest.fn(),
+    deleteSession: jest.fn(),
   };
   const controller = new StatsController(
     statsService as unknown as StatsService,
@@ -88,6 +89,26 @@ describe('StatsController', () => {
 
       await expect(controller.getSessionDetail(1)).resolves.toBe(payload);
       expect(statsService.getSessionDetail).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('deleteSession', () => {
+    it('is restricted to the admin role, unlike the read routes above', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- inspected for metadata only, never invoked
+      const deleteHandler = StatsController.prototype.deleteSession;
+      const roles = Reflect.getMetadata('roles', deleteHandler) as
+        | unknown[]
+        | undefined;
+      expect(roles).toEqual(['admin']);
+    });
+
+    it('delegates to statsService.deleteSession with the parsed id', async () => {
+      const { controller, statsService } = makeController();
+      statsService.deleteSession.mockResolvedValue(undefined);
+
+      await controller.deleteSession(1);
+
+      expect(statsService.deleteSession).toHaveBeenCalledWith(1);
     });
   });
 });

@@ -277,4 +277,15 @@ export class StatsService {
       })),
     });
   }
+
+  /** Deletes an ended session and, via DB cascade rules, every answer, bonus award, and roster row tied to it. */
+  async deleteSession(gameSessionId: number): Promise<void> {
+    const session = await this.gameSessions.findOne({ id: gameSessionId });
+    if (!session || session.status !== 'ended') {
+      throw new NotFoundException(
+        `Ended session ${gameSessionId} does not exist`,
+      );
+    }
+    await this.gameSessions.getEntityManager().removeAndFlush(session);
+  }
 }

@@ -3,6 +3,7 @@ import type {
   SessionDetailStats,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import { CSRF_HEADERS } from '@/app/lib/csrf-headers';
 
 export class StatsApiError extends Error {
   constructor(
@@ -51,4 +52,14 @@ export async function fetchSessionDetail(
     return throwApiError(response, 'Could not load session detail');
   }
   return (await response.json()) as SessionDetailStats;
+}
+
+export async function deleteSession(gameSessionId: number): Promise<void> {
+  const response = await fetch(
+    `${getBackendUrl()}/stats/sessions/${gameSessionId}`,
+    { method: 'DELETE', credentials: 'include', headers: CSRF_HEADERS },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not delete session');
+  }
 }

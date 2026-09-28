@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createColumnHelper,
   createPaginatedRowModel,
@@ -18,12 +18,23 @@ import {
   type Updater,
 } from '@tanstack/react-table';
 import Link from 'next/link';
-import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
+import { toast } from 'sonner';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import type { PlayedSessionStats } from '@campus-pubquiz/types';
-import { fetchPlayedSessions, StatsApiError } from '@/app/lib/stats-api';
+import {
+  deleteSession,
+  fetchPlayedSessions,
+  StatsApiError,
+} from '@/app/lib/stats-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
+import { useAuth } from '@/app/lib/use-auth';
 import { Button } from '@/app/components/button';
+import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 const PAGE_SIZE = 20;
 
@@ -36,6 +47,10 @@ const features = tableFeatures({
 const helper = createColumnHelper<typeof features, PlayedSessionStats>();
 
 export function PlayedSessionsPanel() {
+  const auth = useAuth();
+  const isAdmin =
+    auth.status === 'authenticated' && auth.user?.role === 'admin';
+  const queryClient = useQueryClient();
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'playedAt', desc: true },
   ]);
@@ -43,6 +58,8 @@ export function PlayedSessionsPanel() {
     pageIndex: 0,
     pageSize: PAGE_SIZE,
   });
+  const [deletingSession, setDeletingSession] =
+    useState<PlayedSessionStats | null>(null);
 
   const statsQuery = useQuery({
     queryKey: queryKeys.stats.sessions(),
@@ -54,6 +71,22 @@ export function PlayedSessionsPanel() {
     StatsApiError,
     'Could not load session stats',
   );
+
+  const deleteMutation = useMutation({
+    mutationFn: (gameSessionId: number) => deleteSession(gameSessionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      setDeletingSession(null);
+    },
+    onError: (deleteError) =>
+      toast.error(
+        apiErrorMessage(
+          deleteError,
+          StatsApiError,
+          'Could not delete session',
+        ) ?? 'Could not delete session',
+      ),
+  });
 
   const columns = useMemo(
     () =>
@@ -96,8 +129,29 @@ export function PlayedSessionsPanel() {
               : `${session.winnerAnswerPoints} — ${session.winnerTeamName}`;
           },
         }),
+        ...(isAdmin
+          ? [
+              helper.display({
+                id: 'actions',
+                header: 'Actions',
+                cell: (context) => (
+                  <Button
+                    type="button"
+                    variant="outline-muted"
+                    size="sm"
+                    aria-label={`Delete ${context.row.original.quizTitle}`}
+                    onClick={() => setDeletingSession(context.row.original)}
+                    className="text-magenta"
+                  >
+                    <TrashIcon aria-hidden="true" />
+                    Delete
+                  </Button>
+                ),
+              }),
+            ]
+          : []),
       ]),
-    [],
+    [isAdmin],
   );
 
   function handleSortingChange(updater: Updater<SortingState>): void {
@@ -230,6 +284,22 @@ export function PlayedSessionsPanel() {
           Next
         </Button>
       </div>
+      <ConfirmDialog
+        open={deletingSession !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setDeletingSession(null);
+        }}
+        title={`Delete "${deletingSession?.quizTitle}"?`}
+        description="This permanently deletes this session's stats, including every answer and bonus award recorded for it. This can't be undone."
+        confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+        onConfirm={() => {
+          if (!deletingSession) return;
+          deleteMutation.mutate(deletingSession.gameSessionId, {
+            onSuccess: () =>
+              toast.success(`Deleted "${deletingSession.quizTitle}"`),
+          });
+        }}
+      />
     </main>
   );
 }
