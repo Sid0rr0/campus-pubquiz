@@ -43,8 +43,9 @@ export async function fetchPublicSessions(): Promise<ActiveSessionSummary[]> {
 export async function createSession(
   quizId: number,
   settings?: Partial<SessionSettings>,
+  name?: string,
 ): Promise<ActiveSessionSummary> {
-  const payload: CreateSessionPayload = { quizId, settings };
+  const payload: CreateSessionPayload = { quizId, settings, name };
   const response = await fetch(`${getBackendUrl()}/sessions`, {
     method: 'POST',
     credentials: 'include',

@@ -97,6 +97,7 @@ describe('JoinForm', () => {
         joinCode: 'ABCDEF',
         quizId: 1,
         quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
         status: 'lobby',
         teamCount: 3,
       },

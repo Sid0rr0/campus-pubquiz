@@ -165,6 +165,31 @@ describe('sessions-api', () => {
         }),
       );
     });
+
+    it('includes a custom name in the POST body when given', async () => {
+      const payload = {
+        joinCode: 'GHIJKL',
+        quizId: 2,
+        quizTitle: 'Imported Quiz',
+        name: 'Week 3 Social',
+        status: 'lobby',
+        teamCount: 0,
+      };
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(payload),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await createSession(2, undefined, 'Week 3 Social');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:3000/sessions',
+        expect.objectContaining({
+          body: JSON.stringify({ quizId: 2, name: 'Week 3 Social' }),
+        }),
+      );
+    });
   });
 
   describe('updateSessionSettings', () => {

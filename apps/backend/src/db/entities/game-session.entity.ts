@@ -21,6 +21,7 @@ export class GameSession extends BaseEntity {
     | 'isLeaderboardVisible'
     | 'previousStatus'
     | 'settings'
+    | 'name'
     | 'livePhaseKey'
     | 'phaseStartedAt'
     | 'phaseElapsedByKey';
@@ -54,6 +55,10 @@ export class GameSession extends BaseEntity {
 
   @Property({ type: 'json' })
   settings: SessionSettings = DEFAULT_SESSION_SETTINGS;
+
+  /** Custom display name set at creation or rename — null falls back to the quiz's own title (resolved by SessionsController/StatsService, not here). */
+  @Property({ type: 'text', nullable: true })
+  name: string | null = null;
 
   /** The timed-phase key currently "live" — see SessionState.livePhaseKey. */
   @Property({ type: 'text', nullable: true })

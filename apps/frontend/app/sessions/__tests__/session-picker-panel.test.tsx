@@ -99,6 +99,7 @@ describe('SessionPickerPanel', () => {
         joinCode: 'ABCDEF',
         quizId: 1,
         quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
         status: 'lobby',
         teamCount: 3,
         startedAt: '2026-09-16T12:00:00.000Z',
@@ -118,6 +119,7 @@ describe('SessionPickerPanel', () => {
         joinCode: 'ABCDEF',
         quizId: 1,
         quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
         status: 'lobby',
         teamCount: 3,
         startedAt: '2026-09-16T12:00:00.000Z',
@@ -142,6 +144,7 @@ describe('SessionPickerPanel', () => {
         joinCode: 'ABCDEF',
         quizId: 1,
         quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
         status: 'lobby',
         teamCount: 0,
       },
@@ -162,6 +165,7 @@ describe('SessionPickerPanel', () => {
         joinCode: 'ABCDEF',
         quizId: 1,
         quizTitle: 'Campus Pub Quiz Night',
+        name: 'Campus Pub Quiz Night',
         status: 'lobby',
         teamCount: 0,
       },
@@ -180,6 +184,7 @@ describe('SessionPickerPanel', () => {
           joinCode: 'AAAAAA',
           quizId: 1,
           quizTitle: 'Live Quiz',
+          name: 'Live Quiz',
           status: 'question_open',
           teamCount: 1,
         },
@@ -187,6 +192,7 @@ describe('SessionPickerPanel', () => {
           joinCode: 'BBBBBB',
           quizId: 2,
           quizTitle: 'Finished Quiz',
+          name: 'Finished Quiz',
           status: 'ended',
           teamCount: 2,
         },
@@ -196,6 +202,7 @@ describe('SessionPickerPanel', () => {
           joinCode: 'AAAAAA',
           quizId: 1,
           quizTitle: 'Live Quiz',
+          name: 'Live Quiz',
           status: 'question_open',
           teamCount: 1,
         },
@@ -512,8 +519,56 @@ describe('SessionPickerPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
-    expect(mockCreateSession).toHaveBeenCalledWith(2, DEFAULT_SESSION_SETTINGS);
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+      'Imported Quiz',
+    );
     await waitFor(() => expect(onOpenSession).toHaveBeenCalledWith('GHIJKL'));
+  });
+
+  it('defaults the session name input to the quiz title', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+
+    expect(screen.getByLabelText(/session name/i)).toHaveValue('Imported Quiz');
+  });
+
+  it('passes an edited session name through to createSession', async () => {
+    mockFetchQuizzes.mockResolvedValue({
+      activeQuizId: null,
+      quizzes: [{ id: 2, title: 'Imported Quiz', rounds: [] }],
+    });
+    mockCreateSession.mockResolvedValue({
+      joinCode: 'GHIJKL',
+      quizId: 2,
+      quizTitle: 'Imported Quiz',
+      name: 'Week 3 Social',
+      status: 'lobby',
+      teamCount: 0,
+    });
+    renderWithQuery(<SessionPickerPanel onOpenSession={vi.fn()} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /^start$/i }),
+    );
+    const nameInput = screen.getByLabelText(/session name/i);
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, 'Week 3 Social');
+    await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
+
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+      'Week 3 Social',
+    );
   });
 
   it('passes the confirm dialog form edits through to createSession', async () => {
@@ -539,10 +594,11 @@ describe('SessionPickerPanel', () => {
     await userEvent.type(lockGraceInput, '15');
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
-    expect(mockCreateSession).toHaveBeenCalledWith(2, {
-      ...DEFAULT_SESSION_SETTINGS,
-      lockGraceSeconds: 15,
-    });
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      2,
+      { ...DEFAULT_SESSION_SETTINGS, lockGraceSeconds: 15 },
+      'Imported Quiz',
+    );
   });
 
   it('prefills the kahoot question timer to 30s for a quiz with a kahootMode round', async () => {
@@ -577,10 +633,11 @@ describe('SessionPickerPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
-    expect(mockCreateSession).toHaveBeenCalledWith(2, {
-      ...DEFAULT_SESSION_SETTINGS,
-      kahootQuestionTimerSeconds: 30,
-    });
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      2,
+      { ...DEFAULT_SESSION_SETTINGS, kahootQuestionTimerSeconds: 30 },
+      'Speed Quiz',
+    );
   });
 
   it('prefills the kahoot question timer to null for a quiz with no kahootMode round', async () => {
@@ -602,7 +659,11 @@ describe('SessionPickerPanel', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
-    expect(mockCreateSession).toHaveBeenCalledWith(2, DEFAULT_SESSION_SETTINGS);
+    expect(mockCreateSession).toHaveBeenCalledWith(
+      2,
+      DEFAULT_SESSION_SETTINGS,
+      'Imported Quiz',
+    );
   });
 
   it('does not create a session when the confirmation modal is cancelled', async () => {

@@ -36,6 +36,7 @@ function makeController() {
   };
   const seedService = {
     findStartedAtByJoinCodes: jest.fn().mockResolvedValue(new Map()),
+    findNamesByJoinCodes: jest.fn().mockResolvedValue(new Map()),
   };
   const controller = new SessionsController(
     gameState as unknown as GameStateService,
@@ -143,6 +144,7 @@ describe('SessionsController', () => {
           joinCode: 'ABCDEF',
           quizId: 1,
           quizTitle: 'Campus Pub Quiz Night',
+          name: 'Campus Pub Quiz Night',
           status: 'lobby',
           teamCount: 0,
           startedAt: '2026-09-16T12:00:00.000Z',
@@ -189,6 +191,7 @@ describe('SessionsController', () => {
           joinCode: 'ABCDEF',
           quizId: 1,
           quizTitle: 'Campus Pub Quiz Night',
+          name: 'Campus Pub Quiz Night',
           status: 'lobby',
           teamCount: 0,
           startedAt: '2026-09-16T12:00:00.000Z',
@@ -197,6 +200,7 @@ describe('SessionsController', () => {
           joinCode: 'GHIJKL',
           quizId: 2,
           quizTitle: 'Imported Quiz',
+          name: 'Imported Quiz',
           status: 'question_open',
           teamCount: 3,
           startedAt: '2026-09-16T13:00:00.000Z',
@@ -214,6 +218,42 @@ describe('SessionsController', () => {
       const [result] = await controller.list();
 
       expect(result.quizTitle).toBe('Unknown quiz');
+    });
+
+    it("uses the session's custom display name when one was set, over the quiz title", async () => {
+      const { controller, gameState, quizService, seedService } =
+        makeController();
+      gameState.listSessions.mockReturnValue([
+        { joinCode: 'ABCDEF', quizId: 1, status: 'lobby', teamCount: 0 },
+      ]);
+      quizService.findTitles.mockResolvedValue(
+        new Map([[1, 'Campus Pub Quiz Night']]),
+      );
+      seedService.findNamesByJoinCodes.mockResolvedValue(
+        new Map([['ABCDEF', 'Week 3 Social']]),
+      );
+
+      const [result] = await controller.list();
+
+      expect(result.name).toBe('Week 3 Social');
+    });
+
+    it('falls back to the quiz title when no custom name was set', async () => {
+      const { controller, gameState, quizService, seedService } =
+        makeController();
+      gameState.listSessions.mockReturnValue([
+        { joinCode: 'ABCDEF', quizId: 1, status: 'lobby', teamCount: 0 },
+      ]);
+      quizService.findTitles.mockResolvedValue(
+        new Map([[1, 'Campus Pub Quiz Night']]),
+      );
+      seedService.findNamesByJoinCodes.mockResolvedValue(
+        new Map([['ABCDEF', null]]),
+      );
+
+      const [result] = await controller.list();
+
+      expect(result.name).toBe('Campus Pub Quiz Night');
     });
   });
 
@@ -234,6 +274,7 @@ describe('SessionsController', () => {
       expect(gameState.createSession).toHaveBeenCalledWith(
         2,
         DEFAULT_SESSION_SETTINGS,
+        undefined,
       );
       expect(seedService.findStartedAtByJoinCodes).toHaveBeenCalledWith([
         'GHIJKL',
@@ -242,10 +283,48 @@ describe('SessionsController', () => {
         joinCode: 'GHIJKL',
         quizId: 2,
         quizTitle: 'Imported Quiz',
+        name: 'Imported Quiz',
         status: 'lobby',
         teamCount: 0,
         startedAt: '2026-09-16T12:00:00.000Z',
       });
+    });
+
+    it('passes a trimmed custom name through and uses it in the response', async () => {
+      const { controller, gameState, quizService } = makeController();
+      gameState.createSession.mockResolvedValue(
+        snapshot({ joinCode: 'GHIJKL', teams: [] }),
+      );
+      quizService.findTitles.mockResolvedValue(new Map([[2, 'Imported Quiz']]));
+
+      const result = await controller.create({
+        quizId: 2,
+        name: '  Week 3 Social  ',
+      });
+
+      expect(gameState.createSession).toHaveBeenCalledWith(
+        2,
+        DEFAULT_SESSION_SETTINGS,
+        'Week 3 Social',
+      );
+      expect(result.name).toBe('Week 3 Social');
+    });
+
+    it('treats a blank name as absent, defaulting to the quiz title', async () => {
+      const { controller, gameState, quizService } = makeController();
+      gameState.createSession.mockResolvedValue(
+        snapshot({ joinCode: 'GHIJKL', teams: [] }),
+      );
+      quizService.findTitles.mockResolvedValue(new Map([[2, 'Imported Quiz']]));
+
+      const result = await controller.create({ quizId: 2, name: '   ' });
+
+      expect(gameState.createSession).toHaveBeenCalledWith(
+        2,
+        DEFAULT_SESSION_SETTINGS,
+        undefined,
+      );
+      expect(result.name).toBe('Imported Quiz');
     });
 
     it('resolves a partial settings override over the defaults', async () => {
@@ -260,10 +339,11 @@ describe('SessionsController', () => {
         settings: { lockGraceSeconds: 15 },
       });
 
-      expect(gameState.createSession).toHaveBeenCalledWith(2, {
-        ...DEFAULT_SESSION_SETTINGS,
-        lockGraceSeconds: 15,
-      });
+      expect(gameState.createSession).toHaveBeenCalledWith(
+        2,
+        { ...DEFAULT_SESSION_SETTINGS, lockGraceSeconds: 15 },
+        undefined,
+      );
     });
 
     it('rejects an invalid settings override', async () => {

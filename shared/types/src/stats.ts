@@ -5,6 +5,8 @@ export interface PlayedSessionStats {
   gameSessionId: number;
   joinCode: string;
   quizTitle: string;
+  /** The session's display name — a custom name set at creation/rename, or quizTitle when none was set. */
+  name: string;
   playedAt: string; // game_sessions.created_at, ISO
   teamCount: number; // game_session_teams rows for this session
   maxPoints: number; // sum(questions.points) over the session's quiz
@@ -20,6 +22,11 @@ export interface PlayedSessionsListedPayload {
   total: number;
   page: number;
   pageSize: number;
+}
+
+/** Request body for PATCH /stats/sessions/:id — sets a played session's custom display name. A blank name clears it, falling back to the quiz's title. */
+export interface RenameSessionPayload {
+  name: string;
 }
 
 export const PLAYED_SESSIONS_SORT_COLUMNS = [
@@ -110,6 +117,8 @@ export interface SessionDetailStats {
   gameSessionId: number;
   joinCode: string;
   quizTitle: string;
+  /** The session's display name — a custom name set at creation/rename, or quizTitle when none was set. */
+  name: string;
   playedAt: string; // ISO
   teamCount: number;
   maxPoints: number;

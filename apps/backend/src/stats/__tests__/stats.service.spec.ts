@@ -85,8 +85,14 @@ describe('StatsService (Postgres integration)', () => {
     quiz: Quiz,
     joinCode: string,
     status: string,
+    name?: string | null,
   ): Promise<GameSession> {
-    const session = em.create(GameSession, { quiz, joinCode, status });
+    const session = em.create(GameSession, {
+      quiz,
+      joinCode,
+      status,
+      name: name ?? null,
+    });
     await em.flush();
     return session;
   }
@@ -217,6 +223,28 @@ describe('StatsService (Postgres integration)', () => {
     ]);
   });
 
+  it('resolves name to the quiz title when no custom name was set', async () => {
+    const { quiz } = await createQuiz('Quiz Default Name', [[1]]);
+    await createSession(quiz, 'NONAME1', 'ended');
+
+    const {
+      items: [result],
+    } = await statsService.listPlayedSessions(defaultQuery);
+
+    expect(result.name).toBe('Quiz Default Name');
+  });
+
+  it('resolves name to the custom name when one was set at creation', async () => {
+    const { quiz } = await createQuiz('Quiz L', [[1]]);
+    await createSession(quiz, 'CUSTOMNAME1', 'ended', 'Week 3 Social');
+
+    const {
+      items: [result],
+    } = await statsService.listPlayedSessions(defaultQuery);
+
+    expect(result.name).toBe('Week 3 Social');
+  });
+
   it('orders by quizTitle ascending when requested', async () => {
     const { quiz: quizB } = await createQuiz('Quiz Zebra', [[1]]);
     const { quiz: quizA } = await createQuiz('Quiz Apple', [[1]]);
@@ -307,6 +335,24 @@ describe('StatsService (Postgres integration)', () => {
       expect(result.questions).toHaveLength(2);
     });
 
+    it('resolves name to the custom name when one was set, else the quiz title', async () => {
+      const { quiz: namedQuiz } = await createQuiz('Quiz M', [[1]]);
+      const named = await createSession(
+        namedQuiz,
+        'NAMED1',
+        'ended',
+        'Week 3 Social',
+      );
+      const { quiz: unnamedQuiz } = await createQuiz('Quiz N', [[1]]);
+      const unnamed = await createSession(unnamedQuiz, 'UNNAMED1', 'ended');
+
+      const namedResult = await statsService.getSessionDetail(named.id);
+      const unnamedResult = await statsService.getSessionDetail(unnamed.id);
+
+      expect(namedResult.name).toBe('Week 3 Social');
+      expect(unnamedResult.name).toBe('Quiz N');
+    });
+
     it('still counts a team that was kicked/left after answering, so correctRate cannot exceed 100%', async () => {
       const { quiz, questions } = await createQuiz('Quiz H', [[10]]);
       const session = await createSession(quiz, 'KICKED1', 'ended');
@@ -372,6 +418,62 @@ describe('StatsService (Postgres integration)', () => {
       await statsService.deleteSession(toDelete.id);
 
       expect(await em.findOne(GameSession, { id: toKeep.id })).not.toBeNull();
+    });
+  });
+
+  describe('renameSession', () => {
+    it('throws NotFoundException for a session that does not exist', async () => {
+      await expect(
+        statsService.renameSession(999999, 'New Name'),
+      ).rejects.toThrow('Ended session 999999 does not exist');
+    });
+
+    it('throws NotFoundException for a session that is not ended', async () => {
+      const { quiz } = await createQuiz('Quiz L', [[1]]);
+      const lobby = await createSession(quiz, 'LOBBY4', 'lobby');
+
+      await expect(
+        statsService.renameSession(lobby.id, 'New Name'),
+      ).rejects.toThrow(`Ended session ${lobby.id} does not exist`);
+    });
+
+    it('sets a custom display name, reflected in a subsequent listing', async () => {
+      const { quiz } = await createQuiz('Quiz M', [[1]]);
+      const session = await createSession(quiz, 'RENAME1', 'ended');
+
+      await statsService.renameSession(session.id, 'Week 3 Social');
+
+      const {
+        items: [result],
+      } = await statsService.listPlayedSessions(defaultQuery);
+      expect(result.name).toBe('Week 3 Social');
+    });
+
+    it('trims the given name before storing it', async () => {
+      const { quiz } = await createQuiz('Quiz N', [[1]]);
+      const session = await createSession(quiz, 'RENAME2', 'ended');
+
+      await statsService.renameSession(session.id, '  Week 3 Social  ');
+
+      const reloaded = await em.findOneOrFail(GameSession, { id: session.id });
+      expect(reloaded.name).toBe('Week 3 Social');
+    });
+
+    it('clears a custom name back to the quiz title default when given a blank name', async () => {
+      const { quiz } = await createQuiz('Quiz O', [[1]]);
+      const session = await createSession(
+        quiz,
+        'RENAME3',
+        'ended',
+        'Old Custom Name',
+      );
+
+      await statsService.renameSession(session.id, '   ');
+
+      const {
+        items: [result],
+      } = await statsService.listPlayedSessions(defaultQuery);
+      expect(result.name).toBe('Quiz O');
     });
   });
 });

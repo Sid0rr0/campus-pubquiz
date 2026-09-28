@@ -16,6 +16,7 @@ export interface SessionDetailSessionRow {
   gameSessionId: number;
   joinCode: string;
   quizTitle: string;
+  name: string;
   playedAt: string | Date;
 }
 
@@ -304,6 +305,7 @@ export function computeSessionDetail(
     gameSessionId: session.gameSessionId,
     joinCode: session.joinCode,
     quizTitle: session.quizTitle,
+    name: session.name,
     playedAt: new Date(session.playedAt).toISOString(),
     teamCount,
     maxPoints,

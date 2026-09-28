@@ -7,16 +7,21 @@ import type {
   PlayedSessionsListedPayload,
 } from '@campus-pubquiz/types';
 import { PlayedSessionsPanel } from '@/app/stats/played-sessions-panel';
+import { StatsApiError } from '@/app/lib/stats-api';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchPlayedSessions, mockDeleteSession, mockUseAuth } = vi.hoisted(
-  () => ({
-    mockFetchPlayedSessions: vi.fn(),
-    mockDeleteSession: vi.fn(),
-    mockUseAuth: vi.fn(),
-  }),
-);
+const {
+  mockFetchPlayedSessions,
+  mockDeleteSession,
+  mockRenameSession,
+  mockUseAuth,
+} = vi.hoisted(() => ({
+  mockFetchPlayedSessions: vi.fn(),
+  mockDeleteSession: vi.fn(),
+  mockRenameSession: vi.fn(),
+  mockUseAuth: vi.fn(),
+}));
 
 vi.mock('@/app/lib/stats-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/stats-api')>();
@@ -24,6 +29,7 @@ vi.mock('@/app/lib/stats-api', async (importOriginal) => {
     ...actual,
     fetchPlayedSessions: mockFetchPlayedSessions,
     deleteSession: mockDeleteSession,
+    renameSession: mockRenameSession,
   };
 });
 
@@ -54,6 +60,7 @@ const SESSIONS = [
     gameSessionId: 1,
     joinCode: 'ABCDEF',
     quizTitle: 'Quiz Night',
+    name: 'Quiz Night',
     playedAt: '2026-01-05T00:00:00.000Z',
     teamCount: 3,
     maxPoints: 20,
@@ -64,6 +71,7 @@ const SESSIONS = [
     gameSessionId: 2,
     joinCode: 'GHIJKL',
     quizTitle: 'Trivia Tuesday',
+    name: 'Trivia Tuesday',
     playedAt: '2026-01-01T00:00:00.000Z',
     teamCount: 0,
     maxPoints: 10,
@@ -83,6 +91,7 @@ describe('PlayedSessionsPanel', () => {
   beforeEach(() => {
     mockFetchPlayedSessions.mockReset();
     mockDeleteSession.mockReset();
+    mockRenameSession.mockReset();
     mockUseAuth.mockReset();
     mockFetchPlayedSessions.mockResolvedValue(PAYLOAD);
     mockUseAuth.mockReturnValue(authResult());
@@ -188,13 +197,21 @@ describe('PlayedSessionsPanel', () => {
     });
   });
 
+  async function openActionsMenu(name: string): Promise<void> {
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(`actions for ${name}`, 'i'),
+      }),
+    );
+  }
+
   describe('delete session', () => {
     it('hides the Actions column for a non-admin', async () => {
       renderWithQuery(<PlayedSessionsPanel />);
 
       await waitFor(() => screen.getByText('Quiz Night'));
       expect(
-        screen.queryByRole('button', { name: /delete quiz night/i }),
+        screen.queryByRole('button', { name: /actions for quiz night/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -206,8 +223,9 @@ describe('PlayedSessionsPanel', () => {
       renderWithQuery(<PlayedSessionsPanel />);
 
       await waitFor(() => screen.getByText('Quiz Night'));
+      await openActionsMenu('Quiz Night');
       await userEvent.click(
-        screen.getByRole('button', { name: /delete quiz night/i }),
+        await screen.findByRole('menuitem', { name: /delete/i }),
       );
       await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
 
@@ -227,13 +245,110 @@ describe('PlayedSessionsPanel', () => {
       );
 
       await waitFor(() => screen.getByText('Quiz Night'));
+      await openActionsMenu('Quiz Night');
       await userEvent.click(
-        screen.getByRole('button', { name: /delete quiz night/i }),
+        await screen.findByRole('menuitem', { name: /delete/i }),
       );
       await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
 
       expect(
         await screen.findByText('Deleted "Quiz Night"'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('rename session', () => {
+    it('hides the Edit action for a non-admin', async () => {
+      renderWithQuery(<PlayedSessionsPanel />);
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      expect(
+        screen.queryByRole('button', { name: /actions for quiz night/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows an Edit action for an admin, prefilled with the current name', async () => {
+      mockUseAuth.mockReturnValue(
+        authResult({ user: ADMIN_USER, status: 'authenticated' }),
+      );
+      renderWithQuery(<PlayedSessionsPanel />);
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      await openActionsMenu('Quiz Night');
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /edit/i }),
+      );
+
+      expect(
+        screen.getByRole('heading', { name: /rename session/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Quiz Night')).toBeInTheDocument();
+    });
+
+    it('renames the session to the edited value on save', async () => {
+      mockUseAuth.mockReturnValue(
+        authResult({ user: ADMIN_USER, status: 'authenticated' }),
+      );
+      mockRenameSession.mockResolvedValue(undefined);
+      renderWithQuery(<PlayedSessionsPanel />);
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      await openActionsMenu('Quiz Night');
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /edit/i }),
+      );
+      const nameInput = screen.getByDisplayValue('Quiz Night');
+      await userEvent.clear(nameInput);
+      await userEvent.type(nameInput, 'Week 3 Social');
+      await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+      await waitFor(() =>
+        expect(mockRenameSession).toHaveBeenCalledWith(1, 'Week 3 Social'),
+      );
+    });
+
+    it('does not rename the session when the dialog is cancelled', async () => {
+      mockUseAuth.mockReturnValue(
+        authResult({ user: ADMIN_USER, status: 'authenticated' }),
+      );
+      renderWithQuery(<PlayedSessionsPanel />);
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      await openActionsMenu('Quiz Night');
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /edit/i }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(mockRenameSession).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole('heading', { name: /rename session/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows an error toast when the rename fails', async () => {
+      mockUseAuth.mockReturnValue(
+        authResult({ user: ADMIN_USER, status: 'authenticated' }),
+      );
+      mockRenameSession.mockRejectedValue(
+        new StatsApiError('Could not rename session', 500),
+      );
+      renderWithQuery(
+        <>
+          <PlayedSessionsPanel />
+          <Toaster />
+        </>,
+      );
+
+      await waitFor(() => screen.getByText('Quiz Night'));
+      await openActionsMenu('Quiz Night');
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: /edit/i }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+      expect(
+        await screen.findByText(/could not rename session/i),
       ).toBeInTheDocument();
     });
   });

@@ -116,6 +116,41 @@ describe('SeedService (Postgres integration)', () => {
     expect(sessionsInDb).toHaveLength(2);
   });
 
+  it('persists a trimmed custom name when creating a session with one', async () => {
+    const first = await seedService.seed();
+
+    const session = await seedService.createSession(
+      first.quizId,
+      undefined,
+      '  Week 3 Social  ',
+    );
+
+    const row = await em.findOneOrFail(GameSession, {
+      id: session.gameSessionId,
+    });
+    expect(row.name).toBe('Week 3 Social');
+  });
+
+  it('stores a null name when none is given, or when it is blank', async () => {
+    const first = await seedService.seed();
+
+    const noName = await seedService.createSession(first.quizId);
+    const blankName = await seedService.createSession(
+      first.quizId,
+      undefined,
+      '   ',
+    );
+
+    const noNameRow = await em.findOneOrFail(GameSession, {
+      id: noName.gameSessionId,
+    });
+    const blankNameRow = await em.findOneOrFail(GameSession, {
+      id: blankName.gameSessionId,
+    });
+    expect(noNameRow.name).toBeNull();
+    expect(blankNameRow.name).toBeNull();
+  });
+
   it('resumes the most recently created game session on seed after a restart', async () => {
     const first = await seedService.seed();
     const newerSession = em.create(GameSession, {
@@ -197,6 +232,43 @@ describe('SeedService (Postgres integration)', () => {
       );
 
       expect(startedAtByJoinCode.size).toBe(0);
+    });
+  });
+
+  describe('findNamesByJoinCodes', () => {
+    it('maps each join code to its custom name, or null when none was set', async () => {
+      const first = await seedService.seed();
+      const named = await seedService.createSession(
+        first.quizId,
+        undefined,
+        'Week 3 Social',
+      );
+
+      const namesByJoinCode = await seedService.findNamesByJoinCodes([
+        first.joinCode,
+        named.joinCode,
+      ]);
+
+      expect(namesByJoinCode.get(first.joinCode)).toBeNull();
+      expect(namesByJoinCode.get(named.joinCode)).toBe('Week 3 Social');
+    });
+
+    it('omits join codes that do not exist rather than throwing', async () => {
+      const first = await seedService.seed();
+
+      const namesByJoinCode = await seedService.findNamesByJoinCodes([
+        first.joinCode,
+        'NOPE12',
+      ]);
+
+      expect(namesByJoinCode.size).toBe(1);
+      expect(namesByJoinCode.has('NOPE12')).toBe(false);
+    });
+
+    it('returns an empty map without querying for an empty join code list', async () => {
+      const namesByJoinCode = await seedService.findNamesByJoinCodes([]);
+
+      expect(namesByJoinCode.size).toBe(0);
     });
   });
 });

@@ -123,8 +123,11 @@ export class GameStateService implements OnModuleInit {
     return this.sessionStore.get(joinCode).seededGame.quizId;
   }
 
-  /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles and start times are filled in by the caller — this service only knows quizId, not quiz/GameSession metadata. */
-  listSessions(): Omit<ActiveSessionSummary, 'quizTitle' | 'startedAt'>[] {
+  /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles, names, and start times are filled in by the caller — this service only knows quizId, not quiz/GameSession metadata. */
+  listSessions(): Omit<
+    ActiveSessionSummary,
+    'quizTitle' | 'name' | 'startedAt'
+  >[] {
     return this.sessionStore.values().map((session) => ({
       joinCode: session.seededGame.joinCode,
       quizId: session.seededGame.quizId,
@@ -160,8 +163,13 @@ export class GameStateService implements OnModuleInit {
   async createSession(
     quizId: number,
     settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
+    name?: string,
   ): Promise<StateSnapshotPayload> {
-    const created = await this.seedService.createSession(quizId, settings);
+    const created = await this.seedService.createSession(
+      quizId,
+      settings,
+      name,
+    );
     const seededGame = await this.seedService.loadGame(
       quizId,
       created.gameSessionId,

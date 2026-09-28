@@ -100,6 +100,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
   const [settings, setSettings] = useState<SessionSettings>(
     DEFAULT_SESSION_SETTINGS,
   );
+  const [pendingName, setPendingName] = useState('');
   // Resets the settings form back to defaults whenever a different (or no)
   // quiz becomes pending — adjusted during render rather than in an Effect,
   // same pattern AdminPageContent uses for its own pendingQuizId-driven reset.
@@ -115,11 +116,15 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
         : null,
     });
+    setPendingName(pendingQuiz?.title ?? '');
   }
 
   const createMutation = useMutation({
-    mutationFn: (variables: { quizId: number; settings: SessionSettings }) =>
-      createSession(variables.quizId, variables.settings),
+    mutationFn: (variables: {
+      quizId: number;
+      settings: SessionSettings;
+      name: string;
+    }) => createSession(variables.quizId, variables.settings, variables.name),
     onSuccess: (session) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
       onOpenSession(session.joinCode);
@@ -175,7 +180,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
 
   function handleConfirmCreate(): void {
     if (pendingQuizId === null) return;
-    createMutation.mutate({ quizId: pendingQuizId, settings });
+    createMutation.mutate({
+      quizId: pendingQuizId,
+      settings,
+      name: pendingName,
+    });
   }
 
   function handleClose(joinCode: string): void {
@@ -306,7 +315,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
                 className="flex items-center justify-between gap-3 rounded-xl border border-foreground/15 bg-white px-4 py-3"
               >
                 <div className="flex flex-col">
-                  <span className="font-extrabold">{session.quizTitle}</span>
+                  <span className="font-extrabold">{session.name}</span>
                   <span className="flex items-center gap-1 text-xs text-foreground/55">
                     {session.status} · {session.teamCount} teams ·{' '}
                     {session.joinCode}
@@ -429,6 +438,16 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
             <Dialog.Title className="font-display text-xl">
               Start &quot;{pendingQuiz?.title}&quot;?
             </Dialog.Title>
+            <label className="flex flex-col gap-1 text-sm font-extrabold">
+              Session name
+              <input
+                type="text"
+                value={pendingName}
+                onChange={(event) => setPendingName(event.target.value)}
+                placeholder={pendingQuiz?.title ?? ''}
+                className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+              />
+            </label>
             <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
               <Tabs.List className="flex gap-1 border-b border-foreground/15">
                 <Tabs.Trigger

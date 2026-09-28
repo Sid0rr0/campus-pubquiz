@@ -133,7 +133,7 @@ export function LiveSessionSelect({
                   value={session.joinCode}
                   className="flex cursor-pointer flex-col rounded-xl px-3 py-2 text-sm font-bold outline-none data-highlighted:bg-magenta/10"
                 >
-                  <Select.ItemText>{session.quizTitle}</Select.ItemText>
+                  <Select.ItemText>{session.name}</Select.ItemText>
                   <span className="text-xs font-semibold text-foreground/55">
                     {session.joinCode}
                   </span>

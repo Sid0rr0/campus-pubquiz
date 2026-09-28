@@ -478,6 +478,8 @@ export interface QuizzesListedPayload {
 /** Request body for POST /sessions — start a new concurrent GameSession for a quiz. */
 export interface CreateSessionPayload {
   quizId: number;
+  /** Custom display name for the session. Blank or omitted falls back to the quiz's title. */
+  name?: string;
   /** Any fields omitted are filled in from DEFAULT_SESSION_SETTINGS by the server. */
   settings?: Partial<SessionSettings>;
 }
@@ -487,6 +489,8 @@ export interface ActiveSessionSummary {
   joinCode: string;
   quizId: number;
   quizTitle: string;
+  /** The session's display name — a custom name set at creation/rename, or quizTitle when none was set. */
+  name: string;
   status: GameStatus;
   teamCount: number;
   /** ISO timestamp the session was created (POST /sessions), for the "Started" display. */

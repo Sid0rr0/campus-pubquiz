@@ -128,6 +128,7 @@ describe('GameStateService — persistence and quiz selection', () => {
     expect(seedService.createSession).toHaveBeenCalledWith(
       2,
       DEFAULT_SESSION_SETTINGS,
+      undefined,
     );
     // The original session keeps running untouched by the new one.
     expect(service.getSnapshot(joinCode).progress.status).toBe('rules');
@@ -149,6 +150,7 @@ describe('GameStateService — persistence and quiz selection', () => {
     expect(seedService.createSession).toHaveBeenCalledWith(
       2,
       DEFAULT_SESSION_SETTINGS,
+      undefined,
     );
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
   });
@@ -171,6 +173,7 @@ describe('GameStateService — persistence and quiz selection', () => {
     expect(seedService.createSession).toHaveBeenCalledWith(
       2,
       DEFAULT_SESSION_SETTINGS,
+      undefined,
     );
     expect(seedService.loadGame).toHaveBeenCalledWith(2, 102, 'GHIJKL');
     expect(snapshot.progress).toEqual({

@@ -84,11 +84,13 @@ export class SeedService {
   async createSession(
     quizId: number,
     settings: SessionSettings = DEFAULT_SESSION_SETTINGS,
+    name?: string,
   ): Promise<CreatedGameSession> {
     const session = this.gameSessions.create({
       quiz: quizId,
       joinCode: generateJoinCode(),
       settings,
+      name: name?.trim() || null,
     });
     await this.gameSessions.getEntityManager().persistAndFlush(session);
     return { gameSessionId: session.id, joinCode: session.joinCode };
@@ -105,6 +107,17 @@ export class SeedService {
     return new Map(
       sessions.map((session) => [session.joinCode, session.createdAt]),
     );
+  }
+
+  /** Session display names for the admin session picker and stats views — null means no custom name was set, so callers fall back to the quiz's own title. */
+  async findNamesByJoinCodes(
+    joinCodes: string[],
+  ): Promise<Map<string, string | null>> {
+    if (joinCodes.length === 0) return new Map();
+    const sessions = await this.gameSessions.find({
+      joinCode: { $in: joinCodes },
+    });
+    return new Map(sessions.map((session) => [session.joinCode, session.name]));
   }
 
   /** Merges the given settings into an existing session's row — the lobby-settings-update flow's persistence step. */

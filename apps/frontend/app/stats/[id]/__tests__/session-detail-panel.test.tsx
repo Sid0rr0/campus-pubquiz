@@ -17,6 +17,7 @@ const DETAIL: SessionDetailStats = {
   gameSessionId: 1,
   joinCode: 'ABCDEF',
   quizTitle: 'Quiz Night',
+  name: 'Quiz Night',
   playedAt: '2026-01-05T00:00:00.000Z',
   teamCount: 2,
   maxPoints: 10,

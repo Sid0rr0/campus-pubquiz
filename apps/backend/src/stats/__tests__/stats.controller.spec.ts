@@ -13,6 +13,7 @@ function makeController() {
     listPlayedSessions: jest.fn(),
     getSessionDetail: jest.fn(),
     deleteSession: jest.fn(),
+    renameSession: jest.fn(),
   };
   const controller = new StatsController(
     statsService as unknown as StatsService,
@@ -43,6 +44,7 @@ describe('StatsController', () => {
             gameSessionId: 1,
             joinCode: 'ABCDEF',
             quizTitle: 'Quiz Night',
+            name: 'Quiz Night',
             playedAt: '2026-01-01T00:00:00.000Z',
             teamCount: 2,
             maxPoints: 10,
@@ -113,6 +115,7 @@ describe('StatsController', () => {
         gameSessionId: 1,
         joinCode: 'ABCDEF',
         quizTitle: 'Quiz Night',
+        name: 'Quiz Night',
         playedAt: '2026-01-01T00:00:00.000Z',
         teamCount: 1,
         maxPoints: 10,
@@ -160,6 +163,54 @@ describe('StatsController', () => {
       await controller.deleteSession(1);
 
       expect(statsService.deleteSession).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('renameSession', () => {
+    it('is restricted to the admin role, same as deleteSession', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- inspected for metadata only, never invoked
+      const renameHandler = StatsController.prototype.renameSession;
+      const roles = Reflect.getMetadata('roles', renameHandler) as
+        | unknown[]
+        | undefined;
+      expect(roles).toEqual(['admin']);
+    });
+
+    it('delegates to statsService.renameSession with the parsed id and trimmed name', async () => {
+      const { controller, statsService } = makeController();
+      statsService.renameSession.mockResolvedValue(undefined);
+
+      await controller.renameSession(1, { name: '  Week 3 Social  ' });
+
+      expect(statsService.renameSession).toHaveBeenCalledWith(
+        1,
+        'Week 3 Social',
+      );
+    });
+
+    it('accepts a blank name, to clear a custom name back to the quiz title', async () => {
+      const { controller, statsService } = makeController();
+      statsService.renameSession.mockResolvedValue(undefined);
+
+      await controller.renameSession(1, { name: '   ' });
+
+      expect(statsService.renameSession).toHaveBeenCalledWith(1, '');
+    });
+
+    it('rejects a non-string name', async () => {
+      const { controller } = makeController();
+
+      await expect(controller.renameSession(1, { name: 42 })).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('rejects a name over the length limit', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.renameSession(1, { name: 'x'.repeat(201) }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

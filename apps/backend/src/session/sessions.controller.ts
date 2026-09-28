@@ -40,6 +40,12 @@ function requireQuizId(body: Partial<CreateSessionPayload>): number {
   return body.quizId;
 }
 
+function parseName(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
 function parseSettingsPartial(raw: unknown): Partial<SessionSettings> {
   const parsed = sessionSettingsPartialSchema.safeParse(raw ?? {});
   if (!parsed.success) {
@@ -85,15 +91,18 @@ export class SessionsController {
     const settings = resolveSessionSettings(
       parseSettingsPartial(body.settings),
     );
-    const snapshot = await this.gameState.createSession(quizId, settings);
+    const name = parseName(body.name);
+    const snapshot = await this.gameState.createSession(quizId, settings, name);
     const titles = await this.quizService.findTitles([quizId]);
+    const quizTitle = titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE;
     const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
       [snapshot.joinCode],
     );
     return {
       joinCode: snapshot.joinCode,
       quizId,
-      quizTitle: titles.get(quizId) ?? UNKNOWN_QUIZ_TITLE,
+      quizTitle,
+      name: name ?? quizTitle,
       status: snapshot.progress.status,
       teamCount: snapshot.teams.length,
       startedAt: (
@@ -141,20 +150,29 @@ export class SessionsController {
   }
 
   private async summarize(
-    sessions: Omit<ActiveSessionSummary, 'quizTitle' | 'startedAt'>[],
+    sessions: Omit<ActiveSessionSummary, 'quizTitle' | 'name' | 'startedAt'>[],
   ): Promise<ActiveSessionSummary[]> {
     const titles = await this.quizService.findTitles(
       sessions.map((session) => session.quizId),
     );
-    const startedAtByJoinCode = await this.seedService.findStartedAtByJoinCodes(
-      sessions.map((session) => session.joinCode),
-    );
-    return sessions.map((session) => ({
-      ...session,
-      quizTitle: titles.get(session.quizId) ?? UNKNOWN_QUIZ_TITLE,
-      startedAt: (
-        startedAtByJoinCode.get(session.joinCode) ?? new Date(0)
-      ).toISOString(),
-    }));
+    const [startedAtByJoinCode, namesByJoinCode] = await Promise.all([
+      this.seedService.findStartedAtByJoinCodes(
+        sessions.map((session) => session.joinCode),
+      ),
+      this.seedService.findNamesByJoinCodes(
+        sessions.map((session) => session.joinCode),
+      ),
+    ]);
+    return sessions.map((session) => {
+      const quizTitle = titles.get(session.quizId) ?? UNKNOWN_QUIZ_TITLE;
+      return {
+        ...session,
+        quizTitle,
+        name: namesByJoinCode.get(session.joinCode) ?? quizTitle,
+        startedAt: (
+          startedAtByJoinCode.get(session.joinCode) ?? new Date(0)
+        ).toISOString(),
+      };
+    });
   }
 }

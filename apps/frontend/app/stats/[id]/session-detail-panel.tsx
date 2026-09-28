@@ -49,7 +49,7 @@ export function SessionDetailPanel({ gameSessionId }: SessionDetailPanelProps) {
         >
           ← Back to stats
         </Link>
-        <h1 className="font-display text-2xl">{data.quizTitle}</h1>
+        <h1 className="font-display text-2xl">{data.name}</h1>
         <p className="text-sm text-foreground/60">
           {new Date(data.playedAt).toLocaleString()} · {data.joinCode} ·{' '}
           {data.teamCount} team{data.teamCount === 1 ? '' : 's'}

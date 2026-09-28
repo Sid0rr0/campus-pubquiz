@@ -7,6 +7,7 @@ const BASE_SESSION = {
   gameSessionId: 1,
   joinCode: 'ABCDEF',
   quizTitle: 'Quiz Night',
+  name: 'Quiz Night',
   playedAt: '2026-01-01T00:00:00.000Z',
 };
 

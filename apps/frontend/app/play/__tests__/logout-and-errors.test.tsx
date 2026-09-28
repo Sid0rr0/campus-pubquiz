@@ -31,6 +31,7 @@ const LIVE_SESSION = {
   joinCode: 'ABCDEF',
   quizId: 1,
   quizTitle: 'Campus Pub Quiz Night',
+  name: 'Campus Pub Quiz Night',
   status: 'lobby' as const,
   teamCount: 0,
 };

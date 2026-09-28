@@ -15,6 +15,7 @@ interface PlayedSessionRow {
   gameSessionId: number;
   joinCode: string;
   quizTitle: string;
+  name: string | null;
   playedAt: string | Date;
   teamCount: string | number;
   maxPoints: string | number;
@@ -27,6 +28,7 @@ interface SessionHeaderRow {
   joinCode: string;
   quizId: number;
   quizTitle: string;
+  name: string | null;
   playedAt: string | Date;
 }
 
@@ -145,9 +147,11 @@ export class StatsService {
 
     // `winner` sorts on the same score already exposed as
     // winnerAnswerPoints, with a session that has no teams (null) treated as
-    // lower than any actual score.
+    // lower than any actual score. `quizTitle` sorts on the resolved display
+    // name (custom name if set, else the quiz's own title), matching what
+    // the "Session" column actually shows.
     const orderColumn = {
-      quizTitle: 'qz.title',
+      quizTitle: knex.raw('coalesce(gs.name, qz.title)'),
       playedAt: 'gs.created_at',
       teamCount: knex.raw('coalesce(tc.count, 0)'),
       maxPoints: knex.raw('coalesce(mp.total, 0)'),
@@ -161,6 +165,7 @@ export class StatsService {
           'gs.id as gameSessionId',
           'gs.join_code as joinCode',
           'qz.title as quizTitle',
+          'gs.name as name',
           'gs.created_at as playedAt',
         )
         .select(knex.raw('coalesce(tc.count, 0) as "teamCount"'))
@@ -181,6 +186,7 @@ export class StatsService {
         gameSessionId: row.gameSessionId,
         joinCode: row.joinCode,
         quizTitle: row.quizTitle,
+        name: row.name ?? row.quizTitle,
         playedAt: new Date(row.playedAt).toISOString(),
         teamCount: Number(row.teamCount),
         maxPoints: Number(row.maxPoints),
@@ -208,6 +214,7 @@ export class StatsService {
         'gs.join_code as joinCode',
         'gs.quiz_id as quizId',
         'qz.title as quizTitle',
+        'gs.name as name',
         'gs.created_at as playedAt',
       )
       .first()) as SessionHeaderRow | undefined;
@@ -281,6 +288,7 @@ export class StatsService {
         gameSessionId: header.gameSessionId,
         joinCode: header.joinCode,
         quizTitle: header.quizTitle,
+        name: header.name ?? header.quizTitle,
         playedAt: header.playedAt,
       },
       teams,
@@ -323,5 +331,17 @@ export class StatsService {
       );
     }
     await this.gameSessions.getEntityManager().removeAndFlush(session);
+  }
+
+  /** Sets an ended session's custom display name — a blank name clears it, falling back to showing the quiz's own title instead. */
+  async renameSession(gameSessionId: number, name: string): Promise<void> {
+    const session = await this.gameSessions.findOne({ id: gameSessionId });
+    if (!session || session.status !== 'ended') {
+      throw new NotFoundException(
+        `Ended session ${gameSessionId} does not exist`,
+      );
+    }
+    session.name = name.trim() || null;
+    await this.gameSessions.getEntityManager().flush();
   }
 }

@@ -79,3 +79,22 @@ export async function deleteSession(gameSessionId: number): Promise<void> {
     return throwApiError(response, 'Could not delete session');
   }
 }
+
+/** A blank name clears the session's custom name, falling back to showing the quiz's own title. */
+export async function renameSession(
+  gameSessionId: number,
+  name: string,
+): Promise<void> {
+  const response = await fetch(
+    `${getBackendUrl()}/stats/sessions/${gameSessionId}`,
+    {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...CSRF_HEADERS },
+      body: JSON.stringify({ name }),
+    },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not rename session');
+  }
+}

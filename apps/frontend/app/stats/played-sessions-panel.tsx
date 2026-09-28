@@ -19,9 +19,14 @@ import {
 } from '@tanstack/react-table';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { Dialog, DropdownMenu } from 'radix-ui';
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  Cross2Icon,
+  DotsVerticalIcon,
+  Pencil1Icon,
   TrashIcon,
 } from '@radix-ui/react-icons';
 import type {
@@ -32,6 +37,7 @@ import type {
 import {
   deleteSession,
   fetchPlayedSessions,
+  renameSession,
   StatsApiError,
 } from '@/app/lib/stats-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
@@ -59,6 +65,9 @@ export function PlayedSessionsPanel() {
   });
   const [deletingSession, setDeletingSession] =
     useState<PlayedSessionStats | null>(null);
+  const [renamingSession, setRenamingSession] =
+    useState<PlayedSessionStats | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const sortBy = (sorting[0]?.id ?? 'playedAt') as PlayedSessionsSortColumn;
   const sortOrder: PlayedSessionsSortOrder = sorting[0]
@@ -101,17 +110,37 @@ export function PlayedSessionsPanel() {
       ),
   });
 
+  const renameMutation = useMutation({
+    mutationFn: (variables: { gameSessionId: number; name: string }) =>
+      renameSession(variables.gameSessionId, variables.name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      setRenamingSession(null);
+    },
+    onError: (renameError) =>
+      toast.error(
+        apiErrorMessage(
+          renameError,
+          StatsApiError,
+          'Could not rename session',
+        ) ?? 'Could not rename session',
+      ),
+  });
+
   const columns = useMemo(
     () =>
       helper.columns([
+        // Sorted server-side on the resolved display name (custom name if
+        // set, else the quiz title) — see StatsService.listPlayedSessions'
+        // orderColumn.quizTitle.
         helper.accessor('quizTitle', {
-          header: 'Quiz',
+          header: 'Session',
           cell: (context) => (
             <Link
               href={`/stats/${context.row.original.gameSessionId}`}
               className="underline-offset-2 hover:underline"
             >
-              {context.getValue()}
+              {context.row.original.name}
             </Link>
           ),
         }),
@@ -139,19 +168,47 @@ export function PlayedSessionsPanel() {
               helper.display({
                 id: 'actions',
                 header: 'Actions',
-                cell: (context) => (
-                  <Button
-                    type="button"
-                    variant="outline-muted"
-                    size="sm"
-                    aria-label={`Delete ${context.row.original.quizTitle}`}
-                    onClick={() => setDeletingSession(context.row.original)}
-                    className="text-magenta"
-                  >
-                    <TrashIcon aria-hidden="true" />
-                    Delete
-                  </Button>
-                ),
+                cell: (context) => {
+                  const session = context.row.original;
+                  return (
+                    <DropdownMenu.Root>
+                      <DropdownMenu.Trigger asChild>
+                        <Button
+                          type="button"
+                          size="icon-md"
+                          aria-label={`Actions for ${session.name}`}
+                          className="rounded-lg border-2 border-foreground/15 text-foreground/70"
+                        >
+                          <DotsVerticalIcon aria-hidden="true" />
+                        </Button>
+                      </DropdownMenu.Trigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.Content
+                          align="end"
+                          className="z-40 flex min-w-40 flex-col gap-0.5 rounded-lg border-2 border-foreground/15 bg-background p-1 shadow-lg"
+                        >
+                          <DropdownMenu.Item
+                            onSelect={() => {
+                              setRenamingSession(session);
+                              setRenameValue(session.name);
+                            }}
+                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-foreground outline-none data-highlighted:bg-foreground/10"
+                          >
+                            <Pencil1Icon aria-hidden="true" />
+                            Edit
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item
+                            onSelect={() => setDeletingSession(session)}
+                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-bold text-magenta outline-none data-highlighted:bg-magenta/10"
+                          >
+                            <TrashIcon aria-hidden="true" />
+                            Delete
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Root>
+                  );
+                },
               }),
             ]
           : []),
@@ -300,17 +357,69 @@ export function PlayedSessionsPanel() {
         onOpenChange={(open) => {
           if (!open && !deleteMutation.isPending) setDeletingSession(null);
         }}
-        title={`Delete "${deletingSession?.quizTitle}"?`}
+        title={`Delete "${deletingSession?.name}"?`}
         description="This permanently deletes this session's stats, including every answer and bonus award recorded for it. This can't be undone."
         confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Delete'}
         onConfirm={() => {
           if (!deletingSession) return;
           deleteMutation.mutate(deletingSession.gameSessionId, {
-            onSuccess: () =>
-              toast.success(`Deleted "${deletingSession.quizTitle}"`),
+            onSuccess: () => toast.success(`Deleted "${deletingSession.name}"`),
           });
         }}
       />
+      <Dialog.Root
+        open={renamingSession !== null}
+        onOpenChange={(open) => {
+          if (!open && !renameMutation.isPending) setRenamingSession(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-3 rounded-xl bg-white p-5">
+            <Dialog.Title className="font-display text-lg">
+              Rename session
+            </Dialog.Title>
+            <label className="flex flex-col gap-1 text-sm font-extrabold">
+              Session name
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                placeholder={renamingSession?.quizTitle}
+                className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                disabled={renameMutation.isPending}
+                variant="outline-muted"
+                size="sm"
+                onClick={() => setRenamingSession(null)}
+              >
+                <Cross2Icon aria-hidden="true" />
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={renameMutation.isPending}
+                variant="solid-flat"
+                size="sm"
+                onClick={() => {
+                  if (!renamingSession) return;
+                  renameMutation.mutate({
+                    gameSessionId: renamingSession.gameSessionId,
+                    name: renameValue,
+                  });
+                }}
+              >
+                <CheckIcon aria-hidden="true" />
+                {renameMutation.isPending ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </main>
   );
 }
