@@ -1,16 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   createColumnHelper,
-  createPaginatedRowModel,
-  createSortedRowModel,
   rowPaginationFeature,
   rowSortingFeature,
-  sortFn_alphanumeric,
-  sortFn_basic,
-  sortFn_datetime,
   tableFeatures,
   useTable,
   type PaginationState,
@@ -24,7 +24,11 @@ import {
   ChevronUpIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
-import type { PlayedSessionStats } from '@campus-pubquiz/types';
+import type {
+  PlayedSessionStats,
+  PlayedSessionsSortColumn,
+  PlayedSessionsSortOrder,
+} from '@campus-pubquiz/types';
 import {
   deleteSession,
   fetchPlayedSessions,
@@ -38,12 +42,7 @@ import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 const PAGE_SIZE = 20;
 
-const features = tableFeatures({
-  rowSortingFeature,
-  sortedRowModel: createSortedRowModel(),
-  rowPaginationFeature,
-  paginatedRowModel: createPaginatedRowModel(),
-});
+const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
 const helper = createColumnHelper<typeof features, PlayedSessionStats>();
 
 export function PlayedSessionsPanel() {
@@ -61,9 +60,23 @@ export function PlayedSessionsPanel() {
   const [deletingSession, setDeletingSession] =
     useState<PlayedSessionStats | null>(null);
 
+  const sortBy = (sorting[0]?.id ?? 'playedAt') as PlayedSessionsSortColumn;
+  const sortOrder: PlayedSessionsSortOrder = sorting[0]
+    ? sorting[0].desc
+      ? 'desc'
+      : 'asc'
+    : 'desc';
+  const params = {
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
+    sortBy,
+    sortOrder,
+  };
+
   const statsQuery = useQuery({
-    queryKey: queryKeys.stats.sessions(),
-    queryFn: ({ signal }) => fetchPlayedSessions(signal),
+    queryKey: queryKeys.stats.sessions(params),
+    queryFn: ({ signal }) => fetchPlayedSessions(params, signal),
+    placeholderData: keepPreviousData,
   });
   const payload = statsQuery.data ?? null;
   const error = apiErrorMessage(
@@ -93,7 +106,6 @@ export function PlayedSessionsPanel() {
       helper.columns([
         helper.accessor('quizTitle', {
           header: 'Quiz',
-          sortFn: sortFn_alphanumeric,
           cell: (context) => (
             <Link
               href={`/stats/${context.row.original.gameSessionId}`}
@@ -105,22 +117,15 @@ export function PlayedSessionsPanel() {
         }),
         helper.accessor('playedAt', {
           header: 'Date',
-          sortFn: sortFn_datetime,
           cell: (context) => new Date(context.getValue()).toLocaleDateString(),
         }),
-        helper.accessor('teamCount', {
-          header: 'Teams',
-          sortFn: sortFn_basic,
-        }),
-        helper.accessor('maxPoints', {
-          header: 'Max points',
-          sortFn: sortFn_basic,
-        }),
-        // Sorts on the winner's answer points (nulls — no teams joined — last).
+        helper.accessor('teamCount', { header: 'Teams' }),
+        helper.accessor('maxPoints', { header: 'Max points' }),
+        // Sorted server-side on the winner's answer points (nulls — no teams
+        // joined — last); see PlayedSessionsSortColumn 'winner'.
         helper.accessor((session) => session.winnerAnswerPoints ?? -1, {
           id: 'winner',
           header: 'Winner points',
-          sortFn: sortFn_basic,
           cell: (context) => {
             const session = context.row.original;
             return session.winnerTeamName === null ||
@@ -165,14 +170,20 @@ export function PlayedSessionsPanel() {
   const table = useTable({
     features,
     columns,
-    data: payload ?? [],
+    data: payload?.items ?? [],
     getRowId: (session) => String(session.gameSessionId),
+    manualSorting: true,
+    manualPagination: true,
+    enableMultiSort: false,
     // Locks the toggle cycle to asc <-> desc (skipping "unsorted") so the
-    // most-recent-first default is never silently lost on a stray click.
+    // most-recent-first default is never silently lost on a stray click, and
+    // so a click always produces a distinct sort the query will refetch for
+    // (see teams-directory-panel's identical reasoning).
     enableSortingRemoval: false,
     state: { sorting, pagination },
     onSortingChange: handleSortingChange,
     onPaginationChange: setPagination,
+    rowCount: payload?.total ?? 0,
   });
 
   if (!payload) {

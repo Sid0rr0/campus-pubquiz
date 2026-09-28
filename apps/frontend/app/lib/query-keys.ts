@@ -56,7 +56,12 @@ export const queryKeys = {
   },
   stats: {
     all: ['stats'] as const,
-    sessions: () => ['stats', 'sessions'] as const,
+    sessions: (params: {
+      page: number;
+      pageSize: number;
+      sortBy: string;
+      sortOrder: string;
+    }) => ['stats', 'sessions', params] as const,
     session: (gameSessionId: number) =>
       ['stats', 'sessions', gameSessionId] as const,
   },

@@ -1,9 +1,10 @@
+import { BadRequestException } from '@nestjs/common';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsController } from '@/stats/stats.controller';
 import type { StatsService } from '@/stats/stats.service';
 import type {
-  PlayedSessionStats,
+  PlayedSessionsListedPayload,
   SessionDetailStats,
 } from '@campus-pubquiz/types';
 
@@ -34,24 +35,74 @@ describe('StatsController', () => {
   });
 
   describe('listPlayedSessions', () => {
-    it('delegates to statsService.listPlayedSessions and returns its result', async () => {
+    it('delegates to statsService.listPlayedSessions with parsed defaults', async () => {
       const { controller, statsService } = makeController();
-      const payload: PlayedSessionStats[] = [
-        {
-          gameSessionId: 1,
-          joinCode: 'ABCDEF',
-          quizTitle: 'Quiz Night',
-          playedAt: '2026-01-01T00:00:00.000Z',
-          teamCount: 2,
-          maxPoints: 10,
-          winnerTeamName: 'Team A',
-          winnerAnswerPoints: 8,
-        },
-      ];
+      const payload: PlayedSessionsListedPayload = {
+        items: [
+          {
+            gameSessionId: 1,
+            joinCode: 'ABCDEF',
+            quizTitle: 'Quiz Night',
+            playedAt: '2026-01-01T00:00:00.000Z',
+            teamCount: 2,
+            maxPoints: 10,
+            winnerTeamName: 'Team A',
+            winnerAnswerPoints: 8,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      };
       statsService.listPlayedSessions.mockResolvedValue(payload);
 
-      await expect(controller.listPlayedSessions()).resolves.toBe(payload);
-      expect(statsService.listPlayedSessions).toHaveBeenCalledWith();
+      await expect(controller.listPlayedSessions({})).resolves.toBe(payload);
+      expect(statsService.listPlayedSessions).toHaveBeenCalledWith({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'playedAt',
+        sortOrder: 'desc',
+      });
+    });
+
+    it('parses explicit query params', async () => {
+      const { controller, statsService } = makeController();
+      statsService.listPlayedSessions.mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 2,
+        pageSize: 10,
+      });
+
+      await controller.listPlayedSessions({
+        page: '2',
+        pageSize: '10',
+        sortBy: 'quizTitle',
+        sortOrder: 'asc',
+      });
+
+      expect(statsService.listPlayedSessions).toHaveBeenCalledWith({
+        page: 2,
+        pageSize: 10,
+        sortBy: 'quizTitle',
+        sortOrder: 'asc',
+      });
+    });
+
+    it('rejects an invalid pageSize', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.listPlayedSessions({ pageSize: '0' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects an unknown sortBy column', async () => {
+      const { controller } = makeController();
+
+      await expect(
+        controller.listPlayedSessions({ sortBy: 'notAColumn' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

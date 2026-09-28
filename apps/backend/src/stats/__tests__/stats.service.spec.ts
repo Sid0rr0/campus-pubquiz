@@ -133,22 +133,32 @@ describe('StatsService (Postgres integration)', () => {
     await em.flush();
   }
 
+  const defaultQuery = {
+    page: 1,
+    pageSize: 20,
+    sortBy: 'playedAt' as const,
+    sortOrder: 'desc' as const,
+  };
+
   it('only lists sessions with status "ended"', async () => {
     const { quiz } = await createQuiz('Quiz A', [[1]]);
     await createSession(quiz, 'LOBBY1', 'lobby');
     const ended = await createSession(quiz, 'ENDED1', 'ended');
 
-    const result = await statsService.listPlayedSessions();
+    const result = await statsService.listPlayedSessions(defaultQuery);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].gameSessionId).toBe(ended.id);
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.items[0].gameSessionId).toBe(ended.id);
   });
 
   it('sums the points of every question across every round for maxPoints', async () => {
     const { quiz } = await createQuiz('Quiz B', [[1, 2], [3]]);
     await createSession(quiz, 'MAXPTS', 'ended');
 
-    const [result] = await statsService.listPlayedSessions();
+    const {
+      items: [result],
+    } = await statsService.listPlayedSessions(defaultQuery);
 
     expect(result.maxPoints).toBe(6);
   });
@@ -157,7 +167,9 @@ describe('StatsService (Postgres integration)', () => {
     const { quiz } = await createQuiz('Quiz C', [[1]]);
     await createSession(quiz, 'EMPTY1', 'ended');
 
-    const [result] = await statsService.listPlayedSessions();
+    const {
+      items: [result],
+    } = await statsService.listPlayedSessions(defaultQuery);
 
     expect(result.teamCount).toBe(0);
     expect(result.winnerTeamName).toBeNull();
@@ -177,14 +189,16 @@ describe('StatsService (Postgres integration)', () => {
     // ...but Team B's bonus pushes them into the overall lead.
     await awardBonus(session, teamB, 10);
 
-    const [result] = await statsService.listPlayedSessions();
+    const {
+      items: [result],
+    } = await statsService.listPlayedSessions(defaultQuery);
 
     expect(result.teamCount).toBe(2);
     expect(result.winnerTeamName).toBe('Team B');
     expect(result.winnerAnswerPoints).toBe(3);
   });
 
-  it('orders sessions by playedAt (createdAt) descending', async () => {
+  it('orders sessions by playedAt (createdAt) descending by default', async () => {
     const { quiz } = await createQuiz('Quiz E', [[1]]);
     const older = await createSession(quiz, 'OLDER1', 'ended');
     await em
@@ -195,12 +209,57 @@ describe('StatsService (Postgres integration)', () => {
       ]);
     const newer = await createSession(quiz, 'NEWER1', 'ended');
 
-    const result = await statsService.listPlayedSessions();
+    const result = await statsService.listPlayedSessions(defaultQuery);
 
-    expect(result.map((row) => row.gameSessionId)).toEqual([
+    expect(result.items.map((row) => row.gameSessionId)).toEqual([
       newer.id,
       older.id,
     ]);
+  });
+
+  it('orders by quizTitle ascending when requested', async () => {
+    const { quiz: quizB } = await createQuiz('Quiz Zebra', [[1]]);
+    const { quiz: quizA } = await createQuiz('Quiz Apple', [[1]]);
+    const sessionB = await createSession(quizB, 'ZEBRA1', 'ended');
+    const sessionA = await createSession(quizA, 'APPLE1', 'ended');
+
+    const result = await statsService.listPlayedSessions({
+      ...defaultQuery,
+      sortBy: 'quizTitle',
+      sortOrder: 'asc',
+    });
+
+    expect(result.items.map((row) => row.gameSessionId)).toEqual([
+      sessionA.id,
+      sessionB.id,
+    ]);
+  });
+
+  it('paginates results and reports the total across all pages', async () => {
+    const { quiz } = await createQuiz('Quiz F', [[1]]);
+    const sessions: GameSession[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      sessions.push(await createSession(quiz, `PAGE${i}`, 'ended'));
+    }
+
+    const firstPage = await statsService.listPlayedSessions({
+      ...defaultQuery,
+      pageSize: 2,
+    });
+    const secondPage = await statsService.listPlayedSessions({
+      ...defaultQuery,
+      page: 2,
+      pageSize: 2,
+    });
+
+    expect(firstPage.items).toHaveLength(2);
+    expect(firstPage.total).toBe(3);
+    expect(secondPage.items).toHaveLength(1);
+    expect(secondPage.total).toBe(3);
+    const allIds = [...firstPage.items, ...secondPage.items].map(
+      (row) => row.gameSessionId,
+    );
+    expect(new Set(allIds)).toEqual(new Set(sessions.map((s) => s.id)));
   });
 
   describe('getSessionDetail', () => {

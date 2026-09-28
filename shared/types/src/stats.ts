@@ -15,6 +15,24 @@ export interface PlayedSessionStats {
   winnerAnswerPoints: number | null; // that team's answer points only, bonus excluded
 }
 
+export interface PlayedSessionsListedPayload {
+  items: PlayedSessionStats[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const PLAYED_SESSIONS_SORT_COLUMNS = [
+  'quizTitle',
+  'playedAt',
+  'teamCount',
+  'maxPoints',
+  'winner',
+] as const;
+export type PlayedSessionsSortColumn =
+  (typeof PLAYED_SESSIONS_SORT_COLUMNS)[number];
+export type PlayedSessionsSortOrder = 'asc' | 'desc';
+
 export type QuizDifficultyLabel = 'Easy' | 'Medium' | 'Hard' | 'Brutal';
 
 export interface SessionDetailStandingRow {

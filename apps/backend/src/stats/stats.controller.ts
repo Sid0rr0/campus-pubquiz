@@ -1,20 +1,23 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
   ParseIntPipe,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import type {
-  PlayedSessionStats,
+  PlayedSessionsListedPayload,
   SessionDetailStats,
 } from '@campus-pubquiz/types';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsService } from '@/stats/stats.service';
+import { playedSessionsQuerySchema } from '@/stats/stats-query.schema';
 
 // No @Roles(...) — open to admin and moderator alike, same as teams/sessions.
 @Controller('stats')
@@ -23,8 +26,16 @@ export class StatsController {
   constructor(private readonly statsService: StatsService) {}
 
   @Get('sessions')
-  async listPlayedSessions(): Promise<PlayedSessionStats[]> {
-    return this.statsService.listPlayedSessions();
+  async listPlayedSessions(
+    @Query() query: Record<string, unknown>,
+  ): Promise<PlayedSessionsListedPayload> {
+    const parsed = playedSessionsQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException(
+        parsed.error.issues[0]?.message ?? 'Invalid query',
+      );
+    }
+    return this.statsService.listPlayedSessions(parsed.data);
   }
 
   @Get('sessions/:id')

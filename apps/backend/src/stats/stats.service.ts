@@ -2,13 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   BonusCategory,
-  PlayedSessionStats,
+  PlayedSessionsListedPayload,
   QuestionType,
   SessionDetailStats,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
+import type { PlayedSessionsQuery } from '@/stats/stats-query.schema';
 
 interface PlayedSessionRow {
   gameSessionId: number;
@@ -72,8 +73,14 @@ export class StatsService {
     private readonly gameSessions: GameSessionRepository,
   ) {}
 
-  async listPlayedSessions(): Promise<PlayedSessionStats[]> {
+  async listPlayedSessions({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+  }: PlayedSessionsQuery): Promise<PlayedSessionsListedPayload> {
     const knex = this.gameSessions.getKnex();
+    const offset = (page - 1) * pageSize;
 
     const teamCounts = knex('game_session_teams')
       .groupBy('game_session_id')
@@ -129,35 +136,64 @@ export class StatsService {
         { column: 't.name', order: 'asc' },
       ]);
 
-    const rows = (await knex('game_sessions as gs')
+    const baseQuery = knex('game_sessions as gs')
       .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
       .leftJoin(teamCounts.as('tc'), 'tc.game_session_id', 'gs.id')
       .leftJoin(maxPoints.as('mp'), 'mp.quizId', 'gs.quiz_id')
       .leftJoin(winners.as('w'), 'w.gameSessionId', 'gs.id')
-      .where('gs.status', 'ended')
-      .select(
-        'gs.id as gameSessionId',
-        'gs.join_code as joinCode',
-        'qz.title as quizTitle',
-        'gs.created_at as playedAt',
-      )
-      .select(knex.raw('coalesce(tc.count, 0) as "teamCount"'))
-      .select(knex.raw('coalesce(mp.total, 0) as "maxPoints"'))
-      .select('w.teamName as winnerTeamName')
-      .select('w.answerPoints as winnerAnswerPoints')
-      .orderBy('gs.created_at', 'desc')) as PlayedSessionRow[];
+      .where('gs.status', 'ended');
 
-    return rows.map((row) => ({
-      gameSessionId: row.gameSessionId,
-      joinCode: row.joinCode,
-      quizTitle: row.quizTitle,
-      playedAt: new Date(row.playedAt).toISOString(),
-      teamCount: Number(row.teamCount),
-      maxPoints: Number(row.maxPoints),
-      winnerTeamName: row.winnerTeamName,
-      winnerAnswerPoints:
-        row.winnerAnswerPoints === null ? null : Number(row.winnerAnswerPoints),
-    }));
+    // `winner` sorts on the same score already exposed as
+    // winnerAnswerPoints, with a session that has no teams (null) treated as
+    // lower than any actual score.
+    const orderColumn = {
+      quizTitle: 'qz.title',
+      playedAt: 'gs.created_at',
+      teamCount: knex.raw('coalesce(tc.count, 0)'),
+      maxPoints: knex.raw('coalesce(mp.total, 0)'),
+      winner: knex.raw('coalesce(w."answerPoints", -1)'),
+    } satisfies Record<PlayedSessionsQuery['sortBy'], unknown>;
+
+    const [rows, [{ count: total }]] = await Promise.all([
+      baseQuery
+        .clone()
+        .select(
+          'gs.id as gameSessionId',
+          'gs.join_code as joinCode',
+          'qz.title as quizTitle',
+          'gs.created_at as playedAt',
+        )
+        .select(knex.raw('coalesce(tc.count, 0) as "teamCount"'))
+        .select(knex.raw('coalesce(mp.total, 0) as "maxPoints"'))
+        .select('w.teamName as winnerTeamName')
+        .select('w.answerPoints as winnerAnswerPoints')
+        .orderBy(orderColumn[sortBy], sortOrder)
+        .orderBy('gs.id', 'desc')
+        .limit(pageSize)
+        .offset(offset) as Promise<PlayedSessionRow[]>,
+      baseQuery.clone().count({ count: '*' }) as Promise<
+        { count: string | number }[]
+      >,
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        gameSessionId: row.gameSessionId,
+        joinCode: row.joinCode,
+        quizTitle: row.quizTitle,
+        playedAt: new Date(row.playedAt).toISOString(),
+        teamCount: Number(row.teamCount),
+        maxPoints: Number(row.maxPoints),
+        winnerTeamName: row.winnerTeamName,
+        winnerAnswerPoints:
+          row.winnerAnswerPoints === null
+            ? null
+            : Number(row.winnerAnswerPoints),
+      })),
+      total: Number(total),
+      page,
+      pageSize,
+    };
   }
 
   async getSessionDetail(gameSessionId: number): Promise<SessionDetailStats> {

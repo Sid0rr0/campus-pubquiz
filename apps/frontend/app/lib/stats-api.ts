@@ -1,5 +1,7 @@
 import type {
-  PlayedSessionStats,
+  PlayedSessionsListedPayload,
+  PlayedSessionsSortColumn,
+  PlayedSessionsSortOrder,
   SessionDetailStats,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
@@ -27,17 +29,31 @@ async function throwApiError(
   throw new StatsApiError(body.message ?? fallback, response.status);
 }
 
+interface FetchPlayedSessionsParams {
+  page: number;
+  pageSize: number;
+  sortBy: PlayedSessionsSortColumn;
+  sortOrder: PlayedSessionsSortOrder;
+}
+
 export async function fetchPlayedSessions(
+  params: FetchPlayedSessionsParams,
   signal?: AbortSignal,
-): Promise<PlayedSessionStats[]> {
-  const response = await fetch(`${getBackendUrl()}/stats/sessions`, {
+): Promise<PlayedSessionsListedPayload> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+    sortBy: params.sortBy,
+    sortOrder: params.sortOrder,
+  });
+  const response = await fetch(`${getBackendUrl()}/stats/sessions?${query}`, {
     credentials: 'include',
     signal,
   });
   if (!response.ok) {
     return throwApiError(response, 'Could not load session stats');
   }
-  return (await response.json()) as PlayedSessionStats[];
+  return (await response.json()) as PlayedSessionsListedPayload;
 }
 
 export async function fetchSessionDetail(

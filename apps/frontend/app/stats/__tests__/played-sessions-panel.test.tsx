@@ -2,7 +2,10 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AuthUser, PlayedSessionStats } from '@campus-pubquiz/types';
+import type {
+  AuthUser,
+  PlayedSessionsListedPayload,
+} from '@campus-pubquiz/types';
 import { PlayedSessionsPanel } from '@/app/stats/played-sessions-panel';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import { renderWithQuery } from '@/test-utils/query';
@@ -69,12 +72,19 @@ const SESSIONS = [
   },
 ];
 
+const PAYLOAD: PlayedSessionsListedPayload = {
+  items: SESSIONS,
+  total: SESSIONS.length,
+  page: 1,
+  pageSize: 20,
+};
+
 describe('PlayedSessionsPanel', () => {
   beforeEach(() => {
     mockFetchPlayedSessions.mockReset();
     mockDeleteSession.mockReset();
     mockUseAuth.mockReset();
-    mockFetchPlayedSessions.mockResolvedValue(SESSIONS);
+    mockFetchPlayedSessions.mockResolvedValue(PAYLOAD);
     mockUseAuth.mockReturnValue(authResult());
   });
 
@@ -107,7 +117,12 @@ describe('PlayedSessionsPanel', () => {
 
   it('shows an empty state when no sessions have ended yet', async () => {
     mockFetchPlayedSessions.mockReset();
-    mockFetchPlayedSessions.mockResolvedValue([]);
+    mockFetchPlayedSessions.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    });
     renderWithQuery(<PlayedSessionsPanel />);
 
     await waitFor(() =>
@@ -130,42 +145,46 @@ describe('PlayedSessionsPanel', () => {
   });
 
   describe('pagination', () => {
-    function manySessions(count: number): PlayedSessionStats[] {
-      return Array.from({ length: count }, (_, index) => ({
-        gameSessionId: index + 1,
-        joinCode: `CODE${index}`,
-        quizTitle: `Quiz ${index}`,
-        playedAt: new Date(2026, 0, count - index).toISOString(),
-        teamCount: 1,
-        maxPoints: 10,
-        winnerTeamName: 'Team A',
-        winnerAnswerPoints: 5,
-      }));
-    }
-
-    it('shows at most 20 rows on the first page and disables Prev', async () => {
+    it('disables Prev on the first page and requests page 2 on Next', async () => {
       mockFetchPlayedSessions.mockReset();
-      mockFetchPlayedSessions.mockResolvedValue(manySessions(25));
-      renderWithQuery(<PlayedSessionsPanel />);
-
-      await waitFor(() => screen.getByText('Quiz 0'));
-      expect(screen.getAllByRole('row')).toHaveLength(21); // header + 20 rows
-      expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled();
-    });
-
-    it('navigates to the next page and shows the remaining rows', async () => {
-      mockFetchPlayedSessions.mockReset();
-      mockFetchPlayedSessions.mockResolvedValue(manySessions(25));
+      mockFetchPlayedSessions.mockResolvedValue({
+        items: SESSIONS,
+        total: 25,
+        page: 1,
+        pageSize: 20,
+      });
       const user = userEvent.setup();
       renderWithQuery(<PlayedSessionsPanel />);
-      await waitFor(() => screen.getByText('Quiz 0'));
+      await waitFor(() => screen.getByText('Quiz Night'));
 
+      expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled();
+
+      mockFetchPlayedSessions.mockClear();
       await user.click(screen.getByRole('button', { name: 'Next' }));
 
-      expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
-      expect(screen.getAllByRole('row')).toHaveLength(6); // header + 5 rows
-      expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+      await waitFor(() =>
+        expect(mockFetchPlayedSessions).toHaveBeenCalledWith(
+          expect.objectContaining({ page: 2 }),
+          expect.anything(),
+        ),
+      );
+    });
+
+    it('toggles sort order on the Date header and requests it from the server', async () => {
+      const user = userEvent.setup();
+      renderWithQuery(<PlayedSessionsPanel />);
+      await waitFor(() => screen.getByText('Quiz Night'));
+      mockFetchPlayedSessions.mockClear();
+
+      await user.click(screen.getByRole('button', { name: /date/i }));
+
+      await waitFor(() =>
+        expect(mockFetchPlayedSessions).toHaveBeenCalledWith(
+          expect.objectContaining({ sortBy: 'playedAt', sortOrder: 'asc' }),
+          expect.anything(),
+        ),
+      );
     });
   });
 
