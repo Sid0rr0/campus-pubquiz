@@ -50,6 +50,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team B',
             pointsAwarded: 5,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: null,
           },
           {
@@ -58,6 +59,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 5,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: null,
           },
         ],
@@ -92,6 +94,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 0,
             gradedAt: null,
+            verdict: null,
             responseMs: null,
           },
         ],
@@ -102,7 +105,7 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].answeredCount).toBe(1);
   });
 
-  it('counts partial match credit (points > 0, graded) as correct', () => {
+  it('does not count partial match credit toward the correct-count', () => {
     const result = computeSessionDetail(
       buildInput({
         teams: [{ teamId: 1, teamName: 'Team A' }],
@@ -123,13 +126,59 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 1, // 1-of-4 pairs correct
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'partial',
             responseMs: null,
           },
         ],
       }),
     );
 
-    expect(result.questions[0].correctCount).toBe(1);
+    expect(result.questions[0].correctCount).toBe(0);
+  });
+
+  it('counts a speed-scaled kahoot answer that earned fewer than full points as correct', () => {
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team A' },
+          { teamId: 2, teamName: 'Team B' },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Kahoot Q',
+            type: 'multiple_choice',
+            points: 1000,
+          },
+        ],
+        answers: [
+          {
+            questionId: 10,
+            teamId: 1,
+            teamName: 'Team A',
+            pointsAwarded: 870,
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
+            responseMs: null,
+          },
+          {
+            questionId: 10,
+            teamId: 2,
+            teamName: 'Team B',
+            pointsAwarded: 510,
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
+            responseMs: null,
+          },
+        ],
+      }),
+    );
+
+    expect(result.questions[0].correctCount).toBe(2);
+    expect(result.questions[0].correctRate).toBe(1);
+    expect(result.standings.map((row) => row.correctCount)).toEqual([1, 1]);
   });
 
   it('derives correctRate from points percentage for match questions, not binary correctness', () => {
@@ -156,6 +205,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 1, // 1-of-4 pairs correct
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'partial',
             responseMs: null,
           },
           {
@@ -164,15 +214,16 @@ describe('computeSessionDetail', () => {
             teamName: 'Team B',
             pointsAwarded: 3, // 3-of-4 pairs correct
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'partial',
             responseMs: null,
           },
         ],
       }),
     );
 
-    // Both teams have partial credit, so correctCount stays binary (2), but
+    // Both teams have only partial credit, so nobody is counted correct, but
     // correctRate reflects points earned (1 + 3) / achievable (2 * 4) = 50%.
-    expect(result.questions[0].correctCount).toBe(2);
+    expect(result.questions[0].correctCount).toBe(0);
     expect(result.questions[0].correctRate).toBeCloseTo(0.5);
   });
 
@@ -241,6 +292,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 1,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: null,
           },
           {
@@ -249,6 +301,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team B',
             pointsAwarded: 1,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: null,
           },
           {
@@ -257,6 +310,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'incorrect',
             responseMs: null,
           },
         ],
@@ -288,6 +342,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 1,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: null,
           },
         ],
@@ -324,6 +379,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 1,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: 5000,
           },
           {
@@ -332,6 +388,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team B',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'incorrect',
             responseMs: 1200,
           },
         ],
@@ -398,6 +455,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: averagePercent,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: averagePercent > 0 ? 'correct' : 'incorrect',
             responseMs: null,
           },
         ],
@@ -502,6 +560,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 2,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'correct',
             responseMs: null,
           },
           {
@@ -510,6 +569,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team A',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'incorrect',
             responseMs: null,
           },
           {
@@ -518,6 +578,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team B',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'incorrect',
             responseMs: null,
           },
           {
@@ -526,6 +587,7 @@ describe('computeSessionDetail', () => {
             teamName: 'Team B',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'incorrect',
             responseMs: null,
           },
         ],

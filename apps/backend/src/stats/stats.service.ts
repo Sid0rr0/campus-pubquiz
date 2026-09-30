@@ -5,6 +5,7 @@ import type {
   PlayedSessionsListedPayload,
   QuestionType,
   SessionDetailStats,
+  Verdict,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -59,6 +60,7 @@ interface SessionAnswerRow {
   teamName: string;
   pointsAwarded: string | number;
   gradedAt: string | Date | null;
+  verdict: Verdict | null;
   responseMs: string | number | null;
 }
 
@@ -276,6 +278,7 @@ export class StatsService {
         't.name as teamName',
         'a.points_awarded as pointsAwarded',
         'a.graded_at as gradedAt',
+        'a.verdict as verdict',
         'a.response_ms as responseMs',
       )) as SessionAnswerRow[];
 
@@ -312,6 +315,7 @@ export class StatsService {
         teamName: a.teamName,
         pointsAwarded: Number(a.pointsAwarded),
         gradedAt: a.gradedAt,
+        verdict: a.verdict,
         responseMs: a.responseMs === null ? null : Number(a.responseMs),
       })),
       bonusAwards: bonusAwards.map((b) => ({

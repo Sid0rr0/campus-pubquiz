@@ -121,6 +121,7 @@ describe('StatsService (Postgres integration)', () => {
       value: 'value',
       pointsAwarded: points,
       gradedAt: new Date(),
+      verdict: points > 0 ? 'correct' : 'incorrect',
     });
     await em.flush();
   }

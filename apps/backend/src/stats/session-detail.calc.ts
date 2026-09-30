@@ -3,6 +3,7 @@ import {
   type BonusCategory,
   type QuestionType,
   type QuizDifficultyLabel,
+  type Verdict,
   type SessionDetailBonusSummary,
   type SessionDetailFastestAnswer,
   type SessionDetailFastestTeam,
@@ -47,6 +48,7 @@ export interface SessionDetailAnswerInputRow {
   teamName: string;
   pointsAwarded: number;
   gradedAt: string | Date | null;
+  verdict: Verdict | null;
   responseMs: number | null;
 }
 
@@ -84,10 +86,11 @@ function getDifficultyLabel(averagePercent: number): QuizDifficultyLabel {
   );
 }
 
-/** A correct answer is a graded one with positive points — partial `match`
- * credit counts, an ungraded answer (gradedAt null) never does. */
+/** A correct answer is one whose stored verdict is `correct` — the same
+ * verdict the grading panel counted live, so a speed-scaled kahoot answer
+ * counts while partial `match` credit and ungraded answers (null) don't. */
 function isCorrect(answer: SessionDetailAnswerInputRow): boolean {
-  return answer.gradedAt !== null && answer.pointsAwarded > 0;
+  return answer.verdict === 'correct';
 }
 
 /** First row achieving the min/max of `getValue` — ties keep the earlier
