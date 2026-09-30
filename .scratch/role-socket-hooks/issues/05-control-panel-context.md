@@ -18,10 +18,14 @@ The desktop sidebar and mobile admin bar read the context, and the mobile bar ke
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** wontfix
 
 - [ ] The shared 34-field sidebar props interface is deleted
 - [ ] The desktop sidebar and mobile admin bar render from the Control panel context, and /control passes them no shared props
 - [ ] The leaf panels keep their prop interfaces, and /remote still renders them without the context
 - [ ] The existing /control page tests (advance controls, keyboard shortcuts, status and teams, showdown, leaderboard, end quiz and close session) pass unchanged in behaviour
 - [ ] Using a sidebar outside the provider fails with a clear developer error rather than rendering empty
+
+## Comments
+
+**2026-10-01:** Superseded by `.scratch/props-refactor/spec.md`, ticket `.scratch/props-refactor/issues/03-control-panel-prop.md`. The goals stay the same: the shared sidebar props interface is deleted, and adding a control stops needing two prop lists in /control. The delivery changes from a context to one grouped Control panel prop. The only readers are the two sidebars one level below /control, which react.dev's "Before you use context" says to handle with props. A context would also give no re-render benefit here. Rationale: `.scratch/props-refactor/research.md`, "Where this differs from ticket 05".
