@@ -133,7 +133,17 @@ describe('GameGateway — grading', () => {
   });
 
   it('clears the ungraded-question cache once every submitted answer for that question is graded', async () => {
-    gameStateService.setQuestionGradedStatus('ABCDEF', 21, true);
+    await openFirstQuestion(gateway, server);
+    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
+    await gateway.handleConnection(asSocket(player));
+    await gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+    });
+    await gateway.handleSubmitAnswer(asSocket(player), {
+      questionId: 21,
+      teamId: 31,
+      value: 'Banana',
+    });
     expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual([
       21,
     ]);

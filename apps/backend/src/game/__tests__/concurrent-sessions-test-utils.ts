@@ -6,7 +6,6 @@ import {
   TEST_SESSION_TOKEN,
   createFakeOrm,
   createFakeGameProgressRepository,
-  createFakeAnswerService,
   createFakeBonusService,
   createFakeSessionService,
   createMockSocket,
@@ -199,17 +198,17 @@ export function setupConcurrentSessionsTest(): ConcurrentSessionsTestContext {
         .mockResolvedValue({ gameSessionId: 302, joinCode: 'BBBBBB' }),
       updateSettings: jest.fn(),
     };
+    state.answerService = createSessionAwareAnswerService();
     state.gameStateService = new GameStateService(
       asSeedService(seedService),
       asGameProgressRepository(createFakeGameProgressRepository()),
       createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
+      asAnswerService(state.answerService),
       asShowdownService(createFakeShowdownService()),
     );
     await state.gameStateService.onModuleInit();
 
     state.teamService = createSessionAwareTeamService();
-    state.answerService = createSessionAwareAnswerService();
     state.gateway = new GameGateway(
       state.gameStateService,
       asTeamService(state.teamService),

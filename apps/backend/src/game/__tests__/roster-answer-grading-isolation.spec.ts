@@ -91,12 +91,13 @@ describe('GameGateway — concurrent sessions: roster, answer, and grading isola
       pointsAwarded: 5,
     });
 
-    // Only A was graded — its leaderboard is populated, B's is still empty.
+    // Each session's leaderboard holds only its own team — grading A's
+    // answer never puts Team Alpha on B's board.
     expect(state.gameStateService.getSnapshot('AAAAAA').leaderboard).toEqual([
       expect.objectContaining({ teamId: 61, teamName: 'Team Alpha' }),
     ]);
-    expect(state.gameStateService.getSnapshot('BBBBBB').leaderboard).toEqual(
-      [],
-    );
+    expect(state.gameStateService.getSnapshot('BBBBBB').leaderboard).toEqual([
+      expect.objectContaining({ teamId: 62, teamName: 'Team Beta' }),
+    ]);
   });
 });

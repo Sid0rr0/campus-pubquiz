@@ -22,7 +22,10 @@ import {
   tryStepClosestGuessReveal,
 } from '@/game/state/closest-guess-reveal.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
-import { BlockGradingService } from '@/game/state/block-grading.service';
+import {
+  BlockGradingService,
+  canBeUngraded,
+} from '@/game/state/block-grading.service';
 import { GameSessionMutationsService } from '@/game/state/game-session-mutations.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
@@ -372,9 +375,9 @@ export class GameStateService implements OnModuleInit {
     const previousStatus = this.getSnapshot(joinCode).progress.status;
     const snapshot = await this.applyAction(joinCode, action);
 
-    // The leaderboard otherwise only refreshes on GRADE_ANSWER, so toggling
-    // it on before any grading has happened would show nothing — recompute
-    // fresh here so every currently-joined team appears, 0 points and all.
+    // Answers and grades refresh the leaderboard, but a team that hasn't
+    // answered yet isn't on it — recompute fresh here so every currently-
+    // joined team appears, 0 points and all.
     if (
       action === 'TOGGLE_LEADERBOARD' &&
       snapshot.progress.isLeaderboardVisible
@@ -558,17 +561,52 @@ export class GameStateService implements OnModuleInit {
     return this.getSnapshot(joinCode);
   }
 
-  /** Incrementally patches the ungraded-question cache for one questionId — called by the gateway right after SUBMIT_ANSWER/GRADE_ANSWER, which grade individual answers without going through applyAction's bulk refresh. */
-  setQuestionGradedStatus(
+  /**
+   * A team's answer to `questionId` was just recorded (and, for auto-graded
+   * types, graded): refreshes the leaderboard, the question's answered-team
+   * ids and its ungraded flag, and says the admin needs that question's
+   * answer list afresh.
+   */
+  recordAnswer(joinCode: string, questionId: number): Promise<SessionOutcome> {
+    return this.refreshAfterAnswerChange(joinCode, questionId);
+  }
+
+  /** An admin graded an answer to `questionId`: same refresh as recordAnswer. */
+  answerGraded(joinCode: string, questionId: number): Promise<SessionOutcome> {
+    return this.refreshAfterAnswerChange(joinCode, questionId);
+  }
+
+  private async refreshAfterAnswerChange(
     joinCode: string,
     questionId: number,
-    hasUngradedAnswers: boolean,
-  ): void {
+  ): Promise<SessionOutcome> {
+    const gameSessionId = this.getGameSessionId(joinCode);
+    const [answers, leaderboard] = await Promise.all([
+      this.answerService.listForQuestion(gameSessionId, questionId),
+      this.answerService.computeLeaderboard(gameSessionId),
+    ]);
+    const question = this.findQuestion(joinCode, questionId);
+    this.mutations.setLeaderboard(joinCode, leaderboard);
+    this.mutations.setAnsweredTeamIds(
+      joinCode,
+      questionId,
+      answers.map((answer) => answer.teamId),
+    );
     this.mutations.setQuestionGradedStatus(
       joinCode,
       questionId,
-      hasUngradedAnswers,
+      question !== undefined &&
+        canBeUngraded(question) &&
+        answers.some((answer) => answer.gradedAt === null),
     );
+    return { ...BROADCAST_STATE_OUTCOME, answerListQuestionIds: [questionId] };
+  }
+
+  private findQuestion(joinCode: string, questionId: number) {
+    return this.sessionStore
+      .get(joinCode)
+      .seededGame.rounds.flatMap((round) => round.questions)
+      .find((question) => question.id === questionId);
   }
 
   /**

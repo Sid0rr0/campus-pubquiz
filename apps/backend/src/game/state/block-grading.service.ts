@@ -21,6 +21,16 @@ const GRADED_STATUSES: GameStatus[] = [
 ];
 
 /**
+ * The one rule for which questions can ever count as "ungraded": closest_guess
+ * is graded in a single batch once the question locks and can't be graded by
+ * hand, so its answers never leave the admin anything to do. Shared by the
+ * per-question incremental update and the bulk refresh so they can't diverge.
+ */
+export function canBeUngraded(question: { type: string }): boolean {
+  return question.type !== 'closest_guess';
+}
+
+/**
  * Grading side-effects that fire during applyAction's status transitions —
  * auto-grading closest_guess questions and keeping the ungraded-answer cache
  * fresh. Split out of GameStateService since neither participates in the
@@ -202,7 +212,7 @@ export class BlockGradingService {
   /** Current-block question IDs (closest_guess excluded) with at least one ungraded submitted answer, read fresh from the DB. */
   async getUngradedBlockQuestionIds(session: SessionState): Promise<number[]> {
     const questionIds = getBlockSeededQuestions(session)
-      .filter((question) => question.type !== 'closest_guess')
+      .filter(canBeUngraded)
       .map((question) => question.id);
     return this.answerService.listUngradedQuestionIds(
       session.seededGame.gameSessionId,
@@ -213,7 +223,7 @@ export class BlockGradingService {
   /**
    * Bulk-recomputes ungradedQuestionIds from the DB whenever the block just
    * entered (or is still within) a grading status — the authoritative
-   * baseline the gateway's per-question setQuestionGradedStatus patches
+   * baseline the per-question refresh in GameStateService.recordAnswer/answerGraded
    * build on between these recomputes. A no-op outside GRADING_STATUSES,
    * since nothing there can be graded and the cached value can't go stale.
    */

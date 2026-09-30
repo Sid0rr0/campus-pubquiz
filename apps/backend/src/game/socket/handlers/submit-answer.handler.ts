@@ -1,14 +1,8 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-import {
-  SOCKET_EVENTS,
-  SOCKET_ROOMS,
-  sessionRoom,
-  type SubmitAnswerPayload,
-} from '@campus-pubquiz/types';
+import { SOCKET_EVENTS, type SubmitAnswerPayload } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
-import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payload.util';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 
 export async function submitTeamAnswer(
@@ -54,31 +48,9 @@ export async function submitTeamAnswer(
     gradedAt: submitted.gradedAt,
   });
 
-  const answers = await deps.answerService.listForQuestion(
-    deps.gameState.getGameSessionId(joinCode),
-    payload.questionId,
-  );
-  deps.server
-    .to(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))
-    .emit(
-      SOCKET_EVENTS.ANSWERS_UPDATED,
-      buildAnswersUpdatedPayload(
-        deps.gameState,
-        joinCode,
-        payload.questionId,
-        answers,
-      ),
-    );
-
-  deps.gameState.setAnsweredTeamIds(
+  await deliverOutcome(
+    deps,
     joinCode,
-    payload.questionId,
-    answers.map((answer) => answer.teamId),
+    await deps.gameState.recordAnswer(joinCode, payload.questionId),
   );
-  deps.gameState.setQuestionGradedStatus(
-    joinCode,
-    payload.questionId,
-    answers.some((answer) => answer.gradedAt === null),
-  );
-  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

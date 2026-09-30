@@ -79,8 +79,8 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
   ): Promise<void> {
     // A kahoot question locks straight from its first question; a normal
     // round only locks after its last one (multiple_choice, free_text,
-    // closest_guess, match).
-    const advances = isKahoot ? 1 : 4;
+    // closest_guess, match, audio).
+    const advances = isKahoot ? 1 : 5;
     for (let index = 0; index < advances; index++) {
       await game.gateway.handleAdminAction(asSocket(admin), {
         action: 'ADVANCE',

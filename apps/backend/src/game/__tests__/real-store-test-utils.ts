@@ -60,6 +60,8 @@ export interface SeededQuestionIds {
   freeText: number;
   closestGuess: number;
   match: number;
+  /** Human-graded, so its answers stay ungraded until the admin grades them. */
+  audio: number;
 }
 
 export interface PlayableQuiz {
@@ -159,6 +161,12 @@ const PLAYABLE_QUESTIONS: Record<keyof SeededQuestionIds, SeedQuestion> = {
       matchTargets: ['Rome', 'Paris'],
     },
   },
+  audio: {
+    type: 'audio',
+    prompt: 'Which band is this?',
+    answer: 'Queen',
+    points: 2,
+  },
 };
 
 /**
@@ -210,11 +218,10 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       breakAfter: true,
       kahootMode: options.kahootMode ?? false,
     });
-    const [multipleChoice, freeText, closestGuess, match] = Object.values(
-      PLAYABLE_QUESTIONS,
-    ).map((seed, orderIndex) =>
-      em.create(Question, { round, orderIndex, ...seed }),
-    );
+    const [multipleChoice, freeText, closestGuess, match, audio] =
+      Object.values(PLAYABLE_QUESTIONS).map((seed, orderIndex) =>
+        em.create(Question, { round, orderIndex, ...seed }),
+      );
     const session = em.create(GameSession, {
       quiz,
       joinCode: options.joinCode ?? REAL_STORE_JOIN_CODE,
@@ -230,6 +237,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         freeText: freeText.id,
         closestGuess: closestGuess.id,
         match: match.id,
+        audio: audio.id,
       },
     };
   }

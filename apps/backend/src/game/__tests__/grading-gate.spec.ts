@@ -68,16 +68,4 @@ describe('GameStateService — grading gate before reveal', () => {
     const revealIntro = await service.applyAction(joinCode, 'ADVANCE');
     expect(revealIntro.progress.status).toBe('reveal_intro');
   });
-
-  it('setQuestionGradedStatus incrementally patches the ungraded-question cache', async () => {
-    answerService.listUngradedQuestionIds.mockResolvedValueOnce([]);
-    await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
-    expect(service.getSnapshot(joinCode).ungradedQuestionIds).toEqual([]);
-
-    service.setQuestionGradedStatus(joinCode, 24, true);
-    expect(service.getSnapshot(joinCode).ungradedQuestionIds).toEqual([24]);
-
-    service.setQuestionGradedStatus(joinCode, 24, false);
-    expect(service.getSnapshot(joinCode).ungradedQuestionIds).toEqual([]);
-  });
 });
