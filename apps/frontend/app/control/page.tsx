@@ -7,8 +7,6 @@ import { toast } from 'sonner';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
-  getTiedForFirst,
-  getLeaderboardRevealStepCount,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
@@ -17,7 +15,6 @@ import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
-import { isYoutubeMediaUrl } from '@/app/display/question-display';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
@@ -28,6 +25,7 @@ import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { MobileAdminBar } from '@/app/control/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
+import { getAdminControls } from '@/app/control/admin-controls';
 import { useAdminKeyboardShortcuts } from '@/app/control/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
@@ -212,20 +210,13 @@ function AdminPageContent() {
   }
 
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  // Reveal steps, not teams: tied teams share a rank and appear together in
-  // one step, and a kahootMode round only reveals through its top 5 — same
-  // cutoff the display enforces via maxRank — so "Show Next Team" switches
-  // to "Hide Leaderboard" once every distinct rank on screen is shown.
-  const leaderboardTeamCount = getLeaderboardRevealStepCount(
-    snapshot?.leaderboard ?? [],
-    snapshot?.isCurrentRoundKahoot ?? false,
-  );
+  const controls = snapshot ? getAdminControls(snapshot) : null;
+  const leaderboardTeamCount = controls?.leaderboardStepCount ?? 0;
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
   // Where the active block starts, and whether Advance/Previous are
   // accepted right now, are decided by the server (the admin view) from the
   // session's own rounds and the same steps the action handler applies.
   const activeBlockStartIndex = snapshot?.activeBlockStartIndex ?? 0;
-  const canStartQuiz = gameStatus === 'lobby';
   const canAdvance = snapshot?.canAdvance ?? false;
   const canGoToPreviousQuestion = snapshot?.canGoToPreviousQuestion ?? false;
   const hasUnrevealedTeams =
@@ -277,21 +268,17 @@ function AdminPageContent() {
     isShowdownEligible,
     isLastQuestionBeforeBreak,
   } = snapshot;
-  const tiedTeamNames = getTiedForFirst(leaderboard).map(
-    (entry) => entry.teamName,
-  );
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
     : blockQuestions;
-  const showAnswerStatus =
-    progress.status === 'question_open' || progress.status === 'locking';
-  const canEndQuiz = progress.status !== 'ended';
-  const canCloseSession = progress.status === 'ended';
-  // currentQuestion (and with it its own media) is only populated while a
-  // question is actually open on /display — see getCurrentQuestion.
-  const canReplayMedia =
-    progress.status === 'question_open' &&
-    isYoutubeMediaUrl(currentQuestion?.mediaUrl);
+  const {
+    canStartQuiz,
+    canEndQuiz,
+    canCloseSession,
+    canReplayMedia,
+    showAnswerStatus,
+    tiedTeamNames,
+  } = getAdminControls(snapshot);
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">

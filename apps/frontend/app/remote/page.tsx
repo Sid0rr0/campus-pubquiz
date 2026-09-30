@@ -3,7 +3,6 @@
 import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
-  getLeaderboardRevealStepCount,
   type RevealQuestionView,
   type ScreenPreview,
 } from '@campus-pubquiz/types';
@@ -11,9 +10,9 @@ import { useAdminSession } from '@/app/lib/use-admin-session';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
-import { isYoutubeMediaUrl } from '@/app/display/question-display';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
+import { getAdminControls } from '@/app/control/admin-controls';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
 function NextQuestionPreview({ question }: { question: RevealQuestionView }) {
@@ -99,32 +98,19 @@ function RemotePageContent() {
 
   const {
     progress,
-    currentQuestion,
     teams = [],
     answeredTeamIds = [],
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
-    isCurrentRoundKahoot = false,
     phaseStartedAt = null,
     phaseElapsedMs = null,
   } = snapshot;
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
-  // currentQuestion (and with it its own media) is only populated while a
-  // question is actually open on /display — see getCurrentQuestion.
-  const canReplayMedia =
-    gameStatus === 'question_open' &&
-    isYoutubeMediaUrl(currentQuestion?.mediaUrl);
-  const showAnswerStatus =
-    gameStatus === 'question_open' || gameStatus === 'locking';
+  const { canReplayMedia, showAnswerStatus, leaderboardStepCount } =
+    getAdminControls(snapshot);
   // Availability is decided by the server (the admin view), so the presenter's
   // phone gates the buttons exactly as the admin console does.
   const { canAdvance, canGoToPreviousQuestion } = snapshot;
-  // One reveal step per distinct rank (ties reveal together), capped to a
-  // kahootMode round's top 5 — see control/page.tsx's matching computation.
-  const leaderboardTeamCount = getLeaderboardRevealStepCount(
-    snapshot.leaderboard ?? [],
-    isCurrentRoundKahoot,
-  );
   const leaderboardRevealCount = snapshot.leaderboardRevealCount ?? 0;
 
   return (
@@ -210,7 +196,7 @@ function RemotePageContent() {
           canAdvance={canAdvance}
           isLeaderboardVisible={progress.isLeaderboardVisible}
           leaderboardRevealCount={leaderboardRevealCount}
-          leaderboardTeamCount={leaderboardTeamCount}
+          leaderboardTeamCount={leaderboardStepCount}
           onAction={sendAction}
         >
           <MediaFullscreenToggle
