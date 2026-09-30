@@ -32,13 +32,7 @@ export function QuestionOpenScreen({
       )}
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8">
         <QuestionDisplay
-          type={question.type}
-          prompt={question.prompt}
-          mediaUrl={question.mediaUrl}
-          mediaStartSeconds={question.mediaStartSeconds}
-          mediaEndSeconds={question.mediaEndSeconds}
-          options={question.options}
-          matchTargets={question.matchTargets}
+          question={question}
           mediaTestIdPrefix="question"
           autoplayMedia={autoplayMedia}
           isFullscreen={isFullscreen}

@@ -113,11 +113,8 @@ export function QuestionBrowser({
             />
           ) : (
             <QuestionDisplay
-              type={revealQuestion.type}
-              prompt={revealQuestion.prompt}
-              options={revealQuestion.options}
-              matchTargets={revealQuestion.matchTargets}
-              correctAnswer={revealQuestion.answer}
+              question={revealQuestion}
+              isMediaHidden
               playerAnswer={myAnswer ?? ''}
               mediaTestIdPrefix="play-reveal"
               promptClassName="text-balance font-display text-2xl leading-tight"

@@ -25,6 +25,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | Feature             | #   | Ticket                                                                                                                          | Commit    |
 | ------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | props-refactor      | 03  | [The Control panel prop replaces the 32-field sidebar interface](props-refactor/issues/03-control-panel-prop.md) | —         |
+| props-refactor      | 06  | [The question display takes a question object](props-refactor/issues/06-question-display-takes-question.md) | —         |
 | props-refactor      | 05  | [The /control question browser takes the admin indicators object](props-refactor/issues/05-question-browser-takes-admin-indicators.md) | —         |
 | props-refactor      | 02  | [One shared function for the admin controls, used by /control and /remote](props-refactor/issues/02-shared-admin-controls.md) | —         |
 | props-refactor      | 04  | [Rules content and the phone's game status screens take the session settings object](props-refactor/issues/04-rules-content-takes-settings.md) | —         |

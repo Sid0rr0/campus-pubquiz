@@ -2,7 +2,8 @@ import { useState, type SyntheticEvent } from 'react';
 import {
   extractYoutubeVideoId,
   splitPipeList,
-  type QuestionType,
+  type QuestionView,
+  type RevealQuestionView,
 } from '@campus-pubquiz/types';
 import {
   getLowerOptionLetter,
@@ -111,22 +112,25 @@ export function AnswerMedia({
   );
 }
 
+/** The fields QuestionDisplay renders — the reveal-only ones (answer, answerMedia) are present only once the answer is shown. */
+export type QuestionDisplayQuestion = Pick<
+  QuestionView,
+  | 'type'
+  | 'prompt'
+  | 'mediaUrl'
+  | 'mediaStartSeconds'
+  | 'mediaEndSeconds'
+  | 'options'
+  | 'matchTargets'
+> &
+  Partial<Pick<RevealQuestionView, 'answer' | 'answerMediaUrl'>>;
+
 interface QuestionDisplayProps {
-  type: QuestionType;
-  prompt: string;
-  mediaUrl?: string;
-  /** Clip range (seconds) into a YouTube mediaUrl — ignored for non-YouTube media and for answerMediaUrl. */
-  mediaStartSeconds?: number;
-  mediaEndSeconds?: number;
-  options?: string[];
-  /** Match only: the right-hand items, in the order shown to players. */
-  matchTargets?: string[];
-  /** When set (reveal only), highlights the matching option and shows an answer line. */
-  correctAnswer?: string;
-  /** Sort/match only: the team's own submitted order (pipe-joined, same shape as correctAnswer). When set, reveal shows this instead of the correct order/pairing, bordered green or magenta per item depending on whether that item was correct — used by /play so teams see how they answered rather than the answer key. */
+  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a YouTube `mediaUrl` — ignored for non-YouTube media and for `answerMediaUrl`. */
+  question: QuestionDisplayQuestion;
+  /** Renders the question with no media at all (neither its own nor the answer's) — the phone's question browser, which leaves the big screen's audio and video to the big screen. */
+  isMediaHidden?: boolean;
   playerAnswer?: string;
-  /** Shown alongside the answer during reveal only — independent of the question's own media. */
-  answerMediaUrl?: string;
   mediaTestIdPrefix: string;
   /** Controls <audio autoPlay> and YouTube's autoplay param — defaults to true, matching the pre-settings hardcoded behavior. */
   autoplayMedia?: boolean;
@@ -141,22 +145,26 @@ interface QuestionDisplayProps {
 // Shared by question_open and reveal so the big screen shows each question
 // the same way it was originally asked, just with the answer added back in.
 export function QuestionDisplay({
-  type,
-  prompt,
-  mediaUrl,
-  mediaStartSeconds,
-  mediaEndSeconds,
-  options,
-  matchTargets,
-  correctAnswer,
+  question,
+  isMediaHidden = false,
   playerAnswer,
-  answerMediaUrl,
   mediaTestIdPrefix,
   autoplayMedia = true,
   promptClassName = 'text-balance font-display text-display-4xl leading-snug',
   isFullscreen = false,
   mediaReplayToken = 0,
 }: QuestionDisplayProps) {
+  const {
+    type,
+    prompt,
+    mediaStartSeconds,
+    mediaEndSeconds,
+    options,
+    matchTargets,
+    answer: correctAnswer,
+  } = question;
+  const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
+  const answerMediaUrl = isMediaHidden ? undefined : question.answerMediaUrl;
   // On reveal, answer_media_url (when set) normally replaces the question's
   // own media_url rather than showing both. The one exception is a plain
   // question whose media is an image (not audio/video): then both are shown

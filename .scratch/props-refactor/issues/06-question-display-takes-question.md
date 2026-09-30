@@ -12,7 +12,11 @@ The audience and teams see questions, options, media and revealed answers exactl
 
 **Status:** ready-for-agent
 
-- [ ] The question display takes one question prop typed from the shared question view type
-- [ ] All four call sites pass the question they already hold
-- [ ] The phone's question browser opts out of media explicitly, and phones still render no media
-- [ ] Existing /display tests (question display, media rendering, break, reveal) and /play question tests pass unchanged in behaviour
+- [x] The question display takes one question prop typed from the shared question view type
+- [x] All four call sites pass the question they already hold
+- [x] The phone's question browser opts out of media explicitly, and phones still render no media
+- [x] Existing /display tests (question display, media rendering, break, reveal) and /play question tests pass unchanged in behaviour
+
+## Comments
+
+Implemented: `QuestionDisplay` takes `question` (`QuestionDisplayQuestion`, picked from `QuestionView` + optional `answer`/`answerMediaUrl` from `RevealQuestionView`). The phone browser passes `isMediaHidden`. `Status:` left as `ready-for-agent` (no done state in the triage vocabulary). Commit: see git history.

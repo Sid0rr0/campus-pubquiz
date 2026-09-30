@@ -341,15 +341,7 @@ function DisplayPageContent() {
                 ) : (
                   <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                     <QuestionDisplay
-                      type={revealQuestion.type}
-                      prompt={revealQuestion.prompt}
-                      mediaUrl={revealQuestion.mediaUrl}
-                      mediaStartSeconds={revealQuestion.mediaStartSeconds}
-                      mediaEndSeconds={revealQuestion.mediaEndSeconds}
-                      options={revealQuestion.options}
-                      matchTargets={revealQuestion.matchTargets}
-                      correctAnswer={revealQuestion.answer}
-                      answerMediaUrl={revealQuestion.answerMediaUrl}
+                      question={revealQuestion}
                       mediaTestIdPrefix="reveal"
                       autoplayMedia={settings.autoplayMedia}
                       isFullscreen={progress.isMediaFullscreen}
