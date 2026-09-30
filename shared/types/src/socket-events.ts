@@ -304,6 +304,25 @@ export interface StateSnapshotPayload {
   showdownRevealStep: number;
 }
 
+/**
+ * What each room receives on STATE_UPDATED / STATE_SYNC. The snapshot above
+ * is the shared base of every view; each audience's view is that base with
+ * what the audience must not see removed (and, in later tickets, its own
+ * computed fields added). Keep them as separate names so a page can only
+ * read what its own room is sent.
+ */
+export type DisplayStatePayload = StateSnapshotPayload;
+export type AdminStatePayload = StateSnapshotPayload;
+/** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
+export type PlayersStatePayload = StateSnapshotPayload;
+
+/** The view type each socket room is sent. */
+export interface StateViewByRoom {
+  display: DisplayStatePayload;
+  admin: AdminStatePayload;
+  players: PlayersStatePayload;
+}
+
 export interface AdminActionPayload {
   action: GameAction;
 }

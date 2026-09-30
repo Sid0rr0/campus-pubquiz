@@ -160,12 +160,14 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       const emits = await runTransition(
         { name: 'kahoot lock', kahootMode: true, timer: 'lock' },
         'timer',
-        3,
+        5,
       );
 
       expect(emits).toEqual([
         `admin ${SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED}`,
-        `display+admin+players ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
+        `display ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
+        `admin ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
+        `players ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
         `player-0 ${SOCKET_EVENTS.TEAM_ANSWERS_SYNCED} x1`,
       ]);
     },

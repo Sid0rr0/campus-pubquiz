@@ -165,4 +165,56 @@ describe('PlayPage — leaderboard overlay', () => {
 
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
+
+  it('renders without the question while a kahoot question is redacted behind the leaderboard, then shows it once the board is dismissed', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const team = {
+      teamId: 'team-1',
+      teamName: 'Returning Team',
+      teamToken: 'team-token-1',
+    };
+    const question = {
+      id: 'r1q2',
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 1,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({
+            status: 'question_open',
+            isLeaderboardVisible: true,
+          }),
+          isCurrentRoundKahoot: true,
+          currentQuestion: null,
+          blockQuestions: [],
+        },
+        team,
+      }),
+    );
+    const { rerender } = renderWithQuery(<PlayPage />);
+
+    expect(screen.queryByText('Name a planet')).not.toBeInTheDocument();
+
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({
+            status: 'question_open',
+            isLeaderboardVisible: false,
+          }),
+          isCurrentRoundKahoot: true,
+          currentQuestion: question,
+          blockQuestions: [question],
+        },
+        team,
+      }),
+    );
+    rerender(<PlayPage />);
+
+    expect(screen.getByText('Name a planet')).toBeInTheDocument();
+  });
 });

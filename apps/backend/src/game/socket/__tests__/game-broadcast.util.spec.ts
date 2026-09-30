@@ -29,12 +29,15 @@ describe('broadcastGameState', () => {
 
   function createFakeGameState() {
     return {
-      getSnapshot: jest.fn().mockReturnValue(snapshot),
+      getView: jest.fn((_joinCode: string, room: string) => ({
+        ...snapshot,
+        viewFor: room,
+      })),
       getPresenterContext: jest.fn().mockReturnValue(presenterContext),
     };
   }
 
-  it('emits STATE_UPDATED to display/admin/players and PRESENTER_CONTEXT_UPDATED to admin alone', () => {
+  it('emits each room its own STATE_UPDATED view and PRESENTER_CONTEXT_UPDATED to admin alone', () => {
     const server = createMockServer();
     const gameState = createFakeGameState();
 
@@ -44,23 +47,22 @@ describe('broadcastGameState', () => {
       gameState as unknown as GameStateService,
     );
 
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom(joinCode, SOCKET_ROOMS.DISPLAY),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom(joinCode, SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      snapshot,
-    );
+    const toCalls = server.to.mock.calls as string[][];
+    const stateUpdates = (server.emit.mock.calls as unknown[][])
+      .map((call, index) => ({ call, room: toCalls[index][0] }))
+      .filter(({ call }) => call[0] === SOCKET_EVENTS.STATE_UPDATED);
+    expect(stateUpdates).toHaveLength(3);
+    for (const room of Object.values(SOCKET_ROOMS)) {
+      expect(stateUpdates).toContainEqual({
+        room: sessionRoom(joinCode, room),
+        call: [SOCKET_EVENTS.STATE_UPDATED, { ...snapshot, viewFor: room }],
+      });
+    }
     expect(server.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
       presenterContext,
     );
+    expect(toCalls[0]).toEqual([sessionRoom(joinCode, SOCKET_ROOMS.ADMIN)]);
   });
 
   it('emits STATE_UPDATED last, so it always reflects the most recent snapshot read', () => {
@@ -75,7 +77,7 @@ describe('broadcastGameState', () => {
 
     expect(server.emit).toHaveBeenLastCalledWith(
       SOCKET_EVENTS.STATE_UPDATED,
-      snapshot,
+      expect.objectContaining({ joinCode }),
     );
   });
 });

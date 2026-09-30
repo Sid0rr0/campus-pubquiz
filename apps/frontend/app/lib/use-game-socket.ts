@@ -25,6 +25,7 @@ import {
   type SetBreakEndTimePayload,
   type SetDisplayTextScalePayload,
   type StateSnapshotPayload,
+  type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
   type TeamAnswerView,
@@ -56,8 +57,11 @@ export interface MyAnswerGrade {
   verdict: Verdict | null;
 }
 
-export interface UseGameSocketResult {
-  snapshot: StateSnapshotPayload | null;
+export interface UseGameSocketResult<
+  View extends StateSnapshotPayload = StateSnapshotPayload,
+> {
+  /** The state view the server sends this hook's role — see StateViewByRoom. */
+  snapshot: View | null;
   connectionError: string | null;
   sendAction: (action: GameAction) => void;
   team: JoinAcceptedPayload | null;
@@ -146,22 +150,13 @@ type SeenQuestions = Record<
   BlockQuestionView | BlockRevealQuestionView
 >;
 
-/** Folds a snapshot's block/reveal questions into the running seen-questions map — later sightings of the same id (e.g. once it's revealed) overwrite earlier ones so the richer view wins. */
+/** Folds a view's block/reveal questions into the running seen-questions map — later sightings of the same id (e.g. once it's revealed) overwrite earlier ones so the richer view wins. The players view never carries a question that hasn't been shown yet, so everything in it is taken as it arrives. */
 function mergeSeenQuestions(
   current: SeenQuestions,
   payload: StateSnapshotPayload,
 ): SeenQuestions {
-  // A kahootMode question opened behind the leaderboard (see
-  // advanceFromReveal) is already in blockQuestions server-side — needed so
-  // /display and /control can un-hide it the instant the leaderboard is
-  // dismissed — but a team's own seen-questions history must not leak its
-  // prompt early via the answered-questions panel. It's still just the one
-  // (kahoot blocks are always one question), so skipping all of
-  // blockQuestions here loses nothing else.
-  const isHiddenBehindKahootLeaderboard =
-    payload.isCurrentRoundKahoot && payload.progress.isLeaderboardVisible;
   const additions = [
-    ...(isHiddenBehindKahootLeaderboard ? [] : (payload.blockQuestions ?? [])),
+    ...(payload.blockQuestions ?? []),
     ...(payload.revealQuestions ?? []),
     ...(payload.pastRevealedQuestions ?? []),
   ];
@@ -216,8 +211,8 @@ function getExceptionMessage(payload: unknown): string {
   return 'Unknown error';
 }
 
-export function useGameSocket(
-  role: GameSocketRole,
+export function useGameSocket<Role extends GameSocketRole>(
+  role: Role,
   enabled = true,
   joinCode?: string,
   // Bumped by callers (e.g. useTeamJoin's joinAttempt) to force a fresh
@@ -227,8 +222,8 @@ export function useGameSocket(
   // it on its own. Without this, resubmitting the join form with the same
   // code would silently emit JOIN_PLAYERS on that dead socket and do nothing.
   retryKey = 0,
-): UseGameSocketResult {
-  const [snapshot, setSnapshot] = useState<StateSnapshotPayload | null>(null);
+): UseGameSocketResult<StateViewByRoom[Role]> {
+  const [snapshot, setSnapshot] = useState<StateViewByRoom[Role] | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [team, setTeam] = useState<JoinAcceptedPayload | null>(null);
   const [liveAnswers, setLiveAnswers] = useState<AnswersUpdatedPayload | null>(
@@ -356,13 +351,13 @@ export function useGameSocket(
       setReconnectedAt(Date.now());
     });
 
-    socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateSnapshotPayload) => {
+    socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateViewByRoom[Role]) => {
       setSnapshot(payload);
       setSeenQuestions((current) => mergeSeenQuestions(current, payload));
       setConnectionError(null);
     });
 
-    socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateSnapshotPayload) => {
+    socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateViewByRoom[Role]) => {
       setSnapshot(payload);
       setSeenQuestions((current) => mergeSeenQuestions(current, payload));
       pendingBonusAwardRef.current = false;

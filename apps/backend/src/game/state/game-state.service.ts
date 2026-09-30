@@ -9,7 +9,9 @@ import {
   type GameAction,
   type PresenterContextPayload,
   type SessionSettings,
+  type SocketRoomName,
   type StateSnapshotPayload,
+  type StateViewByRoom,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
@@ -30,6 +32,7 @@ import {
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
+import { projectScreen } from '@/game/state/screen-projection.util';
 import {
   buildAdminQuestionContext,
   buildPresenterContext,
@@ -330,6 +333,14 @@ export class GameStateService implements OnModuleInit {
 
   getSnapshot(joinCode: string): StateSnapshotPayload {
     return buildSnapshot(this.sessionStore.get(joinCode));
+  }
+
+  /** The view of the session that one room is sent — see projectScreen. */
+  getView<Room extends SocketRoomName>(
+    joinCode: string,
+    room: Room,
+  ): StateViewByRoom[Room] {
+    return projectScreen(this.sessionStore.get(joinCode), room);
   }
 
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */

@@ -7,8 +7,8 @@ import {
 import type { GameStateService } from '@/game/state/game-state.service';
 
 /**
- * Fans a fresh state snapshot out to every room (display/admin/players) for
- * one session, and separately pushes admin-only presenter context (host
+ * Fans a fresh state view out to every room (display/admin/players) for
+ * one session — each room is sent its own view, never a shared snapshot — and separately pushes admin-only presenter context (host
  * notes + next-question preview) to the admin room alone. One shared spot
  * for both broadcasts so none of this function's many call sites need a
  * second, easy-to-forget broadcast call. Presenter context is emitted first
@@ -27,9 +27,9 @@ export function broadcastGameState(
       gameState.getPresenterContext(joinCode),
     );
 
-  server
-    .to(sessionRoom(joinCode, SOCKET_ROOMS.DISPLAY))
-    .to(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))
-    .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
-    .emit(SOCKET_EVENTS.STATE_UPDATED, gameState.getSnapshot(joinCode));
+  for (const room of Object.values(SOCKET_ROOMS)) {
+    server
+      .to(sessionRoom(joinCode, room))
+      .emit(SOCKET_EVENTS.STATE_UPDATED, gameState.getView(joinCode, room));
+  }
 }

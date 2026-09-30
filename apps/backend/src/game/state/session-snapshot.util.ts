@@ -16,6 +16,7 @@ import {
   getRevealQuestions,
   getUpcomingQuestionPositions,
 } from '@/game/state/block-questions.util';
+import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 import {
   describeNextScreen,
@@ -105,16 +106,9 @@ export function isQuestionOpenForAnswering(
   session: SessionState,
   questionId: number,
 ): boolean {
-  // A kahootMode question opened right after the previous one's reveal (see
-  // advanceFromReveal) sits behind the leaderboard until the admin
-  // TOGGLE_LEADERBOARDs it away — teams must not be able to answer a
-  // question they haven't been shown yet, mirroring play/page.tsx's
-  // isAnswerable.
-  const isKahootRound =
-    session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ?? false;
-  if (isKahootRound && session.progress.isLeaderboardVisible) {
-    return false;
-  }
+  // Teams must not be able to answer a question they haven't been shown yet,
+  // mirroring play/page.tsx's isAnswerable.
+  if (isQuestionHiddenBehindKahootLeaderboard(session)) return false;
   return (
     (session.progress.status === 'question_open' ||
       session.progress.status === 'locking' ||

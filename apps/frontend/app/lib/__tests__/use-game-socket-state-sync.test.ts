@@ -192,19 +192,10 @@ describe('useGameSocket — state sync', () => {
     );
   });
 
-  it('does not seed seenQuestions with a kahoot question opened behind the leaderboard', async () => {
+  it('takes the players view as it arrives: nothing while a kahoot question is hidden, then the question once the leaderboard is dismissed', async () => {
     const { result } = renderHook(() => useGameSocket('players'));
     const fakeSocket = getFakeSocket();
-    const q1 = {
-      id: 1,
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      roundTitle: 'Round 1',
-    };
-    const q2Hidden = {
+    const q2 = {
       id: 2,
       type: 'free_text' as const,
       prompt: 'Name a planet',
@@ -214,6 +205,7 @@ describe('useGameSocket — state sync', () => {
       roundTitle: 'Round 1',
     };
 
+    // The server removes the hidden question from the players view itself.
     act(() => {
       fakeSocket.trigger(SOCKET_EVENTS.STATE_UPDATED, {
         progress: {
@@ -223,8 +215,8 @@ describe('useGameSocket — state sync', () => {
           isLeaderboardVisible: true,
         },
         isCurrentRoundKahoot: true,
-        currentQuestion: q2Hidden,
-        blockQuestions: [q2Hidden],
+        currentQuestion: null,
+        blockQuestions: [],
         revealQuestions: [],
       });
     });
@@ -240,13 +232,13 @@ describe('useGameSocket — state sync', () => {
           isLeaderboardVisible: false,
         },
         isCurrentRoundKahoot: true,
-        currentQuestion: q2Hidden,
-        blockQuestions: [q1, q2Hidden],
+        currentQuestion: q2,
+        blockQuestions: [q2],
         revealQuestions: [],
       });
     });
     await waitFor(() =>
-      expect(result.current.seenQuestions).toEqual({ 1: q1, 2: q2Hidden }),
+      expect(result.current.seenQuestions).toEqual({ 2: q2 }),
     );
   });
 

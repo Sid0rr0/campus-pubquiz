@@ -82,7 +82,10 @@ export async function acceptConnection(
   deps.logger.log(
     `Client ${client.id} connected as ${role} (session ${joinCode})`,
   );
-  client.emit(SOCKET_EVENTS.STATE_SYNC, deps.gameState.getSnapshot(joinCode));
+  client.emit(
+    SOCKET_EVENTS.STATE_SYNC,
+    deps.gameState.getView(joinCode, role as SocketRoomName),
+  );
   // Otherwise an admin socket that connects (or reconnects) mid-session —
   // e.g. /remote opened well after the last admin action — would show no
   // notes/next-question preview at all until the next action happens to
