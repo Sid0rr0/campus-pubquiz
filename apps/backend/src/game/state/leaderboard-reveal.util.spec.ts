@@ -18,6 +18,8 @@ function leaderboardOfSize(size: number): LeaderboardEntry[] {
     teamId: index + 1,
     teamName: `Team ${index + 1}`,
     totalPoints: size - index,
+    rank: index + 1,
+    rankTo: index + 1,
     bonusPoints: 0,
     positiveBonusPoints: 0,
     negativeBonusPoints: 0,

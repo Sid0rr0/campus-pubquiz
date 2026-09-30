@@ -54,6 +54,8 @@ function zeroEntry(team: TeamView, roundTitles: string[]): LeaderboardEntry {
     teamId: team.teamId,
     teamName: team.teamName,
     totalPoints: 0,
+    rank: 1,
+    rankTo: 1,
     bonusPoints: 0,
     positiveBonusPoints: 0,
     negativeBonusPoints: 0,

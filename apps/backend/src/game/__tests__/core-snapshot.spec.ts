@@ -20,6 +20,7 @@ describe('GameStateService — core snapshot', () => {
       game.progressRepository,
       game.orm,
       game.answerService,
+      game.standingsService,
       game.showdownService,
     );
 

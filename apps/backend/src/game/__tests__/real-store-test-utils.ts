@@ -15,6 +15,7 @@ import {
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
+import { StandingsService } from '@/standings/standings.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
@@ -171,6 +172,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   gateway: GameGateway;
   server: MockServer;
   answerService: AnswerService;
+  standingsService: StandingsService;
   teamService: TeamService;
   bonusService: BonusService;
   showdownService: ShowdownService;
@@ -424,9 +426,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       answerService: new AnswerService(
         em.getRepository<Answer, AnswerRepository>(Answer),
         teams,
-        sessionTeams,
         questions,
       ),
+      standingsService: new StandingsService(sessionTeams),
       teamService: new TeamService(teams, sessions, sessionTeams),
       bonusService,
       showdownService: new ShowdownService(
@@ -484,6 +486,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.progressRepository,
       orm,
       services.answerService,
+      services.standingsService,
       services.showdownService,
     );
     await gameState.onModuleInit();

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
-  LeaderboardEntry,
   MatchScoringMode,
   ScoredQuestion,
   TeamAnswerView,
@@ -16,11 +15,9 @@ import {
   verdictForManualGrade,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
-import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 
@@ -38,26 +35,6 @@ export interface GradedAnswer {
   questionId: number;
 }
 
-interface LeaderboardRow {
-  teamId: number;
-  teamName: string;
-  quizPoints: string | number;
-  bonusPoints: string | number;
-  positiveBonusPoints: string | number;
-  negativeBonusPoints: string | number;
-}
-
-interface RoundRow {
-  roundId: number;
-  roundTitle: string;
-}
-
-interface RoundTotalRow {
-  roundId: number;
-  teamId: number;
-  total: string | number;
-}
-
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. RevealQuestionView satisfies it. */
 export type GradableQuestion = ScoredQuestion & { id: number };
 
@@ -70,8 +47,6 @@ export class AnswerService {
   constructor(
     @InjectRepository(Answer) private readonly answers: AnswerRepository,
     @InjectRepository(Team) private readonly teams: TeamRepository,
-    @InjectRepository(GameSessionTeam)
-    private readonly gameSessionTeams: GameSessionTeamRepository,
     @InjectRepository(Question)
     private readonly questions: QuestionRepository,
   ) {}
@@ -286,8 +261,7 @@ export class AnswerService {
    * Scoring's gradeClosestGuessBatch for the rule). Can only run once all
    * teams are done answering (needs every guess to know who's closest),
    * unlike the types graded at submit() time. Safe to call more than once
-   * for the same question — unconditionally recomputes and overwrites, same
-   * "recompute is idempotent" convention as computeLeaderboard.
+   * for the same question — unconditionally recomputes from the stored guesses and overwrites.
    */
   async gradeClosestGuess(
     gameSessionId: number,
@@ -347,87 +321,5 @@ export class AnswerService {
     // KAHOOT_ALLOWED_TYPES); never overwrite a human or batch grade.
     if (!isAutoGradedType(question.type)) return;
     await this.regradeAutoGraded(gameSessionId, question, questionTimerSeconds);
-  }
-
-  async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {
-    const knex = this.gameSessionTeams.getKnex();
-    // Pre-aggregated as subqueries (rather than two leftJoins straight off
-    // "t") so a team with several answers *and* several bonus awards doesn't
-    // fan out into a cross product that inflates both sums.
-    const answerTotals = knex('answers')
-      .where('game_session_id', gameSessionId)
-      .groupBy('team_id')
-      .select('team_id')
-      .select(knex.raw('sum(points_awarded) as total'));
-    const bonusTotals = knex('bonus_awards')
-      .where('game_session_id', gameSessionId)
-      .groupBy('team_id')
-      .select('team_id')
-      .select(knex.raw('sum(points) as total'))
-      .select(
-        knex.raw(
-          'sum(case when points > 0 then points else 0 end) as positive_total',
-        ),
-      )
-      .select(
-        knex.raw(
-          'sum(case when points < 0 then points else 0 end) as negative_total',
-        ),
-      );
-
-    const rows = (await knex('game_session_teams as gst')
-      .join('teams as t', 't.id', 'gst.team_id')
-      .leftJoin(answerTotals.as('ans'), 'ans.team_id', 't.id')
-      .leftJoin(bonusTotals.as('bonus'), 'bonus.team_id', 't.id')
-      .where('gst.game_session_id', gameSessionId)
-      .select('t.id as teamId', 't.name as teamName')
-      .select(knex.raw('coalesce(ans.total, 0) as "quizPoints"'))
-      .select(knex.raw('coalesce(bonus.total, 0) as "bonusPoints"'))
-      .select(
-        knex.raw('coalesce(bonus.positive_total, 0) as "positiveBonusPoints"'),
-      )
-      .select(
-        knex.raw('coalesce(bonus.negative_total, 0) as "negativeBonusPoints"'),
-      )
-      .orderBy([
-        {
-          column: knex.raw('coalesce(ans.total, 0) + coalesce(bonus.total, 0)'),
-          order: 'desc',
-        },
-        { column: 't.name', order: 'asc' },
-      ])) as LeaderboardRow[];
-
-    // Rounds belong to the session's *current* quiz, not necessarily the one
-    // any given answer was graded under (a mid-game re-import can swap it).
-    const rounds = (await knex('rounds as r')
-      .join('game_sessions as gs', 'gs.quiz_id', 'r.quiz_id')
-      .where('gs.id', gameSessionId)
-      .orderBy('r.order_index', 'asc')
-      .select('r.id as roundId', 'r.title as roundTitle')) as RoundRow[];
-
-    const roundTotals = (await knex('answers as a')
-      .join('questions as q', 'q.id', 'a.question_id')
-      .where('a.game_session_id', gameSessionId)
-      .groupBy('q.round_id', 'a.team_id')
-      .select('q.round_id as roundId', 'a.team_id as teamId')
-      .select(knex.raw('sum(a.points_awarded) as total'))) as RoundTotalRow[];
-
-    return rows.map((row) => ({
-      teamId: row.teamId,
-      teamName: row.teamName,
-      totalPoints: Number(row.quizPoints) + Number(row.bonusPoints),
-      bonusPoints: Number(row.bonusPoints),
-      positiveBonusPoints: Number(row.positiveBonusPoints),
-      negativeBonusPoints: Number(row.negativeBonusPoints),
-      roundPoints: rounds.map((round) => ({
-        roundTitle: round.roundTitle,
-        points: Number(
-          roundTotals.find(
-            (total) =>
-              total.roundId === round.roundId && total.teamId === row.teamId,
-          )?.total ?? 0,
-        ),
-      })),
-    }));
   }
 }

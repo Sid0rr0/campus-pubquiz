@@ -16,6 +16,7 @@ import { TeamService } from '@/team/team.service';
 import { TeamsController } from '@/team/teams.controller';
 import { AnswerController } from '@/answer/answer.controller';
 import { AnswerService } from '@/answer/answer.service';
+import { StandingsService } from '@/standings/standings.service';
 import {
   BonusAwardMutationsController,
   BonusAwardsController,
@@ -68,6 +69,7 @@ import { StatsService } from '@/stats/stats.service';
     SeedService,
     TeamService,
     AnswerService,
+    StandingsService,
     BonusService,
     QuizService,
     GameProgressRepository,

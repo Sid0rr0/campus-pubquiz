@@ -163,6 +163,10 @@ export interface LeaderboardEntry {
   teamId: number;
   teamName: string;
   totalPoints: number;
+  /** Competition rank (1, 2, 2, 4): the first place of this team's tie group. Decided by the server. */
+  rank: number;
+  /** The last place this team's tie group spans — equal to `rank` when not tied. */
+  rankTo: number;
   /** Sum of this team's bonus awards, already included in totalPoints — shown separately as a badge. */
   bonusPoints: number;
   /** Sum of this team's positive bonus awards only — lets the UI show both a positive and a negative badge at once instead of collapsing to the net. */

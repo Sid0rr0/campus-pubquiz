@@ -15,6 +15,7 @@ import {
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
+import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
 import {
   getBlockSeededQuestions,
@@ -86,9 +87,13 @@ export class GameStateService implements OnModuleInit {
     private readonly progressRepository: GameProgressRepository,
     private readonly orm: MikroORM,
     private readonly answerService: AnswerService,
+    private readonly standingsService: StandingsService,
     private readonly showdownService: ShowdownService,
   ) {
-    this.grading = new BlockGradingService(this.answerService);
+    this.grading = new BlockGradingService(
+      this.answerService,
+      this.standingsService,
+    );
   }
 
   // onModuleInit runs at bootstrap, before any HTTP/socket request has
@@ -462,7 +467,7 @@ export class GameStateService implements OnModuleInit {
       action === 'TOGGLE_LEADERBOARD' &&
       snapshot.progress.isLeaderboardVisible
     ) {
-      const leaderboard = await this.answerService.computeLeaderboard(
+      const leaderboard = await this.standingsService.leaderboard(
         this.getGameSessionId(joinCode),
       );
       this.update(joinCode, (session) => withLeaderboard(session, leaderboard));
@@ -514,7 +519,7 @@ export class GameStateService implements OnModuleInit {
             isTie,
             resolved: true,
           };
-          const leaderboard = await this.answerService.computeLeaderboard(
+          const leaderboard = await this.standingsService.leaderboard(
             updated.seededGame.gameSessionId,
           );
           updated = {
@@ -668,7 +673,7 @@ export class GameStateService implements OnModuleInit {
     reason: 'kicked' | 'left',
   ): Promise<SessionOutcome> {
     const socketId = this.getConnectedSocketId(joinCode, teamId);
-    const leaderboard = await this.answerService.computeLeaderboard(
+    const leaderboard = await this.standingsService.leaderboard(
       this.getGameSessionId(joinCode),
     );
     this.update(joinCode, (session) =>
@@ -693,7 +698,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     awarded?: { teamId: number; notice: TeamBonusAwardView },
   ): Promise<SessionOutcome> {
-    const leaderboard = await this.answerService.computeLeaderboard(
+    const leaderboard = await this.standingsService.leaderboard(
       this.getGameSessionId(joinCode),
     );
     this.update(joinCode, (session) => withLeaderboard(session, leaderboard));
@@ -720,7 +725,7 @@ export class GameStateService implements OnModuleInit {
     const gameSessionId = this.getGameSessionId(joinCode);
     const [answers, leaderboard] = await Promise.all([
       this.answerService.listForQuestion(gameSessionId, questionId),
-      this.answerService.computeLeaderboard(gameSessionId),
+      this.standingsService.leaderboard(gameSessionId),
     ]);
     const question = this.findQuestion(joinCode, questionId);
     const hasUngradedAnswers =

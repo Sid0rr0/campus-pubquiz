@@ -184,13 +184,28 @@ describe('GameGateway — leaderboard', () => {
         teamName: 'First',
         totalPoints: 2,
         bonusPoints: 0,
+        rank: 1,
+        rankTo: 1,
       }),
       expect.objectContaining({
         teamId: game.teams[1].teamId,
         teamName: 'Second',
         totalPoints: 0,
         bonusPoints: 0,
+        rank: 2,
+        rankTo: 2,
       }),
+    ]);
+  });
+
+  it('carries shared ranks in the snapshot a reconnecting client receives', async () => {
+    await game.act('START_QUIZ');
+
+    const { leaderboard } = await game.act('TOGGLE_LEADERBOARD');
+
+    expect(leaderboard.map((entry) => [entry.rank, entry.rankTo])).toEqual([
+      [1, 2],
+      [1, 2],
     ]);
   });
 });

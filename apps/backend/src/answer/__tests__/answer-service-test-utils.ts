@@ -11,7 +11,6 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { AnswerService } from '@/answer/answer.service';
@@ -69,9 +68,6 @@ export function setupAnswerServiceTest(): AnswerServiceTestContext {
     state.answerService = new AnswerService(
       state.em.getRepository<Answer, AnswerRepository>(Answer),
       state.em.getRepository<Team, TeamRepository>(Team),
-      state.em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-        GameSessionTeam,
-      ),
       state.em.getRepository<Question, QuestionRepository>(Question),
     );
     const quiz = state.em.create(Quiz, { title: 'Answer Test Quiz' });

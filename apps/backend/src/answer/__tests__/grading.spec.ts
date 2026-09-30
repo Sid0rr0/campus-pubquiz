@@ -1,9 +1,7 @@
 import { Answer } from '@/db/entities/answer.entity';
-import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerService } from '@/answer/answer.service';
 import type { AnswerRepository } from '@/db/repositories/answer.repository';
-import type { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import type { QuestionRepository } from '@/db/repositories/question.repository';
 import type { TeamRepository } from '@/db/repositories/team.repository';
 import { Question } from '@/db/entities/question.entity';
@@ -916,9 +914,6 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const freshService = new AnswerService(
         freshEm.getRepository<Answer, AnswerRepository>(Answer),
         freshEm.getRepository<Team, TeamRepository>(Team),
-        freshEm.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-          GameSessionTeam,
-        ),
         freshEm.getRepository<Question, QuestionRepository>(Question),
       );
       await freshService.regradeAutoGraded(

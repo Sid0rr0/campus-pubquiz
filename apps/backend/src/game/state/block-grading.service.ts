@@ -1,6 +1,7 @@
 import type { GameProgress, GameStatus } from '@campus-pubquiz/types';
 import { isAutoGradedType } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
+import { StandingsService } from '@/standings/standings.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -38,7 +39,10 @@ export function canBeUngraded(question: { type: string }): boolean {
  * state machine itself, only in what happens around it.
  */
 export class BlockGradingService {
-  constructor(private readonly answerService: AnswerService) {}
+  constructor(
+    private readonly answerService: AnswerService,
+    private readonly standingsService: StandingsService,
+  ) {}
 
   /** Batch-grades every closest_guess question in the block once it reaches a graded status, caching the result — safe to call every applyAction since it skips questions already in closestGuessSummaries. */
   async ensureBlockGraded(
@@ -75,7 +79,7 @@ export class BlockGradingService {
     // refresh session.leaderboard) — without this, the points just written
     // above wouldn't show up in the team table until the next explicit grade
     // or a leaderboard toggle.
-    const leaderboard = await this.answerService.computeLeaderboard(
+    const leaderboard = await this.standingsService.leaderboard(
       session.seededGame.gameSessionId,
     );
     return { ...session, closestGuessSummaries: summaries, leaderboard };
@@ -112,7 +116,7 @@ export class BlockGradingService {
       session.seededGame.settings.kahootQuestionTimerSeconds,
     );
 
-    const leaderboard = await this.answerService.computeLeaderboard(
+    const leaderboard = await this.standingsService.leaderboard(
       session.seededGame.gameSessionId,
     );
     return { ...session, leaderboard };
@@ -177,8 +181,7 @@ export class BlockGradingService {
       return { session, regradedQuestionIds };
     }
 
-    const leaderboard =
-      await this.answerService.computeLeaderboard(gameSessionId);
+    const leaderboard = await this.standingsService.leaderboard(gameSessionId);
     return {
       session: { ...session, closestGuessSummaries: summaries, leaderboard },
       regradedQuestionIds,
