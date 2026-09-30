@@ -10,8 +10,12 @@ For now the spec keeps its own list of events, sample payloads and expected mess
 
 **Status:** ready-for-agent
 
-- [ ] One spec covers all 11 socket events. Each event is sent from every disallowed room, and each case asserts the exact rejection message and that no room or socket received an emit.
-- [ ] A case per event sends from a socket with no session and expects the session error.
-- [ ] At least one case shows that an invalid payload from the wrong room yields the payload error, not the room error.
-- [ ] The spec passes against the current gateway with no production code change.
-- [ ] Assertions are only on rejections and emits, never on which internal functions were called.
+- [x] One spec covers all 11 socket events. Each event is sent from every disallowed room, and each case asserts the exact rejection message and that no room or socket received an emit.
+- [x] A case per event sends from a socket with no session and expects the session error.
+- [x] At least one case shows that an invalid payload from the wrong room yields the payload error, not the room error.
+- [x] The spec passes against the current gateway with no production code change.
+- [x] Assertions are only on rejections and emits, never on which internal functions were called.
+
+## Comments
+
+Implemented in `apps/backend/src/game/__tests__/socket-event-authorization.spec.ts` (45 cases: 22 wrong-room, 11 no-session, 11 payload-before-room, 1 event-count guard). Passes against the unchanged gateway; full backend suite green. Commit: see git history (single commit, `test(backend): ...`). `Status:` left as `ready-for-agent` since the triage vocabulary has no "done" state.
