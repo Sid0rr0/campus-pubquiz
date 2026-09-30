@@ -6,13 +6,13 @@ import PlayPage from '@/app/play/page';
 import { AUTO_ADVANCE_STORAGE_KEY } from '@/app/lib/player-settings-storage';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -47,13 +47,13 @@ describe('PlayPage — auto-advance setting', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
   });
 
   it('keeps showing the current question and offers Prev/Next when auto-advance is off', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -70,7 +70,7 @@ describe('PlayPage — auto-advance setting', () => {
     expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
 
     // The admin opens a second question — the team's screen must not move.
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 1 }),
@@ -99,7 +99,7 @@ describe('PlayPage — auto-advance setting', () => {
 
   it('immediately snaps to the newest question when auto-advance is turned back on', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 1 }),
@@ -119,7 +119,7 @@ describe('PlayPage — auto-advance setting', () => {
     await userEvent.click(screen.getByRole('button', { name: /close/i }));
 
     // A third question opens while the team is frozen on the second.
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 2 }),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { MyAnswerGrade } from '@/app/lib/use-game-socket';
+import type { MyAnswerGrade } from '@/app/lib/use-player-game';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 
 const GRADED_AT = '2024-01-01T00:00:00.000Z';

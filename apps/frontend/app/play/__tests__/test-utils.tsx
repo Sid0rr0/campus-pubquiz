@@ -57,7 +57,7 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     connectionError: null,
     sendAction: vi.fn(),
     team: null,
-    joinTeam: vi.fn(),
+    joinTeam: vi.fn().mockResolvedValue({ success: true }),
     submitAnswer: vi.fn(),
     liveAnswers: null,
     gradeAnswer: vi.fn(),
@@ -67,7 +67,7 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     myBonusAwards: [],
     seenQuestions: {},
     // A fixed "already connected" marker — useTeamJoin's join effect only
-    // sends once this is non-null (it mirrors useGameSocket's real
+    // sends once this is non-null (it mirrors usePlayerGame's real
     // post-connect timestamp), so tests that don't care about reconnect
     // timing need a stand-in value here to still see an immediate joinTeam
     // call. Tests exercising an actual second connection (retry, reconnect)

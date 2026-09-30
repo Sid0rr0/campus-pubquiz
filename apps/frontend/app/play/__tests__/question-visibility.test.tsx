@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -22,12 +22,12 @@ describe('PlayPage — question visibility', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
   });
 
   it('shows the current question once joined and connected', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -47,7 +47,7 @@ describe('PlayPage — question visibility', () => {
 
   it('keeps showing the question and answer form during the locking countdown', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'locking' }),
@@ -67,7 +67,7 @@ describe('PlayPage — question visibility', () => {
 
   it('shows a hint to look at the big screen for a question with an image mediaUrl', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -88,7 +88,7 @@ describe('PlayPage — question visibility', () => {
 
   it('shows a hint to look at the big screen for an audio question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -109,7 +109,7 @@ describe('PlayPage — question visibility', () => {
 
   it('shows the screen hint for a free-text question carrying a media_url, regardless of type', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -130,7 +130,7 @@ describe('PlayPage — question visibility', () => {
 
   it('does not show the screen hint for a free-text question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),

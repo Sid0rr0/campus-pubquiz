@@ -8,11 +8,12 @@ import {
   type SubmitEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { PlayersStatePayload } from '@campus-pubquiz/types';
+import type { AckResult } from '@campus-pubquiz/types';
 import {
-  useGameSocket,
-  type UseGameSocketResult,
-} from '@/app/lib/use-game-socket';
+  usePlayerGame,
+  type JoinTeamOptions,
+  type UsePlayerGameResult,
+} from '@/app/lib/use-player-game';
 import {
   JOIN_CODE_STORAGE_KEY,
   TEAM_CODE_STORAGE_KEY,
@@ -23,7 +24,11 @@ import {
   storedJoinOptions,
 } from '@/app/lib/team-storage';
 
-interface UseTeamJoinResult extends UseGameSocketResult<PlayersStatePayload> {
+const KICKED_MESSAGE = 'You were removed from this team by the quiz master';
+
+interface UseTeamJoinResult extends UsePlayerGameResult {
+  /** What the join screen shows: a rejected join's reason, the kick notice, or a connection problem — in that order. Named like the player hook's field so /play's banner keeps reading one error. */
+  connectionError: string | null;
   teamName: string | null;
   nameInput: string;
   setNameInput: (value: string) => void;
@@ -69,6 +74,9 @@ export function useTeamJoin(
   useEffect(() => {
     teamCodeInputRef.current = teamCodeInput;
   });
+  // The reason the server gave for the most recent rejected join — cleared by
+  // a later successful join or a new submission.
+  const [joinError, setJoinError] = useState<string | null>(null);
   // Guards against a double-tap on the join button sending two JOIN_PLAYERS
   // requests before React re-renders past the form: for a brand-new team
   // name, the second request loses the race against the first's just-created
@@ -83,30 +91,42 @@ export function useTeamJoin(
   // QR-prefilled or previously-typed code that turned out to be unknown) —
   // the prior attempt's socket was disconnected server-side and won't
   // reconnect on its own, so reusing it here would silently drop the join.
-  const socket = useGameSocket(
-    'players',
+  const player = usePlayerGame(
     Boolean(activeJoinCode),
     activeJoinCode ?? undefined,
     joinAttempt,
   );
   const {
     team,
-    joinTeam,
+    joinTeam: joinPlayerTeam,
     sessionClosed,
     kicked,
     reconnectedAt,
-    connectionError,
+    connectionError: playerConnectionError,
     leaveSession,
-  } = socket;
+  } = player;
+
+  // A join finished once the server answers it — accepted (the old error no
+  // longer applies) or rejected (its reason goes on the join screen). Either
+  // way the next tap should be able to send a fresh request.
+  const settleJoin = useCallback((result: AckResult): AckResult => {
+    joinInFlightRef.current = false;
+    setJoinError(result.success ? null : result.error);
+    return result;
+  }, []);
+  const joinTeam = useCallback(
+    (teamName: string, options?: JoinTeamOptions): Promise<AckResult> =>
+      joinPlayerTeam(teamName, options).then(settleJoin),
+    [joinPlayerTeam, settleJoin],
+  );
 
   useEffect(() => {
-    // A join attempt has settled — either the team is confirmed (JOIN_ACCEPTED)
-    // or the server rejected it (an 'exception', surfaced as connectionError).
-    // Either way the next tap should be able to send a fresh request.
-    if (team || connectionError) {
+    // A refused connection (e.g. an unknown session code) never gets as far
+    // as sending the join, so no result will arrive to release the guard.
+    if (playerConnectionError) {
       joinInFlightRef.current = false;
     }
-  }, [team, connectionError]);
+  }, [playerConnectionError]);
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored team name can only
@@ -188,7 +208,7 @@ export function useTeamJoin(
     if (sentForReconnectedAtRef.current === reconnectedAt) return;
     sentForReconnectedAtRef.current = reconnectedAt;
     const storedOptions = storedJoinOptions();
-    joinTeam(teamName, {
+    void joinTeam(teamName, {
       teamToken: storedOptions.teamToken,
       teamCode: teamCodeInputRef.current.trim() || storedOptions.teamCode,
       joinCode: activeJoinCode,
@@ -273,6 +293,7 @@ export function useTeamJoin(
     const normalizedCode = normalizeJoinCode(codeInput);
     if (!trimmedName || !normalizedCode) return;
     joinInFlightRef.current = true;
+    setJoinError(null);
     window.localStorage.setItem(TEAM_NAME_STORAGE_KEY, trimmedName);
     window.localStorage.setItem(JOIN_CODE_STORAGE_KEY, normalizedCode);
     setTeamName(trimmedName);
@@ -291,13 +312,14 @@ export function useTeamJoin(
     // already dropped, the emit is silently a no-op and the admin still has
     // the manual kick as a fallback.
     if (team) {
-      leaveSession(team.teamId);
+      void leaveSession(team.teamId);
     }
     // Team name and team code deliberately survive logout — only the token
     // and join code (this specific game session) are cleared, so the join
     // form stays prefilled for playing as this team again another night.
     clearStoredSession();
     joinInFlightRef.current = false;
+    setJoinError(null);
     setTeamName(null);
     setCodeInput(codeFromUrl);
     setHasStoredIdentity(false);
@@ -305,7 +327,10 @@ export function useTeamJoin(
   }, [codeFromUrl, team, leaveSession]);
 
   return {
-    ...socket,
+    ...player,
+    joinTeam,
+    connectionError:
+      joinError ?? (kicked ? KICKED_MESSAGE : playerConnectionError),
     teamName,
     nameInput,
     setNameInput,

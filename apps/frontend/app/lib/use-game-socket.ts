@@ -28,12 +28,18 @@ import {
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
-  type TeamAnswerView,
   type TeamAnswersSyncedPayload,
   type TeamBonusAwardView,
-  type Verdict,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import {
+  buildMyAnswerGrades,
+  buildMyAnswers,
+  mergeSeenQuestions,
+  type JoinTeamOptions,
+  type MyAnswerGrade,
+  type SeenQuestions,
+} from '@/app/lib/use-player-game';
 
 type GameSocketRole = 'display' | 'admin' | 'players';
 
@@ -42,20 +48,6 @@ export const SUBMIT_CONFIRM_TIMEOUT_MS = 5000;
 const RECONNECTING_MESSAGE = 'Connection lost — reconnecting…';
 const NOT_CONNECTED_MESSAGE =
   "You're not connected right now — hang on while we reconnect, then try again.";
-
-export interface JoinTeamOptions {
-  teamToken?: string;
-  teamCode?: string;
-  joinCode?: string;
-}
-
-/** A team's own graded answer to one question — absent from the map entirely until grading happens (instantly for auto-graded types, on admin grading for the rest). */
-export interface MyAnswerGrade {
-  pointsAwarded: number;
-  gradedAt: string;
-  /** How the answer was judged — the same verdict the quiz master sees. */
-  verdict: Verdict | null;
-}
 
 export interface UseGameSocketResult<
   View extends StateSnapshotPayload = StateSnapshotPayload,
@@ -143,54 +135,6 @@ export interface UseGameSocketResult<
   kicked: boolean;
   /** The message from the most recent rejected awardBonus call (admin-only) — surfaced separately from connectionError so callers can show it as a toast next to the award form instead of the persistent connection banner. */
   bonusAwardError: string | null;
-}
-
-type SeenQuestions = Record<
-  number,
-  BlockQuestionView | BlockRevealQuestionView
->;
-
-/** Folds a view's block/reveal questions into the running seen-questions map — later sightings of the same id (e.g. once it's revealed) overwrite earlier ones so the richer view wins. The players view never carries a question that hasn't been shown yet, so everything in it is taken as it arrives. */
-function mergeSeenQuestions(
-  current: SeenQuestions,
-  payload: StateSnapshotPayload,
-): SeenQuestions {
-  const additions = [
-    ...(payload.blockQuestions ?? []),
-    ...(payload.revealQuestions ?? []),
-    ...(payload.pastRevealedQuestions ?? []),
-  ];
-  if (additions.length === 0) {
-    return current;
-  }
-  const next = { ...current };
-  for (const question of additions) {
-    next[question.id] = question;
-  }
-  return next;
-}
-
-function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
-  return Object.fromEntries(
-    answers.map((answer) => [answer.questionId, answer.value]),
-  );
-}
-
-function buildMyAnswerGrades(
-  answers: TeamAnswerView[],
-): Record<number, MyAnswerGrade> {
-  return Object.fromEntries(
-    answers
-      .filter((answer) => answer.gradedAt !== null)
-      .map((answer) => [
-        answer.questionId,
-        {
-          pointsAwarded: answer.pointsAwarded,
-          gradedAt: answer.gradedAt as string,
-          verdict: answer.verdict,
-        },
-      ]),
-  );
 }
 
 /** Only a *different* earlier socket is worth naming — a rejoin on the same socket needs no handover. */

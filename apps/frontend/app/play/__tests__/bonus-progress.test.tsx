@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -27,12 +27,12 @@ describe('PlayPage — bonus points panel', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
   });
 
   it('lists every enabled predefined category with its explanation and award count, but never "Custom" as available', () => {
     joinAsTeam();
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -71,7 +71,7 @@ describe('PlayPage — bonus points panel', () => {
 
   it('shows a received custom award with its points and reason, without a generic "custom available" line', () => {
     joinAsTeam();
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -100,7 +100,7 @@ describe('PlayPage — bonus points panel', () => {
 
   it('does not show any custom-award content when the team has not received one', () => {
     joinAsTeam();
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -127,7 +127,7 @@ describe('PlayPage — bonus points panel', () => {
 
   it('opens the mobile drawer with the same bonus content when its trigger is clicked', async () => {
     joinAsTeam();
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -158,7 +158,7 @@ describe('PlayPage — bonus points panel', () => {
 
   it('does not render the bonus panel when no bonus categories are enabled', () => {
     joinAsTeam();
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),

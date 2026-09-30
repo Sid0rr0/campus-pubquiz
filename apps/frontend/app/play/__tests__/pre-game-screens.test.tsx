@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -22,12 +22,12 @@ describe('PlayPage — pre-game screens', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
   });
 
   it('shows the rules screen after the lobby, before the first question opens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'rules' }),
@@ -59,7 +59,7 @@ describe('PlayPage — pre-game screens', () => {
 
   it('shows the session-specific rules instead of the hardcoded defaults', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'rules' }),
@@ -84,7 +84,7 @@ describe('PlayPage — pre-game screens', () => {
 
   it('shows the round name and a "look at the screen" hint on a fresh round intro card', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'round_intro' }),
@@ -114,7 +114,7 @@ describe('PlayPage — pre-game screens', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'round_intro', furthestOpenIndex: 0 }),
@@ -137,7 +137,7 @@ describe('PlayPage — pre-game screens', () => {
 
   it('shows a link to the rules page while waiting in the lobby', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),

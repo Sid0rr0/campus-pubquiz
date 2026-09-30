@@ -6,7 +6,7 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     connectionError: null,
     sendAction: vi.fn(),
     team: null,
-    joinTeam: vi.fn(),
+    joinTeam: vi.fn().mockResolvedValue({ success: true }),
     submitAnswer: vi.fn(),
     liveAnswers: null,
     gradeAnswer: vi.fn(),

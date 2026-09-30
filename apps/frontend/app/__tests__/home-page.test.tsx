@@ -6,19 +6,19 @@ import { renderWithQuery } from '@/test-utils/query';
 import { socketResult } from './test-utils';
 
 const {
-  mockUseGameSocket,
+  mockUsePlayerGame,
   mockRouterPush,
   mockFetchPublicSessions,
   searchParamsRef,
 } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+  mockUsePlayerGame: vi.fn(),
   mockRouterPush: vi.fn(),
   mockFetchPublicSessions: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -64,7 +64,7 @@ describe('HomePage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
     mockRouterPush.mockClear();
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
@@ -121,7 +121,7 @@ describe('HomePage', () => {
   it('reveals the team code field prefilled when a team code is already stored (returning team)', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({ connectionError: 'Session expired' }),
     );
 
@@ -164,8 +164,8 @@ describe('HomePage', () => {
   });
 
   it('calls joinTeam with the trimmed name, selected game code, and typed team code', async () => {
-    const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    const joinTeam = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     renderWithQuery(<HomePage />);
 
@@ -192,8 +192,8 @@ describe('HomePage', () => {
   });
 
   it('redirects straight to /play once the team is accepted', async () => {
-    const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    const joinTeam = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     const { rerender } = renderWithQuery(<HomePage />);
 
@@ -208,7 +208,7 @@ describe('HomePage', () => {
 
     expect(mockRouterPush).not.toHaveBeenCalled();
 
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         joinTeam,
         team: {

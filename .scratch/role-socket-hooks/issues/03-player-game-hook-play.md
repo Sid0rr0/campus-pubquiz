@@ -27,7 +27,7 @@ The join flow now uses the join result, rather than the connection error, to kno
 
 **Status:** ready-for-agent
 
-- [ ] Player hook tests, driven through the faked transport, cover:
+- [x] Player hook tests, driven through the faked transport, cover:
   - a join rejection reaching the join flow;
   - submit confirmation by acknowledgement;
   - a submit rejection clearing the pending answer and showing its message without reconnecting;
@@ -35,7 +35,17 @@ The join flow now uses the join result, rather than the connection error, to kno
   - the unlinked "not connected" toast;
   - kicked and session-closed signals;
   - seen questions accumulating across blocks
-- [ ] The join flow no longer reads the connection error to detect a finished join
-- [ ] /play and join-flow tests mock the player hook, and the real-socket join-flow test runs against the player hook
-- [ ] The player hook exposes no admin-only members
-- [ ] The existing /play test suite passes (answering, reconnect, logout, kicked, session closed, showdown)
+- [x] The join flow no longer reads the connection error to detect a finished join
+- [x] /play and join-flow tests mock the player hook, and the real-socket join-flow test runs against the player hook
+- [x] The player hook exposes no admin-only members
+- [x] The existing /play test suite passes (answering, reconnect, logout, kicked, session closed, showdown)
+
+## Comments
+
+Implemented in a single commit on `main` (see git history for `feat(frontend): player game hook …`).
+
+- `usePlayerGame` (`apps/frontend/app/lib/use-player-game.ts`) sits on the shared connection core. `useTeamJoin` and so `/play` and the home join panel use it. The old three-role hook stays for /display, /remote and /rules until ticket 06; it now imports the player helpers/types from the new module instead of keeping copies.
+- The core gained an internal `forceReconnect` (used by the dead-socket timeout); the admin hook doesn't expose it.
+- Join flow: a join result (accepted or rejected) settles the in-flight guard and sets/clears the join error shown on the join screen. The connection error still releases the guard, but only for a refused connection, where no join is ever sent and so no result can arrive.
+- Kick notice: the player hook only exposes `kicked`; `useTeamJoin` supplies the "removed from this team" message for the join screen.
+- `Status:` left as `ready-for-agent`: the triage vocabulary has no done state.

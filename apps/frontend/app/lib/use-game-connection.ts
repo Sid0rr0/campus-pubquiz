@@ -30,6 +30,8 @@ export interface UseGameConnectionResult<Role extends SocketRoomName> {
   /** Changes whenever the socket identity does — role hooks reset their own state when it does. */
   identityKey: string;
   emitWithAck: EmitWithAck;
+  /** Drops the current socket and opens a fresh connection, showing the reconnecting banner meanwhile — for a socket that looks connected but has stopped answering. */
+  forceReconnect: () => void;
 }
 
 function getErrorMessage(payload: unknown): string {
@@ -135,5 +137,20 @@ export function useGameConnection<Role extends SocketRoomName>(
     [],
   );
 
-  return { snapshot, connectionError, reconnectedAt, identityKey, emitWithAck };
+  const forceReconnect = useCallback(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    setConnectionError(RECONNECTING_MESSAGE);
+    socket.disconnect();
+    socket.connect();
+  }, []);
+
+  return {
+    snapshot,
+    connectionError,
+    reconnectedAt,
+    identityKey,
+    emitWithAck,
+    forceReconnect,
+  };
 }

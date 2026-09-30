@@ -4,12 +4,12 @@ import type { SubmitEvent } from 'react';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { socketResult } from '@/app/play/__tests__/test-utils';
 
-const { mockUseGameSocket } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -23,7 +23,7 @@ function fakeSubmitEvent() {
 describe('useTeamJoin — double-submit guard', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    mockUseGameSocket.mockReset();
+    mockUsePlayerGame.mockReset();
   });
 
   it('ignores a second join submission fired before the first one settles', () => {
@@ -32,8 +32,8 @@ describe('useTeamJoin — double-submit guard', () => {
     // guard both would fire JOIN_PLAYERS — the loser of that race against
     // the winner's freshly-created team row comes back "already registered"
     // even though the name was genuinely new.
-    const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ joinTeam }));
+    const joinTeam = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
 
     const { result } = renderHook(() => useTeamJoin(''));
 
@@ -50,9 +50,13 @@ describe('useTeamJoin — double-submit guard', () => {
     expect(joinTeam).toHaveBeenCalledTimes(1);
   });
 
-  it('allows a fresh submission once the prior attempt fails', () => {
-    const joinTeam = vi.fn();
-    mockUseGameSocket.mockReturnValue(
+  it("shows a rejected join's reason on the join screen and allows a fresh submission", async () => {
+    const reason = 'Team name "The Quizzards" is already registered';
+    const joinTeam = vi
+      .fn()
+      .mockResolvedValueOnce({ success: false, error: reason })
+      .mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(
       socketResult({ joinTeam, reconnectedAt: 1 }),
     );
 
@@ -62,46 +66,95 @@ describe('useTeamJoin — double-submit guard', () => {
       result.current.setNameInput('The Quizzards');
       result.current.setCodeInput('ABCDEF');
     });
-    act(() => {
+    await act(async () => {
       result.current.handleJoin(fakeSubmitEvent());
     });
     expect(joinTeam).toHaveBeenCalledTimes(1);
-
-    // Same connection, the server just rejects the name — reconnectedAt is
-    // unchanged.
-    mockUseGameSocket.mockReturnValue(
-      socketResult({
-        joinTeam,
-        reconnectedAt: 1,
-        connectionError: 'Team name "The Quizzards" is already registered',
-      }),
-    );
-    rerender();
-
-    act(() => {
-      result.current.setTeamCodeInput('QUICK-JADE-FOX');
-    });
-    act(() => {
-      result.current.handleJoin(fakeSubmitEvent());
-    });
-    expect(joinTeam).toHaveBeenCalledTimes(1);
+    expect(result.current.connectionError).toBe(reason);
 
     // Retrying forces a brand-new socket (see useTeamJoin's joinAttempt
     // comment) — simulate its connect landing, same as the real hook would
     // produce, with a fresh reconnectedAt.
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({ joinTeam, reconnectedAt: 2 }),
     );
+    await act(async () => {
+      result.current.handleJoin(fakeSubmitEvent());
+    });
     rerender();
 
     expect(joinTeam).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears an earlier join error once a later join is accepted', async () => {
+    const joinTeam = vi
+      .fn()
+      .mockResolvedValueOnce({ success: false, error: 'Wrong team code' })
+      .mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 1 }),
+    );
+    const { result, rerender } = renderHook(() => useTeamJoin(''));
+    act(() => {
+      result.current.setNameInput('The Quizzards');
+      result.current.setCodeInput('ABCDEF');
+    });
+    await act(async () => {
+      result.current.handleJoin(fakeSubmitEvent());
+    });
+    expect(result.current.connectionError).toBe('Wrong team code');
+
+    // A transport reconnect re-sends the join, and this time it is accepted.
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 2 }),
+    );
+    await act(async () => {
+      rerender();
+    });
+
+    expect(result.current.connectionError).toBeNull();
+  });
+
+  it('keeps a refused connection visible and lets the next submission through', async () => {
+    const joinTeam = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: null }),
+    );
+    const { result, rerender } = renderHook(() => useTeamJoin(''));
+    act(() => {
+      result.current.setNameInput('The Quizzards');
+      result.current.setCodeInput('ABCDEF');
+    });
+    act(() => {
+      result.current.handleJoin(fakeSubmitEvent());
+    });
+
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({
+        joinTeam,
+        reconnectedAt: null,
+        connectionError: 'Unknown session code',
+      }),
+    );
+    rerender();
+    expect(result.current.connectionError).toBe('Unknown session code');
+
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ joinTeam, reconnectedAt: 1 }),
+    );
+    act(() => {
+      result.current.handleJoin(fakeSubmitEvent());
+    });
+    rerender();
+
+    expect(joinTeam).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('useTeamJoin — log out leaves the session server-side', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    mockUseGameSocket.mockReset();
+    mockUsePlayerGame.mockReset();
   });
 
   it('tells the server this team is leaving, with its own teamId, before clearing local storage', () => {
@@ -109,7 +162,7 @@ describe('useTeamJoin — log out leaves the session server-side', () => {
     // "rename" a team (log out, rejoin under a new name) — without this the
     // old identity's roster row lingers until an admin kicks it by hand.
     const leaveSession = vi.fn();
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         leaveSession,
         team: {
@@ -134,7 +187,7 @@ describe('useTeamJoin — log out leaves the session server-side', () => {
 
   it('does not call leaveSession when logging out with no confirmed team', () => {
     const leaveSession = vi.fn();
-    mockUseGameSocket.mockReturnValue(socketResult({ leaveSession }));
+    mockUsePlayerGame.mockReturnValue(socketResult({ leaveSession }));
 
     const { result } = renderHook(() => useTeamJoin(''));
 

@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -23,7 +23,7 @@ describe('PlayPage — question navigator', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
   });
 
   it('shows a navigator for revealed block questions with answered questions marked', () => {
@@ -44,7 +44,7 @@ describe('PlayPage — question navigator', () => {
       roundNumber: 1,
       questionNumberInRound: 2,
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 1 }),
@@ -80,7 +80,7 @@ describe('PlayPage — question navigator', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -139,7 +139,7 @@ describe('PlayPage — question navigator', () => {
       roundNumber: 2,
       questionNumberInRound: 1,
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', roundIndex: 1 }),
@@ -189,7 +189,7 @@ describe('PlayPage — question navigator', () => {
       roundNumber: 1,
       questionNumberInRound: 2,
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 1 }),
@@ -246,7 +246,7 @@ describe('PlayPage — question navigator', () => {
       roundNumber: 1,
       questionNumberInRound: 2,
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         // The admin hit PREVIOUS on /display: progress/currentQuestion step
         // back to q1, but furthestOpenIndex (and so blockQuestions) still

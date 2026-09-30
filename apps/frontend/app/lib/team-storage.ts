@@ -1,4 +1,4 @@
-import type { JoinTeamOptions } from '@/app/lib/use-game-socket';
+import type { JoinTeamOptions } from '@/app/lib/use-player-game';
 
 export const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
 export const TEAM_TOKEN_STORAGE_KEY = 'campus-pubquiz-team-token';

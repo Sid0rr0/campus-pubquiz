@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUsePlayerGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUsePlayerGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -23,7 +23,7 @@ describe('PlayPage — answered questions history', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseGameSocket.mockReturnValue(socketResult());
+    mockUsePlayerGame.mockReturnValue(socketResult());
   });
 
   it('lists every seen question with the team answer, and the correct answer once revealed', () => {
@@ -47,7 +47,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Mars',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -87,7 +87,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Banana',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal' }),
@@ -149,7 +149,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Mars',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -231,7 +231,7 @@ describe('PlayPage — answered questions history', () => {
         verdict: 'correct',
       },
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -254,7 +254,7 @@ describe('PlayPage — answered questions history', () => {
     expect(screen.getByText('3 / 5')).toBeInTheDocument();
     expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
 
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 1 }),
@@ -289,7 +289,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -332,7 +332,7 @@ describe('PlayPage — answered questions history', () => {
       matchTargets: ['shield', 'excalibur'],
       answer: 'excalibur|shield',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -369,7 +369,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -416,7 +416,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 2,
       roundTitle: 'Round 1',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 1 }),
@@ -458,7 +458,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
     };
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -484,7 +484,7 @@ describe('PlayPage — answered questions history', () => {
 
   it('does not render the history panel when no questions have been opened yet', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUseGameSocket.mockReturnValue(
+    mockUsePlayerGame.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),

@@ -5,7 +5,7 @@ import type {
   QuestionType,
   Verdict,
 } from '@campus-pubquiz/types';
-import type { MyAnswerGrade } from '@/app/lib/use-game-socket';
+import type { MyAnswerGrade } from '@/app/lib/use-player-game';
 
 /** The current snapshot's reveal walk — lets points be gated to "shown on display yet", not just "block has started revealing". */
 interface ActiveRevealWalk {

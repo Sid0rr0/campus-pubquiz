@@ -95,12 +95,8 @@ export function useAdminGame(
     );
   }, []);
 
-  const { identityKey, emitWithAck, ...connection } = useGameConnection(
-    'admin',
-    enabled,
-    joinCode,
-    bindSocket,
-  );
+  const { identityKey, emitWithAck, snapshot, connectionError, reconnectedAt } =
+    useGameConnection('admin', enabled, joinCode, bindSocket);
 
   const [prevIdentityKey, setPrevIdentityKey] = useState(identityKey);
   if (identityKey !== prevIdentityKey) {
@@ -188,7 +184,9 @@ export function useAdminGame(
   }, []);
 
   return {
-    ...connection,
+    snapshot,
+    connectionError,
+    reconnectedAt,
     liveAnswers,
     setLiveAnswers,
     focusAnswersQuestionId,
