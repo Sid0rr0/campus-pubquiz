@@ -9,6 +9,7 @@ import {
 } from '@radix-ui/react-icons';
 import {
   extractYoutubeVideoId,
+  isKahootAllowedType,
   type MatchScoringMode,
   type QuestionType,
   type QuizDraftIssue,
@@ -36,6 +37,8 @@ interface QuizQuestionEditorProps {
   isLive: boolean;
   /** This specific question is already shown/in progress in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
   isLocked: boolean;
+  /** The question's round is in kahoot mode, so the type picker offers only the kahoot-allowed types (Scoring's list). */
+  isKahootRound: boolean;
   /** Validation issues from the last rejected save that apply to this question, shown next to the field each one names. */
   issues: QuizDraftIssue[];
   onChange: (patch: Partial<EditorQuestion>) => void;
@@ -107,6 +110,18 @@ function composeNotesWithClip(
   return freeNotes ? `${freeNotes}\n${clipLine}` : clipLine;
 }
 
+/** The types this question's picker offers: all of them, or in a kahoot round only the kahoot-allowed ones — plus the question's current type, so a disallowed one that arrived with a loaded quiz stays visible (and is flagged by save validation) instead of vanishing. */
+function pickerTypes(
+  isKahootRound: boolean,
+  currentType: QuestionType,
+): { value: QuestionType; label: string }[] {
+  if (!isKahootRound) return QUESTION_TYPES;
+  return QUESTION_TYPES.filter(
+    (option) =>
+      isKahootAllowedType(option.value) || option.value === currentType,
+  );
+}
+
 export function QuizQuestionEditor({
   question,
   index,
@@ -114,6 +129,7 @@ export function QuizQuestionEditor({
   isLast,
   isLive,
   isLocked,
+  isKahootRound,
   issues,
   onChange,
   onDelete,
@@ -289,7 +305,7 @@ export function QuizQuestionEditor({
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex overflow-hidden rounded-lg border-2 border-foreground/20">
-          {QUESTION_TYPES.map((option) => (
+          {pickerTypes(isKahootRound, question.type).map((option) => (
             <Button
               key={option.value}
               type="button"

@@ -6,7 +6,11 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
-import { ROUND_CATEGORIES, type QuizDraftIssue } from '@campus-pubquiz/types';
+import {
+  isKahootAllowedType,
+  ROUND_CATEGORIES,
+  type QuizDraftIssue,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
@@ -38,6 +42,19 @@ interface QuizRoundEditorProps {
   onMoveDown: () => void;
 }
 
+/** 1-based positions, within the round, of the questions whose type a kahoot round can't hold. */
+function kahootBlockingPositions(round: EditorRound): number[] {
+  return round.questions.flatMap((question, index) =>
+    isKahootAllowedType(question.type) ? [] : [index + 1],
+  );
+}
+
+function formatPositions(positions: number[]): string {
+  return positions.length === 1
+    ? `question ${positions[0]}`
+    : `questions ${positions.join(', ')}`;
+}
+
 export function QuizRoundEditor({
   round,
   index,
@@ -54,6 +71,12 @@ export function QuizRoundEditor({
   const roundLevelIssues = issues.filter(
     (issue) => issue.questionIndex === null,
   );
+  // Switching kahoot mode on is blocked while a disallowed question remains;
+  // switching it off is always allowed. Types are never changed for the user.
+  const blockingPositions = kahootBlockingPositions(round);
+  const isKahootBlocked = !round.kahootMode && blockingPositions.length > 0;
+  const kahootHintId = `kahoot-mode-hint-${round.id}`;
+  const kahootBlockedHintId = `kahoot-mode-blocked-${round.id}`;
   function updateQuestion(
     questionId: string,
     patch: Partial<EditorQuestion>,
@@ -144,15 +167,29 @@ export function QuizRoundEditor({
             type="checkbox"
             checked={round.kahootMode}
             onChange={(event) => onChange({ kahootMode: event.target.checked })}
+            disabled={isKahootBlocked}
             className="h-4 w-4"
-            aria-describedby={`kahoot-mode-hint-${round.id}`}
+            aria-describedby={
+              isKahootBlocked
+                ? `${kahootHintId} ${kahootBlockedHintId}`
+                : kahootHintId
+            }
           />
           Kahoot mode
         </label>
-        <span id={`kahoot-mode-hint-${round.id}`} className="sr-only">
+        <span id={kahootHintId} className="sr-only">
           Speed-based scoring, answer then reveal, leaderboard shows only the
           top teams
         </span>
+        {isKahootBlocked && (
+          <span
+            id={kahootBlockedHintId}
+            className="text-xs font-bold text-foreground/60"
+          >
+            Kahoot rounds only hold multiple choice, sort and match — change or
+            remove {formatPositions(blockingPositions)} first.
+          </span>
+        )}
         <FieldErrors issues={fieldIssues(roundLevelIssues, 'kahootMode')} />
         <Button
           type="button"
@@ -225,6 +262,7 @@ export function QuizRoundEditor({
             isFirst={index === 0}
             isLast={index === round.questions.length - 1}
             isLive={isLive}
+            isKahootRound={round.kahootMode}
             isLocked={
               question.dbId !== undefined &&
               lockedQuestionIds.has(question.dbId)

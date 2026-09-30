@@ -23,12 +23,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                            | 02         |
 | 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md)    | 03, 04     |
 
-### scoring-module ([spec](scoring-module/spec.md))
-
-| #   | Ticket                                                                                                                                       | Blocked by |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 07  | [Quiz editor: kahoot type picker and toggle guard](scoring-module/issues/07-editor-kahoot-picker-and-toggle.md)                              | 01         |
-
 ### screen-projection ([spec](screen-projection/spec.md))
 
 | #   | Ticket                                                                                                                                       | Blocked by |
@@ -71,3 +65,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | scoring-module      | 04  | [Stats read the verdict](scoring-module/issues/04-stats-read-verdict.md)                                                        | —         |
 | scoring-module      | 05  | [Team phones: synced closest_guess points and the verdict](scoring-module/issues/05-team-phones-synced-points-and-verdict.md)   | —         |
 | scoring-module      | 06  | [Align half points and sort comparison](scoring-module/issues/06-align-half-points-and-sort.md)                                 | —         |
+| scoring-module      | 07  | [Quiz editor: kahoot type picker and toggle guard](scoring-module/issues/07-editor-kahoot-picker-and-toggle.md)                 | —         |

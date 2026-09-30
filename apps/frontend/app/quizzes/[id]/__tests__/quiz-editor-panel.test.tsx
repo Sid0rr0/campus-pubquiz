@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1012,5 +1012,171 @@ describe('QuizEditorPanel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /could not fetch that sheet/i,
     );
+  });
+
+  describe('kahoot mode question types', () => {
+    const TYPE_LABELS = [
+      'Multiple choice',
+      'Free text',
+      'Audio',
+      'YouTube video',
+      'Sort / order',
+      'Match pairs',
+      'Closest guess',
+    ];
+    const KAHOOT_LABELS = ['Multiple choice', 'Sort / order', 'Match pairs'];
+
+    const multipleChoice = {
+      type: 'multiple_choice',
+      prompt: 'Capital of France?',
+      answer: 'Paris',
+      points: 1000,
+      options: ['Paris', 'London'],
+    };
+    const freeText = {
+      type: 'free_text',
+      prompt: 'Largest planet?',
+      answer: 'Jupiter',
+      points: 2,
+    };
+
+    function loadQuiz(rounds: unknown[]) {
+      mockFetchQuizDraft.mockResolvedValue({
+        id: 5,
+        title: 'Trivia Night',
+        rounds,
+      });
+      return renderWithQuery(<QuizEditorPanel quizId="5" />);
+    }
+
+    /** The type-picker buttons rendered inside the card of the round with this title. */
+    function typeLabelsInRound(roundTitle: string): string[] {
+      const card = screen
+        .getByDisplayValue(roundTitle)
+        .closest('[id^="round-"]') as HTMLElement;
+      return within(card)
+        .getAllByRole('button')
+        .map((button) => button.textContent ?? '')
+        .filter((label) => TYPE_LABELS.includes(label));
+    }
+
+    it('offers only kahoot-allowed types in a kahoot round, leaving other rounds unaffected', async () => {
+      loadQuiz([
+        {
+          title: 'Speed',
+          breakAfter: false,
+          kahootMode: true,
+          questions: [multipleChoice],
+        },
+        {
+          title: 'Normal',
+          breakAfter: true,
+          kahootMode: false,
+          questions: [freeText],
+        },
+      ]);
+      await screen.findByDisplayValue('Speed');
+
+      expect(typeLabelsInRound('Speed')).toEqual(KAHOOT_LABELS);
+      expect(typeLabelsInRound('Normal')).toEqual(TYPE_LABELS);
+    });
+
+    it('restores every type in the round once kahoot mode is turned off', async () => {
+      const user = userEvent.setup();
+      loadQuiz([
+        {
+          title: 'Speed',
+          breakAfter: true,
+          kahootMode: true,
+          questions: [multipleChoice],
+        },
+      ]);
+      await screen.findByDisplayValue('Speed');
+
+      await user.click(screen.getByLabelText(/kahoot mode/i));
+
+      expect(typeLabelsInRound('Speed')).toEqual(TYPE_LABELS);
+    });
+
+    it('disables the kahoot toggle with a hint naming the blocking questions, linked to the toggle', async () => {
+      loadQuiz([
+        {
+          title: 'Mixed',
+          breakAfter: true,
+          kahootMode: false,
+          questions: [
+            multipleChoice,
+            freeText,
+            { ...freeText, prompt: 'Another?' },
+          ],
+        },
+      ]);
+      await screen.findByDisplayValue('Mixed');
+
+      const toggle = screen.getByLabelText(/kahoot mode/i);
+      expect(toggle).toBeDisabled();
+      const hint = screen.getByText(/change or remove questions 2, 3 first/i);
+      expect(toggle.getAttribute('aria-describedby')?.split(' ')).toContain(
+        hint.id,
+      );
+    });
+
+    it('enables the toggle once the blocking question is changed to an allowed type', async () => {
+      const user = userEvent.setup();
+      loadQuiz([
+        {
+          title: 'Mixed',
+          breakAfter: true,
+          kahootMode: false,
+          questions: [freeText],
+        },
+      ]);
+      await screen.findByDisplayValue('Mixed');
+      expect(screen.getByLabelText(/kahoot mode/i)).toBeDisabled();
+      expect(
+        screen.getByText(/change or remove question 1 first/i),
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Multiple choice' }));
+
+      expect(screen.getByLabelText(/kahoot mode/i)).toBeEnabled();
+      expect(screen.queryByText(/change or remove/i)).not.toBeInTheDocument();
+    });
+
+    it('enables the toggle once the blocking question is deleted', async () => {
+      const user = userEvent.setup();
+      loadQuiz([
+        {
+          title: 'Mixed',
+          breakAfter: true,
+          kahootMode: false,
+          questions: [multipleChoice, freeText],
+        },
+      ]);
+      await screen.findByDisplayValue('Mixed');
+      expect(screen.getByLabelText(/kahoot mode/i)).toBeDisabled();
+
+      await user.click(
+        screen.getAllByRole('button', { name: /delete question/i })[1],
+      );
+
+      expect(screen.getByLabelText(/kahoot mode/i)).toBeEnabled();
+    });
+
+    it('never changes a question type when the toggle is blocked', async () => {
+      loadQuiz([
+        {
+          title: 'Mixed',
+          breakAfter: true,
+          kahootMode: false,
+          questions: [freeText],
+        },
+      ]);
+      await screen.findByDisplayValue('Mixed');
+
+      expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue(
+        'Jupiter',
+      );
+    });
   });
 });
