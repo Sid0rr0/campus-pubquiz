@@ -306,6 +306,36 @@ describe('AnswersPanel', () => {
     expect(labels).toEqual(['Custom', '0', 'Half (1)', 'Full (2)']);
   });
 
+  it.each([
+    [3, 'Half (2)', 2],
+    [2, 'Half (1)', 1],
+    [5, 'Half (3)', 3],
+  ])(
+    'uses the shared half-points rule for a %i-point question',
+    (points, label, awarded) => {
+      const onGrade = vi.fn();
+      const base = liveAnswers();
+      render(
+        <AnswersPanel
+          liveAnswers={{
+            ...base,
+            question: { ...base.question, points },
+          }}
+          teams={[TEAMS[0]]}
+          onGrade={onGrade}
+        />,
+      );
+
+      const halfButton = screen.getByRole('button', {
+        name: /grade the quizzards half points/i,
+      });
+      halfButton.click();
+
+      expect(halfButton).toHaveTextContent(label);
+      expect(onGrade).toHaveBeenCalledWith(41, awarded);
+    },
+  );
+
   describe('custom points', () => {
     const CUSTOM_BUTTON = /grade the quizzards custom points/i;
     const CUSTOM_INPUT = /custom points for the quizzards/i;

@@ -118,6 +118,34 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.gradedAt).not.toBeNull();
   });
 
+  it('auto-grades a sort answer with stray whitespace and empty items as correct', async () => {
+    const sortQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'sort',
+      prompt: 'Order these planets from the sun outward.',
+      answer: 'Mercury|Venus|Earth',
+      points: 3,
+      payload: { options: ['Venus', 'Mercury', 'Earth'] },
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      sortQuestion.id,
+      team.id,
+      ' Mercury | Venus ||Earth|',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      sortQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(3);
+    expect(answer.verdict).toBe('correct');
+  });
+
   it('auto-grades an incorrect sort answer on submit as zero points', async () => {
     const sortQuestion = state.em.create(Question, {
       round: state.round,

@@ -121,8 +121,14 @@ function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
       return normalizeFreeText(value) === normalizeFreeText(question.answer)
         ? correct
         : INCORRECT;
-    case 'multiple_choice':
     case 'sort':
+      // Same tolerance as match: stray whitespace and empty items don't cost
+      // a team the question.
+      return splitPipeList(value).join('|') ===
+        splitPipeList(question.answer).join('|')
+        ? correct
+        : INCORRECT;
+    case 'multiple_choice':
       return value === question.answer ? correct : INCORRECT;
     default:
       return INCORRECT;

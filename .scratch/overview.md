@@ -27,7 +27,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 06  | [Align half points and sort comparison](scoring-module/issues/06-align-half-points-and-sort.md)                                              | 01         |
 | 07  | [Quiz editor: kahoot type picker and toggle guard](scoring-module/issues/07-editor-kahoot-picker-and-toggle.md)                              | 01         |
 
 ### screen-projection ([spec](screen-projection/spec.md))
@@ -71,3 +70,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | scoring-module      | 03  | [Stored verdict and verdict-based correct-count on /control and /remote](scoring-module/issues/03-stored-verdict-and-admin-correct-count.md) | —         |
 | scoring-module      | 04  | [Stats read the verdict](scoring-module/issues/04-stats-read-verdict.md)                                                        | —         |
 | scoring-module      | 05  | [Team phones: synced closest_guess points and the verdict](scoring-module/issues/05-team-phones-synced-points-and-verdict.md)   | —         |
+| scoring-module      | 06  | [Align half points and sort comparison](scoring-module/issues/06-align-half-points-and-sort.md)                                 | —         |

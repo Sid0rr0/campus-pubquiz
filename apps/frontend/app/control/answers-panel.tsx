@@ -2,11 +2,12 @@
 
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import { motion } from 'motion/react';
-import type {
-  AnswerView,
-  AnswersUpdatedPayload,
-  QuestionType,
-  TeamView,
+import {
+  halfPoints,
+  type AnswerView,
+  type AnswersUpdatedPayload,
+  type QuestionType,
+  type TeamView,
 } from '@campus-pubquiz/types';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
@@ -27,12 +28,13 @@ function gradingSortRank(answer: AnswerView | null): number {
 }
 
 function gradeOptions(maxPoints: number): GradeOption[] {
+  const half = halfPoints(maxPoints);
   return [
     { display: '0', ariaSuffix: '0 points', value: 0 },
     {
-      display: `Half (${maxPoints / 2})`,
+      display: `Half (${half})`,
       ariaSuffix: 'half points',
-      value: maxPoints / 2,
+      value: half,
     },
     {
       display: `Full (${maxPoints})`,
