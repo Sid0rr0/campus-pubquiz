@@ -65,9 +65,9 @@ export type QuestionType =
   | 'closest_guess';
 
 /**
- * Match only: how computeAutoGradedPoints scores a submitted pairing.
+ * Match only: how Scoring's scoreSubmission scores a submitted pairing.
  * `partial` (the default) splits `points` evenly across correctly paired
- * items, rounded (see computeAutoGradedPoints). `all_or_nothing` instead
+ * items, rounded (see scoring.ts). `all_or_nothing` instead
  * awards full points when every pair is correct, half points (rounded) when
  * exactly one pair is wrong, and zero otherwise.
  */
@@ -322,7 +322,8 @@ export interface SubmitAnswerPayload {
  * (frontend) recognizes it, to render a friendly label instead of the raw
  * sentinel. Never equals a real correct answer, so it's auto-graded 0 for
  * multiple_choice/sort/match/closest_guess exactly like any other wrong
- * answer, and free_text/audio still fall to the admin to grade.
+ * answer. A free_text answer is graded the same way (an exact, case-
+ * insensitive match), so it's 0 too; audio/youtube fall to the admin.
  */
 export const IDK_ANSWER_VALUE = '__idk__';
 
@@ -331,9 +332,9 @@ export interface AnswerReceivedPayload {
   teamId: number;
   teamName: string;
   value: string;
-  /** Set for auto-graded types (multiple_choice/sort/match), graded the instant they're submitted; 0 for types that need admin grading (free_text/audio) until GRADE_ANSWER fires. */
+  /** Set for auto-graded types (multiple_choice/sort/match/free_text), graded the instant they're submitted; 0 for types that need admin grading (audio/youtube) until GRADE_ANSWER fires. */
   pointsAwarded: number;
-  /** Set the instant auto-graded types are submitted; null until the admin grades a free_text/audio answer. */
+  /** Set the instant auto-graded types are submitted; null until the admin grades an audio/youtube answer. */
   gradedAt: string | null;
 }
 

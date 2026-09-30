@@ -1,5 +1,6 @@
 import type { GameProgress, GameStatus } from '@campus-pubquiz/types';
-import { AnswerService, AUTO_GRADED_TYPES } from '@/answer/answer.service';
+import { isAutoGradedType } from '@campus-pubquiz/types';
+import { AnswerService } from '@/answer/answer.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -61,9 +62,7 @@ export class BlockGradingService {
     for (const question of ungraded) {
       const graded = await this.answerService.gradeClosestGuess(
         session.seededGame.gameSessionId,
-        question.id,
-        question.answer,
-        question.points,
+        question,
       );
       summaries = {
         ...summaries,
@@ -120,13 +119,9 @@ export class BlockGradingService {
 
     const multipliers = await this.answerService.applyKahootSpeedScoring(
       session.seededGame.gameSessionId,
-      question.id,
+      question,
       session.phaseStartedAt,
       session.seededGame.settings.kahootQuestionTimerSeconds,
-      question.type,
-      question.answer,
-      question.points,
-      question.matchScoringMode,
     );
 
     const leaderboard = await this.answerService.computeLeaderboard(
@@ -178,14 +173,10 @@ export class BlockGradingService {
       // corrected key at lock (ensureKahootSpeedScored) — regrading it now
       // would bump updatedAt, which that scoring reads as response time.
       if (isKahoot && speedMultipliers === undefined) continue;
-      if (AUTO_GRADED_TYPES.includes(question.type)) {
+      if (isAutoGradedType(question.type)) {
         await this.answerService.regradeAutoGraded(
           gameSessionId,
-          question.id,
-          question.type,
-          question.answer,
-          question.points,
-          question.matchScoringMode,
+          question,
           speedMultipliers ?? {},
         );
         regradedQuestionIds.push(question.id);
@@ -195,9 +186,7 @@ export class BlockGradingService {
       ) {
         const graded = await this.answerService.gradeClosestGuess(
           gameSessionId,
-          question.id,
-          question.answer,
-          question.points,
+          question,
         );
         summaries = {
           ...summaries,

@@ -15,7 +15,7 @@ This is behaviour-preserving: every score is identical to today. Verdicts are co
 
 **Status:** ready-for-agent
 
-- [ ] Table-driven tests on the Scoring interface cover:
+- [x] Table-driven tests on the Scoring interface cover:
   - every type
   - match in both modes with 0, 1 and n wrong pairs
   - free_text normalisation
@@ -24,7 +24,15 @@ This is behaviour-preserving: every score is identical to today. Verdicts are co
   - closest_guess batches with ties, non-numeric guesses and no submissions
   - manual-grade verdicts
   - the category lists, including that free_text is auto-graded but not kahoot-allowed
-- [ ] The answer module and block grading call Scoring with a question value. No grading operation takes separate type/answer/points/mode arguments.
-- [ ] Import and the quiz draft schema reject non-kahoot-allowed types using Scoring's list. The old duplicated type lists are gone.
-- [ ] The socket contract comments that call free_text admin-graded are corrected.
-- [ ] All existing backend, shared-types and frontend tests pass unchanged, apart from specs that asserted the old positional arguments, which are rewritten to assert stored results.
+- [x] The answer module and block grading call Scoring with a question value. No grading operation takes separate type/answer/points/mode arguments.
+- [x] Import and the quiz draft schema reject non-kahoot-allowed types using Scoring's list. The old duplicated type lists are gone.
+- [x] The socket contract comments that call free_text admin-graded are corrected.
+- [x] All existing backend, shared-types and frontend tests pass unchanged, apart from specs that asserted the old positional arguments, which are rewritten to assert stored results.
+
+## Comments
+
+Implemented in the commit that adds `shared/types/src/scoring.ts` (find it in git history: `feat(shared-types): add pure Scoring module`). Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+
+- Import (`question-row.schema.ts`) never carries `kahootMode`, so it had no kahoot type list to replace; only the draft schema's duplicate list existed and now reads Scoring's.
+- Verdicts are computed by Scoring but not stored or sent, as scoped. Kahoot speed still uses `updatedAt` and the in-memory multipliers (ticket 02 removes them); the multiplier formula now lives in Scoring's `speedMultiplier`.
+- Preserved quirk: a blank closest_guess guess counts as `0` (`Number('')`).

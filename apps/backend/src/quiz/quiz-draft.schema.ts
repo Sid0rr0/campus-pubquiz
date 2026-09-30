@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import {
   extractYoutubeVideoId,
+  isKahootAllowedType,
   isSameMultiset,
   splitPipeList,
   ROUND_CATEGORIES,
-  type QuestionType,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
@@ -127,13 +127,6 @@ const questionPreviewSchema = z.discriminatedUnion('type', [
     ),
 ]);
 
-/** Question types that grade themselves the instant they're submitted — the only types a kahootMode round can carry, since its instant reveal has no admin-grading gate to wait through. */
-const KAHOOT_ALLOWED_TYPES: ReadonlyArray<QuestionType> = [
-  'multiple_choice',
-  'sort',
-  'match',
-];
-
 /**
  * Validates a full quiz draft (manual edits and/or a CSV-import preview
  * carried into the editor) before it's persisted. Never throws — every
@@ -215,7 +208,7 @@ export function validateQuizDraft(
     round.questions.forEach((question, questionIndex) => {
       const parsed = questionPreviewSchema.safeParse(question);
       if (parsed.success) {
-        if (round.kahootMode && !KAHOOT_ALLOWED_TYPES.includes(question.type)) {
+        if (round.kahootMode && !isKahootAllowedType(question.type)) {
           issues.push({
             roundIndex,
             questionIndex,

@@ -4,10 +4,16 @@ import type {
   AnswerView,
   LeaderboardEntry,
   MatchScoringMode,
-  QuestionType,
+  ScoredQuestion,
   TeamAnswerView,
 } from '@campus-pubquiz/types';
-import { splitPipeList } from '@campus-pubquiz/types';
+import {
+  gradeClosestGuessBatch,
+  isAutoGradedType,
+  isOverridableType,
+  scoreSubmission,
+  speedMultiplier,
+} from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -50,68 +56,8 @@ interface RoundTotalRow {
   total: string | number;
 }
 
-export const AUTO_GRADED_TYPES: readonly QuestionType[] = [
-  'multiple_choice',
-  'sort',
-  'match',
-  'free_text',
-];
-
-function normalizeFreeText(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-/**
- * Three grading strategies, one per shape of auto-graded answer:
- * - multiple_choice/sort: all-or-nothing, exact (case-sensitive) match.
- * - free_text: all-or-nothing too, but compared trimmed + case-insensitive
- *   (normalizeFreeText) since teams retype the answer freely rather than
- *   picking from fixed options — "Paris"/" paris "/"PARIS" all match.
- * - match: `value` and `question.answer` are the pipe-joined right-hand
- *   items in the question's `options` (left-hand) order (see
- *   question-row.schema.ts's toCanonicalMatchAnswer and AnswerForm's match
- *   UI), so comparing them positionally counts correctly matched pairs
- *   directly. How that count becomes points depends on `matchScoringMode`
- *   (Question.payload.matchScoringMode, undefined behaves as 'partial'):
- *   - 'partial' (default): points split evenly across pairs and rounded
- *     (e.g. 4 points/4 pairs, 1 correct -> 1 point). `pointsAwarded` is
- *     stored as an integer, so when `points` is smaller than the pair
- *     count, distinct partial-credit levels can round to the same value
- *     (e.g. 1 point/4 pairs: both 0-of-4 and 1-of-4 correct round to 0) —
- *     author match questions with points >= pair count for meaningful
- *     partial credit.
- *   - 'all_or_nothing': full points when every pair is correct, half points
- *     (rounded) when exactly one pair is wrong, zero otherwise.
- *
- * Any future addition to AUTO_GRADED_TYPES needs an explicit branch here —
- * there's no safe generic fallback across these three strategies.
- */
-function computeAutoGradedPoints(
-  type: QuestionType,
-  value: string,
-  answer: string,
-  points: number,
-  matchScoringMode: MatchScoringMode = 'partial',
-): number {
-  if (type === 'match') {
-    const answerPairs = splitPipeList(answer);
-    const submittedPairs = splitPipeList(value);
-    const correctPairCount = answerPairs.filter(
-      (rightItem, index) => rightItem === submittedPairs[index],
-    ).length;
-    if (matchScoringMode === 'all_or_nothing') {
-      const wrongPairCount = answerPairs.length - correctPairCount;
-      if (wrongPairCount === 0) return points;
-      if (wrongPairCount === 1) return Math.round(points / 2);
-      return 0;
-    }
-    return Math.round((points * correctPairCount) / answerPairs.length);
-  }
-  if (type === 'free_text') {
-    return normalizeFreeText(value) === normalizeFreeText(answer) ? points : 0;
-  }
-  return value === answer ? points : 0;
-}
+/** A question as grading sees it: the scoring inputs plus the id its answers hang off. RevealQuestionView satisfies it. */
+export type GradableQuestion = ScoredQuestion & { id: number };
 
 interface QuestionPayload {
   matchScoringMode?: MatchScoringMode;
@@ -135,24 +81,22 @@ export class AnswerService {
     value: string,
     responseMs: number | null = null,
   ): Promise<SubmittedAnswer> {
-    const question = await this.questions.findOneOrFail(questionId, {
+    const row = await this.questions.findOneOrFail(questionId, {
       fields: ['type', 'answer', 'points', 'payload'],
     });
+    const question: ScoredQuestion = {
+      type: row.type,
+      answer: row.answer,
+      points: row.points,
+      matchScoringMode: (row.payload as QuestionPayload).matchScoringMode,
+    };
     // Multiple choice, sort, match, and free_text are all gradable without
-    // admin judgement the instant they're submitted (enforced at
-    // import/save time — see question-row.schema.ts and
-    // quiz-draft.schema.ts), unlike audio/youtube. multiple_choice/sort/
-    // free_text are all-or-nothing; match's scoring depends on
-    // matchScoringMode — see computeAutoGradedPoints.
-    const isAutoGraded = AUTO_GRADED_TYPES.includes(question.type);
+    // admin judgement the instant they're submitted (see Scoring's
+    // AUTO_GRADED_TYPES), unlike audio/youtube. How a submission scores is
+    // entirely Scoring's concern.
+    const isAutoGraded = isAutoGradedType(question.type);
     const pointsAwarded = isAutoGraded
-      ? computeAutoGradedPoints(
-          question.type,
-          value,
-          question.answer,
-          question.points,
-          (question.payload as QuestionPayload).matchScoringMode,
-        )
+      ? scoreSubmission(question, value).points
       : 0;
 
     // The admin can grade audio/youtube answers (the remaining non-auto-
@@ -272,10 +216,11 @@ export class AnswerService {
       { id: answerId, gameSession: gameSessionId },
       { populate: ['question'] },
     );
-    // match is auto-graded at submit time too, but its per-pair partial credit
-    // is only a starting point — the quiz master may override it here.
-    // closest_guess can't be overridden: it's recomputed as a batch.
-    if (answer.question.type === 'closest_guess') {
+    // Auto-graded types (match's per-pair partial credit, a free_text
+    // synonym the exact match missed) are only a starting point — the quiz
+    // master may override them here. closest_guess can't be overridden: it's
+    // recomputed as a batch.
+    if (!isOverridableType(answer.question.type)) {
       throw new Error(
         'closest_guess answers are graded automatically and cannot be graded manually',
       );
@@ -288,91 +233,61 @@ export class AnswerService {
 
   /**
    * Re-scores every existing answer to an auto-graded question (see
-   * AUTO_GRADED_TYPES) against a corrected answer key/points — used after a
-   * live edit to an already-shown question. Deliberately overwrites any
-   * manual override (e.g. adjusted match partial credit): the key it was
+   * Scoring's AUTO_GRADED_TYPES) against the corrected `question` — used
+   * after a live edit to an already-shown question. Deliberately overwrites
+   * any manual override (e.g. adjusted match partial credit): the key it was
    * judged against just changed, and the admin can override again in break.
-   * `type`/`answer`/`points` are passed in, same as applyKahootSpeedScoring.
-   * `matchScoringMode` is match's only, ignored for every other type (same
-   * as computeAutoGradedPoints). `speedMultipliers` (answer id -> multiplier,
-   * as returned by applyKahootSpeedScoring) re-applies a kahootMode
-   * question's speed scaling; an answer missing from it keeps unscaled
-   * points.
+   * `speedMultipliers` (answer id -> multiplier, as returned by
+   * applyKahootSpeedScoring) re-applies a kahootMode question's speed
+   * scaling; an answer missing from it keeps unscaled points.
    */
   async regradeAutoGraded(
     gameSessionId: number,
-    questionId: number,
-    type: QuestionType,
-    answer: string,
-    points: number,
-    matchScoringMode?: MatchScoringMode,
+    question: GradableQuestion,
     speedMultipliers: Readonly<Record<number, number>> = {},
   ): Promise<void> {
     const rows = await this.answers.find({
       gameSession: gameSessionId,
-      question: questionId,
+      question: question.id,
     });
     if (rows.length === 0) return;
 
     const now = new Date();
     for (const row of rows) {
-      const basePoints = computeAutoGradedPoints(
-        type,
-        row.value,
-        answer,
-        points,
-        matchScoringMode,
-      );
-      row.pointsAwarded = Math.round(
-        basePoints * (speedMultipliers[row.id] ?? 1),
-      );
+      const { points } = scoreSubmission(question, row.value);
+      row.pointsAwarded = Math.round(points * (speedMultipliers[row.id] ?? 1));
       row.gradedAt = now;
     }
     await this.answers.getEntityManager().flush();
   }
 
   /**
-   * Batch-grades every submitted guess for a closest_guess question against
-   * the correct numeric answer: every team tied for the smallest distance
-   * gets full question points (no splitting), everyone else gets zero. Can
-   * only run once all teams are done answering (needs every guess to know
-   * who's closest), unlike the exact-match types graded at submit() time.
-   * Safe to call more than once for the same question — unconditionally
-   * recomputes and overwrites, same "recompute is idempotent" convention as
-   * computeLeaderboard.
+   * Batch-grades every submitted guess for a closest_guess question (see
+   * Scoring's gradeClosestGuessBatch for the rule). Can only run once all
+   * teams are done answering (needs every guess to know who's closest),
+   * unlike the types graded at submit() time. Safe to call more than once
+   * for the same question — unconditionally recomputes and overwrites, same
+   * "recompute is idempotent" convention as computeLeaderboard.
    */
   async gradeClosestGuess(
     gameSessionId: number,
-    questionId: number,
-    correctAnswer: string,
-    questionPoints: number,
+    question: GradableQuestion,
   ): Promise<AnswerView[]> {
     const rows = await this.answers.find(
-      { gameSession: gameSessionId, question: questionId },
+      { gameSession: gameSessionId, question: question.id },
       { populate: ['team'] },
     );
     if (rows.length === 0) return [];
 
-    const target = Number(correctAnswer);
-    const distances = rows.map((row) => {
-      const parsed = Number(row.value);
-      return {
-        row,
-        distance: Number.isFinite(parsed)
-          ? Math.abs(parsed - target)
-          : Infinity,
-      };
-    });
-    const minDistance = Math.min(...distances.map((d) => d.distance));
-
+    const results = gradeClosestGuessBatch(
+      question,
+      rows.map((row) => row.value),
+    );
     const now = new Date();
-    for (const { row, distance } of distances) {
-      row.pointsAwarded =
-        Number.isFinite(distance) && distance === minDistance
-          ? questionPoints
-          : 0;
+    rows.forEach((row, index) => {
+      row.pointsAwarded = results[index].points;
       row.gradedAt = now;
-    }
+    });
     await this.answers.getEntityManager().flush();
 
     return rows
@@ -388,79 +303,50 @@ export class AnswerService {
   }
 
   /**
-   * Rescales an already-graded kahootMode question's points by answer speed,
-   * using Kahoot's own scoring formula: score = round((1 - (responseTime /
-   * questionTimer) / 2) * points) — a same-instant answer keeps 100% of
-   * `points`, one that answers right as the timer runs out keeps a 50%
-   * floor, linear in between. `questionTimer` is the session's configured
-   * `kahootQuestionTimerSeconds` (the real, fixed timer), not however long
-   * the question actually stayed open — so a manual early lock doesn't
-   * distort the ratio the way using the actual elapsed window would. When
-   * no timer is configured (unlimited), speed conveys no information, so
-   * every correct answer keeps full points. Re-scores every row against
-   * `answer` (so a key corrected before lock counts) — wrong answers stay at
-   * 0 regardless of speed. Uses `updatedAt` (not `createdAt`) since submit()'s upsert
-   * already treats updatedAt as "last resubmission time" for a team that
-   * revises before lock. Idempotent/recomputable, same convention as
-   * gradeClosestGuess — each call recomputes speed-scaling from the row's
-   * pre-scaling auto-graded points (via computeAutoGradedPoints against the
-   * stored value/answer), not from whatever pointsAwarded currently holds,
-   * so a redundant re-run never compounds the scaling on top of itself. That
-   * matters for `match`, whose auto-graded points are already a partial
-   * fraction of `points` (see computeAutoGradedPoints) rather than always
-   * the full amount. `questionType`/`answer`/`points` are passed in rather
-   * than re-fetched — the caller (kahootMode's question-lock transition)
-   * already has them from the seeded game's RevealQuestionView.
-   * `matchScoringMode` is match's only, ignored for every other type (same
-   * as computeAutoGradedPoints).
+   * Rescales an already-graded kahootMode question's points by answer speed
+   * (the formula lives in Scoring's speedMultiplier). `questionTimerSeconds`
+   * is the session's configured `kahootQuestionTimerSeconds` (the real,
+   * fixed timer), not however long the question actually stayed open — so a
+   * manual early lock doesn't distort the ratio. When no timer is configured
+   * (unlimited), speed conveys no information, so nothing is rescaled.
+   * Re-scores every row against `question` (so a key corrected before lock
+   * counts) — wrong answers stay at 0 regardless of speed. Uses `updatedAt`
+   * (not `createdAt`) since submit()'s upsert already treats updatedAt as
+   * "last resubmission time" for a team that revises before lock.
+   * Idempotent/recomputable, same convention as gradeClosestGuess — each
+   * call re-scores from the row's stored value, not from whatever
+   * pointsAwarded currently holds, so a redundant re-run never compounds
+   * the scaling on top of itself.
    *
-   * Returns every answer's speed multiplier (answer id -> `1 - fraction / 2`),
-   * wrong answers included, for the caller to keep: the flush below bumps
-   * `updatedAt` (TimestampedEntity's onUpdate hook), so the response times
-   * can't be recovered afterwards — regradeAutoGraded needs these to re-apply
-   * speed scaling if the answer key is corrected later. Empty when no timer
-   * is configured (speed conveys nothing, so nothing to re-apply).
+   * Returns every answer's speed multiplier, wrong answers included, for the
+   * caller to keep: the flush below bumps `updatedAt` (TimestampedEntity's
+   * onUpdate hook), so the response times can't be recovered afterwards —
+   * regradeAutoGraded needs these to re-apply speed scaling if the answer
+   * key is corrected later. Empty when no timer is configured.
    */
   async applyKahootSpeedScoring(
     gameSessionId: number,
-    questionId: number,
+    question: GradableQuestion,
     questionOpenedAt: number,
     questionTimerSeconds: number | null,
-    questionType: QuestionType,
-    answer: string,
-    points: number,
-    matchScoringMode?: MatchScoringMode,
   ): Promise<Record<number, number>> {
     if (questionTimerSeconds === null) return {};
 
     const rows = await this.answers.find({
       gameSession: gameSessionId,
-      question: questionId,
+      question: question.id,
     });
     if (rows.length === 0) return {};
 
-    const questionTimerMs = questionTimerSeconds * 1000;
+    const timerMs = questionTimerSeconds * 1000;
     const multipliers: Record<number, number> = {};
     for (const row of rows) {
-      const responseTimeMs = row.updatedAt.getTime() - questionOpenedAt;
-      const rawFraction = Math.min(
-        Math.max(responseTimeMs / questionTimerMs, 0),
-        1,
-      );
-      multipliers[row.id] = 1 - rawFraction / 2;
-    }
-    // Every row is re-scored against `answer` (not just rows already > 0):
-    // the key may have been corrected by a live edit since submit() graded
-    // them. A wrong answer's base is 0, so it stays 0 regardless of speed.
-    for (const row of rows) {
-      const basePoints = computeAutoGradedPoints(
-        questionType,
-        row.value,
-        answer,
-        points,
-        matchScoringMode,
-      );
-      row.pointsAwarded = Math.round(basePoints * multipliers[row.id]);
+      const speed = {
+        responseMs: row.updatedAt.getTime() - questionOpenedAt,
+        timerMs,
+      };
+      multipliers[row.id] = speedMultiplier(speed);
+      row.pointsAwarded = scoreSubmission(question, row.value, speed).points;
     }
     await this.answers.getEntityManager().flush();
     return multipliers;

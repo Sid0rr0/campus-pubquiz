@@ -258,9 +258,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     const graded = await state.answerService.gradeClosestGuess(
       state.session.id,
-      guessQuestion.id,
-      guessQuestion.answer,
-      guessQuestion.points,
+      guessQuestion,
     );
 
     expect(graded.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(5);
@@ -296,9 +294,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     const graded = await state.answerService.gradeClosestGuess(
       state.session.id,
-      guessQuestion.id,
-      guessQuestion.answer,
-      guessQuestion.points,
+      guessQuestion,
     );
 
     expect(graded.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(10);
@@ -318,9 +314,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     const graded = await state.answerService.gradeClosestGuess(
       state.session.id,
-      guessQuestion.id,
-      guessQuestion.answer,
-      guessQuestion.points,
+      guessQuestion,
     );
 
     expect(graded).toEqual([]);
@@ -353,9 +347,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     const graded = await state.answerService.gradeClosestGuess(
       state.session.id,
-      guessQuestion.id,
-      guessQuestion.answer,
-      guessQuestion.points,
+      guessQuestion,
     );
 
     expect(graded.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(0);
@@ -382,15 +374,11 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     await state.answerService.gradeClosestGuess(
       state.session.id,
-      guessQuestion.id,
-      guessQuestion.answer,
-      guessQuestion.points,
+      guessQuestion,
     );
     const second = await state.answerService.gradeClosestGuess(
       state.session.id,
-      guessQuestion.id,
-      guessQuestion.answer,
-      guessQuestion.points,
+      guessQuestion,
     );
 
     expect(second.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(5);
@@ -487,13 +475,12 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         'London',
       );
 
-      await state.answerService.regradeAutoGraded(
-        state.session.id,
-        mcQuestion.id,
-        'multiple_choice',
-        'Paris',
-        2,
-      );
+      await state.answerService.regradeAutoGraded(state.session.id, {
+        id: mcQuestion.id,
+        type: 'multiple_choice',
+        answer: 'Paris',
+        points: 2,
+      });
 
       const answers = await state.answerService.listForQuestion(
         state.session.id,
@@ -520,13 +507,12 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         'APPLE',
       );
 
-      await state.answerService.regradeAutoGraded(
-        state.session.id,
-        state.question.id,
-        'free_text',
-        'Pear',
-        1,
-      );
+      await state.answerService.regradeAutoGraded(state.session.id, {
+        id: state.question.id,
+        type: 'free_text',
+        answer: 'Pear',
+        points: 1,
+      });
 
       const answers = await state.answerService.listForQuestion(
         state.session.id,
@@ -560,13 +546,12 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       );
       await state.answerService.grade(state.session.id, submitted.answerId, 4);
 
-      await state.answerService.regradeAutoGraded(
-        state.session.id,
-        matchQuestion.id,
-        'match',
-        'excalibur|shield',
-        6,
-      );
+      await state.answerService.regradeAutoGraded(state.session.id, {
+        id: matchQuestion.id,
+        type: 'match',
+        answer: 'excalibur|shield',
+        points: 6,
+      });
 
       const [answer] = await state.answerService.listForQuestion(
         state.session.id,
@@ -600,14 +585,13 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       );
 
       // Corrected key makes the submission fully correct.
-      await state.answerService.regradeAutoGraded(
-        state.session.id,
-        matchQuestion.id,
-        'match',
-        'excalibur|shield|web|web',
-        4,
-        'all_or_nothing',
-      );
+      await state.answerService.regradeAutoGraded(state.session.id, {
+        id: matchQuestion.id,
+        type: 'match',
+        answer: 'excalibur|shield|web|web',
+        points: 4,
+        matchScoringMode: 'all_or_nothing',
+      });
 
       const [answer] = await state.answerService.listForQuestion(
         state.session.id,
@@ -670,12 +654,9 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       const multipliers = await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        mcQuestion.id,
+        mcQuestion,
         questionOpenedAt,
         questionTimerSeconds,
-        mcQuestion.type,
-        mcQuestion.answer,
-        mcQuestion.points,
       );
 
       const answers = await state.answerService.listForQuestion(
@@ -720,19 +701,18 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       const multipliers = await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        mcQuestion.id,
+        mcQuestion,
         questionOpenedAt,
         questionTimerSeconds,
-        mcQuestion.type,
-        mcQuestion.answer,
-        mcQuestion.points,
       );
       await state.answerService.regradeAutoGraded(
         state.session.id,
-        mcQuestion.id,
-        'multiple_choice',
-        'Paris',
-        10,
+        {
+          id: mcQuestion.id,
+          type: 'multiple_choice',
+          answer: 'Paris',
+          points: 10,
+        },
         multipliers,
       );
 
@@ -768,12 +748,14 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        mcQuestion.id,
+        {
+          id: mcQuestion.id,
+          type: 'multiple_choice',
+          answer: 'Paris',
+          points: 10,
+        },
         questionOpenedAt,
         questionTimerSeconds,
-        'multiple_choice',
-        'Paris',
-        10,
       );
 
       const [answer] = await state.answerService.listForQuestion(
@@ -807,12 +789,9 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        mcQuestion.id,
+        mcQuestion,
         questionOpenedAt,
         null,
-        mcQuestion.type,
-        mcQuestion.answer,
-        mcQuestion.points,
       );
 
       const [answer] = await state.answerService.listForQuestion(
@@ -847,12 +826,9 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        mcQuestion.id,
+        mcQuestion,
         questionOpenedAt,
         questionTimerSeconds,
-        mcQuestion.type,
-        mcQuestion.answer,
-        mcQuestion.points,
       );
 
       const [answer] = await state.answerService.listForQuestion(
@@ -891,12 +867,9 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        matchQuestion.id,
+        matchQuestion,
         questionOpenedAt,
         questionTimerSeconds,
-        matchQuestion.type,
-        matchQuestion.answer,
-        matchQuestion.points,
       );
 
       const [answer] = await state.answerService.listForQuestion(
@@ -937,13 +910,15 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
       await state.answerService.applyKahootSpeedScoring(
         state.session.id,
-        matchQuestion.id,
+        {
+          id: matchQuestion.id,
+          type: matchQuestion.type,
+          answer: matchQuestion.answer,
+          points: matchQuestion.points,
+          matchScoringMode: 'all_or_nothing',
+        },
         questionOpenedAt,
         questionTimerSeconds,
-        matchQuestion.type,
-        matchQuestion.answer,
-        matchQuestion.points,
-        'all_or_nothing',
       );
 
       const [answer] = await state.answerService.listForQuestion(
