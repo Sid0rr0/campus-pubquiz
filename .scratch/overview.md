@@ -1,0 +1,78 @@
+# Ticket overview
+
+All features under `.scratch/`. A ticket is unblocked once every ticket in its "Blocked by" column is under **Done** (numbers refer to tickets in the same feature unless a feature is named). Each feature has a `spec.md` and an `issues/` folder.
+
+## Not implemented
+
+### live-session-module ([spec](live-session-module/spec.md))
+
+| #   | Ticket                                                                                                                                       | Blocked by     |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 02  | [Outcome delivery step; timers share the Advance path](live-session-module/issues/02-outcome-delivery-and-timers.md)                         | 01             |
+| 03  | [Answer recorded / answer graded owned by the Live session module](live-session-module/issues/03-answer-recorded-and-graded.md)              | 02             |
+| 04  | [Team removed (kick / leave)](live-session-module/issues/04-team-removed.md)                                                                 | 02             |
+| 05  | [Bonus changed and leaderboard toggle](live-session-module/issues/05-bonus-changed-and-leaderboard-toggle.md)                                | 02             |
+| 06  | [Quiz edited (live answer-key fix)](live-session-module/issues/06-quiz-edited-regrade.md)                                                    | 03             |
+| 07  | [Remaining events through the module; delete the pass-through setters](live-session-module/issues/07-remaining-events-and-delete-setters.md) | 03, 04, 05, 06 |
+| 08  | [Migrate game-flow specs to the real-store harness](live-session-module/issues/08-migrate-game-flow-specs.md)                                | 01             |
+| 09  | [Migrate grading, answers and team specs to the real-store harness](live-session-module/issues/09-migrate-grading-and-team-specs.md)         | 01             |
+| 10  | [Contract: delete the fake-store harness](live-session-module/issues/10-contract-delete-fake-harness.md)                                     | 07, 08, 09     |
+
+### gateway-handler-template ([spec](gateway-handler-template/spec.md))
+
+| #   | Ticket                                                                                                                                          | Blocked by                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 01  | [Test that every event rejects the wrong room](gateway-handler-template/issues/01-authorization-characterization-spec.md)                       | none                       |
+| 02  | [Declare each event once and route it through one dispatch step](gateway-handler-template/issues/02-event-declarations-and-guarded-dispatch.md) | 01, live-session-module 07 |
+| 03  | [Delete the pass-through handlers and fix the doc comments](gateway-handler-template/issues/03-delete-pass-through-handlers.md)                 | 02                         |
+
+### role-socket-hooks ([spec](role-socket-hooks/spec.md))
+
+| #   | Ticket                                                                                                                                       | Blocked by |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Every socket event answers with an acknowledgement result](role-socket-hooks/issues/01-acknowledge-every-socket-event.md)                   | none       |
+| 02  | [Admin game hook on a shared connection core; /control switches over](role-socket-hooks/issues/02-admin-game-hook-control.md)                | 01         |
+| 03  | [Player game hook; /play and the join flow switch over](role-socket-hooks/issues/03-player-game-hook-play.md)                                | 01, 02     |
+| 04  | [Shared admin-session connection hook; /remote moves to the admin game hook](role-socket-hooks/issues/04-admin-session-connection-remote.md) | 02         |
+| 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                            | 02         |
+| 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md)    | 03, 04     |
+
+### scoring-module ([spec](scoring-module/spec.md))
+
+| #   | Ticket                                                                                                                                       | Blocked by |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Scoring module prefactor](scoring-module/issues/01-scoring-module-prefactor.md)                                                             | none       |
+| 02  | [Kahoot speed from stored response time](scoring-module/issues/02-kahoot-speed-from-response-time.md)                                        | 01         |
+| 03  | [Stored verdict and verdict-based correct-count on /control and /remote](scoring-module/issues/03-stored-verdict-and-admin-correct-count.md) | 01         |
+| 04  | [Stats read the verdict](scoring-module/issues/04-stats-read-verdict.md)                                                                     | 03         |
+| 05  | [Team phones: synced closest_guess points and the verdict](scoring-module/issues/05-team-phones-synced-points-and-verdict.md)                | 03         |
+| 06  | [Align half points and sort comparison](scoring-module/issues/06-align-half-points-and-sort.md)                                              | 01         |
+| 07  | [Quiz editor: kahoot type picker and toggle guard](scoring-module/issues/07-editor-kahoot-picker-and-toggle.md)                              | 01         |
+
+### screen-projection ([spec](screen-projection/spec.md))
+
+| #   | Ticket                                                                                                                                      | Blocked by |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Players view hides the kahoot question behind the leaderboard](screen-projection/issues/01-players-view-redacts-hidden-kahoot-question.md) | none       |
+| 02  | [Named on-air screen drives the big screen](screen-projection/issues/02-named-on-air-screen-drives-display.md)                              | 01         |
+| 03  | [Presenter preview built from the projection](screen-projection/issues/03-presenter-preview-from-projection.md)                             | 02         |
+| 04  | [Admin view: the question on display and the round indicators](screen-projection/issues/04-admin-view-on-display-question-and-indicators.md) | 02         |
+| 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md)                            | 01         |
+| 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md)  | 02         |
+
+### standings-module ([spec](standings-module/spec.md))
+
+| #   | Ticket                                                                                                                                         | Blocked by |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Ranking rule prefactor](standings-module/issues/01-ranking-rule-prefactor.md)                                                                 | none       |
+| 02  | [Live leaderboard served by the Standings service](standings-module/issues/02-live-leaderboard-from-standings.md)                              | 01         |
+| 03  | [Teams table renders server standings; roster changes refresh them](standings-module/issues/03-teams-table-renders-server-standings.md)        | 02         |
+| 04  | [Display and phone overlay render server ranks](standings-module/issues/04-display-and-phones-render-server-ranks.md)                          | 02         |
+| 05  | [Stats detail with the participation rule, departed teams and one winner](standings-module/issues/05-stats-detail-participation-and-winner.md) | 02         |
+| 06  | [Stats list reads Standings](standings-module/issues/06-stats-list-reads-standings.md)                                                         | 05         |
+
+## Done
+
+| Feature             | #   | Ticket                                                                                         | Commit    |
+| ------------------- | --- | ---------------------------------------------------------------------------------------------- | --------- |
+| live-session-module | 01  | [Real-store gateway test harness](live-session-module/issues/01-real-store-gateway-harness.md) | `e9af2e9` |
