@@ -1,3 +1,4 @@
+import { SOCKET_ROOMS, type OnAirScreen } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
@@ -168,6 +169,52 @@ describe('GameStateService — getPresenterContext', () => {
 
       await game.act('REVEAL_NEXT_TEAM');
       expect(screens()).toMatchObject({ next: 'Quiz complete!' });
+    });
+  });
+
+  describe('agreement with /display across a whole-quiz walk', () => {
+    const HEADING_BY_SCREEN: Record<OnAirScreen['kind'], RegExp> = {
+      lobby: /^Lobby$/,
+      rules: /^Rules$/,
+      round_overview: /^Round overview$/,
+      round_title: /^Round \d+ title$/,
+      question: /^R\d+ Q\d+$/,
+      locking: /^Locking answers$/,
+      break_intro: /^Break \d+$/,
+      break_review: /^Break · Reviewing /,
+      break_round_title: /^Break · Round \d+ title$/,
+      reveal_intro: /^Revealing · Round \d+ title$/,
+      reveal: /^Revealing R\d+ Q\d+$/,
+      leaderboard: /^Leaderboard$/,
+      ended: /^Quiz complete!$/,
+      showdown: /^Showdown$/,
+    };
+
+    beforeEach(async () => {
+      game = await harness.createGateway({
+        rounds: TWO_ROUND_QUIZ,
+        teamNames: ['The Quizzards'],
+      });
+    });
+
+    it('describes exactly the screen /display has on air, and previews exactly the screen the next Advance puts there', async () => {
+      await game.act('START_QUIZ');
+      // Past the final reveal the leaderboard takes over and ADVANCE is no
+      // longer the control, so the walk stops at the last reveal.
+      for (let step = 0; step < 14; step += 1) {
+        const before = game.gameState.getPresenterContext(game.joinCode);
+        await game.act('ADVANCE');
+        const after = game.gameState.getPresenterContext(game.joinCode);
+        const { onAirScreen } = game.gameState.getView(
+          game.joinCode,
+          SOCKET_ROOMS.ADMIN,
+        );
+
+        expect(after.currentScreen.heading).toMatch(
+          HEADING_BY_SCREEN[onAirScreen.kind],
+        );
+        expect(before.nextScreen?.heading).toBe(after.currentScreen.heading);
+      }
     });
   });
 

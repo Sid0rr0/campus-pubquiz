@@ -33,9 +33,9 @@ import { GameSessionStore } from '@/game/state/game-session.store';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
+import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import {
   buildAdminQuestionContext,
-  buildPresenterContext,
   buildSnapshot,
   isQuestionOpenForAnswering,
 } from '@/game/state/session-snapshot.util';

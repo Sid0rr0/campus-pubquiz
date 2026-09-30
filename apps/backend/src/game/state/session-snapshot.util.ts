@@ -2,7 +2,6 @@ import {
   getQuizStructureSummary,
   getTimedPhaseKey,
   type AdminQuestionContext,
-  type PresenterContextPayload,
   type StateSnapshotPayload,
   type TeamView,
 } from '@campus-pubquiz/types';
@@ -18,10 +17,6 @@ import {
 } from '@/game/state/block-questions.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
-import {
-  describeNextScreen,
-  describeScreen,
-} from '@/game/state/screen-preview.util';
 import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
 
 /**
@@ -115,29 +110,6 @@ export function isQuestionOpenForAnswering(
       session.progress.status === 'round_intro') &&
     getBlockQuestions(session).some((question) => question.id === questionId)
   );
-}
-
-/**
- * Host notes for the open question + what /display shows now and after the
- * next Advance, for the /remote presenter view alone. Callers MUST only forward this over an
- * admin-room-only channel (PRESENTER_CONTEXT_UPDATED) — never through the
- * broadcast snapshot.
- */
-export function buildPresenterContext(
-  session: SessionState,
-): PresenterContextPayload {
-  const currentQuestion = getCurrentQuestion(session);
-  const currentRound = session.seededGame.rounds[session.progress.roundIndex];
-  const currentQuestionNotes =
-    currentQuestion && currentRound
-      ? (currentRound.questionNotesById?.[currentQuestion.id] ?? null)
-      : null;
-
-  return {
-    currentQuestionNotes,
-    currentScreen: describeScreen(session),
-    nextScreen: describeNextScreen(session),
-  };
 }
 
 /**
