@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import {
   asSocket,
@@ -38,7 +37,7 @@ describe('GameGateway — socket payload validation', () => {
       game.gateway.handleAdminAction(asSocket(admin), {
         action: 'DELETE_EVERYTHING',
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expectNothingDelivered(admin);
   });
 
@@ -55,7 +54,7 @@ describe('GameGateway — socket payload validation', () => {
 
     await expect(
       game.gateway.handleJoinPlayers(asSocket(player), { teamName: '' }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
 
     expectNothingDelivered(player);
     const { teams } = await game.snapshot();
@@ -69,7 +68,7 @@ describe('GameGateway — socket payload validation', () => {
         teamId: 'not-a-number',
         value: 'Banana',
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expectNothingDelivered(team);
   });
 
@@ -80,7 +79,7 @@ describe('GameGateway — socket payload validation', () => {
         teamId,
         value: OVER_MAX_ANSWER_LENGTH,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expectNothingDelivered(team);
   });
 
@@ -101,7 +100,7 @@ describe('GameGateway — socket payload validation', () => {
         answerId: answers[0].answerId,
         pointsAwarded: Number.POSITIVE_INFINITY,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expectNothingDelivered(admin);
     expect(team.emit).not.toHaveBeenCalled();
   });
@@ -113,7 +112,7 @@ describe('GameGateway — socket payload validation', () => {
         category: 'jackpot',
         points: 1,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expectNothingDelivered(admin);
     const { leaderboard } = await game.snapshot();
     expect(leaderboard.filter((entry) => entry.bonusPoints !== 0)).toEqual([]);

@@ -1,4 +1,4 @@
-import { Logger, type OnModuleDestroy } from '@nestjs/common';
+import { Logger, UseInterceptors, type OnModuleDestroy } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   ConnectedSocket,
@@ -12,6 +12,7 @@ import {
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import {
+  type AckResult,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
@@ -22,6 +23,8 @@ import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
+import { LegacyExceptionEmitInterceptor } from '@/game/socket/legacy-exception-emit.interceptor';
+import { acknowledge } from '@/game/socket/acknowledge.util';
 import { runAdminAction } from '@/game/socket/handlers/admin-action.handler';
 import { awardTeamBonus } from '@/game/socket/handlers/award-bonus.handler';
 import {
@@ -56,6 +59,7 @@ import {
 import { submitTeamAnswer } from '@/game/socket/handlers/submit-answer.handler';
 import { ShowdownService } from '@/showdown/showdown.service';
 
+@UseInterceptors(LegacyExceptionEmitInterceptor)
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
 })
@@ -119,24 +123,34 @@ export class GameGateway
   async handleAdminAction(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(adminActionPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may perform game actions');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.ADMIN_ACTION,
+      async () => {
+        const payload = parseSocketPayload(
+          adminActionPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException('Only admin clients may perform game actions');
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
+        this.logger.log(
+          `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
+        );
+
+        try {
+          await runAdminAction(this.outcomeDeps, joinCode, payload.action);
+        } finally {
+          // The action may have been applied even if delivering it failed, so
+          // the deadlines must follow the state either way.
+          this.rearmTimers(joinCode);
+        }
+      },
     );
-
-    try {
-      await runAdminAction(this.outcomeDeps, joinCode, payload.action);
-    } finally {
-      // The action may have been applied even if delivering it failed, so
-      // the deadlines must follow the state either way.
-      this.rearmTimers(joinCode);
-    }
   }
 
   private get outcomeDeps() {
@@ -266,28 +280,38 @@ export class GameGateway
   async handleJoinPlayers(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(joinPlayersPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
-      throw new WsException('Only player clients may join a team');
-    }
-
-    this.logger.log(
-      `${SOCKET_EVENTS.JOIN_PLAYERS} from ${client.id}: teamName=${payload.teamName}`,
-    );
-
-    await joinPlayerTeam(
-      {
-        gameState: this.gameState,
-        teamService: this.teamService,
-        answerService: this.answerService,
-        bonusService: this.bonusService,
-        server: this.server,
-      },
+  ): Promise<AckResult> {
+    return acknowledge(
       client,
-      joinCode,
-      payload,
+      this.logger,
+      SOCKET_EVENTS.JOIN_PLAYERS,
+      async () => {
+        const payload = parseSocketPayload(
+          joinPlayersPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
+          throw new WsException('Only player clients may join a team');
+        }
+
+        this.logger.log(
+          `${SOCKET_EVENTS.JOIN_PLAYERS} from ${client.id}: teamName=${payload.teamName}`,
+        );
+
+        await joinPlayerTeam(
+          {
+            gameState: this.gameState,
+            teamService: this.teamService,
+            answerService: this.answerService,
+            bonusService: this.bonusService,
+            server: this.server,
+          },
+          client,
+          joinCode,
+          payload,
+        );
+      },
     );
   }
 
@@ -296,26 +320,36 @@ export class GameGateway
   async handleSubmitAnswer(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(submitAnswerPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
-      throw new WsException('Only player clients may submit answers');
-    }
-
-    this.logger.log(
-      `${SOCKET_EVENTS.SUBMIT_ANSWER} from ${client.id}: questionId=${payload.questionId} teamId=${payload.teamId}`,
-    );
-
-    await submitTeamAnswer(
-      {
-        gameState: this.gameState,
-        answerService: this.answerService,
-        server: this.server,
-      },
+  ): Promise<AckResult> {
+    return acknowledge(
       client,
-      joinCode,
-      payload,
+      this.logger,
+      SOCKET_EVENTS.SUBMIT_ANSWER,
+      async () => {
+        const payload = parseSocketPayload(
+          submitAnswerPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
+          throw new WsException('Only player clients may submit answers');
+        }
+
+        this.logger.log(
+          `${SOCKET_EVENTS.SUBMIT_ANSWER} from ${client.id}: questionId=${payload.questionId} teamId=${payload.teamId}`,
+        );
+
+        await submitTeamAnswer(
+          {
+            gameState: this.gameState,
+            answerService: this.answerService,
+            server: this.server,
+          },
+          client,
+          joinCode,
+          payload,
+        );
+      },
     );
   }
 
@@ -324,25 +358,35 @@ export class GameGateway
   async handleGradeAnswer(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(gradeAnswerPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may grade answers');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.GRADE_ANSWER,
+      async () => {
+        const payload = parseSocketPayload(
+          gradeAnswerPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException('Only admin clients may grade answers');
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.GRADE_ANSWER} from ${client.id}: answerId=${payload.answerId} pointsAwarded=${payload.pointsAwarded}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.GRADE_ANSWER} from ${client.id}: answerId=${payload.answerId} pointsAwarded=${payload.pointsAwarded}`,
+        );
 
-    await gradeTeamAnswer(
-      {
-        gameState: this.gameState,
-        answerService: this.answerService,
-        server: this.server,
+        await gradeTeamAnswer(
+          {
+            gameState: this.gameState,
+            answerService: this.answerService,
+            server: this.server,
+          },
+          joinCode,
+          payload,
+        );
       },
-      joinCode,
-      payload,
     );
   }
 
@@ -351,26 +395,33 @@ export class GameGateway
   async handleKickTeam(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(kickTeamPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may remove a team');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.KICK_TEAM,
+      async () => {
+        const payload = parseSocketPayload(kickTeamPayloadSchema, rawPayload);
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException('Only admin clients may remove a team');
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.KICK_TEAM} from ${client.id}: teamId=${payload.teamId}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.KICK_TEAM} from ${client.id}: teamId=${payload.teamId}`,
+        );
 
-    await kickTeamFromSession(
-      {
-        gameState: this.gameState,
-        teamService: this.teamService,
-        answerService: this.answerService,
-        server: this.server,
+        await kickTeamFromSession(
+          {
+            gameState: this.gameState,
+            teamService: this.teamService,
+            answerService: this.answerService,
+            server: this.server,
+          },
+          joinCode,
+          payload,
+        );
       },
-      joinCode,
-      payload,
     );
   }
 
@@ -379,27 +430,37 @@ export class GameGateway
   async handleLeaveSession(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(leaveSessionPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
-      throw new WsException('Only player clients may leave a session');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.LEAVE_SESSION,
+      async () => {
+        const payload = parseSocketPayload(
+          leaveSessionPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
+          throw new WsException('Only player clients may leave a session');
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.LEAVE_SESSION} from ${client.id}: teamId=${payload.teamId}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.LEAVE_SESSION} from ${client.id}: teamId=${payload.teamId}`,
+        );
 
-    await leaveSessionAsTeam(
-      {
-        gameState: this.gameState,
-        teamService: this.teamService,
-        answerService: this.answerService,
-        server: this.server,
+        await leaveSessionAsTeam(
+          {
+            gameState: this.gameState,
+            teamService: this.teamService,
+            answerService: this.answerService,
+            server: this.server,
+          },
+          joinCode,
+          client.id,
+          payload,
+        );
       },
-      joinCode,
-      client.id,
-      payload,
     );
   }
 
@@ -408,21 +469,30 @@ export class GameGateway
   async handleSetBreakEndTime(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(
-      setBreakEndTimePayloadSchema,
-      rawPayload,
-    );
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may set the break end time');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.SET_BREAK_END_TIME,
+      async () => {
+        const payload = parseSocketPayload(
+          setBreakEndTimePayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException(
+            'Only admin clients may set the break end time',
+          );
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.SET_BREAK_END_TIME} from ${client.id}: breakEndsAt=${payload.breakEndsAt}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.SET_BREAK_END_TIME} from ${client.id}: breakEndsAt=${payload.breakEndsAt}`,
+        );
 
-    await updateBreakEndTime(this.outcomeDeps, joinCode, payload);
+        await updateBreakEndTime(this.outcomeDeps, joinCode, payload);
+      },
+    );
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE)
@@ -430,23 +500,30 @@ export class GameGateway
   async handleSetDisplayTextScale(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(
-      setDisplayTextScalePayloadSchema,
-      rawPayload,
-    );
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException(
-        'Only admin clients may set the display text scale',
-      );
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE,
+      async () => {
+        const payload = parseSocketPayload(
+          setDisplayTextScalePayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException(
+            'Only admin clients may set the display text scale',
+          );
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE} from ${client.id}: displayTextScale=${payload.displayTextScale}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE} from ${client.id}: displayTextScale=${payload.displayTextScale}`,
+        );
 
-    await updateDisplayTextScale(this.outcomeDeps, joinCode, payload);
+        await updateDisplayTextScale(this.outcomeDeps, joinCode, payload);
+      },
+    );
   }
 
   @SubscribeMessage(SOCKET_EVENTS.AWARD_BONUS)
@@ -454,26 +531,33 @@ export class GameGateway
   async handleAwardBonus(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(awardBonusPayloadSchema, rawPayload);
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may award bonus points');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.AWARD_BONUS,
+      async () => {
+        const payload = parseSocketPayload(awardBonusPayloadSchema, rawPayload);
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException('Only admin clients may award bonus points');
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.AWARD_BONUS} from ${client.id}: teamId=${payload.teamId} category=${payload.category} points=${payload.points}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.AWARD_BONUS} from ${client.id}: teamId=${payload.teamId} category=${payload.category} points=${payload.points}`,
+        );
 
-    await awardTeamBonus(
-      {
-        gameState: this.gameState,
-        bonusService: this.bonusService,
-        answerService: this.answerService,
-        server: this.server,
+        await awardTeamBonus(
+          {
+            gameState: this.gameState,
+            bonusService: this.bonusService,
+            answerService: this.answerService,
+            server: this.server,
+          },
+          joinCode,
+          payload,
+        );
       },
-      joinCode,
-      payload,
     );
   }
 
@@ -482,24 +566,33 @@ export class GameGateway
   async handleCreateShowdownRound(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(
-      createShowdownRoundPayloadSchema,
-      rawPayload,
-    );
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
-      throw new WsException('Only admin clients may start a showdown round');
-    }
+  ): Promise<AckResult> {
+    return acknowledge(
+      client,
+      this.logger,
+      SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND,
+      async () => {
+        const payload = parseSocketPayload(
+          createShowdownRoundPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.ADMIN))) {
+          throw new WsException(
+            'Only admin clients may start a showdown round',
+          );
+        }
 
-    this.logger.log(
-      `${SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND} from ${client.id}: points=${payload.points}`,
-    );
+        this.logger.log(
+          `${SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND} from ${client.id}: points=${payload.points}`,
+        );
 
-    await createShowdownRound(
-      { ...this.outcomeDeps, showdownService: this.showdownService },
-      joinCode,
-      payload,
+        await createShowdownRound(
+          { ...this.outcomeDeps, showdownService: this.showdownService },
+          joinCode,
+          payload,
+        );
+      },
     );
   }
 
@@ -508,25 +601,34 @@ export class GameGateway
   async handleSubmitShowdownGuess(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
-  ): Promise<void> {
-    const payload = parseSocketPayload(
-      submitShowdownGuessPayloadSchema,
-      rawPayload,
-    );
-    const joinCode = this.resolveJoinCode(client);
-    if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
-      throw new WsException('Only player clients may submit a showdown guess');
-    }
-
-    this.logger.log(
-      `${SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS} from ${client.id}: showdownRoundId=${payload.showdownRoundId} teamId=${payload.teamId}`,
-    );
-
-    await submitShowdownGuess(
-      { ...this.outcomeDeps, showdownService: this.showdownService },
+  ): Promise<AckResult> {
+    return acknowledge(
       client,
-      joinCode,
-      payload,
+      this.logger,
+      SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS,
+      async () => {
+        const payload = parseSocketPayload(
+          submitShowdownGuessPayloadSchema,
+          rawPayload,
+        );
+        const joinCode = this.resolveJoinCode(client);
+        if (!client.rooms.has(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))) {
+          throw new WsException(
+            'Only player clients may submit a showdown guess',
+          );
+        }
+
+        this.logger.log(
+          `${SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS} from ${client.id}: showdownRoundId=${payload.showdownRoundId} teamId=${payload.teamId}`,
+        );
+
+        await submitShowdownGuess(
+          { ...this.outcomeDeps, showdownService: this.showdownService },
+          client,
+          joinCode,
+          payload,
+        );
+      },
     );
   }
 }

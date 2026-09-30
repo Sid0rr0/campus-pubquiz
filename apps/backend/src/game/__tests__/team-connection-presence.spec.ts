@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { asSocket, createMockSocket } from '@/game/__tests__/test-utils';
 import {
@@ -38,13 +37,16 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
     await expect(
       game.gateway.handleJoinPlayers(asSocket(second), rejoinPayload()),
-    ).rejects.toThrow(/already connected/i);
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringMatching(/already connected/i) as string,
+    });
   });
 
   it('allows the same still-connected socket to re-join the team it already holds', async () => {
     await expect(
       game.gateway.handleJoinPlayers(asSocket(first.socket), rejoinPayload()),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
   });
 
   it('allows a new device to join once the previous device disconnects', async () => {
@@ -53,7 +55,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
     await expect(
       game.gateway.handleJoinPlayers(asSocket(second), rejoinPayload()),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
   });
 
   it('allows a new device to join when the previous socket is stale (disconnect event has not fired yet)', async () => {
@@ -64,7 +66,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
     await expect(
       game.gateway.handleJoinPlayers(asSocket(second), rejoinPayload()),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
   });
 
   it('lets a reconnecting device take over its own stale socket the server still thinks is live', async () => {
@@ -92,7 +94,10 @@ describe('GameGateway — one live connection per team + admin kick', () => {
         asSocket(second),
         rejoinPayload({ previousSocketId: 'socket-zzz' }),
       ),
-    ).rejects.toThrow(/already connected/i);
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringMatching(/already connected/i) as string,
+    });
     expect(first.socket.disconnect).not.toHaveBeenCalled();
   });
 
@@ -132,7 +137,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
       game.gateway.handleKickTeam(asSocket(first.socket), {
         teamId: first.teamId,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expect(await rosterTeamIds()).toEqual([first.teamId]);
   });
 
@@ -176,7 +181,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     const second = await game.connectPlayer();
     await expect(
       game.gateway.handleJoinPlayers(asSocket(second), rejoinPayload()),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
   });
 
   it('removes a disconnected team from the roster without touching any socket', async () => {
@@ -186,7 +191,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
     await expect(
       game.gateway.handleKickTeam(asSocket(admin), { teamId: first.teamId }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
 
     expect(await rosterTeamIds()).toEqual([]);
     expect(
@@ -203,7 +208,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
       game.gateway.handleLeaveSession(asSocket(admin), {
         teamId: first.teamId,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
   });
 
   it('rejects LEAVE_SESSION for a team the caller is not connected as', async () => {
@@ -212,7 +217,10 @@ describe('GameGateway — one live connection per team + admin kick', () => {
       game.gateway.handleLeaveSession(asSocket(first.socket), {
         teamId: first.teamId + 999,
       }),
-    ).rejects.toThrow(/own team/i);
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringMatching(/own team/i) as string,
+    });
   });
 
   it('removes the team from the roster when it leaves on its own', async () => {
@@ -231,7 +239,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     const second = await game.connectPlayer();
     await expect(
       game.gateway.handleJoinPlayers(asSocket(second), rejoinPayload()),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
   });
 
   it('broadcasts STATE_UPDATED to every room when a team leaves on its own', async () => {

@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -67,7 +66,7 @@ describe('GameGateway — set break end time', () => {
         game.gateway.handleSetBreakEndTime(asSocket(player), {
           breakEndsAt: BREAK_ENDS_AT,
         }),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
       expect((await game.snapshot()).breakEndsAt).toBeNull();
     });
 
@@ -78,7 +77,7 @@ describe('GameGateway — set break end time', () => {
         game.gateway.handleSetBreakEndTime(asSocket(admin), {
           breakEndsAt: 'soon',
         }),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
       expect((await game.snapshot()).breakEndsAt).toBeNull();
     });
   });

@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -88,7 +87,12 @@ describe('GameGateway — join players', () => {
         joinCode: game.joinCode,
         teamCode: first.teamCode,
       }),
-    ).rejects.toThrow('already connected on another device');
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringContaining(
+        'already connected on another device',
+      ) as string,
+    });
   });
 
   it('rejoins the same team when the player supplies its team code', async () => {
@@ -134,7 +138,7 @@ describe('GameGateway — join players', () => {
       game.gateway.handleJoinPlayers(asSocket(admin), {
         teamName: 'The Quizzards',
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
 
     expect((await game.snapshot()).teams).toEqual([]);
   });
@@ -148,7 +152,7 @@ describe('GameGateway — join players', () => {
         teamName: 'The Quizzards',
         joinCode: game.joinCode,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
 
     expect((await game.snapshot()).teams).toHaveLength(1);
   });

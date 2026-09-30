@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -96,7 +95,10 @@ describe('GameGateway — admin actions', () => {
       game.gateway.handleAdminAction(asSocket(display), {
         action: 'START_QUIZ',
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toEqual({
+      success: false,
+      error: 'Only admin clients may perform game actions',
+    });
     expect(game.roomEmits()).toEqual([]);
   });
 
@@ -107,7 +109,7 @@ describe('GameGateway — admin actions', () => {
     // ADVANCE is illegal from lobby - quiz hasn't started yet
     await expect(
       game.gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expect(game.roomEmits()).toEqual([]);
   });
 });

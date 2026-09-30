@@ -1,3 +1,4 @@
+import { WsException } from '@nestjs/websockets';
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
@@ -567,7 +568,11 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const act = async (action: GameAction): Promise<StateSnapshotPayload> => {
       actingAdmin ??= await connectAdmin();
       const emitsBefore = emits.length;
-      await gateway.handleAdminAction(asSocket(actingAdmin), { action });
+      const ack = await gateway.handleAdminAction(asSocket(actingAdmin), {
+        action,
+      });
+      // Specs that drive the game through `act` want a rejected action to fail loudly.
+      if (!ack.success) throw new WsException(ack.error);
       const adminRoom = sessionRoom(quiz.joinCode, SOCKET_ROOMS.ADMIN);
       const received = emits
         .slice(emitsBefore)

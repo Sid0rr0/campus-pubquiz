@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
@@ -23,17 +22,12 @@ describe('GameGateway — response indicators', () => {
   /** Whether a submit to the question is accepted (answering open) or rejected as locked. */
   async function isOpenForAnswering(questionId: number): Promise<boolean> {
     const [{ socket, teamId }] = game.teams;
-    try {
-      await game.gateway.handleSubmitAnswer(asSocket(socket), {
-        questionId,
-        teamId,
-        value: 'anything',
-      });
-      return true;
-    } catch (error) {
-      if (error instanceof WsException) return false;
-      throw error;
-    }
+    const ack = await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId,
+      teamId,
+      value: 'anything',
+    });
+    return ack.success;
   }
 
   async function actAll(actions: ('START_QUIZ' | 'ADVANCE')[]) {

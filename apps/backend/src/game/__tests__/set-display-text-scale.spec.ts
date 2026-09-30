@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -46,7 +45,7 @@ describe('GameGateway — set display text scale', () => {
       game.gateway.handleSetDisplayTextScale(asSocket(player), {
         displayTextScale: 1.5,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expect((await game.snapshot()).displayTextScale).toBe(1);
   });
 
@@ -57,7 +56,7 @@ describe('GameGateway — set display text scale', () => {
       game.gateway.handleSetDisplayTextScale(asSocket(admin), {
         displayTextScale: 3,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
     expect((await game.snapshot()).displayTextScale).toBe(1);
   });
 });

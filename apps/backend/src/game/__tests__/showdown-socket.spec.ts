@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -44,7 +43,7 @@ describe('GameGateway — showdown', () => {
           asSocket(admin),
           SHOWDOWN_PAYLOAD,
         ),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
 
       expect(game.roomEmits()).toEqual([]);
       expect((await game.snapshot()).activeShowdown).toBeNull();
@@ -61,7 +60,7 @@ describe('GameGateway — showdown', () => {
           asSocket(player),
           SHOWDOWN_PAYLOAD,
         ),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
 
       expect(game.roomEmits()).toEqual([]);
       expect((await game.snapshot()).activeShowdown).toBeNull();
@@ -164,7 +163,10 @@ describe('GameGateway — showdown', () => {
           teamId: game.teams[0].teamId,
           value: '95',
         }),
-      ).rejects.toThrow(WsException);
+      ).resolves.toEqual({
+        success: false,
+        error: 'You may only submit guesses for your own team',
+      });
 
       await expectNoGuessRecorded();
     });
@@ -179,7 +181,7 @@ describe('GameGateway — showdown', () => {
           teamId: outsider.teamId,
           value: '95',
         }),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
 
       await expectNoGuessRecorded();
     });
@@ -211,7 +213,7 @@ describe('GameGateway — showdown', () => {
           teamId: teamA.teamId,
           value: '95',
         }),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
 
       expect(game.roomEmits()).toEqual([]);
       const { activeShowdown } = await game.snapshot();
@@ -228,7 +230,7 @@ describe('GameGateway — showdown', () => {
           teamId: game.teams[0].teamId,
           value: '95',
         }),
-      ).rejects.toThrow(WsException);
+      ).resolves.toMatchObject({ success: false });
 
       await expectNoGuessRecorded();
     });

@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -124,7 +123,10 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
         category: 'custom',
         points: 1,
       }),
-    ).rejects.toThrow(new WsException('A custom bonus needs a reason'));
+    ).resolves.toEqual({
+      success: false,
+      error: 'A custom bonus needs a reason',
+    });
     expect(game.roomEmits()).toEqual([]);
   });
 });

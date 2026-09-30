@@ -58,8 +58,8 @@ describe('GameGateway — answer recorded / answer graded', () => {
     game.clearEmits();
   }
 
-  async function submit(questionId: number, value: string): Promise<void> {
-    await game.gateway.handleSubmitAnswer(asSocket(team), {
+  async function submit(questionId: number, value: string) {
+    return game.gateway.handleSubmitAnswer(asSocket(team), {
       questionId,
       teamId,
       value,
@@ -169,9 +169,12 @@ describe('GameGateway — answer recorded / answer graded', () => {
   });
 
   it('rejects a submit to a question that is not open with today’s message', async () => {
-    await expect(submit(999_999, 'Paris')).rejects.toThrow(
-      'Answers are locked for this question',
-    );
+    await expect(submit(999_999, 'Paris')).resolves.toEqual({
+      success: false,
+      error: expect.stringContaining(
+        'Answers are locked for this question',
+      ) as string,
+    });
   });
 
   it('rejects a submit on behalf of another team with today’s message', async () => {
@@ -183,6 +186,11 @@ describe('GameGateway — answer recorded / answer graded', () => {
         teamId,
         value: 'Paris',
       }),
-    ).rejects.toThrow('You may only submit answers for your own team');
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringContaining(
+        'You may only submit answers for your own team',
+      ) as string,
+    });
   });
 });

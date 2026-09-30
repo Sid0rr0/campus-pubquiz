@@ -194,7 +194,10 @@ describe('GameGateway — reveal paging', () => {
         teamId,
         value: 'Eiffel Tower',
       }),
-    ).rejects.toThrow('Answers are locked for this question');
+    ).resolves.toEqual({
+      success: false,
+      error: 'Answers are locked for this question',
+    });
   });
 
   it('rejects PREVIOUS at the first question of a break with no earlier block', async () => {

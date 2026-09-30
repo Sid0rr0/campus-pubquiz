@@ -742,3 +742,12 @@ export interface ActiveShowdownView {
   winnerTeamId?: number | null;
   isTie?: boolean;
 }
+
+/**
+ * What the server replies with (as the Socket.IO acknowledgement) to every
+ * client-to-server event. `error` is always client-safe: a domain rejection's
+ * own message, or a generic one for an unexpected failure.
+ */
+export type AckResult<T = void> =
+  | { success: true; data?: T }
+  | { success: false; error: string };

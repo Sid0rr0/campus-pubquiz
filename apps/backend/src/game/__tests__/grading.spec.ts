@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -130,7 +129,7 @@ describe('GameGateway — grading', () => {
         answerId,
         pointsAwarded: 2,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
 
     const [answer] = await game.inRequestContext(() =>
       game.answerService.listForQuestion(game.gameSessionId, questionId),

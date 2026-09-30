@@ -17,10 +17,20 @@ The handler method returns the result, and Nest sends a returned value as the So
 
 **Status:** ready-for-agent
 
-- [ ] Shared types export one acknowledgement result type (success with optional data, or failure with a message), following the project's response-envelope convention
-- [ ] Every client-to-server gateway event returns that result on success and on every rejection (payload validation, wrong room, domain rejections such as an illegal transition, ungraded answers, a bonus cap or a locked question)
-- [ ] An unexpected error is logged with context and returned with a generic message
-- [ ] The legacy "exception" emit to the sender still happens on rejection, so the current frontend behaves exactly as before
-- [ ] Handshake-time rejections (unknown session code, invalid or expired admin session) are unchanged
-- [ ] Gateway tests, calling handler methods directly as today, assert for each event: success on the happy path; failure with the client-safe message for validation, wrong-room and one representative domain rejection; the generic message for an unexpected error
-- [ ] Existing specs that expected a thrown WebSocket exception now expect a failure result with the same message, and keep their "nothing was emitted" assertions
+- [x] Shared types export one acknowledgement result type (success with optional data, or failure with a message), following the project's response-envelope convention
+- [x] Every client-to-server gateway event returns that result on success and on every rejection (payload validation, wrong room, domain rejections such as an illegal transition, ungraded answers, a bonus cap or a locked question)
+- [x] An unexpected error is logged with context and returned with a generic message
+- [x] The legacy "exception" emit to the sender still happens on rejection, so the current frontend behaves exactly as before
+- [x] Handshake-time rejections (unknown session code, invalid or expired admin session) are unchanged
+- [x] Gateway tests, calling handler methods directly as today, assert for each event: success on the happy path; failure with the client-safe message for validation, wrong-room and one representative domain rejection; the generic message for an unexpected error
+- [x] Existing specs that expected a thrown WebSocket exception now expect a failure result with the same message, and keep their "nothing was emitted" assertions
+
+## Comments
+
+Implemented in the commit that adds this note (see git history for the hash). `Status:` left as `ready-for-agent`; the triage vocabulary has no done state.
+
+- `AckResult<T>` (`{ success: true; data?: T } | { success: false; error: string }`) lives in `shared/types/src/socket-events.ts`.
+- Conversion is plain code: `acknowledge()` in `apps/backend/src/game/socket/acknowledge.util.ts`, called by every `@SubscribeMessage` handler body.
+- The legacy "exception" emit moved into `LegacyExceptionEmitInterceptor` (gateway-level `@UseInterceptors`), not the handler methods: the existing specs call handlers directly and assert the sender got nothing. Ticket 06 deletes that interceptor.
+- Specs that expected a thrown `WsException` now expect the failure result. Specs driving the game through `game.act` still see a throw (the harness converts a failed ack back into one).
+- Happy-path acks for all 11 events are in `acknowledgement.spec.ts`; the unexpected-error generic message and the interceptor are in `ack.spec.ts`.

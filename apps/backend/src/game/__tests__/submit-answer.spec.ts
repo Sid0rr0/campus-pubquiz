@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -107,7 +106,9 @@ describe('GameGateway — submit answer', () => {
 
   it('rejects SUBMIT_ANSWER while the question is not open for answering', async () => {
     // Still in the lobby - no question has been revealed yet.
-    await expect(submit(team.socket, team.teamId)).rejects.toThrow(WsException);
+    await expect(submit(team.socket, team.teamId)).resolves.toMatchObject({
+      success: false,
+    });
 
     expect(await storedAnswers()).toEqual([]);
   });
@@ -116,9 +117,9 @@ describe('GameGateway — submit answer', () => {
     await game.openFirstQuestion(admin);
     const attacker = await game.connectPlayer();
 
-    await expect(submit(attacker, team.teamId, 'Hijacked')).rejects.toThrow(
-      WsException,
-    );
+    await expect(
+      submit(attacker, team.teamId, 'Hijacked'),
+    ).resolves.toMatchObject({ success: false });
 
     expect(await storedAnswers()).toEqual([]);
   });
@@ -126,7 +127,9 @@ describe('GameGateway — submit answer', () => {
   it('rejects SUBMIT_ANSWER from a non-players client', async () => {
     await game.openFirstQuestion(admin);
 
-    await expect(submit(admin, team.teamId)).rejects.toThrow(WsException);
+    await expect(submit(admin, team.teamId)).resolves.toMatchObject({
+      success: false,
+    });
 
     expect(await storedAnswers()).toEqual([]);
   });

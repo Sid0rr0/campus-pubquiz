@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -44,7 +43,9 @@ describe('GameGateway — kahoot question hidden behind the leaderboard', () => 
   }
 
   it('rejects SUBMIT_ANSWER for a kahoot question still hidden behind the leaderboard', async () => {
-    await expect(submitToSecondQuestion()).rejects.toThrow(WsException);
+    await expect(submitToSecondQuestion()).resolves.toMatchObject({
+      success: false,
+    });
 
     expect(await storedAnswers()).toEqual([]);
   });

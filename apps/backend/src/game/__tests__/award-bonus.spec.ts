@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -115,7 +114,7 @@ describe('GameGateway — award bonus', () => {
         category: 'shot',
         points: 1,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
 
     expect(await storedBonuses()).toEqual([]);
   });
@@ -127,7 +126,7 @@ describe('GameGateway — award bonus', () => {
         category: 'custom',
         points: 1,
       }),
-    ).rejects.toThrow(WsException);
+    ).resolves.toMatchObject({ success: false });
 
     expect(await storedBonuses()).toEqual([]);
   });

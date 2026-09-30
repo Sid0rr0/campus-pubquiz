@@ -152,6 +152,11 @@ describe('GameGateway — team removed (kick / leave)', () => {
       game.gateway.handleLeaveSession(asSocket(scorer.socket), {
         teamId: bystander.teamId,
       }),
-    ).rejects.toThrow('Can only leave the session as your own team');
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringContaining(
+        'Can only leave the session as your own team',
+      ) as string,
+    });
   });
 });

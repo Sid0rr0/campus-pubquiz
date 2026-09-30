@@ -84,7 +84,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
         teamId,
         value: 'Eiffel Tower',
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
     // Only r2q2 has genuinely never been shown yet.
     expect(back.upcomingQuestions).toEqual([
       {
@@ -139,7 +139,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
         teamId,
         value: 'Eiffel Tower',
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ success: true });
     expect(backOnIntroCard.upcomingQuestions).toEqual([
       {
         roundNumber: 2,
