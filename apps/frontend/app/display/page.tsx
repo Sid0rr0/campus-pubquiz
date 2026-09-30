@@ -234,10 +234,7 @@ function DisplayPageContent() {
                 <div className="flex flex-1 items-center justify-center px-16 py-10">
                   <RulesContent
                     quizStructure={quizStructure}
-                    rules={settings.rules}
-                    enabledBonusCategories={settings.enabledBonusCategories}
-                    maxPlayersPerTeam={settings.maxPlayersPerTeam}
-                    extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+                    settings={settings}
                   />
                 </div>
               )}

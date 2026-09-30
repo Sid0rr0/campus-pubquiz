@@ -397,10 +397,7 @@ function PlayPageContent() {
           roundTitle={roundTitle}
           roundTitleCard={roundTitleCard}
           joinCode={snapshot.joinCode}
-          rules={settings.rules}
-          enabledBonusCategories={settings.enabledBonusCategories}
-          maxPlayersPerTeam={settings.maxPlayersPerTeam}
-          extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+          settings={settings}
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
           myTeamId={myTeamId}

@@ -1,25 +1,36 @@
 import {
   BONUS_CATEGORIES,
   DEFAULT_SESSION_SETTINGS,
-  type BonusCategory,
   type QuizStructureSummary,
+  type SessionSettings,
 } from '@campus-pubquiz/types';
 import {
   BONUS_CATEGORY_EXPLANATIONS,
   BONUS_CATEGORY_LABELS,
 } from '@/app/lib/bonus-categories';
 
+/** The session settings the rules screen reads. */
+export type RulesSettings = Pick<
+  SessionSettings,
+  | 'rules'
+  | 'enabledBonusCategories'
+  | 'maxPlayersPerTeam'
+  | 'extraPlayerPenaltyPoints'
+>;
+
+/** Standalone, with no live session to read from: default house rules and team size, and no bonus bullets (those are session config). */
+const STANDALONE_RULES_SETTINGS: RulesSettings = {
+  rules: DEFAULT_SESSION_SETTINGS.rules,
+  enabledBonusCategories: [],
+  maxPlayersPerTeam: DEFAULT_SESSION_SETTINGS.maxPlayersPerTeam,
+  extraPlayerPenaltyPoints: DEFAULT_SESSION_SETTINGS.extraPlayerPenaltyPoints,
+};
+
 interface RulesContentProps {
   /** Omitted when shown standalone with no live game session to read the structure from. */
   quizStructure?: QuizStructureSummary;
-  /** One entry per rendered bullet line — defaults to DEFAULT_SESSION_SETTINGS.rules when no live session's settings are available. */
-  rules?: string[];
-  /** This session's SessionSettings.enabledBonusCategories — appends one bullet per enabled category that has a fixed explanation (shot, selfie), since that's session config rather than part of the admin-authored `rules` text. "custom" has no fixed explanation and is never appended. */
-  enabledBonusCategories?: BonusCategory[];
-  /** This session's SessionSettings.maxPlayersPerTeam — combined with extraPlayerPenaltyPoints into a generated bullet shown first, ahead of the admin-authored `rules` text. */
-  maxPlayersPerTeam?: number;
-  /** This session's SessionSettings.extraPlayerPenaltyPoints — see maxPlayersPerTeam. */
-  extraPlayerPenaltyPoints?: number;
+  /** The session's settings: `rules` is one bullet per entry, `enabledBonusCategories` appends a bullet per category with a fixed explanation (shot, selfie; "custom" has none), and `maxPlayersPerTeam` with `extraPlayerPenaltyPoints` make a generated bullet shown first. Omitted when there is no live session. */
+  settings?: RulesSettings;
 }
 
 function pluralize(count: number, singular: string): string {
@@ -63,11 +74,14 @@ function getQuizStructureText({
 
 export function RulesContent({
   quizStructure,
-  rules = DEFAULT_SESSION_SETTINGS.rules,
-  enabledBonusCategories = [],
-  maxPlayersPerTeam = DEFAULT_SESSION_SETTINGS.maxPlayersPerTeam,
-  extraPlayerPenaltyPoints = DEFAULT_SESSION_SETTINGS.extraPlayerPenaltyPoints,
+  settings = STANDALONE_RULES_SETTINGS,
 }: RulesContentProps) {
+  const {
+    rules,
+    enabledBonusCategories,
+    maxPlayersPerTeam,
+    extraPlayerPenaltyPoints,
+  } = settings;
   const bonusRules = BONUS_CATEGORIES.filter(
     (category) =>
       enabledBonusCategories.includes(category) &&

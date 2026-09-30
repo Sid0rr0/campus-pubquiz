@@ -39,12 +39,7 @@ function RulesPageContent() {
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
       <RulesContent
         quizStructure={snapshot?.quizStructure}
-        rules={snapshot?.settings?.rules}
-        enabledBonusCategories={
-          snapshot?.settings?.enabledBonusCategories ?? []
-        }
-        maxPlayersPerTeam={snapshot?.settings?.maxPlayersPerTeam}
-        extraPlayerPenaltyPoints={snapshot?.settings?.extraPlayerPenaltyPoints}
+        settings={snapshot?.settings}
       />
     </main>
   );

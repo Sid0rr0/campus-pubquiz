@@ -1,10 +1,21 @@
+import type { ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
 import { RulesContent } from '@/app/components/rules-content';
 
+const settingsWith = (
+  overrides: Partial<ComponentProps<typeof RulesContent>['settings']> = {},
+) => ({
+  rules: ['House rule.'],
+  enabledBonusCategories: [],
+  maxPlayersPerTeam: 6,
+  extraPlayerPenaltyPoints: 2,
+  ...overrides,
+});
+
 describe('RulesContent', () => {
-  it('falls back to DEFAULT_SESSION_SETTINGS.rules when no rules prop is given', () => {
+  it('falls back to DEFAULT_SESSION_SETTINGS.rules when no settings are given', () => {
     render(<RulesContent />);
 
     for (const rule of DEFAULT_SESSION_SETTINGS.rules) {
@@ -13,7 +24,13 @@ describe('RulesContent', () => {
   });
 
   it('renders the injected rules array instead of the defaults', () => {
-    render(<RulesContent rules={['Custom rule one.', 'Custom rule two.']} />);
+    render(
+      <RulesContent
+        settings={settingsWith({
+          rules: ['Custom rule one.', 'Custom rule two.'],
+        })}
+      />,
+    );
 
     expect(screen.getByText('Custom rule one.')).toBeInTheDocument();
     expect(screen.getByText('Custom rule two.')).toBeInTheDocument();
@@ -25,8 +42,7 @@ describe('RulesContent', () => {
   it('appends a selfie bonus explainer when "selfie" is an enabled bonus category', () => {
     render(
       <RulesContent
-        rules={['House rule.']}
-        enabledBonusCategories={['selfie']}
+        settings={settingsWith({ enabledBonusCategories: ['selfie'] })}
       />,
     );
 
@@ -40,8 +56,7 @@ describe('RulesContent', () => {
   it('appends a shot bonus explainer when "shot" is an enabled bonus category', () => {
     render(
       <RulesContent
-        rules={['House rule.']}
-        enabledBonusCategories={['shot']}
+        settings={settingsWith({ enabledBonusCategories: ['shot'] })}
       />,
     );
 
@@ -55,8 +70,9 @@ describe('RulesContent', () => {
   it('appends both bonus explainers when both categories are enabled', () => {
     render(
       <RulesContent
-        rules={['House rule.']}
-        enabledBonusCategories={['shot', 'selfie', 'custom']}
+        settings={settingsWith({
+          enabledBonusCategories: ['shot', 'selfie', 'custom'],
+        })}
       />,
     );
 
@@ -65,10 +81,27 @@ describe('RulesContent', () => {
   });
 
   it('does not mention any bonus when no bonus categories are enabled', () => {
-    render(<RulesContent rules={['House rule.']} />);
+    render(<RulesContent settings={settingsWith()} />);
 
     expect(screen.queryByText(/Shot bonus:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Selfie bonus:/)).not.toBeInTheDocument();
+  });
+
+  it('states the team size and penalty from the settings', () => {
+    render(
+      <RulesContent
+        settings={settingsWith({
+          maxPlayersPerTeam: 4,
+          extraPlayerPenaltyPoints: 3,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Max 4 players per team, every additional player costs the team −3 points.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('states the break interval when blocks are evenly spaced', () => {

@@ -25,6 +25,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | Feature             | #   | Ticket                                                                                                                          | Commit    |
 | ------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | props-refactor      | 02  | [One shared function for the admin controls, used by /control and /remote](props-refactor/issues/02-shared-admin-controls.md) | —         |
+| props-refactor      | 04  | [Rules content and the phone's game status screens take the session settings object](props-refactor/issues/04-rules-content-takes-settings.md) | —         |
 | props-refactor      | 01  | [The admin view decides showdown eligibility and last-question-before-break](props-refactor/issues/01-server-decided-showdown-and-break-flags.md) | —         |
 | role-socket-hooks   | 04  | [Shared admin-session connection hook; /remote moves to the admin game hook](role-socket-hooks/issues/04-admin-session-connection-remote.md) | —         |
 | role-socket-hooks   | 03  | [Player game hook; /play and the join flow switch over](role-socket-hooks/issues/03-player-game-hook-play.md) | —         |

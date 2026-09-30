@@ -1,10 +1,12 @@
 import type {
   ActiveShowdownView,
-  BonusCategory,
   GameProgress,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
-import { RulesContent } from '@/app/components/rules-content';
+import {
+  RulesContent,
+  type RulesSettings,
+} from '@/app/components/rules-content';
 import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
@@ -16,10 +18,7 @@ interface GameStatusScreensProps {
   /** The round title on the big screen's reveal-intro or break round-intro card, from the players view. */
   roundTitleCard?: string | null;
   joinCode: string;
-  rules: string[];
-  enabledBonusCategories: BonusCategory[];
-  maxPlayersPerTeam: number;
-  extraPlayerPenaltyPoints: number;
+  settings: RulesSettings;
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
@@ -38,10 +37,7 @@ export function GameStatusScreens({
   roundTitle,
   roundTitleCard,
   joinCode,
-  rules,
-  enabledBonusCategories,
-  maxPlayersPerTeam,
-  extraPlayerPenaltyPoints,
+  settings,
   activeShowdown,
   showdownRevealStep,
   myTeamId,
@@ -78,13 +74,7 @@ export function GameStatusScreens({
       )}
       {!progress.isLeaderboardVisible && progress.status === 'rules' && (
         <div className="mt-6">
-          <RulesContent
-            quizStructure={quizStructure}
-            rules={rules}
-            enabledBonusCategories={enabledBonusCategories}
-            maxPlayersPerTeam={maxPlayersPerTeam}
-            extraPlayerPenaltyPoints={extraPlayerPenaltyPoints}
-          />
+          <RulesContent quizStructure={quizStructure} settings={settings} />
         </div>
       )}
       {!progress.isLeaderboardVisible &&
