@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   DEFAULT_SESSION_SETTINGS,
+  type AdminIndicators,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
@@ -29,6 +30,11 @@ import { getAdminControls } from '@/app/control/admin-controls';
 import { useAdminKeyboardShortcuts } from '@/app/control/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
+const NO_INDICATORS: AdminIndicators = {
+  onDisplayQuestionId: null,
+  titleCardRoundIndex: null,
+  breakRoundIndex: null,
+};
 
 function AdminPageContent() {
   const router = useRouter();
@@ -106,9 +112,8 @@ function AdminPageContent() {
   // What the big screen is showing was resolved by the server (the admin
   // view): the question on display, the round whose title card is up, and
   // the round whose break indicator is lit.
-  const displayQuestionId = snapshot?.onDisplayQuestionId ?? null;
-  const displayTitleRoundIndex = snapshot?.titleCardRoundIndex ?? null;
-  const displayBreakRoundIndex = snapshot?.breakRoundIndex ?? null;
+  const indicators = snapshot ?? NO_INDICATORS;
+  const displayQuestionId = indicators.onDisplayQuestionId;
   // Grading defaults to whatever's on display, but a manual pick from the
   // browser sticks — until Prev/Advance brings the displayed question back
   // around to match it, at which point the sync check below drops the
@@ -301,9 +306,7 @@ function AdminPageContent() {
                   currentRoundIndex={progress.roundIndex}
                   activeBlockStartIndex={activeBlockStartIndex}
                   selectedQuestionId={effectiveQuestionId}
-                  displayQuestionId={displayQuestionId}
-                  displayTitleRoundIndex={displayTitleRoundIndex}
-                  displayBreakRoundIndex={displayBreakRoundIndex}
+                  indicators={indicators}
                   onSelectQuestion={setSelectedQuestionId}
                   liveAnswers={liveAnswers}
                   teams={teams}

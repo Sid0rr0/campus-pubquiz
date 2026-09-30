@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  AdminIndicators,
   AnswersUpdatedPayload,
   QuestionView,
   QuizSummaryRound,
@@ -16,12 +17,8 @@ interface QuestionBrowserPanelProps {
   /** First round of the block currently in play — rounds before it are already locked and graded. */
   activeBlockStartIndex: number;
   selectedQuestionId: number | null;
-  /** Question currently shown on `/display`, or null when nothing question-shaped is on screen. */
-  displayQuestionId: number | null;
-  /** 0-based round index whose title card is on `/display`, or null. */
-  displayTitleRoundIndex: number | null;
-  /** 0-based round index whose break card is on `/display`, or null. */
-  displayBreakRoundIndex: number | null;
+  /** What the admin view marks as on air: the question, title card and break indicator. */
+  indicators: AdminIndicators;
   onSelectQuestion: (questionId: number) => void;
   liveAnswers: AnswersUpdatedPayload | null;
   teams: TeamView[];
@@ -76,9 +73,7 @@ export function QuestionBrowserPanel({
   currentRoundIndex,
   activeBlockStartIndex,
   selectedQuestionId,
-  displayQuestionId,
-  displayTitleRoundIndex,
-  displayBreakRoundIndex,
+  indicators,
   onSelectQuestion,
   liveAnswers,
   teams,
@@ -107,8 +102,9 @@ export function QuestionBrowserPanel({
             const isActiveRound =
               roundIndex >= activeBlockStartIndex &&
               roundIndex <= currentRoundIndex;
-            const isTitleOnDisplay = roundIndex === displayTitleRoundIndex;
-            const isBreakOnDisplay = roundIndex === displayBreakRoundIndex;
+            const isTitleOnDisplay =
+              roundIndex === indicators.titleCardRoundIndex;
+            const isBreakOnDisplay = roundIndex === indicators.breakRoundIndex;
             return (
               <div
                 key={`${round.title}-${roundIndex}`}
@@ -130,7 +126,8 @@ export function QuestionBrowserPanel({
                   </span>
                   {round.questions.map((question, questionIndex) => {
                     const isSelected = question.id === selectedQuestionId;
-                    const isOnDisplay = question.id === displayQuestionId;
+                    const isOnDisplay =
+                      question.id === indicators.onDisplayQuestionId;
                     const isUngraded = ungradedQuestionIds.includes(
                       question.id,
                     );
