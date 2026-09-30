@@ -1,60 +1,46 @@
 import { GameStateService } from '@/game/state/game-state.service';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  type MockGameProgressRepository,
-  createFakeShowdownService,
-  asShowdownService,
-  arrange,
-} from './test-utils';
+  TWO_ROUND_QUIZ,
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameStateService — core snapshot', () => {
-  let service: GameStateService;
-  let progressRepository: MockGameProgressRepository;
-  let joinCode: string;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    progressRepository = createFakeGameProgressRepository();
-    service = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(progressRepository),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
+    game = await harness.createGateway({ rounds: TWO_ROUND_QUIZ });
   });
 
   it('throws if used before onModuleInit resolves the seeded game', async () => {
     const uninitialized = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
+      game.seedService,
+      game.progressRepository,
+      game.orm,
+      game.answerService,
+      game.showdownService,
     );
+
     await expect(
-      uninitialized.applyAction('ABCDEF', 'START_QUIZ'),
+      uninitialized.applyAction(game.joinCode, 'START_QUIZ'),
     ).rejects.toThrow(/before initialization/i);
   });
 
   it('exposes the seeded game session id', () => {
-    expect(service.getGameSessionId(joinCode)).toBe(101);
+    expect(game.gameState.getGameSessionId(game.joinCode)).toBe(
+      game.gameSessionId,
+    );
   });
 
-  it('includes the session join code in the snapshot', () => {
-    expect(service.getSnapshot(joinCode).joinCode).toBe('ABCDEF');
+  it('includes the session join code in the snapshot', async () => {
+    expect((await game.snapshot()).joinCode).toBe(game.joinCode);
   });
 
-  it('summarizes the active quiz structure (blocks and topics per block) in the snapshot', () => {
-    // FIXTURE_SEEDED_GAME: round-1 (no break) + round-2 (breakAfter) = 1 block of 2 topics.
-    expect(service.getSnapshot(joinCode).quizStructure).toEqual({
+  it('summarizes the active quiz structure (blocks and topics per block) in the snapshot', async () => {
+    // round-1 (no break) + round-2 (breakAfter) = 1 block of 2 topics.
+    expect((await game.snapshot()).quizStructure).toEqual({
       blockCount: 1,
       topicsPerBlock: 2,
       breakRoundNumbers: [2],
@@ -63,26 +49,29 @@ describe('GameStateService — core snapshot', () => {
     });
   });
 
-  it('starts with no connected teams in the snapshot', () => {
-    expect(service.getSnapshot(joinCode).teams).toEqual([]);
+  it('starts with no connected teams in the snapshot', async () => {
+    expect((await game.snapshot()).teams).toEqual([]);
   });
 
-  it('reflects teams set via setTeams in the snapshot', () => {
-    arrange(service).setTeams(joinCode, [
-      { teamId: 31, teamName: 'The Quizzards' },
+  it('reflects a joined team in the snapshot, connected until its socket drops', async () => {
+    const { socket, teamId } = await game.joinTeam('The Quizzards');
+    expect((await game.snapshot()).teams).toEqual([
+      { teamId, teamName: 'The Quizzards', isConnected: true },
     ]);
 
-    expect(service.getSnapshot(joinCode).teams).toEqual([
-      { teamId: 31, teamName: 'The Quizzards', isConnected: false },
+    await game.gateway.handleDisconnect(asSocket(socket));
+
+    expect((await game.snapshot()).teams).toEqual([
+      { teamId, teamName: 'The Quizzards', isConnected: false },
     ]);
   });
 
   it('clears the connected teams when a new quiz session is selected', async () => {
-    arrange(service).setTeams(joinCode, [
-      { teamId: 31, teamName: 'The Quizzards' },
-    ]);
+    await game.joinTeam('The Quizzards');
 
-    const snapshot = await service.createSession(2);
+    const snapshot = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
 
     expect(snapshot.teams).toEqual([]);
   });

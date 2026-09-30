@@ -174,6 +174,8 @@ export interface RealStoreGateway extends PlayableQuiz {
   teamService: TeamService;
   bonusService: BonusService;
   showdownService: ShowdownService;
+  seedService: SeedService;
+  progressRepository: GameProgressRepository;
   /** Every room emit since the last clearEmits(), in emit order. */
   roomEmits: () => readonly RoomEmit[];
   /** Payloads of one event emitted to one room (of this session) since the last clearEmits(), in emit order. */
@@ -188,6 +190,8 @@ export interface RealStoreGateway extends PlayableQuiz {
   connectPlayer: (id?: string) => Promise<MockSocket>;
   /** Connects a players-room socket and joins it as `teamName`. */
   joinTeam: (teamName: string) => Promise<JoinedTeam>;
+  /** The ORM the stores run on, for a test that builds its own module over them. */
+  orm: MikroORM;
   /** The fake session service behind admin logins, for a test that needs a different user (e.g. a moderator). */
   sessionService: MockSessionService;
   /** Admin START_QUIZ, then ADVANCE past the rules screen and round intro to the first question. */
@@ -610,6 +614,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       connectPlayer,
       joinTeam,
       sessionService,
+      orm,
       openFirstQuestion,
       teams: [],
       act,

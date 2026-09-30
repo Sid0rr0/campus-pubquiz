@@ -1,52 +1,61 @@
+import { SessionCloseBlockedError } from '@/game/state/game-state.service';
 import {
-  GameStateService,
-  SessionCloseBlockedError,
-} from '@/game/state/game-state.service';
-import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  createFakeShowdownService,
-  asShowdownService,
-  arrange,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameStateService — session lifecycle admin surface (phase 4)', () => {
-  let service: GameStateService;
-  let joinCode: string;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let other: RealStoreGateway;
 
   beforeEach(async () => {
-    service = new GameStateService(
-      asSeedService(createFakeSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
+    game = await harness.createGateway();
+    // A second quiz in the same database, for the sessions created on top.
+    other = await harness.createGateway({
+      joinCode: 'OTHER1',
+      rounds: [
+        {
+          title: 'Imported Round',
+          breakAfter: true,
+          questions: [{ type: 'free_text', prompt: 'Q', answer: 'A' }],
+        },
+      ],
+    });
   });
+
+  function createOtherSession() {
+    return game.inRequestContext(() =>
+      game.gameState.createSession(other.quizId),
+    );
+  }
 
   describe('listSessions', () => {
     it('lists the one session created at boot', () => {
-      expect(service.listSessions()).toEqual([
-        { joinCode, quizId: 1, status: 'lobby', teamCount: 0 },
+      expect(game.gameState.listSessions()).toEqual([
+        {
+          joinCode: game.joinCode,
+          quizId: game.quizId,
+          status: 'lobby',
+          teamCount: 0,
+        },
       ]);
     });
 
     it('includes every concurrently-running session after creating another one', async () => {
-      const created = await service.createSession(2);
+      const created = await createOtherSession();
 
-      expect(service.listSessions()).toEqual(
+      expect(game.gameState.listSessions()).toEqual(
         expect.arrayContaining([
-          { joinCode, quizId: 1, status: 'lobby', teamCount: 0 },
+          {
+            joinCode: game.joinCode,
+            quizId: game.quizId,
+            status: 'lobby',
+            teamCount: 0,
+          },
           {
             joinCode: created.joinCode,
-            quizId: 2,
+            quizId: other.quizId,
             status: 'lobby',
             teamCount: 0,
           },
@@ -55,17 +64,15 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
     });
 
     it("reflects each session's own status and roster size", async () => {
-      await service.applyAction(joinCode, 'START_QUIZ');
-      arrange(service).setTeams(joinCode, [
-        { teamId: 31, teamName: 'The Quizzards' },
-        { teamId: 32, teamName: 'Pub Quiz Ninjas' },
-      ]);
+      await game.joinTeam('The Quizzards');
+      await game.joinTeam('Pub Quiz Ninjas');
+      await game.act('START_QUIZ');
 
-      const [listed] = service.listSessions();
+      const [listed] = game.gameState.listSessions();
 
       expect(listed).toEqual({
-        joinCode,
-        quizId: 1,
+        joinCode: game.joinCode,
+        quizId: game.quizId,
         status: 'rules',
         teamCount: 2,
       });
@@ -74,28 +81,32 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
 
   describe('closeSession', () => {
     it('rejects closing a session that has not ended yet', async () => {
-      await service.createSession(2);
-      await service.applyAction(joinCode, 'START_QUIZ');
+      await createOtherSession();
+      await game.act('START_QUIZ');
 
-      expect(() => service.closeSession(joinCode)).toThrow(
+      expect(() => game.gameState.closeSession(game.joinCode)).toThrow(
         SessionCloseBlockedError,
       );
-      expect(service.listSessions()).toEqual(
-        expect.arrayContaining([expect.objectContaining({ joinCode })]),
+      expect(game.gameState.listSessions()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ joinCode: game.joinCode }),
+        ]),
       );
     });
 
     it('evicts a session once it has ended', async () => {
-      await service.createSession(2);
-      await service.applyAction(joinCode, 'START_QUIZ');
-      await service.applyAction(joinCode, 'END_QUIZ');
+      await createOtherSession();
+      await game.act('START_QUIZ');
+      await game.act('END_QUIZ');
 
-      service.closeSession(joinCode);
+      game.gameState.closeSession(game.joinCode);
 
       expect(
-        service.listSessions().some((session) => session.joinCode === joinCode),
+        game.gameState
+          .listSessions()
+          .some((session) => session.joinCode === game.joinCode),
       ).toBe(false);
-      expect(() => service.getSnapshot(joinCode)).toThrow(
+      expect(() => game.gameState.getSnapshot(game.joinCode)).toThrow(
         /Unknown game session/,
       );
     });

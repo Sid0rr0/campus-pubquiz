@@ -3,66 +3,64 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
 } from '@campus-pubquiz/types';
+import { asSocket, createMockSocket } from '@/game/__tests__/test-utils';
 import {
-  asSocket,
-  createMockSocket,
-  createTestGateway,
-  type TestGateway,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — notifySessionClosed', () => {
-  let testGateway: TestGateway;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    testGateway = await createTestGateway();
+    game = await harness.createGateway();
   });
 
   it("emits SESSION_CLOSED to the session's players room", () => {
-    const { gateway, server } = testGateway;
+    game.gateway.notifySessionClosed(game.joinCode);
 
-    gateway.notifySessionClosed('ABCDEF');
-
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.SESSION_CLOSED, {
-      joinCode: 'ABCDEF',
-    });
+    expect(game.roomEmits()).toEqual([
+      {
+        rooms: [sessionRoom(game.joinCode, SOCKET_ROOMS.PLAYERS)],
+        event: SOCKET_EVENTS.SESSION_CLOSED,
+        payload: { joinCode: game.joinCode },
+      },
+    ]);
   });
 
   it('does not target the display or admin rooms', () => {
-    const { gateway, server } = testGateway;
+    game.gateway.notifySessionClosed(game.joinCode);
 
-    gateway.notifySessionClosed('ABCDEF');
-
-    expect(server.to).not.toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
+    const rooms = game.roomEmits().flatMap((emit) => emit.rooms);
+    expect(rooms).not.toContain(
+      sessionRoom(game.joinCode, SOCKET_ROOMS.DISPLAY),
     );
-    expect(server.to).not.toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
+    expect(rooms).not.toContain(sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN));
   });
 
   it('does not crash when a socket disconnects after its own session has been closed', async () => {
-    const { gateway, gameStateService } = testGateway;
-
     const player = createMockSocket(
       SOCKET_ROOMS.PLAYERS,
       {},
       'player-1',
-      'ABCDEF',
+      game.joinCode,
     );
-    await gateway.handleConnection(asSocket(player));
+    await game.gateway.handleConnection(asSocket(player));
 
-    // ABCDEF is the fixture's default session, which closeSession refuses to
+    // The seeded session is the default one, which closeSession refuses to
     // evict — creating a second session hands the default over to it, the
     // same way the real admin flow always has more than one session once a
     // second quiz is started.
-    await gameStateService.createSession(2);
-    await gameStateService.applyAction('ABCDEF', 'START_QUIZ');
-    await gameStateService.applyAction('ABCDEF', 'END_QUIZ');
-    gameStateService.closeSession('ABCDEF');
+    await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
+    await game.act('START_QUIZ');
+    await game.act('END_QUIZ');
+    game.gameState.closeSession(game.joinCode);
 
-    expect(() => gateway.handleDisconnect(asSocket(player))).not.toThrow();
+    await expect(
+      game.gateway.handleDisconnect(asSocket(player)),
+    ).resolves.toBeUndefined();
   });
 });

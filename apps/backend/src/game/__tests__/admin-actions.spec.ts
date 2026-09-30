@@ -2,155 +2,110 @@ import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  sessionRoom,
+  type SocketRoomName,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
+import { asSocket, createMockSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  asSocket,
-  type MockServer,
-  type MockAnswerService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — admin actions', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let answerService: MockAnswerService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    ({ gateway, server, answerService } = await createTestGateway());
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
   });
 
+  function lastState(room: SocketRoomName): StateSnapshotPayload | undefined {
+    return game
+      .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
+      .at(-1);
+  }
+
   it('applies an admin action and broadcasts the updated snapshot to all three rooms', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
+    const admin = await game.connectAdmin();
+    game.clearEmits();
+
+    await game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'START_QUIZ',
     });
-    await gateway.handleConnection(asSocket(admin));
 
-    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
-
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
-        progress: expect.objectContaining({ status: 'rules' }),
-      }),
-    );
+    for (const room of [
+      SOCKET_ROOMS.DISPLAY,
+      SOCKET_ROOMS.ADMIN,
+      SOCKET_ROOMS.PLAYERS,
+    ]) {
+      expect(lastState(room)?.progress.status).toBe('rules');
+    }
   });
 
   it('recomputes the leaderboard when toggled on, so every joined team shows up even before any grading', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const [{ teamId }] = game.teams;
+    const before = await game.snapshot();
+    expect(before.leaderboard).toEqual([]);
 
-    await gateway.handleAdminAction(asSocket(admin), {
-      action: 'TOGGLE_LEADERBOARD',
-    });
+    const toggled = await game.act('TOGGLE_LEADERBOARD');
 
-    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
+    expect(toggled.progress.isLeaderboardVisible).toBe(true);
+    expect(toggled.leaderboard).toEqual([
       expect.objectContaining({
-        leaderboard: [
-          {
-            teamId: 31,
-            teamName: 'The Quizzards',
-            totalPoints: 2,
-            bonusPoints: 0,
-          },
-        ],
+        teamId,
+        teamName: 'The Quizzards',
+        totalPoints: 0,
+        bonusPoints: 0,
       }),
-    );
+    ]);
   });
 
-  it('does not recompute the leaderboard when toggled off', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+  it('hides the leaderboard again when toggled off', async () => {
+    await game.act('TOGGLE_LEADERBOARD'); // on
 
-    await gateway.handleAdminAction(asSocket(admin), {
-      action: 'TOGGLE_LEADERBOARD',
-    }); // on
-    answerService.computeLeaderboard.mockClear();
+    const off = await game.act('TOGGLE_LEADERBOARD');
 
-    await gateway.handleAdminAction(asSocket(admin), {
-      action: 'TOGGLE_LEADERBOARD',
-    }); // off
-
-    expect(answerService.computeLeaderboard).not.toHaveBeenCalled();
+    expect(off.progress.isLeaderboardVisible).toBe(false);
   });
 
   it('toggles media fullscreen and broadcasts the updated snapshot', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const snapshot = await game.act('TOGGLE_MEDIA_FULLSCREEN');
 
-    await gateway.handleAdminAction(asSocket(admin), {
-      action: 'TOGGLE_MEDIA_FULLSCREEN',
-    });
-
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
-        progress: expect.objectContaining({ isMediaFullscreen: true }),
-      }),
-    );
+    expect(snapshot.progress.isMediaFullscreen).toBe(true);
   });
 
   it('replays media and broadcasts the bumped mediaReplayToken', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const snapshot = await game.act('REPLAY_MEDIA');
 
-    await gateway.handleAdminAction(asSocket(admin), {
-      action: 'REPLAY_MEDIA',
-    });
-
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
-        progress: expect.objectContaining({ mediaReplayToken: 1 }),
-      }),
-    );
+    expect(snapshot.progress.mediaReplayToken).toBe(1);
   });
 
   it('rejects an admin action from a non-admin client without broadcasting', async () => {
-    const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
-    await gateway.handleConnection(asSocket(display));
+    const display = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'display-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(display));
+    game.clearEmits();
 
     await expect(
-      gateway.handleAdminAction(asSocket(display), { action: 'START_QUIZ' }),
+      game.gateway.handleAdminAction(asSocket(display), {
+        action: 'START_QUIZ',
+      }),
     ).rejects.toThrow(WsException);
-    expect(server.emit).not.toHaveBeenCalled();
+    expect(game.roomEmits()).toEqual([]);
   });
 
   it('propagates an illegal-transition error for an out-of-order admin action without broadcasting', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = await game.connectAdmin();
+    game.clearEmits();
 
     // ADVANCE is illegal from lobby - quiz hasn't started yet
     await expect(
-      gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }),
+      game.gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }),
     ).rejects.toThrow(WsException);
-    expect(server.emit).not.toHaveBeenCalled();
+    expect(game.roomEmits()).toEqual([]);
   });
 });

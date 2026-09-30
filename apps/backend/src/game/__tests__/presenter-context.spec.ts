@@ -1,95 +1,53 @@
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  DEFAULT_SESSION_SETTINGS,
-  type LeaderboardEntry,
-} from '@campus-pubquiz/types';
-import type { SeededGame } from '@/db/seed.types';
-import { GameStateService } from '@/game/state/game-state.service';
-import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  createFakeShowdownService,
-  asShowdownService,
-  arrange,
-} from './test-utils';
+  TWO_ROUND_QUIZ,
+  TWO_ROUND_QUIZ_HOST_NOTE,
+  setupRealStoreGatewayTest,
+  type QuizRoundSpec,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-const TWO_BLOCK_GAME: SeededGame = {
-  quizId: 9,
-  gameSessionId: 109,
-  joinCode: 'ABCDEF',
-  rounds: [
-    {
-      id: 91,
-      title: 'Music',
-      breakAfter: true,
-      questions: [
-        {
-          id: 191,
-          type: 'free_text',
-          prompt: 'Band?',
-          points: 1,
-          answer: 'ABBA',
-        },
-      ],
-    },
-    {
-      id: 92,
-      title: 'Sport',
-      breakAfter: true,
-      questions: [
-        {
-          id: 192,
-          type: 'free_text',
-          prompt: 'Sport?',
-          points: 1,
-          answer: 'Golf',
-        },
-      ],
-    },
-  ],
-  settings: DEFAULT_SESSION_SETTINGS,
-};
-
-const TEAM_ENTRY: LeaderboardEntry = {
-  teamId: 31,
-  teamName: 'The Quizzards',
-  totalPoints: 2,
-  bonusPoints: 0,
-  positiveBonusPoints: 0,
-  negativeBonusPoints: 0,
-  roundPoints: [],
-};
-
-async function createService(game?: SeededGame): Promise<GameStateService> {
-  const seedService = createFakeGameStateSeedService();
-  if (game) seedService.seed.mockResolvedValue(game);
-  const service = new GameStateService(
-    asSeedService(seedService),
-    asGameProgressRepository(createFakeGameProgressRepository()),
-    createFakeOrm(),
-    asAnswerService(createFakeAnswerService()),
-    asShowdownService(createFakeShowdownService()),
-  );
-  await service.onModuleInit();
-  return service;
-}
+const TWO_BLOCK_QUIZ: QuizRoundSpec[] = [
+  {
+    title: 'Music',
+    breakAfter: true,
+    questions: [
+      { type: 'free_text', prompt: 'Band?', answer: 'ABBA', points: 1 },
+    ],
+  },
+  {
+    title: 'Sport',
+    breakAfter: true,
+    questions: [
+      { type: 'free_text', prompt: 'Sport?', answer: 'Golf', points: 1 },
+    ],
+  },
+];
 
 describe('GameStateService — getPresenterContext', () => {
-  const joinCode = 'ABCDEF';
-  let service: GameStateService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   async function advance(times: number): Promise<void> {
     for (let i = 0; i < times; i += 1) {
-      await service.applyAction(joinCode, 'ADVANCE');
+      await game.act('ADVANCE');
     }
   }
 
+  /** Has the team answer the first question correctly, so it is on the board for the leaderboard screens. */
+  async function answerFirstQuestion(answer: string): Promise<void> {
+    const { socket, teamId } = game.teams[0];
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId: game.rounds[0].questionIds[0],
+      teamId,
+      value: answer,
+    });
+  }
+
   function screens() {
-    const { currentScreen, nextScreen } = service.getPresenterContext(joinCode);
+    const { currentScreen, nextScreen } = game.gameState.getPresenterContext(
+      game.joinCode,
+    );
     return {
       current: currentScreen.heading,
       next: nextScreen?.heading ?? null,
@@ -100,7 +58,10 @@ describe('GameStateService — getPresenterContext', () => {
 
   describe('two-round, one-block quiz', () => {
     beforeEach(async () => {
-      service = await createService();
+      game = await harness.createGateway({
+        rounds: TWO_ROUND_QUIZ,
+        teamNames: ['The Quizzards'],
+      });
     });
 
     it('previews the rules screen from the lobby', () => {
@@ -108,21 +69,22 @@ describe('GameStateService — getPresenterContext', () => {
     });
 
     it('returns notes for the open question and previews the next question with its answer', async () => {
-      await service.applyAction(joinCode, 'START_QUIZ');
+      await game.act('START_QUIZ');
       await advance(2); // -> round_intro(0) -> r1q1
 
-      const context = service.getPresenterContext(joinCode);
-      expect(context.currentQuestionNotes).toBe(
-        'Remind teams: EU capitals only.',
-      );
+      const context = game.gameState.getPresenterContext(game.joinCode);
+      expect(context.currentQuestionNotes).toBe(TWO_ROUND_QUIZ_HOST_NOTE);
       expect(context.currentScreen.heading).toBe('R1 Q1');
       expect(context.nextScreen?.question).toEqual(
-        expect.objectContaining({ id: 22, answer: 'Jupiter' }),
+        expect.objectContaining({
+          id: game.rounds[0].questionIds[1],
+          answer: 'Jupiter',
+        }),
       );
     });
 
     it('walks every screen up to the break', async () => {
-      await service.applyAction(joinCode, 'START_QUIZ');
+      await game.act('START_QUIZ');
       expect(screens()).toMatchObject({
         current: 'Rules',
         next: 'Round 1 title',
@@ -133,7 +95,7 @@ describe('GameStateService — getPresenterContext', () => {
       expect(screens()).toMatchObject({
         current: 'Round 1 title',
         next: 'R1 Q1',
-        nextQuestionId: 21,
+        nextQuestionId: game.rounds[0].questionIds[0],
       });
 
       await advance(2); // -> r1q2, last question of a non-break round
@@ -144,7 +106,10 @@ describe('GameStateService — getPresenterContext', () => {
       });
 
       await advance(2); // -> round_intro(1) -> r2q1
-      expect(screens()).toMatchObject({ next: 'R2 Q2', nextQuestionId: 24 });
+      expect(screens()).toMatchObject({
+        next: 'R2 Q2',
+        nextQuestionId: game.rounds[1].questionIds[1],
+      });
 
       await advance(1); // -> r2q2, last question before the break
       expect(screens()).toMatchObject({ next: 'Locking answers' });
@@ -158,8 +123,10 @@ describe('GameStateService — getPresenterContext', () => {
     });
 
     it('walks from the break through every reveal to the final leaderboard', async () => {
-      await service.applyAction(joinCode, 'START_QUIZ');
-      await advance(8); // -> break_intro
+      await game.act('START_QUIZ');
+      await advance(2); // -> round_intro(0) -> r1q1
+      await answerFirstQuestion('Paris');
+      await advance(6); // -> break_intro
 
       expect(screens()).toMatchObject({
         current: 'Break 1',
@@ -192,7 +159,6 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Final standings',
       });
 
-      arrange(service).setLeaderboard(joinCode, [TEAM_ENTRY]);
       await advance(1); // -> ended, final leaderboard
       expect(screens()).toMatchObject({
         current: 'Leaderboard',
@@ -200,20 +166,24 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Next place (1 of 1)',
       });
 
-      await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
+      await game.act('REVEAL_NEXT_TEAM');
       expect(screens()).toMatchObject({ next: 'Quiz complete!' });
     });
   });
 
   describe('two-block quiz', () => {
     beforeEach(async () => {
-      service = await createService(TWO_BLOCK_GAME);
+      game = await harness.createGateway({
+        rounds: TWO_BLOCK_QUIZ,
+        teamNames: ['The Quizzards'],
+      });
     });
 
     it("previews the leaderboard after a block's last reveal, then the next round's title once every team is shown", async () => {
-      await service.applyAction(joinCode, 'START_QUIZ');
-      await advance(6); // round_intro, q1, locking, break_intro, reveal_intro, reveal
-      arrange(service).setLeaderboard(joinCode, [TEAM_ENTRY]);
+      await game.act('START_QUIZ');
+      await advance(2); // round_intro, q1
+      await answerFirstQuestion('ABBA');
+      await advance(4); // locking, break_intro, reveal_intro, reveal
 
       expect(screens()).toMatchObject({
         current: 'Revealing R1 Q1',
@@ -227,7 +197,7 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Next place (1 of 1)',
       });
 
-      await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
+      await game.act('REVEAL_NEXT_TEAM');
       expect(screens()).toMatchObject({
         next: 'Round 2 title',
         nextBody: 'Sport',

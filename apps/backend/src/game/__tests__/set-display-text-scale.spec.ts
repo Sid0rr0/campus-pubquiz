@@ -2,71 +2,62 @@ import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  sessionRoom,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  asSocket,
-  type MockServer,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — set display text scale', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    ({ gateway, server } = await createTestGateway());
+    game = await harness.createGateway();
   });
 
   it('sets displayTextScale and broadcasts it to every room', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = await game.connectAdmin();
+    game.clearEmits();
 
-    await gateway.handleSetDisplayTextScale(asSocket(admin), {
+    await game.gateway.handleSetDisplayTextScale(asSocket(admin), {
       displayTextScale: 1.5,
     });
 
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({ displayTextScale: 1.5 }),
-    );
+    for (const room of [
+      SOCKET_ROOMS.DISPLAY,
+      SOCKET_ROOMS.ADMIN,
+      SOCKET_ROOMS.PLAYERS,
+    ]) {
+      expect(
+        game
+          .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
+          .at(-1)?.displayTextScale,
+      ).toBe(1.5);
+    }
   });
 
   it('rejects SET_DISPLAY_TEXT_SCALE from a non-admin client', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
+    const player = await game.connectPlayer();
 
     await expect(
-      gateway.handleSetDisplayTextScale(asSocket(player), {
+      game.gateway.handleSetDisplayTextScale(asSocket(player), {
         displayTextScale: 1.5,
       }),
     ).rejects.toThrow(WsException);
+    expect((await game.snapshot()).displayTextScale).toBe(1);
   });
 
   it('rejects a displayTextScale outside the supported steps', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = await game.connectAdmin();
 
     await expect(
-      gateway.handleSetDisplayTextScale(asSocket(admin), {
+      game.gateway.handleSetDisplayTextScale(asSocket(admin), {
         displayTextScale: 3,
       }),
     ).rejects.toThrow(WsException);
+    expect((await game.snapshot()).displayTextScale).toBe(1);
   });
 });

@@ -1,34 +1,25 @@
-import { GameStateService } from '@/game/state/game-state.service';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  createFakeShowdownService,
-  asShowdownService,
-} from './test-utils';
+  TWO_ROUND_QUIZ,
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
+
+const UNKNOWN_QUESTION_ID = 999_999;
 
 describe('GameStateService — getAdminQuestionContext', () => {
-  let service: GameStateService;
-  let joinCode: string;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    service = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
+    game = await harness.createGateway({ rounds: TWO_ROUND_QUIZ });
   });
 
   it('returns the correct answer and round position for a question', () => {
-    expect(service.getAdminQuestionContext(joinCode, 23)).toEqual({
+    const landmarkId = game.rounds[1].questionIds[0];
+
+    expect(
+      game.gameState.getAdminQuestionContext(game.joinCode, landmarkId),
+    ).toEqual({
       type: 'free_text',
       prompt: 'Which landmark is shown?',
       mediaUrl: 'https://example.com/landmark.jpg',
@@ -42,7 +33,11 @@ describe('GameStateService — getAdminQuestionContext', () => {
   });
 
   it('numbers a question within its own round, not the whole quiz', () => {
-    expect(service.getAdminQuestionContext(joinCode, 22)).toMatchObject({
+    const planetId = game.rounds[0].questionIds[1];
+
+    expect(
+      game.gameState.getAdminQuestionContext(game.joinCode, planetId),
+    ).toMatchObject({
       roundNumber: 1,
       questionNumberInRound: 2,
       totalQuestionsInRound: 2,
@@ -50,6 +45,11 @@ describe('GameStateService — getAdminQuestionContext', () => {
   });
 
   it('returns null for an unknown question id', () => {
-    expect(service.getAdminQuestionContext(joinCode, 999999)).toBeNull();
+    expect(
+      game.gameState.getAdminQuestionContext(
+        game.joinCode,
+        UNKNOWN_QUESTION_ID,
+      ),
+    ).toBeNull();
   });
 });

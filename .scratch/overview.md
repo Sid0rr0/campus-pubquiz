@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by     |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 08  | [Migrate game-flow specs to the real-store harness](live-session-module/issues/08-migrate-game-flow-specs.md)                                | 01             |
 | 09  | [Migrate grading, answers and team specs to the real-store harness](live-session-module/issues/09-migrate-grading-and-team-specs.md)         | 01             |
 | 10  | [Contract: delete the fake-store harness](live-session-module/issues/10-contract-delete-fake-harness.md)                                     | 07, 08, 09     |
 
@@ -76,3 +75,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | live-session-module | 05  | [Bonus changed and leaderboard toggle](live-session-module/issues/05-bonus-changed-and-leaderboard-toggle.md)                  | `adc82fe` |
 | live-session-module | 06  | [Quiz edited (live answer-key fix)](live-session-module/issues/06-quiz-edited-regrade.md)                                      | `08a7de8` |
 | live-session-module | 07  | [Remaining events through the module; delete the pass-through setters](live-session-module/issues/07-remaining-events-and-delete-setters.md) | `2b7edc4` |
+| live-session-module | 08  | [Migrate game-flow specs to the real-store harness](live-session-module/issues/08-migrate-game-flow-specs.md)                   | —         |
