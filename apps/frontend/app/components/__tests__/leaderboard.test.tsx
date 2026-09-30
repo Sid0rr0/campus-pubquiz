@@ -39,6 +39,26 @@ const ENTRIES: LeaderboardEntry[] = [
   },
 ];
 
+function ranked(
+  teamId: number,
+  teamName: string,
+  totalPoints: number,
+  rank: number,
+  rankTo: number = rank,
+): LeaderboardEntry {
+  return {
+    teamId,
+    teamName,
+    totalPoints,
+    rank,
+    rankTo,
+    bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    roundPoints: [],
+  };
+}
+
 describe('Leaderboard', () => {
   it('shows every team when revealCount is omitted', () => {
     render(<Leaderboard entries={ENTRIES} />);
@@ -197,7 +217,7 @@ describe('Leaderboard', () => {
         teamName: 'Tied A',
         totalPoints: 20,
         rank: 2,
-        rankTo: 2,
+        rankTo: 4,
         bonusPoints: 0,
         positiveBonusPoints: 0,
         negativeBonusPoints: 0,
@@ -207,8 +227,8 @@ describe('Leaderboard', () => {
         teamId: 3,
         teamName: 'Tied B',
         totalPoints: 20,
-        rank: 3,
-        rankTo: 3,
+        rank: 2,
+        rankTo: 4,
         bonusPoints: 0,
         positiveBonusPoints: 0,
         negativeBonusPoints: 0,
@@ -218,7 +238,7 @@ describe('Leaderboard', () => {
         teamId: 4,
         teamName: 'Tied C',
         totalPoints: 20,
-        rank: 4,
+        rank: 2,
         rankTo: 4,
         bonusPoints: 0,
         positiveBonusPoints: 0,
@@ -284,7 +304,7 @@ describe('Leaderboard', () => {
         teamName: 'Tied A',
         totalPoints: 20,
         rank: 2,
-        rankTo: 2,
+        rankTo: 3,
         bonusPoints: 0,
         positiveBonusPoints: 0,
         negativeBonusPoints: 0,
@@ -294,7 +314,7 @@ describe('Leaderboard', () => {
         teamId: 3,
         teamName: 'Tied B',
         totalPoints: 20,
-        rank: 3,
+        rank: 2,
         rankTo: 3,
         bonusPoints: 0,
         positiveBonusPoints: 0,
@@ -446,6 +466,70 @@ describe('Leaderboard', () => {
       expect(within(leaderRow).getByLabelText('moved down')).toHaveClass(
         'text-red-500',
       );
+    });
+
+    describe('ties against the previous board (trendBaseline)', () => {
+      function trendOf(teamName: string): string | null {
+        return (
+          within(screen.getByText(teamName).closest('li')!)
+            .queryByLabelText(/moved up|moved down|no change/)
+            ?.getAttribute('aria-label') ?? null
+        );
+      }
+
+      it('shows no change for teams that stay tied', () => {
+        const board = [
+          ranked(1, 'Leader', 30, 1),
+          ranked(2, 'Amy', 20, 2, 3),
+          ranked(3, 'Zed', 20, 2, 3),
+        ];
+        const before = [
+          ranked(1, 'Leader', 25, 1),
+          ranked(2, 'Amy', 15, 2, 3),
+          ranked(3, 'Zed', 15, 2, 3),
+        ];
+
+        render(<Leaderboard entries={board} trendBaseline={before} />);
+
+        expect(trendOf('Amy')).toBe('no change');
+        expect(trendOf('Zed')).toBe('no change');
+      });
+
+      it('shows the team that pulled level as moving up, not the one it tied with as dropping', () => {
+        const board = [
+          ranked(1, 'Leader', 30, 1),
+          ranked(2, 'Amy', 20, 2, 3),
+          ranked(3, 'Zed', 20, 2, 3),
+        ];
+        const before = [
+          ranked(1, 'Leader', 30, 1),
+          ranked(2, 'Amy', 20, 2),
+          ranked(3, 'Zed', 10, 3),
+        ];
+
+        render(<Leaderboard entries={board} trendBaseline={before} />);
+
+        expect(trendOf('Amy')).toBe('no change');
+        expect(trendOf('Zed')).toBe('moved up');
+      });
+
+      it('shows a split tie: the team that pulled ahead moves up, the other stays put', () => {
+        const board = [
+          ranked(1, 'Leader', 30, 1),
+          ranked(3, 'Zed', 25, 2),
+          ranked(2, 'Amy', 20, 3),
+        ];
+        const before = [
+          ranked(1, 'Leader', 30, 1),
+          ranked(2, 'Amy', 20, 2, 3),
+          ranked(3, 'Zed', 20, 2, 3),
+        ];
+
+        render(<Leaderboard entries={board} trendBaseline={before} />);
+
+        expect(trendOf('Zed')).toBe('no change');
+        expect(trendOf('Amy')).toBe('moved down');
+      });
     });
 
     it('shows a dash when a team keeps the same rank after the round', () => {
@@ -1014,7 +1098,7 @@ describe('Leaderboard', () => {
             teamName: 'Alpha',
             totalPoints: 0,
             rank: 1,
-            rankTo: 1,
+            rankTo: 3,
             bonusPoints: 0,
             positiveBonusPoints: 0,
             negativeBonusPoints: 0,
@@ -1024,8 +1108,8 @@ describe('Leaderboard', () => {
             teamId: 2,
             teamName: 'Bravo',
             totalPoints: 0,
-            rank: 2,
-            rankTo: 2,
+            rank: 1,
+            rankTo: 3,
             bonusPoints: 0,
             positiveBonusPoints: 0,
             negativeBonusPoints: 0,
@@ -1035,7 +1119,7 @@ describe('Leaderboard', () => {
             teamId: 3,
             teamName: 'Charlie',
             totalPoints: 0,
-            rank: 3,
+            rank: 1,
             rankTo: 3,
             bonusPoints: 0,
             positiveBonusPoints: 0,

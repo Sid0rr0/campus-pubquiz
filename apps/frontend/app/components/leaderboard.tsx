@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { animate, motion } from 'motion/react';
 import {
   KAHOOT_LEADERBOARD_TOP_N,
+  rankTeams,
   type LeaderboardEntry,
 } from '@campus-pubquiz/types';
+import { formatRankLabel } from '@/app/lib/rank-label';
 
 /** `maxRank` for a Kahoot round — at most N teams are shown. Re-exported here (from shared/types) so existing imports of this constant from this module keep working. */
 export { KAHOOT_LEADERBOARD_TOP_N };
@@ -111,48 +113,18 @@ function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
 }
 
 /**
- * Competition-style rank groups (1st, 2nd, 2nd, 4th — never 1st, 2nd, 2nd,
- * 3rd) over items already sorted by score descending: a tie group's rank
- * index is its first member's position, so a tie pushes the next distinct
- * group down by the tie's full size, not just one step.
- */
-function tieGroups<T>(
-  sortedDesc: T[],
-  scoreOf: (item: T) => number,
-): Array<{ start: number; end: number }> {
-  const groups: Array<{ start: number; end: number }> = [];
-  let i = 0;
-  while (i < sortedDesc.length) {
-    let end = i;
-    while (
-      end + 1 < sortedDesc.length &&
-      scoreOf(sortedDesc[end + 1]) === scoreOf(sortedDesc[i])
-    ) {
-      end++;
-    }
-    groups.push({ start: i, end });
-    i = end + 1;
-  }
-  return groups;
-}
-
-/**
- * Competition rank (0-indexed) per team by a score selector, using the same
- * tie-grouping scheme as computeRankInfos for the current standings — so a
- * trend comparison between the two never mismatches over a tie.
+ * Competition rank (0-indexed) per team by a score selector, from the shared
+ * ranking rule — the same one the server ranks live standings with — so a
+ * trend comparison against a previous board never mismatches over a tie.
  */
 function rankIndexByScore(
   entries: LeaderboardEntry[],
   scoreOf: (entry: LeaderboardEntry) => number,
 ): Map<number, number> {
-  const sortedDesc = [...entries].sort((a, b) => scoreOf(b) - scoreOf(a));
-  const rankByTeamId = new Map<number, number>();
-  for (const { start, end } of tieGroups(sortedDesc, scoreOf)) {
-    for (let index = start; index <= end; index++) {
-      rankByTeamId.set(sortedDesc[index].teamId, start);
-    }
-  }
-  return rankByTeamId;
+  const ranked = rankTeams(
+    entries.map((entry) => ({ ...entry, totalPoints: scoreOf(entry) })),
+  );
+  return new Map(ranked.map((team) => [team.teamId, team.rank - 1]));
 }
 
 /**
@@ -224,32 +196,6 @@ function BonusIndicator({
       />
     </span>
   );
-}
-
-export interface RankInfo {
-  /** 0-indexed position of this tie group's first entry — drives styling. */
-  rankIndex: number;
-  /** Display label: "1." for a clear rank, or "2.–4." for a 3-way tie spanning those places. */
-  label: string;
-}
-
-/**
- * Groups consecutive entries (already sorted by totalPoints desc) that share
- * the same score into one tied rank, e.g. three teams tied for 2nd-4th all
- * get the label "2.–4." and the next team is ranked 5th, not 4th.
- */
-export function computeRankInfos(entries: LeaderboardEntry[]): RankInfo[] {
-  const infos: RankInfo[] = [];
-  for (const { start, end } of tieGroups(
-    entries,
-    (entry) => entry.totalPoints,
-  )) {
-    const label = start === end ? `${start + 1}.` : `${start + 1}.–${end + 1}.`;
-    for (let index = start; index <= end; index++) {
-      infos.push({ rankIndex: start, label });
-    }
-  }
-  return infos;
 }
 
 function zeroedOutEntry(entry: LeaderboardEntry): LeaderboardEntry {
@@ -371,7 +317,7 @@ interface LeaderboardRow {
 }
 
 /**
- * Chunks rows (already grouped by rankIndex via computeRankInfos, so equal
+ * Chunks rows (already ordered by rank, so equal
  * ranks are always contiguous) into one array per distinct rank — a tie
  * becomes a single multi-row group instead of several one-row ones.
  */
@@ -420,7 +366,6 @@ export function Leaderboard({
     // not restart on every snapshot broadcast while it's on screen.
   }, [hasOldState]);
 
-  const newRankInfos = computeRankInfos(entries);
   const fullOldEntries = fullOldEntriesForTrend(entries, previousEntries);
   // maxRank narrows the pool first — the reveal walk then counts up from the
   // worst-ranked team *within that pool* toward rank 1, so a capped Kahoot
@@ -448,26 +393,28 @@ export function Leaderboard({
     phase !== 'settled' && fullOldEntries !== undefined;
   let cappedRows: LeaderboardRow[];
   if (!isAnimatingOldState) {
-    const freshRows = entries.map((entry, index) => ({
+    // Entries arrive already ranked by the server; the rows just render them.
+    const freshRows = entries.map((entry) => ({
       entry,
-      ...newRankInfos[index],
+      rankIndex: entry.rank - 1,
+      label: formatRankLabel(entry),
     }));
     cappedRows =
       maxRank === undefined ? freshRows : freshRows.slice(0, maxRank);
   } else {
-    const pool = oldPoolEntries(entries, fullOldEntries, maxRank).sort(
-      (a, b) => b.totalPoints - a.totalPoints,
-    );
-    const oldRankInfos = computeRankInfos(pool);
+    // The old pool is a subset of the old board, so its ranks are recomputed
+    // with the shared ranking rule rather than read off the old entries.
+    const pool = rankTeams(oldPoolEntries(entries, fullOldEntries, maxRank));
     const entriesByTeamId = new Map(
       entries.map((entry) => [entry.teamId, entry]),
     );
-    cappedRows = pool.map((oldEntry, index) => ({
+    cappedRows = pool.map((oldEntry) => ({
       entry:
         phase === 'counting'
           ? (entriesByTeamId.get(oldEntry.teamId) ?? oldEntry)
           : oldEntry,
-      ...oldRankInfos[index],
+      rankIndex: oldEntry.rank - 1,
+      label: formatRankLabel(oldEntry),
     }));
   }
   // revealCount is a raw team count too, but counted in terms of *distinct

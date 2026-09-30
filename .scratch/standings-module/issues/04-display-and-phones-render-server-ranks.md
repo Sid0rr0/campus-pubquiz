@@ -6,9 +6,13 @@
 
 **Status:** ready-for-agent
 
-- [ ] The display leaderboard's own tie-grouping and rank-label code is gone. Labels come from `rank`/`rankTo`.
-- [ ] Trend and reveal code ranks previous boards with the shared ranking rule, not a local re-implementation.
-- [ ] Display, leaderboard-overlay and remote tests feed pre-ranked entries and assert:
+- [x] The display leaderboard's own tie-grouping and rank-label code is gone. Labels come from `rank`/`rankTo`.
+- [x] Trend and reveal code ranks previous boards with the shared ranking rule, not a local re-implementation.
+- [x] Display, leaderboard-overlay and remote tests feed pre-ranked entries and assert:
   - labels for a clear order and for a tie in the middle
   - trend arrows when a tie holds, forms and splits
   - one reveal step per tie group, including a kahoot round capped at top 5
+
+## Comments
+
+Implemented in the commit titled `feat(frontend): display and phone overlay render server ranks` (hash in git history). `app/components/leaderboard.tsx` (shared by `/display`, the phone overlay and the control preview; `/remote` has no leaderboard of its own) deleted `tieGroups`, `computeRankInfos` and `RankInfo`: fresh rows take labels from `rank`/`rankTo` via `formatRankLabel`, and the animated old board and trend baselines are ranked with the shared `rankTeams`. Fixture ranks were corrected where totals tie; new tests cover a tie holding, forming and splitting against the previous board. `Status:` left as `ready-for-agent` — the triage vocabulary has no done state.

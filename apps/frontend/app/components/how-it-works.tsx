@@ -34,7 +34,9 @@ export function HowItWorks() {
               {step.number}
             </div>
             <p className="mb-1 mt-3.5 text-base font-extrabold">{step.title}</p>
-            <p className="text-sm leading-relaxed text-foreground/65">{step.body}</p>
+            <p className="text-sm leading-relaxed text-foreground/65">
+              {step.body}
+            </p>
           </div>
         ))}
       </div>
