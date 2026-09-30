@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const {
   mockUseGameSocket,
@@ -56,7 +56,7 @@ describe('AdminPage — grading quick point buttons', () => {
   it('grades an ungraded answer with the full-points quick button', async () => {
     const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
@@ -64,7 +64,7 @@ describe('AdminPage — grading quick point buttons', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -105,7 +105,7 @@ describe('AdminPage — grading quick point buttons', () => {
   it('grades an ungraded answer with the half-points quick button', async () => {
     const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
@@ -113,7 +113,7 @@ describe('AdminPage — grading quick point buttons', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -153,7 +153,7 @@ describe('AdminPage — grading quick point buttons', () => {
 
   it('shows the awarded grade as a checked quick button that stays enabled for an already-graded answer', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
@@ -161,7 +161,7 @@ describe('AdminPage — grading quick point buttons', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -209,7 +209,7 @@ describe('AdminPage — grading quick point buttons', () => {
     const user = userEvent.setup();
     const gradeAnswer = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break' }),
         currentQuestion: null,
@@ -217,7 +217,7 @@ describe('AdminPage — grading quick point buttons', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),

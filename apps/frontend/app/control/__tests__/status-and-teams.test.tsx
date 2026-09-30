@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
@@ -41,7 +41,7 @@ describe('AdminPage — status and teams', () => {
 
   it('shows the current status and question once connected', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r1q1',
@@ -49,7 +49,7 @@ describe('AdminPage — status and teams', () => {
           prompt: 'Name a fruit',
           points: 1,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       liveAnswers: {
@@ -75,14 +75,14 @@ describe('AdminPage — status and teams', () => {
 
   it('lists the connected team names in the sidebar', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
         teams: [
           { teamId: 'team-1', teamName: 'The Quizzards' },
           { teamId: 'team-2', teamName: 'Beer Necessities' },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -96,7 +96,7 @@ describe('AdminPage — status and teams', () => {
 
   it('marks the teams that have answered the current question in the sidebar', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r1q1',
@@ -109,7 +109,7 @@ describe('AdminPage — status and teams', () => {
           { teamId: 'team-2', teamName: 'Beer Necessities' },
         ],
         answeredTeamIds: ['team-1'],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

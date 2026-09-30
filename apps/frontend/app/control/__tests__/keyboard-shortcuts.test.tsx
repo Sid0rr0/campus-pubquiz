@@ -2,7 +2,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
@@ -42,10 +42,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends ADVANCE when ArrowRight is pressed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -59,7 +59,7 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends PREVIOUS when ArrowLeft is pressed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r1q1',
@@ -70,7 +70,7 @@ describe('AdminPage — keyboard shortcuts', () => {
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
         ],
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -84,7 +84,7 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_LEADERBOARD when ArrowUp is pressed and the leaderboard is hidden', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress(), currentQuestion: null },
+      snapshot: adminView({ progress: progress(), currentQuestion: null }),
       connectionError: null,
       sendAction,
     });
@@ -98,10 +98,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_LEADERBOARD when ArrowDown is pressed and the leaderboard is visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -115,10 +115,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('ignores ArrowUp when the leaderboard is already visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -132,7 +132,7 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends REVEAL_NEXT_TEAM on ArrowRight while teams remain hidden on the leaderboard', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
@@ -150,7 +150,7 @@ describe('AdminPage — keyboard shortcuts', () => {
           },
         ],
         leaderboardRevealCount: 0,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -164,7 +164,7 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_LEADERBOARD on ArrowRight once every team has been revealed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({
           status: 'question_open',
           isLeaderboardVisible: true,
@@ -179,7 +179,7 @@ describe('AdminPage — keyboard shortcuts', () => {
           },
         ],
         leaderboardRevealCount: 1,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -193,10 +193,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_MEDIA_FULLSCREEN when Space is pressed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -210,11 +210,11 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('does not trigger a shortcut while typing in a text field', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction,
     });

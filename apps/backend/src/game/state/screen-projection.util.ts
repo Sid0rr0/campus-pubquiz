@@ -1,5 +1,6 @@
 import {
   SOCKET_ROOMS,
+  describeAdminIndicators,
   describeOnAirScreen,
   type SocketRoomName,
   type StateViewByRoom,
@@ -39,7 +40,11 @@ export function projectScreen(
           isQuestionHiddenBehindKahootLeaderboard(session),
       };
     case SOCKET_ROOMS.ADMIN:
-      return { ...snapshot, onAirScreen: screen };
+      return {
+        ...snapshot,
+        onAirScreen: screen,
+        ...describeAdminIndicators(snapshot),
+      };
     case SOCKET_ROOMS.PLAYERS:
       return isQuestionHiddenBehindKahootLeaderboard(session)
         ? { ...snapshot, currentQuestion: null, blockQuestions: [] }

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const {
   mockUseGameSocket,
@@ -61,10 +61,10 @@ describe('AdminPage — end quiz and close session', () => {
   it('asks for confirmation before ending the quiz', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -81,10 +81,10 @@ describe('AdminPage — end quiz and close session', () => {
   it('does not end the quiz when the confirmation is cancelled', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -107,10 +107,10 @@ describe('AdminPage — end quiz and close session', () => {
   it('sends END_QUIZ once the confirmation dialog is confirmed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -129,11 +129,11 @@ describe('AdminPage — end quiz and close session', () => {
 
   it('does not show the Close Session button while the quiz is still running', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -146,11 +146,11 @@ describe('AdminPage — end quiz and close session', () => {
 
   it('asks for confirmation before closing the session', async () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'ended' }),
         currentQuestion: null,
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -168,11 +168,11 @@ describe('AdminPage — end quiz and close session', () => {
 
   it('does not close the session when the confirmation is cancelled', async () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'ended' }),
         currentQuestion: null,
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -196,11 +196,11 @@ describe('AdminPage — end quiz and close session', () => {
 
   it('closes the session and redirects to /sessions once the confirmation dialog is confirmed', async () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'ended' }),
         currentQuestion: null,
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -226,11 +226,11 @@ describe('AdminPage — end quiz and close session', () => {
   it('shows an error when closing the session fails', async () => {
     const { SessionApiError } = await import('@/app/lib/sessions-api');
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'ended' }),
         currentQuestion: null,
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

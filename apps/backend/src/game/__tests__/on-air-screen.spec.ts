@@ -8,9 +8,18 @@ import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
   tieOnFirstQuestion,
+  TWO_ROUND_QUIZ,
   type QuizRoundSpec,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+
+function none() {
+  return {
+    onDisplayQuestionId: null,
+    titleCardRoundIndex: null,
+    breakRoundIndex: null,
+  };
+}
 
 describe('Screen projection — the named on-air screen', () => {
   const harness = setupRealStoreGatewayTest();
@@ -216,6 +225,80 @@ describe('Screen projection — the named on-air screen', () => {
 
       expect(admin.onAirScreen).toEqual({ kind: 'round_title', roundIndex: 0 });
       expect(players).not.toHaveProperty('onAirScreen');
+    });
+  });
+
+  describe('the admin indicators, across a whole-quiz walk', () => {
+    beforeEach(async () => {
+      game = await harness.createGateway({ rounds: TWO_ROUND_QUIZ });
+    });
+
+    function indicators() {
+      const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
+      return {
+        onDisplayQuestionId: view.onDisplayQuestionId,
+        titleCardRoundIndex: view.titleCardRoundIndex,
+        breakRoundIndex: view.breakRoundIndex,
+      };
+    }
+
+    it('marks the open question, the title cards and the break round as each comes on air', async () => {
+      const [round1, round2] = game.rounds.map((round) => round.questionIds);
+      const walk: [GameAction, ReturnType<typeof indicators>][] = [
+        ['START_QUIZ', none()],
+        ['ADVANCE', { ...none(), titleCardRoundIndex: 0 }], // round_intro(0)
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round1[0] }],
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round1[1] }],
+        ['ADVANCE', { ...none(), titleCardRoundIndex: 1 }], // round_intro(1)
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round2[0] }],
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round2[1] }],
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round2[1] }], // locking
+        ['ADVANCE', { ...none(), breakRoundIndex: 1 }], // break_intro
+        ['ADVANCE', { ...none(), titleCardRoundIndex: 0 }], // reveal_intro
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round1[0] }], // reveal
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round1[1] }],
+        ['ADVANCE', { ...none(), titleCardRoundIndex: 1 }], // reveal_intro
+        ['ADVANCE', { ...none(), onDisplayQuestionId: round2[0] }],
+      ];
+
+      for (const [action, expected] of walk) {
+        await game.act(action);
+        expect(indicators()).toEqual(expected);
+      }
+    });
+
+    it('lights the break round through the break review and its round-title pauses', async () => {
+      for (let i = 0; i < 9; i += 1)
+        await game.act(i === 0 ? 'START_QUIZ' : 'ADVANCE');
+      // -> reveal_intro; Previous steps back into the break review.
+      await game.act('PREVIOUS');
+
+      const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
+      expect(view.progress.status).toBe('break');
+      expect(view.breakRoundIndex).toBe(1);
+      expect(view.onDisplayQuestionId).toBe(
+        view.blockQuestions[view.progress.revealIndex].id,
+      );
+    });
+
+    it('keeps marking what is underneath while the leaderboard is up', async () => {
+      await game.act('START_QUIZ');
+      await game.act('ADVANCE'); // round_intro(0)
+      await game.act('ADVANCE'); // q1
+      const before = indicators();
+
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(indicators()).toEqual(before);
+      expect(before.onDisplayQuestionId).not.toBeNull();
+    });
+
+    it('does not put the indicators in the display or players views', () => {
+      for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.PLAYERS]) {
+        expect(game.gameState.getView(game.joinCode, room)).not.toHaveProperty(
+          'onDisplayQuestionId',
+        );
+      }
     });
   });
 

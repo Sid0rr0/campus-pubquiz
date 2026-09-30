@@ -1,6 +1,13 @@
 import { screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
-import type { AuthUser, GameProgress } from '@campus-pubquiz/types';
+import {
+  describeAdminIndicators,
+  describeOnAirScreen,
+  type AdminIndicators,
+  type AdminStatePayload,
+  type AuthUser,
+  type GameProgress,
+} from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 
 export const TEST_ADMIN_USER: AuthUser = {
@@ -45,4 +52,19 @@ export function getDesktopButton(name: RegExp): HTMLElement {
   return within(screen.getByRole('complementary')).getByRole('button', {
     name,
   });
+}
+
+/**
+ * Builds the view /control is sent from a partial fixture: the fixture is the
+ * core snapshot, and the on-air fields the server adds to the admin view are
+ * derived from it with the same shared rule the backend projection uses.
+ */
+export function adminView<T extends { progress: GameProgress }>(
+  snapshot: T,
+): T & Pick<AdminStatePayload, 'onAirScreen'> & AdminIndicators {
+  return {
+    ...snapshot,
+    onAirScreen: describeOnAirScreen(snapshot).screen,
+    ...describeAdminIndicators(snapshot),
+  };
 }

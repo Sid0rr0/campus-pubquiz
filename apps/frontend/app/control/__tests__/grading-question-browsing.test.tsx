@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const {
   mockUseGameSocket,
@@ -55,7 +55,7 @@ describe('AdminPage — grading question browsing', () => {
 
   it('requests and shows the first block question answers during the grading break', async () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
         currentQuestion: null,
@@ -63,7 +63,7 @@ describe('AdminPage — grading question browsing', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
           { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -80,7 +80,7 @@ describe('AdminPage — grading question browsing', () => {
 
   it('keeps showing the last question answers for grading once the quiz has ended', async () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'ended', isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -88,7 +88,7 @@ describe('AdminPage — grading question browsing', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
         ],
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -146,7 +146,7 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
         currentQuestion: null,
@@ -154,7 +154,7 @@ describe('AdminPage — grading question browsing', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
           { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -197,7 +197,7 @@ describe('AdminPage — grading question browsing', () => {
     });
     const focusAnswersQuestionId = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
         currentQuestion: null,
@@ -205,7 +205,7 @@ describe('AdminPage — grading question browsing', () => {
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
           { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -251,7 +251,7 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
         currentQuestion: null,
@@ -260,7 +260,7 @@ describe('AdminPage — grading question browsing', () => {
           { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
         ],
         ungradedQuestionIds: ['r1q2'],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -309,7 +309,7 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -318,7 +318,7 @@ describe('AdminPage — grading question browsing', () => {
           prompt: 'Name a fruit',
           points: 1,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),

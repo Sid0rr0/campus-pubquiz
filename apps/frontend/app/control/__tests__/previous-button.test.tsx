@@ -7,6 +7,7 @@ import {
   authenticatedAuthResult,
   getDesktopButton,
   progress,
+  adminView,
 } from './test-utils';
 
 const {
@@ -64,7 +65,7 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS to step back to the round intro card from the very first question of the quiz', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r1q1',
@@ -75,7 +76,7 @@ describe('AdminPage — previous button', () => {
         blockQuestions: [
           { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
         ],
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -89,11 +90,11 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS from the round intro card', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'round_intro' }),
         currentQuestion: null,
         roundTitle: 'Picture Round',
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -107,7 +108,7 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS when the Previous button is clicked after the first question of the open block', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open', questionIndex: 1 }),
         currentQuestion: {
           id: 'r1q2',
@@ -124,7 +125,7 @@ describe('AdminPage — previous button', () => {
             points: 1,
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -138,7 +139,7 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS to step back from the locking countdown to the question', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'locking' }),
         currentQuestion: {
           id: 'r2q3',
@@ -147,7 +148,7 @@ describe('AdminPage — previous button', () => {
           points: 3,
         },
         questionLockAt: Date.now() + 60_000,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -161,7 +162,7 @@ describe('AdminPage — previous button', () => {
   it("shows the Previous button on the first question of the first block, during a break — it pauses on that round's own title card", async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         blockQuestions: [
@@ -173,7 +174,7 @@ describe('AdminPage — previous button', () => {
             points: 1,
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -186,7 +187,7 @@ describe('AdminPage — previous button', () => {
 
   it('hides the Previous button on the first round title card during break review, with no earlier block', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break_round_intro' }),
         currentQuestion: null,
         blockQuestions: [
@@ -198,7 +199,7 @@ describe('AdminPage — previous button', () => {
             points: 1,
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -237,7 +238,7 @@ describe('AdminPage — previous button', () => {
     });
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({
           status: 'break_round_intro',
           roundIndex: 1,
@@ -253,7 +254,7 @@ describe('AdminPage — previous button', () => {
           },
         ],
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -269,7 +270,7 @@ describe('AdminPage — previous button', () => {
 
   it('shows the Previous button during a break once the admin has stepped back within the block', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break', roundIndex: 1, revealIndex: 1 }),
         currentQuestion: null,
         blockQuestions: [
@@ -281,7 +282,7 @@ describe('AdminPage — previous button', () => {
             points: 1,
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -317,7 +318,7 @@ describe('AdminPage — previous button', () => {
       ],
     });
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
         currentQuestion: null,
         blockQuestions: [
@@ -329,7 +330,7 @@ describe('AdminPage — previous button', () => {
           },
         ],
         joinCode: 'TESTCODE',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -342,10 +343,10 @@ describe('AdminPage — previous button', () => {
 
   it('shows the Previous button on the first reveal question, since it can still step back to the round intro card', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -357,10 +358,10 @@ describe('AdminPage — previous button', () => {
   it("shows the Previous button on the first reveal round intro card, even with no earlier block — it re-enters that block's own break review", async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'reveal_intro', revealIndex: 0 }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -374,10 +375,10 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS from a later reveal question', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'reveal', revealIndex: 1 }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -390,14 +391,14 @@ describe('AdminPage — previous button', () => {
 
   it('shows a disabled Previous button once the quiz has ended naturally, until the leaderboard is closed', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({
           status: 'ended',
           isLeaderboardVisible: true,
           previousStatus: 'reveal',
         }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -408,10 +409,10 @@ describe('AdminPage — previous button', () => {
 
   it('hides the Previous button on ended when no previousStatus was recorded (a legacy session)', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'ended', isLeaderboardVisible: false }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

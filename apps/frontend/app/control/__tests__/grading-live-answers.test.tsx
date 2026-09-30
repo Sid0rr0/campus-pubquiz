@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const {
   mockUseGameSocket,
@@ -54,7 +54,7 @@ describe('AdminPage — grading live answers', () => {
 
   it('shows live answers for the current question with team name and value', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -64,7 +64,7 @@ describe('AdminPage — grading live answers', () => {
           points: 1,
         },
         teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -101,7 +101,7 @@ describe('AdminPage — grading live answers', () => {
 
   it('shows every team even if it has not answered yet, and the round, question number and correct answer', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -114,7 +114,7 @@ describe('AdminPage — grading live answers', () => {
           { teamId: 'team-1', teamName: 'The Quizzards' },
           { teamId: 'team-2', teamName: 'Beer Necessities' },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),

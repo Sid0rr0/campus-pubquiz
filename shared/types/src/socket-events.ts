@@ -1,4 +1,8 @@
-import type { HeaderContent, OnAirScreen } from './on-air-screen';
+import type {
+  AdminIndicators,
+  HeaderContent,
+  OnAirScreen,
+} from './on-air-screen';
 import type {
   GameAction,
   GameProgress,
@@ -323,8 +327,9 @@ export interface DisplayStatePayload extends StateSnapshotPayload {
   /** True while the between-questions leaderboard covers a kahoot question that is already open underneath. */
   isBetweenKahootQuestions: boolean;
 }
-/** The quiz master's view: the snapshot plus the screen on air. */
-export interface AdminStatePayload extends StateSnapshotPayload {
+/** The quiz master's view: the snapshot plus the screen on air and what /control's question browser marks as on air. */
+export interface AdminStatePayload
+  extends StateSnapshotPayload, AdminIndicators {
   onAirScreen: OnAirScreen;
 }
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */

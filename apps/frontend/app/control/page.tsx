@@ -195,48 +195,12 @@ function AdminPageContent() {
   }
 
   const revealIndex = snapshot?.progress.revealIndex ?? 0;
-  // Which question the audience is actually looking at right now: the open
-  // question while it's open/locking, the block question at `revealIndex`
-  // during break (every position shows its own content, including the
-  // block's last, just-locked question), or the reveal question at
-  // `revealIndex` once the reveal walk starts.
-  const displayQuestionId =
-    gameStatus === 'question_open' || gameStatus === 'locking'
-      ? (snapshot?.currentQuestion?.id ?? null)
-      : gameStatus === 'break'
-        ? (snapshot?.blockQuestions?.[revealIndex]?.id ?? null)
-        : gameStatus === 'reveal'
-          ? (snapshot?.revealQuestions?.[revealIndex]?.id ?? null)
-          : null;
-  // round_intro/reveal_intro/break_round_intro show a round's title card
-  // instead of a question — no question id exists to mark on-display, so the
-  // browser instead marks that round's "T" indicator. reveal_intro's and
-  // break_round_intro's round comes from the block question at the
-  // crossed-into position (progress.roundIndex stays pinned to the block's
-  // last round throughout break/reveal, so it can't be used here);
-  // round_intro's round is progress.roundIndex itself.
-  const revealIntroRoundNumber =
-    snapshot?.revealQuestions?.[revealIndex]?.roundNumber;
-  const breakRoundIntroRoundNumber =
-    snapshot?.blockQuestions?.[revealIndex]?.roundNumber;
-  const displayTitleRoundIndex =
-    gameStatus === 'round_intro'
-      ? (snapshot?.progress.roundIndex ?? null)
-      : gameStatus === 'reveal_intro' && revealIntroRoundNumber !== undefined
-        ? revealIntroRoundNumber - 1
-        : gameStatus === 'break_round_intro' &&
-            breakRoundIntroRoundNumber !== undefined
-          ? breakRoundIntroRoundNumber - 1
-          : null;
-  // progress.roundIndex is the breakAfter round whose block just finished,
-  // so the "B" indicator on that round's row lights up for the whole break,
-  // including its entry beat and round-title pauses.
-  const displayBreakRoundIndex =
-    gameStatus === 'break_intro' ||
-    gameStatus === 'break' ||
-    gameStatus === 'break_round_intro'
-      ? (snapshot?.progress.roundIndex ?? null)
-      : null;
+  // What the big screen is showing was resolved by the server (the admin
+  // view): the question on display, the round whose title card is up, and
+  // the round whose break indicator is lit.
+  const displayQuestionId = snapshot?.onDisplayQuestionId ?? null;
+  const displayTitleRoundIndex = snapshot?.titleCardRoundIndex ?? null;
+  const displayBreakRoundIndex = snapshot?.breakRoundIndex ?? null;
   // Grading defaults to whatever's on display, but a manual pick from the
   // browser sticks — until Prev/Advance brings the displayed question back
   // around to match it, at which point the sync check below drops the

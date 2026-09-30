@@ -7,6 +7,7 @@ import {
   authenticatedAuthResult,
   getDesktopButton,
   progress,
+  adminView,
 } from './test-utils';
 
 const {
@@ -64,10 +65,10 @@ describe('AdminPage — advance controls', () => {
   it('sends START_QUIZ when the Start Quiz button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -81,10 +82,10 @@ describe('AdminPage — advance controls', () => {
   it('sends ADVANCE when the Advance button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -98,10 +99,10 @@ describe('AdminPage — advance controls', () => {
   it('shows a "Begin Quiz" button that sends ADVANCE while showing the rules screen', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'rules' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -115,11 +116,11 @@ describe('AdminPage — advance controls', () => {
   it('shows a "Start Round" button that sends ADVANCE on the round intro card', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'round_intro' }),
         currentQuestion: null,
         roundTitle: 'Picture Round',
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -133,7 +134,7 @@ describe('AdminPage — advance controls', () => {
   it('shows an Advance button that sends ADVANCE during the locking countdown, to skip it early', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'locking' }),
         currentQuestion: {
           id: 'r2q3',
@@ -142,7 +143,7 @@ describe('AdminPage — advance controls', () => {
           points: 3,
         },
         questionLockAt: Date.now() + 60_000,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -155,10 +156,10 @@ describe('AdminPage — advance controls', () => {
 
   it('does not offer a per-question lock control (locking is block-based)', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -172,10 +173,10 @@ describe('AdminPage — advance controls', () => {
   it('sends ADVANCE when the Advance button is clicked during a break', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break' }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -189,10 +190,10 @@ describe('AdminPage — advance controls', () => {
   it('sends ADVANCE to step through reveal questions', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });

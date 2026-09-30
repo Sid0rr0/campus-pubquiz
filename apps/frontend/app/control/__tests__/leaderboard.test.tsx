@@ -7,6 +7,7 @@ import {
   authenticatedAuthResult,
   getDesktopButton,
   progress,
+  adminView,
 } from './test-utils';
 
 const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
@@ -47,7 +48,7 @@ describe('AdminPage — leaderboard', () => {
   it('shows "Leaderboard" and sends TOGGLE_LEADERBOARD when hidden', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: { progress: progress(), currentQuestion: null },
+      snapshot: adminView({ progress: progress(), currentQuestion: null }),
       connectionError: null,
       sendAction,
     });
@@ -63,10 +64,10 @@ describe('AdminPage — leaderboard', () => {
   it('still shows "Leaderboard" and sends TOGGLE_LEADERBOARD when visible', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -81,7 +82,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('disables Previous while the leaderboard is visible', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({
           status: 'question_open',
           questionIndex: 1,
@@ -102,7 +103,7 @@ describe('AdminPage — leaderboard', () => {
             points: 1,
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -114,7 +115,7 @@ describe('AdminPage — leaderboard', () => {
   it('swaps Advance for "Show Next Team" and sends REVEAL_NEXT_TEAM while teams remain hidden', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
         leaderboard: [
@@ -132,7 +133,7 @@ describe('AdminPage — leaderboard', () => {
           },
         ],
         leaderboardRevealCount: 0,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -149,7 +150,7 @@ describe('AdminPage — leaderboard', () => {
   it('swaps Advance for "Hide Leaderboard" once every team is revealed', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({
           status: 'question_open',
           isLeaderboardVisible: true,
@@ -164,7 +165,7 @@ describe('AdminPage — leaderboard', () => {
           },
         ],
         leaderboardRevealCount: 1,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -187,7 +188,7 @@ describe('AdminPage — leaderboard', () => {
   it('re-enables Advance once the leaderboard is closed after a full reveal', async () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({
           status: 'question_open',
           isLeaderboardVisible: false,
@@ -202,7 +203,7 @@ describe('AdminPage — leaderboard', () => {
           },
         ],
         leaderboardRevealCount: 1,
-      },
+      }),
       connectionError: null,
       sendAction,
     });
@@ -217,7 +218,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('shows a leaderboard preview from the snapshot', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         teams: [
@@ -240,7 +241,7 @@ describe('AdminPage — leaderboard', () => {
             roundPoints: [],
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
       liveAnswers: null,

@@ -222,3 +222,62 @@ export function describeOnAirScreen(input: OnAirInput): OnAirDescription {
     header: getHeader(input, breakQuestion, revealQuestion),
   };
 }
+
+/** What the quiz master's question browser marks as on air, for /control. */
+export interface AdminIndicators {
+  /** The question on the big screen while one is shown (open, locking, break review, reveal), else null. */
+  onDisplayQuestionId: number | null;
+  /** The round whose title card is on the big screen (round intro, reveal intro, break round intro), else null. */
+  titleCardRoundIndex: number | null;
+  /** The round whose break indicator is lit — the block-ending round, for the whole of a break — else null. */
+  breakRoundIndex: number | null;
+}
+
+/**
+ * The indicators are about the content the session is on, not whether the
+ * leaderboard happens to cover it: hiding the board resumes exactly there, so
+ * they are read from the screen that would be on air without the board.
+ */
+export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
+  const { screen } = describeOnAirScreen({
+    ...input,
+    progress: { ...input.progress, isLeaderboardVisible: false },
+  });
+  switch (screen.kind) {
+    case 'question':
+    case 'locking':
+    case 'reveal':
+    case 'break_review':
+      return {
+        onDisplayQuestionId: screen.questionId,
+        titleCardRoundIndex: null,
+        breakRoundIndex:
+          screen.kind === 'break_review' ? input.progress.roundIndex : null,
+      };
+    case 'round_title':
+    case 'reveal_intro':
+      return {
+        onDisplayQuestionId: null,
+        titleCardRoundIndex: screen.roundIndex,
+        breakRoundIndex: null,
+      };
+    case 'break_round_title':
+      return {
+        onDisplayQuestionId: null,
+        titleCardRoundIndex: screen.roundIndex,
+        breakRoundIndex: input.progress.roundIndex,
+      };
+    case 'break_intro':
+      return {
+        onDisplayQuestionId: null,
+        titleCardRoundIndex: null,
+        breakRoundIndex: input.progress.roundIndex,
+      };
+    default:
+      return {
+        onDisplayQuestionId: null,
+        titleCardRoundIndex: null,
+        breakRoundIndex: null,
+      };
+  }
+}

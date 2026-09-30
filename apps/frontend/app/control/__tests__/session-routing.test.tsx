@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress } from './test-utils';
+import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const { mockUseGameSocket, mockUseAuth, searchParamsRef, routerRef } =
   vi.hoisted(() => ({
@@ -63,11 +63,11 @@ describe('AdminPage — session routing', () => {
   it('does not redirect to /sessions when an action is rejected on an otherwise-connected session', async () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'break' }),
         currentQuestion: null,
         joinCode: 'ABCDEF',
-      },
+      }),
       connectionError:
         'Cannot reveal yet: 1 question(s) still have ungraded answers.',
       sendAction: vi.fn(),
@@ -102,11 +102,11 @@ describe('AdminPage — session routing', () => {
   it('syncs the URL when the snapshot reports a different session (e.g. after selecting a new quiz)', async () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
         joinCode: 'GHIJKL',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -120,11 +120,11 @@ describe('AdminPage — session routing', () => {
   it('does not sync the URL when the snapshot already matches the session code', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
         joinCode: 'ABCDEF',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -136,11 +136,11 @@ describe('AdminPage — session routing', () => {
   it('renders an open-display link scoped to the current session', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
         joinCode: 'ABCDEF',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
