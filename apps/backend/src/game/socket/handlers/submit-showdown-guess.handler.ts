@@ -1,7 +1,8 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
 import type { SubmitShowdownGuessPayload } from '@campus-pubquiz/types';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import type { AnswerService } from '@/answer/answer.service';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import {
   InvalidShowdownError,
@@ -11,6 +12,7 @@ import {
 export async function submitShowdownGuess(
   deps: {
     gameState: GameStateService;
+    answerService: AnswerService;
     showdownService: ShowdownService;
     server: Server;
   },
@@ -54,6 +56,13 @@ export async function submitShowdownGuess(
     throw error;
   }
 
-  deps.gameState.setShowdownGuess(joinCode, payload.teamId, payload.value);
-  broadcastGameState(deps.server, joinCode, deps.gameState);
+  await deliverOutcome(
+    deps,
+    joinCode,
+    deps.gameState.showdownGuessSubmitted(
+      joinCode,
+      payload.teamId,
+      payload.value,
+    ),
+  );
 }

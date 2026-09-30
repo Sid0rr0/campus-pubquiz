@@ -11,6 +11,7 @@ import {
   GAME_STATE_FIXTURE_SEEDED_GAME,
   createFakeShowdownService,
   asShowdownService,
+  arrange,
 } from './test-utils';
 
 describe('GameStateService — leaderboard', () => {
@@ -43,7 +44,7 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('reveals teams one at a time via REVEAL_NEXT_TEAM, bottom-up and bounded by team count', async () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 1,
         teamName: 'First',
@@ -90,7 +91,7 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('also advances the leaderboard reveal on ADVANCE while the board is visible', async () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 1,
         teamName: 'First',
@@ -119,7 +120,7 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('resets the reveal count whenever the leaderboard is toggled', async () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 1,
         teamName: 'First',
@@ -143,7 +144,7 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('shows "Quiz complete!" rather than the leaderboard when the End Quiz button ends the quiz, until the admin reveals it', async () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 1,
         teamName: 'First',
@@ -186,7 +187,7 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('shows the leaderboard screen when advancing past the last reveal question ends the quiz naturally', async () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 1,
         teamName: 'First',
@@ -268,7 +269,7 @@ describe('GameStateService — leaderboard', () => {
     );
     await customService.onModuleInit();
 
-    customService.setLeaderboard(joinCode, [
+    arrange(customService).setLeaderboard(joinCode, [
       {
         teamId: 1,
         teamName: 'First',
@@ -310,7 +311,7 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('reflects a leaderboard set via setLeaderboard in the snapshot', () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 31,
         teamName: 'The Quizzards',

@@ -4,7 +4,8 @@ import {
   getTiedForFirst,
   type CreateShowdownRoundPayload,
 } from '@campus-pubquiz/types';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import type { AnswerService } from '@/answer/answer.service';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { ActiveShowdownRoundState } from '@/game/state/session-state';
 import {
@@ -15,6 +16,7 @@ import {
 export async function createShowdownRound(
   deps: {
     gameState: GameStateService;
+    answerService: AnswerService;
     showdownService: ShowdownService;
     server: Server;
   },
@@ -47,7 +49,7 @@ export async function createShowdownRound(
     throw error;
   }
 
-  deps.gameState.setActiveShowdownRound(joinCode, round);
+  const outcome = deps.gameState.showdownRoundCreated(joinCode, round);
   // Leaves isLeaderboardVisible untouched — the admin's own "Hide
   // Leaderboard" press (already wired into NavigationButtons' Advance
   // button whenever the leaderboard is up) is what clears it before the
@@ -55,5 +57,5 @@ export async function createShowdownRound(
   // and the next. Forcing it false here would yank the final standings off
   // the display the instant the tiebreaker question is saved, even though
   // it can now be created mid-break, well before anyone's seen them.
-  broadcastGameState(deps.server, joinCode, deps.gameState);
+  await deliverOutcome(deps, joinCode, outcome);
 }

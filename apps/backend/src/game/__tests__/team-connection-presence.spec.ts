@@ -59,7 +59,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
 
   it('allows a new device to join once the previous device disconnects', async () => {
     const playerA = await joinAsPlayer('socket-a');
-    gateway.handleDisconnect(asSocket(playerA));
+    await gateway.handleDisconnect(asSocket(playerA));
     const playerB = await connectPlayer(gateway, server, 'socket-b');
 
     await expect(
@@ -123,7 +123,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     server.to.mockClear();
     server.emit.mockClear();
 
-    gateway.handleDisconnect(asSocket(playerA));
+    await gateway.handleDisconnect(asSocket(playerA));
 
     expect(server.to).toHaveBeenCalledWith(
       sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
@@ -146,7 +146,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     server.to.mockClear();
     server.emit.mockClear();
 
-    gateway.handleDisconnect(asSocket(display));
+    await gateway.handleDisconnect(asSocket(display));
 
     expect(server.emit).not.toHaveBeenCalled();
   });
@@ -196,7 +196,7 @@ describe('GameGateway — one live connection per team + admin kick', () => {
     await gateway.handleKickTeam(asSocket(admin), { teamId: 31 });
     // A real disconnect() call fires the socket.io 'disconnect' event,
     // which our gateway hooks via handleDisconnect.
-    gateway.handleDisconnect(asSocket(playerA));
+    await gateway.handleDisconnect(asSocket(playerA));
 
     const playerB = await connectPlayer(gateway, server, 'socket-b');
     await expect(

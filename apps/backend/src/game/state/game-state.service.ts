@@ -7,7 +7,6 @@ import {
   type ActiveSessionSummary,
   type AdminQuestionContext,
   type GameAction,
-  type LeaderboardEntry,
   type PresenterContextPayload,
   type SessionSettings,
   type StateSnapshotPayload,
@@ -28,7 +27,6 @@ import {
   BlockGradingService,
   canBeUngraded,
 } from '@/game/state/block-grading.service';
-import { GameSessionMutationsService } from '@/game/state/game-session-mutations.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
@@ -50,6 +48,19 @@ import {
   type SessionState,
 } from '@/game/state/session-state';
 import {
+  findTeamIdBySocketId,
+  withActiveShowdownRound,
+  withAnsweredTeamIds,
+  withBreakEndTime,
+  withDisplayTextScale,
+  withLeaderboard,
+  withQuestionGradedStatus,
+  withShowdownGuess,
+  withTeamConnected,
+  withTeams,
+  withoutTeamConnection,
+} from '@/game/state/session-updates.util';
+import {
   BROADCAST_STATE_OUTCOME,
   isRevealEntry,
   type SessionOutcome,
@@ -65,9 +76,6 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 @Injectable()
 export class GameStateService implements OnModuleInit {
   private readonly sessionStore = new GameSessionStore();
-  private readonly mutations = new GameSessionMutationsService(
-    this.sessionStore,
-  );
   private readonly grading: BlockGradingService;
 
   constructor(
@@ -280,36 +288,37 @@ export class GameStateService implements OnModuleInit {
     ].map((question) => question.id);
   }
 
-  setLeaderboard(joinCode: string, leaderboard: LeaderboardEntry[]): void {
-    this.mutations.setLeaderboard(joinCode, leaderboard);
-  }
-
-  setTeams(joinCode: string, teams: TeamRosterEntry[]): void {
-    this.mutations.setTeams(joinCode, teams);
-  }
-
+  /** The socket currently connected for `teamId`, if any. */
   getConnectedSocketId(joinCode: string, teamId: number): string | undefined {
-    return this.mutations.getConnectedSocketId(joinCode, teamId);
+    return this.sessionStore.get(joinCode).connectedTeamSockets[teamId];
   }
 
-  setTeamConnected(joinCode: string, teamId: number, socketId: string): void {
-    this.mutations.setTeamConnected(joinCode, teamId, socketId);
-  }
-
-  /** Called on socket disconnect; returns the teamId that was cleared, if any. */
-  clearTeamConnectionBySocketId(
+  /**
+   * A team's socket joined: records its connection and the session's roster
+   * (which now includes the team) together, so the next snapshot shows the
+   * team as connected.
+   */
+  teamConnected(
     joinCode: string,
+    teamId: number,
     socketId: string,
-  ): number | null {
-    return this.mutations.clearTeamConnectionBySocketId(joinCode, socketId);
+    roster: TeamRosterEntry[],
+  ): SessionOutcome {
+    this.update(joinCode, (session) =>
+      withTeams(withTeamConnected(session, teamId, socketId), roster),
+    );
+    return BROADCAST_STATE_OUTCOME;
   }
 
-  setAnsweredTeamIds(
-    joinCode: string,
-    questionId: number,
-    teamIds: number[],
-  ): void {
-    this.mutations.setAnsweredTeamIds(joinCode, questionId, teamIds);
+  /** A socket dropped: frees its team, if it held one. Null when the socket wasn't a team's — nothing to push. */
+  teamDisconnected(joinCode: string, socketId: string): SessionOutcome | null {
+    const teamId = findTeamIdBySocketId(
+      this.sessionStore.get(joinCode),
+      socketId,
+    );
+    if (teamId === null) return null;
+    this.update(joinCode, (session) => withoutTeamConnection(session, teamId));
+    return BROADCAST_STATE_OUTCOME;
   }
 
   isQuestionOpenForAnswering(joinCode: string, questionId: number): boolean {
@@ -339,13 +348,23 @@ export class GameStateService implements OnModuleInit {
   }
 
   /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
-  setBreakEndTime(joinCode: string, breakEndsAt: number | null): void {
-    this.mutations.setBreakEndTime(joinCode, breakEndsAt);
+  breakEndTimeSet(
+    joinCode: string,
+    breakEndsAt: number | null,
+  ): SessionOutcome {
+    this.update(joinCode, (session) => withBreakEndTime(session, breakEndsAt));
+    return BROADCAST_STATE_OUTCOME;
   }
 
   /** Admin-set text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
-  setDisplayTextScale(joinCode: string, displayTextScale: number): void {
-    this.mutations.setDisplayTextScale(joinCode, displayTextScale);
+  displayTextScaleSet(
+    joinCode: string,
+    displayTextScale: number,
+  ): SessionOutcome {
+    this.update(joinCode, (session) =>
+      withDisplayTextScale(session, displayTextScale),
+    );
+    return BROADCAST_STATE_OUTCOME;
   }
 
   /** The in-progress/just-resolved showdown round, or null between rounds. */
@@ -358,20 +377,25 @@ export class GameStateService implements OnModuleInit {
     return this.sessionStore.get(joinCode).showdownRevealStep;
   }
 
-  setActiveShowdownRound(
+  /** A showdown round was created (or sudden death started a fresh one): caches it and resets the reveal step. */
+  showdownRoundCreated(
     joinCode: string,
     round: ActiveShowdownRoundState,
-  ): void {
-    this.mutations.setActiveShowdownRound(joinCode, round);
+  ): SessionOutcome {
+    this.update(joinCode, (session) => withActiveShowdownRound(session, round));
+    return BROADCAST_STATE_OUTCOME;
   }
 
-  setShowdownGuess(joinCode: string, teamId: number, value: string): void {
-    this.mutations.setShowdownGuess(joinCode, teamId, value);
-  }
-
-  /** In-memory-only override of the leaderboard-visible flag — see GameSessionMutationsService.setLeaderboardVisible. */
-  setLeaderboardVisible(joinCode: string, isVisible: boolean): void {
-    this.mutations.setLeaderboardVisible(joinCode, isVisible);
+  /** A team's showdown guess was stored: the latest guess replaces any earlier one. */
+  showdownGuessSubmitted(
+    joinCode: string,
+    teamId: number,
+    value: string,
+  ): SessionOutcome {
+    this.update(joinCode, (session) =>
+      withShowdownGuess(session, teamId, value),
+    );
+    return BROADCAST_STATE_OUTCOME;
   }
 
   /** This session's current settings — used by the gateway to filter enabled bonus categories. */
@@ -427,12 +451,10 @@ export class GameStateService implements OnModuleInit {
       action === 'TOGGLE_LEADERBOARD' &&
       snapshot.progress.isLeaderboardVisible
     ) {
-      this.setLeaderboard(
-        joinCode,
-        await this.answerService.computeLeaderboard(
-          this.getGameSessionId(joinCode),
-        ),
+      const leaderboard = await this.answerService.computeLeaderboard(
+        this.getGameSessionId(joinCode),
       );
+      this.update(joinCode, (session) => withLeaderboard(session, leaderboard));
     }
 
     const teamSyncTeamIds = isRevealEntry(
@@ -635,14 +657,15 @@ export class GameStateService implements OnModuleInit {
     reason: 'kicked' | 'left',
   ): Promise<SessionOutcome> {
     const socketId = this.getConnectedSocketId(joinCode, teamId);
-    if (socketId) {
-      this.mutations.clearTeamConnectionBySocketId(joinCode, socketId);
-    }
     const leaderboard = await this.answerService.computeLeaderboard(
       this.getGameSessionId(joinCode),
     );
-    this.mutations.setTeams(joinCode, roster);
-    this.mutations.setLeaderboard(joinCode, leaderboard);
+    this.update(joinCode, (session) =>
+      withLeaderboard(
+        withTeams(withoutTeamConnection(session, teamId), roster),
+        leaderboard,
+      ),
+    );
     const notices =
       reason === 'kicked' && socketId
         ? [{ socketId, event: SOCKET_EVENTS.TEAM_KICKED, payload: undefined }]
@@ -662,7 +685,7 @@ export class GameStateService implements OnModuleInit {
     const leaderboard = await this.answerService.computeLeaderboard(
       this.getGameSessionId(joinCode),
     );
-    this.mutations.setLeaderboard(joinCode, leaderboard);
+    this.update(joinCode, (session) => withLeaderboard(session, leaderboard));
     const socketId = awarded
       ? this.getConnectedSocketId(joinCode, awarded.teamId)
       : undefined;
@@ -689,20 +712,30 @@ export class GameStateService implements OnModuleInit {
       this.answerService.computeLeaderboard(gameSessionId),
     ]);
     const question = this.findQuestion(joinCode, questionId);
-    this.mutations.setLeaderboard(joinCode, leaderboard);
-    this.mutations.setAnsweredTeamIds(
-      joinCode,
-      questionId,
-      answers.map((answer) => answer.teamId),
-    );
-    this.mutations.setQuestionGradedStatus(
-      joinCode,
-      questionId,
+    const hasUngradedAnswers =
       question !== undefined &&
-        canBeUngraded(question) &&
-        answers.some((answer) => answer.gradedAt === null),
+      canBeUngraded(question) &&
+      answers.some((answer) => answer.gradedAt === null);
+    this.update(joinCode, (session) =>
+      withQuestionGradedStatus(
+        withAnsweredTeamIds(
+          withLeaderboard(session, leaderboard),
+          questionId,
+          answers.map((answer) => answer.teamId),
+        ),
+        questionId,
+        hasUngradedAnswers,
+      ),
     );
     return { ...BROADCAST_STATE_OUTCOME, answerListQuestionIds: [questionId] };
+  }
+
+  /** Applies a pure update to the session record — the only way this module writes a single field. */
+  private update(
+    joinCode: string,
+    change: (session: SessionState) => SessionState,
+  ): void {
+    this.sessionStore.set(joinCode, change(this.sessionStore.get(joinCode)));
   }
 
   private findQuestion(joinCode: string, questionId: number) {

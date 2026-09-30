@@ -12,6 +12,7 @@ import {
   type MockSeedService,
   createFakeShowdownService,
   asShowdownService,
+  arrange,
 } from './test-utils';
 
 describe('GameStateService — persistence and quiz selection', () => {
@@ -156,7 +157,7 @@ describe('GameStateService — persistence and quiz selection', () => {
   });
 
   it('creates a session from the lobby: allocates a new session, loads its rounds, starts fresh', async () => {
-    service.setLeaderboard(joinCode, [
+    arrange(service).setLeaderboard(joinCode, [
       {
         teamId: 31,
         teamName: 'The Quizzards',

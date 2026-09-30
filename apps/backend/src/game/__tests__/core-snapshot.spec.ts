@@ -10,6 +10,7 @@ import {
   type MockGameProgressRepository,
   createFakeShowdownService,
   asShowdownService,
+  arrange,
 } from './test-utils';
 
 describe('GameStateService — core snapshot', () => {
@@ -67,7 +68,9 @@ describe('GameStateService — core snapshot', () => {
   });
 
   it('reflects teams set via setTeams in the snapshot', () => {
-    service.setTeams(joinCode, [{ teamId: 31, teamName: 'The Quizzards' }]);
+    arrange(service).setTeams(joinCode, [
+      { teamId: 31, teamName: 'The Quizzards' },
+    ]);
 
     expect(service.getSnapshot(joinCode).teams).toEqual([
       { teamId: 31, teamName: 'The Quizzards', isConnected: false },
@@ -75,7 +78,9 @@ describe('GameStateService — core snapshot', () => {
   });
 
   it('clears the connected teams when a new quiz session is selected', async () => {
-    service.setTeams(joinCode, [{ teamId: 31, teamName: 'The Quizzards' }]);
+    arrange(service).setTeams(joinCode, [
+      { teamId: 31, teamName: 'The Quizzards' },
+    ]);
 
     const snapshot = await service.createSession(2);
 

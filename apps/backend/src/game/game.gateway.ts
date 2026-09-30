@@ -96,9 +96,9 @@ export class GameGateway
     );
   }
 
-  handleDisconnect(client: Socket): void {
-    disconnectClient(
-      { gameState: this.gameState, server: this.server, logger: this.logger },
+  async handleDisconnect(client: Socket): Promise<void> {
+    await disconnectClient(
+      { ...this.outcomeDeps, logger: this.logger },
       client,
     );
   }
@@ -405,7 +405,6 @@ export class GameGateway
 
   @SubscribeMessage(SOCKET_EVENTS.SET_BREAK_END_TIME)
   @CreateRequestContext()
-  // eslint-disable-next-line @typescript-eslint/require-await -- @CreateRequestContext() wraps this in a Promise at runtime regardless of the body, so the declared type must stay Promise<void> for callers (and tests) that await it
   async handleSetBreakEndTime(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
@@ -423,16 +422,11 @@ export class GameGateway
       `${SOCKET_EVENTS.SET_BREAK_END_TIME} from ${client.id}: breakEndsAt=${payload.breakEndsAt}`,
     );
 
-    updateBreakEndTime(
-      { gameState: this.gameState, server: this.server },
-      joinCode,
-      payload,
-    );
+    await updateBreakEndTime(this.outcomeDeps, joinCode, payload);
   }
 
   @SubscribeMessage(SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE)
   @CreateRequestContext()
-  // eslint-disable-next-line @typescript-eslint/require-await -- @CreateRequestContext() wraps this in a Promise at runtime regardless of the body, so the declared type must stay Promise<void> for callers (and tests) that await it
   async handleSetDisplayTextScale(
     @ConnectedSocket() client: Socket,
     @MessageBody() rawPayload: unknown,
@@ -452,11 +446,7 @@ export class GameGateway
       `${SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE} from ${client.id}: displayTextScale=${payload.displayTextScale}`,
     );
 
-    updateDisplayTextScale(
-      { gameState: this.gameState, server: this.server },
-      joinCode,
-      payload,
-    );
+    await updateDisplayTextScale(this.outcomeDeps, joinCode, payload);
   }
 
   @SubscribeMessage(SOCKET_EVENTS.AWARD_BONUS)
@@ -507,11 +497,7 @@ export class GameGateway
     );
 
     await createShowdownRound(
-      {
-        gameState: this.gameState,
-        showdownService: this.showdownService,
-        server: this.server,
-      },
+      { ...this.outcomeDeps, showdownService: this.showdownService },
       joinCode,
       payload,
     );
@@ -537,11 +523,7 @@ export class GameGateway
     );
 
     await submitShowdownGuess(
-      {
-        gameState: this.gameState,
-        showdownService: this.showdownService,
-        server: this.server,
-      },
+      { ...this.outcomeDeps, showdownService: this.showdownService },
       client,
       joinCode,
       payload,

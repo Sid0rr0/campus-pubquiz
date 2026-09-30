@@ -11,8 +11,17 @@ With every caller migrated, the read-spread-write mutations layer is deleted and
 
 **Status:** ready-for-agent
 
-- [ ] Connection presence, break end time, display text scale and showdown flows behave exactly as today (existing specs pass).
-- [ ] The mutations layer no longer exists. The Live session interface exposes only event operations plus the read-only queries listed in the spec.
-- [ ] No socket handler, timer callback or REST notification emits game-state events except through the delivery step.
-- [ ] The concurrent-sessions isolation specs still pass: one session's events never refresh or push to another session's rooms.
-- [ ] Restart recovery (progress and timers restored from persistence) behaves exactly as today.
+- [x] Connection presence, break end time, display text scale and showdown flows behave exactly as today (existing specs pass).
+- [x] The mutations layer no longer exists. The Live session interface exposes only event operations plus the read-only queries listed in the spec.
+- [x] No socket handler, timer callback or REST notification emits game-state events except through the delivery step.
+- [x] The concurrent-sessions isolation specs still pass: one session's events never refresh or push to another session's rooms.
+- [x] Restart recovery (progress and timers restored from persistence) behaves exactly as today.
+
+## Comments
+
+Implemented in the commit recorded in `.scratch/overview.md`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and the overview records completion.
+
+- `GameStateService` gained event operations `teamConnected`, `teamDisconnected` (null when the socket held no team), `breakEndTimeSet`, `displayTextScaleSet`, `showdownRoundCreated` and `showdownGuessSubmitted`; each returns a `SessionOutcome` that the handler passes to `deliverOutcome`.
+- `GameSessionMutationsService` and every field-level setter (leaderboard, teams, answered-team ids, graded status, leaderboard visibility, team connection) are gone. Their logic lives as pure `with…` transforms in `session-updates.util.ts`, applied only inside the module's event operations.
+- `handleDisconnect` and the break-end-time / text-scale handlers are now async so they can await the delivery step.
+- Specs still on the fake-store harness that arranged state through the deleted setters now use a test-only `arrange(service)` helper in `test-utils.ts`; it goes away when 08/09 migrate them. `team-presence.spec.ts` was rewritten against `teamConnected`/`teamDisconnected`. New real-store spec: `remaining-events.spec.ts`.

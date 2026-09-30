@@ -107,7 +107,7 @@ describe('GameStateService — showdown reveal-step gating', () => {
     // Admin composes the tiebreaker question during grading, before the
     // block's own answers have been revealed to the audience.
     const round = twoTeamRound();
-    service.setActiveShowdownRound(joinCode, round);
+    service.showdownRoundCreated(joinCode, round);
 
     const stepped = await service.applyAction(joinCode, 'ADVANCE');
 
@@ -127,7 +127,7 @@ describe('GameStateService — showdown reveal-step gating', () => {
     const round = twoTeamRound();
     round.participants[0].guess = '40';
     // Team B (seatIndex 1) still hasn't guessed.
-    service.setActiveShowdownRound(joinCode, round);
+    service.showdownRoundCreated(joinCode, round);
 
     await expect(service.applyAction(joinCode, 'ADVANCE')).rejects.toThrow(
       'not every team has submitted a guess',
@@ -159,7 +159,7 @@ describe('GameStateService — showdown reveal-step gating', () => {
     const round = twoTeamRound();
     round.participants[0].guess = '40';
     round.participants[1].guess = '50';
-    service.setActiveShowdownRound(joinCode, round);
+    service.showdownRoundCreated(joinCode, round);
 
     const step1 = await service.applyAction(joinCode, 'ADVANCE');
     expect(step1.showdownRevealStep).toBe(1);
@@ -207,7 +207,7 @@ describe('GameStateService — showdown reveal-step gating', () => {
     const round = twoTeamRound();
     round.participants[0].guess = '40';
     round.participants[1].guess = '50';
-    service.setActiveShowdownRound(joinCode, round);
+    service.showdownRoundCreated(joinCode, round);
     await service.applyAction(joinCode, 'ADVANCE'); // step 1
     await service.applyAction(joinCode, 'ADVANCE'); // step 2
 

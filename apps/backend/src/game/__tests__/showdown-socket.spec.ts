@@ -14,6 +14,7 @@ import {
   asSocket,
   type MockServer,
   type MockShowdownService,
+  arrange,
 } from './test-utils';
 
 const TIED_LEADERBOARD = [
@@ -50,7 +51,7 @@ describe('GameGateway — showdown', () => {
 
   describe('CREATE_SHOWDOWN_ROUND', () => {
     it('rejects when nobody is tied for first', async () => {
-      gameStateService.setLeaderboard('ABCDEF', [
+      arrange(gameStateService).setLeaderboard('ABCDEF', [
         {
           teamId: 31,
           teamName: 'Team A',
@@ -86,7 +87,7 @@ describe('GameGateway — showdown', () => {
     });
 
     it('rejects CREATE_SHOWDOWN_ROUND from a non-admin client', async () => {
-      gameStateService.setLeaderboard('ABCDEF', TIED_LEADERBOARD);
+      arrange(gameStateService).setLeaderboard('ABCDEF', TIED_LEADERBOARD);
       const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
       await gateway.handleConnection(asSocket(player));
 
@@ -101,10 +102,10 @@ describe('GameGateway — showdown', () => {
     });
 
     it('creates a round for the tied teams without touching leaderboard visibility, and broadcasts activeShowdown', async () => {
-      gameStateService.setLeaderboard('ABCDEF', TIED_LEADERBOARD);
+      arrange(gameStateService).setLeaderboard('ABCDEF', TIED_LEADERBOARD);
       // The final standings are still up (e.g. auto-shown when the quiz hit
       // 'ended') — creating the round must not yank them away.
-      gameStateService.setLeaderboardVisible('ABCDEF', true);
+      arrange(gameStateService).setLeaderboardVisible('ABCDEF', true);
       showdownService.createRound.mockResolvedValueOnce({
         id: 900,
         question: 'How many?',
@@ -153,7 +154,7 @@ describe('GameGateway — showdown', () => {
 
   describe('SUBMIT_SHOWDOWN_GUESS', () => {
     async function seedActiveRound(): Promise<void> {
-      gameStateService.setLeaderboard('ABCDEF', TIED_LEADERBOARD);
+      arrange(gameStateService).setLeaderboard('ABCDEF', TIED_LEADERBOARD);
       showdownService.createRound.mockResolvedValueOnce({
         id: 900,
         question: 'How many?',
@@ -181,7 +182,7 @@ describe('GameGateway — showdown', () => {
       await seedActiveRound();
       const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-a');
       await gateway.handleConnection(asSocket(player));
-      gameStateService.setTeamConnected('ABCDEF', 31, 'socket-a');
+      arrange(gameStateService).setTeamConnected('ABCDEF', 31, 'socket-a');
 
       await gateway.handleSubmitShowdownGuess(asSocket(player), {
         showdownRoundId: 900,
@@ -212,7 +213,7 @@ describe('GameGateway — showdown', () => {
         'socket-attacker',
       );
       await gateway.handleConnection(asSocket(attacker));
-      gameStateService.setTeamConnected('ABCDEF', 31, 'socket-owner');
+      arrange(gameStateService).setTeamConnected('ABCDEF', 31, 'socket-owner');
 
       await expect(
         gateway.handleSubmitShowdownGuess(asSocket(attacker), {
@@ -232,7 +233,11 @@ describe('GameGateway — showdown', () => {
         'socket-outsider',
       );
       await gateway.handleConnection(asSocket(outsider));
-      gameStateService.setTeamConnected('ABCDEF', 99, 'socket-outsider');
+      arrange(gameStateService).setTeamConnected(
+        'ABCDEF',
+        99,
+        'socket-outsider',
+      );
 
       await expect(
         gateway.handleSubmitShowdownGuess(asSocket(outsider), {
@@ -248,10 +253,10 @@ describe('GameGateway — showdown', () => {
       await seedActiveRound();
       const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-a');
       await gateway.handleConnection(asSocket(player));
-      gameStateService.setTeamConnected('ABCDEF', 31, 'socket-a');
-      gameStateService.setTeamConnected('ABCDEF', 32, 'socket-b');
-      gameStateService.setShowdownGuess('ABCDEF', 31, '10');
-      gameStateService.setShowdownGuess('ABCDEF', 32, '20');
+      arrange(gameStateService).setTeamConnected('ABCDEF', 31, 'socket-a');
+      arrange(gameStateService).setTeamConnected('ABCDEF', 32, 'socket-b');
+      gameStateService.showdownGuessSubmitted('ABCDEF', 31, '10');
+      gameStateService.showdownGuessSubmitted('ABCDEF', 32, '20');
       // The showdown-reveal intercept only engages once the quiz has
       // actually ended (see GameStateService.applyAction) — reached here via
       // the same END_QUIZ escape hatch the admin's "End Quiz" button uses.

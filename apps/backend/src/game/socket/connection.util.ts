@@ -9,7 +9,8 @@ import {
 } from '@campus-pubquiz/types';
 import { extractSessionCookie } from '@/auth/session-cookie';
 import type { SessionService } from '@/auth/session.service';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import type { AnswerService } from '@/answer/answer.service';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 
 const VALID_ROOMS: string[] = [
@@ -94,10 +95,15 @@ export async function acceptConnection(
   }
 }
 
-export function disconnectClient(
-  deps: { gameState: GameStateService; server: Server; logger: Logger },
+export async function disconnectClient(
+  deps: {
+    gameState: GameStateService;
+    answerService: AnswerService;
+    server: Server;
+    logger: Logger;
+  },
   client: Socket,
-): void {
+): Promise<void> {
   const joinCode = (client.data as { joinCode?: string }).joinCode;
   // The session may have been closed (evicted from memory) while this
   // socket was still connected to it — e.g. the admin who just closed it
@@ -105,12 +111,9 @@ export function disconnectClient(
   // means nothing here needs cleanup.
   if (!joinCode || !deps.gameState.hasSession(joinCode)) return;
 
-  const teamId = deps.gameState.clearTeamConnectionBySocketId(
-    joinCode,
-    client.id,
-  );
-  if (!teamId) return;
+  const outcome = deps.gameState.teamDisconnected(joinCode, client.id);
+  if (!outcome) return;
 
-  deps.logger.log(`Client ${client.id} disconnected, freeing team ${teamId}`);
-  broadcastGameState(deps.server, joinCode, deps.gameState);
+  deps.logger.log(`Client ${client.id} disconnected, freeing its team`);
+  await deliverOutcome(deps, joinCode, outcome);
 }

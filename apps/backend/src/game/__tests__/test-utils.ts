@@ -19,6 +19,13 @@ import type {
 } from '@/game/state/game-progress.repository';
 import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/state/game-state.service';
+import type { SessionState } from '@/game/state/session-state';
+import {
+  withAnsweredTeamIds,
+  withLeaderboard,
+  withTeamConnected,
+  withTeams,
+} from '@/game/state/session-updates.util';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
 // GameStateService.onModuleInit and every DB-touching GameGateway handler
@@ -546,4 +553,44 @@ export async function openFirstQuestion(
   await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> r1q1
   server.to.mockClear();
   server.emit.mockClear();
+}
+
+/**
+ * Test-only arrangement of one session record for specs that run on the fake
+ * answer store, where the derived caches can't be produced by real events.
+ * Reaches past GameStateService's interface on purpose — production code has
+ * no such door. Specs on the real-store harness don't need it.
+ */
+export function arrange(service: GameStateService) {
+  const store = (
+    service as unknown as {
+      sessionStore: {
+        get(joinCode: string): SessionState;
+        set(joinCode: string, session: SessionState): void;
+      };
+    }
+  ).sessionStore;
+  const apply =
+    (change: (session: SessionState, ...args: never[]) => SessionState) =>
+    (joinCode: string, ...args: unknown[]) =>
+      store.set(
+        joinCode,
+        (change as (s: SessionState, ...a: unknown[]) => SessionState)(
+          store.get(joinCode),
+          ...args,
+        ),
+      );
+  return {
+    setLeaderboard: apply(withLeaderboard),
+    setTeams: apply(withTeams),
+    setTeamConnected: apply(withTeamConnected),
+    setAnsweredTeamIds: apply(withAnsweredTeamIds),
+    setLeaderboardVisible: (joinCode: string, isVisible: boolean) => {
+      const session = store.get(joinCode);
+      store.set(joinCode, {
+        ...session,
+        progress: { ...session.progress, isLeaderboardVisible: isVisible },
+      });
+    },
+  };
 }

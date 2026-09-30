@@ -12,6 +12,7 @@ import {
   asAnswerService,
   createFakeShowdownService,
   asShowdownService,
+  arrange,
 } from './test-utils';
 
 describe('GameStateService — session lifecycle admin surface (phase 4)', () => {
@@ -55,7 +56,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
 
     it("reflects each session's own status and roster size", async () => {
       await service.applyAction(joinCode, 'START_QUIZ');
-      service.setTeams(joinCode, [
+      arrange(service).setTeams(joinCode, [
         { teamId: 31, teamName: 'The Quizzards' },
         { teamId: 32, teamName: 'Pub Quiz Ninjas' },
       ]);

@@ -161,7 +161,7 @@ describe('GameStateService — breakEndsAt reset on a fresh break', () => {
     expect(firstBreak.progress.status).toBe('break_intro');
     expect(firstBreak.breakEndsAt).toBeNull();
 
-    service.setBreakEndTime(joinCode, 555);
+    service.breakEndTimeSet(joinCode, 555);
     expect(service.getSnapshot(joinCode).breakEndsAt).toBe(555);
 
     const stillInBreak = await service.applyAction(joinCode, 'PREVIOUS'); // -> break (same cycle)
@@ -187,7 +187,7 @@ describe('GameStateService — breakEndsAt reset on a fresh break', () => {
     expect(locking.progress.status).toBe('locking');
 
     const futureEndsAt = Date.now() + 10 * 60 * 1000;
-    service.setBreakEndTime(joinCode, futureEndsAt);
+    service.breakEndTimeSet(joinCode, futureEndsAt);
     expect(service.getSnapshot(joinCode).breakEndsAt).toBe(futureEndsAt);
 
     const firstBreak = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro

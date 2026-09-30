@@ -14,6 +14,7 @@ import {
   asAnswerService,
   createFakeShowdownService,
   asShowdownService,
+  arrange,
 } from './test-utils';
 
 const TWO_BLOCK_GAME: SeededGame = {
@@ -191,7 +192,7 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Final standings',
       });
 
-      service.setLeaderboard(joinCode, [TEAM_ENTRY]);
+      arrange(service).setLeaderboard(joinCode, [TEAM_ENTRY]);
       await advance(1); // -> ended, final leaderboard
       expect(screens()).toMatchObject({
         current: 'Leaderboard',
@@ -212,7 +213,7 @@ describe('GameStateService — getPresenterContext', () => {
     it("previews the leaderboard after a block's last reveal, then the next round's title once every team is shown", async () => {
       await service.applyAction(joinCode, 'START_QUIZ');
       await advance(6); // round_intro, q1, locking, break_intro, reveal_intro, reveal
-      service.setLeaderboard(joinCode, [TEAM_ENTRY]);
+      arrange(service).setLeaderboard(joinCode, [TEAM_ENTRY]);
 
       expect(screens()).toMatchObject({
         current: 'Revealing R1 Q1',

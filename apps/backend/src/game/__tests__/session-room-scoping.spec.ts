@@ -148,7 +148,7 @@ describe('GameGateway — session room scoping', () => {
 
     server.to.mockClear();
     server.emit.mockClear();
-    gateway.handleDisconnect(asSocket(playerInA));
+    await gateway.handleDisconnect(asSocket(playerInA));
 
     expect(server.to).toHaveBeenCalledWith(
       sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),

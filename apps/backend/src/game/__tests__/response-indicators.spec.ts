@@ -9,6 +9,7 @@ import {
   asAnswerService,
   createFakeShowdownService,
   asShowdownService,
+  arrange,
 } from '@/game/__tests__/test-utils';
 
 describe('GameStateService — response indicators', () => {
@@ -92,7 +93,7 @@ describe('GameStateService — response indicators', () => {
     await service.applyAction(joinCode, 'START_QUIZ');
     await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
     await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    service.setAnsweredTeamIds(joinCode, 21, [31]);
+    arrange(service).setAnsweredTeamIds(joinCode, 21, [31]);
 
     expect(service.getSnapshot(joinCode).answeredTeamIds).toEqual([31]);
 
@@ -106,7 +107,7 @@ describe('GameStateService — response indicators', () => {
     await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
     // Same question id as the imported quiz's first question, so stale
     // indicators would leak into the new session if it inherited them.
-    service.setAnsweredTeamIds(joinCode, 25, [31]);
+    arrange(service).setAnsweredTeamIds(joinCode, 25, [31]);
     await service.applyAction(joinCode, 'END_QUIZ');
 
     const created = await service.createSession(2);

@@ -94,7 +94,7 @@ describe('GameGateway — team removed (kick / leave)', () => {
   });
 
   it('kicks a team whose socket has already disconnected', async () => {
-    game.gateway.handleDisconnect(asSocket(scorer.socket));
+    await game.gateway.handleDisconnect(asSocket(scorer.socket));
     game.clearEmits();
 
     await game.gateway.handleKickTeam(asSocket(admin), {

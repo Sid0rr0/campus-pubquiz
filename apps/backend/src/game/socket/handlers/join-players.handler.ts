@@ -3,7 +3,7 @@ import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, type JoinPlayersPayload } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
 import type { BonusService } from '@/bonus/bonus.service';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { TeamService } from '@/team/team.service';
 
@@ -50,7 +50,15 @@ export async function joinPlayerTeam(
       }
       existingSocket.disconnect(true);
     }
-    deps.gameState.setTeamConnected(joinCode, team.id, client.id);
+    const teams = await deps.teamService.listForSession(
+      deps.gameState.getGameSessionId(joinCode),
+    );
+    const outcome = deps.gameState.teamConnected(
+      joinCode,
+      team.id,
+      client.id,
+      teams,
+    );
 
     const savedAnswers = await deps.answerService.listForTeam(
       deps.gameState.getGameSessionId(joinCode),
@@ -69,11 +77,7 @@ export async function joinPlayerTeam(
       bonusAwards: savedBonusAwards,
     });
 
-    const teams = await deps.teamService.listForSession(
-      deps.gameState.getGameSessionId(joinCode),
-    );
-    deps.gameState.setTeams(joinCode, teams);
-    broadcastGameState(deps.server, joinCode, deps.gameState);
+    await deliverOutcome(deps, joinCode, outcome);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to join';
     throw new WsException(message);
