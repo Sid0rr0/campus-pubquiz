@@ -8,13 +8,13 @@ export interface PlayedSessionStats {
   /** The session's display name — a custom name set at creation/rename, or quizTitle when none was set. */
   name: string;
   playedAt: string; // game_sessions.created_at, ISO
-  teamCount: number; // game_session_teams rows for this session
+  teamCount: number; // everyone who took part: roster teams plus any kicked/departed team that answered or got a bonus
   maxPoints: number; // sum(questions.points) over the session's quiz
-  // Leaderboard winner (ranked by total incl. bonus, same order as
-  // AnswerService.computeLeaderboard: total desc, team name asc) — null when
-  // no teams joined.
+  // The session's single Standings winner — never a team that left, the
+  // showdown winner when a showdown broke a tie, name order when a tie for
+  // first was never broken — null when no team is on the roster.
   winnerTeamName: string | null;
-  winnerAnswerPoints: number | null; // that team's answer points only, bonus excluded
+  winnerPoints: number | null; // that team's winning total, bonus (and any showdown bonus) included
 }
 
 export interface PlayedSessionsListedPayload {

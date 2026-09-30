@@ -23,16 +23,12 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                            | 02         |
 | 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md)    | 03, 04     |
 
-### standings-module ([spec](standings-module/spec.md))
-
-| #   | Ticket                                                                                                                                         | Blocked by |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 06  | [Stats list reads Standings](standings-module/issues/06-stats-list-reads-standings.md)                                                         | 05         |
 
 ## Done
 
 | Feature             | #   | Ticket                                                                                                                          | Commit    |
 | ------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| standings-module    | 06  | [Stats list reads Standings](standings-module/issues/06-stats-list-reads-standings.md) | —         |
 | standings-module    | 05  | [Stats detail with the participation rule, departed teams and one winner](standings-module/issues/05-stats-detail-participation-and-winner.md) | —         |
 | standings-module    | 04  | [Display and phone overlay render server ranks](standings-module/issues/04-display-and-phones-render-server-ranks.md) | —         |
 | standings-module    | 03  | [Teams table renders server standings; roster changes refresh them](standings-module/issues/03-teams-table-renders-server-standings.md) | —         |

@@ -11,7 +11,11 @@ Sorting by winner points still works with server-side pagination. It sorts on th
 
 **Status:** ready-for-agent
 
-- [ ] Stats service tests assert that for the same session, list and detail agree on team count and winner. Cases: a kicked team (counted, never winner), a showdown-resolved tie, and an unbroken tie for first.
-- [ ] Sorting by winner points in both directions across more than one page returns sessions in the right order, with sessions that have no teams last.
-- [ ] A multi-session Standings call returns each session's own standings without mixing teams across sessions.
-- [ ] The shared stats payload type and the list's frontend column and tests use `winnerPoints`. `winnerAnswerPoints` is gone.
+- [x] Stats service tests assert that for the same session, list and detail agree on team count and winner. Cases: a kicked team (counted, never winner), a showdown-resolved tie, and an unbroken tie for first.
+- [x] Sorting by winner points in both directions across more than one page returns sessions in the right order, with sessions that have no teams last.
+- [x] A multi-session Standings call returns each session's own standings without mixing teams across sessions.
+- [x] The shared stats payload type and the list's frontend column and tests use `winnerPoints`. `winnerAnswerPoints` is gone.
+
+## Comments
+
+Implemented in the commit titled `feat(backend,frontend,shared-types): stats list reads Standings` (hash in git history). `listPlayedSessions` takes `teamCount`, `winnerTeamName` and `winnerPoints` from `StandingsService.forSessions` for the returned page only (one call, fixed queries). SQL keeps only what sorting and paging need: a participant count (roster, answers or bonuses) and the highest roster-team total. `winnerAnswerPoints` was renamed `winnerPoints` in the shared type, panel and tests. `Status:` left as `ready-for-agent` — the triage vocabulary has no done state.

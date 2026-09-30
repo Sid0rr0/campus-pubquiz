@@ -150,17 +150,17 @@ export function PlayedSessionsPanel() {
         }),
         helper.accessor('teamCount', { header: 'Teams' }),
         helper.accessor('maxPoints', { header: 'Max points' }),
-        // Sorted server-side on the winner's answer points (nulls — no teams
-        // joined — last); see PlayedSessionsSortColumn 'winner'.
-        helper.accessor((session) => session.winnerAnswerPoints ?? -1, {
+        // Sorted server-side on the winner's total points (nulls — no teams
+        // on the roster — last); see PlayedSessionsSortColumn 'winner'.
+        helper.accessor((session) => session.winnerPoints ?? -1, {
           id: 'winner',
           header: 'Winner points',
           cell: (context) => {
             const session = context.row.original;
             return session.winnerTeamName === null ||
-              session.winnerAnswerPoints === null
+              session.winnerPoints === null
               ? '—'
-              : `${session.winnerAnswerPoints} — ${session.winnerTeamName}`;
+              : `${session.winnerPoints} — ${session.winnerTeamName}`;
           },
         }),
         ...(isAdmin

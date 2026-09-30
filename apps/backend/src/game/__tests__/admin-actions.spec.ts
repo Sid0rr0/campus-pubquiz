@@ -42,10 +42,12 @@ describe('GameGateway — admin actions', () => {
     }
   });
 
-  it('recomputes the leaderboard when toggled on, so every joined team shows up even before any grading', async () => {
+  it('shows every joined team on the leaderboard at zero from the moment it joins, and keeps it there when toggled on', async () => {
     const [{ teamId }] = game.teams;
     const before = await game.snapshot();
-    expect(before.leaderboard).toEqual([]);
+    expect(before.leaderboard).toEqual([
+      expect.objectContaining({ teamId, totalPoints: 0 }),
+    ]);
 
     const toggled = await game.act('TOGGLE_LEADERBOARD');
 

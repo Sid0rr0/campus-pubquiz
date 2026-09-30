@@ -188,10 +188,10 @@ describe('StatsService (Postgres integration)', () => {
 
     expect(result.teamCount).toBe(0);
     expect(result.winnerTeamName).toBeNull();
-    expect(result.winnerAnswerPoints).toBeNull();
+    expect(result.winnerPoints).toBeNull();
   });
 
-  it("picks the leaderboard winner by total incl. bonus, but shows only that team's answer points", async () => {
+  it("picks the leaderboard winner by total incl. bonus and shows that team's total", async () => {
     const { quiz, questions } = await createQuiz('Quiz D', [[5, 5]]);
     const session = await createSession(quiz, 'BONUSWIN', 'ended');
     const [q1, q2] = questions[0];
@@ -210,7 +210,112 @@ describe('StatsService (Postgres integration)', () => {
 
     expect(result.teamCount).toBe(2);
     expect(result.winnerTeamName).toBe('Team B');
-    expect(result.winnerAnswerPoints).toBe(3);
+    expect(result.winnerPoints).toBe(13);
+  });
+
+  describe('agreement with stats detail', () => {
+    async function listAndDetail(session: GameSession) {
+      const { items } = await statsService.listPlayedSessions(defaultQuery);
+      const listed = items.find((item) => item.gameSessionId === session.id)!;
+      const detail = await statsService.getSessionDetail(session.id);
+      return { listed, detail };
+    }
+
+    it('counts a kicked team and never names it the winner', async () => {
+      const { quiz, questions } = await createQuiz('Quiz K', [[10]]);
+      const session = await createSession(quiz, 'AGREEKICK', 'ended');
+      const cheater = await joinTeam(session, 'Cheater');
+      const honest = await joinTeam(session, 'Honest');
+      await grade(session, questions[0][0], cheater, 10);
+      await grade(session, questions[0][0], honest, 3);
+      await em.nativeDelete(GameSessionTeam, {
+        gameSession: session,
+        team: cheater,
+      });
+
+      const { listed, detail } = await listAndDetail(session);
+
+      expect(listed.teamCount).toBe(2);
+      expect(listed.teamCount).toBe(detail.teamCount);
+      expect(listed.winnerTeamName).toBe('Honest');
+      expect(listed.winnerPoints).toBe(3);
+      expect(detail.standings.find((s) => s.isWinner)?.teamName).toBe('Honest');
+    });
+
+    it('names the showdown winner of a tie, with the showdown bonus in the points', async () => {
+      const { quiz, questions } = await createQuiz('Quiz S', [[5]]);
+      const session = await createSession(quiz, 'AGREESHOW', 'ended');
+      const amy = await joinTeam(session, 'Amy');
+      const zed = await joinTeam(session, 'Zed');
+      await grade(session, questions[0][0], amy, 5);
+      await grade(session, questions[0][0], zed, 5);
+      await awardBonus(session, zed, 2);
+
+      const { listed, detail } = await listAndDetail(session);
+
+      expect(listed.winnerTeamName).toBe('Zed');
+      expect(listed.winnerPoints).toBe(7);
+      expect(detail.standings.find((s) => s.isWinner)?.teamName).toBe('Zed');
+    });
+
+    it('falls back to the same name-order winner as detail when a tie for first was never broken', async () => {
+      const { quiz, questions } = await createQuiz('Quiz U', [[5]]);
+      const session = await createSession(quiz, 'AGREETIE', 'ended');
+      const zed = await joinTeam(session, 'Zed');
+      const amy = await joinTeam(session, 'Amy');
+      await grade(session, questions[0][0], zed, 5);
+      await grade(session, questions[0][0], amy, 5);
+
+      const { listed, detail } = await listAndDetail(session);
+
+      expect(listed.winnerTeamName).toBe('Amy');
+      expect(detail.standings.find((s) => s.isWinner)?.teamName).toBe('Amy');
+    });
+  });
+
+  describe('sorting by winner points', () => {
+    async function endedSessionWithWinner(
+      joinCode: string,
+      winnerPoints: number | null,
+    ): Promise<GameSession> {
+      const { quiz, questions } = await createQuiz(`Quiz ${joinCode}`, [[100]]);
+      const session = await createSession(quiz, joinCode, 'ended');
+      if (winnerPoints !== null) {
+        const team = await joinTeam(session, `Team ${joinCode}`);
+        await grade(session, questions[0][0], team, winnerPoints);
+      }
+      return session;
+    }
+
+    it('orders across pages in both directions, treating a session with no teams as lowest', async () => {
+      const low = await endedSessionWithWinner('LOW', 10);
+      const mid = await endedSessionWithWinner('MID', 20);
+      const high = await endedSessionWithWinner('HIGH', 30);
+      const empty = await endedSessionWithWinner('NOBODY', null);
+
+      const page = async (sortOrder: 'asc' | 'desc', pageNumber: number) =>
+        (
+          await statsService.listPlayedSessions({
+            page: pageNumber,
+            pageSize: 2,
+            sortBy: 'winner',
+            sortOrder,
+          })
+        ).items.map((item) => item.gameSessionId);
+
+      expect([...(await page('desc', 1)), ...(await page('desc', 2))]).toEqual([
+        high.id,
+        mid.id,
+        low.id,
+        empty.id,
+      ]);
+      expect([...(await page('asc', 1)), ...(await page('asc', 2))]).toEqual([
+        empty.id,
+        low.id,
+        mid.id,
+        high.id,
+      ]);
+    });
   });
 
   it('orders sessions by playedAt (createdAt) descending by default', async () => {

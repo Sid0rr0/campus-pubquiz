@@ -49,7 +49,7 @@ describe('StatsController', () => {
             teamCount: 2,
             maxPoints: 10,
             winnerTeamName: 'Team A',
-            winnerAnswerPoints: 8,
+            winnerPoints: 8,
           },
         ],
         total: 1,

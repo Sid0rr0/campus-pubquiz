@@ -65,7 +65,7 @@ const SESSIONS = [
     teamCount: 3,
     maxPoints: 20,
     winnerTeamName: 'The Quizzards',
-    winnerAnswerPoints: 15,
+    winnerPoints: 15,
   },
   {
     gameSessionId: 2,
@@ -76,7 +76,7 @@ const SESSIONS = [
     teamCount: 0,
     maxPoints: 10,
     winnerTeamName: null,
-    winnerAnswerPoints: null,
+    winnerPoints: null,
   },
 ];
 

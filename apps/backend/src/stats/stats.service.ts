@@ -19,10 +19,7 @@ interface PlayedSessionRow {
   quizTitle: string;
   name: string | null;
   playedAt: string | Date;
-  teamCount: string | number;
   maxPoints: string | number;
-  winnerTeamName: string | null;
-  winnerAnswerPoints: string | number | null;
 }
 
 interface SessionHeaderRow {
@@ -83,9 +80,18 @@ export class StatsService {
     const knex = this.gameSessions.getKnex();
     const offset = (page - 1) * pageSize;
 
-    const teamCounts = knex('game_session_teams')
-      .groupBy('game_session_id')
-      .select('game_session_id')
+    // Counted over everyone who took part (roster, answers or bonus awards),
+    // so the sortable number is the same participant count Standings reports.
+    const participants = knex('game_session_teams')
+      .select('game_session_id', 'team_id')
+      .union([
+        knex('answers').select('game_session_id', 'team_id'),
+        knex('bonus_awards').select('game_session_id', 'team_id'),
+      ]);
+    const participantCounts = knex
+      .from(participants.as('p'))
+      .groupBy('p.game_session_id')
+      .select('p.game_session_id as game_session_id')
       .select(knex.raw('count(*) as count'));
 
     const maxPoints = knex('rounds as r')
@@ -94,10 +100,9 @@ export class StatsService {
       .select('r.quiz_id as quizId')
       .select(knex.raw('sum(q.points) as total'));
 
-    // Pre-aggregated per (session, team), same reasoning as
-    // AnswerService.computeLeaderboard — joining straight off
-    // game_session_teams would fan out a team with several answers *and*
-    // several bonus awards.
+    // Pre-aggregated per (session, team), same reasoning as the Standings
+    // service — joining straight off game_session_teams would fan out a team
+    // with several answers *and* several bonus awards.
     const answerTotals = knex('answers')
       .groupBy(['game_session_id', 'team_id'])
       .select('game_session_id', 'team_id')
@@ -108,11 +113,10 @@ export class StatsService {
       .select('game_session_id', 'team_id')
       .select(knex.raw('sum(points) as total'));
 
-    // One row per session: the leaderboard winner (same ranking as
-    // AnswerService.computeLeaderboard — total incl. bonus desc, name asc),
-    // but only that team's answer points are carried through.
-    const winners = knex('game_session_teams as gst')
-      .join('teams as t', 't.id', 'gst.team_id')
+    // The highest roster-team total per session — the winner's total, which
+    // doesn't depend on how ties are ordered, so sorting and pagination stay
+    // in SQL. Who the winner *is* comes from Standings, for the page only.
+    const winnerTotals = knex('game_session_teams as gst')
       .leftJoin(answerTotals.as('ans'), function joinAnswers() {
         this.on('ans.game_session_id', 'gst.game_session_id').andOn(
           'ans.team_id',
@@ -125,36 +129,32 @@ export class StatsService {
           'gst.team_id',
         );
       })
-      .distinctOn('gst.game_session_id')
-      .select('gst.game_session_id as gameSessionId', 't.name as teamName')
-      .select(knex.raw('coalesce(ans.total, 0) as "answerPoints"'))
-      .orderBy([
-        { column: 'gst.game_session_id' },
-        {
-          column: knex.raw('coalesce(ans.total, 0) + coalesce(bonus.total, 0)'),
-          order: 'desc',
-        },
-        { column: 't.name', order: 'asc' },
-      ]);
+      .groupBy('gst.game_session_id')
+      .select('gst.game_session_id as game_session_id')
+      .select(
+        knex.raw(
+          'max(coalesce(ans.total, 0) + coalesce(bonus.total, 0)) as total',
+        ),
+      );
 
     const baseQuery = knex('game_sessions as gs')
       .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
-      .leftJoin(teamCounts.as('tc'), 'tc.game_session_id', 'gs.id')
+      .leftJoin(participantCounts.as('pc'), 'pc.game_session_id', 'gs.id')
       .leftJoin(maxPoints.as('mp'), 'mp.quizId', 'gs.quiz_id')
-      .leftJoin(winners.as('w'), 'w.gameSessionId', 'gs.id')
+      .leftJoin(winnerTotals.as('w'), 'w.game_session_id', 'gs.id')
       .where('gs.status', 'ended');
 
-    // `winner` sorts on the same score already exposed as
-    // winnerAnswerPoints, with a session that has no teams (null) treated as
-    // lower than any actual score. `quizTitle` sorts on the resolved display
-    // name (custom name if set, else the quiz's own title), matching what
-    // the "Session" column actually shows.
+    // `winner` sorts on the winning total, with a session that has no
+    // roster teams (null) treated as lower than any actual score.
+    // `quizTitle` sorts on the resolved display name (custom name if set,
+    // else the quiz's own title), matching what the "Session" column
+    // actually shows.
     const orderColumn = {
       quizTitle: knex.raw('coalesce(gs.name, qz.title)'),
       playedAt: 'gs.created_at',
-      teamCount: knex.raw('coalesce(tc.count, 0)'),
+      teamCount: knex.raw('coalesce(pc.count, 0)'),
       maxPoints: knex.raw('coalesce(mp.total, 0)'),
-      winner: knex.raw('coalesce(w."answerPoints", -1)'),
+      winner: knex.raw('coalesce(w.total, -1)'),
     } satisfies Record<PlayedSessionsQuery['sortBy'], unknown>;
 
     const [rows, [{ count: total }]] = await Promise.all([
@@ -167,10 +167,7 @@ export class StatsService {
           'gs.name as name',
           'gs.created_at as playedAt',
         )
-        .select(knex.raw('coalesce(tc.count, 0) as "teamCount"'))
         .select(knex.raw('coalesce(mp.total, 0) as "maxPoints"'))
-        .select('w.teamName as winnerTeamName')
-        .select('w.answerPoints as winnerAnswerPoints')
         .orderBy(orderColumn[sortBy], sortOrder)
         .orderBy('gs.id', 'desc')
         .limit(pageSize)
@@ -180,21 +177,25 @@ export class StatsService {
       >,
     ]);
 
+    const standings = await this.standings.forSessions(
+      rows.map((row) => row.gameSessionId),
+    );
+
     return {
-      items: rows.map((row) => ({
-        gameSessionId: row.gameSessionId,
-        joinCode: row.joinCode,
-        quizTitle: row.quizTitle,
-        name: row.name ?? row.quizTitle,
-        playedAt: new Date(row.playedAt).toISOString(),
-        teamCount: Number(row.teamCount),
-        maxPoints: Number(row.maxPoints),
-        winnerTeamName: row.winnerTeamName,
-        winnerAnswerPoints:
-          row.winnerAnswerPoints === null
-            ? null
-            : Number(row.winnerAnswerPoints),
-      })),
+      items: rows.map((row) => {
+        const sessionStandings = standings.get(row.gameSessionId)!;
+        return {
+          gameSessionId: row.gameSessionId,
+          joinCode: row.joinCode,
+          quizTitle: row.quizTitle,
+          name: row.name ?? row.quizTitle,
+          playedAt: new Date(row.playedAt).toISOString(),
+          teamCount: sessionStandings.participantCount,
+          maxPoints: Number(row.maxPoints),
+          winnerTeamName: sessionStandings.winner?.teamName ?? null,
+          winnerPoints: sessionStandings.winner?.totalPoints ?? null,
+        };
+      }),
       total: Number(total),
       page,
       pageSize,
