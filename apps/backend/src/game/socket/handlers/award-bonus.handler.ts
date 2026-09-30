@@ -1,9 +1,9 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
-import { SOCKET_EVENTS, type AwardBonusPayload } from '@campus-pubquiz/types';
+import type { AwardBonusPayload } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
 import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 
 export async function awardTeamBonus(
@@ -33,21 +33,16 @@ export async function awardTeamBonus(
     throw error;
   }
 
-  const awardedTeamSocketId = deps.gameState.getConnectedSocketId(
+  await deliverOutcome(
+    deps,
     joinCode,
-    payload.teamId,
+    await deps.gameState.bonusChanged(joinCode, {
+      teamId: payload.teamId,
+      notice: {
+        category: payload.category,
+        points: payload.points,
+        reason: payload.reason,
+      },
+    }),
   );
-  if (awardedTeamSocketId) {
-    deps.server.to(awardedTeamSocketId).emit(SOCKET_EVENTS.BONUS_AWARDED, {
-      category: payload.category,
-      points: payload.points,
-      reason: payload.reason,
-    });
-  }
-
-  const leaderboard = await deps.answerService.computeLeaderboard(
-    deps.gameState.getGameSessionId(joinCode),
-  );
-  deps.gameState.setLeaderboard(joinCode, leaderboard);
-  broadcastGameState(deps.server, joinCode, deps.gameState);
 }

@@ -11,6 +11,7 @@ import {
   type PresenterContextPayload,
   type SessionSettings,
   type StateSnapshotPayload,
+  type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { SeedService } from '@/db/seed.service';
@@ -602,6 +603,35 @@ export class GameStateService implements OnModuleInit {
     const notices =
       reason === 'kicked' && socketId
         ? [{ socketId, event: SOCKET_EVENTS.TEAM_KICKED, payload: undefined }]
+        : [];
+    return { ...BROADCAST_STATE_OUTCOME, notices };
+  }
+
+  /**
+   * A bonus award was added, edited or deleted: refreshes the leaderboard the
+   * same way grading does. `awarded` (a fresh award only) carries its
+   * BONUS_AWARDED notice for that team's socket, if it is connected.
+   */
+  async bonusChanged(
+    joinCode: string,
+    awarded?: { teamId: number; notice: TeamBonusAwardView },
+  ): Promise<SessionOutcome> {
+    const leaderboard = await this.answerService.computeLeaderboard(
+      this.getGameSessionId(joinCode),
+    );
+    this.mutations.setLeaderboard(joinCode, leaderboard);
+    const socketId = awarded
+      ? this.getConnectedSocketId(joinCode, awarded.teamId)
+      : undefined;
+    const notices =
+      awarded && socketId
+        ? [
+            {
+              socketId,
+              event: SOCKET_EVENTS.BONUS_AWARDED,
+              payload: awarded.notice,
+            },
+          ]
         : [];
     return { ...BROADCAST_STATE_OUTCOME, notices };
   }

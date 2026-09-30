@@ -227,23 +227,13 @@ export class GameGateway
   }
 
   /**
-   * Called by BonusAwardMutationsController after editing/deleting a bonus
-   * award via REST — recomputes the leaderboard and rebroadcasts, same as
-   * awardTeamBonus's socket-handler tail, so /display and /control never show
-   * a stale bonus total after an out-of-band edit. No @CreateRequestContext()
-   * needed: invoked synchronously from inside a REST controller method,
-   * already covered by @mikro-orm/nestjs's HTTP-request-context middleware
-   * (unlike socket handlers, which fork their own context — see
-   * handleAdminAction above).
-   */
-  /**
    * Called by QuizController.update after persisting an in-place edit to a
    * quiz with a live session on it — reloads that session's in-memory
    * question snapshot from the DB, re-grades `regradeQuestionIds` (already-
    * shown questions whose answer/points were corrected) against it, and
    * rebroadcasts the full state, so /display, /control, and /play pick up
    * the correction without needing a reconnect. No @CreateRequestContext()
-   * needed, same reasoning as notifyBonusAwardsChanged above.
+   * needed, same reasoning as notifyBonusAwardsChanged below.
    */
   async notifyQuizEdited(
     joinCode: string,
@@ -256,12 +246,20 @@ export class GameGateway
     broadcastGameState(this.server, joinCode, this.gameState);
   }
 
+  /**
+   * Called by BonusAwardMutationsController after editing/deleting a bonus
+   * award via REST, so /display and /control never show a stale bonus total
+   * after an out-of-band edit. No @CreateRequestContext() needed: invoked
+   * synchronously from inside a REST controller method, already covered by
+   * @mikro-orm/nestjs's HTTP-request-context middleware (unlike socket
+   * handlers, which fork their own context — see handleAdminAction above).
+   */
   async notifyBonusAwardsChanged(joinCode: string): Promise<void> {
-    const gameSessionId = this.gameState.getGameSessionId(joinCode);
-    const leaderboard =
-      await this.answerService.computeLeaderboard(gameSessionId);
-    this.gameState.setLeaderboard(joinCode, leaderboard);
-    broadcastGameState(this.server, joinCode, this.gameState);
+    await deliverOutcome(
+      this.outcomeDeps,
+      joinCode,
+      await this.gameState.bonusChanged(joinCode),
+    );
   }
 
   @SubscribeMessage(SOCKET_EVENTS.JOIN_PLAYERS)

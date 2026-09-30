@@ -2,7 +2,7 @@ import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
-import { MikroORM } from '@mikro-orm/postgresql';
+import { MikroORM, RequestContext } from '@mikro-orm/postgresql';
 import {
   DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
@@ -94,6 +94,8 @@ export interface RealStoreGateway extends PlayableQuiz {
   roomEmits: () => readonly RoomEmit[];
   /** Forgets captured room emits and per-socket emits sent so far. */
   clearEmits: () => void;
+  /** Runs `work` in its own request context, for a test that calls a service directly the way a REST controller would. */
+  inRequestContext: <T>(work: () => Promise<T>) => Promise<T>;
   /** Connects an admin socket (valid session cookie) to the seeded session. */
   connectAdmin: () => Promise<MockSocket>;
   /** Connects a players-room socket and joins it as `teamName`. */
@@ -389,6 +391,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         emits.length = 0;
         server.sockets.sockets.forEach((socket) => socket.emit.mockClear());
       },
+      inRequestContext: (work) => RequestContext.create(orm.em, work),
       connectAdmin,
       joinTeam,
       openFirstQuestion,
