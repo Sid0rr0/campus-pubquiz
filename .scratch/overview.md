@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by     |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 06  | [Quiz edited (live answer-key fix)](live-session-module/issues/06-quiz-edited-regrade.md)                                                    | 03             |
 | 07  | [Remaining events through the module; delete the pass-through setters](live-session-module/issues/07-remaining-events-and-delete-setters.md) | 03, 04, 05, 06 |
 | 08  | [Migrate game-flow specs to the real-store harness](live-session-module/issues/08-migrate-game-flow-specs.md)                                | 01             |
 | 09  | [Migrate grading, answers and team specs to the real-store harness](live-session-module/issues/09-migrate-grading-and-team-specs.md)         | 01             |
@@ -76,3 +75,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | live-session-module | 03  | [Answer recorded / answer graded owned by the Live session module](live-session-module/issues/03-answer-recorded-and-graded.md) | `22dad1f` |
 | live-session-module | 04  | [Team removed (kick / leave)](live-session-module/issues/04-team-removed.md)                                                    | `6f17212`    |
 | live-session-module | 05  | [Bonus changed and leaderboard toggle](live-session-module/issues/05-bonus-changed-and-leaderboard-toggle.md)                  | `adc82fe` |
+| live-session-module | 06  | [Quiz edited (live answer-key fix)](live-session-module/issues/06-quiz-edited-regrade.md)                                      | `08a7de8` |
