@@ -10,17 +10,22 @@ import {
   adminView,
 } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
+const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
+    mockUseAdminGame: vi.fn(),
     mockFetchQuizzes: vi.fn(),
     mockUseAuth: vi.fn(),
     searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
   }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -38,7 +43,7 @@ describe('AdminPage — leaderboard', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
@@ -47,7 +52,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('shows "Leaderboard" and sends TOGGLE_LEADERBOARD when hidden', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({ progress: progress(), currentQuestion: null }),
       connectionError: null,
       sendAction,
@@ -63,7 +68,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('still shows "Leaderboard" and sends TOGGLE_LEADERBOARD when visible', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -81,7 +86,7 @@ describe('AdminPage — leaderboard', () => {
   });
 
   it('disables Previous while the leaderboard is visible', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({
           status: 'question_open',
@@ -114,7 +119,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('swaps Advance for "Show Next Team" and sends REVEAL_NEXT_TEAM while teams remain hidden', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -149,7 +154,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('swaps Advance for "Hide Leaderboard" once every team is revealed', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({
           status: 'question_open',
@@ -187,7 +192,7 @@ describe('AdminPage — leaderboard', () => {
 
   it('re-enables Advance once the leaderboard is closed after a full reveal', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({
           status: 'question_open',
@@ -217,7 +222,7 @@ describe('AdminPage — leaderboard', () => {
   });
 
   it('shows a leaderboard preview from the snapshot', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'break' }),
         currentQuestion: null,

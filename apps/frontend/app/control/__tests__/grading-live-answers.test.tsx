@@ -5,22 +5,27 @@ import AdminPage from '@/app/control/page';
 import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const {
-  mockUseGameSocket,
+  mockUseAdminGame,
   mockFetchQuizzes,
   mockFetchAnswers,
   mockUseAuth,
   searchParamsRef,
 } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+  mockUseAdminGame: vi.fn(),
   mockFetchQuizzes: vi.fn(),
   mockFetchAnswers: vi.fn(),
   mockUseAuth: vi.fn(),
   searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -43,7 +48,7 @@ describe('AdminPage — grading live answers', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
@@ -53,7 +58,7 @@ describe('AdminPage — grading live answers', () => {
   });
 
   it('shows live answers for the current question with team name and value', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),
@@ -100,7 +105,7 @@ describe('AdminPage — grading live answers', () => {
   });
 
   it('shows every team even if it has not answered yet, and the round, question number and correct answer', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),

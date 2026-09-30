@@ -11,7 +11,7 @@ describe('ShowdownPanel', () => {
         isEligible={false}
         activeShowdown={null}
         tiedTeamNames={['Team A', 'Team B']}
-        onCreateShowdownRound={vi.fn()}
+        onCreateShowdownRound={vi.fn().mockResolvedValue({ success: true })}
       />,
     );
 
@@ -24,7 +24,7 @@ describe('ShowdownPanel', () => {
         isEligible={true}
         activeShowdown={null}
         tiedTeamNames={[]}
-        onCreateShowdownRound={vi.fn()}
+        onCreateShowdownRound={vi.fn().mockResolvedValue({ success: true })}
       />,
     );
 
@@ -32,7 +32,7 @@ describe('ShowdownPanel', () => {
   });
 
   it('shows the trigger once two or more teams are tied for 1st, and opens the create modal on click', async () => {
-    const onCreateShowdownRound = vi.fn();
+    const onCreateShowdownRound = vi.fn().mockResolvedValue({ success: true });
     render(
       <ShowdownPanel
         isEligible={true}
@@ -70,7 +70,7 @@ describe('ShowdownPanel', () => {
         isEligible={true}
         activeShowdown={null}
         tiedTeamNames={['Team A', 'Team B']}
-        onCreateShowdownRound={vi.fn()}
+        onCreateShowdownRound={vi.fn().mockResolvedValue({ success: true })}
       />,
     );
 
@@ -98,7 +98,7 @@ describe('ShowdownPanel', () => {
         isEligible={true}
         activeShowdown={activeShowdown}
         tiedTeamNames={['Team A', 'Team B']}
-        onCreateShowdownRound={vi.fn()}
+        onCreateShowdownRound={vi.fn().mockResolvedValue({ success: true })}
       />,
     );
 
@@ -113,7 +113,7 @@ describe('ShowdownPanel', () => {
   });
 
   it('offers "Ask another question" once a round resolves as a tie, opening the modal pre-labeled for it', async () => {
-    const onCreateShowdownRound = vi.fn();
+    const onCreateShowdownRound = vi.fn().mockResolvedValue({ success: true });
     const activeShowdown: ActiveShowdownView = {
       id: 900,
       question: 'How many?',
@@ -154,5 +154,59 @@ describe('ShowdownPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
     expect(onCreateShowdownRound).toHaveBeenCalledWith('Round 2', '7', 1);
+  });
+
+  it('keeps the modal open with what was typed when the round is rejected', async () => {
+    const onCreateShowdownRound = vi
+      .fn()
+      .mockResolvedValue({ success: false, error: 'Not tied any more' });
+    render(
+      <ShowdownPanel
+        isEligible={true}
+        activeShowdown={null}
+        tiedTeamNames={['Team A', 'Team B']}
+        onCreateShowdownRound={onCreateShowdownRound}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /create showdown/i }),
+    );
+    await userEvent.type(screen.getByLabelText('Question'), 'How many?');
+    await userEvent.type(screen.getByLabelText(/answer/i), '42');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(onCreateShowdownRound).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Question')).toHaveValue('How many?');
+    expect(screen.getByLabelText(/answer/i)).toHaveValue(42);
+  });
+
+  it('creates one round when Save is clicked twice before the acknowledgement arrives', async () => {
+    let release!: (result: { success: true }) => void;
+    const onCreateShowdownRound = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    render(
+      <ShowdownPanel
+        isEligible={true}
+        activeShowdown={null}
+        tiedTeamNames={['Team A', 'Team B']}
+        onCreateShowdownRound={onCreateShowdownRound}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /create showdown/i }),
+    );
+    await userEvent.type(screen.getByLabelText('Question'), 'How many?');
+    await userEvent.type(screen.getByLabelText(/answer/i), '42');
+    const save = screen.getByRole('button', { name: /^save$/i });
+    await userEvent.click(save);
+    await userEvent.click(save);
+    release({ success: true });
+
+    expect(onCreateShowdownRound).toHaveBeenCalledTimes(1);
   });
 });

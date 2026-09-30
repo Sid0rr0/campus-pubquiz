@@ -4,17 +4,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
 import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
+const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
+    mockUseAdminGame: vi.fn(),
     mockFetchQuizzes: vi.fn(),
     mockUseAuth: vi.fn(),
     searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
   }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -32,7 +37,7 @@ describe('AdminPage — keyboard shortcuts', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
@@ -41,7 +46,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends ADVANCE when ArrowRight is pressed', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
@@ -58,7 +63,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends PREVIOUS when ArrowLeft is pressed', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -83,7 +88,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends TOGGLE_LEADERBOARD when ArrowUp is pressed and the leaderboard is hidden', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({ progress: progress(), currentQuestion: null }),
       connectionError: null,
       sendAction,
@@ -97,7 +102,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends TOGGLE_LEADERBOARD when ArrowDown is pressed and the leaderboard is visible', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -114,7 +119,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('ignores ArrowUp when the leaderboard is already visible', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -131,7 +136,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends REVEAL_NEXT_TEAM on ArrowRight while teams remain hidden on the leaderboard', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -163,7 +168,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends TOGGLE_LEADERBOARD on ArrowRight once every team has been revealed', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({
           status: 'question_open',
@@ -192,7 +197,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('sends TOGGLE_MEDIA_FULLSCREEN when Space is pressed', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
@@ -209,7 +214,7 @@ describe('AdminPage — keyboard shortcuts', () => {
 
   it('does not trigger a shortcut while typing in a text field', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,

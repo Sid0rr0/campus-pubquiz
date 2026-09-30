@@ -6,7 +6,7 @@ import { QueryAuthWrapper } from '@/test-utils/query';
 import { progress, adminView } from './test-utils';
 
 const {
-  mockUseGameSocket,
+  mockUseAdminGame,
   mockFetchQuizzes,
   mockLogin,
   mockRegister,
@@ -15,7 +15,7 @@ const {
   searchParamsRef,
   routerRef,
 } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+  mockUseAdminGame: vi.fn(),
   mockFetchQuizzes: vi.fn(),
   mockLogin: vi.fn(),
   mockRegister: vi.fn(),
@@ -25,9 +25,14 @@ const {
   routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -64,7 +69,7 @@ const NO_SESSION_ERROR = new AuthApiError(
 describe('AdminPage — connection', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockFetchQuizzes.mockReset();
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
     mockLogin.mockReset();
@@ -77,7 +82,7 @@ describe('AdminPage — connection', () => {
   });
 
   it('redirects to /login before authenticating — login/register now live there', async () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
       sendAction: vi.fn(),
@@ -96,7 +101,7 @@ describe('AdminPage — connection', () => {
   it('restores an existing session after a refresh and reconnects automatically', async () => {
     mockFetchMe.mockReset();
     mockFetchMe.mockResolvedValue({ user: AUTH_USER });
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
       sendAction: vi.fn(),
@@ -111,17 +116,13 @@ describe('AdminPage — connection', () => {
     await waitFor(() =>
       expect(screen.getByText(/connecting…/i)).toBeInTheDocument(),
     );
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
-      'admin',
-      true,
-      'TESTCODE',
-    );
+    expect(mockUseAdminGame).toHaveBeenLastCalledWith(true, 'TESTCODE');
   });
 
   it('surfaces a connection error before the first snapshot arrives', async () => {
     mockFetchMe.mockReset();
     mockFetchMe.mockResolvedValue({ user: AUTH_USER });
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Invalid or expired session',
       sendAction: vi.fn(),
@@ -143,7 +144,7 @@ describe('AdminPage — connection', () => {
   it('surfaces a connection error as an alert once connected', async () => {
     mockFetchMe.mockReset();
     mockFetchMe.mockResolvedValue({ user: AUTH_USER });
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({ progress: progress(), currentQuestion: null }),
       connectionError: 'Only admin clients may perform game actions',
       sendAction: vi.fn(),

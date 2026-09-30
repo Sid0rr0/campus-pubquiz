@@ -16,7 +16,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 02  | [Admin game hook on a shared connection core; /control switches over](role-socket-hooks/issues/02-admin-game-hook-control.md)                | 01         |
 | 03  | [Player game hook; /play and the join flow switch over](role-socket-hooks/issues/03-player-game-hook-play.md)                                | 01, 02     |
 | 04  | [Shared admin-session connection hook; /remote moves to the admin game hook](role-socket-hooks/issues/04-admin-session-connection-remote.md) | 02         |
 | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                            | 02         |
@@ -27,6 +26,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature             | #   | Ticket                                                                                                                          | Commit    |
 | ------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| role-socket-hooks   | 02  | [Admin game hook on a shared connection core; /control switches over](role-socket-hooks/issues/02-admin-game-hook-control.md) | —         |
 | role-socket-hooks   | 01  | [Every socket event answers with an acknowledgement result](role-socket-hooks/issues/01-acknowledge-every-socket-event.md) | —         |
 | standings-module    | 06  | [Stats list reads Standings](standings-module/issues/06-stats-list-reads-standings.md) | —         |
 | standings-module    | 05  | [Stats detail with the participation rule, departed teams and one winner](standings-module/issues/05-stats-detail-participation-and-winner.md) | —         |

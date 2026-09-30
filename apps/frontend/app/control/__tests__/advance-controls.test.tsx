@@ -11,14 +11,14 @@ import {
 } from './test-utils';
 
 const {
-  mockUseGameSocket,
+  mockUseAdminGame,
   mockFetchQuizzes,
   mockUseAuth,
   mockCloseSession,
   searchParamsRef,
   routerRef,
 } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+  mockUseAdminGame: vi.fn(),
   mockFetchQuizzes: vi.fn(),
   mockUseAuth: vi.fn(),
   mockCloseSession: vi.fn(),
@@ -26,9 +26,14 @@ const {
   routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -54,7 +59,7 @@ describe('AdminPage — advance controls', () => {
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
@@ -64,7 +69,7 @@ describe('AdminPage — advance controls', () => {
 
   it('sends START_QUIZ when the Start Quiz button is clicked', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -81,7 +86,7 @@ describe('AdminPage — advance controls', () => {
 
   it('sends ADVANCE when the Advance button is clicked', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
@@ -98,7 +103,7 @@ describe('AdminPage — advance controls', () => {
 
   it('shows a "Begin Quiz" button that sends ADVANCE while showing the rules screen', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'rules' }),
         currentQuestion: null,
@@ -115,7 +120,7 @@ describe('AdminPage — advance controls', () => {
 
   it('shows a "Start Round" button that sends ADVANCE on the round intro card', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'round_intro' }),
         currentQuestion: null,
@@ -133,7 +138,7 @@ describe('AdminPage — advance controls', () => {
 
   it('shows an Advance button that sends ADVANCE during the locking countdown, to skip it early', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'locking' }),
         currentQuestion: {
@@ -155,7 +160,7 @@ describe('AdminPage — advance controls', () => {
   });
 
   it('does not offer a per-question lock control (locking is block-based)', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: null,
@@ -172,7 +177,7 @@ describe('AdminPage — advance controls', () => {
 
   it('sends ADVANCE when the Advance button is clicked during a break', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'break' }),
         currentQuestion: null,
@@ -189,7 +194,7 @@ describe('AdminPage — advance controls', () => {
 
   it('sends ADVANCE to step through reveal questions', async () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,

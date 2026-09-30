@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Dialog } from 'radix-ui';
-import type { ActiveShowdownView } from '@campus-pubquiz/types';
+import type { AckResult, ActiveShowdownView } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
 interface ShowdownPanelProps {
@@ -15,7 +15,7 @@ interface ShowdownPanelProps {
     question: string,
     answer: string,
     points: number,
-  ) => void;
+  ) => Promise<AckResult>;
   className?: string;
 }
 
@@ -39,6 +39,8 @@ export function ShowdownPanel({
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [points, setPoints] = useState(String(DEFAULT_POINTS));
+  // Drops a second Save while the first awaits its acknowledgement.
+  const isSaveInFlightRef = useRef(false);
 
   if (!isEligible) return null;
   if (!activeShowdown && tiedTeamNames.length < 2) return null;
@@ -51,9 +53,21 @@ export function ShowdownPanel({
     Number.isFinite(parsedPoints) &&
     parsedPoints > 0;
 
-  function handleSave(): void {
-    if (!canSubmit) return;
-    onCreateShowdownRound(question.trim(), answer.trim(), parsedPoints);
+  async function handleSave(): Promise<void> {
+    if (!canSubmit || isSaveInFlightRef.current) return;
+    isSaveInFlightRef.current = true;
+    let result;
+    try {
+      result = await onCreateShowdownRound(
+        question.trim(),
+        answer.trim(),
+        parsedPoints,
+      );
+    } finally {
+      isSaveInFlightRef.current = false;
+    }
+    // A rejection keeps the modal open with what was typed.
+    if (!result.success) return;
     setQuestion('');
     setAnswer('');
     setPoints(String(DEFAULT_POINTS));

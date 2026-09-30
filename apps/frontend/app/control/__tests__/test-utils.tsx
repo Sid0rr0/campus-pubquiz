@@ -11,6 +11,7 @@ import {
   type GameStatus,
 } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
+import type { UseAdminGameResult } from '@/app/lib/use-admin-game';
 
 export const TEST_ADMIN_USER: AuthUser = {
   id: 1,
@@ -127,5 +128,33 @@ export function adminView<
     ...describeAdminIndicators(snapshot),
     ...defaultActionAvailability(snapshot),
     ...snapshot,
+  };
+}
+
+/**
+ * A complete admin-hook result for page tests: each test passes only what it
+ * exercises, and every other member is a spy that resolves to success — so a
+ * page can't crash on a member the test didn't think about.
+ */
+export function adminGameResult(
+  overrides: Partial<UseAdminGameResult> = {},
+): UseAdminGameResult {
+  const ok = () => Promise.resolve({ success: true as const });
+  return {
+    snapshot: null,
+    connectionError: null,
+    reconnectedAt: null,
+    liveAnswers: null,
+    setLiveAnswers: vi.fn(),
+    focusAnswersQuestionId: vi.fn(),
+    presenterContext: null,
+    sendAction: vi.fn(ok),
+    gradeAnswer: vi.fn(ok),
+    kickTeam: vi.fn(ok),
+    awardBonus: vi.fn(ok),
+    setBreakEndTime: vi.fn(ok),
+    setDisplayTextScale: vi.fn(ok),
+    createShowdownRound: vi.fn(ok),
+    ...overrides,
   };
 }

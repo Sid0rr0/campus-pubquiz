@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   createColumnHelper,
   tableFeatures,
@@ -11,7 +11,11 @@ import {
   ListBulletIcon,
   StarIcon,
 } from '@radix-ui/react-icons';
-import type { BonusCategory, LeaderboardEntry } from '@campus-pubquiz/types';
+import type {
+  AckResult,
+  BonusCategory,
+  LeaderboardEntry,
+} from '@campus-pubquiz/types';
 import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
 import { TeamCodeModal } from '@/app/control/team-code-modal';
@@ -29,7 +33,7 @@ interface TeamsTableProps {
     category: BonusCategory,
     points: number,
     reason?: string,
-  ) => void;
+  ) => Promise<AckResult>;
   enabledBonusCategories: BonusCategory[];
 }
 
@@ -51,6 +55,8 @@ export function TeamsTable({
   enabledBonusCategories,
 }: TeamsTableProps) {
   const [awardingTeamId, setAwardingTeamId] = useState<number | null>(null);
+  // Drops a second submit while the first award awaits its acknowledgement.
+  const isAwardInFlightRef = useRef(false);
   const [viewingAwardsTeamId, setViewingAwardsTeamId] = useState<number | null>(
     null,
   );
@@ -202,9 +208,21 @@ export function TeamsTable({
             {awardingTeam && (
               <BonusAwardForm
                 enabledCategories={enabledBonusCategories}
-                onAward={(category, points, reason) => {
-                  onAwardBonus(awardingTeam.teamId, category, points, reason);
-                  setAwardingTeamId(null);
+                onAward={async (category, points, reason) => {
+                  if (isAwardInFlightRef.current) return;
+                  isAwardInFlightRef.current = true;
+                  try {
+                    const result = await onAwardBonus(
+                      awardingTeam.teamId,
+                      category,
+                      points,
+                      reason,
+                    );
+                    // A rejection keeps the dialog open with what was typed.
+                    if (result.success) setAwardingTeamId(null);
+                  } finally {
+                    isAwardInFlightRef.current = false;
+                  }
                 }}
                 onCancel={() => setAwardingTeamId(null)}
               />

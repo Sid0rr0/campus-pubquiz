@@ -1,4 +1,5 @@
 import type {
+  AckResult,
   ActiveShowdownView,
   GameAction,
   GameStatus,
@@ -43,5 +44,5 @@ export interface AdminSidebarProps {
     question: string,
     answer: string,
     points: number,
-  ) => void;
+  ) => Promise<AckResult>;
 }

@@ -6,22 +6,27 @@ import AdminPage from '@/app/control/page';
 import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
 const {
-  mockUseGameSocket,
+  mockUseAdminGame,
   mockFetchQuizzes,
   mockFetchAnswers,
   mockUseAuth,
   searchParamsRef,
 } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+  mockUseAdminGame: vi.fn(),
   mockFetchQuizzes: vi.fn(),
   mockFetchAnswers: vi.fn(),
   mockUseAuth: vi.fn(),
   searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -44,7 +49,7 @@ describe('AdminPage — grading question browsing', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
@@ -54,7 +59,7 @@ describe('AdminPage — grading question browsing', () => {
   });
 
   it('requests and shows the first block question answers during the grading break', async () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
@@ -79,7 +84,7 @@ describe('AdminPage — grading question browsing', () => {
   });
 
   it('keeps showing the last question answers for grading once the quiz has ended', async () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'ended', isLeaderboardVisible: true }),
@@ -145,7 +150,7 @@ describe('AdminPage — grading question browsing', () => {
         },
       ],
     });
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
@@ -196,7 +201,7 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     const focusAnswersQuestionId = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
@@ -250,7 +255,7 @@ describe('AdminPage — grading question browsing', () => {
         },
       ],
     });
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'break', questionIndex: 1 }),
@@ -308,7 +313,7 @@ describe('AdminPage — grading question browsing', () => {
         },
       ],
     });
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         joinCode: 'TESTCODE',
         progress: progress({ status: 'question_open' }),

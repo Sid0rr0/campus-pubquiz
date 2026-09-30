@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardEntry } from '@campus-pubquiz/types';
@@ -104,7 +104,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -137,7 +137,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -159,7 +159,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -176,7 +176,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={[...LEADERBOARD].reverse()}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -211,7 +211,7 @@ describe('TeamsTable', () => {
           tied(4, 'Delta', 4, 4),
         ]}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -237,7 +237,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={[]}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -252,7 +252,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={[{ ...LEADERBOARD[0], totalPoints: 0, roundPoints: [] }]}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -264,7 +264,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -274,7 +274,7 @@ describe('TeamsTable', () => {
   });
 
   it('opens a bonus award modal for a team from its actions menu and awards a predefined-category bonus', async () => {
-    const onAwardBonus = vi.fn();
+    const onAwardBonus = vi.fn().mockResolvedValue({ success: true });
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
@@ -295,11 +295,63 @@ describe('TeamsTable', () => {
     await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
 
     expect(onAwardBonus).toHaveBeenCalledWith(1, 'selfie', 1, undefined);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('sends one award when Award is clicked twice before the acknowledgement arrives', async () => {
+    let release!: (result: { success: true }) => void;
+    const onAwardBonus = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={onAwardBonus}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    await openBonusModalFor('The Quizzards');
+    const award = screen.getByRole('button', { name: /^award$/i });
+    await userEvent.click(award);
+    await userEvent.click(award);
+    release({ success: true });
+
+    expect(onAwardBonus).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the bonus modal open with what was typed when the award is rejected', async () => {
+    const onAwardBonus = vi
+      .fn()
+      .mockResolvedValue({ success: false, error: 'Bonus cap reached' });
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={LEADERBOARD}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={onAwardBonus}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    await openBonusModalFor('The Quizzards');
+    await userEvent.click(screen.getByRole('button', { name: /^custom$/i }));
+    await userEvent.type(screen.getByLabelText('Bonus reason'), 'Best hat');
+    await userEvent.click(screen.getByRole('button', { name: /^award$/i }));
+
+    expect(onAwardBonus).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bonus reason')).toHaveValue('Best hat');
   });
 
   it('cancels the bonus modal without awarding', async () => {
-    const onAwardBonus = vi.fn();
+    const onAwardBonus = vi.fn().mockResolvedValue({ success: true });
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
@@ -334,7 +386,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
@@ -354,7 +406,7 @@ describe('TeamsTable', () => {
         joinCode={JOIN_CODE}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
-        onAwardBonus={vi.fn()}
+        onAwardBonus={vi.fn().mockResolvedValue({ success: true })}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );

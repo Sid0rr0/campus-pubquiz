@@ -4,17 +4,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
 import { authenticatedAuthResult, progress, adminView } from './test-utils';
 
-const { mockUseGameSocket, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
+const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
+    mockUseAdminGame: vi.fn(),
     mockFetchQuizzes: vi.fn(),
     mockUseAuth: vi.fn(),
     searchParamsRef: { current: new URLSearchParams('code=TESTCODE') },
   }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
@@ -32,7 +37,7 @@ describe('AdminPage — status and teams', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams('code=TESTCODE');
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockReset();
@@ -40,7 +45,7 @@ describe('AdminPage — status and teams', () => {
   });
 
   it('shows the current status and question once connected', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -74,7 +79,7 @@ describe('AdminPage — status and teams', () => {
   });
 
   it('lists the connected team names in the sidebar', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -95,7 +100,7 @@ describe('AdminPage — status and teams', () => {
   });
 
   it('marks the teams that have answered the current question in the sidebar', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {

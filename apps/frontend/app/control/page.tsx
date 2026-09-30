@@ -13,7 +13,7 @@ import {
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
-import { useGameSocket } from '@/app/lib/use-game-socket';
+import { useAdminGame } from '@/app/lib/use-admin-game';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
@@ -80,11 +80,10 @@ function AdminPageContent() {
     setBreakEndTime,
     setDisplayTextScale,
     createShowdownRound,
-    setLiveAnswers = () => {},
-    focusAnswersQuestionId = () => {},
+    setLiveAnswers,
+    focusAnswersQuestionId,
     reconnectedAt,
-  } = useGameSocket(
-    'admin',
+  } = useAdminGame(
     isAuthenticated && Boolean(connectJoinCode),
     connectJoinCode ?? undefined,
   );
