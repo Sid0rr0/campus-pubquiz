@@ -8,6 +8,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type QuestionType,
+  type SessionSettings,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -104,6 +105,12 @@ export interface RealStoreGateway extends PlayableQuiz {
 export interface CreateGatewayOptions {
   /** Teams to join right after seeding; more can be joined later with joinTeam(). */
   teamNames?: string[];
+  /** Join code for the seeded session; defaults to REAL_STORE_JOIN_CODE. Lets one test build two independent gateways. */
+  joinCode?: string;
+  /** Makes the seeded round a kahootMode round. */
+  kahootMode?: boolean;
+  /** Overrides on top of DEFAULT_SESSION_SETTINGS (e.g. a 1s lockGraceSeconds so a timer fires within a test). */
+  settings?: Partial<SessionSettings>;
 }
 
 export interface RealStoreHarness {
@@ -191,7 +198,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     await orm.em.getConnection().execute(TRUNCATE_GAME_TABLES);
   });
 
-  async function seedPlayableQuiz(): Promise<PlayableQuiz> {
+  async function seedPlayableQuiz(
+    options: CreateGatewayOptions,
+  ): Promise<PlayableQuiz> {
     const em = orm.em.fork();
     const quiz = em.create(Quiz, { title: 'Real Store Quiz' });
     const round = em.create(Round, {
@@ -199,6 +208,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       title: 'Round 1',
       orderIndex: 0,
       breakAfter: true,
+      kahootMode: options.kahootMode ?? false,
     });
     const [multipleChoice, freeText, closestGuess, match] = Object.values(
       PLAYABLE_QUESTIONS,
@@ -207,8 +217,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     );
     const session = em.create(GameSession, {
       quiz,
-      joinCode: REAL_STORE_JOIN_CODE,
-      settings: DEFAULT_SESSION_SETTINGS,
+      joinCode: options.joinCode ?? REAL_STORE_JOIN_CODE,
+      settings: { ...DEFAULT_SESSION_SETTINGS, ...options.settings },
     });
     await em.flush();
     return {
@@ -289,7 +299,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   async function createGateway(
     options: CreateGatewayOptions = {},
   ): Promise<RealStoreGateway> {
-    const quiz = await seedPlayableQuiz();
+    const quiz = await seedPlayableQuiz(options);
     const services = buildServices();
     const gameState = new GameStateService(
       services.seedService,

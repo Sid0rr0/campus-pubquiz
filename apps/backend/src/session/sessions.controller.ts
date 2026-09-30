@@ -129,7 +129,7 @@ export class SessionsController {
       }
       throw error;
     }
-    this.gameGateway.notifySettingsUpdated(joinCode);
+    await this.gameGateway.notifySettingsUpdated(joinCode);
   }
 
   @Delete(':joinCode')

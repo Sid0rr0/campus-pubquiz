@@ -15,7 +15,6 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
-  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { SessionService } from '@/auth/session.service';
 import { TeamService } from '@/team/team.service';
@@ -23,7 +22,7 @@ import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
-import { applyAdminAction } from '@/game/socket/handlers/admin-action.handler';
+import { runAdminAction } from '@/game/socket/handlers/admin-action.handler';
 import { awardTeamBonus } from '@/game/socket/handlers/award-bonus.handler';
 import {
   acceptConnection,
@@ -36,7 +35,8 @@ import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
 import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
 import { leaveSessionAsTeam } from '@/game/socket/handlers/leave-session.handler';
 import { QuestionLockTimerRegistry } from '@/game/socket/question-lock-timer.registry';
-import { syncTeamAnswersOnRevealEntry } from '@/game/socket/reveal-entry-sync.util';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
+import { BROADCAST_STATE_OUTCOME } from '@/game/state/session-outcome';
 import { updateBreakEndTime } from '@/game/socket/handlers/set-break-end-time.handler';
 import { updateDisplayTextScale } from '@/game/socket/handlers/set-display-text-scale.handler';
 import { submitShowdownGuess } from '@/game/socket/handlers/submit-showdown-guess.handler';
@@ -131,16 +131,21 @@ export class GameGateway
       `${SOCKET_EVENTS.ADMIN_ACTION} from ${client.id}: action=${payload.action}`,
     );
 
-    await applyAdminAction(
-      {
-        gameState: this.gameState,
-        answerService: this.answerService,
-        server: this.server,
-      },
-      joinCode,
-      payload.action,
-    );
-    this.rearmTimers(joinCode);
+    try {
+      await runAdminAction(this.outcomeDeps, joinCode, payload.action);
+    } finally {
+      // The action may have been applied even if delivering it failed, so
+      // the deadlines must follow the state either way.
+      this.rearmTimers(joinCode);
+    }
+  }
+
+  private get outcomeDeps() {
+    return {
+      gameState: this.gameState,
+      answerService: this.answerService,
+      server: this.server,
+    };
   }
 
   /**
@@ -152,53 +157,34 @@ export class GameGateway
   private async handleQuestionLockTimerExpired(
     joinCode: string,
   ): Promise<void> {
-    const previousStatus = this.gameState.getSnapshot(joinCode).progress.status;
-    let snapshot: StateSnapshotPayload;
-    try {
-      snapshot = await this.gameState.applyAction(joinCode, 'ADVANCE');
-    } catch (error) {
-      this.logger.error(
-        `Auto-lock ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return;
-    }
-
-    await syncTeamAnswersOnRevealEntry(
-      {
-        gameState: this.gameState,
-        answerService: this.answerService,
-        server: this.server,
-      },
-      joinCode,
-      previousStatus,
-      snapshot.progress.status,
-    );
-
-    broadcastGameState(this.server, joinCode, this.gameState);
-    this.rearmTimers(joinCode);
+    await this.advanceFromTimer(joinCode, 'Auto-lock');
   }
 
   /**
    * Fires when a kahootMode question has been open for the session's
    * settings.kahootQuestionTimerSeconds with no admin action — auto-locks it
-   * exactly as if the admin had clicked "Advance" themselves. Never enters
-   * reveal directly (advanceFromQuestionOpen always lands on 'locking'
-   * first), so unlike handleQuestionLockTimerExpired there's no
-   * syncTeamAnswersOnRevealEntry step here.
+   * exactly as if the admin had clicked "Advance" themselves.
    */
   @CreateRequestContext()
   private async handleKahootQuestionTimerExpired(
     joinCode: string,
   ): Promise<void> {
+    await this.advanceFromTimer(joinCode, 'Kahoot auto-lock');
+  }
+
+  /** Both timers share the admin's ADVANCE path; a failure is logged (there's no client to tell) and leaves the timers as they were. */
+  private async advanceFromTimer(
+    joinCode: string,
+    label: string,
+  ): Promise<void> {
     try {
-      await this.gameState.applyAction(joinCode, 'ADVANCE');
+      await runAdminAction(this.outcomeDeps, joinCode, 'ADVANCE');
     } catch (error) {
       this.logger.error(
-        `Kahoot auto-lock ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
+        `${label} ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
       );
       return;
     }
-    broadcastGameState(this.server, joinCode, this.gameState);
     this.rearmTimers(joinCode);
   }
 
@@ -236,8 +222,8 @@ export class GameGateway
    * notifySessionClosed's narrow one-off emit) so /display, /control, and
    * /rules?code= all pick up the change immediately.
    */
-  notifySettingsUpdated(joinCode: string): void {
-    broadcastGameState(this.server, joinCode, this.gameState);
+  async notifySettingsUpdated(joinCode: string): Promise<void> {
+    await deliverOutcome(this.outcomeDeps, joinCode, BROADCAST_STATE_OUTCOME);
   }
 
   /**

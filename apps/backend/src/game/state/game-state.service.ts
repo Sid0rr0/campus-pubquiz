@@ -44,6 +44,11 @@ import {
   type ActiveShowdownRoundState,
   type SessionState,
 } from '@/game/state/session-state';
+import {
+  BROADCAST_STATE_OUTCOME,
+  isRevealEntry,
+  type SessionOutcome,
+} from '@/game/state/session-outcome';
 import { tryStepShowdownReveal } from '@/game/state/showdown-reveal.util';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import { ShowdownService } from '@/showdown/showdown.service';
@@ -351,6 +356,46 @@ export class GameStateService implements OnModuleInit {
       ...session,
       seededGame: { ...session.seededGame, settings },
     });
+  }
+
+  /**
+   * Applies an admin action (or a timer expiry standing in for one) and says
+   * what must be pushed. Owns every follow-up an action implies — the fresh
+   * leaderboard when it is toggled on, and the per-team answer sync on
+   * reveal entry — so the admin path and both timer paths behave the same.
+   * Throws whatever applyAction throws (illegal transition, ungraded answers).
+   */
+  async applyAdminAction(
+    joinCode: string,
+    action: GameAction,
+  ): Promise<SessionOutcome> {
+    const previousStatus = this.getSnapshot(joinCode).progress.status;
+    const snapshot = await this.applyAction(joinCode, action);
+
+    // The leaderboard otherwise only refreshes on GRADE_ANSWER, so toggling
+    // it on before any grading has happened would show nothing — recompute
+    // fresh here so every currently-joined team appears, 0 points and all.
+    if (
+      action === 'TOGGLE_LEADERBOARD' &&
+      snapshot.progress.isLeaderboardVisible
+    ) {
+      this.setLeaderboard(
+        joinCode,
+        await this.answerService.computeLeaderboard(
+          this.getGameSessionId(joinCode),
+        ),
+      );
+    }
+
+    const teamSyncTeamIds = isRevealEntry(
+      previousStatus,
+      snapshot.progress.status,
+    )
+      ? this.getSnapshot(joinCode)
+          .teams.filter((team) => team.isConnected)
+          .map((team) => team.teamId)
+      : [];
+    return { ...BROADCAST_STATE_OUTCOME, teamSyncTeamIds };
   }
 
   async applyAction(

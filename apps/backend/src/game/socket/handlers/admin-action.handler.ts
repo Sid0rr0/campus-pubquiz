@@ -1,50 +1,33 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
-import type { GameAction, StateSnapshotPayload } from '@campus-pubquiz/types';
+import type { GameAction } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
-import { syncTeamAnswersOnRevealEntry } from '@/game/socket/reveal-entry-sync.util';
 
-export async function applyAdminAction(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    server: Server;
-  },
+interface AdminActionDeps {
+  gameState: GameStateService;
+  answerService: AnswerService;
+  server: Server;
+}
+
+/**
+ * Applies one action and delivers its outcome. The admin's ADVANCE and both
+ * auto-lock timer expiries all go through here, so a timer-driven lock is
+ * indistinguishable from the quiz master pressing Advance. Rejects with the
+ * state machine's own message (illegal transition, ungraded answers).
+ */
+export async function runAdminAction(
+  deps: AdminActionDeps,
   joinCode: string,
   action: GameAction,
 ): Promise<void> {
-  const previousStatus = deps.gameState.getSnapshot(joinCode).progress.status;
-  let snapshot: StateSnapshotPayload;
-  try {
-    snapshot = await deps.gameState.applyAction(joinCode, action);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Invalid game action';
-    throw new WsException(message);
-  }
-
-  // The leaderboard otherwise only refreshes on GRADE_ANSWER, so toggling
-  // it on before any grading has happened would show nothing — recompute
-  // fresh here so every currently-joined team appears, 0 points and all.
-  if (
-    action === 'TOGGLE_LEADERBOARD' &&
-    snapshot.progress.isLeaderboardVisible
-  ) {
-    const leaderboard = await deps.answerService.computeLeaderboard(
-      deps.gameState.getGameSessionId(joinCode),
-    );
-    deps.gameState.setLeaderboard(joinCode, leaderboard);
-    snapshot = deps.gameState.getSnapshot(joinCode);
-  }
-
-  await syncTeamAnswersOnRevealEntry(
-    deps,
-    joinCode,
-    previousStatus,
-    snapshot.progress.status,
-  );
-
-  broadcastGameState(deps.server, joinCode, deps.gameState);
+  const outcome = await deps.gameState
+    .applyAdminAction(joinCode, action)
+    .catch((error: unknown) => {
+      throw new WsException(
+        error instanceof Error ? error.message : 'Invalid game action',
+      );
+    });
+  await deliverOutcome(deps, joinCode, outcome);
 }

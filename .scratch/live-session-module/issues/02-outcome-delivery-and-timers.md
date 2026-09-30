@@ -18,9 +18,18 @@ The admin ADVANCE/action path, the question-lock timer expiry and the kahoot tim
 
 **Status:** ready-for-agent
 
-- [ ] A regression test on the real-store harness proves that a question-lock timer expiry produces the same room emits as a manual ADVANCE from the same state, including the per-team answer sync on reveal entry.
-- [ ] The same holds for a kahoot question timer expiry versus a manual ADVANCE.
-- [ ] Admin actions, both timer paths and the settings-updated notification deliver through the one delivery step. No hand-copied action tail remains.
-- [ ] Timers are still re-armed after every applied action.
-- [ ] Admin-action error messages (illegal transition, ungraded answers blocking Advance) reach the admin unchanged.
-- [ ] All existing specs still pass.
+- [x] A regression test on the real-store harness proves that a question-lock timer expiry produces the same room emits as a manual ADVANCE from the same state, including the per-team answer sync on reveal entry.
+- [x] The same holds for a kahoot question timer expiry versus a manual ADVANCE.
+- [x] Admin actions, both timer paths and the settings-updated notification deliver through the one delivery step. No hand-copied action tail remains.
+- [x] Timers are still re-armed after every applied action.
+- [x] Admin-action error messages (illegal transition, ungraded answers blocking Advance) reach the admin unchanged.
+- [x] All existing specs still pass.
+
+## Comments
+
+Implemented in commit `HASH`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and `overview.md` records completion.
+
+- The outcome and delivery step live in `state/session-outcome.ts`, `GameStateService.applyAdminAction` and `socket/outcome-delivery.util.ts`; `runAdminAction` is the shared path for the admin action and both timers.
+- Delivery order now follows this ticket (presenter context, state snapshot, answer lists, team syncs, notices). The team sync used to be emitted *before* the snapshot on the admin path; it now follows it. Different events, so clients are unaffected.
+- The lock timer only reaches a reveal-entry team sync on a kahoot round (locking goes straight to reveal); on a normal round it lands on `break_intro`. The regression tests cover both.
+- `notifySettingsUpdated` is now async, and `SessionsController` awaits it.
