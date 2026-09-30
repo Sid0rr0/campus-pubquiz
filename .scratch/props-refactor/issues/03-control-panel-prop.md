@@ -32,9 +32,18 @@ Inside each sidebar, the leaf panels still get their own props, read from the Co
 
 **Status:** ready-for-agent
 
-- [ ] The shared 32-field sidebar props interface is deleted
-- [ ] Both sidebars take one Control panel prop; /control no longer writes out two prop lists
-- [ ] The Control panel's actions keep the admin game hook's acknowledgement-returning signatures
-- [ ] The mobile drawer still closes after an action or closing the session
-- [ ] The leaf panels keep their own prop interfaces, and /remote still renders them without the Control panel
-- [ ] Existing /control page tests (advance controls, previous button, keyboard shortcuts, status and teams, teams table, leaderboard, showdown, end quiz and close session, rejected actions, connection) pass unchanged in behaviour
+- [x] The shared 32-field sidebar props interface is deleted
+- [x] Both sidebars take one Control panel prop; /control no longer writes out two prop lists
+- [x] The Control panel's actions keep the admin game hook's acknowledgement-returning signatures
+- [x] The mobile drawer still closes after an action or closing the session
+- [x] The leaf panels keep their own prop interfaces, and /remote still renders them without the Control panel
+- [x] Existing /control page tests (advance controls, previous button, keyboard shortcuts, status and teams, teams table, leaderboard, showdown, end quiz and close session, rejected actions, connection) pass unchanged in behaviour
+
+## Comments
+
+Implemented in the commit titled `refactor(frontend): /control passes both sidebars one Control panel prop` (find it with `git log --grep`; hash not recorded here to avoid a follow-up commit).
+
+- Types live in `apps/frontend/app/control/control-panel.ts` (`ControlPanel`, `ControlPanelView`, `ControlPanelActions`); `admin-sidebar-props.ts` is deleted. `controls` is ticket 02's `AdminControls`.
+- `view` is the admin view passed straight through, so the `= []`/`= null` fallbacks for always-present fields are gone from /control. The `adminView` test fixture builder now fills those fields with empty defaults (the fixtures are partial snapshots).
+- `MobileAdminBar` keeps `user`/`onLogout` beyond the panel and still wraps `sendAction`/`closeSession` to close its drawer. Leaf panels and /remote are untouched.
+- `Status:` left as `ready-for-agent`: the triage vocabulary has no "done" state.

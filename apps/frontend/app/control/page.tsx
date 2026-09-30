@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   type GameStatus,
   type QuizSummaryRound,
@@ -25,6 +24,7 @@ import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { MobileAdminBar } from '@/app/control/mobile-admin-bar';
 import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
+import type { ControlPanel } from '@/app/control/control-panel';
 import { getAdminControls } from '@/app/control/admin-controls';
 import { useAdminKeyboardShortcuts } from '@/app/control/use-admin-keyboard-shortcuts';
 
@@ -256,103 +256,35 @@ function AdminPageContent() {
     currentQuestion,
     blockQuestions = [],
     leaderboard = [],
-    teams = [],
-    answeredTeamIds = [],
+    teams,
     ungradedQuestionIds = [],
-    breakEndsAt = null,
-    displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
     phaseStartedAt = null,
     phaseElapsedMs = null,
     settings = DEFAULT_SESSION_SETTINGS,
-    activeShowdown = null,
-    isShowdownEligible,
-    isLastQuestionBeforeBreak,
   } = snapshot;
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
     : blockQuestions;
-  const {
-    canStartQuiz,
-    canEndQuiz,
-    canCloseSession,
-    canReplayMedia,
-    showAnswerStatus,
-    tiedTeamNames,
-  } = getAdminControls(snapshot);
+  const panel: ControlPanel = {
+    view: snapshot,
+    quiz: { id: activeQuizId, title: activeQuizTitle },
+    connectionError,
+    controls: getAdminControls(snapshot),
+    actions: {
+      sendAction,
+      kickTeam,
+      setBreakEndTime,
+      setDisplayTextScale,
+      createShowdownRound,
+      closeSession: handleCloseSession,
+    },
+  };
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
       {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
-      <MobileAdminBar
-        progressStatus={progress.status}
-        roundIndex={progress.roundIndex}
-        questionIndex={progress.questionIndex}
-        joinCode={snapshot.joinCode}
-        activeQuizId={activeQuizId}
-        activeQuizTitle={activeQuizTitle}
-        connectionError={connectionError}
-        canStartQuiz={canStartQuiz}
-        canGoToPreviousQuestion={canGoToPreviousQuestion}
-        canAdvance={canAdvance}
-        canEndQuiz={canEndQuiz}
-        canCloseSession={canCloseSession}
-        isLeaderboardVisible={progress.isLeaderboardVisible}
-        leaderboardRevealCount={leaderboardRevealCount}
-        leaderboardTeamCount={leaderboardTeamCount}
-        isMediaFullscreen={progress.isMediaFullscreen ?? false}
-        canReplayMedia={canReplayMedia}
-        onAction={sendAction}
-        onCloseSession={handleCloseSession}
-        teams={teams}
-        showAnswerStatus={showAnswerStatus}
-        answeredTeamIds={answeredTeamIds}
-        onKickTeam={kickTeam}
-        breakEndsAt={breakEndsAt}
-        onSetBreakEndTime={setBreakEndTime}
-        isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
-        displayTextScale={displayTextScale}
-        onSetDisplayTextScale={setDisplayTextScale}
-        activeShowdown={activeShowdown}
-        tiedTeamNames={tiedTeamNames}
-        isShowdownEligible={isShowdownEligible}
-        onCreateShowdownRound={createShowdownRound}
-        user={auth.user}
-        onLogout={handleLogout}
-      />
-      <DesktopSidebar
-        progressStatus={progress.status}
-        roundIndex={progress.roundIndex}
-        questionIndex={progress.questionIndex}
-        joinCode={snapshot.joinCode}
-        activeQuizId={activeQuizId}
-        activeQuizTitle={activeQuizTitle}
-        connectionError={connectionError}
-        canStartQuiz={canStartQuiz}
-        canGoToPreviousQuestion={canGoToPreviousQuestion}
-        canAdvance={canAdvance}
-        canEndQuiz={canEndQuiz}
-        canCloseSession={canCloseSession}
-        isLeaderboardVisible={progress.isLeaderboardVisible}
-        leaderboardRevealCount={leaderboardRevealCount}
-        leaderboardTeamCount={leaderboardTeamCount}
-        isMediaFullscreen={progress.isMediaFullscreen ?? false}
-        canReplayMedia={canReplayMedia}
-        onAction={sendAction}
-        onCloseSession={handleCloseSession}
-        teams={teams}
-        showAnswerStatus={showAnswerStatus}
-        answeredTeamIds={answeredTeamIds}
-        onKickTeam={kickTeam}
-        breakEndsAt={breakEndsAt}
-        onSetBreakEndTime={setBreakEndTime}
-        isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
-        displayTextScale={displayTextScale}
-        onSetDisplayTextScale={setDisplayTextScale}
-        activeShowdown={activeShowdown}
-        tiedTeamNames={tiedTeamNames}
-        isShowdownEligible={isShowdownEligible}
-        onCreateShowdownRound={createShowdownRound}
-      />
+      <MobileAdminBar panel={panel} user={auth.user} onLogout={handleLogout} />
+      <DesktopSidebar panel={panel} />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
         {progress.status === 'lobby' && (
           <SessionSettingsPanel

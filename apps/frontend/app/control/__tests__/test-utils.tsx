@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import {
+  DEFAULT_DISPLAY_TEXT_SCALE,
   describeAdminIndicators,
   describeOnAirScreen,
   type AdminIndicators,
@@ -108,7 +109,8 @@ function defaultActionAvailability(snapshot: {
  * Builds the view /control is sent from a partial fixture: the fixture is the
  * core snapshot, and the fields the server adds to the admin view are filled
  * in — the on-air fields from the same shared rule the backend projection
- * uses, the button availability from a per-status default. Fields the
+ * uses, the button availability from a per-status default, and the
+ * always-present snapshot fields a test didn't bother to set from empty defaults. Fields the
  * fixture sets itself win.
  */
 export function adminView<
@@ -130,6 +132,12 @@ export function adminView<
     ...defaultActionAvailability(snapshot),
     isShowdownEligible: false,
     isLastQuestionBeforeBreak: false,
+    teams: [],
+    answeredTeamIds: [],
+    breakEndsAt: null,
+    displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
+    activeShowdown: null,
+    leaderboardRevealCount: 0,
     ...snapshot,
   };
 }

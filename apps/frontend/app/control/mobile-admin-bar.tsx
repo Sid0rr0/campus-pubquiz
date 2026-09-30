@@ -12,61 +12,29 @@ import { EditQuizLink } from '@/app/control/edit-quiz-link';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
 import { TeamsPanel } from '@/app/control/teams-panel';
 import { SessionStatusPanel } from '@/app/control/session-status-panel';
-import type { AdminSidebarProps } from '@/app/control/admin-sidebar-props';
+import type { ControlPanel } from '@/app/control/control-panel';
 import { AccountMenuLinks } from '@/app/components/account-menu-links';
 import { Button } from '@/app/components/button';
 
-interface MobileAdminBarProps extends AdminSidebarProps {
+interface MobileAdminBarProps {
+  panel: ControlPanel;
   user: AuthUser | null;
   onLogout: () => void;
 }
 
 /** Sticky Previous/Advance bar + hamburger drawer for everything else — mobile only. Also carries the account nav (Users/Log out) the site header would otherwise show, since that header is hidden on mobile here. */
-export function MobileAdminBar({
-  progressStatus,
-  roundIndex,
-  questionIndex,
-  joinCode,
-  activeQuizId,
-  activeQuizTitle,
-  connectionError,
-  canStartQuiz,
-  canGoToPreviousQuestion,
-  canAdvance,
-  canEndQuiz,
-  canCloseSession,
-  isLeaderboardVisible,
-  leaderboardRevealCount,
-  leaderboardTeamCount,
-  isMediaFullscreen,
-  canReplayMedia,
-  onAction,
-  onCloseSession,
-  teams,
-  showAnswerStatus,
-  answeredTeamIds,
-  onKickTeam,
-  breakEndsAt,
-  onSetBreakEndTime,
-  isLastQuestionBeforeBreak,
-  displayTextScale,
-  onSetDisplayTextScale,
-  activeShowdown,
-  tiedTeamNames,
-  isShowdownEligible,
-  onCreateShowdownRound,
-  user,
-  onLogout,
-}: MobileAdminBarProps) {
+export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
+  const { view, quiz, connectionError, controls, actions } = panel;
+  const { progress } = view;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   function handleDrawerAction(action: GameAction): void {
-    onAction(action);
+    actions.sendAction(action);
     setIsDrawerOpen(false);
   }
 
   function handleDrawerCloseSession(): void {
-    onCloseSession();
+    actions.closeSession();
     setIsDrawerOpen(false);
   }
 
@@ -107,58 +75,58 @@ export function MobileAdminBar({
               </div>
             )}
             <SessionStatusPanel
-              progressStatus={progressStatus}
-              roundIndex={roundIndex}
-              questionIndex={questionIndex}
-              joinCode={joinCode}
-              activeQuizTitle={activeQuizTitle}
+              progressStatus={progress.status}
+              roundIndex={progress.roundIndex}
+              questionIndex={progress.questionIndex}
+              joinCode={view.joinCode}
+              activeQuizTitle={quiz.title}
               connectionError={connectionError}
             />
             <AdminActions
-              canStartQuiz={canStartQuiz}
-              canEndQuiz={canEndQuiz}
-              canCloseSession={canCloseSession}
-              isLeaderboardVisible={isLeaderboardVisible}
-              isMediaFullscreen={isMediaFullscreen}
-              canReplayMedia={canReplayMedia}
+              canStartQuiz={controls.canStartQuiz}
+              canEndQuiz={controls.canEndQuiz}
+              canCloseSession={controls.canCloseSession}
+              isLeaderboardVisible={progress.isLeaderboardVisible}
+              isMediaFullscreen={progress.isMediaFullscreen ?? false}
+              canReplayMedia={controls.canReplayMedia}
               onAction={handleDrawerAction}
               onCloseSession={handleDrawerCloseSession}
             />
             <BreakEndTimeControl
-              progressStatus={progressStatus}
-              breakEndsAt={breakEndsAt}
-              onSetBreakEndTime={onSetBreakEndTime}
-              isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+              progressStatus={progress.status}
+              breakEndsAt={view.breakEndsAt}
+              onSetBreakEndTime={actions.setBreakEndTime}
+              isLastQuestionBeforeBreak={view.isLastQuestionBeforeBreak}
             />
             <DisplayTextScaleControl
-              displayTextScale={displayTextScale}
-              onSetDisplayTextScale={onSetDisplayTextScale}
+              displayTextScale={view.displayTextScale}
+              onSetDisplayTextScale={actions.setDisplayTextScale}
             />
-            <EditQuizLink quizId={activeQuizId} />
+            <EditQuizLink quizId={quiz.id} />
             <ShowdownPanel
-              isEligible={isShowdownEligible}
-              activeShowdown={activeShowdown}
-              tiedTeamNames={tiedTeamNames}
-              onCreateShowdownRound={onCreateShowdownRound}
+              isEligible={view.isShowdownEligible}
+              activeShowdown={view.activeShowdown}
+              tiedTeamNames={controls.tiedTeamNames}
+              onCreateShowdownRound={actions.createShowdownRound}
             />
             <TeamsPanel
-              teams={teams}
-              showAnswerStatus={showAnswerStatus}
-              answeredTeamIds={answeredTeamIds}
-              onKickTeam={onKickTeam}
+              teams={view.teams}
+              showAnswerStatus={controls.showAnswerStatus}
+              answeredTeamIds={view.answeredTeamIds}
+              onKickTeam={actions.kickTeam}
               className="mt-auto border-t border-background/20 pt-4"
             />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
       <NavigationButtons
-        progressStatus={progressStatus}
-        canGoToPreviousQuestion={canGoToPreviousQuestion}
-        canAdvance={canAdvance}
-        isLeaderboardVisible={isLeaderboardVisible}
-        leaderboardRevealCount={leaderboardRevealCount}
-        leaderboardTeamCount={leaderboardTeamCount}
-        onAction={onAction}
+        progressStatus={progress.status}
+        canGoToPreviousQuestion={view.canGoToPreviousQuestion}
+        canAdvance={view.canAdvance}
+        isLeaderboardVisible={progress.isLeaderboardVisible}
+        leaderboardRevealCount={view.leaderboardRevealCount}
+        leaderboardTeamCount={controls.leaderboardStepCount}
+        onAction={actions.sendAction}
         className="flex-1"
       />
     </div>

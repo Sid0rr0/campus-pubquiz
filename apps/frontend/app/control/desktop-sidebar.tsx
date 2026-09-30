@@ -6,97 +6,66 @@ import { EditQuizLink } from '@/app/control/edit-quiz-link';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
 import { TeamsPanel } from '@/app/control/teams-panel';
 import { SessionStatusPanel } from '@/app/control/session-status-panel';
-import type { AdminSidebarProps } from '@/app/control/admin-sidebar-props';
+import type { ControlPanel } from '@/app/control/control-panel';
 
 /** Always-visible quiz master panel — desktop only (the mobile drawer covers the same actions via MobileAdminBar). */
-export function DesktopSidebar({
-  progressStatus,
-  roundIndex,
-  questionIndex,
-  joinCode,
-  activeQuizId,
-  activeQuizTitle,
-  connectionError,
-  canStartQuiz,
-  canGoToPreviousQuestion,
-  canAdvance,
-  canEndQuiz,
-  canCloseSession,
-  isLeaderboardVisible,
-  leaderboardRevealCount,
-  leaderboardTeamCount,
-  isMediaFullscreen,
-  canReplayMedia,
-  onAction,
-  onCloseSession,
-  teams,
-  showAnswerStatus,
-  answeredTeamIds,
-  onKickTeam,
-  breakEndsAt,
-  onSetBreakEndTime,
-  isLastQuestionBeforeBreak,
-  displayTextScale,
-  onSetDisplayTextScale,
-  activeShowdown,
-  tiedTeamNames,
-  isShowdownEligible,
-  onCreateShowdownRound,
-}: AdminSidebarProps) {
+export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
+  const { view, quiz, connectionError, controls, actions } = panel;
+  const { progress } = view;
   return (
     <aside className="hidden w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-foreground p-5 text-background md:sticky md:top-(--site-header-height) md:flex md:h-[calc(100vh-var(--site-header-height))]">
       <h1 className="font-display text-lg">Quiz Master</h1>
       <SessionStatusPanel
-        progressStatus={progressStatus}
-        roundIndex={roundIndex}
-        questionIndex={questionIndex}
-        joinCode={joinCode}
-        activeQuizTitle={activeQuizTitle}
+        progressStatus={progress.status}
+        roundIndex={progress.roundIndex}
+        questionIndex={progress.questionIndex}
+        joinCode={view.joinCode}
+        activeQuizTitle={quiz.title}
         connectionError={connectionError}
       />
       <div className="flex flex-col gap-2">
         <NavigationButtons
-          progressStatus={progressStatus}
-          canGoToPreviousQuestion={canGoToPreviousQuestion}
-          canAdvance={canAdvance}
-          isLeaderboardVisible={isLeaderboardVisible}
-          leaderboardRevealCount={leaderboardRevealCount}
-          leaderboardTeamCount={leaderboardTeamCount}
-          onAction={onAction}
+          progressStatus={progress.status}
+          canGoToPreviousQuestion={view.canGoToPreviousQuestion}
+          canAdvance={view.canAdvance}
+          isLeaderboardVisible={progress.isLeaderboardVisible}
+          leaderboardRevealCount={view.leaderboardRevealCount}
+          leaderboardTeamCount={controls.leaderboardStepCount}
+          onAction={actions.sendAction}
         />
         <AdminActions
-          canStartQuiz={canStartQuiz}
-          canEndQuiz={canEndQuiz}
-          canCloseSession={canCloseSession}
-          isLeaderboardVisible={isLeaderboardVisible}
-          isMediaFullscreen={isMediaFullscreen}
-          canReplayMedia={canReplayMedia}
-          onAction={onAction}
-          onCloseSession={onCloseSession}
+          canStartQuiz={controls.canStartQuiz}
+          canEndQuiz={controls.canEndQuiz}
+          canCloseSession={controls.canCloseSession}
+          isLeaderboardVisible={progress.isLeaderboardVisible}
+          isMediaFullscreen={progress.isMediaFullscreen ?? false}
+          canReplayMedia={controls.canReplayMedia}
+          onAction={actions.sendAction}
+          onCloseSession={actions.closeSession}
         />
         <BreakEndTimeControl
-          progressStatus={progressStatus}
-          breakEndsAt={breakEndsAt}
-          onSetBreakEndTime={onSetBreakEndTime}
-          isLastQuestionBeforeBreak={isLastQuestionBeforeBreak}
+          progressStatus={progress.status}
+          breakEndsAt={view.breakEndsAt}
+          onSetBreakEndTime={actions.setBreakEndTime}
+          isLastQuestionBeforeBreak={view.isLastQuestionBeforeBreak}
         />
         <DisplayTextScaleControl
-          displayTextScale={displayTextScale}
-          onSetDisplayTextScale={onSetDisplayTextScale}
+          displayTextScale={view.displayTextScale}
+          onSetDisplayTextScale={actions.setDisplayTextScale}
         />
-        <EditQuizLink quizId={activeQuizId} />
+        <EditQuizLink quizId={quiz.id} />
         <ShowdownPanel
-          isEligible={isShowdownEligible}
-          activeShowdown={activeShowdown}
-          tiedTeamNames={tiedTeamNames}
-          onCreateShowdownRound={onCreateShowdownRound}
+          isEligible={view.isShowdownEligible}
+          activeShowdown={view.activeShowdown}
+          tiedTeamNames={controls.tiedTeamNames}
+          onCreateShowdownRound={actions.createShowdownRound}
         />
       </div>
       <TeamsPanel
-        teams={teams}
-        showAnswerStatus={showAnswerStatus}
-        answeredTeamIds={answeredTeamIds}
-        onKickTeam={onKickTeam}
+        teams={view.teams}
+        showAnswerStatus={controls.showAnswerStatus}
+        answeredTeamIds={view.answeredTeamIds}
+        onKickTeam={actions.kickTeam}
         className="mt-auto border-t border-background/20 pt-4"
       />
     </aside>
