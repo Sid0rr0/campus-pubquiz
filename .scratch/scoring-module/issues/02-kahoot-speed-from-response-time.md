@@ -12,8 +12,16 @@ See [spec](../spec.md) user stories 7, 8, 16–18 and 26.
 
 **Status:** ready-for-agent
 
-- [ ] Postgres test: speed-scaled points after a kahoot answer-key regrade, run from a freshly constructed answer/grading module with no in-memory state (restart), equal the points from a run without a restart.
-- [ ] Postgres test: a team that resubmits before lock is timed from its last submission.
-- [ ] Postgres test: answers with no stored response time get no scaling. With no timer configured, correct answers keep full points. Wrong answers stay at zero.
-- [ ] The session state no longer holds speed multipliers. The regrade path has no kahoot "not yet scored" skip.
-- [ ] The CLAUDE.md "Known Tradeoffs" entry about in-memory kahoot multipliers is narrowed to the part that still holds (live fixes overwrite manual overrides).
+- [x] Postgres test: speed-scaled points after a kahoot answer-key regrade, run from a freshly constructed answer/grading module with no in-memory state (restart), equal the points from a run without a restart.
+- [x] Postgres test: a team that resubmits before lock is timed from its last submission.
+- [x] Postgres test: answers with no stored response time get no scaling. With no timer configured, correct answers keep full points. Wrong answers stay at zero.
+- [x] The session state no longer holds speed multipliers. The regrade path has no kahoot "not yet scored" skip.
+- [x] The CLAUDE.md "Known Tradeoffs" entry about in-memory kahoot multipliers is narrowed to the part that still holds (live fixes overwrite manual overrides).
+
+## Comments
+
+Implemented in `feat(backend): speed-scale kahoot answers from stored response time`. Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+
+- `applyKahootSpeedScoring(session, question, timer)` now just delegates to `regradeAutoGraded(session, question, kahootTimerSeconds)`; both read `responseMs` stored at submit. `kahootSpeedMultipliers` is gone from session state, and the ensureKahootSpeedScored guard is the status-transition check only.
+- The restart case is covered in `grading.spec.ts` (fresh `AnswerService` on a forked entity manager). The old gateway spec asserting "kahoot not yet scored is skipped" was rewritten to assert the corrected, speed-scaled stored points.
+- DOCUMENTATION.md's live-edit paragraph was updated in the same commit.

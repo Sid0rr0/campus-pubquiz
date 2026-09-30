@@ -86,18 +86,11 @@ export class BlockGradingService {
    * when leaving 'locking' for a kahootMode round — covers both the
    * collapsed locking->reveal path and the ordinary locking->break_intro
    * path (irrelevant there since a kahootMode round never takes it, but
-   * cheap to check generically). Reads the question's open timestamp from
-   * `session`'s phase-timer fields, which are still the pre-transition
-   * values at this point in applyAction (computePhaseTimerFields for the
-   * new progress hasn't run yet) — i.e. exactly when this question opened.
-   * Guarded by kahootSpeedMultipliers (same idempotency convention as
-   * ensureBlockGraded/closestGuessSummaries): the formula itself is
-   * deterministic given phaseStartedAt/kahootQuestionTimerSeconds/points, so
-   * a redundant re-run (e.g. PREVIOUS from 'reveal' back into 'locking'
-   * followed by another ADVANCE) would recompute the same result, but the
-   * guard still skips the pointless extra DB write and leaderboard
-   * recompute. Recomputes the leaderboard afterward, same as
-   * ensureBlockGraded.
+   * cheap to check generically). The scoring reads each answer's response
+   * time as stored at submit, so a redundant re-run (e.g. PREVIOUS from
+   * 'reveal' back into 'locking' followed by another ADVANCE) recomputes the
+   * same points — the status transition is the only guard needed. Recomputes
+   * the leaderboard afterward, same as ensureBlockGraded.
    */
   async ensureKahootSpeedScored(
     session: SessionState,
@@ -110,39 +103,27 @@ export class BlockGradingService {
       return session;
     }
     const round = session.seededGame.rounds[session.progress.roundIndex];
-    if (!round?.kahootMode || session.phaseStartedAt === null) return session;
+    if (!round?.kahootMode) return session;
 
     const question = round.questions[session.progress.questionIndex];
-    if (session.kahootSpeedMultipliers[question.id] !== undefined) {
-      return session;
-    }
-
-    const multipliers = await this.answerService.applyKahootSpeedScoring(
+    await this.answerService.applyKahootSpeedScoring(
       session.seededGame.gameSessionId,
       question,
-      session.phaseStartedAt,
       session.seededGame.settings.kahootQuestionTimerSeconds,
     );
 
     const leaderboard = await this.answerService.computeLeaderboard(
       session.seededGame.gameSessionId,
     );
-    return {
-      ...session,
-      leaderboard,
-      kahootSpeedMultipliers: {
-        ...session.kahootSpeedMultipliers,
-        [question.id]: multipliers,
-      },
-    };
+    return { ...session, leaderboard };
   }
 
   /**
    * Re-grades already-shown questions after a live edit changed their
    * answer/points — `session.seededGame` must already be reloaded, since
    * that's where the corrected key is read from. Auto-graded types re-score
-   * every answer (re-applying any recorded kahoot speed multipliers; a kahoot
-   * question not yet speed-scored is left for its scoring at lock);
+   * every answer (kahoot questions re-apply speed scaling from the response
+   * times stored at submit);
    * closest_guess re-runs its batch only if it was already graded (otherwise
    * the normal lock flow grades it with the new key); human-graded types keep
    * the admin's judgement. Recomputes the leaderboard if anything changed,
@@ -156,28 +137,25 @@ export class BlockGradingService {
     regradedQuestionIds: readonly number[];
   }> {
     const { gameSessionId } = session.seededGame;
+    const { kahootQuestionTimerSeconds } = session.seededGame.settings;
     const questions = session.seededGame.rounds
       .flatMap((round) =>
         round.questions.map((question) => ({
           question,
-          isKahoot: round.kahootMode === true,
+          kahootTimerSeconds:
+            round.kahootMode === true ? kahootQuestionTimerSeconds : null,
         })),
       )
       .filter(({ question }) => questionIds.includes(question.id));
 
     let summaries = session.closestGuessSummaries;
     const regradedQuestionIds: number[] = [];
-    for (const { question, isKahoot } of questions) {
-      const speedMultipliers = session.kahootSpeedMultipliers[question.id];
-      // A kahoot question not yet speed-scored gets graded against the
-      // corrected key at lock (ensureKahootSpeedScored) — regrading it now
-      // would bump updatedAt, which that scoring reads as response time.
-      if (isKahoot && speedMultipliers === undefined) continue;
+    for (const { question, kahootTimerSeconds } of questions) {
       if (isAutoGradedType(question.type)) {
         await this.answerService.regradeAutoGraded(
           gameSessionId,
           question,
-          speedMultipliers ?? {},
+          kahootTimerSeconds,
         );
         regradedQuestionIds.push(question.id);
       } else if (

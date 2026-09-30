@@ -12,7 +12,6 @@ import {
   isAutoGradedType,
   isOverridableType,
   scoreSubmission,
-  speedMultiplier,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -237,14 +236,15 @@ export class AnswerService {
    * after a live edit to an already-shown question. Deliberately overwrites
    * any manual override (e.g. adjusted match partial credit): the key it was
    * judged against just changed, and the admin can override again in break.
-   * `speedMultipliers` (answer id -> multiplier, as returned by
-   * applyKahootSpeedScoring) re-applies a kahootMode question's speed
-   * scaling; an answer missing from it keeps unscaled points.
+   * `kahootTimerSeconds` is the session's configured kahoot question timer
+   * for a kahootMode question, null otherwise (or when unlimited): when set,
+   * each answer is speed-scaled by the response time stored at submit, so a
+   * regrade after a backend restart gives the same points as one without.
    */
   async regradeAutoGraded(
     gameSessionId: number,
     question: GradableQuestion,
-    speedMultipliers: Readonly<Record<number, number>> = {},
+    kahootTimerSeconds: number | null = null,
   ): Promise<void> {
     const rows = await this.answers.find({
       gameSession: gameSessionId,
@@ -252,10 +252,15 @@ export class AnswerService {
     });
     if (rows.length === 0) return;
 
+    const timerMs =
+      kahootTimerSeconds === null ? null : kahootTimerSeconds * 1000;
     const now = new Date();
     for (const row of rows) {
-      const { points } = scoreSubmission(question, row.value);
-      row.pointsAwarded = Math.round(points * (speedMultipliers[row.id] ?? 1));
+      row.pointsAwarded = scoreSubmission(
+        question,
+        row.value,
+        timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
+      ).points;
       row.gradedAt = now;
     }
     await this.answers.getEntityManager().flush();
@@ -303,53 +308,28 @@ export class AnswerService {
   }
 
   /**
-   * Rescales an already-graded kahootMode question's points by answer speed
-   * (the formula lives in Scoring's speedMultiplier). `questionTimerSeconds`
-   * is the session's configured `kahootQuestionTimerSeconds` (the real,
-   * fixed timer), not however long the question actually stayed open — so a
-   * manual early lock doesn't distort the ratio. When no timer is configured
-   * (unlimited), speed conveys no information, so nothing is rescaled.
-   * Re-scores every row against `question` (so a key corrected before lock
-   * counts) — wrong answers stay at 0 regardless of speed. Uses `updatedAt`
-   * (not `createdAt`) since submit()'s upsert already treats updatedAt as
-   * "last resubmission time" for a team that revises before lock.
-   * Idempotent/recomputable, same convention as gradeClosestGuess — each
-   * call re-scores from the row's stored value, not from whatever
-   * pointsAwarded currently holds, so a redundant re-run never compounds
-   * the scaling on top of itself.
-   *
-   * Returns every answer's speed multiplier, wrong answers included, for the
-   * caller to keep: the flush below bumps `updatedAt` (TimestampedEntity's
-   * onUpdate hook), so the response times can't be recovered afterwards —
-   * regradeAutoGraded needs these to re-apply speed scaling if the answer
-   * key is corrected later. Empty when no timer is configured.
+   * Scales a kahootMode question's points by answer speed once it locks (the
+   * formula lives in Scoring's speedMultiplier), reading each answer's
+   * response time as stored at submit — measured from the phase start and
+   * overwritten on every resubmission, so a team that revises before lock is
+   * timed from its last submission. `questionTimerSeconds` is the session's
+   * configured `kahootQuestionTimerSeconds` (the real, fixed timer), not
+   * however long the question actually stayed open — so a manual early lock
+   * doesn't distort the ratio; null (unlimited) means no scaling. Re-scores
+   * every row against `question`, so a key corrected before lock counts —
+   * wrong answers stay at 0 regardless of speed. Idempotent: scores are
+   * recomputed from the stored value and response time, never from the
+   * current pointsAwarded, so a redundant re-run can't compound the scaling.
    */
   async applyKahootSpeedScoring(
     gameSessionId: number,
     question: GradableQuestion,
-    questionOpenedAt: number,
     questionTimerSeconds: number | null,
-  ): Promise<Record<number, number>> {
-    if (questionTimerSeconds === null) return {};
-
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      question: question.id,
-    });
-    if (rows.length === 0) return {};
-
-    const timerMs = questionTimerSeconds * 1000;
-    const multipliers: Record<number, number> = {};
-    for (const row of rows) {
-      const speed = {
-        responseMs: row.updatedAt.getTime() - questionOpenedAt,
-        timerMs,
-      };
-      multipliers[row.id] = speedMultiplier(speed);
-      row.pointsAwarded = scoreSubmission(question, row.value, speed).points;
-    }
-    await this.answers.getEntityManager().flush();
-    return multipliers;
+  ): Promise<void> {
+    // Kahoot rounds only hold auto-graded types (Scoring's
+    // KAHOOT_ALLOWED_TYPES); never overwrite a human or batch grade.
+    if (!isAutoGradedType(question.type)) return;
+    await this.regradeAutoGraded(gameSessionId, question, questionTimerSeconds);
   }
 
   async computeLeaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {

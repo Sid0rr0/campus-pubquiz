@@ -355,9 +355,9 @@ If a shown question's `answer` or `points` changed, its existing answers are
 re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
 (`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
-speed scaling from the per-answer multipliers recorded when the question was
-scored (lost on a backend restart, after which a regraded kahoot question gets
-unscaled points); an already-graded `closest_guess` re-runs its batch;
+speed scaling from the response time stored on each answer at submit (so it
+survives a backend restart, and a correction made before the question locks is
+speed-scaled like any other); an already-graded `closest_guess` re-runs its batch;
 human-graded types keep the admin's grades. The editor keeps sort/match
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see.

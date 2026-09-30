@@ -194,7 +194,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     ).toEqual([]);
   });
 
-  it('re-applies the speed multipliers recorded when a kahoot question was scored', async () => {
+  it('re-applies the speed scaling from the stored response time after a kahoot question was scored', async () => {
     freezeClockAt(FROZEN_NOW);
     const { game, admin } = await start({
       teamNames: ['Speedy'],
@@ -213,11 +213,12 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
 
     await editQuiz(game, [questionId]);
 
-    // 20 points at the recorded x0.75 multiplier, not the unscaled 20.
+    // 20 points at the stored response time's x0.75 multiplier, not the unscaled 20.
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
   });
 
-  it('leaves a kahoot question that has not been speed-scored yet to the scoring at lock', async () => {
+  it('speed-scales a correction made before the kahoot question locks, and keeps it through lock', async () => {
+    freezeClockAt(FROZEN_NOW);
     const { game, admin } = await start({
       teamNames: ['Speedy'],
       rounds: KAHOOT_QUIZ,
@@ -226,17 +227,17 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     const [team] = game.teams;
     const [questionId] = game.rounds[0].questionIds;
     await game.openFirstQuestion(admin);
+    advanceClockBy(HALF_TIMER_MS); // answers halfway through the timer: x0.75
     await submit(game, team, questionId, 'Paris');
-    const pointsBefore = await storedPoints(game, questionId);
-    await correctAnswerKey(game, questionId, { answer: 'London' });
-    game.clearEmits();
+    expect(await storedPoints(game, questionId)).toEqual({ Speedy: 10 });
+    await correctAnswerKey(game, questionId, { points: 20 });
 
     await editQuiz(game, [questionId]);
 
-    expect(await storedPoints(game, questionId)).toEqual(pointsBefore);
-    expect(
-      game.payloadsTo(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED),
-    ).toEqual([]);
+    expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
+    await game.act('ADVANCE'); // -> locking
+    await game.act('ADVANCE'); // -> reveal (speed-scored at lock)
+    expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
   });
 
   it('skips a closest_guess question that has not been graded yet', async () => {
