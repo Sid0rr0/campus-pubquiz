@@ -211,15 +211,58 @@ export class GameStateService implements OnModuleInit {
   /**
    * Re-grades already-shown questions whose answer/points were corrected by
    * a live edit — call after reloadActiveQuiz, so the corrected key is what
-   * gets graded against. See BlockGradingService.regradeQuestions.
+   * gets graded against. See BlockGradingService.regradeQuestions. Returns
+   * the ids of the questions it actually re-scored.
    */
   async regradeQuestions(
     joinCode: string,
     questionIds: readonly number[],
-  ): Promise<void> {
+  ): Promise<readonly number[]> {
     const session = this.sessionStore.get(joinCode);
-    const regraded = await this.grading.regradeQuestions(session, questionIds);
+    const { session: regraded, regradedQuestionIds } =
+      await this.grading.regradeQuestions(session, questionIds);
     this.sessionStore.set(joinCode, regraded);
+    return regradedQuestionIds;
+  }
+
+  /**
+   * The quiz behind a live session was edited in place: reloads its
+   * questions and re-grades `regradeQuestionIds` (already-shown questions
+   * whose answer/points were corrected). The outcome names every re-scored
+   * question for a fresh admin answer list, and every connected team with an
+   * answer to one for a per-team sync — so the grading panel, the big screen
+   * and the phones all show the corrected points.
+   */
+  async quizEdited(
+    joinCode: string,
+    regradeQuestionIds: readonly number[] = [],
+  ): Promise<SessionOutcome> {
+    await this.reloadActiveQuiz(joinCode);
+    const regradedQuestionIds =
+      regradeQuestionIds.length > 0
+        ? await this.regradeQuestions(joinCode, regradeQuestionIds)
+        : [];
+    if (regradedQuestionIds.length === 0) return BROADCAST_STATE_OUTCOME;
+
+    const gameSessionId = this.getGameSessionId(joinCode);
+    const answerLists = await Promise.all(
+      regradedQuestionIds.map((questionId) =>
+        this.answerService.listForQuestion(gameSessionId, questionId),
+      ),
+    );
+    const answeredTeamIds = new Set(
+      answerLists.flat().map((answer) => answer.teamId),
+    );
+    const teamSyncTeamIds = this.getSnapshot(joinCode)
+      .teams.filter(
+        (team) => team.isConnected && answeredTeamIds.has(team.teamId),
+      )
+      .map((team) => team.teamId);
+    return {
+      ...BROADCAST_STATE_OUTCOME,
+      answerListQuestionIds: regradedQuestionIds,
+      teamSyncTeamIds,
+    };
   }
 
   /**

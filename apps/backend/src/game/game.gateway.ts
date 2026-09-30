@@ -29,7 +29,6 @@ import {
   disconnectClient,
 } from '@/game/socket/connection.util';
 import { createShowdownRound } from '@/game/socket/handlers/create-showdown-round.handler';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
 import { gradeTeamAnswer } from '@/game/socket/handlers/grade-answer.handler';
 import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
 import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
@@ -239,11 +238,11 @@ export class GameGateway
     joinCode: string,
     regradeQuestionIds: readonly number[] = [],
   ): Promise<void> {
-    await this.gameState.reloadActiveQuiz(joinCode);
-    if (regradeQuestionIds.length > 0) {
-      await this.gameState.regradeQuestions(joinCode, regradeQuestionIds);
-    }
-    broadcastGameState(this.server, joinCode, this.gameState);
+    await deliverOutcome(
+      this.outcomeDeps,
+      joinCode,
+      await this.gameState.quizEdited(joinCode, regradeQuestionIds),
+    );
   }
 
   /**

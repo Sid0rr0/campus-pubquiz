@@ -11,7 +11,14 @@ The grading panel, the big screen and the teams' phones all show the corrected p
 
 **Status:** ready-for-agent
 
-- [ ] Regression test (real-store harness): after correcting a shown multiple_choice question's answer, the admin room receives that question's answer list with re-scored points.
-- [ ] In the same scenario, each connected team that answered it receives TEAM_ANSWERS_SYNCED with its re-scored answer, and the next snapshot's leaderboard reflects the new totals.
-- [ ] Editing only not-yet-shown questions still just reloads and broadcasts, with no answer-list or team-sync pushes.
-- [ ] The accepted tradeoffs are unchanged: manual overrides are discarded on regrade, and the kahoot multipliers still live in memory.
+- [x] Regression test (real-store harness): after correcting a shown multiple_choice question's answer, the admin room receives that question's answer list with re-scored points.
+- [x] In the same scenario, each connected team that answered it receives TEAM_ANSWERS_SYNCED with its re-scored answer, and the next snapshot's leaderboard reflects the new totals.
+- [x] Editing only not-yet-shown questions still just reloads and broadcasts, with no answer-list or team-sync pushes.
+- [x] The accepted tradeoffs are unchanged: manual overrides are discarded on regrade, and the kahoot multipliers still live in memory.
+
+## Comments
+
+Implemented in the commit recorded in `.scratch/overview.md`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and the overview records completion.
+
+- `GameStateService.quizEdited(joinCode, regradeQuestionIds)` reloads the questions, regrades, and returns an outcome. `BlockGradingService.regradeQuestions` now reports which questions it actually re-scored, so the outcome's `answerListQuestionIds` names only those; `teamSyncTeamIds` is every connected team with an answer to one. `GameGateway.notifyQuizEdited` just delivers that outcome.
+- Specs in `quiz-edited.spec.ts` (real-store harness). Manual-override discard and in-memory kahoot multipliers are unchanged (still pinned by `live-edit-regrade.spec.ts`).

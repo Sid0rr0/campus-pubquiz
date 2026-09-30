@@ -150,12 +150,16 @@ export class BlockGradingService {
    * question not yet speed-scored is left for its scoring at lock);
    * closest_guess re-runs its batch only if it was already graded (otherwise
    * the normal lock flow grades it with the new key); human-graded types keep
-   * the admin's judgement. Recomputes the leaderboard if anything changed.
+   * the admin's judgement. Recomputes the leaderboard if anything changed,
+   * and names the questions it re-scored.
    */
   async regradeQuestions(
     session: SessionState,
     questionIds: readonly number[],
-  ): Promise<SessionState> {
+  ): Promise<{
+    session: SessionState;
+    regradedQuestionIds: readonly number[];
+  }> {
     const { gameSessionId } = session.seededGame;
     const questions = session.seededGame.rounds
       .flatMap((round) =>
@@ -167,7 +171,7 @@ export class BlockGradingService {
       .filter(({ question }) => questionIds.includes(question.id));
 
     let summaries = session.closestGuessSummaries;
-    let hasRegraded = false;
+    const regradedQuestionIds: number[] = [];
     for (const { question, isKahoot } of questions) {
       const speedMultipliers = session.kahootSpeedMultipliers[question.id];
       // A kahoot question not yet speed-scored gets graded against the
@@ -184,7 +188,7 @@ export class BlockGradingService {
           question.matchScoringMode,
           speedMultipliers ?? {},
         );
-        hasRegraded = true;
+        regradedQuestionIds.push(question.id);
       } else if (
         question.type === 'closest_guess' &&
         summaries[question.id] !== undefined
@@ -199,14 +203,19 @@ export class BlockGradingService {
           ...summaries,
           [question.id]: summarizeClosestGuess(graded),
         };
-        hasRegraded = true;
+        regradedQuestionIds.push(question.id);
       }
     }
-    if (!hasRegraded) return session;
+    if (regradedQuestionIds.length === 0) {
+      return { session, regradedQuestionIds };
+    }
 
     const leaderboard =
       await this.answerService.computeLeaderboard(gameSessionId);
-    return { ...session, closestGuessSummaries: summaries, leaderboard };
+    return {
+      session: { ...session, closestGuessSummaries: summaries, leaderboard },
+      regradedQuestionIds,
+    };
   }
 
   /** Current-block question IDs (closest_guess excluded) with at least one ungraded submitted answer, read fresh from the DB. */
