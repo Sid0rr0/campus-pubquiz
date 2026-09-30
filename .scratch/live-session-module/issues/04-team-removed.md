@@ -13,7 +13,7 @@
 
 ## Comments
 
-Implemented in commit `HASH`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and `.scratch/overview.md` records completion.
+Implemented in commit `6f17212`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and `.scratch/overview.md` records completion.
 
 - `GameStateService.teamRemoved(joinCode, teamId, roster, 'kicked' | 'left')` drops the connection, sets the roster and recomputes the leaderboard together, and returns an outcome; a kick carries the `TEAM_KICKED` notice for the team's socket.
 - The kick handler disconnects the socket after delivery, so the notice is out before it closes. The notice now goes through `server.to(socketId)` (the shared delivery step) instead of a direct `socket.emit`; the fake-harness kick spec was adjusted, and a payload-less notice is emitted with no argument as before.
