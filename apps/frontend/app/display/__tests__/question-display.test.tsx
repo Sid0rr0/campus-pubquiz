@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, question } from './test-utils';
+import { progress, question, displayView } from './test-utils';
 
 const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
@@ -35,10 +35,10 @@ describe('DisplayPage — question display', () => {
 
   it('shows the current question and its options while open', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -50,7 +50,7 @@ describe('DisplayPage — question display', () => {
 
   it('shows sort items numbered in display order', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r1q1',
@@ -59,7 +59,7 @@ describe('DisplayPage — question display', () => {
           options: ['Venus', 'Mercury', 'Earth'],
           points: 3,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -75,7 +75,7 @@ describe('DisplayPage — question display', () => {
 
   it('shows both match lists before reveal', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r1q1',
@@ -85,7 +85,7 @@ describe('DisplayPage — question display', () => {
           matchTargets: ['shield', 'excalibur'],
           points: 4,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -103,13 +103,13 @@ describe('DisplayPage — question display', () => {
 
   it('shows the question image in a fullscreen overlay when media fullscreen is on', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'question_open',
           isMediaFullscreen: true,
         }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -122,13 +122,13 @@ describe('DisplayPage — question display', () => {
 
   it('does not show the image in a fullscreen overlay when media fullscreen is off', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'question_open',
           isMediaFullscreen: false,
         }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -141,13 +141,13 @@ describe('DisplayPage — question display', () => {
 
   it('does not show any media when the question has none, even with fullscreen on', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'question_open',
           isMediaFullscreen: true,
         }),
         currentQuestion: question,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -158,10 +158,10 @@ describe('DisplayPage — question display', () => {
 
   it('switches to a two-column layout once a portrait image loads', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -182,10 +182,10 @@ describe('DisplayPage — question display', () => {
 
   it('stays in the stacked layout once a landscape image loads', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -204,13 +204,13 @@ describe('DisplayPage — question display', () => {
 
   it('stays in the stacked layout for a portrait image while fullscreen', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'question_open',
           isMediaFullscreen: true,
         }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -229,7 +229,7 @@ describe('DisplayPage — question display', () => {
 
   it('shows how many teams have answered the open question', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
         teams: [
@@ -237,7 +237,7 @@ describe('DisplayPage — question display', () => {
           { teamId: 'team-2', teamName: 'Beer Necessities' },
         ],
         answeredTeamIds: ['team-1'],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

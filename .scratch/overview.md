@@ -27,7 +27,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 02  | [Named on-air screen drives the big screen](screen-projection/issues/02-named-on-air-screen-drives-display.md)                               | 01         |
 | 03  | [Presenter preview built from the projection](screen-projection/issues/03-presenter-preview-from-projection.md)                              | 02         |
 | 04  | [Admin view: the question on display and the round indicators](screen-projection/issues/04-admin-view-on-display-question-and-indicators.md) | 02         |
 | 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md)                             | 01         |
@@ -66,3 +65,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | scoring-module      | 06  | [Align half points and sort comparison](scoring-module/issues/06-align-half-points-and-sort.md)                                 | —         |
 | scoring-module      | 07  | [Quiz editor: kahoot type picker and toggle guard](scoring-module/issues/07-editor-kahoot-picker-and-toggle.md)                 | —         |
 | screen-projection   | 01  | [Players view hides the kahoot question behind the leaderboard](screen-projection/issues/01-players-view-redacts-hidden-kahoot-question.md) | —         |
+| screen-projection   | 02  | [Named on-air screen drives the big screen](screen-projection/issues/02-named-on-air-screen-drives-display.md) | —         |

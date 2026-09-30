@@ -8,9 +8,6 @@ import {
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
   isShowingLastBreak,
-  type BlockQuestionView,
-  type BlockRevealQuestionView,
-  type GameProgress,
   type LeaderboardEntry,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
@@ -37,104 +34,6 @@ import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RevealIntroScreen } from '@/app/display/reveal-intro-screen';
 import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
 import { TriviaHeader } from '@/app/display/trivia-header';
-
-interface HeaderContent {
-  label?: string;
-  title?: string;
-  badge?: string;
-}
-
-/**
- * Round/question badge for the header — only for statuses whose own screen
- * has no other way to show that context (question_open/locking/break/reveal).
- * round_intro and reveal_intro already show "ROUND N" in their own big
- * centered card, so the header stays badge-less there to avoid showing the
- * same line twice.
- */
-function getHeaderContent(
-  progress: GameProgress,
-  currentRoundTitle: string,
-  breakQuestion:
-    | Pick<
-        BlockQuestionView,
-        'roundNumber' | 'questionNumberInRound' | 'roundTitle'
-      >
-    | undefined,
-  revealQuestion:
-    | Pick<
-        BlockRevealQuestionView,
-        'roundNumber' | 'questionNumberInRound' | 'roundTitle'
-      >
-    | undefined,
-): HeaderContent {
-  switch (progress.status) {
-    case 'question_open':
-    case 'locking':
-      return {
-        label: `ROUND ${progress.roundIndex + 1}`,
-        title: currentRoundTitle,
-        badge: `QUESTION ${progress.questionIndex + 1}`,
-      };
-    case 'break':
-      if (breakQuestion === undefined) return {};
-      return {
-        label: `ROUND ${breakQuestion.roundNumber}`,
-        title: breakQuestion.roundTitle,
-        badge: `QUESTION ${breakQuestion.questionNumberInRound} (BREAK)`,
-      };
-    case 'reveal':
-      if (revealQuestion === undefined) return {};
-      return {
-        label: `ROUND ${revealQuestion.roundNumber}`,
-        title: revealQuestion.roundTitle,
-        badge: `REVEALING ANSWERS · QUESTION ${revealQuestion.questionNumberInRound}`,
-      };
-    default:
-      return {};
-  }
-}
-
-/**
- * Identifies the visually distinct screen currently on-air, so AnimatePresence
- * only re-triggers the transition when what's shown actually changes (not on
- * every snapshot broadcast for the same screen, e.g. an answer count ticking
- * up during question_open).
- */
-function getScreenKey(
-  progress: GameProgress,
-  revealQuestion:
-    | Pick<BlockRevealQuestionView, 'roundNumber' | 'questionNumberInRound'>
-    | undefined,
-  closestGuessRevealStep: number,
-  activeShowdownId: number | undefined,
-  showdownRevealStep: number,
-): string {
-  if (progress.isLeaderboardVisible) return 'leaderboard';
-
-  switch (progress.status) {
-    case 'ended':
-      return activeShowdownId === undefined
-        ? 'ended'
-        : `ended-showdown-${activeShowdownId}-${showdownRevealStep}`;
-    case 'question_open':
-    case 'locking':
-      return `${progress.status}-${progress.roundIndex}-${progress.questionIndex}`;
-    case 'round_intro':
-      return `round_intro-${progress.roundIndex}`;
-    case 'break_intro':
-      return `break_intro-${progress.roundIndex}`;
-    case 'break':
-      return `break-${progress.roundIndex}-${progress.revealIndex}`;
-    case 'break_round_intro':
-      return `break_round_intro-${progress.revealIndex}`;
-    case 'reveal_intro':
-      return `reveal_intro-${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
-    case 'reveal':
-      return `reveal-${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}-${closestGuessRevealStep}`;
-    default:
-      return progress.status;
-  }
-}
 
 function DisplayPageContent() {
   const router = useRouter();
@@ -224,6 +123,10 @@ function DisplayPageContent() {
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
     showdownRevealStep = 0,
+    onAirScreen,
+    screenKey,
+    header: headerContent,
+    isBetweenKahootQuestions,
   } = snapshot;
 
   // Adjusted directly during render (React's sanctioned "remember info from
@@ -254,42 +157,20 @@ function DisplayPageContent() {
     setPreviousLeaderboard(snapshot.leaderboard);
   }
 
-  const revealQuestion = revealQuestions[progress.revealIndex];
-  // The specific block question under review — every position shows its own
-  // content (including the block's last, just-locked question), so Previous
-  // steps through Q5, Q4, Q3… one at a time with nothing skipped.
-  const breakReviewQuestion = blockQuestions[progress.revealIndex];
-  // The round whose title is paused on — looked up the same way as
-  // revealQuestion above, since progress.roundIndex stays pinned to the
-  // block's last round throughout break, not whichever round is on screen.
-  const breakRoundIntroQuestion = blockQuestions[progress.revealIndex];
-  const headerContent = getHeaderContent(
-    progress,
-    roundTitle,
-    breakReviewQuestion,
-    revealQuestion,
+  // The question each break/reveal screen is about was resolved by the
+  // server (progress.roundIndex stays pinned to the block's last round
+  // there), so it is looked up by id rather than worked out here.
+  const screenQuestionId =
+    'questionId' in onAirScreen ? onAirScreen.questionId : null;
+  const breakReviewQuestion = blockQuestions.find(
+    (question) => question.id === screenQuestionId,
   );
-
-  const screenKey = getScreenKey(
-    progress,
-    revealQuestion,
-    closestGuessRevealStep,
-    activeShowdown?.id,
-    showdownRevealStep,
+  const breakRoundIntroQuestion = breakReviewQuestion;
+  const revealQuestion = revealQuestions.find(
+    (question) => question.id === screenQuestionId,
   );
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
-  // The leaderboard shown between one Kahoot question and the next (the
-  // next question is already open underneath, hidden until the admin
-  // dismisses this board) — the one case that should animate from the old
-  // standings rather than snap straight to the new ones. Every other
-  // leaderboard view (round-end, end-of-quiz, even for a Kahoot round's
-  // last question) keeps its existing one-by-one suspense reveal.
-  const isBetweenKahootQuestions =
-    isCurrentRoundKahoot &&
-    progress.status === 'question_open' &&
-    progress.isLeaderboardVisible;
-
   return (
     <main
       className="flex h-dvh flex-col bg-background text-foreground"

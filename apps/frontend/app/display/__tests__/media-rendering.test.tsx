@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress } from './test-utils';
+import { progress, displayView } from './test-utils';
 
 const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
@@ -35,7 +35,7 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders a question with an image mediaUrl as an image', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r2q1',
@@ -44,7 +44,7 @@ describe('DisplayPage — media rendering', () => {
           mediaUrl: 'https://example.com/landmark.jpg',
           points: 3,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -57,7 +57,7 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders an audio question as an autoplaying audio player, not an image', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r2q2',
@@ -66,7 +66,7 @@ describe('DisplayPage — media rendering', () => {
           mediaUrl: 'https://example.com/song.mp3',
           points: 3,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -81,7 +81,7 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders media_url on a multiple_choice/free_text question too, not just audio', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r3q1',
@@ -91,7 +91,7 @@ describe('DisplayPage — media rendering', () => {
           options: ['France', 'Italy'],
           points: 2,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -105,7 +105,7 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders a YouTube media_url as an embedded iframe with the clip start/end, not an image', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r4q1',
@@ -116,7 +116,7 @@ describe('DisplayPage — media rendering', () => {
           mediaEndSeconds: 140,
           points: 3,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -132,7 +132,7 @@ describe('DisplayPage — media rendering', () => {
 
   it('does not autoplay an audio question when the session disables autoplayMedia', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r2q2',
@@ -142,7 +142,7 @@ describe('DisplayPage — media rendering', () => {
           points: 3,
         },
         settings: { autoplayMedia: false },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -155,7 +155,7 @@ describe('DisplayPage — media rendering', () => {
 
   it('sets the YouTube embed autoplay param to 0 when the session disables autoplayMedia', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
           id: 'r4q1',
@@ -165,7 +165,7 @@ describe('DisplayPage — media rendering', () => {
           points: 3,
         },
         settings: { autoplayMedia: false },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -186,13 +186,13 @@ describe('DisplayPage — media rendering', () => {
       points: 3,
     };
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'question_open',
           isMediaFullscreen: false,
         }),
         currentQuestion,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -200,13 +200,13 @@ describe('DisplayPage — media rendering', () => {
     const iframeBeforeToggle = screen.getByTestId('question-youtube');
 
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'question_open',
           isMediaFullscreen: true,
         }),
         currentQuestion,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -224,10 +224,10 @@ describe('DisplayPage — media rendering', () => {
       points: 3,
     };
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open', mediaReplayToken: 1 }),
         currentQuestion,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -235,10 +235,10 @@ describe('DisplayPage — media rendering', () => {
     const iframeBeforeReplay = screen.getByTestId('question-youtube');
 
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open', mediaReplayToken: 2 }),
         currentQuestion,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

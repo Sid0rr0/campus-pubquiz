@@ -1,3 +1,4 @@
+import type { HeaderContent, OnAirScreen } from './on-air-screen';
 import type {
   GameAction,
   GameProgress,
@@ -311,8 +312,21 @@ export interface StateSnapshotPayload {
  * computed fields added). Keep them as separate names so a page can only
  * read what its own room is sent.
  */
-export type DisplayStatePayload = StateSnapshotPayload;
-export type AdminStatePayload = StateSnapshotPayload;
+/** What /display renders: the snapshot plus the screen on air, resolved once by the server. */
+export interface DisplayStatePayload extends StateSnapshotPayload {
+  /** The named screen on air, and the question or round it is about. */
+  onAirScreen: OnAirScreen;
+  /** Transition key — changes only when what's on screen changes. */
+  screenKey: string;
+  /** Header label/title/badge for the screen on air. */
+  header: HeaderContent;
+  /** True while the between-questions leaderboard covers a kahoot question that is already open underneath. */
+  isBetweenKahootQuestions: boolean;
+}
+/** The quiz master's view: the snapshot plus the screen on air. */
+export interface AdminStatePayload extends StateSnapshotPayload {
+  onAirScreen: OnAirScreen;
+}
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export type PlayersStatePayload = StateSnapshotPayload;
 

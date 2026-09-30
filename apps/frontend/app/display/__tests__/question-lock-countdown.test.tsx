@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, question } from './test-utils';
+import { progress, question, displayView } from './test-utils';
 
 const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
@@ -39,11 +39,11 @@ describe('DisplayPage — question lock countdown', () => {
 
   it('shows no countdown while the question itself is open', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
         questionLockAt: null,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -58,12 +58,12 @@ describe('DisplayPage — question lock countdown', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
         questionLockAt: null,
         kahootQuestionEndsAt: Date.now() + 20_000,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -78,11 +78,11 @@ describe('DisplayPage — question lock countdown', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'locking' }),
         currentQuestion: question,
         questionLockAt: Date.now() + 45_000,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -98,11 +98,11 @@ describe('DisplayPage — question lock countdown', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'locking' }),
         currentQuestion: question,
         questionLockAt: Date.now() + 10_000,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

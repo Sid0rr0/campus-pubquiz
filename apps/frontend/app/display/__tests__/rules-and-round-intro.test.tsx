@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress } from './test-utils';
+import { progress, displayView } from './test-utils';
 
 const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
@@ -35,7 +35,7 @@ describe('DisplayPage — rules and round intro', () => {
 
   it('shows the rules screen after the lobby, before the first question opens', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'rules' }),
         currentQuestion: null,
         quizStructure: {
@@ -45,7 +45,7 @@ describe('DisplayPage — rules and round intro', () => {
           minQuestionsPerTopic: 4,
           maxQuestionsPerTopic: 4,
         },
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -61,13 +61,13 @@ describe('DisplayPage — rules and round intro', () => {
 
   it('lists every round title, category, and author on the round overview screen, before round 0 opens', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'round_overview' }),
         currentQuestion: null,
         roundTitles: ['General Knowledge', 'Picture Round', 'Music Round'],
         roundCategories: ['General knowledge', '', ''],
         roundAuthors: ['', 'Sam', ''],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -82,13 +82,13 @@ describe('DisplayPage — rules and round intro', () => {
 
   it('shows the round name, category, and author on the round intro screen, before any question opens', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'round_intro', roundIndex: 1 }),
         currentQuestion: null,
         roundTitle: 'Picture Round',
         roundCategory: 'Film & TV',
         roundAuthor: 'Sam',
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });

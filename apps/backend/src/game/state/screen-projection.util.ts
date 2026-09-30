@@ -1,5 +1,6 @@
 import {
   SOCKET_ROOMS,
+  describeOnAirScreen,
   type SocketRoomName,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
@@ -10,9 +11,9 @@ import { buildSnapshot } from '@/game/state/session-snapshot.util';
 /**
  * The Screen projection: the view of a live session that one audience (a
  * socket room) is sent on every state broadcast and on connect/reconnect.
- * Pure — the display and admin views are the snapshot unchanged; the
- * players view has whatever a team has not been shown yet removed before
- * the payload leaves the server.
+ * Pure — every view is the snapshot plus what that audience needs computed;
+ * the players view also has whatever a team has not been shown yet removed
+ * before the payload leaves the server.
  */
 export function projectScreen<Room extends SocketRoomName>(
   session: SessionState,
@@ -23,11 +24,25 @@ export function projectScreen(
   audience: SocketRoomName,
 ): StateViewByRoom[SocketRoomName] {
   const snapshot = buildSnapshot(session);
-  if (
-    audience === SOCKET_ROOMS.PLAYERS &&
-    isQuestionHiddenBehindKahootLeaderboard(session)
-  ) {
-    return { ...snapshot, currentQuestion: null, blockQuestions: [] };
+  const { screen, screenKey, header } = describeOnAirScreen(snapshot);
+
+  switch (audience) {
+    case SOCKET_ROOMS.DISPLAY:
+      return {
+        ...snapshot,
+        onAirScreen: screen,
+        screenKey,
+        header,
+        // The next kahoot question is already open underneath the board.
+        isBetweenKahootQuestions:
+          session.progress.status === 'question_open' &&
+          isQuestionHiddenBehindKahootLeaderboard(session),
+      };
+    case SOCKET_ROOMS.ADMIN:
+      return { ...snapshot, onAirScreen: screen };
+    case SOCKET_ROOMS.PLAYERS:
+      return isQuestionHiddenBehindKahootLeaderboard(session)
+        ? { ...snapshot, currentQuestion: null, blockQuestions: [] }
+        : snapshot;
   }
-  return snapshot;
 }

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress } from './test-utils';
+import { progress, displayView } from './test-utils';
 
 const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
   mockUseGameSocket: vi.fn(),
@@ -59,11 +59,11 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the current reveal question with its correct answer, same layout as when it was asked', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -78,7 +78,7 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the correct order for a sort question on reveal', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -94,7 +94,7 @@ describe('DisplayPage — reveal', () => {
             roundTitle: 'Space',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -110,7 +110,7 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the correct pairs for a match question on reveal', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -127,7 +127,7 @@ describe('DisplayPage — reveal', () => {
             roundTitle: 'Heroes',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -147,11 +147,11 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the second reveal question when revealIndex advances', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 1 }),
         currentQuestion: null,
         revealQuestions,
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -168,7 +168,7 @@ describe('DisplayPage — reveal', () => {
 
   it("shows a round intro card with the question's own round title before revealing a new round's answers, even for a block spanning multiple rounds", () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({
           status: 'reveal_intro',
           roundIndex: 1,
@@ -188,7 +188,7 @@ describe('DisplayPage — reveal', () => {
             roundTitle: 'Geography',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -202,7 +202,7 @@ describe('DisplayPage — reveal', () => {
 
   it('shows media for an image mediaUrl and audio reveal questions', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -215,7 +215,7 @@ describe('DisplayPage — reveal', () => {
             answer: 'Eiffel Tower',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -229,7 +229,7 @@ describe('DisplayPage — reveal', () => {
 
   it('places the answer text above the picture on reveal', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -242,7 +242,7 @@ describe('DisplayPage — reveal', () => {
             answer: 'Eiffel Tower',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -257,7 +257,7 @@ describe('DisplayPage — reveal', () => {
 
   it('shows both media_url and answer_media_url side by side on reveal when the question media is an image', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -271,7 +271,7 @@ describe('DisplayPage — reveal', () => {
             answerMediaUrl: 'https://example.com/eiffel-plaque.jpg',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -289,7 +289,7 @@ describe('DisplayPage — reveal', () => {
 
   it('shows an answer_media_url image on reveal for a free_text question, independent of type', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -302,7 +302,7 @@ describe('DisplayPage — reveal', () => {
             answerMediaUrl: 'https://example.com/france-flag.jpg',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -316,7 +316,7 @@ describe('DisplayPage — reveal', () => {
 
   it('renders an answer_media_url ending in an audio extension as audio, not an image', () => {
     mockUseGameSocket.mockReturnValue({
-      snapshot: {
+      snapshot: displayView({
         progress: progress({ status: 'reveal', revealIndex: 0 }),
         currentQuestion: null,
         revealQuestions: [
@@ -329,7 +329,7 @@ describe('DisplayPage — reveal', () => {
             answerMediaUrl: 'https://example.com/anthem.mp3',
           },
         ],
-      },
+      }),
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -340,5 +340,29 @@ describe('DisplayPage — reveal', () => {
       'https://example.com/anthem.mp3',
     );
     expect(screen.queryByTestId('reveal-answer-image')).not.toBeInTheDocument();
+  });
+
+  it('draws the header exactly as the view provides it, not from its own derivation', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: {
+        ...displayView({
+          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          currentQuestion: null,
+          revealQuestions,
+        }),
+        header: {
+          label: 'ROUND 9',
+          title: 'Served Title',
+          badge: 'SERVED BADGE',
+        },
+      },
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('ROUND 9')).toBeInTheDocument();
+    expect(screen.getByText('Served Title')).toBeInTheDocument();
+    expect(screen.getByText('SERVED BADGE')).toBeInTheDocument();
   });
 });
