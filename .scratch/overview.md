@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### live-session-module ([spec](live-session-module/spec.md))
-
-| #   | Ticket                                                                                                                                       | Blocked by     |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 10  | [Contract: delete the fake-store harness](live-session-module/issues/10-contract-delete-fake-harness.md)                                     | 07, 08, 09     |
-
 ### gateway-handler-template ([spec](gateway-handler-template/spec.md))
 
 | #   | Ticket                                                                                                                                          | Blocked by                 |
@@ -76,3 +70,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | live-session-module | 07  | [Remaining events through the module; delete the pass-through setters](live-session-module/issues/07-remaining-events-and-delete-setters.md) | `2b7edc4` |
 | live-session-module | 08  | [Migrate game-flow specs to the real-store harness](live-session-module/issues/08-migrate-game-flow-specs.md)                   | —         |
 | live-session-module | 09  | [Migrate grading, answers and team specs to the real-store harness](live-session-module/issues/09-migrate-grading-and-team-specs.md) | —         |
+| live-session-module | 10  | [Contract: delete the fake-store harness](live-session-module/issues/10-contract-delete-fake-harness.md)                        | —         |

@@ -306,10 +306,9 @@ function unavailableQuestionIds(): SeededQuestionIds {
 
 /**
  * Gateway test harness backed by the real answer, team, bonus, showdown,
- * seed and game-progress modules on a Postgres testcontainer — the
- * counterpart to createTestGateway() in test-utils.ts, whose fake answer
- * store returns the same data on every call and so can't reveal a missing
- * cache refresh.
+ * seed and game-progress modules on a Postgres testcontainer — the only way
+ * to test through the gateway, because a fake store that returns the same
+ * data on every call can't reveal a missing cache refresh.
  *
  * Call inside a top-level `describe`: one container per spec file, game
  * tables truncated after each test, same shape as setupAnswerServiceTest.
