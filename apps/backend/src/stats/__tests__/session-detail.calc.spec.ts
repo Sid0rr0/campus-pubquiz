@@ -1,3 +1,5 @@
+import { rankTeams } from '@campus-pubquiz/types';
+import type { SessionStandings } from '@/standings/standings.service';
 import {
   computeSessionDetail,
   type SessionDetailInput,
@@ -11,28 +13,123 @@ const BASE_SESSION = {
   playedAt: '2026-01-01T00:00:00.000Z',
 };
 
-function buildInput(
-  overrides: Partial<SessionDetailInput>,
-): SessionDetailInput {
+interface TestTeam {
+  teamId: number;
+  teamName: string;
+  /** Took part but is no longer on the roster. */
+  hasLeft?: boolean;
+}
+
+type BuildInputOverrides = Partial<Omit<SessionDetailInput, 'standings'>> & {
+  teams?: TestTeam[];
+  standings?: SessionStandings;
+};
+
+/** Stands in for the Standings service: totals from the answers and bonuses, ranked with the shared rule. */
+function standingsFor(
+  teams: TestTeam[],
+  answers: SessionDetailInput['answers'],
+  bonusAwards: SessionDetailInput['bonusAwards'],
+): SessionStandings {
+  const entries = teams.map((team) => {
+    const bonusPoints = bonusAwards
+      .filter((b) => b.teamId === team.teamId)
+      .reduce((sum, b) => sum + b.points, 0);
+    const answerPoints = answers
+      .filter((a) => a.teamId === team.teamId)
+      .reduce((sum, a) => sum + a.pointsAwarded, 0);
+    return {
+      hasLeft: team.hasLeft === true,
+      entry: {
+        teamId: team.teamId,
+        teamName: team.teamName,
+        totalPoints: answerPoints + bonusPoints,
+        bonusPoints,
+        positiveBonusPoints: Math.max(bonusPoints, 0),
+        negativeBonusPoints: Math.min(bonusPoints, 0),
+        roundPoints: [],
+      },
+    };
+  });
+  const leaderboard = rankTeams(
+    entries.filter((e) => !e.hasLeft).map((e) => e.entry),
+  );
+  return {
+    leaderboard,
+    departed: entries.filter((e) => e.hasLeft).map((e) => e.entry),
+    participantCount: entries.length,
+    winner: leaderboard[0],
+  };
+}
+
+function buildInput({
+  teams = [],
+  standings,
+  answers = [],
+  bonusAwards = [],
+  ...overrides
+}: BuildInputOverrides): SessionDetailInput {
   return {
     session: BASE_SESSION,
-    teams: [],
+    standings: standings ?? standingsFor(teams, answers, bonusAwards),
     rounds: [],
     questions: [],
-    answers: [],
-    bonusAwards: [],
+    answers,
+    bonusAwards,
     ...overrides,
   };
 }
 
 describe('computeSessionDetail', () => {
-  it('ranks standings by total (answer + bonus) desc, team name asc on ties', () => {
+  it('passes the standings through in the order and ranks given, without sorting or ranking itself', () => {
+    const entry = (teamId: number, teamName: string, totalPoints: number) => ({
+      teamId,
+      teamName,
+      totalPoints,
+      bonusPoints: 0,
+      positiveBonusPoints: 0,
+      negativeBonusPoints: 0,
+      roundPoints: [],
+    });
+    // Deliberately not the order the ranking rule would give.
+    const standings: SessionStandings = {
+      leaderboard: [
+        { ...entry(1, 'Zed', 3), rank: 1, rankTo: 2 },
+        { ...entry(2, 'Amy', 3), rank: 1, rankTo: 2 },
+        { ...entry(3, 'Low', 1), rank: 3, rankTo: 3 },
+      ],
+      departed: [entry(4, 'Gone High', 9)],
+      participantCount: 4,
+      winner: { ...entry(1, 'Zed', 3), rank: 1, rankTo: 2 },
+    };
+
+    const result = computeSessionDetail(buildInput({ standings }));
+
+    expect(
+      result.standings.map((s) => [
+        s.teamName,
+        s.rank,
+        s.rankTo,
+        s.hasLeft,
+        s.isWinner,
+        s.total,
+      ]),
+    ).toEqual([
+      ['Zed', 1, 2, false, true, 3],
+      ['Amy', 1, 2, false, false, 3],
+      ['Low', 3, 3, false, false, 1],
+      ['Gone High', null, null, true, false, 9],
+    ]);
+  });
+
+  it('uses the participant count, departed teams included, as every denominator', () => {
     const result = computeSessionDetail(
       buildInput({
         teams: [
-          { teamId: 1, teamName: 'Team B' },
-          { teamId: 2, teamName: 'Team A' },
+          { teamId: 1, teamName: 'Stayed' },
+          { teamId: 2, teamName: 'Kicked', hasLeft: true },
         ],
+        rounds: [{ roundId: 100, title: 'R1', category: null, orderIndex: 0 }],
         questions: [
           {
             questionId: 10,
@@ -43,34 +140,23 @@ describe('computeSessionDetail', () => {
             points: 5,
           },
         ],
-        answers: [
-          {
-            questionId: 10,
-            teamId: 1,
-            teamName: 'Team B',
-            pointsAwarded: 5,
-            gradedAt: '2026-01-01T00:00:01.000Z',
-            verdict: 'correct',
-            responseMs: null,
-          },
-          {
-            questionId: 10,
-            teamId: 2,
-            teamName: 'Team A',
-            pointsAwarded: 5,
-            gradedAt: '2026-01-01T00:00:01.000Z',
-            verdict: 'correct',
-            responseMs: null,
-          },
-        ],
+        answers: [1, 2].map((teamId) => ({
+          questionId: 10,
+          teamId,
+          teamName: `Team ${teamId}`,
+          pointsAwarded: 5,
+          gradedAt: '2026-01-01T00:00:01.000Z',
+          verdict: 'correct' as const,
+          responseMs: null,
+        })),
       }),
     );
 
-    expect(result.standings.map((s) => s.teamName)).toEqual([
-      'Team A',
-      'Team B',
-    ]);
-    expect(result.standings.map((s) => s.rank)).toEqual([1, 2]);
+    expect(result.teamCount).toBe(2);
+    expect(result.questions[0].correctRate).toBe(1);
+    expect(result.rounds[0].correctRate).toBe(1);
+    expect(result.rounds[0].pointsPercent).toBe(100);
+    expect(result.standings.find((s) => s.isWinner)?.teamName).toBe('Stayed');
   });
 
   it('counts an ungraded answer as not correct', () => {

@@ -13,6 +13,8 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
+import { StandingsService } from '@/standings/standings.service';
 import { StatsService } from '@/stats/stats.service';
 
 describe('StatsService (Postgres integration)', () => {
@@ -44,6 +46,11 @@ describe('StatsService (Postgres integration)', () => {
     em = orm.em.fork();
     statsService = new StatsService(
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
+      new StandingsService(
+        em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
+          GameSessionTeam,
+        ),
+      ),
     );
   });
 
@@ -375,6 +382,96 @@ describe('StatsService (Postgres integration)', () => {
 
       expect(result.teamCount).toBe(2);
       expect(result.questions[0].correctRate).toBe(1);
+    });
+  });
+
+  describe('getSessionDetail standings', () => {
+    async function leave(session: GameSession, team: Team): Promise<void> {
+      await em.nativeDelete(GameSessionTeam, { gameSession: session, team });
+    }
+
+    it('gives tied teams a shared rank and marks the single winner by name order when the tie was never broken', async () => {
+      const { quiz, questions } = await createQuiz('Quiz T', [[5]]);
+      const session = await createSession(quiz, 'TIED1', 'ended');
+      const [q1] = questions[0];
+      const zed = await joinTeam(session, 'Zed');
+      const amy = await joinTeam(session, 'Amy');
+      const last = await joinTeam(session, 'Last');
+      await grade(session, q1, zed, 5);
+      await grade(session, q1, amy, 5);
+      await grade(session, q1, last, 1);
+
+      const { standings } = await statsService.getSessionDetail(session.id);
+
+      expect(
+        standings.map((s) => [s.teamName, s.rank, s.rankTo, s.isWinner]),
+      ).toEqual([
+        ['Amy', 1, 2, true],
+        ['Zed', 1, 2, false],
+        ['Last', 3, 3, false],
+      ]);
+    });
+
+    it('names the showdown winner as the single winner of a tie', async () => {
+      const { quiz, questions } = await createQuiz('Quiz S', [[5]]);
+      const session = await createSession(quiz, 'SHOWDOWN1', 'ended');
+      const [q1] = questions[0];
+      const amy = await joinTeam(session, 'Amy');
+      const zed = await joinTeam(session, 'Zed');
+      await grade(session, q1, amy, 5);
+      await grade(session, q1, zed, 5);
+      await awardBonus(session, zed, 1);
+
+      const { standings } = await statsService.getSessionDetail(session.id);
+
+      expect(standings.map((s) => [s.teamName, s.rank, s.isWinner])).toEqual([
+        ['Zed', 1, true],
+        ['Amy', 2, false],
+      ]);
+    });
+
+    it('lists a kicked high scorer last, unranked and marked as having left, never the winner', async () => {
+      const { quiz, questions } = await createQuiz('Quiz K', [[10]]);
+      const session = await createSession(quiz, 'KICKED2', 'ended');
+      const [q1] = questions[0];
+      const cheater = await joinTeam(session, 'Cheater');
+      const honest = await joinTeam(session, 'Honest');
+      await grade(session, q1, cheater, 10);
+      await grade(session, q1, honest, 3);
+      await leave(session, cheater);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(
+        result.standings.map((s) => [
+          s.teamName,
+          s.rank,
+          s.hasLeft,
+          s.isWinner,
+        ]),
+      ).toEqual([
+        ['Honest', 1, false, true],
+        ['Cheater', null, true, false],
+      ]);
+      expect(result.teamCount).toBe(2);
+      expect(result.highlights.winningMargin).toBeNull();
+    });
+
+    it('counts a team that left with only a bonus as a participant', async () => {
+      const { quiz } = await createQuiz('Quiz B', [[5]]);
+      const session = await createSession(quiz, 'BONUSLEFT1', 'ended');
+      const leaver = await joinTeam(session, 'Leaver');
+      await joinTeam(session, 'Stayer');
+      await awardBonus(session, leaver, 2);
+      await leave(session, leaver);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.teamCount).toBe(2);
+      expect(result.standings.map((s) => s.teamName)).toEqual([
+        'Stayer',
+        'Leaver',
+      ]);
     });
   });
 

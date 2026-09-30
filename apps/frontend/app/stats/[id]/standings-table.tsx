@@ -1,4 +1,5 @@
 import type { SessionDetailStats } from '@campus-pubquiz/types';
+import { formatRankLabel } from '@/app/lib/rank-label';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
 
 interface StandingsTableProps {
@@ -48,10 +49,21 @@ export function StandingsTable({ standings }: StandingsTableProps) {
             standings.map((team) => (
               <tr
                 key={team.teamId}
-                className="border-b border-foreground/10 last:border-b-0"
+                className={`border-b border-foreground/10 last:border-b-0 ${team.isWinner ? 'bg-yellow/20 font-bold' : ''} ${team.hasLeft ? 'text-foreground/50' : ''}`}
               >
-                <td className="px-4 py-2">{team.rank}</td>
-                <td className="px-4 py-2">{team.teamName}</td>
+                <td className="px-4 py-2">
+                  {team.rank === null || team.rankTo === null
+                    ? 'left'
+                    : formatRankLabel({ rank: team.rank, rankTo: team.rankTo })}
+                </td>
+                <td className="px-4 py-2">
+                  {team.teamName}
+                  {team.isWinner && (
+                    <span className="ml-2 rounded-full bg-yellow px-2 py-0.5 text-xs">
+                      Winner
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-2">{team.answerPoints}</td>
                 <td className="px-4 py-2">{team.bonusPoints}</td>
                 <td className="px-4 py-2 font-extrabold">{team.total}</td>

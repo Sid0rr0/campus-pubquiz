@@ -1,6 +1,8 @@
+import { GameSession } from '@/db/entities/game-session.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
+import { Team } from '@/db/entities/team.entity';
 import { Round } from '@/db/entities/round.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
@@ -223,5 +225,112 @@ describe('StandingsService (Postgres integration)', () => {
         roundPoints: [{ roundTitle: 'Round 1', points: 5 }],
       }),
     );
+  });
+
+  async function removeFromRoster(
+    team: Awaited<ReturnType<typeof insertTeam>>,
+  ) {
+    await state.em.nativeDelete(GameSessionTeam, {
+      gameSession: state.session.id,
+      team: team.id,
+    });
+  }
+
+  it('lists a kicked team with graded answers as departed: unranked, counted, never the winner', async () => {
+    const kicked = await insertTeam('Kicked High Scorer', 'token-k');
+    const best = await insertTeam('Best Roster Team', 'token-b');
+    await scoreAnswer(state.question.id, kicked.id, 9);
+    await scoreAnswer(state.question.id, best.id, 2);
+    await removeFromRoster(kicked);
+
+    const standings_ = await standings.forSession(state.session.id);
+
+    expect(standings_.leaderboard.map((e) => e.teamName)).toEqual([
+      'Best Roster Team',
+    ]);
+    expect(standings_.winner?.teamName).toBe('Best Roster Team');
+    expect(standings_.departed).toEqual([
+      expect.objectContaining({
+        teamId: kicked.id,
+        totalPoints: 9,
+        roundPoints: [{ roundTitle: 'Round 1', points: 9 }],
+      }),
+    ]);
+    expect(standings_.departed[0]).not.toHaveProperty('rank');
+    expect(standings_.participantCount).toBe(2);
+  });
+
+  it('counts a team that left with only a bonus, and a roster team with nothing, as participants', async () => {
+    const leaver = await insertTeam('Leaver', 'token-l');
+    await insertTeam('Quiet Team', 'token-q');
+    await awardBonus(leaver, 3);
+    await removeFromRoster(leaver);
+
+    const result = await standings.forSession(state.session.id);
+
+    expect(result.leaderboard.map((e) => [e.teamName, e.totalPoints])).toEqual([
+      ['Quiet Team', 0],
+    ]);
+    expect(result.departed).toEqual([
+      expect.objectContaining({
+        teamName: 'Leaver',
+        totalPoints: 3,
+        bonusPoints: 3,
+      }),
+    ]);
+    expect(result.participantCount).toBe(2);
+  });
+
+  it('orders departed teams by total, highest first', async () => {
+    const low = await insertTeam('Low', 'token-1');
+    const high = await insertTeam('High', 'token-2');
+    await scoreAnswer(state.question.id, low.id, 1);
+    await scoreAnswer(state.question.id, high.id, 4);
+    await removeFromRoster(low);
+    await removeFromRoster(high);
+
+    const result = await standings.forSession(state.session.id);
+
+    expect(result.departed.map((t) => t.teamName)).toEqual(['High', 'Low']);
+    expect(result.winner).toBeUndefined();
+  });
+
+  it("returns each session's own standings when asked for several at once", async () => {
+    const otherSession = state.em.create(GameSession, {
+      quiz: state.round.quiz,
+      joinCode: 'OTHER1',
+    });
+    await state.em.flush();
+    const here = await insertTeam('Here Team', 'token-h');
+    const there = state.em.create(Team, {
+      name: 'There Team',
+      token: 'token-t',
+      code: 'code-token-t',
+    });
+    state.em.create(GameSessionTeam, {
+      gameSession: otherSession,
+      team: there,
+    });
+    await state.em.flush();
+    await scoreAnswer(state.question.id, here.id, 2);
+    await state.answerService.submit(
+      otherSession.id,
+      state.question.id,
+      there.id,
+      'guess',
+    );
+
+    const bySession = await standings.forSessions([
+      state.session.id,
+      otherSession.id,
+    ]);
+
+    expect(
+      bySession.get(state.session.id)?.leaderboard.map((e) => e.teamName),
+    ).toEqual(['Here Team']);
+    expect(
+      bySession.get(otherSession.id)?.leaderboard.map((e) => e.teamName),
+    ).toEqual(['There Team']);
+    expect(bySession.get(state.session.id)?.leaderboard[0].totalPoints).toBe(2);
   });
 });

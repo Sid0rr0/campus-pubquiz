@@ -43,7 +43,14 @@ export type PlayedSessionsSortOrder = 'asc' | 'desc';
 export type QuizDifficultyLabel = 'Easy' | 'Medium' | 'Hard' | 'Brutal';
 
 export interface SessionDetailStandingRow {
-  rank: number;
+  /** Competition rank shared by tied teams — null for a team that has left (kicked or left on its own), which is listed below every ranked team. */
+  rank: number | null;
+  /** Last place this team's tie group spans (equal to `rank` when not tied) — null when `rank` is. */
+  rankTo: number | null;
+  /** True for a team that took part but is no longer on the roster. */
+  hasLeft: boolean;
+  /** True on the session's single winner's row, even when its rank is shared. Never true for a team that has left. */
+  isWinner: boolean;
   teamId: number;
   teamName: string;
   answerPoints: number;

@@ -12,6 +12,10 @@ import {
   type SessionDetailStandingRow,
   type SessionDetailStats,
 } from '@campus-pubquiz/types';
+import type {
+  DepartedTeam,
+  SessionStandings,
+} from '@/standings/standings.service';
 
 export interface SessionDetailSessionRow {
   gameSessionId: number;
@@ -19,11 +23,6 @@ export interface SessionDetailSessionRow {
   quizTitle: string;
   name: string;
   playedAt: string | Date;
-}
-
-export interface SessionDetailTeamRow {
-  teamId: number;
-  teamName: string;
 }
 
 export interface SessionDetailRoundInputRow {
@@ -60,7 +59,8 @@ export interface SessionDetailBonusInputRow {
 
 export interface SessionDetailInput {
   session: SessionDetailSessionRow;
-  teams: SessionDetailTeamRow[];
+  /** Who took part and how they rank — decided by the Standings service, passed through as given. */
+  standings: SessionStandings;
   rounds: SessionDetailRoundInputRow[];
   questions: SessionDetailQuestionInputRow[];
   answers: SessionDetailAnswerInputRow[];
@@ -179,29 +179,33 @@ function computeBonusSummary(
 export function computeSessionDetail(
   input: SessionDetailInput,
 ): SessionDetailStats {
-  const { session, teams, rounds, questions, answers, bonusAwards } = input;
-  const teamCount = teams.length;
+  const {
+    session,
+    standings: sessionStandings,
+    rounds,
+    questions,
+    answers,
+    bonusAwards,
+  } = input;
+  const teamCount = sessionStandings.participantCount;
   const maxPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
-  const standings: SessionDetailStandingRow[] = teams.map((team) => {
+  const toRow = (
+    team: DepartedTeam,
+    placement: Pick<SessionDetailStandingRow, 'rank' | 'rankTo' | 'hasLeft'>,
+  ): SessionDetailStandingRow => {
     const teamAnswers = answers.filter((a) => a.teamId === team.teamId);
-    const answerPoints = teamAnswers.reduce(
-      (sum, a) => sum + a.pointsAwarded,
-      0,
-    );
-    const bonusPoints = bonusAwards
-      .filter((b) => b.teamId === team.teamId)
-      .reduce((sum, b) => sum + b.points, 0);
     const timedResponses = teamAnswers
       .map((a) => a.responseMs)
       .filter((ms): ms is number => ms !== null);
     return {
-      rank: 0, // assigned below, after sorting
+      ...placement,
+      isWinner: sessionStandings.winner?.teamId === team.teamId,
       teamId: team.teamId,
       teamName: team.teamName,
-      answerPoints,
-      bonusPoints,
-      total: answerPoints + bonusPoints,
+      answerPoints: team.totalPoints - team.bonusPoints,
+      bonusPoints: team.bonusPoints,
+      total: team.totalPoints,
       correctCount: teamAnswers.filter(isCorrect).length,
       avgResponseMs:
         timedResponses.length > 0
@@ -209,14 +213,17 @@ export function computeSessionDetail(
             timedResponses.length
           : null,
     };
-  });
-  // Same ranking as AnswerService.computeLeaderboard: total desc, name asc.
-  standings.sort(
-    (a, b) => b.total - a.total || a.teamName.localeCompare(b.teamName),
-  );
-  standings.forEach((row, index) => {
-    row.rank = index + 1;
-  });
+  };
+  // Ranked teams first, in the order Standings gave them, then the ones that
+  // left — this function never sorts or ranks.
+  const standings: SessionDetailStandingRow[] = [
+    ...sessionStandings.leaderboard.map((team) =>
+      toRow(team, { rank: team.rank, rankTo: team.rankTo, hasLeft: false }),
+    ),
+    ...sessionStandings.departed.map((team) =>
+      toRow(team, { rank: null, rankTo: null, hasLeft: true }),
+    ),
+  ];
 
   const sortedRounds = [...rounds].sort((a, b) => a.orderIndex - b.orderIndex);
   const roundTitleById = new Map(
@@ -351,7 +358,10 @@ export function computeSessionDetail(
       fastestTeam: pickFastestTeam(standings),
       bonus: computeBonusSummary(bonusAwards),
       winningMargin:
-        standings.length >= 2 ? standings[0].total - standings[1].total : null,
+        sessionStandings.leaderboard.length >= 2
+          ? sessionStandings.leaderboard[0].totalPoints -
+            sessionStandings.leaderboard[1].totalPoints
+          : null,
     },
   };
 }

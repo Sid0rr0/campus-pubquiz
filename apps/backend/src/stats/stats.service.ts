@@ -9,6 +9,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { StandingsService } from '@/standings/standings.service';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
 import type { PlayedSessionsQuery } from '@/stats/stats-query.schema';
 
@@ -31,11 +32,6 @@ interface SessionHeaderRow {
   quizTitle: string;
   name: string | null;
   playedAt: string | Date;
-}
-
-interface SessionTeamRow {
-  teamId: number;
-  teamName: string;
 }
 
 interface SessionRoundRow {
@@ -75,6 +71,7 @@ export class StatsService {
   constructor(
     @InjectRepository(GameSession)
     private readonly gameSessions: GameSessionRepository,
+    private readonly standings: StandingsService,
   ) {}
 
   async listPlayedSessions({
@@ -226,27 +223,7 @@ export class StatsService {
       );
     }
 
-    // Kicking a team or a team leaving mid-session hard-deletes its
-    // game_session_teams roster row (TeamService.removeFromRoster), but its
-    // already-graded answers/bonuses stay — so the roster alone would
-    // undercount teamCount and inflate correctRate/pointsPercent past 100%
-    // for anyone who answered before being removed. Union in every team that
-    // left a mark on this session, not just the current roster.
-    const teamIdsInSession = knex('game_session_teams')
-      .where('game_session_id', gameSessionId)
-      .select('team_id')
-      .union([
-        knex('answers')
-          .where('game_session_id', gameSessionId)
-          .select('team_id'),
-        knex('bonus_awards')
-          .where('game_session_id', gameSessionId)
-          .select('team_id'),
-      ]);
-
-    const teams = (await knex('teams as t')
-      .whereIn('t.id', teamIdsInSession)
-      .select('t.id as teamId', 't.name as teamName')) as SessionTeamRow[];
+    const standings = await this.standings.forSession(gameSessionId);
 
     const rounds = (await knex('rounds as r')
       .where('r.quiz_id', header.quizId)
@@ -294,7 +271,7 @@ export class StatsService {
         name: header.name ?? header.quizTitle,
         playedAt: header.playedAt,
       },
-      teams,
+      standings,
       rounds: rounds.map((r) => ({
         roundId: r.roundId,
         title: r.title,

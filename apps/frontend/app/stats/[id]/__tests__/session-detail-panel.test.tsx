@@ -25,6 +25,9 @@ const DETAIL: SessionDetailStats = {
   standings: [
     {
       rank: 1,
+      rankTo: 1,
+      hasLeft: false,
+      isWinner: true,
       teamId: 1,
       teamName: 'Team A',
       answerPoints: 8,
@@ -35,6 +38,9 @@ const DETAIL: SessionDetailStats = {
     },
     {
       rank: 2,
+      rankTo: 2,
+      hasLeft: false,
+      isWinner: false,
       teamId: 2,
       teamName: 'Team B',
       answerPoints: 4,
