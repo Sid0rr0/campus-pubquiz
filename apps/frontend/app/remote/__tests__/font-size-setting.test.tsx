@@ -5,17 +5,22 @@ import type { GameProgress } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
-const { mockUseGameSocket, mockUseAuth, searchParamsRef, routerRef } =
+const { mockUseAdminGame, mockUseAuth, searchParamsRef, routerRef } =
   vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
+    mockUseAdminGame: vi.fn(),
     mockUseAuth: vi.fn(),
     searchParamsRef: { current: new URLSearchParams('code=ABCDEF') },
     routerRef: { push: vi.fn(), replace: vi.fn() },
   }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
@@ -69,13 +74,13 @@ describe('RemotePage — display text scale control (reused from /control)', () 
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
   });
 
   it('shows the current /display text scale from the snapshot', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({ displayTextScale: 1.25 }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -89,7 +94,7 @@ describe('RemotePage — display text scale control (reused from /control)', () 
 
   it('steps the shared /display text scale up via setDisplayTextScale', () => {
     const setDisplayTextScale = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({ displayTextScale: 1 }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -107,7 +112,7 @@ describe('RemotePage — display text scale control (reused from /control)', () 
 
   it('steps the shared /display text scale down via setDisplayTextScale', () => {
     const setDisplayTextScale = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({ displayTextScale: 1 }),
       connectionError: null,
       sendAction: vi.fn(),

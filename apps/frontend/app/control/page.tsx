@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -13,12 +13,11 @@ import {
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
-import { useAdminGame } from '@/app/lib/use-admin-game';
+import { useAdminSession } from '@/app/lib/use-admin-session';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
-import { useAuth } from '@/app/lib/use-auth';
 import { isYoutubeMediaUrl } from '@/app/display/question-display';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
@@ -47,27 +46,11 @@ const SHOWDOWN_ELIGIBLE_STATUSES: GameStatus[] = [
 ];
 
 function AdminPageContent() {
-  const auth = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionCode = searchParams.get('code');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
     null,
   );
   const queryClient = useQueryClient();
-
-  const isAuthenticated = auth.status === 'authenticated';
-
-  // The code the socket actually connects with. Only adopts `sessionCode`
-  // (the URL's ?code=) when it points at a session the socket doesn't
-  // already know about — a deep link, a freshly picked session, or a
-  // manual URL edit to a different session — so a snapshot that already
-  // matches the current session never forces a pointless full socket
-  // reconnect (and briefly hides already-correct data behind the
-  // "Connecting…" screen).
-  const [connectJoinCode, setConnectJoinCode] = useState<string | null>(
-    sessionCode,
-  );
 
   const {
     snapshot,
@@ -83,10 +66,9 @@ function AdminPageContent() {
     setLiveAnswers,
     focusAnswersQuestionId,
     reconnectedAt,
-  } = useAdminGame(
-    isAuthenticated && Boolean(connectJoinCode),
-    connectJoinCode ?? undefined,
-  );
+    auth,
+    isLoading,
+  } = useAdminSession('/control');
   const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
     useLockCountdownSound({
       lockAt: snapshot?.questionLockAt ?? null,
@@ -95,61 +77,6 @@ function AdminPageContent() {
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
   const connectedJoinCode = snapshot?.joinCode;
-
-  // Adopts a new ?code= only when it points at a session the socket doesn't
-  // already know about (see `connectJoinCode` above) — adjusted during
-  // render rather than in an Effect, keyed off sessionCode the same way the
-  // old Effect's dependency array was. Compares against `connectedJoinCode`
-  // (plain state, not a ref) since refs can't be read during render.
-  const [prevSessionCode, setPrevSessionCode] = useState(sessionCode);
-  if (sessionCode !== prevSessionCode) {
-    setPrevSessionCode(sessionCode);
-    if (sessionCode && sessionCode !== connectedJoinCode) {
-      setConnectJoinCode(sessionCode);
-    }
-  }
-
-  useEffect(() => {
-    // Keeps the URL's ?code= in sync with whatever session the socket is
-    // actually connected to, so a refresh lands back in the same session
-    // instead of falling through to the picker screen. Pure URL
-    // bookkeeping — `connectJoinCode` above deliberately doesn't treat this
-    // as a new session to connect to.
-    if (snapshot && snapshot.joinCode !== sessionCode) {
-      router.replace(`/control?code=${snapshot.joinCode}`);
-    }
-  }, [snapshot, sessionCode, router]);
-
-  useEffect(() => {
-    // The session picker (list + start) now lives at /sessions — /control
-    // without a ?code= just bounces there instead of rendering it inline.
-    if (isAuthenticated && !sessionCode) {
-      router.replace('/sessions');
-    }
-  }, [isAuthenticated, sessionCode, router]);
-
-  const codeFromUrl = searchParams.get('code') ?? undefined;
-  useEffect(() => {
-    // Only bounces back to the picker for a session that never connected in
-    // the first place (e.g. an unknown/invalid ?code=) — handleConnection
-    // disconnects before ever sending STATE_SYNC in that case, so snapshot
-    // stays null. Once a snapshot exists, a later WsException (illegal
-    // transition, the ungraded-answers gate, kick/bonus validation, …) is an
-    // action-level rejection on an otherwise-live session — it should render
-    // inline via the existing connectionError banner, not redirect away.
-    if (codeFromUrl && connectionError && !snapshot) {
-      router.replace('/sessions');
-    }
-  }, [codeFromUrl, connectionError, snapshot, router]);
-
-  useEffect(() => {
-    // Login/register/pending-approval now live at /login and /register —
-    // anyone landing here without a session bounces there instead of
-    // rendering those screens inline.
-    if (auth.status === 'unauthenticated' || auth.status === 'pending') {
-      router.replace('/login');
-    }
-  }, [auth.status, router]);
 
   const gameStatus = snapshot?.progress.status;
 
@@ -333,19 +260,7 @@ function AdminPageContent() {
     sendAction,
   });
 
-  if (
-    auth.status === 'checking' ||
-    auth.status === 'unauthenticated' ||
-    auth.status === 'pending'
-  ) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <p className="font-display text-xl">Loading…</p>
-      </main>
-    );
-  }
-
-  if (!sessionCode) {
+  if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>

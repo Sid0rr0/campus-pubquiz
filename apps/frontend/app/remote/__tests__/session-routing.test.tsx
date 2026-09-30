@@ -1,21 +1,26 @@
-import { waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameProgress } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
-const { mockUseGameSocket, mockUseAuth, searchParamsRef, routerRef } =
+const { mockUseAdminGame, mockUseAuth, searchParamsRef, routerRef } =
   vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
+    mockUseAdminGame: vi.fn(),
     mockUseAuth: vi.fn(),
     searchParamsRef: { current: new URLSearchParams() },
     routerRef: { push: vi.fn(), replace: vi.fn() },
   }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
@@ -56,10 +61,10 @@ describe('RemotePage — session routing', () => {
     searchParamsRef.current = new URLSearchParams();
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
       sendAction: vi.fn(),
@@ -88,7 +93,7 @@ describe('RemotePage — session routing', () => {
 
   it('redirects to /sessions when the session code is invalid (never got a snapshot)', async () => {
     searchParamsRef.current = new URLSearchParams('code=BADCODE');
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
       sendAction: vi.fn(),
@@ -104,23 +109,19 @@ describe('RemotePage — session routing', () => {
   it('does not connect the socket until a session code is known', () => {
     renderWithQuery(<RemotePage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
-      'admin',
-      false,
-      undefined,
-    );
+    expect(mockUseAdminGame).toHaveBeenLastCalledWith(false, undefined);
   });
 
   it('connects the socket for the session code once present in the URL', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     renderWithQuery(<RemotePage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith('admin', true, 'ABCDEF');
+    expect(mockUseAdminGame).toHaveBeenLastCalledWith(true, 'ABCDEF');
   });
 
   it('syncs the URL when the snapshot reports a different session', async () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: {
         progress: progress({ status: 'lobby' }),
         joinCode: 'GHIJKL',
@@ -139,5 +140,65 @@ describe('RemotePage — session routing', () => {
     await waitFor(() =>
       expect(routerRef.replace).toHaveBeenCalledWith('/remote?code=GHIJKL'),
     );
+  });
+  it('stays on the remote when an action is rejected on an otherwise-connected session', async () => {
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseAdminGame.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'break' }),
+        joinCode: 'ABCDEF',
+        quizStructure: { breakRoundNumbers: [] },
+        leaderboard: [],
+        leaderboardRevealCount: 0,
+        activeShowdown: null,
+        showdownRevealStep: 0,
+      },
+      connectionError: 'Connection lost',
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(await screen.findByText('Connection lost')).toBeInTheDocument();
+    expect(routerRef.replace).not.toHaveBeenCalledWith('/sessions');
+  });
+
+  it('does not sync the URL when the snapshot already matches the session code', () => {
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseAdminGame.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        joinCode: 'ABCDEF',
+        quizStructure: { breakRoundNumbers: [] },
+        leaderboard: [],
+        leaderboardRevealCount: 0,
+        activeShowdown: null,
+        showdownRevealStep: 0,
+      },
+      connectionError: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(routerRef.replace).not.toHaveBeenCalled();
+  });
+
+  it('does not reconnect when the URL moves to the session it is already connected to', () => {
+    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseAdminGame.mockReturnValue({
+      snapshot: {
+        progress: progress({ status: 'lobby' }),
+        joinCode: 'GHIJKL',
+        quizStructure: { breakRoundNumbers: [] },
+        leaderboard: [],
+        leaderboardRevealCount: 0,
+        activeShowdown: null,
+        showdownRevealStep: 0,
+      },
+      connectionError: null,
+    });
+    const { rerender } = renderWithQuery(<RemotePage />);
+
+    searchParamsRef.current = new URLSearchParams('code=GHIJKL');
+    rerender(<RemotePage />);
+
+    expect(mockUseAdminGame).toHaveBeenLastCalledWith(true, 'ABCDEF');
   });
 });

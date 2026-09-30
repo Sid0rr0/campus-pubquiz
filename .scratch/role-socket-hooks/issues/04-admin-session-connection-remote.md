@@ -16,7 +16,11 @@ Parent spec: `.scratch/role-socket-hooks/spec.md`
 
 **Status:** ready-for-agent
 
-- [ ] /control and /remote both use the shared admin-session connection hook, and neither page keeps its own copy of the connect, URL or auth logic
-- [ ] /remote page tests mock the admin hook, and each redirect behaviour /control tests (never-connected code goes to the picker, a rejected action on a live session stays put, URL sync, login redirect, no code goes to the picker) also has a /remote test
-- [ ] A rejected Advance on /remote shows a toast, not the connection banner
-- [ ] Following a link to the session /remote is already connected to does not force a reconnect
+- [x] /control and /remote both use the shared admin-session connection hook, and neither page keeps its own copy of the connect, URL or auth logic
+- [x] /remote page tests mock the admin hook, and each redirect behaviour /control tests (never-connected code goes to the picker, a rejected action on a live session stays put, URL sync, login redirect, no code goes to the picker) also has a /remote test
+- [x] A rejected Advance on /remote shows a toast, not the connection banner
+- [x] Following a link to the session /remote is already connected to does not force a reconnect
+
+## Comments
+
+Implemented in a single commit on `main` (see git history for `feat(frontend): shared admin-session connection hook; /remote moves to the admin game hook`). New hook: `apps/frontend/app/lib/use-admin-session.ts` (`useAdminSession('/control' | '/remote')`, returns the admin game result plus `auth`, `sessionCode`, `isLoading`). /remote's rejected-Advance toast comes from `useAdminGame` itself; /remote's banner now only shows `connectionError`. `Status:` left as `ready-for-agent` — the triage vocabulary has no "done" state.

@@ -1,15 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   getLeaderboardRevealStepCount,
   type RevealQuestionView,
   type ScreenPreview,
 } from '@campus-pubquiz/types';
-import { useGameSocket } from '@/app/lib/use-game-socket';
-import { useAuth } from '@/app/lib/use-auth';
+import { useAdminSession } from '@/app/lib/use-admin-session';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
@@ -68,19 +66,6 @@ function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
 }
 
 function RemotePageContent() {
-  const auth = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionCode = searchParams.get('code');
-  const isAuthenticated = auth.status === 'authenticated';
-
-  // Mirrors /control's connectJoinCode pattern: only adopts a new ?code=
-  // when it points at a session the socket doesn't already know about, so
-  // an already-matching snapshot never forces a pointless reconnect.
-  const [connectJoinCode, setConnectJoinCode] = useState<string | null>(
-    sessionCode,
-  );
-
   const {
     snapshot,
     connectionError,
@@ -88,59 +73,10 @@ function RemotePageContent() {
     presenterContext,
     liveAnswers,
     setDisplayTextScale,
-  } = useGameSocket(
-    'admin',
-    isAuthenticated && Boolean(connectJoinCode),
-    connectJoinCode ?? undefined,
-  );
-  const connectedJoinCode = snapshot?.joinCode;
+    isLoading,
+  } = useAdminSession('/remote');
 
-  const [prevSessionCode, setPrevSessionCode] = useState(sessionCode);
-  if (sessionCode !== prevSessionCode) {
-    setPrevSessionCode(sessionCode);
-    if (sessionCode && sessionCode !== connectedJoinCode) {
-      setConnectJoinCode(sessionCode);
-    }
-  }
-
-  useEffect(() => {
-    if (snapshot && snapshot.joinCode !== sessionCode) {
-      router.replace(`/remote?code=${snapshot.joinCode}`);
-    }
-  }, [snapshot, sessionCode, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && !sessionCode) {
-      router.replace('/sessions');
-    }
-  }, [isAuthenticated, sessionCode, router]);
-
-  const codeFromUrl = searchParams.get('code') ?? undefined;
-  useEffect(() => {
-    if (codeFromUrl && connectionError && !snapshot) {
-      router.replace('/sessions');
-    }
-  }, [codeFromUrl, connectionError, snapshot, router]);
-
-  useEffect(() => {
-    if (auth.status === 'unauthenticated' || auth.status === 'pending') {
-      router.replace('/login');
-    }
-  }, [auth.status, router]);
-
-  if (
-    auth.status === 'checking' ||
-    auth.status === 'unauthenticated' ||
-    auth.status === 'pending'
-  ) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <p className="font-display text-xl">Loading…</p>
-      </main>
-    );
-  }
-
-  if (!sessionCode) {
+  if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="font-display text-xl">Loading…</p>

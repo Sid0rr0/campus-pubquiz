@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -8,17 +8,22 @@ import type {
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
-const { mockUseGameSocket, mockUseAuth, searchParamsRef, routerRef } =
+const { mockUseAdminGame, mockUseAuth, searchParamsRef, routerRef } =
   vi.hoisted(() => ({
-    mockUseGameSocket: vi.fn(),
+    mockUseAdminGame: vi.fn(),
     mockUseAuth: vi.fn(),
     searchParamsRef: { current: new URLSearchParams('code=ABCDEF') },
     routerRef: { push: vi.fn(), replace: vi.fn() },
   }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
-}));
+vi.mock('@/app/lib/use-admin-game', async () => {
+  const { adminGameResult } =
+    await import('@/app/control/__tests__/test-utils');
+  return {
+    useAdminGame: (...args: unknown[]) =>
+      adminGameResult(mockUseAdminGame(...args)),
+  };
+});
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
@@ -87,14 +92,14 @@ describe('RemotePage — content', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUseGameSocket.mockReset();
+    mockUseAdminGame.mockReset();
     mockUseAuth.mockReset();
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
   });
 
   it('wires the Advance button to sendAction', () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction,
@@ -107,9 +112,29 @@ describe('RemotePage — content', () => {
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
+  it('keeps a rejected Advance out of the connection banner', async () => {
+    // The admin hook toasts the rejection itself; the page only ever shows
+    // real connection problems in its banner.
+    const sendAction = vi.fn(() =>
+      Promise.resolve({ success: false as const, error: 'Cannot advance' }),
+    );
+    mockUseAdminGame.mockReturnValue({
+      snapshot: baseSnapshot(),
+      connectionError: null,
+      sendAction,
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /advance/i }));
+
+    await waitFor(() => expect(sendAction).toHaveBeenCalledWith('ADVANCE'));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('wires the Previous button to sendAction', () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
       }),
@@ -125,7 +150,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows the current question notes when present', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
@@ -141,7 +166,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows an empty state when there are no notes', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
@@ -153,7 +178,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows what the display is currently showing', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
@@ -168,7 +193,7 @@ describe('RemotePage — content', () => {
   });
 
   it('previews the next screen', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
@@ -187,7 +212,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows the full question preview when the next screen is a question', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
@@ -214,7 +239,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows an empty state when nothing is queued next', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
@@ -226,7 +251,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows how many teams have answered while a question is open', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         teams: [
@@ -246,7 +271,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows how many teams answered correctly once graded', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -304,7 +329,7 @@ describe('RemotePage — content', () => {
   });
 
   it('counts a speed-scaled kahoot answer with fewer than full points as correct', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -367,7 +392,7 @@ describe('RemotePage — content', () => {
     // closed and answeredTeamIds/currentQuestion have already cleared. It
     // must not be tied to showAnswerStatus the way the teams-answered line
     // is, or it disappears exactly when it becomes meaningful.
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'break' }),
         currentQuestion: null,
@@ -420,7 +445,7 @@ describe('RemotePage — content', () => {
   });
 
   it('omits the correct count when nothing has been submitted or graded yet', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -443,7 +468,7 @@ describe('RemotePage — content', () => {
   });
 
   it('hides the answered count once the question is no longer open', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'break' }),
         teams: [{ teamId: 1, teamName: 'The Quizzards', isConnected: true }],
@@ -459,7 +484,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows the elapsed time while a question/break is live', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         phaseStartedAt: Date.now() - 5_000,
@@ -475,7 +500,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows the final elapsed time once the phase is no longer live', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         phaseStartedAt: null,
@@ -491,7 +516,7 @@ describe('RemotePage — content', () => {
   });
 
   it('shows no elapsed time for an untimed status', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'reveal' }),
         phaseStartedAt: null,
@@ -508,7 +533,7 @@ describe('RemotePage — content', () => {
 
   it('shows a Play Again button for an open YouTube question and dispatches REPLAY_MEDIA', () => {
     const sendAction = vi.fn();
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -530,7 +555,7 @@ describe('RemotePage — content', () => {
   });
 
   it('hides the Play Again button for a non-YouTube question', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -552,7 +577,7 @@ describe('RemotePage — content', () => {
   });
 
   it('renders no grading, team, or leaderboard controls', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseAdminGame.mockReturnValue({
       snapshot: baseSnapshot(),
       connectionError: null,
       sendAction: vi.fn(),
