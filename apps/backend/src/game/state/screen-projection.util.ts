@@ -9,6 +9,8 @@ import {
 import {
   getActionAvailability,
   getActiveBlockStartIndex,
+  isLastQuestionBeforeBreak,
+  isShowdownEligible,
 } from '@/game/state/action-availability.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -54,6 +56,8 @@ export function projectScreen(
         ...describeAdminIndicators(snapshot),
         ...getActionAvailability(session),
         activeBlockStartIndex: getActiveBlockStartIndex(session),
+        isShowdownEligible: isShowdownEligible(session),
+        isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),
       };
     case SOCKET_ROOMS.PLAYERS: {
       const view = {

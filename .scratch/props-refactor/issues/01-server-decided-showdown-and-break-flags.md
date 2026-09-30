@@ -15,9 +15,18 @@ The admin view gains two admin-only booleans, "showdown eligible" and "last ques
 
 **Status:** ready-for-agent
 
-- [ ] The admin view type carries both flags; the display and players views do not
-- [ ] Backend Screen projection specs cover showdown eligible across the graded statuses, off the final round, and with questions still ungraded
-- [ ] Backend Screen projection specs cover last question before break at a block's last question versus mid-block, in question open, locking and a non-question status
-- [ ] /control reads both flags from the admin view; its hand-copied graded-status list and the client derivations of both flags are deleted
-- [ ] The /control test fixture builder defaults both flags to false; the showdown panel and break-end-time tests set them on the fixture instead of relying on the mocked quiz list
-- [ ] Existing /control page tests pass unchanged in behaviour
+- [x] The admin view type carries both flags; the display and players views do not
+- [x] Backend Screen projection specs cover showdown eligible across the graded statuses, off the final round, and with questions still ungraded
+- [x] Backend Screen projection specs cover last question before break at a block's last question versus mid-block, in question open, locking and a non-question status
+- [x] /control reads both flags from the admin view; its hand-copied graded-status list and the client derivations of both flags are deleted
+- [x] The /control test fixture builder defaults both flags to false; the showdown panel and break-end-time tests set them on the fixture instead of relying on the mocked quiz list
+- [x] Existing /control page tests pass unchanged in behaviour
+
+## Comments
+
+Implemented in the commit titled `feat(backend): server-decided showdown-eligible and last-question-before-break flags in the admin view` (find it with `git log --grep`; hash not recorded here to avoid a follow-up commit).
+
+- `isShowdownEligible` / `isLastQuestionBeforeBreak` are computed in `action-availability.util.ts` and added to the admin branch of `projectScreen`; `GRADED_STATUSES` is now exported from `block-grading.service.ts` and is the single definition.
+- Backend specs: `apps/backend/src/game/__tests__/admin-flags-projection.spec.ts`.
+- The showdown panel and break-end-time control tests are component tests that already take the flags as props, so no fixture change applied to them; the page-level coverage is the new `app/control/__tests__/server-decided-flags.test.tsx`, which sets the flags on the admin view fixture with an empty quiz list.
+- `Status:` left as `ready-for-agent`: the triage vocabulary has no "done" state.

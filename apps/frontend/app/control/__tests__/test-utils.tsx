@@ -122,11 +122,14 @@ export function adminView<
 ): T &
   Pick<AdminStatePayload, 'onAirScreen'> &
   AdminIndicators &
-  Pick<AdminStatePayload, 'canAdvance' | 'canGoToPreviousQuestion'> {
+  Pick<AdminStatePayload, 'canAdvance' | 'canGoToPreviousQuestion'> &
+  Pick<AdminStatePayload, 'isShowdownEligible' | 'isLastQuestionBeforeBreak'> {
   return {
     onAirScreen: describeOnAirScreen(snapshot).screen,
     ...describeAdminIndicators(snapshot),
     ...defaultActionAvailability(snapshot),
+    isShowdownEligible: false,
+    isLastQuestionBeforeBreak: false,
     ...snapshot,
   };
 }

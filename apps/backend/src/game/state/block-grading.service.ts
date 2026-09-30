@@ -13,7 +13,8 @@ const GRADING_STATUSES: GameStatus[] = [
   'break_round_intro',
 ];
 
-const GRADED_STATUSES: GameStatus[] = [
+/** Statuses in which a block's grading is complete or being reviewed — ungradedQuestionIds can be trusted from here on. */
+export const GRADED_STATUSES: readonly GameStatus[] = [
   'break_intro',
   'break',
   'break_round_intro',

@@ -342,6 +342,10 @@ export interface AdminStatePayload
   canGoToPreviousQuestion: boolean;
   /** roundIndex of the first round in the block that is open, locked or under review, per the session's own rounds — where the question browser's active block begins. */
   activeBlockStartIndex: number;
+  /** Whether the quiz master may set up the showdown tiebreaker now: the final round is graded (no ungraded questions left, in a graded status). */
+  isShowdownEligible: boolean;
+  /** Whether a question is open or locking and it is a break point in the session's own round structure. */
+  isLastQuestionBeforeBreak: boolean;
 }
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export interface PlayersStatePayload

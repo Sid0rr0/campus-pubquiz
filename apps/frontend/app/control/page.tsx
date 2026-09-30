@@ -8,7 +8,6 @@ import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   getTiedForFirst,
-  isBreakPointQuestion,
   getLeaderboardRevealStepCount,
   type GameStatus,
   type QuizSummaryRound,
@@ -32,18 +31,6 @@ import { SessionSettingsPanel } from '@/app/control/session-settings-panel';
 import { useAdminKeyboardShortcuts } from '@/app/control/use-admin-keyboard-shortcuts';
 
 const EMPTY_ROUNDS: QuizSummaryRound[] = [];
-
-// Mirrors the backend's block-grading GRADED_STATUSES (see
-// block-grading.service.ts) — the window in which ungradedQuestionIds is
-// kept fresh, so it's safe to trust "grading complete" from that point on.
-const SHOWDOWN_ELIGIBLE_STATUSES: GameStatus[] = [
-  'break_intro',
-  'break',
-  'break_round_intro',
-  'reveal_intro',
-  'reveal',
-  'ended',
-];
 
 function AdminPageContent() {
   const router = useRouter();
@@ -224,7 +211,6 @@ function AdminPageContent() {
     router.push('/');
   }
 
-  const roundIndex = snapshot?.progress.roundIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   // Reveal steps, not teams: tied teams share a rank and appear together in
   // one step, and a kahootMode round only reveals through its top 5 — same
@@ -235,13 +221,6 @@ function AdminPageContent() {
     snapshot?.isCurrentRoundKahoot ?? false,
   );
   const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
-  const gameContext = {
-    rounds: activeQuizRounds.map((round) => ({
-      questionCount: round.questions.length,
-      breakAfter: round.breakAfter,
-      kahootMode: round.kahootMode,
-    })),
-  };
   // Where the active block starts, and whether Advance/Previous are
   // accepted right now, are decided by the server (the admin view) from the
   // session's own rounds and the same steps the action handler applies.
@@ -295,20 +274,12 @@ function AdminPageContent() {
     phaseElapsedMs = null,
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
+    isShowdownEligible,
+    isLastQuestionBeforeBreak,
   } = snapshot;
   const tiedTeamNames = getTiedForFirst(leaderboard).map(
     (entry) => entry.teamName,
   );
-  // The admin can compose/save the tiebreaker question as soon as the final
-  // block is graded — no need to wait through the block's own reveal walk
-  // to reach 'ended'. Gated on the final round specifically (not just any
-  // grading break) so a coincidental mid-quiz tie for 1st never offers it
-  // early.
-  const isShowdownEligible =
-    activeQuizRounds.length > 0 &&
-    roundIndex >= activeQuizRounds.length - 1 &&
-    ungradedQuestionIds.length === 0 &&
-    SHOWDOWN_ELIGIBLE_STATUSES.includes(progress.status);
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
     : blockQuestions;
@@ -321,17 +292,6 @@ function AdminPageContent() {
   const canReplayMedia =
     progress.status === 'question_open' &&
     isYoutubeMediaUrl(currentQuestion?.mediaUrl);
-  // Lets the admin pre-set the break end-time while still on the block's
-  // last question, so it's already in place once the break screen appears —
-  // see BreakEndTimeControl.
-  const isLastQuestionBeforeBreak =
-    activeQuizRounds.length > roundIndex &&
-    showAnswerStatus &&
-    isBreakPointQuestion(
-      progress.roundIndex,
-      progress.questionIndex,
-      gameContext,
-    );
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
