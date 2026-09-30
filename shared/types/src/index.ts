@@ -1,5 +1,6 @@
 export * from './game-state';
 export * from './socket-events';
+export * from './ranking-rule';
 export * from './leaderboard-tiebreak';
 export * from './import';
 export * from './auth';

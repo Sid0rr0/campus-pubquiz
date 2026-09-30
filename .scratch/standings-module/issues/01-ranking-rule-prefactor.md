@@ -13,12 +13,16 @@ This is behaviour-preserving for live play. Nothing new is sent to clients yet. 
 
 **Status:** ready-for-agent
 
-- [ ] Table-driven tests on the ranking rule cover:
+- [x] Table-driven tests on the ranking rule cover:
   - no teams and a single team
   - every team tied, including everyone on zero
   - a tie for first, a three-way tie in the middle, and a tie at the bottom
   - negative totals from penalties
   - names differing only in case, accents or digits, ordered identically whatever the runtime locale
   - the winner when first place is clear, and the name-order fallback when it's tied
-- [ ] The reveal step count, tied-for-first lookup and kahoot top-N cutoff use the ranking rule. None of them scans for equal totals on its own any more.
-- [ ] All existing reveal, showdown and kahoot leaderboard tests pass unchanged.
+- [x] The reveal step count, tied-for-first lookup and kahoot top-N cutoff use the ranking rule. None of them scans for equal totals on its own any more.
+- [x] All existing reveal, showdown and kahoot leaderboard tests pass unchanged.
+
+## Comments
+
+Implemented in the commit titled `feat(shared-types): add ranking rule under the leaderboard helpers` (hash in git history). New `shared/types/src/ranking-rule.ts` (`rankTeams`, `getWinner`, `compareTeamNames`, code-unit name order). `getLeaderboardRevealStepCount` and `getTiedForFirst` now read its ranks; the kahoot cutoff still slices the ranked list so it splits a tie. `Status:` left as `ready-for-agent` — the triage vocabulary has no done state.
