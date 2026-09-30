@@ -369,6 +369,7 @@ export class GameGateway
       {
         gameState: this.gameState,
         teamService: this.teamService,
+        answerService: this.answerService,
         server: this.server,
       },
       joinCode,
@@ -396,6 +397,7 @@ export class GameGateway
       {
         gameState: this.gameState,
         teamService: this.teamService,
+        answerService: this.answerService,
         server: this.server,
       },
       joinCode,

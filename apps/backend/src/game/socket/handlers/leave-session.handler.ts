@@ -1,7 +1,8 @@
 import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
 import type { LeaveSessionPayload } from '@campus-pubquiz/types';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import type { AnswerService } from '@/answer/answer.service';
+import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { TeamService } from '@/team/team.service';
 
@@ -17,6 +18,7 @@ export async function leaveSessionAsTeam(
   deps: {
     gameState: GameStateService;
     teamService: TeamService;
+    answerService: AnswerService;
     server: Server;
   },
   joinCode: string,
@@ -31,12 +33,13 @@ export async function leaveSessionAsTeam(
     throw new WsException('Can only leave the session as your own team');
   }
 
-  deps.gameState.clearTeamConnectionBySocketId(joinCode, callerSocketId);
-
   const gameSessionId = deps.gameState.getGameSessionId(joinCode);
   await deps.teamService.removeFromRoster(gameSessionId, payload.teamId);
+  const roster = await deps.teamService.listForSession(gameSessionId);
 
-  const teams = await deps.teamService.listForSession(gameSessionId);
-  deps.gameState.setTeams(joinCode, teams);
-  broadcastGameState(deps.server, joinCode, deps.gameState);
+  await deliverOutcome(
+    deps,
+    joinCode,
+    await deps.gameState.teamRemoved(joinCode, payload.teamId, roster, 'left'),
+  );
 }

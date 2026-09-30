@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   DEFAULT_SESSION_SETTINGS,
+  SOCKET_EVENTS,
   getNextGameState,
   type ActiveSessionSummary,
   type AdminQuestionContext,
@@ -574,6 +575,35 @@ export class GameStateService implements OnModuleInit {
   /** An admin graded an answer to `questionId`: same refresh as recordAnswer. */
   answerGraded(joinCode: string, questionId: number): Promise<SessionOutcome> {
     return this.refreshAfterAnswerChange(joinCode, questionId);
+  }
+
+  /**
+   * A team left the session (kicked or left on its own) and `roster` is the
+   * session's roster after its removal: drops the team's connection and
+   * refreshes roster and leaderboard together, so the next snapshot never
+   * has one without the other. A kick also carries TEAM_KICKED for the
+   * team's socket, if it still has one.
+   */
+  async teamRemoved(
+    joinCode: string,
+    teamId: number,
+    roster: TeamRosterEntry[],
+    reason: 'kicked' | 'left',
+  ): Promise<SessionOutcome> {
+    const socketId = this.getConnectedSocketId(joinCode, teamId);
+    if (socketId) {
+      this.mutations.clearTeamConnectionBySocketId(joinCode, socketId);
+    }
+    const leaderboard = await this.answerService.computeLeaderboard(
+      this.getGameSessionId(joinCode),
+    );
+    this.mutations.setTeams(joinCode, roster);
+    this.mutations.setLeaderboard(joinCode, leaderboard);
+    const notices =
+      reason === 'kicked' && socketId
+        ? [{ socketId, event: SOCKET_EVENTS.TEAM_KICKED, payload: undefined }]
+        : [];
+    return { ...BROADCAST_STATE_OUTCOME, notices };
   }
 
   private async refreshAfterAnswerChange(

@@ -53,6 +53,8 @@ export async function deliverOutcome(
   }
 
   for (const notice of outcome.notices) {
-    server.to(notice.socketId).emit(notice.event, notice.payload);
+    const target = server.to(notice.socketId);
+    if (notice.payload === undefined) target.emit(notice.event);
+    else target.emit(notice.event, notice.payload);
   }
 }
