@@ -2,184 +2,132 @@ import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  sessionRoom,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
+import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  openFirstQuestion,
-  asSocket,
-  type MockServer,
-  type MockAnswerService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — submit answer', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let answerService: MockAnswerService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: { socket: MockSocket; teamId: number };
 
   beforeEach(async () => {
-    ({ gateway, server, answerService } = await createTestGateway());
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
   });
 
+  function submit(socket: MockSocket, teamId: number, value = 'Banana') {
+    return game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId: game.questionIds.multipleChoice,
+      teamId,
+      value,
+    });
+  }
+
+  function storedAnswers() {
+    return game.inRequestContext(() =>
+      game.answerService.listForQuestion(
+        game.gameSessionId,
+        game.questionIds.multipleChoice,
+      ),
+    );
+  }
+
   it('submits an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
 
-    await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 21,
-      teamId: 31,
-      value: 'Banana',
-    });
+    await submit(team.socket, team.teamId);
 
-    expect(answerService.submit).toHaveBeenCalledWith(
-      101,
-      21,
-      31,
-      'Banana',
-      expect.any(Number),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: 21,
-      question: {
-        type: 'free_text',
-        prompt: 'Q1',
-        points: 1,
-        correctAnswer: 'A1',
-        roundTitle: 'Round 1',
-        roundNumber: 1,
-        questionNumberInRound: 1,
-        totalQuestionsInRound: 1,
-      },
-      answers: [
-        {
-          answerId: 41,
-          teamId: 31,
-          teamName: 'The Quizzards',
-          value: 'Banana',
-          pointsAwarded: 0,
-          gradedAt: null,
-        },
-      ],
+    const [update] = game.payloadsTo<{
+      questionId: number;
+      question: Record<string, unknown>;
+      answers: Record<string, unknown>[];
+    }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED);
+    expect(update.questionId).toBe(game.questionIds.multipleChoice);
+    expect(update.question).toMatchObject({
+      type: 'multiple_choice',
+      prompt: 'Capital of France?',
+      points: 2,
+      correctAnswer: 'Paris',
+      roundTitle: 'Round 1',
+      roundNumber: 1,
+      questionNumberInRound: 1,
     });
+    expect(update.answers).toEqual([
+      expect.objectContaining({
+        teamId: team.teamId,
+        teamName: 'The Quizzards',
+        value: 'Banana',
+        pointsAwarded: 0,
+      }),
+    ]);
   });
 
   it('acknowledges the submitting player with ANSWER_RECEIVED', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
 
-    await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 21,
-      teamId: 31,
-      value: 'Banana',
-    });
+    await submit(team.socket, team.teamId);
 
-    expect(player.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWER_RECEIVED, {
-      questionId: 21,
-      teamId: 31,
-      teamName: 'The Quizzards',
-      value: 'Banana',
-      pointsAwarded: 0,
-      gradedAt: null,
-    });
+    expect(team.socket.emit).toHaveBeenCalledWith(
+      SOCKET_EVENTS.ANSWER_RECEIVED,
+      expect.objectContaining({
+        questionId: game.questionIds.multipleChoice,
+        teamId: team.teamId,
+        teamName: 'The Quizzards',
+        value: 'Banana',
+        pointsAwarded: 0,
+      }),
+    );
   });
 
   it('broadcasts STATE_UPDATED with the answered team ids after a submit', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
 
-    await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 21,
-      teamId: 31,
-      value: 'Banana',
-    });
+    await submit(team.socket, team.teamId);
 
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({ answeredTeamIds: [31] }),
-    );
+    for (const room of [SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.PLAYERS]) {
+      const snapshots = game.payloadsTo<StateSnapshotPayload>(
+        room,
+        SOCKET_EVENTS.STATE_UPDATED,
+      );
+      expect(snapshots[snapshots.length - 1].answeredTeamIds).toEqual([
+        team.teamId,
+      ]);
+    }
   });
 
   it('rejects SUBMIT_ANSWER while the question is not open for answering', async () => {
     // Still in the lobby - no question has been revealed yet.
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
+    await expect(submit(team.socket, team.teamId)).rejects.toThrow(WsException);
 
-    await expect(
-      gateway.handleSubmitAnswer(asSocket(player), {
-        questionId: 21,
-        teamId: 31,
-        value: 'Banana',
-      }),
-    ).rejects.toThrow(WsException);
-    expect(answerService.submit).not.toHaveBeenCalled();
+    expect(await storedAnswers()).toEqual([]);
   });
 
   it('rejects SUBMIT_ANSWER for a team the submitting socket never joined as', async () => {
-    await openFirstQuestion(gateway, server);
-    const teamOwner = createMockSocket(
-      SOCKET_ROOMS.PLAYERS,
-      {},
-      'socket-owner',
-    );
-    await gateway.handleConnection(asSocket(teamOwner));
-    await gateway.handleJoinPlayers(asSocket(teamOwner), {
-      teamName: 'The Quizzards',
-    });
+    await game.openFirstQuestion(admin);
+    const attacker = await game.connectPlayer();
 
-    const attacker = createMockSocket(
-      SOCKET_ROOMS.PLAYERS,
-      {},
-      'socket-attacker',
+    await expect(submit(attacker, team.teamId, 'Hijacked')).rejects.toThrow(
+      WsException,
     );
-    await gateway.handleConnection(asSocket(attacker));
 
-    await expect(
-      gateway.handleSubmitAnswer(asSocket(attacker), {
-        questionId: 21,
-        teamId: 31,
-        value: 'Hijacked',
-      }),
-    ).rejects.toThrow(WsException);
-    expect(answerService.submit).not.toHaveBeenCalled();
+    expect(await storedAnswers()).toEqual([]);
   });
 
   it('rejects SUBMIT_ANSWER from a non-players client', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    await game.openFirstQuestion(admin);
 
-    await expect(
-      gateway.handleSubmitAnswer(asSocket(admin), {
-        questionId: 21,
-        teamId: 31,
-        value: 'Banana',
-      }),
-    ).rejects.toThrow(WsException);
-    expect(answerService.submit).not.toHaveBeenCalled();
+    await expect(submit(admin, team.teamId)).rejects.toThrow(WsException);
+
+    expect(await storedAnswers()).toEqual([]);
   });
 });

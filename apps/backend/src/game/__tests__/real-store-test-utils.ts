@@ -186,10 +186,10 @@ export interface RealStoreGateway extends PlayableQuiz {
   inRequestContext: <T>(work: () => Promise<T>) => Promise<T>;
   /** Connects an admin socket (valid session cookie) to the seeded session, or to another session by `joinCode`. */
   connectAdmin: (joinCode?: string) => Promise<MockSocket>;
-  /** Connects a players-room socket without joining a team (`id` defaults to the next `player-N`). */
-  connectPlayer: (id?: string) => Promise<MockSocket>;
-  /** Connects a players-room socket and joins it as `teamName`. */
-  joinTeam: (teamName: string) => Promise<JoinedTeam>;
+  /** Connects a players-room socket without joining a team (`id` defaults to the next `player-N`; `joinCode` defaults to the seeded session). */
+  connectPlayer: (id?: string, joinCode?: string) => Promise<MockSocket>;
+  /** Connects a players-room socket and joins it as `teamName`, to the seeded session or another by `joinCode`. */
+  joinTeam: (teamName: string, joinCode?: string) => Promise<JoinedTeam>;
   /** The ORM the stores run on, for a test that builds its own module over them. */
   orm: MikroORM;
   /** The fake session service behind admin logins, for a test that needs a different user (e.g. a moderator). */
@@ -518,23 +518,29 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       return admin;
     };
 
-    const connectPlayer = async (id?: string): Promise<MockSocket> => {
+    const connectPlayer = async (
+      id?: string,
+      joinCode = quiz.joinCode,
+    ): Promise<MockSocket> => {
       const socket = createMockSocket(
         SOCKET_ROOMS.PLAYERS,
         {},
         id ?? nextSocketId('player'),
-        quiz.joinCode,
+        joinCode,
       );
       await gateway.handleConnection(asSocket(socket));
       server.sockets.sockets.set(socket.id, socket);
       return socket;
     };
 
-    const joinTeam = async (teamName: string): Promise<JoinedTeam> => {
-      const socket = await connectPlayer();
+    const joinTeam = async (
+      teamName: string,
+      joinCode = quiz.joinCode,
+    ): Promise<JoinedTeam> => {
+      const socket = await connectPlayer(undefined, joinCode);
       await gateway.handleJoinPlayers(asSocket(socket), {
         teamName,
-        joinCode: quiz.joinCode,
+        joinCode,
       });
       const accepted = socket.emit.mock.calls.find(
         ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,

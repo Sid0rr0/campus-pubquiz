@@ -1,220 +1,120 @@
-import { IllegalGameTransitionError } from '@campus-pubquiz/types';
-import { GameStateService } from '@/game/state/game-state.service';
+import { WsException } from '@nestjs/websockets';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  GAME_STATE_FIXTURE_SEEDED_GAME,
-  createFakeShowdownService,
-  asShowdownService,
-  arrange,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-describe('GameStateService — leaderboard', () => {
-  let service: GameStateService;
-  let joinCode: string;
+const MAX_WALK_STEPS = 20;
+
+describe('GameGateway — leaderboard', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    service = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
+    game = await harness.createGateway({ teamNames: ['First', 'Second'] });
   });
 
+  /** Opens the first question; "First" answers it correctly (2 points), "Second" wrongly. */
+  async function scoreFirstTeamOnFirstQuestion(): Promise<void> {
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_intro(0)
+    await game.act('ADVANCE'); // -> first question
+    for (const [{ socket, teamId }, value] of [
+      [game.teams[0], 'Paris'],
+      [game.teams[1], 'London'],
+    ] as const) {
+      await game.gateway.handleSubmitAnswer(asSocket(socket), {
+        questionId: game.questionIds.multipleChoice,
+        teamId,
+        value,
+      });
+    }
+  }
+
   it('toggles the leaderboard without disturbing the underlying status', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    const withLeaderboard = await service.applyAction(
-      joinCode,
-      'TOGGLE_LEADERBOARD',
-    );
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_intro(0)
+    await game.act('ADVANCE'); // -> r1q1
+
+    const withLeaderboard = await game.act('TOGGLE_LEADERBOARD');
+
     expect(withLeaderboard.progress.status).toBe('question_open');
     expect(withLeaderboard.progress.isLeaderboardVisible).toBe(true);
-    expect(withLeaderboard.currentQuestion?.id).toBe(21);
+    expect(withLeaderboard.currentQuestion?.id).toBe(
+      game.questionIds.multipleChoice,
+    );
   });
 
   it('reveals teams one at a time via REVEAL_NEXT_TEAM, bottom-up and bounded by team count', async () => {
-    arrange(service).setLeaderboard(joinCode, [
-      {
-        teamId: 1,
-        teamName: 'First',
-        totalPoints: 10,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-      {
-        teamId: 2,
-        teamName: 'Second',
-        totalPoints: 5,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'TOGGLE_LEADERBOARD');
-    expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(0);
+    await scoreFirstTeamOnFirstQuestion();
+    await game.act('TOGGLE_LEADERBOARD');
+    expect((await game.snapshot()).leaderboardRevealCount).toBe(0);
 
-    await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
-    expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(1);
-
-    await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
-    expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(2);
+    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(1);
+    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(2);
 
     // Bounded: a further reveal doesn't exceed the number of teams.
-    await expect(
-      service.applyAction(joinCode, 'REVEAL_NEXT_TEAM'),
-    ).resolves.toMatchObject({
-      leaderboardRevealCount: 2,
-    });
+    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(2);
   });
 
   it('rejects REVEAL_NEXT_TEAM while the leaderboard is hidden', async () => {
-    await expect(
-      service.applyAction(joinCode, 'REVEAL_NEXT_TEAM'),
-    ).rejects.toThrow(IllegalGameTransitionError);
+    await expect(game.act('REVEAL_NEXT_TEAM')).rejects.toThrow(WsException);
   });
 
   it('also advances the leaderboard reveal on ADVANCE while the board is visible', async () => {
-    arrange(service).setLeaderboard(joinCode, [
-      {
-        teamId: 1,
-        teamName: 'First',
-        totalPoints: 10,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-      {
-        teamId: 2,
-        teamName: 'Second',
-        totalPoints: 5,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'TOGGLE_LEADERBOARD');
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_intro(0)
+    await game.act('TOGGLE_LEADERBOARD');
 
-    const afterAdvance = await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1, board still visible
+    const afterAdvance = await game.act('ADVANCE'); // -> r1q1, board still visible
+
     expect(afterAdvance.leaderboardRevealCount).toBe(1);
   });
 
   it('resets the reveal count whenever the leaderboard is toggled', async () => {
-    arrange(service).setLeaderboard(joinCode, [
-      {
-        teamId: 1,
-        teamName: 'First',
-        totalPoints: 10,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'TOGGLE_LEADERBOARD');
-    await service.applyAction(joinCode, 'REVEAL_NEXT_TEAM');
-    expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(1);
+    await game.act('START_QUIZ');
+    await game.act('TOGGLE_LEADERBOARD');
+    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(1);
 
-    await service.applyAction(joinCode, 'TOGGLE_LEADERBOARD'); // hide
-    expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(0);
-
-    await service.applyAction(joinCode, 'TOGGLE_LEADERBOARD'); // show again, fresh
-    expect(service.getSnapshot(joinCode).leaderboardRevealCount).toBe(0);
+    expect((await game.act('TOGGLE_LEADERBOARD')).leaderboardRevealCount).toBe(
+      0,
+    ); // hide
+    expect((await game.act('TOGGLE_LEADERBOARD')).leaderboardRevealCount).toBe(
+      0,
+    ); // show again, fresh
   });
 
   it('shows "Quiz complete!" rather than the leaderboard when the End Quiz button ends the quiz, until the admin reveals it', async () => {
-    arrange(service).setLeaderboard(joinCode, [
-      {
-        teamId: 1,
-        teamName: 'First',
-        totalPoints: 10,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-      {
-        teamId: 2,
-        teamName: 'Second',
-        totalPoints: 5,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
-    await service.applyAction(joinCode, 'START_QUIZ');
+    await game.act('START_QUIZ');
 
-    const ended = await service.applyAction(joinCode, 'END_QUIZ');
+    const ended = await game.act('END_QUIZ');
 
     expect(ended.progress.status).toBe('ended');
     expect(ended.progress.isLeaderboardVisible).toBe(false);
     expect(ended.leaderboardRevealCount).toBe(0);
 
-    const withLeaderboard = await service.applyAction(
-      joinCode,
-      'TOGGLE_LEADERBOARD',
-    );
+    const withLeaderboard = await game.act('TOGGLE_LEADERBOARD');
     expect(withLeaderboard.progress.isLeaderboardVisible).toBe(true);
     expect(withLeaderboard.leaderboardRevealCount).toBe(0);
 
-    const afterFirstReveal = await service.applyAction(
-      joinCode,
-      'REVEAL_NEXT_TEAM',
-    );
+    const afterFirstReveal = await game.act('REVEAL_NEXT_TEAM');
     expect(afterFirstReveal.leaderboardRevealCount).toBe(1);
   });
 
   it('shows the leaderboard screen when advancing past the last reveal question ends the quiz naturally', async () => {
-    arrange(service).setLeaderboard(joinCode, [
-      {
-        teamId: 1,
-        teamName: 'First',
-        totalPoints: 10,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-      {
-        teamId: 2,
-        teamName: 'Second',
-        totalPoints: 5,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
-    await service.applyAction(joinCode, 'START_QUIZ');
+    await game.act('START_QUIZ');
 
-    let snapshot = service.getSnapshot(joinCode);
-    // Walk ADVANCE all the way through both rounds' questions, the break,
+    // Walk ADVANCE all the way through the round's questions, the break,
     // and every reveal step — same as an admin just clicking through to the
     // end without ever pressing the separate "End Quiz" button.
-    for (let i = 0; i < 20 && snapshot.progress.status !== 'ended'; i += 1) {
-      snapshot = await service.applyAction(joinCode, 'ADVANCE');
+    let snapshot = await game.snapshot();
+    for (
+      let step = 0;
+      step < MAX_WALK_STEPS && snapshot.progress.status !== 'ended';
+      step += 1
+    ) {
+      snapshot = await game.act('ADVANCE');
     }
 
     expect(snapshot.progress.status).toBe('ended');
@@ -226,69 +126,35 @@ describe('GameStateService — leaderboard', () => {
   });
 
   it('shows the leaderboard between reveal blocks, before the next round intro card is revealed', async () => {
-    const customSeedService = createFakeGameStateSeedService();
-    customSeedService.seed.mockResolvedValue({
-      ...GAME_STATE_FIXTURE_SEEDED_GAME,
+    const twoBlocks = await harness.createGateway({
+      joinCode: 'BLOCKS',
+      teamNames: ['Third'],
       rounds: [
         {
-          id: 31,
           title: 'Round A',
           breakAfter: true,
-          questions: [
-            {
-              id: 41,
-              type: 'free_text',
-              prompt: 'Q1',
-              points: 1,
-              answer: 'A1',
-            },
-          ],
+          questions: [{ type: 'free_text', prompt: 'Q1', answer: 'A1' }],
         },
         {
-          id: 32,
           title: 'Round B',
           breakAfter: true,
-          questions: [
-            {
-              id: 42,
-              type: 'free_text',
-              prompt: 'Q2',
-              points: 1,
-              answer: 'A2',
-            },
-          ],
+          questions: [{ type: 'free_text', prompt: 'Q2', answer: 'A2' }],
         },
       ],
     });
-    const customService = new GameStateService(
-      asSeedService(customSeedService),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await customService.onModuleInit();
+    for (const action of [
+      'START_QUIZ',
+      'ADVANCE', // -> round_intro(0)
+      'ADVANCE', // -> r1q1
+      'ADVANCE', // -> locking (round A breakAfter)
+      'ADVANCE', // -> break_intro
+      'ADVANCE', // -> reveal_intro (round 0)
+      'ADVANCE', // -> reveal (revealIndex 0)
+    ] as const) {
+      await twoBlocks.act(action);
+    }
 
-    arrange(customService).setLeaderboard(joinCode, [
-      {
-        teamId: 1,
-        teamName: 'First',
-        totalPoints: 10,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
-
-    await customService.applyAction(joinCode, 'START_QUIZ');
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> locking (round A breakAfter)
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> break_intro
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> reveal_intro (round 0)
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> reveal (revealIndex 0)
-    const afterReveal = await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1), board up
+    const afterReveal = await twoBlocks.act('ADVANCE'); // -> round_intro(1), board up
 
     expect(afterReveal.progress.status).toBe('round_intro');
     expect(afterReveal.progress.roundIndex).toBe(1);
@@ -297,42 +163,34 @@ describe('GameStateService — leaderboard', () => {
     // never inherits a stale count from an earlier reveal.
     expect(afterReveal.leaderboardRevealCount).toBe(0);
 
-    const afterClose = await customService.applyAction(
-      joinCode,
-      'TOGGLE_LEADERBOARD',
-    );
+    const afterClose = await twoBlocks.act('TOGGLE_LEADERBOARD');
     expect(afterClose.progress.status).toBe('round_intro');
     expect(afterClose.progress.roundIndex).toBe(1);
     expect(afterClose.progress.isLeaderboardVisible).toBe(false);
   });
 
-  it('starts with an empty leaderboard', () => {
-    expect(service.getSnapshot(joinCode).leaderboard).toEqual([]);
+  it('starts with an empty leaderboard when no team has joined', async () => {
+    const empty = await harness.createGateway({ joinCode: 'EMPTY1' });
+
+    expect((await empty.snapshot()).leaderboard).toEqual([]);
   });
 
-  it('reflects a leaderboard set via setLeaderboard in the snapshot', () => {
-    arrange(service).setLeaderboard(joinCode, [
-      {
-        teamId: 31,
-        teamName: 'The Quizzards',
-        totalPoints: 5,
-        bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
-    ]);
+  it('ranks teams by the points their answers earned', async () => {
+    await scoreFirstTeamOnFirstQuestion();
 
-    expect(service.getSnapshot(joinCode).leaderboard).toEqual([
-      {
-        teamId: 31,
-        teamName: 'The Quizzards',
-        totalPoints: 5,
+    expect((await game.snapshot()).leaderboard).toEqual([
+      expect.objectContaining({
+        teamId: game.teams[0].teamId,
+        teamName: 'First',
+        totalPoints: 2,
         bonusPoints: 0,
-        positiveBonusPoints: 0,
-        negativeBonusPoints: 0,
-        roundPoints: [],
-      },
+      }),
+      expect.objectContaining({
+        teamId: game.teams[1].teamId,
+        teamName: 'Second',
+        totalPoints: 0,
+        bonusPoints: 0,
+      }),
     ]);
   });
 });

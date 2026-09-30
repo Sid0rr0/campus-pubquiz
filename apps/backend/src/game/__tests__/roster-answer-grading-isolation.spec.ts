@@ -1,103 +1,97 @@
-import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  asSocket,
-} from '@/game/__tests__/test-utils';
-import { setupConcurrentSessionsTest } from '@/game/__tests__/concurrent-sessions-test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — concurrent sessions: roster, answer, and grading isolation', () => {
-  const { state, openSessionA, createAndOpenSessionB } =
-    setupConcurrentSessionsTest();
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let questionId: number;
+
+  beforeEach(async () => {
+    // A single human-graded question, so grading is the admin's call.
+    game = await harness.createGateway({
+      rounds: [
+        {
+          title: 'Round Alpha',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'audio',
+              prompt: 'Name that tune',
+              answer: 'Queen',
+              points: 7,
+            },
+          ],
+        },
+      ],
+    });
+    [questionId] = game.rounds[0].questionIds;
+  });
 
   it('keeps rosters, submitted answers, and grading fully isolated between two concurrently open sessions', async () => {
-    await openSessionA();
-    await createAndOpenSessionB();
-
-    const playerA = createMockSocket(
-      SOCKET_ROOMS.PLAYERS,
-      {},
-      'player-a',
-      'AAAAAA',
+    const adminA = await game.connectAdmin();
+    await game.openFirstQuestion(adminA);
+    const { joinCode: joinCodeB } = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
     );
-    await state.gateway.handleConnection(asSocket(playerA));
-    await state.gateway.handleJoinPlayers(asSocket(playerA), {
-      teamName: 'Team Alpha',
-      joinCode: 'AAAAAA',
-    });
+    const adminB = await game.connectAdmin(joinCodeB);
+    await game.openFirstQuestion(adminB);
 
-    const playerB = createMockSocket(
-      SOCKET_ROOMS.PLAYERS,
-      {},
-      'player-b',
-      'BBBBBB',
-    );
-    await state.gateway.handleConnection(asSocket(playerB));
-    await state.gateway.handleJoinPlayers(asSocket(playerB), {
-      teamName: 'Team Beta',
-      joinCode: 'BBBBBB',
-    });
+    const alpha = await game.joinTeam('Team Alpha');
+    const beta = await game.joinTeam('Team Beta', joinCodeB);
 
-    expect(state.gameStateService.getSnapshot('AAAAAA').teams).toEqual([
-      expect.objectContaining({ teamId: 61, teamName: 'Team Alpha' }),
+    expect((await game.snapshot()).teams).toEqual([
+      expect.objectContaining({ teamId: alpha.teamId, teamName: 'Team Alpha' }),
     ]);
-    expect(state.gameStateService.getSnapshot('BBBBBB').teams).toEqual([
-      expect.objectContaining({ teamId: 62, teamName: 'Team Beta' }),
+    expect((await game.snapshot(joinCodeB)).teams).toEqual([
+      expect.objectContaining({ teamId: beta.teamId, teamName: 'Team Beta' }),
     ]);
 
-    await state.gateway.handleSubmitAnswer(asSocket(playerA), {
-      questionId: 501,
-      teamId: 61,
-      value: 'foo',
-    });
-    await state.gateway.handleSubmitAnswer(asSocket(playerB), {
-      questionId: 502,
-      teamId: 62,
-      value: 'bar',
-    });
+    // Same quiz, so the same question id: each submit still lands only in its own session.
+    for (const [team, value] of [
+      [alpha, 'foo'],
+      [beta, 'bar'],
+    ] as const) {
+      await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+        questionId,
+        teamId: team.teamId,
+        value,
+      });
+    }
 
-    expect(state.answerService.submit).toHaveBeenNthCalledWith(
-      1,
-      301,
-      501,
-      61,
-      'foo',
-      expect.any(Number),
+    expect((await game.snapshot()).answeredTeamIds).toEqual([alpha.teamId]);
+    expect((await game.snapshot(joinCodeB)).answeredTeamIds).toEqual([
+      beta.teamId,
+    ]);
+    const answersInA = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
     );
-    expect(state.answerService.submit).toHaveBeenNthCalledWith(
-      2,
-      302,
-      502,
-      62,
-      'bar',
-      expect.any(Number),
-    );
-    expect(
-      state.gameStateService.getSnapshot('AAAAAA').answeredTeamIds,
-    ).toEqual([61]);
-    expect(
-      state.gameStateService.getSnapshot('BBBBBB').answeredTeamIds,
-    ).toEqual([62]);
+    expect(answersInA).toEqual([
+      expect.objectContaining({ teamName: 'Team Alpha', value: 'foo' }),
+    ]);
 
-    const adminA = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'admin-grade-a',
-      'AAAAAA',
-    );
-    await state.gateway.handleConnection(asSocket(adminA));
-    await state.gateway.handleGradeAnswer(asSocket(adminA), {
-      answerId: 701,
+    await game.gateway.handleGradeAnswer(asSocket(adminA), {
+      answerId: answersInA[0].answerId,
       pointsAwarded: 5,
     });
 
     // Each session's leaderboard holds only its own team — grading A's
-    // answer never puts Team Alpha on B's board.
-    expect(state.gameStateService.getSnapshot('AAAAAA').leaderboard).toEqual([
-      expect.objectContaining({ teamId: 61, teamName: 'Team Alpha' }),
+    // answer never puts Team Alpha on B's board or points on Team Beta.
+    expect((await game.snapshot()).leaderboard).toEqual([
+      expect.objectContaining({
+        teamId: alpha.teamId,
+        teamName: 'Team Alpha',
+        totalPoints: 5,
+      }),
     ]);
-    expect(state.gameStateService.getSnapshot('BBBBBB').leaderboard).toEqual([
-      expect.objectContaining({ teamId: 62, teamName: 'Team Beta' }),
+    expect((await game.snapshot(joinCodeB)).leaderboard).toEqual([
+      expect.objectContaining({
+        teamId: beta.teamId,
+        teamName: 'Team Beta',
+        totalPoints: 0,
+      }),
     ]);
   });
 });

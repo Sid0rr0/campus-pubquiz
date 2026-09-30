@@ -1,70 +1,53 @@
 import { SOCKET_ROOMS, sessionRoom } from '@campus-pubquiz/types';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  asSocket,
-} from '@/game/__tests__/test-utils';
-import { setupConcurrentSessionsTest } from '@/game/__tests__/concurrent-sessions-test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — concurrent sessions: state machine progression isolation', () => {
-  const { state, openSessionA } = setupConcurrentSessionsTest();
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    game = await harness.createGateway();
+  });
 
   it('advances two sessions through the state machine independently, with no shared progress', async () => {
-    await openSessionA();
-    expect(state.gameStateService.getSnapshot('AAAAAA').progress.status).toBe(
-      'question_open',
-    );
+    const adminA = await game.connectAdmin();
+    await game.openFirstQuestion(adminA);
+    expect((await game.snapshot()).progress.status).toBe('question_open');
 
-    await state.gameStateService.createSession(20);
-    const adminB = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'socket-1',
-      'BBBBBB',
+    // Session B is created directly through the module (mirroring what
+    // POST /sessions does) while A already has its question open.
+    const { joinCode: joinCodeB } = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
     );
-    await state.gateway.handleConnection(asSocket(adminB));
+    const adminB = await game.connectAdmin(joinCodeB);
 
     // Creating B must not touch A's already-open question.
-    expect(state.gameStateService.getSnapshot('AAAAAA').progress.status).toBe(
-      'question_open',
-    );
-    expect(state.gameStateService.getSnapshot('BBBBBB').progress.status).toBe(
-      'lobby',
-    );
+    expect((await game.snapshot()).progress.status).toBe('question_open');
+    expect((await game.snapshot(joinCodeB)).progress.status).toBe('lobby');
 
-    state.server.to.mockClear();
-    state.server.emit.mockClear();
-    await state.gateway.handleAdminAction(asSocket(adminB), {
-      action: 'START_QUIZ',
-    });
-    await state.gateway.handleAdminAction(asSocket(adminB), {
-      action: 'ADVANCE',
-    });
-    await state.gateway.handleAdminAction(asSocket(adminB), {
-      action: 'ADVANCE',
-    });
+    game.clearEmits();
+    for (const action of ['START_QUIZ', 'ADVANCE', 'ADVANCE'] as const) {
+      await game.gateway.handleAdminAction(asSocket(adminB), { action });
+    }
 
-    expect(state.gameStateService.getSnapshot('AAAAAA').progress.status).toBe(
-      'question_open',
-    );
-    expect(state.gameStateService.getSnapshot('BBBBBB').progress.status).toBe(
-      'question_open',
-    );
-    expect(
-      state.gameStateService.getSnapshot('AAAAAA').currentQuestion?.id,
-    ).toBe(501);
-    expect(
-      state.gameStateService.getSnapshot('BBBBBB').currentQuestion?.id,
-    ).toBe(502);
-    expect(state.gameStateService.getGameSessionId('AAAAAA')).toBe(301);
-    expect(state.gameStateService.getGameSessionId('BBBBBB')).toBe(302);
+    const snapshotA = await game.snapshot();
+    const snapshotB = await game.snapshot(joinCodeB);
+    expect(snapshotA.progress.status).toBe('question_open');
+    expect(snapshotB.progress.status).toBe('question_open');
+    expect(snapshotA.joinCode).toBe(game.joinCode);
+    expect(snapshotB.joinCode).toBe(joinCodeB);
 
-    // The last ADVANCE (B's) must only have broadcast to B's rooms.
-    expect(state.server.to).toHaveBeenCalledWith(
-      sessionRoom('BBBBBB', SOCKET_ROOMS.DISPLAY),
+    // B's actions must only have broadcast to B's rooms.
+    const emittedRooms = game.roomEmits().flatMap(({ rooms }) => rooms);
+    expect(emittedRooms).toContain(
+      sessionRoom(joinCodeB, SOCKET_ROOMS.DISPLAY),
     );
-    expect(state.server.to).not.toHaveBeenCalledWith(
-      sessionRoom('AAAAAA', SOCKET_ROOMS.DISPLAY),
+    expect(emittedRooms).not.toContain(
+      sessionRoom(game.joinCode, SOCKET_ROOMS.DISPLAY),
     );
   });
 });

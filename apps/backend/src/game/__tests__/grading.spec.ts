@@ -2,174 +2,157 @@ import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  sessionRoom,
+  type SocketRoomName,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
-import type { GameStateService } from '@/game/state/game-state.service';
+import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  openFirstQuestion,
-  asSocket,
-  type MockServer,
-  type MockAnswerService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — grading', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let answerService: MockAnswerService;
-  let gameStateService: GameStateService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: { socket: MockSocket; teamId: number };
+  let questionId: number;
 
   beforeEach(async () => {
-    ({ gateway, server, answerService, gameStateService } =
-      await createTestGateway());
-  });
-
-  it('grades an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
-    await gateway.handleGradeAnswer(asSocket(admin), {
-      answerId: 41,
-      pointsAwarded: 2,
-    });
-
-    expect(answerService.grade).toHaveBeenCalledWith(101, 41, 2);
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.ANSWERS_UPDATED, {
-      questionId: 21,
-      question: {
-        type: 'free_text',
-        prompt: 'Q1',
-        points: 1,
-        correctAnswer: 'A1',
-        roundTitle: 'Round 1',
-        roundNumber: 1,
-        questionNumberInRound: 1,
-        totalQuestionsInRound: 1,
-      },
-      answers: [
+    // A single human-graded question, so the submitted answer stays
+    // ungraded until the admin grades it.
+    game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: [
         {
-          answerId: 41,
-          teamId: 31,
-          teamName: 'The Quizzards',
-          value: 'Banana',
-          pointsAwarded: 0,
-          gradedAt: null,
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'audio',
+              prompt: 'Which band is this?',
+              answer: 'Queen',
+              points: 2,
+            },
+          ],
         },
       ],
     });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    [questionId] = game.rounds[0].questionIds;
   });
 
-  it('refreshes the leaderboard and broadcasts STATE_UPDATED to all three rooms after grading', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
+  async function submitBanana(): Promise<number> {
+    await game.openFirstQuestion(admin);
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId,
+      teamId: team.teamId,
+      value: 'Banana',
     });
-    await gateway.handleConnection(asSocket(admin));
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    game.clearEmits();
+    return answer.answerId;
+  }
 
-    await gateway.handleGradeAnswer(asSocket(admin), {
-      answerId: 41,
+  function lastSnapshot(room: SocketRoomName): StateSnapshotPayload {
+    const snapshots = game.payloadsTo<StateSnapshotPayload>(
+      room,
+      SOCKET_EVENTS.STATE_UPDATED,
+    );
+    return snapshots[snapshots.length - 1];
+  }
+
+  it('grades an answer and broadcasts ANSWERS_UPDATED to the admin room', async () => {
+    const answerId = await submitBanana();
+
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
       pointsAwarded: 2,
     });
 
-    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
+    const [update] = game.payloadsTo<{
+      questionId: number;
+      question: Record<string, unknown>;
+      answers: Record<string, unknown>[];
+    }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED);
+    expect(update.questionId).toBe(questionId);
+    expect(update.question).toMatchObject({
+      type: 'audio',
+      prompt: 'Which band is this?',
+      points: 2,
+      correctAnswer: 'Queen',
+      roundTitle: 'Round 1',
+    });
+    expect(update.answers).toEqual([
       expect.objectContaining({
-        leaderboard: [
-          {
-            teamId: 31,
-            teamName: 'The Quizzards',
-            totalPoints: 2,
-            bonusPoints: 0,
-          },
-        ],
-      }),
-    );
-  });
-
-  it('rejects GRADE_ANSWER from a non-admin client', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
-    await expect(
-      gateway.handleGradeAnswer(asSocket(player), {
-        answerId: 41,
-        pointsAwarded: 2,
-      }),
-    ).rejects.toThrow(WsException);
-    expect(answerService.grade).not.toHaveBeenCalled();
-  });
-
-  it('marks the question ungraded once a manually-graded answer is submitted', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
-
-    await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 21,
-      teamId: 31,
-      value: 'Banana',
-    });
-
-    expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual([
-      21,
-    ]);
-  });
-
-  it('clears the ungraded-question cache once every submitted answer for that question is graded', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
-    await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 21,
-      teamId: 31,
-      value: 'Banana',
-    });
-    expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual([
-      21,
-    ]);
-
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-    answerService.listForQuestion.mockResolvedValueOnce([
-      {
-        answerId: 41,
-        teamId: 31,
+        answerId,
+        teamId: team.teamId,
         teamName: 'The Quizzards',
         value: 'Banana',
         pointsAwarded: 2,
-        gradedAt: '2026-01-01T00:00:00.000Z',
-      },
+        gradedAt: expect.any(String) as string,
+      }),
     ]);
+  });
 
-    await gateway.handleGradeAnswer(asSocket(admin), {
-      answerId: 41,
+  it('refreshes the leaderboard and broadcasts STATE_UPDATED to all three rooms after grading', async () => {
+    const answerId = await submitBanana();
+
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
       pointsAwarded: 2,
     });
 
-    expect(gameStateService.getSnapshot('ABCDEF').ungradedQuestionIds).toEqual(
-      [],
+    for (const room of [
+      SOCKET_ROOMS.ADMIN,
+      SOCKET_ROOMS.DISPLAY,
+      SOCKET_ROOMS.PLAYERS,
+    ]) {
+      expect(lastSnapshot(room).leaderboard).toEqual([
+        expect.objectContaining({
+          teamId: team.teamId,
+          teamName: 'The Quizzards',
+          totalPoints: 2,
+          bonusPoints: 0,
+        }),
+      ]);
+    }
+  });
+
+  it('rejects GRADE_ANSWER from a non-admin client', async () => {
+    const answerId = await submitBanana();
+
+    await expect(
+      game.gateway.handleGradeAnswer(asSocket(team.socket), {
+        answerId,
+        pointsAwarded: 2,
+      }),
+    ).rejects.toThrow(WsException);
+
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
     );
+    expect(answer).toMatchObject({ pointsAwarded: 0, gradedAt: null });
+  });
+
+  it('marks the question ungraded once a manually-graded answer is submitted', async () => {
+    await submitBanana();
+
+    expect((await game.snapshot()).ungradedQuestionIds).toEqual([questionId]);
+  });
+
+  it('clears the ungraded-question cache once every submitted answer for that question is graded', async () => {
+    const answerId = await submitBanana();
+    expect((await game.snapshot()).ungradedQuestionIds).toEqual([questionId]);
+
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
+      pointsAwarded: 2,
+    });
+
+    expect((await game.snapshot()).ungradedQuestionIds).toEqual([]);
   });
 });

@@ -1,71 +1,106 @@
-import { GameStateService } from '@/game/state/game-state.service';
-import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
+import { WsException } from '@nestjs/websockets';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  type MockAnswerService,
-  createFakeShowdownService,
-  asShowdownService,
-} from '@/game/__tests__/test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-describe('GameStateService — grading gate before reveal', () => {
-  let service: GameStateService;
-  let answerService: MockAnswerService;
-  let joinCode: string;
+describe('GameGateway — grading gate before reveal', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let firstQuestionId: number;
 
   beforeEach(async () => {
-    answerService = createFakeAnswerService();
-    service = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(answerService),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
-
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> locking
+    // One block spanning two rounds; both questions are human-graded, so a
+    // submitted answer keeps the block from revealing until it is graded.
+    game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: [
+        {
+          title: 'Round 1',
+          questions: [
+            { type: 'audio', prompt: 'Name that tune', answer: 'Queen' },
+          ],
+        },
+        {
+          title: 'Round 2',
+          breakAfter: true,
+          questions: [
+            { type: 'audio', prompt: 'Name that band', answer: 'Abba' },
+          ],
+        },
+      ],
+    });
+    firstQuestionId = game.rounds[0].questionIds[0];
+    for (const action of [
+      'START_QUIZ',
+      'ADVANCE', // -> round_intro(0)
+      'ADVANCE', // -> r1q1
+    ] as const) {
+      await game.act(action);
+    }
   });
 
+  async function submitAnswerToFirstQuestion(): Promise<number> {
+    const [{ socket, teamId }] = game.teams;
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId: firstQuestionId,
+      teamId,
+      value: 'Banana',
+    });
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, firstQuestionId),
+    );
+    return answer.answerId;
+  }
+
+  async function advanceToBreakIntro() {
+    await game.act('ADVANCE'); // -> round_intro(1)
+    await game.act('ADVANCE'); // -> r2q1
+    await game.act('ADVANCE'); // -> locking
+    return game.act('ADVANCE'); // -> break_intro
+  }
+
   it('rejects ADVANCE out of break_intro while a block question still has an ungraded answer', async () => {
-    answerService.listUngradedQuestionIds.mockResolvedValueOnce([24]);
-    const breakIntro = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
+    await submitAnswerToFirstQuestion();
+    const breakIntro = await advanceToBreakIntro();
     expect(breakIntro.progress.status).toBe('break_intro');
 
-    answerService.listUngradedQuestionIds.mockResolvedValueOnce([24]);
-    await expect(service.applyAction(joinCode, 'ADVANCE')).rejects.toThrow(
-      UngradedAnswersError,
-    );
+    await expect(game.act('ADVANCE')).rejects.toThrow(WsException);
 
     // The rejected transition must not have been persisted.
-    expect(service.getSnapshot(joinCode).progress.status).toBe('break_intro');
+    expect((await game.snapshot()).progress.status).toBe('break_intro');
   });
 
   it('reports the ungraded question ids on the snapshot while reviewing the break screen', async () => {
-    answerService.listUngradedQuestionIds.mockResolvedValueOnce([24]);
-    const breakIntro = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
-    expect(breakIntro.ungradedQuestionIds).toEqual([24]);
+    await submitAnswerToFirstQuestion();
+
+    const breakIntro = await advanceToBreakIntro();
+
+    expect(breakIntro.ungradedQuestionIds).toEqual([firstQuestionId]);
+  });
+
+  it('allows ADVANCE into reveal once the ungraded answer has been graded', async () => {
+    const answerId = await submitAnswerToFirstQuestion();
+    await advanceToBreakIntro();
+    const admin = await game.connectAdmin();
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
+      pointsAwarded: 1,
+    });
+
+    const revealIntro = await game.act('ADVANCE');
+
+    expect(revealIntro.progress.status).toBe('reveal_intro');
   });
 
   it('allows ADVANCE into reveal once nothing is left ungraded', async () => {
-    const breakIntro = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro (default mock: nothing ungraded)
+    const breakIntro = await advanceToBreakIntro(); // nobody answered
     expect(breakIntro.progress.status).toBe('break_intro');
     expect(breakIntro.ungradedQuestionIds).toEqual([]);
 
-    const revealIntro = await service.applyAction(joinCode, 'ADVANCE');
+    const revealIntro = await game.act('ADVANCE');
+
     expect(revealIntro.progress.status).toBe('reveal_intro');
   });
 });

@@ -1,145 +1,98 @@
 import {
   SOCKET_EVENTS,
-  SOCKET_ROOMS,
-  type TeamAnswerView,
+  type GameStatus,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
-import type { GameStateService } from '@/game/state/game-state.service';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createFakeGameStateSeedService,
-  createFakeKahootSeedService,
-  createMockSocket,
-  createTestGateway,
-  asSocket,
-  type MockServer,
-  type MockAnswerService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
+
+const MAX_ADVANCES = 20;
 
 /** Drives ADVANCE until the session reaches the given status, or throws after a generous cap. */
 async function advanceUntilStatus(
-  gateway: GameGateway,
-  gameStateService: GameStateService,
-  joinCode: string,
-  admin: ReturnType<typeof createMockSocket>,
-  status: string,
-): Promise<void> {
-  for (let i = 0; i < 20; i += 1) {
-    if (gameStateService.getSnapshot(joinCode).progress.status === status) {
-      return;
-    }
-    await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' });
+  game: RealStoreGateway,
+  status: GameStatus,
+): Promise<StateSnapshotPayload> {
+  let snapshot = await game.snapshot();
+  for (let i = 0; i < MAX_ADVANCES; i += 1) {
+    if (snapshot.progress.status === status) return snapshot;
+    snapshot = await game.act('ADVANCE');
   }
   throw new Error(`Never reached status "${status}"`);
 }
 
 describe('GameGateway — team answers sync on reveal entry', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let answerService: MockAnswerService;
-  let gameStateService: GameStateService;
+  const harness = setupRealStoreGatewayTest();
 
-  beforeEach(async () => {
-    // FIXTURE_SEEDED_GAME's single round has breakAfter: false and is the
-    // only round, which the state machine rejects ("its answers could never
-    // be revealed") — GAME_STATE_FIXTURE_SEEDED_GAME's second round has
-    // breakAfter: true, so this game can legally reach reveal.
-    ({ gateway, server, answerService, gameStateService } =
-      await createTestGateway(createFakeGameStateSeedService()));
-  });
+  function teamSyncs(game: RealStoreGateway, socketId: string) {
+    return game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(socketId) &&
+          emit.event === SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
+      );
+  }
+
+  /** Starts the quiz and has the first team submit a wrong answer to the first question. */
+  async function startWithAnswer(game: RealStoreGateway): Promise<void> {
+    const [{ socket, teamId }] = game.teams;
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_intro
+    await game.act('ADVANCE'); // -> first question
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId: game.questionIds.multipleChoice,
+      teamId,
+      value: 'Banana',
+    });
+  }
 
   it("pushes the team's own answers privately once the block reaches reveal_intro", async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-player');
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const [{ socket }] = game.teams;
+    await startWithAnswer(game);
+
+    await advanceUntilStatus(game, 'reveal_intro');
+
+    const [sync] = teamSyncs(game, socket.id);
+    expect(sync.payload).toEqual({
+      answers: [
+        expect.objectContaining({
+          questionId: game.questionIds.multipleChoice,
+          value: 'Banana',
+          pointsAwarded: 0,
+        }),
+      ],
     });
-    const admin = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'socket-admin',
-    );
-    await gateway.handleConnection(asSocket(admin));
-    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
-
-    await advanceUntilStatus(
-      gateway,
-      gameStateService,
-      'ABCDEF',
-      admin,
-      'reveal_intro',
-    );
-
-    expect(answerService.listForTeam).toHaveBeenCalledWith(101, 31);
-    expect(server.to).toHaveBeenCalledWith('socket-player');
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      {
-        answers: [
-          {
-            questionId: 21,
-            value: 'Banana',
-            pointsAwarded: 0,
-            gradedAt: null,
-          },
-        ],
-      },
-    );
   });
 
   it('does not push to a team that is not currently connected', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const [{ socket }] = game.teams;
+    await startWithAnswer(game);
+    await game.gateway.handleDisconnect(asSocket(socket));
 
-    await advanceUntilStatus(
-      gateway,
-      gameStateService,
-      'ABCDEF',
-      admin,
-      'reveal_intro',
-    );
+    await advanceUntilStatus(game, 'reveal_intro');
 
-    expect(answerService.listForTeam).not.toHaveBeenCalled();
-    expect(server.emit).not.toHaveBeenCalledWith(
+    expect(game.roomEmits().map((emit) => emit.event)).not.toContain(
       SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      expect.anything(),
     );
   });
 
   it('does not push again on a later ADVANCE while already revealing', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-player');
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
-    const admin = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'socket-admin',
-    );
-    await gateway.handleConnection(asSocket(admin));
-    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
-    await advanceUntilStatus(
-      gateway,
-      gameStateService,
-      'ABCDEF',
-      admin,
-      'reveal_intro',
-    );
-    answerService.listForTeam.mockClear();
-    server.to.mockClear();
-    server.emit.mockClear();
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const [{ socket }] = game.teams;
+    await startWithAnswer(game);
+    await advanceUntilStatus(game, 'reveal_intro');
+    game.clearEmits();
 
-    await gateway.handleAdminAction(asSocket(admin), { action: 'ADVANCE' }); // -> reveal
+    const revealing = await game.act('ADVANCE'); // -> reveal
 
-    expect(answerService.listForTeam).not.toHaveBeenCalled();
-    expect(server.emit).not.toHaveBeenCalledWith(
-      SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      expect.anything(),
-    );
+    expect(revealing.progress.status).toBe('reveal');
+    expect(teamSyncs(game, socket.id)).toEqual([]);
   });
 
   // kahootMode collapses 'locking' straight into 'reveal', skipping
@@ -148,43 +101,23 @@ describe('GameGateway — team answers sync on reveal entry', () => {
   // screen would keep showing the pre-speed-scoring grade cached from
   // ANSWER_RECEIVED at submit time instead of the rescaled points.
   it("pushes the team's own answers privately when a kahootMode question collapses locking straight into reveal", async () => {
-    ({ gateway, server, answerService, gameStateService } =
-      await createTestGateway(createFakeKahootSeedService()));
-
-    const player = createMockSocket(
-      SOCKET_ROOMS.PLAYERS,
-      {},
-      'socket-player',
-      'KAHOOT',
-    );
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      kahootMode: true,
     });
-    const admin = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'socket-admin',
-      'KAHOOT',
-    );
-    await gateway.handleConnection(asSocket(admin));
-    await gateway.handleAdminAction(asSocket(admin), { action: 'START_QUIZ' });
+    const [{ socket }] = game.teams;
+    await startWithAnswer(game);
 
-    await advanceUntilStatus(
-      gateway,
-      gameStateService,
-      'KAHOOT',
-      admin,
-      'reveal',
-    );
+    await advanceUntilStatus(game, 'reveal');
 
-    expect(answerService.listForTeam).toHaveBeenCalledWith(103, 31);
-    expect(server.to).toHaveBeenCalledWith('socket-player');
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-      expect.objectContaining({
-        answers: expect.any(Array) as TeamAnswerView[],
-      }),
-    );
+    const [sync] = teamSyncs(game, socket.id);
+    expect(sync.payload).toEqual({
+      answers: [
+        expect.objectContaining({
+          questionId: game.questionIds.multipleChoice,
+          value: 'Banana',
+        }),
+      ],
+    });
   });
 });

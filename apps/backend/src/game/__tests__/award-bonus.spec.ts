@@ -2,175 +2,133 @@ import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  sessionRoom,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { InvalidBonusAwardError } from '@/bonus/bonus.service';
-import type { GameGateway } from '@/game/game.gateway';
+import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  asSocket,
-  type MockServer,
-  type MockBonusService,
-  type MockAnswerService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — award bonus', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let bonusService: MockBonusService;
-  let answerService: MockAnswerService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: { socket: MockSocket; teamId: number };
 
   beforeEach(async () => {
-    ({ gateway, server, bonusService, answerService } =
-      await createTestGateway());
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    game.clearEmits();
   });
 
-  it('awards a predefined-category bonus and refreshes the leaderboard for all rooms', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+  function storedBonuses() {
+    return game.inRequestContext(() =>
+      game.bonusService.listForTeam(game.gameSessionId, team.teamId),
+    );
+  }
 
-    await gateway.handleAwardBonus(asSocket(admin), {
-      teamId: 31,
+  it('awards a predefined-category bonus and refreshes the leaderboard for all rooms', async () => {
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
       category: 'shot',
       points: 1,
     });
 
-    expect(bonusService.award).toHaveBeenCalledWith(
-      101,
-      31,
-      'shot',
-      1,
-      undefined,
-      ['shot', 'selfie', 'custom'],
-      { shot: 2, selfie: 1 },
-    );
-    expect(answerService.computeLeaderboard).toHaveBeenCalledWith(101);
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.PLAYERS),
-    );
-    expect(server.emit).toHaveBeenCalledWith(
-      SOCKET_EVENTS.STATE_UPDATED,
-      expect.objectContaining({
-        leaderboard: [
-          {
-            teamId: 31,
-            teamName: 'The Quizzards',
-            totalPoints: 2,
-            bonusPoints: 0,
-          },
-        ],
-      }),
-    );
+    for (const room of [
+      SOCKET_ROOMS.DISPLAY,
+      SOCKET_ROOMS.ADMIN,
+      SOCKET_ROOMS.PLAYERS,
+    ]) {
+      const snapshots = game.payloadsTo<StateSnapshotPayload>(
+        room,
+        SOCKET_EVENTS.STATE_UPDATED,
+      );
+      expect(snapshots[snapshots.length - 1].leaderboard).toEqual([
+        expect.objectContaining({
+          teamId: team.teamId,
+          teamName: 'The Quizzards',
+          bonusPoints: 1,
+        }),
+      ]);
+    }
+    expect(await storedBonuses()).toEqual([
+      expect.objectContaining({ category: 'shot', points: 1 }),
+    ]);
   });
 
   it('awards a custom bonus with an admin-written reason', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
-    await gateway.handleAwardBonus(asSocket(admin), {
-      teamId: 31,
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
       category: 'custom',
       reason: 'Best team name',
       points: 3,
     });
 
-    expect(bonusService.award).toHaveBeenCalledWith(
-      101,
-      31,
-      'custom',
-      3,
-      'Best team name',
-      ['shot', 'selfie', 'custom'],
-      { shot: 2, selfie: 1 },
-    );
+    expect(await storedBonuses()).toEqual([
+      expect.objectContaining({
+        category: 'custom',
+        points: 3,
+        reason: 'Best team name',
+      }),
+    ]);
   });
 
   it('pushes the award privately to the awarded team’s own connected socket', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-player');
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-    server.to.mockClear();
-    server.emit.mockClear();
-
-    await gateway.handleAwardBonus(asSocket(admin), {
-      teamId: 31,
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
       category: 'selfie',
       points: 1,
     });
 
-    expect(server.to).toHaveBeenCalledWith('socket-player');
-    expect(server.emit).toHaveBeenCalledWith(SOCKET_EVENTS.BONUS_AWARDED, {
-      category: 'selfie',
-      points: 1,
-      reason: undefined,
-    });
+    expect(game.roomEmits()).toContainEqual(
+      expect.objectContaining({
+        rooms: [team.socket.id],
+        event: SOCKET_EVENTS.BONUS_AWARDED,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- nested expect.objectContaining resolves to `any` in @types/jest
+        payload: expect.objectContaining({ category: 'selfie', points: 1 }),
+      }),
+    );
   });
 
   it('does not try to push the award to a team that is not currently connected', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    await game.gateway.handleDisconnect(asSocket(team.socket));
+    game.clearEmits();
 
-    await gateway.handleAwardBonus(asSocket(admin), {
-      teamId: 31,
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
       category: 'shot',
       points: 1,
     });
 
-    expect(server.emit).not.toHaveBeenCalledWith(
+    expect(game.roomEmits().map((emit) => emit.event)).not.toContain(
       SOCKET_EVENTS.BONUS_AWARDED,
-      expect.anything(),
     );
+    expect(await storedBonuses()).toHaveLength(1);
   });
 
   it('rejects AWARD_BONUS from a non-admin client', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
     await expect(
-      gateway.handleAwardBonus(asSocket(player), {
-        teamId: 31,
+      game.gateway.handleAwardBonus(asSocket(team.socket), {
+        teamId: team.teamId,
         category: 'shot',
         points: 1,
       }),
     ).rejects.toThrow(WsException);
-    expect(bonusService.award).not.toHaveBeenCalled();
+
+    expect(await storedBonuses()).toEqual([]);
   });
 
   it('surfaces a validation error from BonusService as a WsException', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-    bonusService.award.mockRejectedValueOnce(
-      new InvalidBonusAwardError('A custom bonus needs a reason'),
-    );
-
     await expect(
-      gateway.handleAwardBonus(asSocket(admin), {
-        teamId: 31,
+      game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId: team.teamId,
         category: 'custom',
         points: 1,
       }),
     ).rejects.toThrow(WsException);
+
+    expect(await storedBonuses()).toEqual([]);
   });
 });
