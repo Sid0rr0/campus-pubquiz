@@ -331,6 +331,12 @@ export interface DisplayStatePayload extends StateSnapshotPayload {
 export interface AdminStatePayload
   extends StateSnapshotPayload, AdminIndicators {
   onAirScreen: OnAirScreen;
+  /** Whether the server will accept ADVANCE right now — decided by the same intercepts and state machine the action handler applies. */
+  canAdvance: boolean;
+  /** Whether the server will accept PREVIOUS right now and it does something. */
+  canGoToPreviousQuestion: boolean;
+  /** roundIndex of the first round in the block that is open, locked or under review, per the session's own rounds — where the question browser's active block begins. */
+  activeBlockStartIndex: number;
 }
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export type PlayersStatePayload = StateSnapshotPayload;

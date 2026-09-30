@@ -56,6 +56,10 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
 
 function baseSnapshot(overrides: Record<string, unknown> = {}) {
   return {
+    // The server decides button availability (admin view); these fixtures
+    // just say both are allowed.
+    canAdvance: true,
+    canGoToPreviousQuestion: true,
     progress: progress(),
     joinCode: 'ABCDEF',
     quizStructure: { breakRoundNumbers: [] },

@@ -239,6 +239,9 @@ describe('AdminPage — previous button', () => {
     const sendAction = vi.fn();
     mockUseGameSocket.mockReturnValue({
       snapshot: adminView({
+        // The server allows stepping back from here because an earlier block
+        // exists; whether it does is decided (and tested) in the projection.
+        canGoToPreviousQuestion: true,
         progress: progress({
           status: 'break_round_intro',
           roundIndex: 1,

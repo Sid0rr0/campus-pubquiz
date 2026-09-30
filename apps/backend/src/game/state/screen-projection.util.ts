@@ -5,6 +5,10 @@ import {
   type SocketRoomName,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
+import {
+  getActionAvailability,
+  getActiveBlockStartIndex,
+} from '@/game/state/action-availability.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
 import { buildSnapshot } from '@/game/state/session-snapshot.util';
@@ -44,6 +48,8 @@ export function projectScreen(
         ...snapshot,
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
+        ...getActionAvailability(session),
+        activeBlockStartIndex: getActiveBlockStartIndex(session),
       };
     case SOCKET_ROOMS.PLAYERS:
       return isQuestionHiddenBehindKahootLeaderboard(session)

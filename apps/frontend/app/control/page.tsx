@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
-  getBlockStartPosition,
   getTiedForFirst,
   isBreakPointQuestion,
   getLeaderboardRevealStepCount,
@@ -15,7 +14,6 @@ import {
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
-import { getAdvanceGating } from '@/app/control/advance-gating';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
@@ -194,7 +192,6 @@ function AdminPageContent() {
     setSelectedQuestionId(null);
   }
 
-  const revealIndex = snapshot?.progress.revealIndex ?? 0;
   // What the big screen is showing was resolved by the server (the admin
   // view): the question on display, the round whose title card is up, and
   // the round whose break indicator is lit.
@@ -302,7 +299,6 @@ function AdminPageContent() {
   }
 
   const roundIndex = snapshot?.progress.roundIndex ?? 0;
-  const questionIndex = snapshot?.progress.questionIndex ?? 0;
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
   // Reveal steps, not teams: tied teams share a rank and appear together in
   // one step, and a kahootMode round only reveals through its top 5 — same
@@ -320,29 +316,13 @@ function AdminPageContent() {
       kahootMode: round.kahootMode,
     })),
   };
-  // Rounds before the active block are already locked and graded; guard on
-  // rounds.length so a stale/incomplete quiz list can never index past its
-  // own array inside getBlockStartPosition.
-  const activeBlockStartIndex =
-    activeQuizRounds.length > roundIndex
-      ? getBlockStartPosition(roundIndex, questionIndex, gameContext).roundIndex
-      : 0;
+  // Where the active block starts, and whether Advance/Previous are
+  // accepted right now, are decided by the server (the admin view) from the
+  // session's own rounds and the same steps the action handler applies.
+  const activeBlockStartIndex = snapshot?.activeBlockStartIndex ?? 0;
   const canStartQuiz = gameStatus === 'lobby';
-  // A showdown round can be created as early as the final block being fully
-  // graded (see isShowdownEligible below), well before status reaches
-  // 'ended' — but its own reveal walk only starts hijacking Advance/Previous
-  // once status genuinely is 'ended' (see GameStateService.applyAction's
-  // showdown intercept), so 'ended' still needs its own escape hatch here.
-  const hasActiveShowdown = snapshot?.activeShowdown != null;
-  const showdownRevealStep = snapshot?.showdownRevealStep ?? 0;
-  const { canAdvance, canGoToPreviousQuestion } = getAdvanceGating({
-    gameStatus,
-    hasActiveShowdown,
-    showdownRevealStep,
-    revealIndex,
-    activeBlockStartIndex,
-    previousStatus: snapshot?.progress.previousStatus,
-  });
+  const canAdvance = snapshot?.canAdvance ?? false;
+  const canGoToPreviousQuestion = snapshot?.canGoToPreviousQuestion ?? false;
   const hasUnrevealedTeams =
     isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 

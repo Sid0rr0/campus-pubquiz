@@ -10,7 +10,6 @@ import {
 } from '@campus-pubquiz/types';
 import { useGameSocket } from '@/app/lib/use-game-socket';
 import { useAuth } from '@/app/lib/use-auth';
-import { getAdvanceGating } from '@/app/control/advance-gating';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
@@ -18,19 +17,6 @@ import { isYoutubeMediaUrl } from '@/app/display/question-display';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
-
-/**
- * 0-based index of the round the current block started at, derived from
- * quizStructure.breakRoundNumbers (already on every snapshot) rather than a
- * separate REST fetch of the quiz's round shape — /remote only needs this
- * for NavigationButtons' break_round_intro Previous-button nuance.
- */
-function getActiveBlockStartIndex(
-  roundIndex: number,
-  breakRoundNumbers: number[],
-): number {
-  return breakRoundNumbers.filter((number) => number <= roundIndex).at(-1) ?? 0;
-}
 
 function NextQuestionPreview({ question }: { question: RevealQuestionView }) {
   return (
@@ -194,21 +180,9 @@ function RemotePageContent() {
     isYoutubeMediaUrl(currentQuestion?.mediaUrl);
   const showAnswerStatus =
     gameStatus === 'question_open' || gameStatus === 'locking';
-  const hasActiveShowdown = snapshot.activeShowdown != null;
-  const showdownRevealStep = snapshot.showdownRevealStep ?? 0;
-  const revealIndex = progress.revealIndex ?? 0;
-  const activeBlockStartIndex = getActiveBlockStartIndex(
-    progress.roundIndex,
-    snapshot.quizStructure.breakRoundNumbers,
-  );
-  const { canAdvance, canGoToPreviousQuestion } = getAdvanceGating({
-    gameStatus,
-    hasActiveShowdown,
-    showdownRevealStep,
-    revealIndex,
-    activeBlockStartIndex,
-    previousStatus: progress.previousStatus,
-  });
+  // Availability is decided by the server (the admin view), so the presenter's
+  // phone gates the buttons exactly as the admin console does.
+  const { canAdvance, canGoToPreviousQuestion } = snapshot;
   // One reveal step per distinct rank (ties reveal together), capped to a
   // kahootMode round's top 5 — see control/page.tsx's matching computation.
   const leaderboardTeamCount = getLeaderboardRevealStepCount(

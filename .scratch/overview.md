@@ -27,7 +27,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md)                             | 01         |
 | 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md)   | 02         |
 
 ### standings-module ([spec](standings-module/spec.md))
@@ -66,3 +65,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | screen-projection   | 02  | [Named on-air screen drives the big screen](screen-projection/issues/02-named-on-air-screen-drives-display.md) | —         |
 | screen-projection   | 03  | [Presenter preview built from the projection](screen-projection/issues/03-presenter-preview-from-projection.md) | —         |
 | screen-projection   | 04  | [Admin view: the question on display and the round indicators](screen-projection/issues/04-admin-view-on-display-question-and-indicators.md) | —         |
+| screen-projection   | 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md) | —         |
