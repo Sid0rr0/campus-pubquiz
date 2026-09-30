@@ -6,7 +6,11 @@
 
 **Status:** ready-for-agent
 
-- [ ] Backend test: after a team joins, the pushed leaderboard includes it at zero with the right shared rank.
-- [ ] Backend test: after a team is kicked, and after a team leaves, the pushed leaderboard no longer includes it and the remaining ranks close up.
-- [ ] The teams table has no client-side merge, zero-fill or sort. Its tests feed pre-ranked entries and assert the rendered order and labels, including a tie.
-- [ ] Tied teams appear in the same order in the teams table and on `/display`.
+- [x] Backend test: after a team joins, the pushed leaderboard includes it at zero with the right shared rank.
+- [x] Backend test: after a team is kicked, and after a team leaves, the pushed leaderboard no longer includes it and the remaining ranks close up.
+- [x] The teams table has no client-side merge, zero-fill or sort. Its tests feed pre-ranked entries and assert the rendered order and labels, including a tie.
+- [x] Tied teams appear in the same order in the teams table and on `/display`.
+
+## Comments
+
+Implemented in the commit titled `feat(backend,frontend): teams table renders server standings` (hash in git history). `GameStateService.teamConnected` is now async and refreshes the leaderboard (a joined team appears at zero at once); kick/leave already refreshed it through `teamRemoved`. `TeamsTable` lost its `teams` prop, merge, zero-fill and sort and renders `leaderboard` as given, labelled by new `formatRankLabel` (`app/lib/rank-label.ts`). `/remote` does not use this table. `Status:` left as `ready-for-agent` — the triage vocabulary has no done state.

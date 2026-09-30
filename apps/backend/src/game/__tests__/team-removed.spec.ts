@@ -79,6 +79,48 @@ describe('GameGateway — team removed (kick / leave)', () => {
     expectTeamGoneFromEveryRoom(scorer.teamId);
   });
 
+  it('closes the ranks up behind a removed team', async () => {
+    await game.gateway.handleKickTeam(asSocket(admin), {
+      teamId: scorer.teamId,
+    });
+
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).leaderboard).toEqual([
+      expect.objectContaining({
+        teamId: bystander.teamId,
+        rank: 1,
+        rankTo: 1,
+      }),
+    ]);
+  });
+
+  it('puts a newly joined team on the leaderboard at zero, sharing the bottom rank', async () => {
+    const late = await game.joinTeam('Late Arrivals');
+
+    const leaderboard = lastSnapshot(SOCKET_ROOMS.ADMIN).leaderboard;
+    expect(leaderboard.map((entry) => entry.teamName)).toEqual([
+      'The Quizzards',
+      'Bystanders',
+      'Late Arrivals',
+    ]);
+    expect(leaderboard[0]).toEqual(
+      expect.objectContaining({ totalPoints: 2, rank: 1, rankTo: 1 }),
+    );
+    expect(leaderboard.slice(1)).toEqual([
+      expect.objectContaining({
+        teamId: bystander.teamId,
+        totalPoints: 0,
+        rank: 2,
+        rankTo: 3,
+      }),
+      expect.objectContaining({
+        teamId: late.teamId,
+        totalPoints: 0,
+        rank: 2,
+        rankTo: 3,
+      }),
+    ]);
+  });
+
   it('tells the kicked team’s socket and disconnects it', async () => {
     await game.gateway.handleKickTeam(asSocket(admin), {
       teamId: scorer.teamId,

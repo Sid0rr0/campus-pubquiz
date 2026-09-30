@@ -11,22 +11,16 @@ import {
   ListBulletIcon,
   StarIcon,
 } from '@radix-ui/react-icons';
-import type {
-  BonusCategory,
-  LeaderboardEntry,
-  TeamView,
-} from '@campus-pubquiz/types';
+import type { BonusCategory, LeaderboardEntry } from '@campus-pubquiz/types';
 import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
 import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { Button } from '@/app/components/button';
-import { computeRankInfos } from '@/app/components/leaderboard';
+import { formatRankLabel } from '@/app/lib/rank-label';
 
 interface TeamsTableProps {
   joinCode: string;
-  /** Every team that has joined the session — always present, even before any points are recorded. */
-  teams: TeamView[];
-  /** Points data, populated once grading/bonuses/leaderboard-toggle have run for at least one team. */
+  /** The session's standings exactly as the server ranked them — every joined team, already in order. */
   leaderboard: LeaderboardEntry[];
   /** Round titles for the active quiz, in round order — drives one column per round. */
   roundTitles: string[];
@@ -49,43 +43,8 @@ function pointsForRound(entry: LeaderboardEntry, roundTitle: string): number {
   );
 }
 
-function zeroEntry(team: TeamView, roundTitles: string[]): LeaderboardEntry {
-  return {
-    teamId: team.teamId,
-    teamName: team.teamName,
-    totalPoints: 0,
-    rank: 1,
-    rankTo: 1,
-    bonusPoints: 0,
-    positiveBonusPoints: 0,
-    negativeBonusPoints: 0,
-    roundPoints: roundTitles.map((roundTitle) => ({ roundTitle, points: 0 })),
-  };
-}
-
-/** Every joined team, defaulting to zero points until the leaderboard has caught up. */
-function buildEntries(
-  teams: TeamView[],
-  leaderboard: LeaderboardEntry[],
-  roundTitles: string[],
-): LeaderboardEntry[] {
-  const leaderboardByTeamId = new Map(
-    leaderboard.map((entry) => [entry.teamId, entry]),
-  );
-  return teams
-    .map(
-      (team) =>
-        leaderboardByTeamId.get(team.teamId) ?? zeroEntry(team, roundTitles),
-    )
-    .sort(
-      (a, b) =>
-        b.totalPoints - a.totalPoints || a.teamName.localeCompare(b.teamName),
-    );
-}
-
 export function TeamsTable({
   joinCode,
-  teams,
   leaderboard,
   roundTitles,
   onAwardBonus,
@@ -98,27 +57,19 @@ export function TeamsTable({
   const [viewingCodeTeamId, setViewingCodeTeamId] = useState<number | null>(
     null,
   );
-  const entries = useMemo(
-    () => buildEntries(teams, leaderboard, roundTitles),
-    [teams, leaderboard, roundTitles],
-  );
   const awardingTeam =
-    entries.find((entry) => entry.teamId === awardingTeamId) ?? null;
+    leaderboard.find((entry) => entry.teamId === awardingTeamId) ?? null;
   const viewingAwardsTeam =
-    entries.find((entry) => entry.teamId === viewingAwardsTeamId) ?? null;
+    leaderboard.find((entry) => entry.teamId === viewingAwardsTeamId) ?? null;
   const viewingCodeTeam =
-    entries.find((entry) => entry.teamId === viewingCodeTeamId) ?? null;
-  // Same tie-aware rank labels the /display leaderboard uses, e.g. "2.–3."
-  // for a two-way tie — entries is already sorted by totalPoints desc, so
-  // rankInfos stays index-aligned with it.
-  const rankInfos = useMemo(() => computeRankInfos(entries), [entries]);
+    leaderboard.find((entry) => entry.teamId === viewingCodeTeamId) ?? null;
   const columns = useMemo(
     () =>
       helper.columns([
         helper.display({
           id: 'position',
           header: 'Position',
-          cell: (context) => rankInfos[context.row.index]?.label ?? '',
+          cell: (context) => formatRankLabel(context.row.original),
         }),
         helper.accessor('teamName', { header: 'Team' }),
         ...roundTitles.map((roundTitle, index) =>
@@ -179,12 +130,12 @@ export function TeamsTable({
           },
         }),
       ]),
-    [roundTitles, rankInfos],
+    [roundTitles],
   );
   const table = useTable({
     features,
     columns,
-    data: entries,
+    data: leaderboard,
     getRowId: (entry) => String(entry.teamId),
   });
 

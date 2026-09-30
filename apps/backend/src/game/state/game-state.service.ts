@@ -304,16 +304,23 @@ export class GameStateService implements OnModuleInit {
   /**
    * A team's socket joined: records its connection and the session's roster
    * (which now includes the team) together, so the next snapshot shows the
-   * team as connected.
+   * team as connected — and on the leaderboard from the moment it joins,
+   * at zero points until it scores.
    */
-  teamConnected(
+  async teamConnected(
     joinCode: string,
     teamId: number,
     socketId: string,
     roster: TeamRosterEntry[],
-  ): SessionOutcome {
+  ): Promise<SessionOutcome> {
+    const leaderboard = await this.standingsService.leaderboard(
+      this.getGameSessionId(joinCode),
+    );
     this.update(joinCode, (session) =>
-      withTeams(withTeamConnected(session, teamId, socketId), roster),
+      withLeaderboard(
+        withTeams(withTeamConnected(session, teamId, socketId), roster),
+        leaderboard,
+      ),
     );
     return BROADCAST_STATE_OUTCOME;
   }

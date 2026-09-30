@@ -53,7 +53,7 @@ export async function joinPlayerTeam(
     const teams = await deps.teamService.listForSession(
       deps.gameState.getGameSessionId(joinCode),
     );
-    const outcome = deps.gameState.teamConnected(
+    const outcome = await deps.gameState.teamConnected(
       joinCode,
       team.id,
       client.id,

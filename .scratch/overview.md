@@ -27,7 +27,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                         | Blocked by |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 03  | [Teams table renders server standings; roster changes refresh them](standings-module/issues/03-teams-table-renders-server-standings.md)        | 02         |
 | 04  | [Display and phone overlay render server ranks](standings-module/issues/04-display-and-phones-render-server-ranks.md)                          | 02         |
 | 05  | [Stats detail with the participation rule, departed teams and one winner](standings-module/issues/05-stats-detail-participation-and-winner.md) | 02         |
 | 06  | [Stats list reads Standings](standings-module/issues/06-stats-list-reads-standings.md)                                                         | 05         |
@@ -36,6 +35,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature             | #   | Ticket                                                                                                                          | Commit    |
 | ------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| standings-module    | 03  | [Teams table renders server standings; roster changes refresh them](standings-module/issues/03-teams-table-renders-server-standings.md) | —         |
 | standings-module    | 02  | [Live leaderboard served by the Standings service](standings-module/issues/02-live-leaderboard-from-standings.md)              | —         |
 | standings-module    | 01  | [Ranking rule prefactor](standings-module/issues/01-ranking-rule-prefactor.md)                                                  | —         |
 | live-session-module | 01  | [Real-store gateway test harness](live-session-module/issues/01-real-store-gateway-harness.md)                                  | `e9af2e9` |

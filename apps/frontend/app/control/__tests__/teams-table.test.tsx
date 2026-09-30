@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LeaderboardEntry, TeamView } from '@campus-pubquiz/types';
+import type { LeaderboardEntry } from '@campus-pubquiz/types';
 import { TeamsTable } from '@/app/control/teams-table';
 import { renderWithQuery } from '@/test-utils/query';
 
@@ -34,11 +34,6 @@ vi.mock('qrcode.react', () => ({
 
 const JOIN_CODE = 'ABCDEF';
 const ROUND_TITLES = ['Animals', 'History'];
-
-const TEAMS: TeamView[] = [
-  { teamId: 1, teamName: 'The Quizzards', isConnected: true },
-  { teamId: 2, teamName: 'Second Place', isConnected: true },
-];
 
 const LEADERBOARD: LeaderboardEntry[] = [
   {
@@ -107,7 +102,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
@@ -141,7 +135,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
@@ -164,7 +157,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
@@ -178,30 +170,71 @@ describe('TeamsTable', () => {
     expect(within(secondPlaceRow).getByText('2.')).toBeInTheDocument();
   });
 
-  it('shows a joined team with zeros when the leaderboard has not been computed for it yet', () => {
+  it('renders the leaderboard in the order given, without re-sorting', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
-        leaderboard={[]}
+        leaderboard={[...LEADERBOARD].reverse()}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
 
-    const quizzardsRow = screen.getByText('The Quizzards').closest('tr')!;
-    expect(within(quizzardsRow).getAllByText('0')).toHaveLength(4); // round 1, round 2, bonus, total
+    const teamNames = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell')[1].textContent);
+    expect(teamNames).toEqual(['Second Place', 'The Quizzards']);
+  });
 
-    const secondPlaceRow = screen.getByText('Second Place').closest('tr')!;
-    expect(within(secondPlaceRow).getAllByText('0')).toHaveLength(4);
+  it('labels tied teams with their shared range, in the order given', () => {
+    const tied = (
+      teamId: number,
+      teamName: string,
+      rank: number,
+      rankTo: number,
+    ) => ({
+      ...LEADERBOARD[1],
+      teamId,
+      teamName,
+      rank,
+      rankTo,
+    });
+    renderWithQuery(
+      <TeamsTable
+        joinCode={JOIN_CODE}
+        leaderboard={[
+          tied(1, 'Alpha', 1, 1),
+          tied(2, 'Bravo', 2, 3),
+          tied(3, 'Charlie', 2, 3),
+          tied(4, 'Delta', 4, 4),
+        ]}
+        roundTitles={ROUND_TITLES}
+        onAwardBonus={vi.fn()}
+        enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
+      />,
+    );
+
+    const positions = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => {
+        const cells = within(row).getAllByRole('cell');
+        return [cells[0].textContent, cells[1].textContent];
+      });
+    expect(positions).toEqual([
+      ['1.', 'Alpha'],
+      ['2.–3.', 'Bravo'],
+      ['2.–3.', 'Charlie'],
+      ['4.', 'Delta'],
+    ]);
   });
 
   it('always renders the table, showing a placeholder row when no teams have joined', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={[]}
         leaderboard={[]}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
@@ -217,20 +250,18 @@ describe('TeamsTable', () => {
     const { rerender } = renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
-        leaderboard={[]}
+        leaderboard={[{ ...LEADERBOARD[0], totalPoints: 0, roundPoints: [] }]}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
         enabledBonusCategories={[...ENABLED_BONUS_CATEGORIES]}
       />,
     );
     const quizzardsRowBefore = screen.getByText('The Quizzards').closest('tr')!;
-    expect(within(quizzardsRowBefore).getAllByText('0')).toHaveLength(4);
+    expect(within(quizzardsRowBefore).getAllByText('0')).toHaveLength(3); // round 1, round 2, total
 
     rerender(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
@@ -247,7 +278,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={onAwardBonus}
@@ -273,7 +303,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={onAwardBonus}
@@ -303,7 +332,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
@@ -324,7 +352,6 @@ describe('TeamsTable', () => {
     renderWithQuery(
       <TeamsTable
         joinCode={JOIN_CODE}
-        teams={TEAMS}
         leaderboard={LEADERBOARD}
         roundTitles={ROUND_TITLES}
         onAwardBonus={vi.fn()}
