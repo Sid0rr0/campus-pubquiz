@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by     |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 02  | [Outcome delivery step; timers share the Advance path](live-session-module/issues/02-outcome-delivery-and-timers.md)                         | 01             |
 | 03  | [Answer recorded / answer graded owned by the Live session module](live-session-module/issues/03-answer-recorded-and-graded.md)              | 02             |
 | 04  | [Team removed (kick / leave)](live-session-module/issues/04-team-removed.md)                                                                 | 02             |
 | 05  | [Bonus changed and leaderboard toggle](live-session-module/issues/05-bonus-changed-and-leaderboard-toggle.md)                                | 02             |
@@ -51,14 +50,14 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ### screen-projection ([spec](screen-projection/spec.md))
 
-| #   | Ticket                                                                                                                                      | Blocked by |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [Players view hides the kahoot question behind the leaderboard](screen-projection/issues/01-players-view-redacts-hidden-kahoot-question.md) | none       |
-| 02  | [Named on-air screen drives the big screen](screen-projection/issues/02-named-on-air-screen-drives-display.md)                              | 01         |
-| 03  | [Presenter preview built from the projection](screen-projection/issues/03-presenter-preview-from-projection.md)                             | 02         |
+| #   | Ticket                                                                                                                                       | Blocked by |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Players view hides the kahoot question behind the leaderboard](screen-projection/issues/01-players-view-redacts-hidden-kahoot-question.md)  | none       |
+| 02  | [Named on-air screen drives the big screen](screen-projection/issues/02-named-on-air-screen-drives-display.md)                               | 01         |
+| 03  | [Presenter preview built from the projection](screen-projection/issues/03-presenter-preview-from-projection.md)                              | 02         |
 | 04  | [Admin view: the question on display and the round indicators](screen-projection/issues/04-admin-view-on-display-question-and-indicators.md) | 02         |
-| 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md)                            | 01         |
-| 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md)  | 02         |
+| 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md)                             | 01         |
+| 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md)   | 02         |
 
 ### standings-module ([spec](standings-module/spec.md))
 
@@ -73,6 +72,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Done
 
-| Feature             | #   | Ticket                                                                                         | Commit    |
-| ------------------- | --- | ---------------------------------------------------------------------------------------------- | --------- |
-| live-session-module | 01  | [Real-store gateway test harness](live-session-module/issues/01-real-store-gateway-harness.md) | `e9af2e9` |
+| Feature             | #   | Ticket                                                                                                               | Commit    |
+| ------------------- | --- | -------------------------------------------------------------------------------------------------------------------- | --------- |
+| live-session-module | 01  | [Real-store gateway test harness](live-session-module/issues/01-real-store-gateway-harness.md)                       | `e9af2e9` |
+| live-session-module | 02  | [Outcome delivery step; timers share the Advance path](live-session-module/issues/02-outcome-delivery-and-timers.md) | `66ddeb5` |
