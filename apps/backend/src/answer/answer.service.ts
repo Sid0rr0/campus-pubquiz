@@ -6,12 +6,14 @@ import type {
   MatchScoringMode,
   ScoredQuestion,
   TeamAnswerView,
+  Verdict,
 } from '@campus-pubquiz/types';
 import {
   gradeClosestGuessBatch,
   isAutoGradedType,
   isOverridableType,
   scoreSubmission,
+  verdictForManualGrade,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -29,6 +31,7 @@ export interface SubmittedAnswer {
   value: string;
   pointsAwarded: number;
   gradedAt: string | null;
+  verdict: Verdict | null;
 }
 
 export interface GradedAnswer {
@@ -94,9 +97,8 @@ export class AnswerService {
     // AUTO_GRADED_TYPES), unlike audio/youtube. How a submission scores is
     // entirely Scoring's concern.
     const isAutoGraded = isAutoGradedType(question.type);
-    const pointsAwarded = isAutoGraded
-      ? scoreSubmission(question, value).points
-      : 0;
+    const score = isAutoGraded ? scoreSubmission(question, value) : null;
+    const pointsAwarded = score?.points ?? 0;
 
     // The admin can grade audio/youtube answers (the remaining non-auto-
     // graded types) as soon as they land (grade() has no status gate — see
@@ -124,8 +126,8 @@ export class AnswerService {
         value,
         pointsAwarded,
         responseMs,
-        ...(isAutoGraded ? { gradedAt: now } : {}),
-        ...(resetsGrading ? { gradedAt: null } : {}),
+        ...(score ? { gradedAt: now, verdict: score.verdict } : {}),
+        ...(resetsGrading ? { gradedAt: null, verdict: null } : {}),
         createdAt: now,
         updatedAt: now,
       },
@@ -134,7 +136,14 @@ export class AnswerService {
         onConflictAction: 'merge',
         onConflictMergeFields:
           isAutoGraded || resetsGrading
-            ? ['value', 'updatedAt', 'pointsAwarded', 'gradedAt', 'responseMs']
+            ? [
+                'value',
+                'updatedAt',
+                'pointsAwarded',
+                'gradedAt',
+                'verdict',
+                'responseMs',
+              ]
             : ['value', 'updatedAt', 'responseMs'],
       },
     );
@@ -148,6 +157,7 @@ export class AnswerService {
       value: answer.value,
       pointsAwarded: answer.pointsAwarded,
       gradedAt: answer.gradedAt?.toISOString() ?? null,
+      verdict: answer.verdict,
     };
   }
 
@@ -166,6 +176,7 @@ export class AnswerService {
       value: row.value,
       pointsAwarded: row.pointsAwarded,
       gradedAt: row.gradedAt?.toISOString() ?? null,
+      verdict: row.verdict,
     }));
   }
 
@@ -203,6 +214,7 @@ export class AnswerService {
       value: row.value,
       pointsAwarded: row.pointsAwarded,
       gradedAt: row.gradedAt?.toISOString() ?? null,
+      verdict: row.verdict,
     }));
   }
 
@@ -225,6 +237,7 @@ export class AnswerService {
       );
     }
     answer.pointsAwarded = pointsAwarded;
+    answer.verdict = verdictForManualGrade(answer.question, pointsAwarded);
     answer.gradedAt = new Date();
     await this.answers.getEntityManager().flush();
     return { questionId: answer.question.id };
@@ -256,11 +269,13 @@ export class AnswerService {
       kahootTimerSeconds === null ? null : kahootTimerSeconds * 1000;
     const now = new Date();
     for (const row of rows) {
-      row.pointsAwarded = scoreSubmission(
+      const score = scoreSubmission(
         question,
         row.value,
         timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
-      ).points;
+      );
+      row.pointsAwarded = score.points;
+      row.verdict = score.verdict;
       row.gradedAt = now;
     }
     await this.answers.getEntityManager().flush();
@@ -291,6 +306,7 @@ export class AnswerService {
     const now = new Date();
     rows.forEach((row, index) => {
       row.pointsAwarded = results[index].points;
+      row.verdict = results[index].verdict;
       row.gradedAt = now;
     });
     await this.answers.getEntityManager().flush();
@@ -303,6 +319,7 @@ export class AnswerService {
         value: row.value,
         pointsAwarded: row.pointsAwarded,
         gradedAt: row.gradedAt!.toISOString(),
+        verdict: row.verdict,
       }))
       .sort((a, b) => a.teamName.localeCompare(b.teamName));
   }

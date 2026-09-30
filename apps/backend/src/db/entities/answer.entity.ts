@@ -6,6 +6,7 @@ import {
   Property,
   Unique,
 } from '@mikro-orm/core';
+import type { Verdict } from '@campus-pubquiz/types';
 import { BaseEntity } from '@/db/entities/base.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -23,6 +24,7 @@ export class Answer extends BaseEntity {
     | 'updatedAt'
     | 'pointsAwarded'
     | 'gradedAt'
+    | 'verdict'
     | 'responseMs';
 
   @ManyToOne(() => GameSession, { deleteRule: 'cascade' })
@@ -46,6 +48,11 @@ export class Answer extends BaseEntity {
 
   @Property({ type: 'timestamptz', nullable: true })
   gradedAt: Date | null = null;
+
+  // Written together with pointsAwarded and gradedAt on every grading path
+  // (see Scoring's Verdict) — null exactly while gradedAt is.
+  @Property({ type: 'text', nullable: true })
+  verdict: Verdict | null = null;
 
   // Final (last-write-wins) submission time minus the question's open time
   // (GameStateService.getPhaseStartedAt) — null for answers submitted before

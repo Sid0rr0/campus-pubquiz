@@ -27,7 +27,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                       | Blocked by |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 03  | [Stored verdict and verdict-based correct-count on /control and /remote](scoring-module/issues/03-stored-verdict-and-admin-correct-count.md) | 01         |
 | 04  | [Stats read the verdict](scoring-module/issues/04-stats-read-verdict.md)                                                                     | 03         |
 | 05  | [Team phones: synced closest_guess points and the verdict](scoring-module/issues/05-team-phones-synced-points-and-verdict.md)                | 03         |
 | 06  | [Align half points and sort comparison](scoring-module/issues/06-align-half-points-and-sort.md)                                              | 01         |
@@ -71,3 +70,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | live-session-module | 10  | [Contract: delete the fake-store harness](live-session-module/issues/10-contract-delete-fake-harness.md)                        | —         |
 | scoring-module      | 01  | [Scoring module prefactor](scoring-module/issues/01-scoring-module-prefactor.md)                                                | —         |
 | scoring-module      | 02  | [Kahoot speed from stored response time](scoring-module/issues/02-kahoot-speed-from-response-time.md)                           | —         |
+| scoring-module      | 03  | [Stored verdict and verdict-based correct-count on /control and /remote](scoring-module/issues/03-stored-verdict-and-admin-correct-count.md) | —         |

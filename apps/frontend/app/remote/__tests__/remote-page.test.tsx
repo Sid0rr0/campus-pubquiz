@@ -280,6 +280,7 @@ describe('RemotePage — content', () => {
             value: 'Paris',
             pointsAwarded: 2,
             gradedAt: '2026-01-01T00:00:00.000Z',
+            verdict: 'correct',
           },
           {
             answerId: 2,
@@ -288,6 +289,7 @@ describe('RemotePage — content', () => {
             value: 'London',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:00.000Z',
+            verdict: 'incorrect',
           },
         ],
       },
@@ -295,6 +297,64 @@ describe('RemotePage — content', () => {
     renderWithQuery(<RemotePage />);
 
     expect(screen.getByText(/1 correct/i)).toBeInTheDocument();
+  });
+
+  it('counts a speed-scaled kahoot answer with fewer than full points as correct', () => {
+    mockUseGameSocket.mockReturnValue({
+      snapshot: baseSnapshot({
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 55,
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          options: ['Paris', 'London'],
+        },
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
+          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+        ],
+        answeredTeamIds: [1, 2],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+      liveAnswers: {
+        questionId: 55,
+        question: {
+          type: 'multiple_choice',
+          prompt: 'Capital of France?',
+          points: 1000,
+          correctAnswer: 'Paris',
+          roundTitle: 'Speed Round',
+          roundNumber: 1,
+          questionNumberInRound: 1,
+          totalQuestionsInRound: 1,
+        },
+        answers: [
+          {
+            answerId: 1,
+            teamId: 1,
+            teamName: 'The Quizzards',
+            value: 'Paris',
+            pointsAwarded: 870,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+            verdict: 'correct',
+          },
+          {
+            answerId: 2,
+            teamId: 2,
+            teamName: 'Beer Necessities',
+            value: 'Paris',
+            pointsAwarded: 520,
+            gradedAt: '2026-01-01T00:00:00.000Z',
+            verdict: 'correct',
+          },
+        ],
+      },
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText(/2 correct/i)).toBeInTheDocument();
   });
 
   it('keeps showing the correct count once grading moves the question into break', () => {
@@ -336,6 +396,7 @@ describe('RemotePage — content', () => {
             value: 'Paris',
             pointsAwarded: 2,
             gradedAt: '2026-01-01T00:00:00.000Z',
+            verdict: 'correct',
           },
           {
             answerId: 2,
@@ -344,6 +405,7 @@ describe('RemotePage — content', () => {
             value: 'London',
             pointsAwarded: 0,
             gradedAt: '2026-01-01T00:00:00.000Z',
+            verdict: 'incorrect',
           },
         ],
       },

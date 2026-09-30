@@ -32,6 +32,7 @@ function liveAnswers(
         value: 'Paris',
         pointsAwarded: 0,
         gradedAt: null,
+        verdict: null,
       },
     ],
     ...overrides,
@@ -51,6 +52,7 @@ describe('AnswersPanel', () => {
               value: 'Paris',
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'correct',
             },
             {
               answerId: 42,
@@ -59,6 +61,7 @@ describe('AnswersPanel', () => {
               value: 'London',
               pointsAwarded: 0,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'incorrect',
             },
           ],
         })}
@@ -109,6 +112,7 @@ describe('AnswersPanel', () => {
               value: 'Earth|Venus|Mercury',
               pointsAwarded: 0,
               gradedAt: new Date().toISOString(),
+              verdict: 'incorrect',
             },
           ],
         })}
@@ -146,6 +150,7 @@ describe('AnswersPanel', () => {
               value: 'shield|excalibur',
               pointsAwarded: 0,
               gradedAt: new Date().toISOString(),
+              verdict: 'incorrect',
             },
           ],
         })}
@@ -176,6 +181,7 @@ describe('AnswersPanel', () => {
               value: '__idk__',
               pointsAwarded: 0,
               gradedAt: null,
+              verdict: null,
             },
           ],
         })}
@@ -269,6 +275,7 @@ describe('AnswersPanel', () => {
               value: 'Paris',
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'correct',
             },
           ],
         })}
@@ -435,6 +442,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 1.5,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'partial',
               },
             ],
           })}
@@ -482,6 +490,7 @@ describe('AnswersPanel', () => {
               value: 'Paris',
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'correct',
             },
           ],
         })}
@@ -519,6 +528,7 @@ describe('AnswersPanel', () => {
               value: '950',
               pointsAwarded: 5,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'correct',
             },
           ],
         })}
@@ -560,6 +570,7 @@ describe('AnswersPanel', () => {
               value: 'excalibur|excalibur',
               pointsAwarded: 1,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'partial',
             },
           ],
         })}
@@ -602,6 +613,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'correct',
               },
             ],
           })}
@@ -628,6 +640,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 0,
                 gradedAt: null,
+                verdict: null,
               },
             ],
           })}
@@ -654,6 +667,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 0,
                 gradedAt: null,
+                verdict: null,
               },
               {
                 answerId: 42,
@@ -662,6 +676,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 0,
                 gradedAt: null,
+                verdict: null,
               },
             ],
           })}
@@ -685,6 +700,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'correct',
               },
               {
                 answerId: 42,
@@ -693,6 +709,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 0,
                 gradedAt: null,
+                verdict: null,
               },
             ],
           })}
@@ -719,6 +736,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'correct',
               },
               {
                 answerId: 42,
@@ -727,6 +745,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'correct',
               },
             ],
           })}
@@ -751,6 +770,7 @@ describe('AnswersPanel', () => {
                 value: 'Rome',
                 pointsAwarded: 0,
                 gradedAt: null,
+                verdict: null,
               },
               {
                 answerId: 42,
@@ -759,6 +779,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'correct',
               },
             ],
           })}

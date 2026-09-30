@@ -46,6 +46,7 @@ export async function submitTeamAnswer(
     value: submitted.value,
     pointsAwarded: submitted.pointsAwarded,
     gradedAt: submitted.gradedAt,
+    verdict: submitted.verdict,
   });
 
   await deliverOutcome(

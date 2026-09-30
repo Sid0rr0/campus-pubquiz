@@ -22,7 +22,10 @@ export async function fetchAnswers(
 
   if (!response.ok) {
     const body = (await response.json()) as { message?: string };
-    throw new AnswerApiError(body.message ?? 'Could not load answers', response.status);
+    throw new AnswerApiError(
+      body.message ?? 'Could not load answers',
+      response.status,
+    );
   }
 
   return (await response.json()) as AnswersUpdatedPayload;

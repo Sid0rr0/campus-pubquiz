@@ -4,6 +4,7 @@ import type {
   GameStatus,
   QuizStructureSummary,
 } from './game-state';
+import type { Verdict } from './scoring';
 
 export const SOCKET_EVENTS = {
   // server -> client
@@ -336,6 +337,8 @@ export interface AnswerReceivedPayload {
   pointsAwarded: number;
   /** Set the instant auto-graded types are submitted; null until the admin grades an audio/youtube answer. */
   gradedAt: string | null;
+  /** Set together with gradedAt; null until graded. */
+  verdict: Verdict | null;
 }
 
 export interface JoinPlayersPayload {
@@ -353,6 +356,8 @@ export interface TeamAnswerView {
   pointsAwarded: number;
   /** Set once this answer is graded (instantly for auto-graded types, on admin grading for the rest) — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
   gradedAt: string | null;
+  /** Set together with gradedAt: how the answer was judged, independent of speed scaling or partial rounding. Null until graded. */
+  verdict: Verdict | null;
 }
 
 export interface JoinAcceptedPayload {
@@ -374,6 +379,8 @@ export interface AnswerView {
   pointsAwarded: number;
   /** Set once the admin grades this answer — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
   gradedAt: string | null;
+  /** Set together with gradedAt — what "correct" means everywhere (a speed-scaled kahoot answer is still correct). Null until graded. */
+  verdict: Verdict | null;
 }
 
 /**

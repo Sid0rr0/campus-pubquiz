@@ -23,7 +23,7 @@ function liveAnswers(
 }
 
 describe('countCorrectAnswers', () => {
-  it('counts only answers graded for the full question points', () => {
+  it('counts only answers with a correct verdict, not partial or incorrect ones', () => {
     const payload = liveAnswers({
       answers: [
         {
@@ -33,6 +33,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 2,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'correct',
         },
         {
           answerId: 2,
@@ -41,6 +42,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 1,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'partial',
         },
         {
           answerId: 3,
@@ -49,11 +51,52 @@ describe('countCorrectAnswers', () => {
           value: 'London',
           pointsAwarded: 0,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'incorrect',
         },
       ],
     });
 
     expect(countCorrectAnswers(payload)).toBe(1);
+  });
+
+  it('counts a speed-scaled kahoot answer that earned fewer than the full points', () => {
+    const payload = liveAnswers({
+      question: { ...liveAnswers().question, points: 1000 },
+      answers: [
+        {
+          answerId: 1,
+          teamId: 1,
+          teamName: 'The Quizzards',
+          value: 'Paris',
+          pointsAwarded: 640,
+          gradedAt: '2026-01-01T00:00:00.000Z',
+          verdict: 'correct',
+        },
+      ],
+    });
+
+    expect(countCorrectAnswers(payload)).toBe(1);
+  });
+
+  it('counts an answer the admin overrode up to full points once its verdict updates', () => {
+    const answer = {
+      answerId: 1,
+      teamId: 1,
+      teamName: 'The Quizzards',
+      value: 'Pariss',
+      pointsAwarded: 0,
+      gradedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const before = liveAnswers({
+      answers: [{ ...answer, verdict: 'incorrect' }],
+    });
+    const after = liveAnswers({
+      answers: [{ ...answer, pointsAwarded: 2, verdict: 'correct' }],
+    });
+
+    expect([countCorrectAnswers(before), countCorrectAnswers(after)]).toEqual([
+      0, 1,
+    ]);
   });
 
   it('excludes ungraded answers, which default to zero points', () => {
@@ -66,6 +109,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 0,
           gradedAt: null,
+          verdict: null,
         },
       ],
     });

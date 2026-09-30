@@ -39,6 +39,7 @@ const answers: AnswerView[] = [
     value: 'Banana',
     pointsAwarded: 0,
     gradedAt: null,
+    verdict: null,
   },
 ];
 
