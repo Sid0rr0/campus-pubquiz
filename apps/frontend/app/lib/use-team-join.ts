@@ -8,6 +8,7 @@ import {
   type SubmitEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import type { PlayersStatePayload } from '@campus-pubquiz/types';
 import {
   useGameSocket,
   type UseGameSocketResult,
@@ -22,7 +23,7 @@ import {
   storedJoinOptions,
 } from '@/app/lib/team-storage';
 
-interface UseTeamJoinResult extends UseGameSocketResult {
+interface UseTeamJoinResult extends UseGameSocketResult<PlayersStatePayload> {
   teamName: string | null;
   nameInput: string;
   setNameInput: (value: string) => void;

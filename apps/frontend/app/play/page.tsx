@@ -236,17 +236,21 @@ function PlayPageContent() {
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
     showdownRevealStep = 0,
+    isAnswerable = false,
+    onScreenQuestionId = null,
+    roundTitleCard = null,
   } = snapshot;
   const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
   // During reveal, the big screen walks one question at a time via
-  // revealIndex — teams should see the same one, not stay pinned to the
-  // block's last question the way question_open/break does.
+  // revealIndex — teams should see the same one (the server names it in the
+  // players view), not stay pinned to the block's last question the way
+  // question_open/break does.
   const revealDisplayQuestion =
-    progress.status === 'reveal'
-      ? blockQuestions[progress.revealIndex]
-      : undefined;
+    onScreenQuestionId === null
+      ? undefined
+      : blockQuestions.find((question) => question.id === onScreenQuestionId);
   // Defaults to the block's last (furthest-ever-opened) question rather than
   // currentQuestion, which tracks the display's literal position - stepping
   // the display backward with PREVIOUS must not drag /play's default view
@@ -295,43 +299,12 @@ function PlayPageContent() {
     progress.status === 'reveal' && selectedQuestion
       ? revealQuestions.find((question) => question.id === selectedQuestion.id)
       : undefined;
-  // Answering stays available even while the leaderboard is toggled on for
-  // the big screen — only a real lock (status leaving question_open/locking)
-  // should stop teams from answering. round_intro also stays answerable when
-  // Previous steps the display back into a round whose questions are already
-  // open (blockQuestions non-empty) — only a genuinely fresh round_intro
-  // (nothing opened yet) blocks answering.
-  //
-  // The one exception: a kahootMode question opened behind the leaderboard
-  // (see advanceFromReveal) has never actually been shown yet — unlike the
-  // general case above, where the leaderboard only ever covers a question
-  // teams already saw and started answering, this question_open is brand
-  // new. Teams must wait for the same TOGGLE_LEADERBOARD that un-hides it on
-  // /display before they can see or answer it.
-  const isAnswerable =
-    !(isCurrentRoundKahoot && progress.isLeaderboardVisible) &&
-    (progress.status === 'question_open' ||
-      progress.status === 'locking' ||
-      (progress.status === 'round_intro' && blockQuestions.length > 0));
   const isBreakOrReveal =
     progress.status === 'break_intro' ||
     progress.status === 'break' ||
     progress.status === 'break_round_intro' ||
     progress.status === 'reveal_intro' ||
     progress.status === 'reveal';
-  // Same "look at the screen" round title card as round_intro, shown when
-  // reveal crosses into a new round within the block, or PREVIOUS steps back
-  // through break to a round's own title — sourced from the block/reveal
-  // question at revealIndex, since progress.roundIndex stays pinned to the
-  // block's last round throughout break/reveal (see display/page.tsx).
-  const revealIntroRoundTitle =
-    progress.status === 'reveal_intro'
-      ? revealQuestions[progress.revealIndex]?.roundTitle
-      : undefined;
-  const breakRoundIntroRoundTitle =
-    progress.status === 'break_round_intro'
-      ? blockQuestions[progress.revealIndex]?.roundTitle
-      : undefined;
   // The block browser (question picker + prompt) stays up through break/reveal
   // too, so teams can review the block they just answered — unless the
   // leaderboard overlay is toggled on, which takes over the screen instead.
@@ -422,8 +395,7 @@ function PlayPageContent() {
           isAnswerable={isAnswerable}
           quizStructure={quizStructure}
           roundTitle={roundTitle}
-          revealIntroRoundTitle={revealIntroRoundTitle}
-          breakRoundIntroRoundTitle={breakRoundIntroRoundTitle}
+          roundTitleCard={roundTitleCard}
           joinCode={snapshot.joinCode}
           rules={settings.rules}
           enabledBonusCategories={settings.enabledBonusCategories}

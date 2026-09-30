@@ -281,3 +281,44 @@ export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
       };
   }
 }
+
+/** What a team's phone follows the big screen for during reveal and round title cards. */
+export interface PlayersScreenFields {
+  /** The question the big screen is revealing (the phone shows the same one), else null. */
+  onScreenQuestionId: number | null;
+  /** The round title on the big screen's reveal-intro or break round-intro card, else null. */
+  roundTitleCard: string | null;
+}
+
+/**
+ * Like the admin indicators, read from the content the session is on rather
+ * than from whether the leaderboard covers it.
+ */
+export function describePlayersScreen(input: OnAirInput): PlayersScreenFields {
+  const { screen } = describeOnAirScreen({
+    ...input,
+    progress: { ...input.progress, isLeaderboardVisible: false },
+  });
+  switch (screen.kind) {
+    case 'reveal':
+      return { onScreenQuestionId: screen.questionId, roundTitleCard: null };
+    case 'reveal_intro':
+      return {
+        onScreenQuestionId: null,
+        roundTitleCard:
+          input.revealQuestions?.find(
+            (question) => question.id === screen.questionId,
+          )?.roundTitle ?? null,
+      };
+    case 'break_round_title':
+      return {
+        onScreenQuestionId: null,
+        roundTitleCard:
+          input.blockQuestions?.find(
+            (question) => question.id === screen.questionId,
+          )?.roundTitle ?? null,
+      };
+    default:
+      return { onScreenQuestionId: null, roundTitleCard: null };
+  }
+}

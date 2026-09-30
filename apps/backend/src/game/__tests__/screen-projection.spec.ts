@@ -69,9 +69,9 @@ describe('Screen projection — a kahoot round, per audience', () => {
     ]);
   });
 
-  it('leaves the players view identical to the snapshot whenever nothing is hidden', () => {
-    expect(game.gameState.getView(game.joinCode, SOCKET_ROOMS.PLAYERS)).toEqual(
-      game.gameState.getSnapshot(game.joinCode),
-    );
+  it('leaves the players view carrying the whole snapshot whenever nothing is hidden', () => {
+    expect(
+      game.gameState.getView(game.joinCode, SOCKET_ROOMS.PLAYERS),
+    ).toMatchObject(game.gameState.getSnapshot(game.joinCode));
   });
 });

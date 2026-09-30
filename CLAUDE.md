@@ -34,7 +34,7 @@ Grading happens inside `break` (no separate grading status). Rounds carry a `bre
 
 `rules` is a one-time screen shown once per quiz, right after `START_QUIZ`, before any question opens — the admin dismisses it with `ADVANCE` (same action that later steps through questions). Its round/topic/break sentence is computed from the active quiz's rounds via `getQuizStructureSummary` (rounds grouped into "blocks" by `breakAfter`, same grouping the reveal/grading flow already uses), not hardcoded.
 
-Only admin actions advance the state. Clients in three rooms (`display`, `admin`, `players`) receive broadcasts. On reconnect, any client receives the full current state snapshot — reconnection is a **core feature**, not a nice-to-have (phones sleep, networks drop).
+Only admin actions advance the state. Clients in three rooms (`display`, `admin`, `players`) receive broadcasts, but **each room gets its own view**, built by the Screen projection (`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`): the display view names the screen on air, the admin view adds what `/control` marks as on air plus server-decided Advance/Previous availability, and the players view adds answerability and drops anything teams haven't been shown yet (a kahoot question hidden behind the leaderboard is removed server-side, never filtered by the client). On reconnect, any client receives the full current view for its own role — reconnection is a **core feature**, not a nice-to-have (phones sleep, networks drop).
 
 ### Auth
 

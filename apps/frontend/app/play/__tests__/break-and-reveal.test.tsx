@@ -568,6 +568,7 @@ describe('PlayPage — break and reveal', () => {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
           currentQuestion: null,
           blockQuestions: [q1, q2, q3],
+          revealQuestions: [q1, q2, q3],
         },
         team: {
           teamId: 'team-1',
@@ -595,6 +596,7 @@ describe('PlayPage — break and reveal', () => {
           progress: progress({ status: 'reveal', revealIndex: 1 }),
           currentQuestion: null,
           blockQuestions: [q1, q2, q3],
+          revealQuestions: [q1, q2, q3],
         },
         team: {
           teamId: 'team-1',

@@ -40,8 +40,7 @@ export function ShowdownGuessForm({
         <div className="flex flex-col items-center gap-1">
           {submittedGuess !== null && (
             <p className="text-lg font-bold">
-              Your guess:{' '}
-              <span className="text-magenta">{submittedGuess}</span>
+              Your guess: <span className="text-magenta">{submittedGuess}</span>
             </p>
           )}
           <p className="text-sm font-extrabold text-foreground/55">

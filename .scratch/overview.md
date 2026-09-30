@@ -23,12 +23,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                            | 02         |
 | 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md)    | 03, 04     |
 
-### screen-projection ([spec](screen-projection/spec.md))
-
-| #   | Ticket                                                                                                                                       | Blocked by |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md)   | 02         |
-
 ### standings-module ([spec](standings-module/spec.md))
 
 | #   | Ticket                                                                                                                                         | Blocked by |
@@ -66,3 +60,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | screen-projection   | 03  | [Presenter preview built from the projection](screen-projection/issues/03-presenter-preview-from-projection.md) | —         |
 | screen-projection   | 04  | [Admin view: the question on display and the round indicators](screen-projection/issues/04-admin-view-on-display-question-and-indicators.md) | —         |
 | screen-projection   | 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md) | —         |
+| screen-projection   | 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md) | —         |

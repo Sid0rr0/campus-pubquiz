@@ -15,7 +15,10 @@ import {
   getRevealQuestions,
   getUpcomingQuestionPositions,
 } from '@/game/state/block-questions.util';
-import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
+import {
+  isAnsweringPhase,
+  isQuestionHiddenBehindKahootLeaderboard,
+} from '@/game/state/kahoot-visibility.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
 
@@ -97,17 +100,27 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
   };
 }
 
+/**
+ * Whether the session's current block can be answered right now: its
+ * questions are open (or locking), or a round intro sits over questions
+ * already open — and never for a kahoot question still hidden behind the
+ * leaderboard. The one rule behind both the players view and the
+ * answer-submission gate.
+ */
+export function isBlockAnswerable(session: SessionState): boolean {
+  return (
+    isAnsweringPhase(session.progress.status) &&
+    !isQuestionHiddenBehindKahootLeaderboard(session) &&
+    getBlockQuestions(session).length > 0
+  );
+}
+
 export function isQuestionOpenForAnswering(
   session: SessionState,
   questionId: number,
 ): boolean {
-  // Teams must not be able to answer a question they haven't been shown yet,
-  // mirroring play/page.tsx's isAnswerable.
-  if (isQuestionHiddenBehindKahootLeaderboard(session)) return false;
   return (
-    (session.progress.status === 'question_open' ||
-      session.progress.status === 'locking' ||
-      session.progress.status === 'round_intro') &&
+    isBlockAnswerable(session) &&
     getBlockQuestions(session).some((question) => question.id === questionId)
   );
 }

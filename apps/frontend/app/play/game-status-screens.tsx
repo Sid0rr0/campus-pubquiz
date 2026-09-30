@@ -13,8 +13,8 @@ interface GameStatusScreensProps {
   isAnswerable: boolean;
   quizStructure: QuizStructureSummary;
   roundTitle: string;
-  revealIntroRoundTitle?: string;
-  breakRoundIntroRoundTitle?: string;
+  /** The round title on the big screen's reveal-intro or break round-intro card, from the players view. */
+  roundTitleCard?: string | null;
   joinCode: string;
   rules: string[];
   enabledBonusCategories: BonusCategory[];
@@ -36,8 +36,7 @@ export function GameStatusScreens({
   isAnswerable,
   quizStructure,
   roundTitle,
-  revealIntroRoundTitle,
-  breakRoundIntroRoundTitle,
+  roundTitleCard,
   joinCode,
   rules,
   enabledBonusCategories,
@@ -113,30 +112,28 @@ export function GameStatusScreens({
         )}
       {/* Reveal crossing into a new round within the same block, or Previous
           stepping back through break to a round's own title card — same
-          "look at the screen" treatment as round_intro, but sourced from the
-          block/reveal question at revealIndex rather than the top-level
-          roundTitle, since progress.roundIndex stays pinned to the block's
-          last round throughout break/reveal. */}
+          "look at the screen" treatment as round_intro, but the title comes
+          from the players view (roundTitleCard), which the server resolves
+          from the reveal index, since progress.roundIndex stays pinned to
+          the block's last round throughout break/reveal. */}
       {!progress.isLeaderboardVisible &&
         progress.status === 'reveal_intro' &&
-        revealIntroRoundTitle && (
+        roundTitleCard && (
           <div className="mt-16 flex flex-col items-center gap-2 text-center">
             <p className="text-sm font-extrabold tracking-wide text-foreground/55">
               👀 Look at the screen
             </p>
-            <h1 className="font-display text-2xl">{revealIntroRoundTitle}</h1>
+            <h1 className="font-display text-2xl">{roundTitleCard}</h1>
           </div>
         )}
       {!progress.isLeaderboardVisible &&
         progress.status === 'break_round_intro' &&
-        breakRoundIntroRoundTitle && (
+        roundTitleCard && (
           <div className="mt-16 flex flex-col items-center gap-2 text-center">
             <p className="text-sm font-extrabold tracking-wide text-foreground/55">
               👀 Look at the screen
             </p>
-            <h1 className="font-display text-2xl">
-              {breakRoundIntroRoundTitle}
-            </h1>
+            <h1 className="font-display text-2xl">{roundTitleCard}</h1>
           </div>
         )}
       {!progress.isLeaderboardVisible &&

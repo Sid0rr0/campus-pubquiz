@@ -2,6 +2,7 @@ import type {
   AdminIndicators,
   HeaderContent,
   OnAirScreen,
+  PlayersScreenFields,
 } from './on-air-screen';
 import type {
   GameAction,
@@ -339,7 +340,11 @@ export interface AdminStatePayload
   activeBlockStartIndex: number;
 }
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
-export type PlayersStatePayload = StateSnapshotPayload;
+export interface PlayersStatePayload
+  extends StateSnapshotPayload, PlayersScreenFields {
+  /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
+  isAnswerable: boolean;
+}
 
 /** The view type each socket room is sent. */
 export interface StateViewByRoom {
