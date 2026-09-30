@@ -1,114 +1,121 @@
 import { WsException } from '@nestjs/websockets';
-import { SOCKET_ROOMS } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
+import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  openFirstQuestion,
   asSocket,
-  type MockServer,
-  type MockAnswerService,
-  type MockBonusService,
-  type MockTeamService,
-} from './test-utils';
+  createMockSocket,
+  type MockSocket,
+} from '@/game/__tests__/test-utils';
+import {
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
+
+const OVER_MAX_ANSWER_LENGTH = 'x'.repeat(2001);
 
 describe('GameGateway — socket payload validation', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let answerService: MockAnswerService;
-  let bonusService: MockBonusService;
-  let teamService: MockTeamService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: MockSocket;
+  let teamId: number;
 
   beforeEach(async () => {
-    ({ gateway, server, answerService, bonusService, teamService } =
-      await createTestGateway());
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    ({ socket: team, teamId } = game.teams[0]);
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
   });
 
-  it('rejects ADMIN_ACTION with an unrecognized action string', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-    server.to.mockClear();
-    server.emit.mockClear();
+  /** A rejected payload must leave no trace: nothing broadcast, nothing told to the sender. */
+  function expectNothingDelivered(sender: MockSocket): void {
+    expect(game.roomEmits()).toEqual([]);
+    expect(sender.emit).not.toHaveBeenCalled();
+  }
 
+  it('rejects ADMIN_ACTION with an unrecognized action string', async () => {
     await expect(
-      gateway.handleAdminAction(asSocket(admin), {
+      game.gateway.handleAdminAction(asSocket(admin), {
         action: 'DELETE_EVERYTHING',
       }),
     ).rejects.toThrow(WsException);
-    expect(server.emit).not.toHaveBeenCalled();
+    expectNothingDelivered(admin);
   });
 
   it('rejects JOIN_PLAYERS with a blank team name', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
+    const player = createMockSocket(
+      SOCKET_ROOMS.PLAYERS,
+      {},
+      'blank-name',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(player));
+    game.clearEmits();
+    player.emit.mockClear(); // the state sync every connection gets
 
     await expect(
-      gateway.handleJoinPlayers(asSocket(player), { teamName: '' }),
+      game.gateway.handleJoinPlayers(asSocket(player), { teamName: '' }),
     ).rejects.toThrow(WsException);
-    expect(teamService.join).not.toHaveBeenCalled();
+
+    expectNothingDelivered(player);
+    const { teams } = await game.snapshot();
+    expect(teams.map((entry) => entry.teamName)).toEqual(['The Quizzards']);
   });
 
   it('rejects SUBMIT_ANSWER with a non-numeric teamId', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
     await expect(
-      gateway.handleSubmitAnswer(asSocket(player), {
-        questionId: 21,
+      game.gateway.handleSubmitAnswer(asSocket(team), {
+        questionId: game.questionIds.multipleChoice,
         teamId: 'not-a-number',
         value: 'Banana',
       }),
     ).rejects.toThrow(WsException);
-    expect(answerService.submit).not.toHaveBeenCalled();
+    expectNothingDelivered(team);
   });
 
   it('rejects SUBMIT_ANSWER whose value exceeds the max length', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
     await expect(
-      gateway.handleSubmitAnswer(asSocket(player), {
-        questionId: 21,
-        teamId: 31,
-        value: 'x'.repeat(2001),
+      game.gateway.handleSubmitAnswer(asSocket(team), {
+        questionId: game.questionIds.multipleChoice,
+        teamId,
+        value: OVER_MAX_ANSWER_LENGTH,
       }),
     ).rejects.toThrow(WsException);
-    expect(answerService.submit).not.toHaveBeenCalled();
+    expectNothingDelivered(team);
   });
 
   it('rejects GRADE_ANSWER with a non-finite pointsAwarded', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
+    await game.gateway.handleSubmitAnswer(asSocket(team), {
+      questionId: game.questionIds.multipleChoice,
+      teamId,
+      value: 'Paris',
     });
-    await gateway.handleConnection(asSocket(admin));
+    const [{ answers }] = game.payloadsTo<{
+      answers: { answerId: number }[];
+    }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED);
+    game.clearEmits();
+    team.emit.mockClear();
 
     await expect(
-      gateway.handleGradeAnswer(asSocket(admin), {
-        answerId: 41,
+      game.gateway.handleGradeAnswer(asSocket(admin), {
+        answerId: answers[0].answerId,
         pointsAwarded: Number.POSITIVE_INFINITY,
       }),
     ).rejects.toThrow(WsException);
-    expect(answerService.grade).not.toHaveBeenCalled();
+    expectNothingDelivered(admin);
+    expect(team.emit).not.toHaveBeenCalled();
   });
 
   it('rejects AWARD_BONUS with an unrecognized category', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
-
     await expect(
-      gateway.handleAwardBonus(asSocket(admin), {
-        teamId: 31,
+      game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId,
         category: 'jackpot',
         points: 1,
       }),
     ).rejects.toThrow(WsException);
-    expect(bonusService.award).not.toHaveBeenCalled();
+    expectNothingDelivered(admin);
+    const { leaderboard } = await game.snapshot();
+    expect(leaderboard.filter((entry) => entry.bonusPoints !== 0)).toEqual([]);
   });
 });

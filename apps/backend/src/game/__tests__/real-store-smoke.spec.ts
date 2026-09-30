@@ -1,9 +1,4 @@
-import {
-  SOCKET_EVENTS,
-  SOCKET_ROOMS,
-  type SocketRoomName,
-  sessionRoom,
-} from '@campus-pubquiz/types';
+import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -23,14 +18,6 @@ describe('GameGateway — real-store harness smoke', () => {
     game = await harness.createGateway({ teamNames: ['The Quizzards'] });
   });
 
-  function roomPayloads<T>(room: SocketRoomName, event: string): T[] {
-    const fullRoom = sessionRoom(game.joinCode, room);
-    return game
-      .roomEmits()
-      .filter((emit) => emit.rooms.includes(fullRoom) && emit.event === event)
-      .map((emit) => emit.payload as T);
-  }
-
   it('plays a real submit and grade through the gateway and shows the results to each room', async () => {
     const admin = await game.connectAdmin();
     const [{ socket: team, teamId }] = game.teams;
@@ -43,7 +30,7 @@ describe('GameGateway — real-store harness smoke', () => {
       value: 'Paris',
     });
 
-    const [submitted] = roomPayloads<AnswersUpdated>(
+    const [submitted] = game.payloadsTo<AnswersUpdated>(
       SOCKET_ROOMS.ADMIN,
       SOCKET_EVENTS.ANSWERS_UPDATED,
     );
@@ -63,7 +50,7 @@ describe('GameGateway — real-store harness smoke', () => {
       pointsAwarded: 1,
     });
 
-    const [regraded] = roomPayloads<AnswersUpdated>(
+    const [regraded] = game.payloadsTo<AnswersUpdated>(
       SOCKET_ROOMS.ADMIN,
       SOCKET_EVENTS.ANSWERS_UPDATED,
     );
@@ -76,7 +63,7 @@ describe('GameGateway — real-store harness smoke', () => {
       SOCKET_ROOMS.PLAYERS,
     ]) {
       expect(
-        roomPayloads(room, SOCKET_EVENTS.STATE_UPDATED).length,
+        game.payloadsTo(room, SOCKET_EVENTS.STATE_UPDATED).length,
       ).toBeGreaterThan(0);
     }
   });

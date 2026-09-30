@@ -4,57 +4,56 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
 } from '@campus-pubquiz/types';
-import type { SeededGame } from '@/db/seed.types';
-import { GameGateway } from '@/game/game.gateway';
-import { GameStateService } from '@/game/state/game-state.service';
+import { asSocket, createMockSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeTeamService,
-  createFakeAnswerService,
-  createFakeBonusService,
-  createFakeSessionService,
-  createMockSocket,
-  createMockServer,
-  createTestGateway,
-  asSocket,
-  asServer,
-  asSeedService,
-  asGameProgressRepository,
-  asTeamService,
-  asAnswerService,
-  asBonusService,
-  asSessionService,
-  type MockServer,
-  createFakeShowdownService,
-  asShowdownService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
+
+const LOCK_GRACE_SECONDS = 1;
+const PAST_LOCK_GRACE_MS = 1_800;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe('GameGateway — session room scoping', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let gameStateService: GameStateService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    ({ gateway, server, gameStateService } = await createTestGateway());
+    game = await harness.createGateway();
   });
+
+  /** Every room an emit since the last clearEmits() was addressed to. */
+  function emittedRooms(): string[] {
+    return game.roomEmits().flatMap(({ rooms }) => rooms);
+  }
+
+  async function createOtherSession(
+    settings = DEFAULT_SESSION_SETTINGS,
+  ): Promise<string> {
+    const { joinCode } = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId, settings),
+    );
+    return joinCode;
+  }
 
   it('joins a connecting client to the session named by an explicit code', async () => {
     const display = createMockSocket(
       SOCKET_ROOMS.DISPLAY,
       {},
       'socket-1',
-      'ABCDEF',
+      game.joinCode,
     );
-    await gateway.handleConnection(asSocket(display));
+    await game.gateway.handleConnection(asSocket(display));
 
     expect(display.join).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
+      sessionRoom(game.joinCode, SOCKET_ROOMS.DISPLAY),
     );
     expect(display.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_SYNC,
-      expect.objectContaining({ joinCode: 'ABCDEF' }),
+      expect.objectContaining({ joinCode: game.joinCode }),
     );
   });
 
@@ -65,180 +64,95 @@ describe('GameGateway — session room scoping', () => {
       'socket-1',
       'NOSUCHCODE',
     );
-    await gateway.handleConnection(asSocket(display));
+    await game.gateway.handleConnection(asSocket(display));
 
     expect(display.join).not.toHaveBeenCalled();
     expect(display.disconnect).toHaveBeenCalled();
   });
 
   it("keeps two sessions fully isolated: an admin action in one only broadcasts to that session's rooms", async () => {
-    // Session A ('ABCDEF') is seeded by createTestGateway. Session B is
-    // created directly via GameStateService (mirroring what POST /sessions
-    // does), and a fresh admin connects straight into it — leaving A's
-    // state, still in the map under 'ABCDEF', reachable only by explicitly
-    // reconnecting with ?code=ABCDEF.
-    await gameStateService.createSession(2);
-    const adminForB = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'socket-1',
-      'GHIJKL',
-    );
-    await gateway.handleConnection(asSocket(adminForB));
+    // Session A is the seeded one. Session B is created directly through the
+    // module (mirroring what POST /sessions does), each with its own admin.
+    const joinCodeB = await createOtherSession();
+    const adminForA = await game.connectAdmin();
+    const adminForB = await game.connectAdmin(joinCodeB);
+    const adminRoomA = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
+    const adminRoomB = sessionRoom(joinCodeB, SOCKET_ROOMS.ADMIN);
 
-    const adminForA = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'admin-a',
-      'ABCDEF',
-    );
-    await gateway.handleConnection(asSocket(adminForA));
-
-    server.to.mockClear();
-    server.emit.mockClear();
-    await gateway.handleAdminAction(asSocket(adminForA), {
+    game.clearEmits();
+    await game.gateway.handleAdminAction(asSocket(adminForA), {
       action: 'START_QUIZ',
     });
 
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.to).not.toHaveBeenCalledWith(
-      sessionRoom('GHIJKL', SOCKET_ROOMS.ADMIN),
-    );
+    expect(emittedRooms()).toContain(adminRoomA);
+    expect(emittedRooms()).not.toContain(adminRoomB);
 
-    server.to.mockClear();
-    server.emit.mockClear();
-    await gateway.handleAdminAction(asSocket(adminForB), {
+    game.clearEmits();
+    await game.gateway.handleAdminAction(asSocket(adminForB), {
       action: 'START_QUIZ',
     });
 
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('GHIJKL', SOCKET_ROOMS.ADMIN),
-    );
-    expect(server.to).not.toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
-    );
+    expect(emittedRooms()).toContain(adminRoomB);
+    expect(emittedRooms()).not.toContain(adminRoomA);
   });
 
   it("clears the connection roster of the disconnecting socket's own session, not the admin's other session", async () => {
-    await gameStateService.createSession(2);
-    const adminForB = createMockSocket(
-      SOCKET_ROOMS.ADMIN,
-      { token: TEST_SESSION_TOKEN },
-      'socket-1',
-      'GHIJKL',
-    );
-    await gateway.handleConnection(asSocket(adminForB));
-    // adminForB's socket is now in session B ('GHIJKL'); session A
-    // ('ABCDEF') still holds the fixture team's connection from
-    // createTestGateway's seed data.
+    const joinCodeB = await createOtherSession();
+    await game.connectAdmin(joinCodeB);
+    const { socket: playerInA } = await game.joinTeam('The Quizzards');
 
-    const playerInA = createMockSocket(
-      SOCKET_ROOMS.PLAYERS,
-      {},
-      'player-a',
-      'ABCDEF',
-    );
-    await gateway.handleConnection(asSocket(playerInA));
-    await gateway.handleJoinPlayers(asSocket(playerInA), {
-      teamName: 'The Quizzards',
-      joinCode: 'ABCDEF',
-    });
+    game.clearEmits();
+    await game.gateway.handleDisconnect(asSocket(playerInA));
 
-    server.to.mockClear();
-    server.emit.mockClear();
-    await gateway.handleDisconnect(asSocket(playerInA));
-
-    expect(server.to).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
+    expect(emittedRooms()).toContain(
+      sessionRoom(game.joinCode, SOCKET_ROOMS.DISPLAY),
     );
-    expect(server.to).not.toHaveBeenCalledWith(
-      sessionRoom('GHIJKL', SOCKET_ROOMS.DISPLAY),
+    expect(emittedRooms()).not.toContain(
+      sessionRoom(joinCodeB, SOCKET_ROOMS.DISPLAY),
     );
   });
 
   it('clears every armed question-lock timer for every session on module destroy', async () => {
-    // FIXTURE_SEEDED_GAME's only round has breakAfter: false, so it never
-    // arms a lock timer — this test needs its own breakAfter fixture.
-    const BREAK_AFTER_GAME: SeededGame = {
-      quizId: 3,
-      gameSessionId: 103,
-      joinCode: 'ZZZZZZ',
+    // The quiz's round has breakAfter: true, so its last question arms a lock
+    // timer once it locks.
+    const quick = {
+      ...DEFAULT_SESSION_SETTINGS,
+      lockGraceSeconds: LOCK_GRACE_SECONDS,
+    };
+    const armed = await harness.createGateway({
+      joinCode: 'ARMED1',
+      settings: quick,
       rounds: [
         {
-          id: 14,
           title: 'Round A',
           breakAfter: true,
-          questions: [
-            {
-              id: 26,
-              type: 'free_text',
-              prompt: 'QA1',
-              points: 1,
-              answer: 'A1',
-            },
-          ],
+          questions: [{ type: 'free_text', prompt: 'QA1', answer: 'A1' }],
         },
       ],
-      settings: DEFAULT_SESSION_SETTINGS,
-    };
-    const localSeedService = {
-      seed: jest.fn().mockResolvedValue(BREAK_AFTER_GAME),
-      loadGame: jest.fn().mockResolvedValue(BREAK_AFTER_GAME),
-      createSession: jest
-        .fn()
-        .mockResolvedValue({ gameSessionId: 103, joinCode: 'ZZZZZZ' }),
-      updateSettings: jest.fn(),
-    };
-    const localGameState = new GameStateService(
-      asSeedService(localSeedService),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
+    });
+    const { joinCode: joinCodeB } = await armed.inRequestContext(() =>
+      armed.gameState.createSession(armed.quizId, quick),
     );
-    await localGameState.onModuleInit();
-    const localGateway = new GameGateway(
-      localGameState,
-      asTeamService(createFakeTeamService()),
-      asAnswerService(createFakeAnswerService()),
-      asBonusService(createFakeBonusService()),
-      asSessionService(createFakeSessionService()),
-      createFakeOrm(),
-      asShowdownService(createFakeShowdownService()),
-    );
-    localGateway.server = asServer(createMockServer());
 
-    jest.useFakeTimers();
-    try {
-      const admin = createMockSocket(
-        SOCKET_ROOMS.ADMIN,
-        { token: TEST_SESSION_TOKEN },
-        'socket-1',
-        'ZZZZZZ',
-      );
-      await localGateway.handleConnection(asSocket(admin));
-      await localGateway.handleAdminAction(asSocket(admin), {
-        action: 'START_QUIZ',
-      });
-      await localGateway.handleAdminAction(asSocket(admin), {
-        action: 'ADVANCE',
-      }); // -> round_intro
-      await localGateway.handleAdminAction(asSocket(admin), {
-        action: 'ADVANCE',
-      }); // -> question_open (last question of a breakAfter round)
-      await localGateway.handleAdminAction(asSocket(admin), {
-        action: 'ADVANCE',
-      }); // -> locking (arms the timer)
+    for (const joinCode of [armed.joinCode, joinCodeB]) {
+      const admin = await armed.connectAdmin(joinCode);
+      for (const action of [
+        'START_QUIZ',
+        'ADVANCE', // -> round_intro
+        'ADVANCE', // -> question_open (last question of a breakAfter round)
+        'ADVANCE', // -> locking (arms the timer)
+      ] as const) {
+        await armed.gateway.handleAdminAction(asSocket(admin), { action });
+      }
+      expect((await armed.snapshot(joinCode)).progress.status).toBe('locking');
+    }
 
-      expect(jest.getTimerCount()).toBeGreaterThan(0);
+    armed.gateway.onModuleDestroy();
+    await delay(PAST_LOCK_GRACE_MS);
 
-      localGateway.onModuleDestroy();
-
-      expect(jest.getTimerCount()).toBe(0);
-    } finally {
-      jest.useRealTimers();
+    // Had either timer survived, the 1s grace would have advanced its session.
+    for (const joinCode of [armed.joinCode, joinCodeB]) {
+      expect((await armed.snapshot(joinCode)).progress.status).toBe('locking');
     }
   });
 });

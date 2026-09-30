@@ -1,89 +1,103 @@
-import { GameStateService } from '@/game/state/game-state.service';
+import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { asSocket, createMockSocket } from '@/game/__tests__/test-utils';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  createFakeShowdownService,
-  asShowdownService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-const QUIZZARDS = [{ teamId: 31, teamName: 'The Quizzards' }];
+const ALL_ROOMS = [
+  SOCKET_ROOMS.DISPLAY,
+  SOCKET_ROOMS.ADMIN,
+  SOCKET_ROOMS.PLAYERS,
+];
 
-describe('GameStateService — team connection presence (one live device per team + kick)', () => {
-  let service: GameStateService;
-  let joinCode: string;
+describe('GameGateway — team presence (one live device per team + kick)', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    service = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
+    game = await harness.createGateway();
+  });
+
+  function expectStateUpdateInEveryRoom(): void {
+    for (const room of ALL_ROOMS) {
+      expect(
+        game.payloadsTo(room, SOCKET_EVENTS.STATE_UPDATED).length,
+      ).toBeGreaterThan(0);
+    }
+  }
+
+  it('shows no connected team for a session nobody has joined', async () => {
+    const { teams } = await game.snapshot();
+    expect(teams).toEqual([]);
+  });
+
+  it('reflects isConnected in the snapshot once a team is connected', async () => {
+    const { teamId } = await game.joinTeam('The Quizzards');
+
+    const { teams } = await game.snapshot();
+    expect(teams).toEqual([
+      { teamId, teamName: 'The Quizzards', isConnected: true },
+    ]);
+  });
+
+  it('broadcasts a state update to every room when a team connects', async () => {
+    game.clearEmits();
+
+    await game.joinTeam('The Quizzards');
+
+    expectStateUpdateInEveryRoom();
+  });
+
+  it('frees a team connection when its socket disconnects, and broadcasts it', async () => {
+    const { socket, teamId } = await game.joinTeam('The Quizzards');
+    game.clearEmits();
+
+    await game.gateway.handleDisconnect(asSocket(socket));
+
+    expectStateUpdateInEveryRoom();
+    const { teams } = await game.snapshot();
+    expect(teams).toEqual([
+      { teamId, teamName: 'The Quizzards', isConnected: false },
+    ]);
+  });
+
+  it('has nothing to push when the disconnected socket is not connected to any team', async () => {
+    const display = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'display-1',
+      game.joinCode,
     );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
+    await game.gateway.handleConnection(asSocket(display));
+    game.clearEmits();
+
+    await game.gateway.handleDisconnect(asSocket(display));
+
+    expect(game.roomEmits()).toEqual([]);
   });
 
-  it('has no connected socket for a team that has never joined', () => {
-    expect(service.getConnectedSocketId(joinCode, 31)).toBeUndefined();
-  });
+  it('does not disturb another team connection when an unrelated socket disconnects', async () => {
+    const teamA = await game.joinTeam('The Quizzards');
+    const teamB = await game.joinTeam('The Brainiacs');
 
-  it('tracks which socket is connected for a team', () => {
-    service.teamConnected(joinCode, 31, 'socket-a', QUIZZARDS);
+    await game.gateway.handleDisconnect(asSocket(teamA.socket));
 
-    expect(service.getConnectedSocketId(joinCode, 31)).toBe('socket-a');
-  });
-
-  it('reflects isConnected in the snapshot once a team is connected', () => {
-    service.teamConnected(joinCode, 31, 'socket-a', QUIZZARDS);
-
-    expect(service.getSnapshot(joinCode).teams).toEqual([
-      { teamId: 31, teamName: 'The Quizzards', isConnected: true },
+    const { teams } = await game.snapshot();
+    expect(teams).toEqual([
+      { teamId: teamA.teamId, teamName: 'The Quizzards', isConnected: false },
+      { teamId: teamB.teamId, teamName: 'The Brainiacs', isConnected: true },
     ]);
-  });
-
-  it('asks for a state broadcast when a team connects', () => {
-    const outcome = service.teamConnected(joinCode, 31, 'socket-a', QUIZZARDS);
-
-    expect(outcome.shouldBroadcastState).toBe(true);
-  });
-
-  it('frees a team connection by socket id and asks for a state broadcast', () => {
-    service.teamConnected(joinCode, 31, 'socket-a', QUIZZARDS);
-
-    const outcome = service.teamDisconnected(joinCode, 'socket-a');
-
-    expect(outcome?.shouldBroadcastState).toBe(true);
-    expect(service.getConnectedSocketId(joinCode, 31)).toBeUndefined();
-    expect(service.getSnapshot(joinCode).teams).toEqual([
-      { teamId: 31, teamName: 'The Quizzards', isConnected: false },
-    ]);
-  });
-
-  it('has nothing to push when the disconnected socket is not connected to any team', () => {
-    expect(service.teamDisconnected(joinCode, 'unknown-socket')).toBeNull();
-  });
-
-  it('does not disturb another team connection when an unrelated socket disconnects', () => {
-    service.teamConnected(joinCode, 31, 'socket-a', QUIZZARDS);
-    service.teamConnected(joinCode, 32, 'socket-b', QUIZZARDS);
-
-    service.teamDisconnected(joinCode, 'socket-a');
-
-    expect(service.getConnectedSocketId(joinCode, 31)).toBeUndefined();
-    expect(service.getConnectedSocketId(joinCode, 32)).toBe('socket-b');
   });
 
   it('does not carry a stale team connection over into a newly created session', async () => {
-    service.teamConnected(joinCode, 31, 'socket-a', QUIZZARDS);
+    await game.joinTeam('The Quizzards');
 
-    const created = await service.createSession(2);
+    const created = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
 
-    expect(service.getConnectedSocketId(created.joinCode, 31)).toBeUndefined();
+    expect(created.joinCode).not.toBe(game.joinCode);
+    expect(created.teams).toEqual([]);
   });
 });

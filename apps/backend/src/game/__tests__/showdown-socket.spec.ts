@@ -2,203 +2,152 @@ import { WsException } from '@nestjs/websockets';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
-  sessionRoom,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
-import type { GameStateService } from '@/game/state/game-state.service';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  asSocket,
-  type MockServer,
-  type MockShowdownService,
-  arrange,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-const TIED_LEADERBOARD = [
-  {
-    teamId: 31,
-    teamName: 'Team A',
-    totalPoints: 10,
-    bonusPoints: 0,
-    positiveBonusPoints: 0,
-    negativeBonusPoints: 0,
-    roundPoints: [],
-  },
-  {
-    teamId: 32,
-    teamName: 'Team B',
-    totalPoints: 10,
-    bonusPoints: 0,
-    positiveBonusPoints: 0,
-    negativeBonusPoints: 0,
-    roundPoints: [],
-  },
-];
+const SHOWDOWN_PAYLOAD = {
+  question: 'How many?',
+  answer: '100',
+  points: 5,
+};
 
 describe('GameGateway — showdown', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
-  let showdownService: MockShowdownService;
-  let gameStateService: GameStateService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
-  beforeEach(async () => {
-    ({ gateway, server, showdownService, gameStateService } =
-      await createTestGateway());
-  });
+  /** The state the display room was last sent. */
+  function lastDisplayState(): StateSnapshotPayload | undefined {
+    return game
+      .payloadsTo<StateSnapshotPayload>(
+        SOCKET_ROOMS.DISPLAY,
+        SOCKET_EVENTS.STATE_UPDATED,
+      )
+      .at(-1);
+  }
 
   describe('CREATE_SHOWDOWN_ROUND', () => {
     it('rejects when nobody is tied for first', async () => {
-      arrange(gameStateService).setLeaderboard('ABCDEF', [
-        {
-          teamId: 31,
-          teamName: 'Team A',
-          totalPoints: 10,
-          bonusPoints: 0,
-          positiveBonusPoints: 0,
-          negativeBonusPoints: 0,
-          roundPoints: [],
-        },
-        {
-          teamId: 32,
-          teamName: 'Team B',
-          totalPoints: 5,
-          bonusPoints: 0,
-          positiveBonusPoints: 0,
-          negativeBonusPoints: 0,
-          roundPoints: [],
-        },
-      ]);
-      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-        token: TEST_SESSION_TOKEN,
-      });
-      await gateway.handleConnection(asSocket(admin));
+      game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
+      // Only Team A answers, so it leads alone.
+      await tieOnFirstQuestion(game, [game.teams[0]]);
+      const admin = await game.connectAdmin();
+      game.clearEmits();
 
       await expect(
-        gateway.handleCreateShowdownRound(asSocket(admin), {
-          question: 'How many?',
-          answer: '100',
-          points: 5,
-        }),
+        game.gateway.handleCreateShowdownRound(
+          asSocket(admin),
+          SHOWDOWN_PAYLOAD,
+        ),
       ).rejects.toThrow(WsException);
-      expect(showdownService.createRound).not.toHaveBeenCalled();
+
+      expect(game.roomEmits()).toEqual([]);
+      expect((await game.snapshot()).activeShowdown).toBeNull();
     });
 
     it('rejects CREATE_SHOWDOWN_ROUND from a non-admin client', async () => {
-      arrange(gameStateService).setLeaderboard('ABCDEF', TIED_LEADERBOARD);
-      const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-      await gateway.handleConnection(asSocket(player));
+      game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
+      await tieOnFirstQuestion(game, game.teams);
+      const player = await game.connectPlayer();
+      game.clearEmits();
 
       await expect(
-        gateway.handleCreateShowdownRound(asSocket(player), {
-          question: 'How many?',
-          answer: '100',
-          points: 5,
-        }),
+        game.gateway.handleCreateShowdownRound(
+          asSocket(player),
+          SHOWDOWN_PAYLOAD,
+        ),
       ).rejects.toThrow(WsException);
-      expect(showdownService.createRound).not.toHaveBeenCalled();
+
+      expect(game.roomEmits()).toEqual([]);
+      expect((await game.snapshot()).activeShowdown).toBeNull();
     });
 
     it('creates a round for the tied teams without touching leaderboard visibility, and broadcasts activeShowdown', async () => {
-      arrange(gameStateService).setLeaderboard('ABCDEF', TIED_LEADERBOARD);
+      game = await harness.createGateway({
+        teamNames: ['Team A', 'Team B', 'Team C'],
+      });
+      const [teamA, teamB] = game.teams;
+      await tieOnFirstQuestion(game, [teamA, teamB]);
       // The final standings are still up (e.g. auto-shown when the quiz hit
       // 'ended') — creating the round must not yank them away.
-      arrange(gameStateService).setLeaderboardVisible('ABCDEF', true);
-      showdownService.createRound.mockResolvedValueOnce({
-        id: 900,
+      await game.act('TOGGLE_LEADERBOARD');
+      const admin = await game.connectAdmin();
+      game.clearEmits();
+
+      await game.gateway.handleCreateShowdownRound(
+        asSocket(admin),
+        SHOWDOWN_PAYLOAD,
+      );
+
+      // Only the tied teams are seated, in leaderboard order.
+      const state = lastDisplayState();
+      expect(state?.showdownRevealStep).toBe(0);
+      expect(state?.activeShowdown).toMatchObject({
         question: 'How many?',
-        answer: '100',
-        winnerTeamId: null,
-        isTie: false,
-        resolved: false,
         participants: [
-          { teamId: 31, teamName: 'Team A', seatIndex: 0, guess: null },
-          { teamId: 32, teamName: 'Team B', seatIndex: 1, guess: null },
+          { teamId: teamA.teamId, teamName: 'Team A', seatIndex: 0 },
+          { teamId: teamB.teamId, teamName: 'Team B', seatIndex: 1 },
         ],
       });
-      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-        token: TEST_SESSION_TOKEN,
-      });
-      await gateway.handleConnection(asSocket(admin));
-
-      await gateway.handleCreateShowdownRound(asSocket(admin), {
-        question: 'How many?',
-        answer: '100',
-        points: 5,
-      });
-
-      expect(showdownService.createRound).toHaveBeenCalledWith(
-        101,
-        [
-          { teamId: 31, teamName: 'Team A' },
-          { teamId: 32, teamName: 'Team B' },
-        ],
-        'How many?',
-        '100',
-        5,
-      );
-      expect(server.to).toHaveBeenCalledWith(
-        sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
-      );
-      const lastCall = server.emit.mock.calls.at(-1) as
-        | [string, StateSnapshotPayload]
-        | undefined;
-      expect(lastCall?.[0]).toBe(SOCKET_EVENTS.STATE_UPDATED);
-      expect(lastCall?.[1].showdownRevealStep).toBe(0);
-      expect(lastCall?.[1].activeShowdown?.id).toBe(900);
-      expect(lastCall?.[1].progress.isLeaderboardVisible).toBe(true);
+      expect(state?.progress.isLeaderboardVisible).toBe(true);
     });
   });
 
   describe('SUBMIT_SHOWDOWN_GUESS', () => {
-    async function seedActiveRound(): Promise<void> {
-      arrange(gameStateService).setLeaderboard('ABCDEF', TIED_LEADERBOARD);
-      showdownService.createRound.mockResolvedValueOnce({
-        id: 900,
-        question: 'How many?',
-        answer: '100',
-        winnerTeamId: null,
-        isTie: false,
-        resolved: false,
-        participants: [
-          { teamId: 31, teamName: 'Team A', seatIndex: 0, guess: null },
-          { teamId: 32, teamName: 'Team B', seatIndex: 1, guess: null },
-        ],
+    async function seedActiveRound(): Promise<number> {
+      game = await harness.createGateway({
+        teamNames: ['Team A', 'Team B', 'Team C'],
       });
-      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-        token: TEST_SESSION_TOKEN,
-      });
-      await gateway.handleConnection(asSocket(admin));
-      await gateway.handleCreateShowdownRound(asSocket(admin), {
-        question: 'How many?',
-        answer: '100',
-        points: 5,
-      });
+      await tieOnFirstQuestion(game, game.teams.slice(0, 2));
+      const admin = await game.connectAdmin();
+      await game.gateway.handleCreateShowdownRound(
+        asSocket(admin),
+        SHOWDOWN_PAYLOAD,
+      );
+      const { activeShowdown } = await game.snapshot();
+      game.clearEmits();
+      return activeShowdown!.id;
+    }
+
+    async function expectNoGuessRecorded(): Promise<void> {
+      expect(game.roomEmits()).toEqual([]);
+      const { activeShowdown } = await game.snapshot();
+      expect(activeShowdown?.participants.map((p) => p.hasGuessed)).toEqual([
+        false,
+        false,
+      ]);
     }
 
     it('accepts a guess from the owning team and broadcasts hasGuessed without the value', async () => {
-      await seedActiveRound();
-      const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-a');
-      await gateway.handleConnection(asSocket(player));
-      arrange(gameStateService).setTeamConnected('ABCDEF', 31, 'socket-a');
+      const showdownRoundId = await seedActiveRound();
+      const [teamA, teamB] = game.teams;
 
-      await gateway.handleSubmitShowdownGuess(asSocket(player), {
-        showdownRoundId: 900,
-        teamId: 31,
+      await game.gateway.handleSubmitShowdownGuess(asSocket(teamA.socket), {
+        showdownRoundId,
+        teamId: teamA.teamId,
         value: '95',
       });
 
-      expect(showdownService.submitGuess).toHaveBeenCalledWith(900, 31, '95');
-      const lastCall = server.emit.mock.calls.at(-1) as
-        | [string, StateSnapshotPayload]
-        | undefined;
-      expect(lastCall?.[0]).toBe(SOCKET_EVENTS.STATE_UPDATED);
-      const broadcastParticipants = lastCall?.[1].activeShowdown?.participants;
+      const state = lastDisplayState();
+      const broadcastParticipants = state?.activeShowdown?.participants;
       expect(broadcastParticipants).toEqual([
-        { teamId: 31, teamName: 'Team A', seatIndex: 0, hasGuessed: true },
-        { teamId: 32, teamName: 'Team B', seatIndex: 1, hasGuessed: false },
+        {
+          teamId: teamA.teamId,
+          teamName: 'Team A',
+          seatIndex: 0,
+          hasGuessed: true,
+        },
+        {
+          teamId: teamB.teamId,
+          teamName: 'Team B',
+          seatIndex: 1,
+          hasGuessed: false,
+        },
       ]);
       // Guess values are never included at step 0, however far the reveal
       // walk has progressed for other participants.
@@ -206,88 +155,82 @@ describe('GameGateway — showdown', () => {
     });
 
     it("rejects a guess for a team the submitting socket doesn't own", async () => {
-      await seedActiveRound();
-      const attacker = createMockSocket(
-        SOCKET_ROOMS.PLAYERS,
-        {},
-        'socket-attacker',
-      );
-      await gateway.handleConnection(asSocket(attacker));
-      arrange(gameStateService).setTeamConnected('ABCDEF', 31, 'socket-owner');
+      const showdownRoundId = await seedActiveRound();
+      const attacker = await game.connectPlayer();
 
       await expect(
-        gateway.handleSubmitShowdownGuess(asSocket(attacker), {
-          showdownRoundId: 900,
-          teamId: 31,
+        game.gateway.handleSubmitShowdownGuess(asSocket(attacker), {
+          showdownRoundId,
+          teamId: game.teams[0].teamId,
           value: '95',
         }),
       ).rejects.toThrow(WsException);
-      expect(showdownService.submitGuess).not.toHaveBeenCalled();
+
+      await expectNoGuessRecorded();
     });
 
     it('rejects a guess from a team not seated in the round', async () => {
-      await seedActiveRound();
-      const outsider = createMockSocket(
-        SOCKET_ROOMS.PLAYERS,
-        {},
-        'socket-outsider',
-      );
-      await gateway.handleConnection(asSocket(outsider));
-      arrange(gameStateService).setTeamConnected(
-        'ABCDEF',
-        99,
-        'socket-outsider',
-      );
+      const showdownRoundId = await seedActiveRound();
+      const outsider = game.teams[2];
 
       await expect(
-        gateway.handleSubmitShowdownGuess(asSocket(outsider), {
-          showdownRoundId: 900,
-          teamId: 99,
+        game.gateway.handleSubmitShowdownGuess(asSocket(outsider.socket), {
+          showdownRoundId,
+          teamId: outsider.teamId,
           value: '95',
         }),
       ).rejects.toThrow(WsException);
-      expect(showdownService.submitGuess).not.toHaveBeenCalled();
+
+      await expectNoGuessRecorded();
     });
 
     it('rejects a guess once the reveal has moved past step 0', async () => {
-      await seedActiveRound();
-      const player = createMockSocket(SOCKET_ROOMS.PLAYERS, {}, 'socket-a');
-      await gateway.handleConnection(asSocket(player));
-      arrange(gameStateService).setTeamConnected('ABCDEF', 31, 'socket-a');
-      arrange(gameStateService).setTeamConnected('ABCDEF', 32, 'socket-b');
-      gameStateService.showdownGuessSubmitted('ABCDEF', 31, '10');
-      gameStateService.showdownGuessSubmitted('ABCDEF', 32, '20');
+      const showdownRoundId = await seedActiveRound();
+      const [teamA, teamB] = game.teams;
+      for (const [team, value] of [
+        [teamA, '10'],
+        [teamB, '20'],
+      ] as const) {
+        await game.gateway.handleSubmitShowdownGuess(asSocket(team.socket), {
+          showdownRoundId,
+          teamId: team.teamId,
+          value,
+        });
+      }
       // The showdown-reveal intercept only engages once the quiz has
-      // actually ended (see GameStateService.applyAction) — reached here via
-      // the same END_QUIZ escape hatch the admin's "End Quiz" button uses.
-      await gameStateService.applyAction('ABCDEF', 'END_QUIZ');
-      await gameStateService.applyAction('ABCDEF', 'ADVANCE');
+      // actually ended — reached here via the same END_QUIZ escape hatch the
+      // admin's "End Quiz" button uses.
+      await game.act('END_QUIZ');
+      const stepped = await game.act('ADVANCE');
+      expect(stepped.showdownRevealStep).toBe(1);
+      game.clearEmits();
 
       await expect(
-        gateway.handleSubmitShowdownGuess(asSocket(player), {
-          showdownRoundId: 900,
-          teamId: 31,
+        game.gateway.handleSubmitShowdownGuess(asSocket(teamA.socket), {
+          showdownRoundId,
+          teamId: teamA.teamId,
           value: '95',
         }),
       ).rejects.toThrow(WsException);
-      expect(showdownService.submitGuess).not.toHaveBeenCalled();
+
+      expect(game.roomEmits()).toEqual([]);
+      const { activeShowdown } = await game.snapshot();
+      expect(activeShowdown?.participants[0].guess).toBe('10');
     });
 
     it('rejects SUBMIT_SHOWDOWN_GUESS from a non-player client', async () => {
-      await seedActiveRound();
-      const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-        token: TEST_SESSION_TOKEN,
-      });
-      await gateway.handleConnection(asSocket(admin));
+      const showdownRoundId = await seedActiveRound();
+      const admin = await game.connectAdmin();
 
       await expect(
-        gateway.handleSubmitShowdownGuess(asSocket(admin), {
-          showdownRoundId: 900,
-          teamId: 31,
+        game.gateway.handleSubmitShowdownGuess(asSocket(admin), {
+          showdownRoundId,
+          teamId: game.teams[0].teamId,
           value: '95',
         }),
       ).rejects.toThrow(WsException);
-      expect(showdownService.submitGuess).not.toHaveBeenCalled();
+
+      await expectNoGuessRecorded();
     });
   });
 });

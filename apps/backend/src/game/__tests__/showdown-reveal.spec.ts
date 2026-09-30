@@ -1,223 +1,163 @@
-import { DEFAULT_SESSION_SETTINGS } from '@campus-pubquiz/types';
-import type { SeededGame } from '@/db/seed.types';
-import { GameStateService } from '@/game/state/game-state.service';
-import type { ActiveShowdownRoundState } from '@/game/state/session-state';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeAnswerService,
-  createFakeShowdownService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  asShowdownService,
-  type MockAnswerService,
-  type MockShowdownService,
-} from './test-utils';
+  setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-const SIMPLE_GAME: SeededGame = {
-  quizId: 1,
-  gameSessionId: 101,
-  joinCode: 'ABCDEF',
-  rounds: [
-    {
-      id: 11,
-      title: 'Round 1',
-      breakAfter: true,
-      questions: [
-        {
-          id: 21,
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-          answer: 'Apple',
-        },
-      ],
-    },
-  ],
-  settings: DEFAULT_SESSION_SETTINGS,
-};
+const SHOWDOWN_POINTS = 5;
+const TIED_TEAM_POINTS = 2;
 
-function twoTeamRound(): ActiveShowdownRoundState {
-  return {
-    id: 501,
-    question: 'How many people are in this room?',
-    answer: '42',
-    winnerTeamId: null,
-    isTie: false,
-    resolved: false,
-    participants: [
-      { teamId: 31, teamName: 'Team A', seatIndex: 0, guess: null },
-      { teamId: 32, teamName: 'Team B', seatIndex: 1, guess: null },
-    ],
-  };
-}
+describe('GameGateway — showdown reveal-step gating', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
-async function buildService(
-  answerService: MockAnswerService,
-  showdownService: MockShowdownService,
-): Promise<GameStateService> {
-  const seedService = {
-    seed: jest.fn().mockResolvedValue(SIMPLE_GAME),
-    loadGame: jest.fn(),
-    createSession: jest.fn(),
-    updateSettings: jest.fn(),
-  };
-  const service = new GameStateService(
-    asSeedService(seedService),
-    asGameProgressRepository(createFakeGameProgressRepository()),
-    createFakeOrm(),
-    asAnswerService(answerService),
-    asShowdownService(showdownService),
-  );
-  await service.onModuleInit();
-  return service;
-}
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
+    await tieOnFirstQuestion(game, game.teams);
+  });
 
-/**
- * Reaches 'ended' via the same END_QUIZ escape hatch the admin's "End Quiz"
- * button uses (legal from any non-ended status) — the showdown-reveal
- * intercept only engages once status is genuinely 'ended' (see
- * GameStateService.applyAction), so tests exercising it need a real 'ended'
- * status rather than a synthetic one.
- */
-async function buildServiceAtEnded(
-  answerService: MockAnswerService,
-  showdownService: MockShowdownService,
-  joinCode: string,
-): Promise<GameStateService> {
-  const service = await buildService(answerService, showdownService);
-  const final = await service.applyAction(joinCode, 'END_QUIZ');
-  expect(final.progress.status).toBe('ended');
-  return service;
-}
+  async function createRound(): Promise<void> {
+    const admin = await game.connectAdmin();
+    await game.gateway.handleCreateShowdownRound(asSocket(admin), {
+      question: 'How many people are in this room?',
+      answer: '42',
+      points: SHOWDOWN_POINTS,
+    });
+  }
 
-describe('GameStateService — showdown reveal-step gating', () => {
-  const joinCode = 'ABCDEF';
+  async function guess(teamIndex: number, value: string): Promise<void> {
+    const { socket, teamId } = game.teams[teamIndex];
+    const { activeShowdown } = await game.snapshot();
+    await game.gateway.handleSubmitShowdownGuess(asSocket(socket), {
+      showdownRoundId: activeShowdown!.id,
+      teamId,
+      value,
+    });
+  }
+
+  /**
+   * Reaches 'ended' via the same END_QUIZ escape hatch the admin's "End Quiz"
+   * button uses (legal from any non-ended status) — the showdown-reveal
+   * intercept only engages once status is genuinely 'ended'.
+   */
+  async function endQuiz(): Promise<void> {
+    const final = await game.act('END_QUIZ');
+    expect(final.progress.status).toBe('ended');
+  }
+
+  function bonusByTeam(
+    snapshot: Awaited<ReturnType<RealStoreGateway['snapshot']>>,
+  ): Record<string, number> {
+    return Object.fromEntries(
+      snapshot.leaderboard.map((entry) => [entry.teamName, entry.bonusPoints]),
+    );
+  }
 
   it("does not intercept ADVANCE before the quiz reaches ended, even with an active round — the block's own reveal keeps driving", async () => {
-    const answerService = createFakeAnswerService();
-    const showdownService = createFakeShowdownService();
-    const service = await buildService(answerService, showdownService);
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // rules -> round_intro
-    await service.applyAction(joinCode, 'ADVANCE'); // round_intro -> question_open
-    await service.applyAction(joinCode, 'ADVANCE'); // question_open -> locking
-    await service.applyAction(joinCode, 'ADVANCE'); // locking -> break_intro
+    for (const action of [
+      'ADVANCE', // q2
+      'ADVANCE', // q3
+      'ADVANCE', // q4
+      'ADVANCE', // q5
+      'ADVANCE', // -> locking
+      'ADVANCE', // -> break_intro
+    ] as const) {
+      await game.act(action);
+    }
     // Admin composes the tiebreaker question during grading, before the
     // block's own answers have been revealed to the audience.
-    const round = twoTeamRound();
-    service.showdownRoundCreated(joinCode, round);
+    await createRound();
 
-    const stepped = await service.applyAction(joinCode, 'ADVANCE');
+    const stepped = await game.act('ADVANCE');
 
     expect(stepped.progress.status).toBe('reveal_intro');
     expect(stepped.showdownRevealStep).toBe(0);
-    expect(showdownService.resolve).not.toHaveBeenCalled();
+    expect(stepped.activeShowdown?.winnerTeamId).toBeUndefined();
+    expect(bonusByTeam(stepped)).toEqual({ 'Team A': 0, 'Team B': 0 });
   });
 
-  it('throws ShowdownGuessesPendingError when ADVANCE is pressed before every participant has guessed', async () => {
-    const answerService = createFakeAnswerService();
-    const showdownService = createFakeShowdownService();
-    const service = await buildServiceAtEnded(
-      answerService,
-      showdownService,
-      joinCode,
-    );
-    const round = twoTeamRound();
-    round.participants[0].guess = '40';
+  it('throws when ADVANCE is pressed before every participant has guessed', async () => {
+    await endQuiz();
+    await createRound();
+    await guess(0, '40');
     // Team B (seatIndex 1) still hasn't guessed.
-    service.showdownRoundCreated(joinCode, round);
 
-    await expect(service.applyAction(joinCode, 'ADVANCE')).rejects.toThrow(
+    await expect(game.act('ADVANCE')).rejects.toThrow(
       'not every team has submitted a guess',
     );
-    expect(showdownService.resolve).not.toHaveBeenCalled();
+
+    const after = await game.snapshot();
+    expect(after.showdownRevealStep).toBe(0);
+    expect(bonusByTeam(after)).toEqual({ 'Team A': 0, 'Team B': 0 });
   });
 
   it('walks ADVANCE through every step once every participant has guessed, resolving on the final step and refreshing the leaderboard', async () => {
-    const answerService = createFakeAnswerService();
-    answerService.computeLeaderboard.mockResolvedValueOnce([
-      {
-        teamId: 31,
-        teamName: 'Team A',
-        totalPoints: 12,
-        bonusPoints: 5,
-        roundPoints: [],
-      },
-    ]);
-    const showdownService = createFakeShowdownService();
-    showdownService.resolve.mockResolvedValueOnce({
-      winnerTeamId: 31,
-      isTie: false,
-    });
-    const service = await buildServiceAtEnded(
-      answerService,
-      showdownService,
-      joinCode,
-    );
-    const round = twoTeamRound();
-    round.participants[0].guess = '40';
-    round.participants[1].guess = '50';
-    service.showdownRoundCreated(joinCode, round);
+    await endQuiz();
+    await createRound();
+    await guess(0, '40');
+    await guess(1, '50');
+    const [teamA, teamB] = game.teams;
 
-    const step1 = await service.applyAction(joinCode, 'ADVANCE');
+    const step1 = await game.act('ADVANCE');
     expect(step1.showdownRevealStep).toBe(1);
     expect(step1.activeShowdown?.participants[0].guess).toBe('40');
     expect(step1.activeShowdown?.participants[1].guess).toBeUndefined();
     // Never falls through to getNextGameState — status is untouched.
     expect(step1.progress.status).toBe('ended');
 
-    const step2 = await service.applyAction(joinCode, 'ADVANCE');
+    const step2 = await game.act('ADVANCE');
     expect(step2.showdownRevealStep).toBe(2);
     expect(step2.activeShowdown?.participants[1].guess).toBe('50');
-    expect(showdownService.resolve).not.toHaveBeenCalled();
+    expect(step2.activeShowdown?.winnerTeamId).toBeUndefined();
+    expect(bonusByTeam(step2)).toEqual({ 'Team A': 0, 'Team B': 0 });
 
-    // Crossing into the final step (N+1 = 3) resolves the round.
-    const finalStep = await service.applyAction(joinCode, 'ADVANCE');
+    // Crossing into the final step (N+1 = 3) resolves the round: 40 is
+    // closer to 42 than 50 is, so Team A wins the showdown bonus.
+    const finalStep = await game.act('ADVANCE');
     expect(finalStep.showdownRevealStep).toBe(3);
-    expect(showdownService.resolve).toHaveBeenCalledWith(round.id);
-    expect(showdownService.resolve).toHaveBeenCalledTimes(1);
     expect(finalStep.activeShowdown?.answer).toBe('42');
-    expect(finalStep.activeShowdown?.winnerTeamId).toBe(31);
-    expect(finalStep.leaderboard).toEqual([
-      {
-        teamId: 31,
-        teamName: 'Team A',
-        totalPoints: 12,
-        bonusPoints: 5,
-        roundPoints: [],
-      },
-    ]);
+    expect(finalStep.activeShowdown?.winnerTeamId).toBe(teamA.teamId);
+    expect(finalStep.leaderboard).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          teamId: teamA.teamId,
+          totalPoints: TIED_TEAM_POINTS + SHOWDOWN_POINTS,
+          bonusPoints: SHOWDOWN_POINTS,
+        }),
+        expect.objectContaining({
+          teamId: teamB.teamId,
+          totalPoints: TIED_TEAM_POINTS,
+          bonusPoints: 0,
+        }),
+      ]),
+    );
 
-    // A repeated ADVANCE at the final step is a harmless no-op.
-    const repeated = await service.applyAction(joinCode, 'ADVANCE');
+    // A repeated ADVANCE at the final step is a harmless no-op: the round
+    // isn't resolved (and the bonus isn't awarded) a second time.
+    const repeated = await game.act('ADVANCE');
     expect(repeated.showdownRevealStep).toBe(3);
-    expect(showdownService.resolve).toHaveBeenCalledTimes(1);
+    expect(bonusByTeam(repeated)).toEqual({
+      'Team A': SHOWDOWN_POINTS,
+      'Team B': 0,
+    });
   });
 
   it('walks PREVIOUS backward without resolving', async () => {
-    const answerService = createFakeAnswerService();
-    const showdownService = createFakeShowdownService();
-    const service = await buildServiceAtEnded(
-      answerService,
-      showdownService,
-      joinCode,
-    );
-    const round = twoTeamRound();
-    round.participants[0].guess = '40';
-    round.participants[1].guess = '50';
-    service.showdownRoundCreated(joinCode, round);
-    await service.applyAction(joinCode, 'ADVANCE'); // step 1
-    await service.applyAction(joinCode, 'ADVANCE'); // step 2
+    await endQuiz();
+    await createRound();
+    await guess(0, '40');
+    await guess(1, '50');
+    await game.act('ADVANCE'); // step 1
+    await game.act('ADVANCE'); // step 2
 
-    const back = await service.applyAction(joinCode, 'PREVIOUS');
+    const back = await game.act('PREVIOUS');
     expect(back.showdownRevealStep).toBe(1);
-    expect(showdownService.resolve).not.toHaveBeenCalled();
+    expect(bonusByTeam(back)).toEqual({ 'Team A': 0, 'Team B': 0 });
 
     // PREVIOUS at step 0 is a harmless no-op.
-    await service.applyAction(joinCode, 'PREVIOUS');
-    const atZero = await service.applyAction(joinCode, 'PREVIOUS');
+    await game.act('PREVIOUS');
+    const atZero = await game.act('PREVIOUS');
     expect(atZero.showdownRevealStep).toBe(0);
   });
 });

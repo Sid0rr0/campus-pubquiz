@@ -3,30 +3,36 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
 } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
 import {
   TEST_MODERATOR_USER,
   TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
   asSocket,
-  type MockSessionService,
-} from './test-utils';
+  createMockSocket,
+} from '@/game/__tests__/test-utils';
+import {
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — connection', () => {
-  let gateway: GameGateway;
-  let sessionService: MockSessionService;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
 
   beforeEach(async () => {
-    ({ gateway, sessionService } = await createTestGateway());
+    game = await harness.createGateway();
   });
 
   it('joins a connecting display client to the display room and sends a state snapshot', async () => {
-    const client = createMockSocket(SOCKET_ROOMS.DISPLAY);
-    await gateway.handleConnection(asSocket(client));
+    const client = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.join).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.DISPLAY),
+      sessionRoom(game.joinCode, SOCKET_ROOMS.DISPLAY),
     );
     expect(client.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_SYNC,
@@ -38,26 +44,36 @@ describe('GameGateway — connection', () => {
   });
 
   it('includes the session join code in the snapshot sent on connection', async () => {
-    const client = createMockSocket(SOCKET_ROOMS.DISPLAY);
-    await gateway.handleConnection(asSocket(client));
+    const client = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.STATE_SYNC,
-      expect.objectContaining({ joinCode: 'ABCDEF' }),
+      expect.objectContaining({ joinCode: game.joinCode }),
     );
   });
 
   it('disconnects a client that connects without a recognized role', async () => {
-    const client = createMockSocket('not-a-real-room');
-    await gateway.handleConnection(asSocket(client));
+    const client = createMockSocket(
+      'not-a-real-room',
+      {},
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.join).not.toHaveBeenCalled();
     expect(client.disconnect).toHaveBeenCalled();
   });
 
   it('disconnects a client that connects with no role at all', async () => {
-    const client = createMockSocket();
-    await gateway.handleConnection(asSocket(client));
+    const client = createMockSocket(undefined, {}, 'socket-1', game.joinCode);
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.join).not.toHaveBeenCalled();
     expect(client.disconnect).toHaveBeenCalled();
@@ -65,7 +81,7 @@ describe('GameGateway — connection', () => {
 
   it('disconnects a client that connects with no session code at all', async () => {
     const client = createMockSocket(SOCKET_ROOMS.DISPLAY, {}, 'socket-1', null);
-    await gateway.handleConnection(asSocket(client));
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.join).not.toHaveBeenCalled();
     expect(client.emit).toHaveBeenCalledWith(
@@ -82,7 +98,7 @@ describe('GameGateway — connection', () => {
       'socket-1',
       'NOTREAL',
     );
-    await gateway.handleConnection(asSocket(client));
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.join).not.toHaveBeenCalled();
     expect(client.emit).toHaveBeenCalledWith(
@@ -93,22 +109,28 @@ describe('GameGateway — connection', () => {
   });
 
   it('joins an admin client that presents a valid session token', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
+      sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN),
     );
     expect(admin.disconnect).not.toHaveBeenCalled();
   });
 
   it('sends presenter context to a connecting admin client, so /remote has something to show before the next admin action', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(admin));
 
     expect(admin.emit).toHaveBeenCalledWith(
       SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
@@ -117,8 +139,13 @@ describe('GameGateway — connection', () => {
   });
 
   it('never sends presenter context to a connecting display client', async () => {
-    const client = createMockSocket(SOCKET_ROOMS.DISPLAY);
-    await gateway.handleConnection(asSocket(client));
+    const client = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(client.emit).not.toHaveBeenCalledWith(
       SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
@@ -128,27 +155,34 @@ describe('GameGateway — connection', () => {
 
   it('joins a moderator client that presents a valid session token', async () => {
     const moderatorToken = 'moderator-token';
-    sessionService.validate.mockImplementation((token: string | undefined) =>
-      Promise.resolve(
-        token === moderatorToken ? { user: TEST_MODERATOR_USER } : null,
-      ),
+    game.sessionService.validate.mockImplementation(
+      (token: string | undefined) =>
+        Promise.resolve(
+          token === moderatorToken ? { user: TEST_MODERATOR_USER } : null,
+        ),
     );
-    const moderator = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: moderatorToken,
-    });
-    await gateway.handleConnection(asSocket(moderator));
+    const moderator = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: moderatorToken },
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(moderator));
 
     expect(moderator.join).toHaveBeenCalledWith(
-      sessionRoom('ABCDEF', SOCKET_ROOMS.ADMIN),
+      sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN),
     );
     expect(moderator.disconnect).not.toHaveBeenCalled();
   });
 
   it('disconnects an admin client with an invalid or expired token', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: 'wrong-token',
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: 'wrong-token' },
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).not.toHaveBeenCalled();
     expect(admin.emit).toHaveBeenCalledWith(
@@ -159,8 +193,13 @@ describe('GameGateway — connection', () => {
   });
 
   it('disconnects an admin client with no token at all', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN);
-    await gateway.handleConnection(asSocket(admin));
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      {},
+      'socket-1',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(admin));
 
     expect(admin.join).not.toHaveBeenCalled();
     expect(admin.emit).toHaveBeenCalledWith(

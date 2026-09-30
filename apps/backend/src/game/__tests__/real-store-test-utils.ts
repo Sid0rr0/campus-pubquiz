@@ -7,8 +7,12 @@ import {
   DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  sessionRoom,
+  type GameAction,
   type QuestionType,
   type SessionSettings,
+  type SocketRoomName,
+  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -47,6 +51,7 @@ import {
   createMockServer,
   createMockSocket,
   type MockServer,
+  type MockSessionService,
   type MockSocket,
 } from '@/game/__tests__/test-utils';
 
@@ -64,11 +69,87 @@ export interface SeededQuestionIds {
   audio: number;
 }
 
+/** One question of a custom quiz; `payload` carries options / matchTargets / mediaUrl / answerMediaUrl like the imported column. */
+export interface QuizQuestionSpec {
+  type: QuestionType;
+  prompt: string;
+  answer: string;
+  points?: number;
+  /** Host-only note shown on /remote. */
+  notes?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface QuizRoundSpec {
+  title: string;
+  breakAfter?: boolean;
+  kahootMode?: boolean;
+  questions: QuizQuestionSpec[];
+}
+
+/** Host-only note on the first question of TWO_ROUND_QUIZ — never allowed into a broadcast. */
+export const TWO_ROUND_QUIZ_HOST_NOTE = 'Remind teams: EU capitals only.';
+
+/**
+ * Two rounds, four questions: round 1 (no break) then round 2 (breakAfter),
+ * so one block spans both rounds. Covers a note, question media and answer
+ * media, for specs about progression, reveal and what a snapshot exposes.
+ */
+export const TWO_ROUND_QUIZ: QuizRoundSpec[] = [
+  {
+    title: 'General Knowledge',
+    questions: [
+      {
+        type: 'multiple_choice',
+        prompt: 'Capital of France?',
+        answer: 'Paris',
+        points: 2,
+        notes: TWO_ROUND_QUIZ_HOST_NOTE,
+        payload: { options: ['Paris', 'London', 'Berlin', 'Rome'] },
+      },
+      {
+        type: 'free_text',
+        prompt: 'Name the largest planet in the solar system.',
+        answer: 'Jupiter',
+        points: 2,
+      },
+    ],
+  },
+  {
+    title: 'Landmarks & Flags',
+    breakAfter: true,
+    questions: [
+      {
+        type: 'free_text',
+        prompt: 'Which landmark is shown?',
+        answer: 'Eiffel Tower',
+        points: 3,
+        payload: { mediaUrl: 'https://example.com/landmark.jpg' },
+      },
+      {
+        type: 'free_text',
+        prompt: 'Name this flag.',
+        answer: 'France',
+        points: 3,
+        payload: { answerMediaUrl: 'https://example.com/france-flag.jpg' },
+      },
+    ],
+  },
+];
+
+export interface SeededRoundIds {
+  id: number;
+  questionIds: number[];
+}
+
 export interface PlayableQuiz {
   quizId: number;
   gameSessionId: number;
   joinCode: string;
+  /** The default quiz's questions by kind. Reading it on a quiz seeded from `rounds` throws — use `rounds` there. */
   questionIds: SeededQuestionIds;
+  /** Every seeded round with its question ids, in quiz order. */
+  rounds: SeededRoundIds[];
 }
 
 /** An emit captured from the mock server, with every room it was addressed to (`to(a).to(b).emit(...)` reaches both). */
@@ -81,6 +162,9 @@ export interface RoomEmit {
 export interface JoinedTeam {
   socket: MockSocket;
   teamId: number;
+  /** What JOIN_ACCEPTED handed the phone — a second device rejoins the team with either. */
+  teamToken: string;
+  teamCode: string;
 }
 
 export interface RealStoreGateway extends PlayableQuiz {
@@ -92,18 +176,35 @@ export interface RealStoreGateway extends PlayableQuiz {
   showdownService: ShowdownService;
   /** Every room emit since the last clearEmits(), in emit order. */
   roomEmits: () => readonly RoomEmit[];
+  /** Payloads of one event emitted to one room (of this session) since the last clearEmits(), in emit order. */
+  payloadsTo: <T>(room: SocketRoomName, event: string) => T[];
   /** Forgets captured room emits and per-socket emits sent so far. */
   clearEmits: () => void;
   /** Runs `work` in its own request context, for a test that calls a service directly the way a REST controller would. */
   inRequestContext: <T>(work: () => Promise<T>) => Promise<T>;
-  /** Connects an admin socket (valid session cookie) to the seeded session. */
-  connectAdmin: () => Promise<MockSocket>;
+  /** Connects an admin socket (valid session cookie) to the seeded session, or to another session by `joinCode`. */
+  connectAdmin: (joinCode?: string) => Promise<MockSocket>;
+  /** Connects a players-room socket without joining a team (`id` defaults to the next `player-N`). */
+  connectPlayer: (id?: string) => Promise<MockSocket>;
   /** Connects a players-room socket and joins it as `teamName`. */
   joinTeam: (teamName: string) => Promise<JoinedTeam>;
+  /** The fake session service behind admin logins, for a test that needs a different user (e.g. a moderator). */
+  sessionService: MockSessionService;
   /** Admin START_QUIZ, then ADVANCE past the rules screen and round intro to the first question. */
   openFirstQuestion: (admin: MockSocket) => Promise<void>;
   /** The teams joined by createGateway({ teamNames }), in the same order. */
   teams: JoinedTeam[];
+  /**
+   * The Live session module, for the calls REST controllers make (create /
+   * close a session, update settings) — game events go through the gateway.
+   */
+  gameState: GameStateService;
+  /** Sends an admin action through the gateway (connecting an admin on first use) and returns the snapshot the admin room received for it. Throws whatever the gateway rejects with. */
+  act: (action: GameAction) => Promise<StateSnapshotPayload>;
+  /** The snapshot a freshly connecting client is handed — what a reconnect sees — for the seeded session, or another by `joinCode`. */
+  snapshot: (joinCode?: string) => Promise<StateSnapshotPayload>;
+  /** Rebuilds the module and gateway over the same database, as a backend restart would: progress and timers come back from persistence, sockets and connected teams do not. */
+  restart: () => Promise<RealStoreGateway>;
 }
 
 export interface CreateGatewayOptions {
@@ -113,6 +214,8 @@ export interface CreateGatewayOptions {
   joinCode?: string;
   /** Makes the seeded round a kahootMode round. */
   kahootMode?: boolean;
+  /** Seeds these rounds instead of the default single playable round (`kahootMode` is ignored). */
+  rounds?: QuizRoundSpec[];
   /** Overrides on top of DEFAULT_SESSION_SETTINGS (e.g. a 1s lockGraceSeconds so a timer fires within a test). */
   settings?: Partial<SessionSettings>;
 }
@@ -171,6 +274,32 @@ const PLAYABLE_QUESTIONS: Record<keyof SeededQuestionIds, SeedQuestion> = {
   },
 };
 
+const QUESTION_KINDS = Object.keys(
+  PLAYABLE_QUESTIONS,
+) as (keyof SeededQuestionIds)[];
+
+function defaultQuestionIds(questions: { id: number }[]): SeededQuestionIds {
+  return Object.fromEntries(
+    QUESTION_KINDS.map((kind, index) => [kind, questions[index].id]),
+  ) as unknown as SeededQuestionIds;
+}
+
+// A custom quiz has no "the multiple-choice question", so reading one fails
+// loudly instead of yielding an id that belongs to nothing.
+function unavailableQuestionIds(): SeededQuestionIds {
+  const ids = {};
+  for (const kind of QUESTION_KINDS) {
+    Object.defineProperty(ids, kind, {
+      get: () => {
+        throw new Error(
+          `questionIds.${kind} only exists on the default quiz — use rounds`,
+        );
+      },
+    });
+  }
+  return ids as SeededQuestionIds;
+}
+
 /**
  * Gateway test harness backed by the real answer, team, bonus, showdown,
  * seed and game-progress modules on a Postgres testcontainer — the
@@ -184,6 +313,7 @@ const PLAYABLE_QUESTIONS: Record<keyof SeededQuestionIds, SeedQuestion> = {
 export function setupRealStoreGatewayTest(): RealStoreHarness {
   let container: StartedPostgreSqlContainer;
   let orm: MikroORM;
+  let gateways: GameGateway[] = [];
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -205,6 +335,10 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   });
 
   afterEach(async () => {
+    // Armed lock/kahoot timers would otherwise fire into truncated tables
+    // and keep the worker alive.
+    gateways.forEach((gateway) => gateway.onModuleDestroy());
+    gateways = [];
     await orm.em.getConnection().execute(TRUNCATE_GAME_TABLES);
   });
 
@@ -213,34 +347,55 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   ): Promise<PlayableQuiz> {
     const em = orm.em.fork();
     const quiz = em.create(Quiz, { title: 'Real Store Quiz' });
-    const round = em.create(Round, {
-      quiz,
-      title: 'Round 1',
-      orderIndex: 0,
-      breakAfter: true,
-      kahootMode: options.kahootMode ?? false,
-    });
-    const [multipleChoice, freeText, closestGuess, match, audio] =
-      Object.values(PLAYABLE_QUESTIONS).map((seed, orderIndex) =>
-        em.create(Question, { round, orderIndex, ...seed }),
+    const isDefaultQuiz = options.rounds === undefined;
+    const roundSpecs: QuizRoundSpec[] = options.rounds ?? [
+      {
+        title: 'Round 1',
+        breakAfter: true,
+        kahootMode: options.kahootMode ?? false,
+        questions: Object.values(PLAYABLE_QUESTIONS),
+      },
+    ];
+    const rounds = roundSpecs.map((spec, orderIndex) => {
+      const round = em.create(Round, {
+        quiz,
+        title: spec.title,
+        orderIndex,
+        breakAfter: spec.breakAfter ?? false,
+        kahootMode: spec.kahootMode ?? false,
+      });
+      const questions = spec.questions.map((question, questionIndex) =>
+        em.create(Question, {
+          round,
+          orderIndex: questionIndex,
+          type: question.type,
+          prompt: question.prompt,
+          answer: question.answer,
+          points: question.points ?? 1,
+          notes: question.notes,
+          payload: question.payload ?? {},
+        }),
       );
+      return { round, questions };
+    });
     const session = em.create(GameSession, {
       quiz,
       joinCode: options.joinCode ?? REAL_STORE_JOIN_CODE,
       settings: { ...DEFAULT_SESSION_SETTINGS, ...options.settings },
     });
     await em.flush();
+    const questionIds = isDefaultQuiz
+      ? defaultQuestionIds(rounds[0].questions)
+      : unavailableQuestionIds();
     return {
       quizId: quiz.id,
       gameSessionId: session.id,
       joinCode: session.joinCode,
-      questionIds: {
-        multipleChoice: multipleChoice.id,
-        freeText: freeText.id,
-        closestGuess: closestGuess.id,
-        match: match.id,
-        audio: audio.id,
-      },
+      questionIds,
+      rounds: rounds.map(({ round, questions }) => ({
+        id: round.id,
+        questionIds: questions.map((question) => question.id),
+      })),
     };
   }
 
@@ -310,6 +465,16 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     options: CreateGatewayOptions = {},
   ): Promise<RealStoreGateway> {
     const quiz = await seedPlayableQuiz(options);
+    const game = await assemble(quiz);
+    for (const teamName of options.teamNames ?? []) {
+      game.teams.push(await game.joinTeam(teamName));
+    }
+    return game;
+  }
+
+  // Builds the module and gateway over the database as it stands — the
+  // first boot of a freshly seeded quiz, or a restart over the same one.
+  async function assemble(quiz: PlayableQuiz): Promise<RealStoreGateway> {
     const services = buildServices();
     const gameState = new GameStateService(
       services.seedService,
@@ -319,15 +484,17 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.showdownService,
     );
     await gameState.onModuleInit();
+    const sessionService = createFakeSessionService();
     const gateway = new GameGateway(
       gameState,
       services.teamService,
       services.answerService,
       services.bonusService,
-      asSessionService(createFakeSessionService()),
+      asSessionService(sessionService),
       orm,
       services.showdownService,
     );
+    gateways.push(gateway);
     const server = createMockServer();
     gateway.server = asServer(server);
     const emits = captureRoomEmits(server);
@@ -335,38 +502,46 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     let socketCount = 0;
     const nextSocketId = (prefix: string) => `${prefix}-${socketCount++}`;
 
-    const connectAdmin = async () => {
+    const connectAdmin = async (joinCode = quiz.joinCode) => {
       const admin = createMockSocket(
         SOCKET_ROOMS.ADMIN,
         { token: TEST_SESSION_TOKEN },
         nextSocketId('admin'),
-        quiz.joinCode,
+        joinCode,
       );
       await gateway.handleConnection(asSocket(admin));
       server.sockets.sockets.set(admin.id, admin);
       return admin;
     };
 
-    const joinTeam = async (teamName: string): Promise<JoinedTeam> => {
+    const connectPlayer = async (id?: string): Promise<MockSocket> => {
       const socket = createMockSocket(
         SOCKET_ROOMS.PLAYERS,
         {},
-        nextSocketId('player'),
+        id ?? nextSocketId('player'),
         quiz.joinCode,
       );
       await gateway.handleConnection(asSocket(socket));
       server.sockets.sockets.set(socket.id, socket);
+      return socket;
+    };
+
+    const joinTeam = async (teamName: string): Promise<JoinedTeam> => {
+      const socket = await connectPlayer();
       await gateway.handleJoinPlayers(asSocket(socket), {
         teamName,
         joinCode: quiz.joinCode,
       });
       const accepted = socket.emit.mock.calls.find(
         ([event]) => event === SOCKET_EVENTS.JOIN_ACCEPTED,
-      ) as [string, { teamId: number }] | undefined;
+      ) as
+        | [string, { teamId: number; teamToken: string; teamCode: string }]
+        | undefined;
       if (!accepted) {
         throw new Error(`Team "${teamName}" was not accepted into the session`);
       }
-      return { socket, teamId: accepted[1].teamId };
+      const { teamId, teamToken, teamCode } = accepted[1];
+      return { socket, teamId, teamToken, teamCode };
     };
 
     const openFirstQuestion = async (admin: MockSocket) => {
@@ -376,28 +551,122 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       await gateway.handleAdminAction(adminSocket, { action: 'ADVANCE' }); // -> first question
     };
 
-    const teams: JoinedTeam[] = [];
-    for (const teamName of options.teamNames ?? []) {
-      teams.push(await joinTeam(teamName));
-    }
+    let actingAdmin: MockSocket | undefined;
+    const act = async (action: GameAction): Promise<StateSnapshotPayload> => {
+      actingAdmin ??= await connectAdmin();
+      const emitsBefore = emits.length;
+      await gateway.handleAdminAction(asSocket(actingAdmin), { action });
+      const adminRoom = sessionRoom(quiz.joinCode, SOCKET_ROOMS.ADMIN);
+      const received = emits
+        .slice(emitsBefore)
+        .filter(
+          (emit) =>
+            emit.rooms.includes(adminRoom) &&
+            emit.event === SOCKET_EVENTS.STATE_UPDATED,
+        );
+      const latest = received[received.length - 1];
+      if (!latest) throw new Error(`${action} pushed no state snapshot`);
+      return latest.payload as StateSnapshotPayload;
+    };
+
+    const snapshot = async (
+      joinCode = quiz.joinCode,
+    ): Promise<StateSnapshotPayload> => {
+      const display = createMockSocket(
+        SOCKET_ROOMS.DISPLAY,
+        {},
+        nextSocketId('display'),
+        joinCode,
+      );
+      await gateway.handleConnection(asSocket(display));
+      const sync = display.emit.mock.calls.find(
+        ([event]) => event === SOCKET_EVENTS.STATE_SYNC,
+      ) as [string, StateSnapshotPayload] | undefined;
+      if (!sync) throw new Error('A connecting client received no snapshot');
+      return sync[1];
+    };
 
     return {
       ...quiz,
       ...services,
       gateway,
       server,
+      gameState,
       roomEmits: () => emits,
+      payloadsTo: <T>(room: SocketRoomName, event: string) => {
+        const fullRoom = sessionRoom(quiz.joinCode, room);
+        return emits
+          .filter(
+            (emit) => emit.rooms.includes(fullRoom) && emit.event === event,
+          )
+          .map((emit) => emit.payload as T);
+      },
       clearEmits: () => {
         emits.length = 0;
         server.sockets.sockets.forEach((socket) => socket.emit.mockClear());
       },
       inRequestContext: (work) => RequestContext.create(orm.em, work),
       connectAdmin,
+      connectPlayer,
       joinTeam,
+      sessionService,
       openFirstQuestion,
-      teams,
+      teams: [],
+      act,
+      snapshot,
+      restart: () => assemble(quiz),
     };
   }
 
   return { createGateway };
+}
+
+/** Opens the default quiz's first question and has each team answer it correctly (2 points each), so those teams tie on the board. */
+export async function tieOnFirstQuestion(
+  game: RealStoreGateway,
+  teams: JoinedTeam[],
+): Promise<void> {
+  await game.act('START_QUIZ');
+  await game.act('ADVANCE'); // -> round_intro
+  await game.act('ADVANCE'); // -> first question
+  for (const { socket, teamId } of teams) {
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId: game.questionIds.multipleChoice,
+      teamId,
+      value: 'Paris',
+    });
+  }
+}
+
+// Fakes only Date: timers, microtasks and I/O scheduling stay real, so the
+// Postgres-backed stores keep working while a test pins and moves "now".
+const ALL_BUT_DATE: FakeableAPI[] = [
+  'hrtime',
+  'nextTick',
+  'performance',
+  'queueMicrotask',
+  'requestAnimationFrame',
+  'cancelAnimationFrame',
+  'requestIdleCallback',
+  'cancelIdleCallback',
+  'setImmediate',
+  'clearImmediate',
+  'setInterval',
+  'clearInterval',
+  'setTimeout',
+  'clearTimeout',
+];
+
+/** Pins Date.now() at `iso` without touching any timer; undo with restoreClock(). */
+export function freezeClockAt(iso: string): void {
+  jest.useFakeTimers({ doNotFake: ALL_BUT_DATE, now: new Date(iso).getTime() });
+}
+
+/** Moves the pinned clock forward; no pending timer fires. */
+export function advanceClockBy(milliseconds: number): void {
+  jest.setSystemTime(Date.now() + milliseconds);
+}
+
+export function restoreClock(): void {
+  jest.useRealTimers();
 }

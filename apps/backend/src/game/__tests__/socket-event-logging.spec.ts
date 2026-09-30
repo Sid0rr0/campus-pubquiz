@@ -1,23 +1,23 @@
 import { Logger } from '@nestjs/common';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
-import type { GameGateway } from '@/game/game.gateway';
 import {
   TEST_SESSION_TOKEN,
-  createMockSocket,
-  createTestGateway,
-  openFirstQuestion,
   asSocket,
-  type MockServer,
-} from './test-utils';
+  createMockSocket,
+} from '@/game/__tests__/test-utils';
+import {
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
 describe('GameGateway — socket event logging', () => {
-  let gateway: GameGateway;
-  let server: MockServer;
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
   let logSpy: jest.SpyInstance;
   let warnSpy: jest.SpyInstance;
 
   beforeEach(async () => {
-    ({ gateway, server } = await createTestGateway());
+    game = await harness.createGateway();
     logSpy = jest
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
@@ -32,10 +32,15 @@ describe('GameGateway — socket event logging', () => {
   });
 
   it('logs a successful connection with the socket id and role', async () => {
-    const display = createMockSocket(SOCKET_ROOMS.DISPLAY);
-    await gateway.handleConnection(asSocket(display));
+    const display = createMockSocket(
+      SOCKET_ROOMS.DISPLAY,
+      {},
+      'display-7',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(display));
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('socket-1'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('display-7'));
 
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining(SOCKET_ROOMS.DISPLAY),
@@ -43,8 +48,13 @@ describe('GameGateway — socket event logging', () => {
   });
 
   it('warns when a connection is rejected for an unrecognized role', async () => {
-    const client = createMockSocket('not-a-real-room');
-    await gateway.handleConnection(asSocket(client));
+    const client = createMockSocket(
+      'not-a-real-room',
+      {},
+      'stranger',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(client));
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('not-a-real-room'),
@@ -52,21 +62,27 @@ describe('GameGateway — socket event logging', () => {
   });
 
   it('warns when an admin connection is rejected for an invalid session token', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: 'wrong-token',
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: 'wrong-token' },
+      'bad-admin',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(admin));
 
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('session'));
   });
 
   it('logs an ADMIN_ACTION event with the action name', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
-    });
-    await gateway.handleConnection(asSocket(admin));
+    const admin = createMockSocket(
+      SOCKET_ROOMS.ADMIN,
+      { token: TEST_SESSION_TOKEN },
+      'good-admin',
+      game.joinCode,
+    );
+    await game.gateway.handleConnection(asSocket(admin));
 
-    await gateway.handleAdminAction(asSocket(admin), {
+    await game.gateway.handleAdminAction(asSocket(admin), {
       action: 'START_QUIZ',
     });
 
@@ -77,12 +93,7 @@ describe('GameGateway — socket event logging', () => {
   });
 
   it('logs a JOIN_PLAYERS event with the team name', async () => {
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
+    await game.joinTeam('The Quizzards');
 
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining(SOCKET_EVENTS.JOIN_PLAYERS),
@@ -93,40 +104,56 @@ describe('GameGateway — socket event logging', () => {
   });
 
   it('logs a SUBMIT_ANSWER event with the question and team ids', async () => {
-    await openFirstQuestion(gateway, server);
-    const player = createMockSocket(SOCKET_ROOMS.PLAYERS);
-    await gateway.handleConnection(asSocket(player));
-    await gateway.handleJoinPlayers(asSocket(player), {
-      teamName: 'The Quizzards',
-    });
+    const admin = await game.connectAdmin();
+    const { socket: team, teamId } = await game.joinTeam('The Quizzards');
+    await game.openFirstQuestion(admin);
+    const questionId = game.questionIds.multipleChoice;
 
-    await gateway.handleSubmitAnswer(asSocket(player), {
-      questionId: 21,
-      teamId: 31,
+    await game.gateway.handleSubmitAnswer(asSocket(team), {
+      questionId,
+      teamId,
       value: 'Banana',
     });
 
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining(SOCKET_EVENTS.SUBMIT_ANSWER),
     );
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('21'));
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('31'));
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`questionId=${questionId}`),
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`teamId=${teamId}`),
+    );
   });
 
   it('logs a GRADE_ANSWER event with the answer id and points', async () => {
-    const admin = createMockSocket(SOCKET_ROOMS.ADMIN, {
-      token: TEST_SESSION_TOKEN,
+    const admin = await game.connectAdmin();
+    const { socket: team, teamId } = await game.joinTeam('The Quizzards');
+    await game.openFirstQuestion(admin);
+    await game.gateway.handleSubmitAnswer(asSocket(team), {
+      questionId: game.questionIds.multipleChoice,
+      teamId,
+      value: 'Paris',
     });
-    await gateway.handleConnection(asSocket(admin));
+    const [{ answers }] = game.payloadsTo<{ answers: { answerId: number }[] }>(
+      SOCKET_ROOMS.ADMIN,
+      SOCKET_EVENTS.ANSWERS_UPDATED,
+    );
+    const { answerId } = answers[0];
 
-    await gateway.handleGradeAnswer(asSocket(admin), {
-      answerId: 41,
-      pointsAwarded: 2,
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
+      pointsAwarded: 1,
     });
 
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining(SOCKET_EVENTS.GRADE_ANSWER),
     );
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('41'));
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`answerId=${answerId}`),
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('pointsAwarded=1'),
+    );
   });
 });

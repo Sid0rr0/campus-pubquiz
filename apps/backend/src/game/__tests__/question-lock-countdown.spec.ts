@@ -1,193 +1,142 @@
-import { GameStateService } from '@/game/state/game-state.service';
+import type { GameAction } from '@campus-pubquiz/types';
 import {
-  createFakeOrm,
-  createFakeGameProgressRepository,
-  createFakeGameStateSeedService,
-  createFakeAnswerService,
-  asSeedService,
-  asGameProgressRepository,
-  asAnswerService,
-  GAME_STATE_FIXTURE_SEEDED_GAME,
-  createFakeShowdownService,
-  asShowdownService,
-} from './test-utils';
+  TWO_ROUND_QUIZ,
+  advanceClockBy,
+  freezeClockAt,
+  restoreClock,
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
 
-describe('GameStateService — question lock countdown', () => {
-  let service: GameStateService;
-  let joinCode: string;
+const START_OF_TIME = '2024-01-01T00:00:00.000Z';
+const DEFAULT_LOCK_GRACE_MS = 60_000;
+const CUSTOM_LOCK_GRACE_SECONDS = 15;
+
+const TO_LAST_QUESTION: GameAction[] = [
+  'START_QUIZ',
+  'ADVANCE', // -> round_intro(0)
+  'ADVANCE', // -> r1q1
+  'ADVANCE', // -> r1q2
+  'ADVANCE', // -> round_intro(1)
+  'ADVANCE', // -> r2q1
+  'ADVANCE', // -> r2q2 (last, breakAfter, still open)
+];
+const TO_LOCKING: GameAction[] = [...TO_LAST_QUESTION, 'ADVANCE']; // lock armed
+
+describe('GameGateway — question lock countdown', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  async function actAll(actions: GameAction[], from = game) {
+    let snapshot = await from.snapshot();
+    for (const action of actions) {
+      snapshot = await from.act(action);
+    }
+    return snapshot;
+  }
 
   beforeEach(async () => {
-    service = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await service.onModuleInit();
-    joinCode = 'ABCDEF';
-  });
-
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
+    game = await harness.createGateway({ rounds: TWO_ROUND_QUIZ });
+    freezeClockAt(START_OF_TIME);
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    restoreClock();
   });
 
-  it('has no lock armed in the lobby', () => {
-    expect(service.getQuestionLockAt(joinCode)).toBeNull();
+  it('has no lock armed in the lobby', async () => {
+    expect((await game.snapshot()).questionLockAt).toBeNull();
   });
 
   it('does not arm a lock on the last question of a round with breakAfter: false', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2 (last of round 1, breakAfter: false)
-    expect(service.getQuestionLockAt(joinCode)).toBeNull();
-  });
-
-  it('does not arm a lock on the first question of a breakAfter round', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    expect(service.getQuestionLockAt(joinCode)).toBeNull();
-  });
-
-  it('does not arm a lock while merely sitting on the last question of a breakAfter round', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    const snapshot = await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2 (last, breakAfter, still open)
-
-    expect(snapshot.progress.status).toBe('question_open');
-    expect(service.getQuestionLockAt(joinCode)).toBeNull();
+    const snapshot = await actAll([
+      'START_QUIZ',
+      'ADVANCE', // -> round_intro(0)
+      'ADVANCE', // -> r1q1
+      'ADVANCE', // -> r1q2 (last of round 1, breakAfter: false)
+    ]);
     expect(snapshot.questionLockAt).toBeNull();
   });
 
+  it('does not arm a lock on the first question of a breakAfter round', async () => {
+    const snapshot = await actAll(TO_LAST_QUESTION.slice(0, -1)); // -> r2q1
+    expect(snapshot.questionLockAt).toBeNull();
+  });
+
+  it('does not arm a lock while merely sitting on the last question of a breakAfter round', async () => {
+    const snapshot = await actAll(TO_LAST_QUESTION);
+
+    expect(snapshot.progress.status).toBe('question_open');
+    expect(snapshot.questionLockAt).toBeNull();
+    expect((await game.snapshot()).questionLockAt).toBeNull();
+  });
+
   it('arms a 60s lock deadline once the admin advances into the locking countdown', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
-    const locking = await service.applyAction(joinCode, 'ADVANCE'); // -> locking
+    const locking = await actAll(TO_LOCKING);
 
     expect(locking.progress.status).toBe('locking');
-    expect(service.getQuestionLockAt(joinCode)).toBe(Date.now() + 60_000);
-    expect(locking.questionLockAt).toBe(Date.now() + 60_000);
+    expect(locking.questionLockAt).toBe(Date.now() + DEFAULT_LOCK_GRACE_MS);
+    expect((await game.snapshot()).questionLockAt).toBe(
+      Date.now() + DEFAULT_LOCK_GRACE_MS,
+    );
   });
 
   it('clears the lock when the admin steps back from locking to the last question', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> locking, lock armed
+    await actAll(TO_LOCKING);
 
-    const back = await service.applyAction(joinCode, 'PREVIOUS'); // -> question_open again
+    const back = await game.act('PREVIOUS'); // -> question_open again
 
     expect(back.progress.status).toBe('question_open');
     expect(back.questionLockAt).toBeNull();
-    expect(service.getQuestionLockAt(joinCode)).toBeNull();
+    expect((await game.snapshot()).questionLockAt).toBeNull();
   });
 
   it('clears the lock once the countdown advances into break', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> locking, lock armed
-    const breakSnapshot = await service.applyAction(joinCode, 'ADVANCE'); // -> break_intro
+    await actAll(TO_LOCKING);
+
+    const breakSnapshot = await game.act('ADVANCE'); // -> break_intro
 
     expect(breakSnapshot.progress.status).toBe('break_intro');
     expect(breakSnapshot.questionLockAt).toBeNull();
-    expect(service.getQuestionLockAt(joinCode)).toBeNull();
+    expect((await game.snapshot()).questionLockAt).toBeNull();
   });
 
   it('clears the lock when a new quiz is selected', async () => {
-    await service.applyAction(joinCode, 'START_QUIZ');
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    await service.applyAction(joinCode, 'ADVANCE'); // -> r2q2
-    await service.applyAction(joinCode, 'ADVANCE'); // -> locking, lock armed
-    await service.applyAction(joinCode, 'END_QUIZ');
+    await actAll(TO_LOCKING);
+    await game.act('END_QUIZ');
 
-    const created = await service.createSession(2);
+    const created = await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
 
-    expect(service.getQuestionLockAt(created.joinCode)).toBeNull();
+    expect(created.questionLockAt).toBeNull();
   });
 
   it('re-arms a fresh lock deadline on rehydrate if restarted mid-countdown', async () => {
-    const rehydratingRepository = createFakeGameProgressRepository({
-      status: 'locking',
-      roundIndex: 1,
-      questionIndex: 1, // last question of round 2 (breakAfter: true)
-      isLeaderboardVisible: false,
-      revealIndex: 0,
-      furthestOpenIndex: 0,
-    });
-    const rehydratedService = new GameStateService(
-      asSeedService(createFakeGameStateSeedService()),
-      asGameProgressRepository(rehydratingRepository),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await rehydratedService.onModuleInit();
+    await actAll(TO_LOCKING);
+    advanceClockBy(10_000); // downtime before the backend comes back
 
-    expect(rehydratedService.getQuestionLockAt('ABCDEF')).toBe(
-      Date.now() + 60_000,
+    const restarted = await game.restart();
+
+    expect((await restarted.snapshot()).questionLockAt).toBe(
+      Date.now() + DEFAULT_LOCK_GRACE_MS,
     );
   });
 
   it('arms the lock deadline using the session-specific lockGraceSeconds instead of the 60s default', async () => {
-    const customSeedService = createFakeGameStateSeedService();
-    customSeedService.seed.mockResolvedValue({
-      ...GAME_STATE_FIXTURE_SEEDED_GAME,
-      settings: {
-        ...GAME_STATE_FIXTURE_SEEDED_GAME.settings,
-        lockGraceSeconds: 15,
-      },
+    restoreClock();
+    const custom = await harness.createGateway({
+      joinCode: 'CUSTOM',
+      rounds: TWO_ROUND_QUIZ,
+      settings: { lockGraceSeconds: CUSTOM_LOCK_GRACE_SECONDS },
     });
-    const customService = new GameStateService(
-      asSeedService(customSeedService),
-      asGameProgressRepository(createFakeGameProgressRepository()),
-      createFakeOrm(),
-      asAnswerService(createFakeAnswerService()),
-      asShowdownService(createFakeShowdownService()),
-    );
-    await customService.onModuleInit();
+    freezeClockAt(START_OF_TIME);
 
-    await customService.applyAction(joinCode, 'START_QUIZ');
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(0)
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> r1q1
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> r1q2
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> round_intro(1)
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> r2q1
-    await customService.applyAction(joinCode, 'ADVANCE'); // -> r2q2
-    const locking = await customService.applyAction(joinCode, 'ADVANCE'); // -> locking
+    const locking = await actAll(TO_LOCKING, custom);
 
     expect(locking.progress.status).toBe('locking');
-    expect(customService.getQuestionLockAt(joinCode)).toBe(Date.now() + 15_000);
+    expect(locking.questionLockAt).toBe(
+      Date.now() + CUSTOM_LOCK_GRACE_SECONDS * 1_000,
+    );
   });
 });
