@@ -47,33 +47,46 @@ describe('RegisterPage', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'authenticated' }));
     render(<RegisterPage />);
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/sessions'));
+    await waitFor(() =>
+      expect(routerRef.replace).toHaveBeenCalledWith('/sessions'),
+    );
   });
 
   it('renders the register form when unauthenticated', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated' }));
     render(<RegisterPage />);
 
-    expect(screen.getByRole('button', { name: /^register$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^register$/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows a validation error and skips the API call when the passwords do not match', async () => {
     const register = vi.fn();
-    mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated', register }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'unauthenticated', register }),
+    );
     render(<RegisterPage />);
 
     await userEvent.type(screen.getByLabelText(/username/i), 'alice');
     await userEvent.type(screen.getByLabelText(/^password$/i), 'hunter2');
-    await userEvent.type(screen.getByLabelText(/confirm password/i), 'different');
+    await userEvent.type(
+      screen.getByLabelText(/confirm password/i),
+      'different',
+    );
     await userEvent.click(screen.getByRole('button', { name: /^register$/i }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/passwords do not match/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /passwords do not match/i,
+    );
     expect(register).not.toHaveBeenCalled();
   });
 
   it('submits matching passwords to auth.register', async () => {
     const register = vi.fn().mockResolvedValue(undefined);
-    mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated', register }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'unauthenticated', register }),
+    );
     render(<RegisterPage />);
 
     await userEvent.type(screen.getByLabelText(/username/i), 'alice');

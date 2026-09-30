@@ -47,7 +47,9 @@ describe('LoginPage', () => {
     mockUseAuth.mockReturnValue(authResult({ status: 'authenticated' }));
     render(<LoginPage />);
 
-    await waitFor(() => expect(routerRef.replace).toHaveBeenCalledWith('/sessions'));
+    await waitFor(() =>
+      expect(routerRef.replace).toHaveBeenCalledWith('/sessions'),
+    );
   });
 
   it('renders the login form when unauthenticated', () => {
@@ -60,7 +62,9 @@ describe('LoginPage', () => {
 
   it('submits the entered credentials to auth.login', async () => {
     const login = vi.fn().mockResolvedValue(undefined);
-    mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated', login }));
+    mockUseAuth.mockReturnValue(
+      authResult({ status: 'unauthenticated', login }),
+    );
     render(<LoginPage />);
 
     await userEvent.type(screen.getByLabelText(/username/i), 'alice');
@@ -71,9 +75,16 @@ describe('LoginPage', () => {
   });
 
   it('shows the auth error returned by useAuth', () => {
-    mockUseAuth.mockReturnValue(authResult({ status: 'unauthenticated', error: 'Invalid username or password' }));
+    mockUseAuth.mockReturnValue(
+      authResult({
+        status: 'unauthenticated',
+        error: 'Invalid username or password',
+      }),
+    );
     render(<LoginPage />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Invalid username or password');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Invalid username or password',
+    );
   });
 });
