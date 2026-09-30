@@ -3,6 +3,7 @@ import type {
   BlockRevealQuestionView,
   GameStatus,
   QuestionType,
+  Verdict,
 } from '@campus-pubquiz/types';
 import type { MyAnswerGrade } from '@/app/lib/use-game-socket';
 
@@ -30,32 +31,14 @@ export interface OpenedQuestionEntry {
   maxPoints: number;
   /** Points awarded for myAnswer, null until this question is revealed (even if it was graded earlier). */
   pointsAwarded: number | null;
+  /** The quiz master's verdict on myAnswer, shown with pointsAwarded — null while either is hidden or ungraded. */
+  verdict: Verdict | null;
 }
 
 function isRevealed(
   question: BlockQuestionView | BlockRevealQuestionView,
 ): question is BlockRevealQuestionView {
   return 'answer' in question;
-}
-
-/**
- * closest_guess is graded automatically in one batch (never through
- * GRADE_ANSWER), so it has no live per-team grade push — its own reveal data
- * already publicly lists every team tied for closest, so points are derived
- * from that instead of myAnswerGrades. Null only when nobody submitted a
- * guess at all (nothing was graded); a team that didn't submit still gets 0
- * once someone else's guess put a real grading result on the board.
- */
-function resolveClosestGuessPoints(
-  question: BlockRevealQuestionView,
-  myTeamName: string | null,
-): number | null {
-  const summary = question.closestGuess;
-  if (!summary?.hasSubmissions) return null;
-  const wasClosest = summary.closestGuesses.some(
-    (guess) => guess.teamName === myTeamName,
-  );
-  return wasClosest ? question.points : 0;
 }
 
 /**
@@ -83,25 +66,22 @@ function isDisplayRevealed(
   );
 }
 
-/** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded (shown once the display has actually stepped to that question — 0 for an unanswered question — even if the answer was actually graded earlier). */
+/** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded plus verdict (shown once the display has actually stepped to that question — 0 for an unanswered question — even if the answer was actually graded earlier). Both come from the team's own synced graded answers, closest_guess included. */
 export function buildOpenedQuestions(
   seenQuestions: Record<number, BlockQuestionView | BlockRevealQuestionView>,
   myAnswers: Record<number, string>,
   myAnswerGrades: Record<number, MyAnswerGrade> = {},
-  myTeamName: string | null = null,
   activeReveal: ActiveRevealWalk | null = null,
 ): OpenedQuestionEntry[] {
   return Object.values(seenQuestions)
     .map((question) => {
       const myAnswer = myAnswers[question.id] ?? null;
       const revealed = isRevealed(question);
-      const pointsAwarded =
-        !revealed || !isDisplayRevealed(question.id, activeReveal)
-          ? null
-          : question.type === 'closest_guess'
-            ? resolveClosestGuessPoints(question, myTeamName)
-            : (myAnswerGrades[question.id]?.pointsAwarded ??
-              (myAnswer === null ? 0 : null));
+      const isShown = revealed && isDisplayRevealed(question.id, activeReveal);
+      const grade = isShown ? myAnswerGrades[question.id] : undefined;
+      const pointsAwarded = !isShown
+        ? null
+        : (grade?.pointsAwarded ?? (myAnswer === null ? 0 : null));
       return {
         id: question.id,
         type: question.type,
@@ -114,6 +94,7 @@ export function buildOpenedQuestions(
         options: question.options,
         maxPoints: question.points,
         pointsAwarded,
+        verdict: grade?.verdict ?? null,
       };
     })
     .sort((a, b) =>

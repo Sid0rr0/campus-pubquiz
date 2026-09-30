@@ -342,7 +342,6 @@ function PlayPageContent() {
     seenQuestions,
     myAnswers,
     myAnswerGrades,
-    team?.teamName ?? null,
     {
       status: progress.status,
       revealIndex: progress.revealIndex,

@@ -101,7 +101,11 @@ describe('PlayPage — answered questions history', () => {
         },
         myAnswers: { 1: 'Banana' },
         myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
+          1: {
+            pointsAwarded: 3,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'partial',
+          },
         },
         seenQuestions: { 1: q1 },
       }),
@@ -109,6 +113,88 @@ describe('PlayPage — answered questions history', () => {
     renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('3 / 5')).toBeInTheDocument();
+  });
+
+  it('labels each graded answer with the verdict the quiz master sees, and a partial match as partial', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const fruit = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+      answer: 'Banana',
+    };
+    const heroes = {
+      id: 2,
+      type: 'match' as const,
+      prompt: 'Match the hero to their weapon.',
+      points: 4,
+      roundNumber: 1,
+      questionNumberInRound: 2,
+      roundTitle: 'Round 1',
+      options: ['arthur', 'captain america'],
+      matchTargets: ['shield', 'excalibur'],
+      answer: 'excalibur|shield',
+    };
+    const planet = {
+      id: 3,
+      type: 'free_text' as const,
+      prompt: 'Name a planet',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 3,
+      roundTitle: 'Round 1',
+      answer: 'Mars',
+    };
+    mockUseGameSocket.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'break' }),
+          currentQuestion: null,
+          blockQuestions: [],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 1: 'Banana', 2: 'excalibur|excalibur', 3: 'Venus' },
+        myAnswerGrades: {
+          1: {
+            pointsAwarded: 5,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'correct',
+          },
+          2: {
+            pointsAwarded: 2,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'partial',
+          },
+          3: {
+            pointsAwarded: 0,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'incorrect',
+          },
+        },
+        seenQuestions: { 1: fruit, 2: heroes, 3: planet },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    const pointsLine = (text: string) =>
+      screen.getByText(text).closest('p') as HTMLElement;
+    expect(
+      within(pointsLine('5 / 5')).getByText('Correct'),
+    ).toBeInTheDocument();
+    expect(
+      within(pointsLine('2 / 4')).getByText('Partial'),
+    ).toBeInTheDocument();
+    expect(
+      within(pointsLine('0 / 5')).getByText('Incorrect'),
+    ).toBeInTheDocument();
   });
 
   it('reveals points in the history panel one question at a time as the display steps through the reveal walk', () => {
@@ -134,8 +220,16 @@ describe('PlayPage — answered questions history', () => {
       answer: 'Mars',
     };
     const myAnswerGrades = {
-      1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
-      2: { pointsAwarded: 5, gradedAt: '2024-01-01T00:00:00.000Z' },
+      1: {
+        pointsAwarded: 3,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+        verdict: 'partial',
+      },
+      2: {
+        pointsAwarded: 5,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+        verdict: 'correct',
+      },
     };
     mockUseGameSocket.mockReturnValue(
       socketResult({
@@ -209,7 +303,11 @@ describe('PlayPage — answered questions history', () => {
         },
         myAnswers: { 1: 'Banana' },
         myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
+          1: {
+            pointsAwarded: 3,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'partial',
+          },
         },
         seenQuestions: { 1: q1 },
       }),

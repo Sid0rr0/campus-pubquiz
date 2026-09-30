@@ -1,6 +1,13 @@
+import type { Verdict } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { formatAnswerValue } from '@/app/lib/format-answer-value';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
+
+const VERDICT_LABELS: Record<Verdict, string> = {
+  correct: 'Correct',
+  partial: 'Partial',
+  incorrect: 'Incorrect',
+};
 
 interface AnsweredQuestionsListProps {
   entries: OpenedQuestionEntry[];
@@ -54,6 +61,11 @@ export function AnsweredQuestionsList({
                   Points:{' '}
                 </span>
                 {entry.pointsAwarded} / {entry.maxPoints}
+                {entry.verdict !== null && (
+                  <span className="ml-2 font-extrabold text-foreground/55">
+                    {VERDICT_LABELS[entry.verdict]}
+                  </span>
+                )}
               </p>
             )}
           </>

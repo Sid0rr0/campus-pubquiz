@@ -69,6 +69,60 @@ describe('GameGateway — team answers sync on reveal entry', () => {
     });
   });
 
+  it('includes the graded closest_guess points and verdict, so phones needn’t look themselves up in the reveal list', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Near', 'Far'],
+      rounds: [
+        {
+          title: 'Estimation',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'closest_guess',
+              prompt: 'How many jelly beans?',
+              answer: '500',
+              points: 3,
+            },
+          ],
+        },
+      ],
+    });
+    const [near, far] = game.teams;
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(await game.connectAdmin());
+    await game.gateway.handleSubmitAnswer(asSocket(near.socket), {
+      questionId,
+      teamId: near.teamId,
+      value: '480',
+    });
+    await game.gateway.handleSubmitAnswer(asSocket(far.socket), {
+      questionId,
+      teamId: far.teamId,
+      value: '650',
+    });
+
+    await advanceUntilStatus(game, 'reveal_intro');
+
+    expect(teamSyncs(game, near.socket.id)[0].payload).toEqual({
+      answers: [
+        expect.objectContaining({
+          questionId,
+          pointsAwarded: 3,
+          verdict: 'correct',
+        }),
+      ],
+    });
+    expect(teamSyncs(game, far.socket.id)[0].payload).toEqual({
+      answers: [
+        expect.objectContaining({
+          questionId,
+          pointsAwarded: 0,
+          verdict: 'incorrect',
+        }),
+      ],
+    });
+  });
+
   it('does not push to a team that is not currently connected', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const [{ socket }] = game.teams;

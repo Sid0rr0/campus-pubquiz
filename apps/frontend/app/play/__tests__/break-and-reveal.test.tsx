@@ -297,7 +297,11 @@ describe('PlayPage — break and reveal', () => {
         },
         myAnswers: { r1q1: 'Mango' },
         myAnswerGrades: {
-          r1q1: { pointsAwarded: 0, gradedAt: '2024-01-01T00:00:00.000Z' },
+          r1q1: {
+            pointsAwarded: 0,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'incorrect',
+          },
         },
         seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
       }),
@@ -332,7 +336,11 @@ describe('PlayPage — break and reveal', () => {
         },
         myAnswers: { r1q1: 'Banana' },
         myAnswerGrades: {
-          r1q1: { pointsAwarded: 5, gradedAt: '2024-01-01T00:00:00.000Z' },
+          r1q1: {
+            pointsAwarded: 5,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'correct',
+          },
         },
         seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
       }),
@@ -369,7 +377,11 @@ describe('PlayPage — break and reveal', () => {
         },
         myAnswers: { r1q1: 'Mango' },
         myAnswerGrades: {
-          r1q1: { pointsAwarded: 0, gradedAt: '2024-01-01T00:00:00.000Z' },
+          r1q1: {
+            pointsAwarded: 0,
+            gradedAt: '2024-01-01T00:00:00.000Z',
+            verdict: 'incorrect',
+          },
         },
         seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
       }),

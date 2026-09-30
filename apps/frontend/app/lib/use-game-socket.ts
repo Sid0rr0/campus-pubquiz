@@ -30,6 +30,7 @@ import {
   type TeamAnswerView,
   type TeamAnswersSyncedPayload,
   type TeamBonusAwardView,
+  type Verdict,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
 
@@ -51,6 +52,8 @@ export interface JoinTeamOptions {
 export interface MyAnswerGrade {
   pointsAwarded: number;
   gradedAt: string;
+  /** How the answer was judged — the same verdict the quiz master sees. */
+  verdict: Verdict | null;
 }
 
 export interface UseGameSocketResult {
@@ -189,6 +192,7 @@ function buildMyAnswerGrades(
         {
           pointsAwarded: answer.pointsAwarded,
           gradedAt: answer.gradedAt as string,
+          verdict: answer.verdict,
         },
       ]),
   );
@@ -396,6 +400,7 @@ export function useGameSocket(
             [payload.questionId]: {
               pointsAwarded: payload.pointsAwarded,
               gradedAt: payload.gradedAt as string,
+              verdict: payload.verdict,
             },
           }));
         }

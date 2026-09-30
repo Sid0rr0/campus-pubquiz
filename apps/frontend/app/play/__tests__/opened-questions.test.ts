@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest';
+import type { MyAnswerGrade } from '@/app/lib/use-game-socket';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
+
+const GRADED_AT = '2024-01-01T00:00:00.000Z';
+
+function closestGuessQuestion(id: number) {
+  return {
+    id,
+    type: 'closest_guess' as const,
+    prompt: 'How many jellybeans?',
+    points: 5,
+    roundNumber: 1,
+    questionNumberInRound: 1,
+    roundTitle: 'Round 1',
+    answer: '100',
+    closestGuess: {
+      hasSubmissions: true,
+      minGuess: '80',
+      maxGuess: '120',
+      closestGuesses: [{ teamName: 'Team B', value: '95' }],
+    },
+  };
+}
 
 describe('buildOpenedQuestions', () => {
   it('pairs each seen question with the team answer and sorts by round/position', () => {
@@ -99,7 +121,13 @@ describe('buildOpenedQuestions', () => {
     const entries = buildOpenedQuestions(
       { 1: question },
       { 1: 'Banana' },
-      { 1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' } },
+      {
+        1: {
+          pointsAwarded: 3,
+          gradedAt: '2024-01-01T00:00:00.000Z',
+          verdict: 'partial',
+        },
+      },
     );
 
     expect(entries[0]).toMatchObject({ maxPoints: 5, pointsAwarded: 3 });
@@ -119,7 +147,13 @@ describe('buildOpenedQuestions', () => {
     const entries = buildOpenedQuestions(
       { 1: question },
       { 1: 'Banana' },
-      { 1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' } },
+      {
+        1: {
+          pointsAwarded: 3,
+          gradedAt: '2024-01-01T00:00:00.000Z',
+          verdict: 'partial',
+        },
+      },
     );
 
     expect(entries[0]).toMatchObject({ maxPoints: 5, pointsAwarded: null });
@@ -146,68 +180,80 @@ describe('buildOpenedQuestions', () => {
     });
   });
 
-  it('shows 0 closest_guess points for a team that never submitted a guess, once others graded the question', () => {
-    const closest = {
-      id: 1,
-      type: 'closest_guess' as const,
-      prompt: 'How many jellybeans?',
-      points: 5,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      roundTitle: 'Round 1',
-      answer: '100',
-      closestGuess: {
-        hasSubmissions: true,
-        minGuess: '80',
-        maxGuess: '120',
-        closestGuesses: [{ teamName: 'Team B', value: '95' }],
-      },
-    };
-
+  it('shows 0 closest_guess points for a team that never submitted a guess', () => {
     const entries = buildOpenedQuestions(
-      { 1: closest },
+      { 1: closestGuessQuestion(1) },
       {},
       {},
-      'The Quizzards',
     );
 
     expect(entries[0]).toMatchObject({ myAnswer: null, pointsAwarded: 0 });
   });
 
-  it('derives closest_guess points from the reveal data instead of myAnswerGrades', () => {
-    const closest = {
+  it('takes closest_guess points from the team’s synced graded answer, not the reveal list', () => {
+    // The reveal list names 'Team B' closest; this team (renamed since, so
+    // no name would match) was graded full points on its own synced answer.
+    const mine = buildOpenedQuestions(
+      { 1: closestGuessQuestion(1) },
+      { 1: '95' },
+      { 1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' } },
+    );
+
+    expect(mine[0]).toMatchObject({ pointsAwarded: 5, verdict: 'correct' });
+  });
+
+  it('shows 0 closest_guess points when another team was closest', () => {
+    const entries = buildOpenedQuestions(
+      { 2: closestGuessQuestion(2) },
+      { 2: '70' },
+      { 2: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' } },
+    );
+
+    expect(entries[0]).toMatchObject({
+      pointsAwarded: 0,
+      verdict: 'incorrect',
+    });
+  });
+
+  it('carries the synced verdict, including partial, alongside the points', () => {
+    const match = {
       id: 1,
-      type: 'closest_guess' as const,
-      prompt: 'How many jellybeans?',
+      type: 'match' as const,
+      prompt: 'Match them',
+      points: 4,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+      answer: 'a|b|c|d',
+    };
+
+    const entries = buildOpenedQuestions(
+      { 1: match },
+      { 1: 'a|b|x|x' },
+      { 1: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'partial' } },
+    );
+
+    expect(entries[0]).toMatchObject({ pointsAwarded: 2, verdict: 'partial' });
+  });
+
+  it('hides the verdict together with the points until the question is revealed', () => {
+    const question = {
+      id: 1,
+      type: 'free_text' as const,
+      prompt: 'Name a fruit',
       points: 5,
       roundNumber: 1,
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
-      answer: '100',
-      closestGuess: {
-        hasSubmissions: true,
-        minGuess: '80',
-        maxGuess: '120',
-        closestGuesses: [{ teamName: 'The Quizzards', value: '95' }],
-      },
     };
-    const notClosest = { ...closest, id: 2 };
 
-    const mine = buildOpenedQuestions(
-      { 1: closest },
-      { 1: '95' },
-      {},
-      'The Quizzards',
-    );
-    const someoneElses = buildOpenedQuestions(
-      { 2: notClosest },
-      { 2: '70' },
-      {},
-      'Team B',
+    const entries = buildOpenedQuestions(
+      { 1: question },
+      { 1: 'Banana' },
+      { 1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' } },
     );
 
-    expect(mine[0]).toMatchObject({ pointsAwarded: 5 });
-    expect(someoneElses[0]).toMatchObject({ pointsAwarded: 0 });
+    expect(entries[0]).toMatchObject({ pointsAwarded: null, verdict: null });
   });
 
   it('gates points to the question the display has actually stepped to within the active reveal walk', () => {
@@ -231,9 +277,17 @@ describe('buildOpenedQuestions', () => {
       roundTitle: 'Round 1',
       answer: 'Mars',
     };
-    const myAnswerGrades = {
-      1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
-      2: { pointsAwarded: 5, gradedAt: '2024-01-01T00:00:00.000Z' },
+    const myAnswerGrades: Record<number, MyAnswerGrade> = {
+      1: {
+        pointsAwarded: 3,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+        verdict: 'partial',
+      },
+      2: {
+        pointsAwarded: 5,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+        verdict: 'correct',
+      },
     };
     const activeReveal = {
       status: 'reveal' as const,
@@ -245,7 +299,6 @@ describe('buildOpenedQuestions', () => {
       { 1: q1, 2: q2 },
       { 1: 'Banana', 2: 'Mars' },
       myAnswerGrades,
-      null,
       activeReveal,
     );
 
@@ -274,9 +327,17 @@ describe('buildOpenedQuestions', () => {
       roundTitle: 'Round 2',
       answer: 'Mars',
     };
-    const myAnswerGrades = {
-      1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' },
-      2: { pointsAwarded: 5, gradedAt: '2024-01-01T00:00:00.000Z' },
+    const myAnswerGrades: Record<number, MyAnswerGrade> = {
+      1: {
+        pointsAwarded: 3,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+        verdict: 'partial',
+      },
+      2: {
+        pointsAwarded: 5,
+        gradedAt: '2024-01-01T00:00:00.000Z',
+        verdict: 'correct',
+      },
     };
     // revealIndex has already moved to position 1 (q2), but status is
     // 'reveal_intro' — the round-2 title card, shown before q2 itself.
@@ -290,7 +351,6 @@ describe('buildOpenedQuestions', () => {
       { 1: q1, 2: q2 },
       { 1: 'Banana', 2: 'Mars' },
       myAnswerGrades,
-      null,
       activeReveal,
     );
 
@@ -321,8 +381,13 @@ describe('buildOpenedQuestions', () => {
     const entries = buildOpenedQuestions(
       { 1: oldQuestion },
       { 1: 'Banana' },
-      { 1: { pointsAwarded: 3, gradedAt: '2024-01-01T00:00:00.000Z' } },
-      null,
+      {
+        1: {
+          pointsAwarded: 3,
+          gradedAt: '2024-01-01T00:00:00.000Z',
+          verdict: 'partial',
+        },
+      },
       activeReveal,
     );
 
