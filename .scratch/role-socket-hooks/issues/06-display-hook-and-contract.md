@@ -8,11 +8,15 @@ With /display, /control, /remote and /play all on role hooks, the old three-room
 
 **Blocked by:** 03, 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] /display uses the display game hook, and its page tests mock it; the display hook exposes only the snapshot and the connection error
-- [ ] The three-room socket hook, its result type and any tests of it are gone; remaining hook tests target the role hooks
-- [ ] Nothing in the frontend imports the deleted hook
-- [ ] An acknowledged rejection no longer produces an "exception" event to the sender, and gateway tests assert this
-- [ ] An unknown session code and an invalid or expired admin session are still rejected at handshake, and all three pages still bounce to the session picker
-- [ ] The full frontend and backend test suites, lint and build pass
+- [x] /display uses the display game hook, and its page tests mock it; the display hook exposes only the snapshot and the connection error
+- [x] The three-room socket hook, its result type and any tests of it are gone; remaining hook tests target the role hooks
+- [x] Nothing in the frontend imports the deleted hook
+- [x] An acknowledged rejection no longer produces an "exception" event to the sender, and gateway tests assert this
+- [x] An unknown session code and an invalid or expired admin session are still rejected at handshake, and all three pages still bounce to the session picker
+- [x] The full frontend and backend test suites, lint and build pass
+
+## Outcome
+
+Implemented in 7134768. /rules also used the old hook and now uses the player hook. Full lint, build and frontend/backend/shared suites pass (one pre-existing flaky failure seen once in use-team-join-real-socket, passes on rerun).
