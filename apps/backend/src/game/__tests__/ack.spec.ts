@@ -1,6 +1,4 @@
-import { Logger, type ExecutionContext } from '@nestjs/common';
-import { lastValueFrom, of } from 'rxjs';
-import { LegacyExceptionEmitInterceptor } from '@/game/socket/legacy-exception-emit.interceptor';
+import { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import type { Socket } from 'socket.io';
 import {
@@ -51,36 +49,5 @@ describe('acknowledge', () => {
     expect(logError).toHaveBeenCalledWith(
       expect.stringContaining('db exploded: secret detail'),
     );
-  });
-});
-
-describe('LegacyExceptionEmitInterceptor', () => {
-  const emit = jest.fn();
-  const context = {
-    switchToWs: () => ({ getClient: () => ({ emit }) }),
-  } as unknown as ExecutionContext;
-  const run = (result: unknown) =>
-    lastValueFrom(
-      new LegacyExceptionEmitInterceptor().intercept(context, {
-        handle: () => of(result),
-      }),
-    );
-
-  beforeEach(() => emit.mockClear());
-
-  it('re-emits a rejection to the sender as the legacy exception event and passes the result on', async () => {
-    const failure = { success: false, error: 'Nope' };
-
-    await expect(run(failure)).resolves.toBe(failure);
-    expect(emit).toHaveBeenCalledWith('exception', {
-      status: 'error',
-      message: 'Nope',
-    });
-  });
-
-  it('emits nothing for a success', async () => {
-    await run({ success: true });
-
-    expect(emit).not.toHaveBeenCalled();
   });
 });

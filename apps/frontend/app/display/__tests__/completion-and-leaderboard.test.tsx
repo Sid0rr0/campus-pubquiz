@@ -4,13 +4,13 @@ import type { ReactNode } from 'react';
 import DisplayPage from '@/app/display/page';
 import { progress, question, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 // AnimatePresence's exit transition never resolves synchronously across
@@ -49,7 +49,7 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   it('shows a completion message once the quiz has ended', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'ended' }),
         currentQuestion: null,
@@ -62,7 +62,7 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   it('shows the leaderboard overlay whenever isLeaderboardVisible is true, regardless of status', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -78,7 +78,7 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   it('renders leaderboard entries in ranked order when visible', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -113,7 +113,7 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   it('only shows teams revealed so far, bottom-up, while more remain hidden', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -153,7 +153,7 @@ describe('DisplayPage — completion and leaderboard', () => {
   }));
 
   it('caps the leaderboard to the top 5 while a kahoot round is active', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -176,7 +176,7 @@ describe('DisplayPage — completion and leaderboard', () => {
     // Regression test: computeLeaderboardRevealCount caps revealCount at
     // min(KAHOOT_LEADERBOARD_TOP_N, leaderboard.length) — 5 here, not 6 —
     // for the Kahoot between-questions leaderboard's immediate full reveal.
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,
@@ -223,7 +223,7 @@ describe('DisplayPage — completion and leaderboard', () => {
       },
     ];
 
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'locking' }),
         currentQuestion: null,
@@ -237,7 +237,7 @@ describe('DisplayPage — completion and leaderboard', () => {
 
     // Grading happens here, on the 'reveal' screen — leaderboard already
     // updated, but isLeaderboardVisible is still false.
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'reveal' }),
         currentQuestion: null,
@@ -250,7 +250,7 @@ describe('DisplayPage — completion and leaderboard', () => {
     rerender(<DisplayPage />);
 
     // The next question opens behind the between-questions leaderboard.
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -272,7 +272,7 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   it('shows every team when the current round is not kahoot mode', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ isLeaderboardVisible: true }),
         currentQuestion: null,

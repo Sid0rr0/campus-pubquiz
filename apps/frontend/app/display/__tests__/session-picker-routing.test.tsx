@@ -3,14 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 
-const { mockUseGameSocket, searchParamsRef, routerRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef, routerRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
   routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -37,8 +37,8 @@ describe('DisplayPage — session picker routing', () => {
     searchParamsRef.current = new URLSearchParams();
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUseGameSocket.mockReset();
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReset();
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
       sendAction: vi.fn(),
@@ -56,11 +56,7 @@ describe('DisplayPage — session picker routing', () => {
   it('does not connect the socket until a session code is known', () => {
     render(<DisplayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
-      'display',
-      false,
-      undefined,
-    );
+    expect(mockUseGame).toHaveBeenLastCalledWith(false, undefined);
   });
 
   it('replaces the URL with the chosen session when picked', async () => {
@@ -77,16 +73,12 @@ describe('DisplayPage — session picker routing', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<DisplayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
-      'display',
-      true,
-      'ABCDEF',
-    );
+    expect(mockUseGame).toHaveBeenLastCalledWith(true, 'ABCDEF');
   });
 
   it('falls back to the picker with no error banner when the code is unknown or stale', async () => {
     searchParamsRef.current = new URLSearchParams('code=STALE1');
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
       sendAction: vi.fn(),
@@ -101,7 +93,7 @@ describe('DisplayPage — session picker routing', () => {
 
   it('cleans the bad code from the URL when the code is unknown or stale', async () => {
     searchParamsRef.current = new URLSearchParams('code=STALE1');
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
       sendAction: vi.fn(),

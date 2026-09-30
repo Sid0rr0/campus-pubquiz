@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, question, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -34,7 +34,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('shows the current question and its options while open', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
@@ -49,7 +49,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('shows sort items numbered in display order', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -74,7 +74,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('shows both match lists before reveal', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -102,7 +102,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('shows the question image in a fullscreen overlay when media fullscreen is on', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -121,7 +121,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('does not show the image in a fullscreen overlay when media fullscreen is off', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -140,7 +140,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('does not show any media when the question has none, even with fullscreen on', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -157,7 +157,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('switches to a two-column layout once a portrait image loads', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
@@ -181,7 +181,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('stays in the stacked layout once a landscape image loads', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
@@ -203,7 +203,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('stays in the stacked layout for a portrait image while fullscreen', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -228,7 +228,7 @@ describe('DisplayPage — question display', () => {
   });
 
   it('shows how many teams have answered the open question', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,

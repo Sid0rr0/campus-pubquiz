@@ -10,7 +10,7 @@ import {
   isShowingLastBreak,
   type LeaderboardEntry,
 } from '@campus-pubquiz/types';
-import { useGameSocket } from '@/app/lib/use-game-socket';
+import { useDisplayGame } from '@/app/lib/use-display-game';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
@@ -43,8 +43,7 @@ function DisplayPageContent() {
   // an implicit "default" session — once more than one game can run at
   // once that would silently point the screen at the wrong game.
   const codeFromUrl = searchParams.get('code') ?? undefined;
-  const { snapshot, connectionError } = useGameSocket(
-    'display',
+  const { snapshot, connectionError } = useDisplayGame(
     Boolean(codeFromUrl),
     codeFromUrl,
   );

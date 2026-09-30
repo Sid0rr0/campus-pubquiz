@@ -67,10 +67,9 @@ export function createFakeSocket() {
     acknowledge(event: string, data?: unknown) {
       socket.lastEmitOf(event).ack?.({ success: true, data });
     },
-    /** Answers the most recent emit of `event` with a rejection. Like today's backend, also pushes the legacy untagged 'exception'. */
+    /** Answers the most recent emit of `event` with a rejection. */
     reject(event: string, message: string) {
       socket.lastEmitOf(event).ack?.({ success: false, error: message });
-      socket.trigger('exception', { message });
     },
   };
   return socket;

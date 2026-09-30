@@ -197,7 +197,7 @@ export function useTeamJoin(
     // against the first's just-created row and comes back "already
     // registered" even though the name was genuinely new. reconnectedAt is
     // only non-null once the socket has actually connected (real
-    // useGameSocket usage — some tests mock it as undefined and skip this
+    // usePlayerGame usage — some tests mock it as undefined and skip this
     // gate entirely, sending as soon as identity is known), and it gets a
     // fresh value on every connect (first-time or reconnect), so gating on
     // "already sent for this exact reconnectedAt" collapses both triggers

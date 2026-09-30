@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -34,7 +34,7 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('renders a question with an image mediaUrl as an image', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -56,7 +56,7 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('renders an audio question as an autoplaying audio player, not an image', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -80,7 +80,7 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('renders media_url on a multiple_choice/free_text question too, not just audio', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -104,7 +104,7 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('renders a YouTube media_url as an embedded iframe with the clip start/end, not an image', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -131,7 +131,7 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('does not autoplay an audio question when the session disables autoplayMedia', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -154,7 +154,7 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('sets the YouTube embed autoplay param to 0 when the session disables autoplayMedia', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: {
@@ -185,7 +185,7 @@ describe('DisplayPage — media rendering', () => {
       mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
       points: 3,
     };
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -199,7 +199,7 @@ describe('DisplayPage — media rendering', () => {
     const { rerender } = render(<DisplayPage />);
     const iframeBeforeToggle = screen.getByTestId('question-youtube');
 
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'question_open',
@@ -223,7 +223,7 @@ describe('DisplayPage — media rendering', () => {
       mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
       points: 3,
     };
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open', mediaReplayToken: 1 }),
         currentQuestion,
@@ -234,7 +234,7 @@ describe('DisplayPage — media rendering', () => {
     const { rerender } = render(<DisplayPage />);
     const iframeBeforeReplay = screen.getByTestId('question-youtube');
 
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open', mediaReplayToken: 2 }),
         currentQuestion,

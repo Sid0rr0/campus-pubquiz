@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, question, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -38,7 +38,7 @@ describe('DisplayPage — question lock countdown', () => {
   });
 
   it('shows no countdown while the question itself is open', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
@@ -57,7 +57,7 @@ describe('DisplayPage — question lock countdown', () => {
   it('shows a countdown ring while a kahoot question is open with a timer armed', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
@@ -77,7 +77,7 @@ describe('DisplayPage — question lock countdown', () => {
   it('hides the question and shows the seconds remaining once locking starts', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'locking' }),
         currentQuestion: question,
@@ -97,7 +97,7 @@ describe('DisplayPage — question lock countdown', () => {
   it('counts down as time passes', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'locking' }),
         currentQuestion: question,

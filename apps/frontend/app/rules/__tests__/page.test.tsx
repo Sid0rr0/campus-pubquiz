@@ -2,14 +2,14 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import RulesPage from '@/app/rules/page';
 
-const { mockUseGameSocket, searchParamsRef, routerRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef, routerRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
   routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-player-game', () => ({
+  usePlayerGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -21,8 +21,8 @@ describe('RulesPage', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams();
     routerRef.replace.mockReset();
-    mockUseGameSocket.mockReset();
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReset();
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
     });
@@ -31,11 +31,7 @@ describe('RulesPage', () => {
   it('renders the static house rules with no ?code= in the URL, skipping the socket entirely', () => {
     render(<RulesPage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
-      'players',
-      false,
-      undefined,
-    );
+    expect(mockUseGame).toHaveBeenLastCalledWith(false, undefined);
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
     expect(
       screen.getByText(/organizers have the final word/i),
@@ -47,17 +43,13 @@ describe('RulesPage', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<RulesPage />);
 
-    expect(mockUseGameSocket).toHaveBeenLastCalledWith(
-      'players',
-      true,
-      'ABCDEF',
-    );
+    expect(mockUseGame).toHaveBeenLastCalledWith(true, 'ABCDEF');
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 
   it('renders the rules with the active quiz structure filled in once connected', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: {
         quizStructure: {
           blockCount: 2,
@@ -81,7 +73,7 @@ describe('RulesPage', () => {
 
   it('falls back to the static rules and cleans the URL when the code is unknown or stale', () => {
     searchParamsRef.current = new URLSearchParams('code=STALE1');
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
     });

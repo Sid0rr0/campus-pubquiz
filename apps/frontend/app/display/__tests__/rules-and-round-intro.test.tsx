@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -34,7 +34,7 @@ describe('DisplayPage — rules and round intro', () => {
   });
 
   it('shows the rules screen after the lobby, before the first question opens', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'rules' }),
         currentQuestion: null,
@@ -60,7 +60,7 @@ describe('DisplayPage — rules and round intro', () => {
   });
 
   it('lists every round title, category, and author on the round overview screen, before round 0 opens', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'round_overview' }),
         currentQuestion: null,
@@ -81,7 +81,7 @@ describe('DisplayPage — rules and round intro', () => {
   });
 
   it('shows the round name, category, and author on the round intro screen, before any question opens', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'round_intro', roundIndex: 1 }),
         currentQuestion: null,

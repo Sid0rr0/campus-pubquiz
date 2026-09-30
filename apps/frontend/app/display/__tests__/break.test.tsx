@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -44,7 +44,7 @@ describe('DisplayPage — break', () => {
   });
 
   it('shows a "BREAK" title card once a round locks (break_intro)', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'break_intro', roundIndex: 1 }),
         currentQuestion: null,
@@ -82,7 +82,7 @@ describe('DisplayPage — break', () => {
   ];
 
   it('keeps showing the generic BREAK card for break_intro even once block questions have loaded, never showing Q5 itself', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'break_intro',
@@ -103,7 +103,7 @@ describe('DisplayPage — break', () => {
   });
 
   it("shows the block's last question (no answer) immediately once break proper is entered (Previous from break_intro), without skipping it", () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         // revealIndex 1 is the last index of a 2-question block: the one
         // that just locked — it must show its own content, not a generic
@@ -122,7 +122,7 @@ describe('DisplayPage — break', () => {
   });
 
   it("shows the specific question (no answer) once Previous walks revealIndex off the entry position, matching question_open's layout", () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
         currentQuestion: null,
@@ -140,7 +140,7 @@ describe('DisplayPage — break', () => {
   });
 
   it("shows the round's own title card once Previous crosses a round boundary during break review", () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({
           status: 'break_round_intro',

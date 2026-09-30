@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { progress, question, displayView } from './test-utils';
 
-const { mockUseGameSocket, searchParamsRef } = vi.hoisted(() => ({
-  mockUseGameSocket: vi.fn(),
+const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
+  mockUseGame: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-game-socket', () => ({
-  useGameSocket: mockUseGameSocket,
+vi.mock('@/app/lib/use-display-game', () => ({
+  useDisplayGame: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -34,7 +34,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('shows a connecting message before the first snapshot arrives', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
       sendAction: vi.fn(),
@@ -45,18 +45,18 @@ describe('DisplayPage — lobby', () => {
 
   it('passes the ?code= query parameter to the socket handshake', () => {
     searchParamsRef.current = new URLSearchParams('code=GHIJKL');
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: null,
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
 
-    expect(mockUseGameSocket).toHaveBeenCalledWith('display', true, 'GHIJKL');
+    expect(mockUseGame).toHaveBeenCalledWith(true, 'GHIJKL');
   });
 
   it('shows a waiting message in the lobby', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -69,7 +69,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('shows a join QR code and the join code in the lobby', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -88,7 +88,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('shows the max team size, one-device-per-team note, and extra-player penalty in the lobby', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -108,7 +108,7 @@ describe('DisplayPage — lobby', () => {
 
   it('prefers the join code from the ?code= query parameter over the snapshot', () => {
     searchParamsRef.current = new URLSearchParams('code=GHIJKL');
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -127,7 +127,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('shows the connected team names at the bottom of the lobby screen with a join count', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -154,7 +154,7 @@ describe('DisplayPage — lobby', () => {
     const clientWidthSpy = vi
       .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
       .mockReturnValue(1000);
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -179,7 +179,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('uses the singular "TEAM" when exactly one team has joined', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'lobby' }),
         currentQuestion: null,
@@ -195,7 +195,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('does not show the connected team names outside the lobby', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,
@@ -211,7 +211,7 @@ describe('DisplayPage — lobby', () => {
   });
 
   it('does not show the join QR code outside the lobby', () => {
-    mockUseGameSocket.mockReturnValue({
+    mockUseGame.mockReturnValue({
       snapshot: displayView({
         progress: progress({ status: 'question_open' }),
         currentQuestion: question,

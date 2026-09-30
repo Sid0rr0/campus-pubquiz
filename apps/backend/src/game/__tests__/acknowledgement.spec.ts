@@ -114,3 +114,30 @@ describe('GameGateway — acknowledgement on success', () => {
     ).resolves.toEqual(SUCCESS);
   });
 });
+
+describe('GameGateway — rejections reach only the acknowledgement', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('registers no interceptor that would re-emit a rejection to the sender as "exception"', async () => {
+    const { gateway } = await harness.createGateway();
+
+    expect(Reflect.getMetadata('__interceptors__', gateway.constructor)).toBe(
+      undefined,
+    );
+  });
+
+  it('answers a rejected action through the acknowledgement without emitting "exception" to the sender', async () => {
+    const game = await harness.createGateway();
+    const admin = await game.connectAdmin();
+    const emitsBefore = admin.emit.mock.calls.length;
+
+    const result = await game.gateway.handleSetDisplayTextScale(
+      asSocket(admin),
+      { displayTextScale: 99 },
+    );
+
+    expect(result).toMatchObject({ success: false });
+    expect(admin.emit).not.toHaveBeenCalledWith('exception', expect.anything());
+    expect(admin.emit.mock.calls.length).toBe(emitsBefore);
+  });
+});

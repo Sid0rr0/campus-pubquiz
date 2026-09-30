@@ -1,4 +1,4 @@
-import { Logger, UseInterceptors, type OnModuleDestroy } from '@nestjs/common';
+import { Logger, type OnModuleDestroy } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   ConnectedSocket,
@@ -23,7 +23,6 @@ import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
-import { LegacyExceptionEmitInterceptor } from '@/game/socket/legacy-exception-emit.interceptor';
 import { acknowledge } from '@/game/socket/acknowledge.util';
 import { runAdminAction } from '@/game/socket/handlers/admin-action.handler';
 import { awardTeamBonus } from '@/game/socket/handlers/award-bonus.handler';
@@ -59,7 +58,6 @@ import {
 import { submitTeamAnswer } from '@/game/socket/handlers/submit-answer.handler';
 import { ShowdownService } from '@/showdown/showdown.service';
 
-@UseInterceptors(LegacyExceptionEmitInterceptor)
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
 })
