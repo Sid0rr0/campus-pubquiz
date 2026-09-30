@@ -75,4 +75,4 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | live-session-module | 02  | [Outcome delivery step; timers share the Advance path](live-session-module/issues/02-outcome-delivery-and-timers.md)            | `66ddeb5` |
 | live-session-module | 03  | [Answer recorded / answer graded owned by the Live session module](live-session-module/issues/03-answer-recorded-and-graded.md) | `22dad1f` |
 | live-session-module | 04  | [Team removed (kick / leave)](live-session-module/issues/04-team-removed.md)                                                    | `6f17212`    |
-| live-session-module | 05  | [Bonus changed and leaderboard toggle](live-session-module/issues/05-bonus-changed-and-leaderboard-toggle.md)                  | `HASH` |
+| live-session-module | 05  | [Bonus changed and leaderboard toggle](live-session-module/issues/05-bonus-changed-and-leaderboard-toggle.md)                  | `adc82fe` |
