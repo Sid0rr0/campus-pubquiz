@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Frontend tests: a team's closest_guess points come from its synced graded answer, including when its team name differs from the reveal list's entry (e.g. renamed), and are 0 when another team was closest.
 - [x] Frontend tests: the team's answered-questions view labels each graded answer with its verdict, and a partial match answer shows as partial.
@@ -12,7 +12,7 @@
 
 ## Comments
 
-Implemented in `feat(frontend): team phones read synced points and verdict`. Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+Implemented in `feat(frontend): team phones read synced points and verdict`. Status set to `done`.
 
 - `buildOpenedQuestions` no longer takes a team name: closest_guess points now come from the same synced graded answer as every other type. A team that never submitted shows 0 once the question is revealed, even when nobody submitted (previously nothing was shown in that case).
 - `MyAnswerGrade` and `OpenedQuestionEntry` carry `verdict`; the answered-questions list shows Correct / Partial / Incorrect beside the points.

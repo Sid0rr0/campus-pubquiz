@@ -13,7 +13,7 @@ This is behaviour-preserving: every score is identical to today. Verdicts are co
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Table-driven tests on the Scoring interface cover:
   - every type
@@ -31,7 +31,7 @@ This is behaviour-preserving: every score is identical to today. Verdicts are co
 
 ## Comments
 
-Implemented in the commit that adds `shared/types/src/scoring.ts` (find it in git history: `feat(shared-types): add pure Scoring module`). Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+Implemented in the commit that adds `shared/types/src/scoring.ts` (find it in git history: `feat(shared-types): add pure Scoring module`). Status set to `done`.
 
 - Import (`question-row.schema.ts`) never carries `kahootMode`, so it had no kahoot type list to replace; only the draft schema's duplicate list existed and now reads Scoring's.
 - Verdicts are computed by Scoring but not stored or sent, as scoped. Kahoot speed still uses `updatedAt` and the in-memory multipliers (ticket 02 removes them); the multiplier formula now lives in Scoring's `speedMultiplier`.

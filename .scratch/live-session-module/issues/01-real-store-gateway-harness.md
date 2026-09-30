@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] A harness helper builds a gateway wired to real answer/team/bonus/showdown modules on a Postgres testcontainer, with migrations applied.
 - [x] One container per spec file, with game tables truncated between tests, following the existing answer/team/stats testcontainer prior art.
@@ -14,4 +14,4 @@
 
 ## Comments
 
-Implemented in `e9af2e9` (`apps/backend/src/game/__tests__/real-store-test-utils.ts`, `real-store-smoke.spec.ts`). `createGateway({ teamNames })` seeds the quiz and joins teams in one call. The smoke spec asserts on room-visible emits (admin answer list, team `ANSWER_RECEIVED`, state update to all three rooms). Full backend suite passed (96 suites, 851 tests) before the final `createGateway({ teamNames })` tweak; lint, tsc and the smoke spec were re-run after it. Status left as `ready-for-agent`: the triage vocabulary has no done state.
+Implemented in `e9af2e9` (`apps/backend/src/game/__tests__/real-store-test-utils.ts`, `real-store-smoke.spec.ts`). `createGateway({ teamNames })` seeds the quiz and joins teams in one call. The smoke spec asserts on room-visible emits (admin answer list, team `ANSWER_RECEIVED`, state update to all three rooms). Full backend suite passed (96 suites, 851 tests) before the final `createGateway({ teamNames })` tweak; lint, tsc and the smoke spec were re-run after it. Status set to `done`.

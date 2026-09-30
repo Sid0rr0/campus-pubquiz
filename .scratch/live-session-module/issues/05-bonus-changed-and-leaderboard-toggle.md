@@ -9,7 +9,7 @@ The awarded team's BONUS_AWARDED notice travels in the outcome. See the spec's u
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Test (real-store harness): after a socket bonus award, the next snapshot's leaderboard includes the bonus, and the awarded team's socket receives BONUS_AWARDED.
 - [x] Test: after a REST bonus edit/delete notification, the next snapshot's leaderboard reflects it.
@@ -18,7 +18,7 @@ The awarded team's BONUS_AWARDED notice travels in the outcome. See the spec's u
 
 ## Comments
 
-Implemented in the commit recorded in `.scratch/overview.md`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and the overview records completion.
+Implemented in the commit recorded in `.scratch/overview.md`. `Status:` set to `done`.
 
 - `GameStateService.bonusChanged(joinCode, awarded?)` recomputes the leaderboard and returns an outcome; a fresh socket award carries the `BONUS_AWARDED` notice for the team's socket. `awardTeamBonus` and `GameGateway.notifyBonusAwardsChanged` (REST edit/delete) both go through it and `deliverOutcome`. The notice is now emitted after the room push rather than before.
 - The leaderboard toggle already refreshed via `applyAdminAction` (ticket 02); ticket 05 adds the test that pins it, including 0-point teams.

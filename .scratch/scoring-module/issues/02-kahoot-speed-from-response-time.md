@@ -10,7 +10,7 @@ See [spec](../spec.md) user stories 7, 8, 16–18 and 26.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Postgres test: speed-scaled points after a kahoot answer-key regrade, run from a freshly constructed answer/grading module with no in-memory state (restart), equal the points from a run without a restart.
 - [x] Postgres test: a team that resubmits before lock is timed from its last submission.
@@ -20,7 +20,7 @@ See [spec](../spec.md) user stories 7, 8, 16–18 and 26.
 
 ## Comments
 
-Implemented in `feat(backend): speed-scale kahoot answers from stored response time`. Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+Implemented in `feat(backend): speed-scale kahoot answers from stored response time`. Status set to `done`.
 
 - `applyKahootSpeedScoring(session, question, timer)` now just delegates to `regradeAutoGraded(session, question, kahootTimerSeconds)`; both read `responseMs` stored at submit. `kahootSpeedMultipliers` is gone from session state, and the ensureKahootSpeedScored guard is the status-transition check only.
 - The restart case is covered in `grading.spec.ts` (fresh `AnswerService` on a forked entity manager). The old gateway spec asserting "kahoot not yet scored is skipped" was rewritten to assert the corrected, speed-scaled stored points.

@@ -10,7 +10,7 @@ The outcome names the question whose admin answer list must be pushed. The quiz 
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Regression test (real-store harness): after a team submits a correct multiple_choice answer, the next state snapshot's leaderboard shows that team's points.
 - [x] Regression test: after a closest_guess submit during question_open, the snapshot's ungraded-question ids do not include that question.
@@ -21,7 +21,7 @@ The outcome names the question whose admin answer list must be pushed. The quiz 
 
 ## Comments
 
-Implemented in commit `22dad1f`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and `.scratch/overview.md` records completion.
+Implemented in commit `22dad1f`. `Status:` set to `done`.
 
 - `GameStateService.recordAnswer` / `answerGraded` share one refresh and return an outcome naming the question's admin answer list; the handlers only call them and `deliverOutcome`. The one "ungraded" rule is `canBeUngraded` in `block-grading.service.ts`, used by the incremental and bulk paths.
 - The real-store seed gained an `audio` question (last in the round) so a human-graded answer exists; the timer spec's advance count went from 4 to 5.

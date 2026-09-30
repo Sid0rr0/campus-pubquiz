@@ -9,7 +9,7 @@ With every caller migrated, the read-spread-write mutations layer is deleted and
 
 **Blocked by:** 03, 04, 05, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Connection presence, break end time, display text scale and showdown flows behave exactly as today (existing specs pass).
 - [x] The mutations layer no longer exists. The Live session interface exposes only event operations plus the read-only queries listed in the spec.
@@ -19,7 +19,7 @@ With every caller migrated, the read-spread-write mutations layer is deleted and
 
 ## Comments
 
-Implemented in the commit recorded in `.scratch/overview.md`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and the overview records completion.
+Implemented in the commit recorded in `.scratch/overview.md`. `Status:` set to `done`.
 
 - `GameStateService` gained event operations `teamConnected`, `teamDisconnected` (null when the socket held no team), `breakEndTimeSet`, `displayTextScaleSet`, `showdownRoundCreated` and `showdownGuessSubmitted`; each returns a `SessionOutcome` that the handler passes to `deliverOutcome`.
 - `GameSessionMutationsService` and every field-level setter (leaderboard, teams, answered-team ids, graded status, leaderboard visibility, team connection) are gone. Their logic lives as pure `with…` transforms in `session-updates.util.ts`, applied only inside the module's event operations.

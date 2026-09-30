@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Component tests through the quiz editor panel: with kahoot mode on, a round's pickers show only multiple choice, sort and match, and other rounds are unaffected.
 - [x] A round holding a free_text question has its kahoot toggle disabled with a hint naming that question. Changing the question to an allowed type, or deleting it, enables the toggle.
@@ -13,7 +13,7 @@
 
 ## Comments
 
-Implemented in `feat(frontend): filter kahoot round types and guard the kahoot toggle`. Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+Implemented in `feat(frontend): filter kahoot round types and guard the kahoot toggle`. Status set to `done`.
 
 - Pickers in a kahoot round use Scoring's `isKahootAllowedType`. A question that already holds a disallowed type (only possible in a quiz loaded in that state) keeps its current type visible so the UI doesn't hide it; save validation still flags it.
 - The blocked toggle's hint (`Kahoot rounds only hold multiple choice, sort and match — change or remove question N first.`) is referenced from the toggle via `aria-describedby`, alongside the existing sr-only description.

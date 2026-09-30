@@ -16,7 +16,7 @@ The concurrent-sessions specs move too, replacing their separate session-aware f
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Every grading/answers/team gateway spec, including the concurrent-sessions specs, runs on the real-store harness and passes.
 - [x] No migrated spec asserts on fake-store call arguments.

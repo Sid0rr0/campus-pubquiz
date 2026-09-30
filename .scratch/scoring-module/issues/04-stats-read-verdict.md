@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Session-detail calculation tests: correct-count uses verdict, speed-scaled kahoot correct answers count, partial match answers don't count toward the correct-count, and match's rate stays points-based.
 - [x] Stats service Postgres tests still pass with backfilled historical verdicts.
@@ -12,7 +12,7 @@
 
 ## Comments
 
-Implemented in `feat(backend): count stats correct answers by stored verdict`. Status line left as `ready-for-agent`; the triage vocabulary has no done state.
+Implemented in `feat(backend): count stats correct answers by stored verdict`. Status set to `done`.
 
 - `isCorrect` in `session-detail.calc.ts` is now `verdict === 'correct'`; the stats service selects `a.verdict`. Team, round and non-match question correct-counts/rates all use it (the round-level rate change is a side effect of sharing the helper, not a separate decision). Match keeps its points-based rate.
 - No frontend change was needed.

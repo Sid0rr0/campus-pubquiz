@@ -3,6 +3,7 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { GameStatus } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -84,7 +85,7 @@ describe('StatsService (Postgres integration)', () => {
   async function createSession(
     quiz: Quiz,
     joinCode: string,
-    status: string,
+    status: GameStatus,
     name?: string | null,
   ): Promise<GameSession> {
     const session = em.create(GameSession, {

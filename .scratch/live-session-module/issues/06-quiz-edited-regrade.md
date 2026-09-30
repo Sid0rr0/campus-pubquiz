@@ -9,7 +9,7 @@ The grading panel, the big screen and the teams' phones all show the corrected p
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Regression test (real-store harness): after correcting a shown multiple_choice question's answer, the admin room receives that question's answer list with re-scored points.
 - [x] In the same scenario, each connected team that answered it receives TEAM_ANSWERS_SYNCED with its re-scored answer, and the next snapshot's leaderboard reflects the new totals.
@@ -18,7 +18,7 @@ The grading panel, the big screen and the teams' phones all show the corrected p
 
 ## Comments
 
-Implemented in the commit recorded in `.scratch/overview.md`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and the overview records completion.
+Implemented in the commit recorded in `.scratch/overview.md`. `Status:` set to `done`.
 
 - `GameStateService.quizEdited(joinCode, regradeQuestionIds)` reloads the questions, regrades, and returns an outcome. `BlockGradingService.regradeQuestions` now reports which questions it actually re-scored, so the outcome's `answerListQuestionIds` names only those; `teamSyncTeamIds` is every connected team with an answer to one. `GameGateway.notifyQuizEdited` just delivers that outcome.
 - Specs in `quiz-edited.spec.ts` (real-store harness). Manual-override discard and in-memory kahoot multipliers are unchanged (still pinned by `live-edit-regrade.spec.ts`).

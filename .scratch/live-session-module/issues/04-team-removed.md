@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Regression test (real-store harness): a team that has scored points is kicked, and the next snapshot's leaderboard and roster both no longer contain it.
 - [x] The same for a team that leaves the session itself.
@@ -13,7 +13,7 @@
 
 ## Comments
 
-Implemented in commit `6f17212`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and `.scratch/overview.md` records completion.
+Implemented in commit `6f17212`. `Status:` set to `done`.
 
 - `GameStateService.teamRemoved(joinCode, teamId, roster, 'kicked' | 'left')` drops the connection, sets the roster and recomputes the leaderboard together, and returns an outcome; a kick carries the `TEAM_KICKED` notice for the team's socket.
 - The kick handler disconnects the socket after delivery, so the notice is out before it closes. The notice now goes through `server.to(socketId)` (the shared delivery step) instead of a direct `socket.emit`; the fake-harness kick spec was adjusted, and a payload-less notice is emitted with no argument as before.

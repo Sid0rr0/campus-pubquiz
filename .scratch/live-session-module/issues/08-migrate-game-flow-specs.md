@@ -15,7 +15,7 @@ Any assertion on internal method calls or their positional arguments is rewritte
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] Every game-flow gateway spec runs on the real-store harness and passes.
 - [x] No migrated spec asserts on fake-store call arguments. Assertions are on room/socket emits or on the snapshot.
@@ -23,7 +23,7 @@ Any assertion on internal method calls or their positional arguments is rewritte
 
 ## Comments
 
-Implemented in the commits recorded in `.scratch/overview.md`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and the overview records completion.
+Implemented in the commits recorded in `.scratch/overview.md`. `Status:` set to `done`.
 
 **Scope.** The bullets above plus eleven game specs named in neither 08 nor 09 (`admin-actions`, `admin-question-context`, `block-questions`, `core-snapshot`, `notify-session-closed`, `past-revealed-questions`, `presenter-context`, `session-lifecycle-admin`, `set-break-end-time`, `set-display-text-scale`, `update-session-settings`): ticket 10 can only delete the fakes once they move, and they are game flow. Left for 09: the grading, answers, team, bonus, leaderboard and kahoot specs and the three concurrent-sessions specs. `phase-timer.spec.ts` is a pure utility test and needs no harness.
 

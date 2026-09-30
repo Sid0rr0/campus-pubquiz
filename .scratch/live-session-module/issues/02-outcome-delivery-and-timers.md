@@ -16,7 +16,7 @@ The admin ADVANCE/action path, the question-lock timer expiry and the kahoot tim
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] A regression test on the real-store harness proves that a question-lock timer expiry produces the same room emits as a manual ADVANCE from the same state, including the per-team answer sync on reveal entry.
 - [x] The same holds for a kahoot question timer expiry versus a manual ADVANCE.
@@ -27,7 +27,7 @@ The admin ADVANCE/action path, the question-lock timer expiry and the kahoot tim
 
 ## Comments
 
-Implemented in commit `66ddeb5`. `Status:` left as `ready-for-agent`: the triage vocabulary has no done state, and `.scratch/overview.md` records completion.
+Implemented in commit `66ddeb5`. `Status:` set to `done`.
 
 - The outcome and delivery step live in `state/session-outcome.ts`, `GameStateService.applyAdminAction` and `socket/outcome-delivery.util.ts`; `runAdminAction` is the shared path for the admin action and both timers.
 - Delivery order now follows this ticket (presenter context, state snapshot, answer lists, team syncs, notices). The team sync used to be emitted *before* the snapshot on the admin path; it now follows it. Different events, so clients are unaffected.
