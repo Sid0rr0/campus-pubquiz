@@ -1,9 +1,19 @@
-import { SOCKET_ROOMS, type OnAirScreen } from '@campus-pubquiz/types';
+import { RequestContext } from '@mikro-orm/postgresql';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { Question } from '@/db/entities/question.entity';
 import { asSocket } from '@/game/__tests__/test-utils';
+import {
+  HEADING_BY_SCREEN,
+  createAnswerer,
+  createPreviewWalk,
+  summarise,
+  type PressResult,
+} from '@/game/__tests__/walk-test-utils';
 import {
   TWO_ROUND_QUIZ,
   TWO_ROUND_QUIZ_HOST_NOTE,
   setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
   type QuizRoundSpec,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -175,23 +185,6 @@ describe('GameStateService — getPresenterContext', () => {
   });
 
   describe('agreement with /display across a whole-quiz walk', () => {
-    const HEADING_BY_SCREEN: Record<OnAirScreen['kind'], RegExp> = {
-      lobby: /^Lobby$/,
-      rules: /^Rules$/,
-      round_overview: /^Round overview$/,
-      round_title: /^Round \d+ title$/,
-      question: /^R\d+ Q\d+$/,
-      locking: /^Locking answers$/,
-      break_intro: /^Break \d+$/,
-      break_review: /^Break · Reviewing /,
-      break_round_title: /^Break · Round \d+ title$/,
-      reveal_intro: /^Revealing · Round \d+ title$/,
-      reveal: /^Revealing R\d+ Q\d+$/,
-      leaderboard: /^Leaderboard$/,
-      ended: /^Quiz complete!$/,
-      showdown: /^Showdown$/,
-    };
-
     beforeEach(async () => {
       game = await harness.createGateway({
         rounds: TWO_ROUND_QUIZ,
@@ -250,6 +243,364 @@ describe('GameStateService — getPresenterContext', () => {
       expect(screens()).toMatchObject({
         next: 'Round 2 title',
         nextBody: 'Sport',
+      });
+    });
+  });
+  describe('the preview agrees with the real press across whole quizzes', () => {
+    /** One-line reasons for every place today's preview and press disagree; later tickets remove them one at a time. */
+    const UNGRADED_BREAK_PREVIEWS_REVEAL = 'ungraded break previews the reveal';
+    const KNOWN_DISAGREEMENTS: Record<string, string> = {
+      [UNGRADED_BREAK_PREVIEWS_REVEAL]:
+        'the preview projects the next status without the grading gate, so it names the reveal while Advance out of the break is refused until every answer is graded',
+    };
+
+    /** Names a mismatch by what was on air and what the preview claimed. */
+    function nameDisagreement({
+      outcome,
+      before,
+    }: Omit<PressResult, 'disagreement'>): string {
+      const isRefusedBreakAdvance =
+        outcome === 'refused' &&
+        before.status === 'break_intro' &&
+        before.next !== null &&
+        HEADING_BY_SCREEN.reveal_intro.test(before.next.heading);
+      if (isRefusedBreakAdvance) return UNGRADED_BREAK_PREVIEWS_REVEAL;
+      return `unexplained: ${outcome} from "${before.currentHeading}" previewed "${before.next?.heading ?? null}" (${before.next?.body ?? '-'})`;
+    }
+
+    function previewWalk() {
+      return createPreviewWalk(game, nameDisagreement);
+    }
+
+    function expectOnlyKnownDisagreements(
+      { disagreements }: { disagreements: string[] },
+      expected: string[],
+    ) {
+      expect(disagreements).toEqual([...expected].sort());
+      for (const name of disagreements) {
+        expect(KNOWN_DISAGREEMENTS).toHaveProperty([name]);
+      }
+    }
+
+    const TWO_BLOCK_WALK_QUIZ: QuizRoundSpec[] = [
+      {
+        title: 'Music',
+        breakAfter: true,
+        questions: [
+          { type: 'free_text', prompt: 'Band?', answer: 'ABBA', points: 1 },
+          { type: 'free_text', prompt: 'Song?', answer: 'Waterloo', points: 1 },
+        ],
+      },
+      {
+        title: 'Sport',
+        breakAfter: true,
+        questions: [
+          { type: 'free_text', prompt: 'Sport?', answer: 'Golf', points: 1 },
+        ],
+      },
+    ];
+
+    it('agrees through the lobby start, a two-block quiz, its breaks, reveals and boards', async () => {
+      game = await harness.createGateway({
+        rounds: TWO_BLOCK_WALK_QUIZ,
+        teamNames: ['Team A', 'Team B'],
+      });
+      const answer = createAnswerer(game, TWO_BLOCK_WALK_QUIZ, (t) => t === 0);
+
+      const { presses, disagreements } = await previewWalk().walk(answer);
+
+      expect(presses[0].before.status).toBe('lobby');
+      expect(presses.at(-1)?.after.status).toBe('ended');
+      expect(new Set(presses.map(({ after }) => after.kind))).toEqual(
+        new Set([
+          'rules',
+          'round_title',
+          'question',
+          'locking',
+          'break_intro',
+          'reveal_intro',
+          'reveal',
+          'leaderboard',
+        ]),
+      );
+      expectOnlyKnownDisagreements({ disagreements }, []);
+    });
+
+    it('agrees when a leaderboard has a tie', async () => {
+      game = await harness.createGateway({
+        rounds: TWO_BLOCK_WALK_QUIZ,
+        teamNames: ['Team A', 'Team B'],
+      });
+      const answer = createAnswerer(game, TWO_BLOCK_WALK_QUIZ, () => true);
+
+      const result = await previewWalk().walk(answer);
+
+      expect(
+        result.presses.some(({ after }) => after.kind === 'leaderboard'),
+      ).toBe(true);
+      expectOnlyKnownDisagreements(result, []);
+    });
+
+    const MAX_PRESSES_TO_BREAK = 30;
+
+    function isBoardUp(): boolean {
+      return game.gameState.getSnapshot(game.joinCode).progress
+        .isLeaderboardVisible;
+    }
+
+    describe('a break with an ungraded answer', () => {
+      const AUDIO_QUIZ: QuizRoundSpec[] = [
+        {
+          title: 'Music',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'audio',
+              prompt: 'Name that tune',
+              answer: 'Queen',
+              points: 1,
+            },
+          ],
+        },
+      ];
+      let admin: Awaited<ReturnType<RealStoreGateway['connectAdmin']>>;
+
+      async function submit(value: string) {
+        const { socket, teamId } = game.teams[0];
+        await game.gateway.handleSubmitAnswer(asSocket(socket), {
+          questionId: game.rounds[0].questionIds[0],
+          teamId,
+          value,
+        });
+      }
+
+      async function gradeFirstAnswer() {
+        const [answer] = await game.inRequestContext(() =>
+          game.answerService.listForQuestion(
+            game.gameSessionId,
+            game.rounds[0].questionIds[0],
+          ),
+        );
+        await game.gateway.handleGradeAnswer(asSocket(admin), {
+          answerId: answer.answerId,
+          pointsAwarded: 1,
+        });
+      }
+
+      async function fixAnswerKey(answer: string) {
+        const questionId = game.rounds[0].questionIds[0];
+        await game.inRequestContext(async () => {
+          const em = RequestContext.getEntityManager()!;
+          const question = await em.findOneOrFail(Question, { id: questionId });
+          question.answer = answer;
+          await em.flush();
+        });
+        await game.inRequestContext(() =>
+          game.gateway.notifyQuizEdited(game.joinCode, [questionId]),
+        );
+      }
+
+      /** Presses until the quiz sits in the break, submitting `value` once the question is open. */
+      async function pressToBreak(
+        walk: ReturnType<typeof previewWalk>,
+        value: string,
+      ) {
+        const presses: PressResult[] = [];
+        let hasSubmitted = false;
+        for (let step = 0; step < MAX_PRESSES_TO_BREAK; step += 1) {
+          const { status } = game.gameState.getSnapshot(game.joinCode).progress;
+          if (status === 'break_intro') return presses;
+          if (status === 'question_open' && !hasSubmitted) {
+            await submit(value);
+            hasSubmitted = true;
+          }
+          presses.push(
+            await walk.pressAndCompare(
+              status === 'lobby' ? 'START_QUIZ' : 'ADVANCE',
+            ),
+          );
+        }
+        throw new Error('the quiz never reached the break');
+      }
+
+      beforeEach(async () => {
+        game = await harness.createGateway({
+          rounds: AUDIO_QUIZ,
+          teamNames: ['The Quizzards'],
+        });
+        admin = await game.connectAdmin();
+      });
+
+      it('is refused while the answer waits, then advances once the moderator has graded it', async () => {
+        const walk = previewWalk();
+        const toBreak = await pressToBreak(walk, 'Abba');
+
+        const refused = await walk.pressAndCompare();
+        await gradeFirstAnswer();
+        const rest = await walk.walk();
+
+        expect(refused.outcome).toBe('refused');
+        expectOnlyKnownDisagreements(
+          summarise([...toBreak, refused, ...rest.presses]),
+          [UNGRADED_BREAK_PREVIEWS_REVEAL],
+        );
+      });
+
+      it('is refused after a live key fix leaves a matched answer ungraded, then advances once it is graded', async () => {
+        const walk = previewWalk();
+        const toBreak = await pressToBreak(walk, 'Queen');
+        await fixAnswerKey('Queen II');
+
+        const refused = await walk.pressAndCompare();
+        await gradeFirstAnswer();
+        const rest = await walk.walk();
+
+        expect(refused.outcome).toBe('refused');
+        expectOnlyKnownDisagreements(
+          summarise([...toBreak, refused, ...rest.presses]),
+          [UNGRADED_BREAK_PREVIEWS_REVEAL],
+        );
+      });
+    });
+
+    describe('a closest_guess reveal', () => {
+      const CLOSEST_WALK_QUIZ: QuizRoundSpec[] = [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Name a fruit',
+              answer: 'Apple',
+              points: 1,
+            },
+            {
+              type: 'closest_guess',
+              prompt: 'How many students attend this university?',
+              answer: '1000',
+              points: 5,
+            },
+          ],
+        },
+      ];
+
+      it('agrees through its sub-steps, with the leaderboard shown and hidden mid-reveal', async () => {
+        game = await harness.createGateway({
+          rounds: CLOSEST_WALK_QUIZ,
+          teamNames: ['Team A', 'Team B', 'Team C'],
+        });
+        const answer = createAnswerer(game, CLOSEST_WALK_QUIZ, (t) => t === 0);
+        let phase: 'before_board' | 'board_up' | 'done' = 'before_board';
+
+        const result = await previewWalk().walk(async ({ status }) => {
+          await answer();
+          const {
+            closestGuessRevealStep: step,
+            progress,
+            leaderboardRevealCount,
+          } = game.gameState.getSnapshot(game.joinCode);
+          if (status !== 'reveal') return;
+          if (
+            phase === 'before_board' &&
+            step > 0 &&
+            !progress.isLeaderboardVisible
+          ) {
+            await game.act('TOGGLE_LEADERBOARD');
+            phase = 'board_up';
+          } else if (
+            phase === 'board_up' &&
+            progress.isLeaderboardVisible &&
+            leaderboardRevealCount > 0
+          ) {
+            await game.act('TOGGLE_LEADERBOARD');
+            phase = 'done';
+          }
+        });
+
+        expect(phase).toBe('done');
+        expectOnlyKnownDisagreements(result, []);
+      });
+    });
+
+    describe('a kahoot round', () => {
+      const KAHOOT_TEAMS = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'];
+      const KAHOOT_QUIZ: QuizRoundSpec[] = [
+        {
+          title: 'Kahoot',
+          breakAfter: true,
+          kahootMode: true,
+          questions: ['A', 'B', 'C', 'D', 'E'].map((answer) => ({
+            type: 'free_text' as const,
+            prompt: `Say ${answer}`,
+            answer,
+            points: 1,
+          })),
+        },
+      ];
+
+      it('agrees through the between-questions board and the round-end board with its top-5 cutoff', async () => {
+        game = await harness.createGateway({
+          rounds: KAHOOT_QUIZ,
+          teamNames: KAHOOT_TEAMS,
+        });
+        const answer = createAnswerer(
+          game,
+          KAHOOT_QUIZ,
+          (team, question) => question < team,
+        );
+
+        const result = await previewWalk().walk(answer);
+
+        const boards = result.presses.filter(
+          ({ before }) => before.kind === 'leaderboard',
+        );
+        expect(boards.length).toBeGreaterThan(5);
+        expectOnlyKnownDisagreements(result, []);
+      });
+    });
+
+    describe('an ended quiz with an active showdown', () => {
+      async function guess(teamIndex: number, value: string) {
+        const { socket, teamId } = game.teams[teamIndex];
+        const { activeShowdown } = game.gameState.getSnapshot(game.joinCode);
+        await game.gateway.handleSubmitShowdownGuess(asSocket(socket), {
+          showdownRoundId: activeShowdown!.id,
+          teamId,
+          value,
+        });
+      }
+
+      it('agrees while waiting for every guess and through the final resolving step', async () => {
+        game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
+        await tieOnFirstQuestion(game, game.teams);
+        await game.act('END_QUIZ');
+        const admin = await game.connectAdmin();
+        await game.gateway.handleCreateShowdownRound(asSocket(admin), {
+          question: 'How many people are in this room?',
+          answer: '42',
+          points: 5,
+        });
+        const walk = previewWalk();
+        const cleared: PressResult[] = [];
+        for (let step = 0; step < MAX_PRESSES_TO_BREAK; step += 1) {
+          if (!isBoardUp()) break;
+          cleared.push(await walk.pressAndCompare());
+        }
+        expect(isBoardUp()).toBe(false);
+        await guess(0, '40');
+        const waiting = await walk.pressAndCompare();
+        await guess(1, '50');
+
+        const rest = await walk.walk();
+
+        expect(waiting.outcome).toBe('refused');
+        expect(waiting.before.next?.body).toBe('Waiting for every guess');
+        expect(rest.presses.at(-1)?.outcome).toBe('unmoved');
+        expectOnlyKnownDisagreements(
+          summarise([...cleared, waiting, ...rest.presses]),
+          [],
+        );
       });
     });
   });

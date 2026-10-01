@@ -6,14 +6,13 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ### commit-a-move ([spec](commit-a-move/spec.md))
 
-| #   | Ticket                                                                                                               | Blocked by                    |
-| --- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| 01  | [Agreement walk pins today's preview against the real press](commit-a-move/issues/01-agreement-walk-pins-preview.md) | —                             |
-| 02  | [The Settle step knows the step kind](commit-a-move/issues/02-settle-step-knows-step-kind.md)                        | 01                            |
-| 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md)    | 01                            |
-| 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md)            | 01, 03, grading-refresh (all) |
-| 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md)                  | 02, 03, 04                    |
-| 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md)                    | 05                            |
+| #   | Ticket                                                                                                            | Blocked by                    |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 02  | [The Settle step knows the step kind](commit-a-move/issues/02-settle-step-knows-step-kind.md)                     | 01                            |
+| 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md) | 01                            |
+| 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md)         | 01, 03, grading-refresh (all) |
+| 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md)               | 02, 03, 04                    |
+| 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md)                 | 05                            |
 
 ### players-reveal-redaction ([spec](players-reveal-redaction/spec.md))
 
@@ -28,7 +27,8 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| grading-refresh             | 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md)                | —         |
+| commit-a-move               | 01  | [Agreement walk pins today's preview against the real press](commit-a-move/issues/01-agreement-walk-pins-preview.md)                                                   | —         |
+| grading-refresh             | 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md)               | —         |
 | grading-refresh             | 02  | [Answer submitted or graded ends through the grading refresh](grading-refresh/issues/02-answer-changes-through-refresh.md)                                             | —         |
 | grading-refresh             | 01  | [A live answer-key fix refreshes /control's ungraded markers](grading-refresh/issues/01-key-fix-refreshes-ungraded.md)                                                 | —         |
 | round-title-card            | 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md)                            | —         |

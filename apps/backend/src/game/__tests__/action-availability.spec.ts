@@ -7,12 +7,12 @@ import {
 } from '@campus-pubquiz/types';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import type { GameSessionStore } from '@/game/state/game-session.store';
-import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
+import { asSocket } from '@/game/__tests__/test-utils';
+import { createAnswerer } from '@/game/__tests__/walk-test-utils';
 import {
   TWO_ROUND_QUIZ,
   setupRealStoreGatewayTest,
   tieOnFirstQuestion,
-  type QuizQuestionSpec,
   type QuizRoundSpec,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -317,80 +317,10 @@ describe('Screen projection — Advance/Previous availability', () => {
       }
     }
 
-    /** Every question's expected answer, by seeded question id. */
-    function questionSpecsById(
-      specs: QuizRoundSpec[],
-    ): Map<number, QuizQuestionSpec> {
-      const byId = new Map<number, QuizQuestionSpec>();
-      specs.forEach((round, roundIndex) =>
-        round.questions.forEach((question, questionIndex) =>
-          byId.set(
-            game.rounds[roundIndex].questionIds[questionIndex],
-            question,
-          ),
-        ),
-      );
-      return byId;
-    }
-
-    /**
-     * Has the first `correctTeams` teams answer each question correctly and
-     * the rest wrongly, the first time it is open and answerable, so the
-     * board has standings to reveal. Teams are spread out by `correctTeams`
-     * of the way down the list: team N scores on a question when
-     * `isCorrect(N, questionOrdinal)`.
-     */
-    function createAnswerer(
+    const answerWith = (
       specs: QuizRoundSpec[],
       isCorrect: (teamIndex: number, questionOrdinal: number) => boolean,
-    ) {
-      const specById = questionSpecsById(specs);
-      const ordinalById = new Map(
-        [...specById.keys()].map((id, ordinal) => [id, ordinal]),
-      );
-      const answered = new Set<number>();
-      let admin: MockSocket | undefined;
-      // A wrong typed answer waits for the moderator, so the walk grades it
-      // zero — Advance out of the break is refused while any is ungraded.
-      async function gradeWrongAnswersZero(questionId: number) {
-        admin ??= await game.connectAdmin();
-        const answers = await game.inRequestContext(() =>
-          game.answerService.listForQuestion(game.gameSessionId, questionId),
-        );
-        for (const { answerId, gradedAt } of answers) {
-          if (gradedAt !== null) continue;
-          await game.gateway.handleGradeAnswer(asSocket(admin), {
-            answerId,
-            pointsAwarded: 0,
-          });
-        }
-      }
-      return async () => {
-        const view = adminView();
-        const question = view.currentQuestion;
-        if (
-          view.progress.status !== 'question_open' ||
-          view.progress.isLeaderboardVisible ||
-          !question ||
-          answered.has(question.id)
-        ) {
-          return;
-        }
-        answered.add(question.id);
-        const spec = specById.get(question.id)!;
-        for (const [index, { socket, teamId }] of game.teams.entries()) {
-          const right = isCorrect(index, ordinalById.get(question.id)!);
-          const wrongNumber = String(Number(spec.answer) - 100 * (index + 1));
-          const wrong = spec.type === 'closest_guess' ? wrongNumber : 'nope';
-          await game.gateway.handleSubmitAnswer(asSocket(socket), {
-            questionId: question.id,
-            teamId,
-            value: right ? spec.answer : wrong,
-          });
-        }
-        if (spec.type === 'free_text') await gradeWrongAnswersZero(question.id);
-      };
-    }
+    ) => createAnswerer(game, specs, isCorrect);
 
     /**
      * Presses a raw ADVANCE until the Advance slot is gone, checking at every point that what was announced is what happened and
@@ -509,7 +439,7 @@ describe('Screen projection — Advance/Previous availability', () => {
 
       it('announces what Advance does at every point to the end of the quiz', async () => {
         await game.act('START_QUIZ');
-        const answer = createAnswerer(TWO_BLOCK_QUIZ, (team) => team === 0);
+        const answer = answerWith(TWO_BLOCK_QUIZ, (team) => team === 0);
 
         const points = await walkForward(answer);
 
@@ -526,7 +456,7 @@ describe('Screen projection — Advance/Previous availability', () => {
 
       it('announces whether Previous works at every point back from the end', async () => {
         await game.act('START_QUIZ');
-        await walkForward(createAnswerer(TWO_BLOCK_QUIZ, (team) => team === 0));
+        await walkForward(answerWith(TWO_BLOCK_QUIZ, (team) => team === 0));
 
         const steps = await walkBackward();
 
@@ -543,7 +473,7 @@ describe('Screen projection — Advance/Previous availability', () => {
         await game.act('START_QUIZ');
 
         const points = await walkForward(
-          createAnswerer(TWO_BLOCK_QUIZ, () => true),
+          answerWith(TWO_BLOCK_QUIZ, () => true),
         );
 
         const board = points.filter((point) => point.isBoardUp);
@@ -581,7 +511,7 @@ describe('Screen projection — Advance/Previous availability', () => {
 
       it('announces the between-questions board and the capped round-end board at every point', async () => {
         // Team N gets the first N questions right: six different scores.
-        const answer = createAnswerer(
+        const answer = answerWith(
           KAHOOT_QUIZ,
           (team, question) => question < team,
         );
@@ -608,7 +538,7 @@ describe('Screen projection — Advance/Previous availability', () => {
 
       it('announces whether Previous works at every point back from the end', async () => {
         await walkForward(
-          createAnswerer(KAHOOT_QUIZ, (team, question) => question < team),
+          answerWith(KAHOOT_QUIZ, (team, question) => question < team),
         );
 
         const steps = await walkBackward();
@@ -648,7 +578,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       });
 
       it('announces every reveal sub-step going forward', async () => {
-        const answer = createAnswerer(CLOSEST_QUIZ, (team) => team === 0);
+        const answer = answerWith(CLOSEST_QUIZ, (team) => team === 0);
 
         const points = await walkForward(answer);
 
@@ -656,7 +586,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       });
 
       it('announces every reveal sub-step going back', async () => {
-        await walkForward(createAnswerer(CLOSEST_QUIZ, (team) => team === 0));
+        await walkForward(answerWith(CLOSEST_QUIZ, (team) => team === 0));
 
         const steps = await walkBackward();
 
