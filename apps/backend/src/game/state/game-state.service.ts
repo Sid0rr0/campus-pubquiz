@@ -24,7 +24,7 @@ import {
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
-import { settleSession } from '@/game/state/session-settle.util';
+import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import {
@@ -55,16 +55,8 @@ import {
 } from '@/game/state/session-updates.util';
 import {
   BROADCAST_STATE_OUTCOME,
-  isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import {
-  effectiveActionOf,
-  planMove,
-  type MoveStep,
-} from '@/game/state/move-plan.util';
-import { ShowdownGuessesPendingError } from '@/game/state/errors/showdown-guesses-pending.error';
-import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import { ShowdownService } from '@/showdown/showdown.service';
 import type { TeamRosterEntry } from '@/team/team.service';
 
@@ -75,6 +67,7 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 export class GameStateService implements OnModuleInit {
   private readonly sessionStore = new GameSessionStore();
   private readonly grading: BlockGradingService;
+  private readonly moveCommitter: MoveCommitter;
 
   constructor(
     private readonly seedService: SeedService,
@@ -88,6 +81,12 @@ export class GameStateService implements OnModuleInit {
       this.answerService,
       this.standingsService,
     );
+    this.moveCommitter = new MoveCommitter(
+      this.grading,
+      this.progressRepository,
+      this.standingsService,
+      this.showdownService,
+    );
   }
 
   // onModuleInit runs at bootstrap, before any HTTP/socket request has
@@ -97,26 +96,14 @@ export class GameStateService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const seededGame = await this.seedService.seed();
     const saved = await this.progressRepository.load(seededGame.gameSessionId);
-    // A saved phase timer is restored exactly (unlike the auto-lock deadline's
-    // deliberate re-arm-fresh) — its epoch-ms start time is real and
-    // persisted, so the elapsed time it shows after a restart is still
-    // accurate, downtime included.
     const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
-    // The ungraded cache lives in memory only; inside the break it must be
-    // rebuilt so /control and showdown eligibility are right straight away.
-    const restoredSession = await this.grading.refreshUngradedQuestionIds(
-      freshSessionState(seededGame),
-      progress,
-    );
     this.sessionStore.set(
       seededGame.joinCode,
-      settleSession({
-        session: restoredSession,
+      await this.moveCommitter.place(
+        freshSessionState(seededGame),
         progress,
-        step: { kind: 'place' },
-        now: Date.now(),
-        savedPhaseTimer: saved ?? undefined,
-      }),
+        saved ?? undefined,
+      ),
     );
     this.sessionStore.markInitialized();
   }
@@ -190,11 +177,8 @@ export class GameStateService implements OnModuleInit {
     // no progress to persist here.
     this.sessionStore.set(
       seededGame.joinCode,
-      settleSession({
-        session: freshSessionState(seededGame),
-        progress: { ...LOBBY_PROGRESS },
-        step: { kind: 'place' },
-        now: Date.now(),
+      await this.moveCommitter.place(freshSessionState(seededGame), {
+        ...LOBBY_PROGRESS,
       }),
     );
     return this.getSnapshot(seededGame.joinCode);
@@ -483,140 +467,33 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * Applies an admin action (or a timer expiry standing in for one) and says
-   * what must be pushed. Owns every follow-up an action implies — the fresh
-   * leaderboard when it is toggled on, and the per-team answer sync on
-   * reveal entry — so the admin path and both timer paths behave the same.
-   * Throws whatever applyAction throws (illegal transition, ungraded answers).
+   * what must be pushed. Carries the press out through the Move committer —
+   * every follow-up it implies (the fresh leaderboard when it is toggled on,
+   * the per-team answer sync on reveal entry) comes back in the outcome — so
+   * the admin path and both timer paths behave the same. The session is
+   * stored only once its progress is saved, so a refused press leaves it
+   * where it was. Throws whatever the commit throws (illegal transition,
+   * ungraded answers, a failed save).
    */
   async applyAdminAction(
     joinCode: string,
     action: GameAction,
   ): Promise<SessionOutcome> {
-    const previousStatus = this.getSnapshot(joinCode).progress.status;
-    const snapshot = await this.applyAction(joinCode, action);
-
-    // Answers and grades refresh the leaderboard, but a team that hasn't
-    // answered yet isn't on it — recompute fresh here so every currently-
-    // joined team appears, 0 points and all.
-    if (
-      action === 'TOGGLE_LEADERBOARD' &&
-      snapshot.progress.isLeaderboardVisible
-    ) {
-      const leaderboard = await this.standingsService.leaderboard(
-        this.getGameSessionId(joinCode),
-      );
-      this.update(joinCode, (session) => withLeaderboard(session, leaderboard));
-    }
-
-    const teamSyncTeamIds = isRevealEntry(
-      previousStatus,
-      snapshot.progress.status,
-    )
-      ? this.getSnapshot(joinCode)
-          .teams.filter((team) => team.isConnected)
-          .map((team) => team.teamId)
-      : [];
-    return { ...BROADCAST_STATE_OUTCOME, teamSyncTeamIds };
+    const { session, outcome } = await this.moveCommitter.commit(
+      this.sessionStore.get(joinCode),
+      action,
+    );
+    this.sessionStore.set(joinCode, session);
+    return outcome;
   }
 
+  /** The same press as applyAdminAction, answering with the snapshot it leaves behind. */
   async applyAction(
     joinCode: string,
     action: GameAction,
   ): Promise<StateSnapshotPayload> {
-    const session = this.sessionStore.get(joinCode);
-
-    const step = planMove(session, action);
-
-    // The ephemeral steps (showdown reveal, closest_guess sub-steps) never
-    // reach getNextGameState: GameProgress is untouched and nothing is
-    // persisted. See tryStepClosestGuessReveal for why they stay ephemeral.
-    switch (step.kind) {
-      case 'blocked':
-        throw step.cause;
-      case 'showdown_waiting':
-        throw new ShowdownGuessesPendingError();
-      case 'showdown_step':
-        this.sessionStore.set(
-          joinCode,
-          await this.resolveShowdownIfFinished(step),
-        );
-        return this.getSnapshot(joinCode);
-      case 'closest_guess_step':
-        this.sessionStore.set(joinCode, step.session);
-        return this.getSnapshot(joinCode);
-      case 'transition':
-      case 'grading_pending':
-      case 'leaderboard_reveal':
-      case 'leaderboard_hide':
-        break;
-    }
-    const { progress } = step;
-    // A raw ADVANCE under the leaderboard is carried out as the action it
-    // plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the reveal count,
-    // the kahoot timer and everything else downstream treat it identically.
-    const effectiveAction = effectiveActionOf(step, action);
-
-    // Committing out of the break/grading screens into reveal — the one
-    // moment this must be DB-authoritative rather than relying on the
-    // (possibly stale, e.g. post-restart) ungradedQuestionIds cache the plan
-    // and the refresh below read.
-    if (
-      (session.progress.status === 'break_intro' ||
-        session.progress.status === 'break') &&
-      progress.status === 'reveal_intro'
-    ) {
-      const ungradedQuestionIds =
-        await this.grading.getUngradedBlockQuestionIds(session);
-      if (ungradedQuestionIds.length > 0) {
-        throw new UngradedAnswersError(ungradedQuestionIds);
-      }
-    }
-
-    const speedScoredSession = await this.grading.ensureKahootSpeedScored(
-      session,
-      progress,
-    );
-    const gradedSession = await this.grading.ensureBlockGraded(
-      speedScoredSession,
-      progress,
-    );
-    const sessionWithGradingStatus =
-      await this.grading.refreshUngradedQuestionIds(gradedSession, progress);
-    const updated = settleSession({
-      session: sessionWithGradingStatus,
-      progress,
-      step: { kind: step.kind, action: effectiveAction },
-      now: Date.now(),
-    });
-    this.sessionStore.set(joinCode, updated);
-    await this.progressRepository.save(updated.seededGame.gameSessionId, {
-      progress,
-      livePhaseKey: updated.livePhaseKey,
-      phaseStartedAt: updated.phaseStartedAt,
-      phaseElapsedByKey: updated.phaseElapsedByKey,
-    });
+    await this.applyAdminAction(joinCode, action);
     return this.getSnapshot(joinCode);
-  }
-
-  /** Crossing into a showdown's final reveal step records the winner and refreshes the leaderboard it moves. */
-  private async resolveShowdownIfFinished(
-    step: Extract<MoveStep, { kind: 'showdown_step' }>,
-  ): Promise<SessionState> {
-    const { session, shouldResolve } = step;
-    if (!shouldResolve || !session.activeShowdownRound) return session;
-    const { winnerTeamId, isTie } = await this.showdownService.resolve(
-      session.activeShowdownRound.id,
-    );
-    const resolvedRound: ActiveShowdownRoundState = {
-      ...session.activeShowdownRound,
-      winnerTeamId,
-      isTie,
-      resolved: true,
-    };
-    const leaderboard = await this.standingsService.leaderboard(
-      session.seededGame.gameSessionId,
-    );
-    return { ...session, activeShowdownRound: resolvedRound, leaderboard };
   }
 
   /**

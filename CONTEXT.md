@@ -78,5 +78,9 @@ What one press of an admin action does right now. Advance and Previous: reveal t
 **Settle step**:
 Bringing a session's timers, deadlines and reveal counters into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
 
+**Commit a move**:
+Carrying out one planned press from start to finish: plan it, grade what it implies, settle the session, save its progress. An admin press and both timer expiries go through it. The session only moves once its progress is saved, so a press that can't be saved is refused and nothing changes. Session creation and restart restore reach their starting point through the same module, without a save.
+\_Avoid*: apply action
+
 **Grading refresh**:
 The one step every change to grades ends through: given the questions whose grades just changed, it works out which of them are ungraded and fetches fresh standings, and the session takes both in a single update. Today a live answer-key fix ends through it.

@@ -11,11 +11,17 @@ Parent spec: `.scratch/commit-a-move/spec.md`
 
 **Blocked by:** 02 (The Settle step knows the step kind), 03 (The Move plan plans every action, lobby start included), 04 (/remote says Advance is waiting for grading)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The admin action, both auto-lock timer paths, session creation and restart restore all go through the module; no other place puts the plan → grade → settle → save pipeline together
-- [ ] Turning the board on still shows every joined team at zero points, and entering the reveal still re-syncs every connected team's answers, now returned in the commit's outcome with no second store write after an await
-- [ ] When the progress save fails for a press (swap the progress repository's save in the real-store harness), the press is refused and the next snapshot is unchanged
-- [ ] Restart restore puts the session back at exactly the same point, with phase timers and the ungraded set rebuilt; a new session starts settled in the lobby
-- [ ] The 01 agreement walk, grading gate, kahoot timer, question-lock auto-advance, showdown, leaderboard, ungraded restore, persistence and session-creation specs pass unchanged
-- [ ] CONTEXT.md gains **Commit a move** (carrying out one planned press: grade, settle, save), with "apply action" under _Avoid_
+- [x] The admin action, both auto-lock timer paths, session creation and restart restore all go through the module; no other place puts the plan → grade → settle → save pipeline together
+- [x] Turning the board on still shows every joined team at zero points, and entering the reveal still re-syncs every connected team's answers, now returned in the commit's outcome with no second store write after an await
+- [x] When the progress save fails for a press (swap the progress repository's save in the real-store harness), the press is refused and the next snapshot is unchanged
+- [x] Restart restore puts the session back at exactly the same point, with phase timers and the ungraded set rebuilt; a new session starts settled in the lobby
+- [x] The 01 agreement walk, grading gate, kahoot timer, question-lock auto-advance, showdown, leaderboard, ungraded restore, persistence and session-creation specs pass unchanged
+- [x] CONTEXT.md gains **Commit a move** (carrying out one planned press: grade, settle, save), with "apply action" under _Avoid_
+
+## Comments
+
+Implemented as `MoveCommitter` (`apps/backend/src/game/state/commit-a-move.service.ts`) with `commit` and `place`; `GameStateService` constructs it beside `BlockGradingService` and stores what `commit` returns only after the progress save succeeds. `applyAction` stays as a thin delegation to `applyAdminAction` (making it private belongs to a later candidate). The leaderboard refresh on turning the board on now happens inside the commit, before the save; the reveal-entry team sync is computed from the committed session. New `commit-a-move.spec.ts` covers the failed-save refusal (snapshot unchanged, retry works) and the outcome's team sync. Committed on main; see git history for the hash.
+
+Known, accepted: the commit still builds its result from the session it read before its awaits, so a team connecting or an answer landing mid-commit can be overwritten when the result is stored. That window existed before; serialising each session's async writes is review candidate 5 (out of scope in the spec).
