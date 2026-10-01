@@ -102,7 +102,7 @@ export const HEADING_BY_SCREEN: Record<OnAirScreen['kind'], RegExp> = {
   showdown: /^Showdown$/,
 };
 
-const SHOWDOWN_WAITING_BODY = 'Waiting for every guess';
+const WAITING_BODIES = ['Waiting for every guess', 'Waiting for grading'];
 const MAX_WALK_STEPS = 120;
 
 /** What one press did to the quiz: moved it, was accepted but changed nothing, or was refused. */
@@ -165,7 +165,7 @@ export function createPreviewWalk(
   }
 
   function isPreviewedAsWaiting(next: ScreenPreview | null): boolean {
-    return next === null || next.body === SHOWDOWN_WAITING_BODY;
+    return next === null || WAITING_BODIES.includes(next.body ?? '');
   }
 
   function movedAgrees(before: Observation, after: Observation): boolean {

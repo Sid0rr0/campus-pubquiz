@@ -72,7 +72,7 @@ lobby → rules → round_overview
 ## Moving through the quiz
 
 **Move plan**:
-What one press of Advance or Previous does right now: reveal the next leaderboard rank, hide the leaderboard, take a showdown or closest*guess reveal step, move the quiz to its next status, or nothing. While the leaderboard is up, a press only works the leaderboard and never moves the quiz underneath.
+What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a showdown or closest*guess reveal step, move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard and never moves the quiz underneath.
 \_Avoid*: next step, action result
 
 **Settle step**:

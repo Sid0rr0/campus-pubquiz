@@ -23,7 +23,11 @@ export interface SavedPhaseTimer {
 export type SettleStep =
   | { kind: 'place' }
   | {
-      kind: 'transition' | 'leaderboard_reveal' | 'leaderboard_hide';
+      kind:
+        | 'transition'
+        | 'grading_pending'
+        | 'leaderboard_reveal'
+        | 'leaderboard_hide';
       action: GameAction;
     };
 

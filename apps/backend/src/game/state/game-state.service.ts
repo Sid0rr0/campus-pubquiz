@@ -3,7 +3,6 @@ import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
-  getNextGameState,
   type ActiveSessionSummary,
   type AdminQuestionContext,
   type GameAction,
@@ -38,7 +37,6 @@ import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 import {
   LOBBY_PROGRESS,
   freshSessionState,
-  getGameContext,
   type ActiveShowdownRoundState,
   type SessionState,
 } from '@/game/state/session-state';
@@ -527,17 +525,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<StateSnapshotPayload> {
     const session = this.sessionStore.get(joinCode);
 
-    const step: MoveStep =
-      action === 'ADVANCE' || action === 'PREVIOUS'
-        ? planMove(session, action)
-        : {
-            kind: 'transition',
-            progress: getNextGameState(
-              session.progress,
-              action,
-              getGameContext(session),
-            ),
-          };
+    const step = planMove(session, action);
 
     // The ephemeral steps (showdown reveal, closest_guess sub-steps) never
     // reach getNextGameState: GameProgress is untouched and nothing is
@@ -557,6 +545,7 @@ export class GameStateService implements OnModuleInit {
         this.sessionStore.set(joinCode, step.session);
         return this.getSnapshot(joinCode);
       case 'transition':
+      case 'grading_pending':
       case 'leaderboard_reveal':
       case 'leaderboard_hide':
         break;
@@ -569,9 +558,9 @@ export class GameStateService implements OnModuleInit {
 
     // Committing out of the break/grading screens into reveal — the one
     // moment this must be DB-authoritative rather than relying on the
-    // (possibly stale, e.g. post-restart) ungradedQuestionIds cache below.
+    // (possibly stale, e.g. post-restart) ungradedQuestionIds cache the plan
+    // and the refresh below read.
     if (
-      action === 'ADVANCE' &&
       (session.progress.status === 'break_intro' ||
         session.progress.status === 'break') &&
       progress.status === 'reveal_intro'

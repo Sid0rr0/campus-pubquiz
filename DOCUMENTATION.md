@@ -124,7 +124,12 @@ Grading is not tied to a status. The admin can grade an answer as soon as it
 arrives (a team revising an answer into something that doesn't match the key
 clears its grade); the break is
 where remaining grading must be finished, since leaving it is refused while
-any answer in the block is ungraded.
+any answer in the block is ungraded. While one is, /remote's "next" line says
+Advance is "Waiting for grading" (the Advance slot still shows Advance); it
+switches to the reveal's round title card once the last answer is graded, and
+follows a live answer-key fix that makes an answer ungraded or clears the last
+one. The press itself re-reads the database, so a stale cache never lets it
+through.
 
 For a `closest_guess` question with at least one submitted guess,
 `ADVANCE`/`PREVIOUS` in `reveal` first walk a 5-step cumulative reveal on that

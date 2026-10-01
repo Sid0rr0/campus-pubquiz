@@ -54,7 +54,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Grading',
     paragraphs: [
-      'You can grade an answer as soon as it arrives, in the teams/answers table. Typed answers (free text, audio, YouTube) that match the answer text are graded correct automatically; any other typed answer waits for you. If a team changes an answer you already graded so that it no longer matches, the mark is cleared and you need to grade it again. Whatever is still ungraded must be finished during the break: the quiz will not leave the break while an answer is ungraded.',
+      'You can grade an answer as soon as it arrives, in the teams/answers table. Typed answers (free text, audio, YouTube) that match the answer text are graded correct automatically; any other typed answer waits for you. If a team changes an answer you already graded so that it no longer matches, the mark is cleared and you need to grade it again. Whatever is still ungraded must be finished during the break: the quiz will not leave the break while an answer is ungraded. While one is, the preview on the Remote page says Advance is waiting for grading; once the last answer is graded it names the reveal.',
       'How each question type is graded:',
     ],
     bullets: QUESTION_TYPE_BULLETS,

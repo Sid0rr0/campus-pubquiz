@@ -6,13 +6,17 @@ Parent spec: `.scratch/commit-a-move/spec.md`
 
 **Blocked by:** 01 (Agreement walk pins today's preview against the real press), 03 (The Move plan plans every action, lobby start included), and `.scratch/grading-refresh/` (every grade change, key fix included, keeps the ungraded set fresh)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] With an ungraded answer in the break, /remote's "next" line says Advance is waiting for grading, and pressing Advance is refused with the ungraded question ids, as today
-- [ ] Once the moderator grades the last ungraded answer, the "next" line names the reveal's round title card and Advance shows it
-- [ ] A live answer-key fix in the break that makes an answer ungraded (or clears the last one) updates the "next" line straight away
-- [ ] The Advance slot still announces Advance while grading is pending
-- [ ] The refusal still comes from a fresh database read, not the cached set
-- [ ] The 01 walk's ungraded-break and key-fix exceptions are removed and the walk passes
-- [ ] The grading gate, ungraded agreement and action-availability specs pass unchanged
-- [ ] CONTEXT.md's **Move plan** mentions the grading-pending step and the lobby start; DOCUMENTATION.md and the `/guide` page mention the new "waiting for grading" line wherever they describe the presenter preview or the break → reveal gate
+- [x] With an ungraded answer in the break, /remote's "next" line says Advance is waiting for grading, and pressing Advance is refused with the ungraded question ids, as today
+- [x] Once the moderator grades the last ungraded answer, the "next" line names the reveal's round title card and Advance shows it
+- [x] A live answer-key fix in the break that makes an answer ungraded (or clears the last one) updates the "next" line straight away
+- [x] The Advance slot still announces Advance while grading is pending
+- [x] The refusal still comes from a fresh database read, not the cached set
+- [x] The 01 walk's ungraded-break and key-fix exceptions are removed and the walk passes
+- [x] The grading gate, ungraded agreement and action-availability specs pass unchanged
+- [x] CONTEXT.md's **Move plan** mentions the grading-pending step and the lobby start; DOCUMENTATION.md and the `/guide` page mention the new "waiting for grading" line wherever they describe the presenter preview or the break → reveal gate
+
+## Comments
+
+Implemented as a `grading_pending` Move plan step (`move-plan.util.ts`) that carries the reveal progress, so the press falls through to the existing fresh-database gate in `GameStateService.applyAction`. /remote's line reads "Grading — Waiting for grading". Committed on main; see git history for the hash.

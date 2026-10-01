@@ -14,6 +14,9 @@ import { tryStepShowdownReveal } from '@/game/state/showdown-reveal.util';
 
 export type Movement = 'ADVANCE' | 'PREVIOUS';
 
+const isMovement = (action: GameAction): action is Movement =>
+  action === 'ADVANCE' || action === 'PREVIOUS';
+
 /** The one step a press of ADVANCE or PREVIOUS would take right now. */
 export type MoveStep =
   /** ADVANCE under the leaderboard with ranks still hidden: shows the next rank, the quiz underneath stays put. */
@@ -37,17 +40,58 @@ export type MoveStep =
   | { kind: 'showdown_waiting' }
   | { kind: 'closest_guess_step'; session: SessionState }
   | { kind: 'transition'; progress: GameProgress }
+  /**
+   * ADVANCE out of the break into the reveal while the cached ungraded set
+   * is not empty: pressable, but the press is refused with what is still
+   * waiting. `progress` is the reveal the press goes on to when the database
+   * says nothing is ungraded after all, so a stale cache never refuses a press.
+   */
+  | {
+      kind: 'grading_pending';
+      progress: GameProgress;
+      ungradedQuestionIds: number[];
+    }
   | { kind: 'blocked'; cause: unknown };
 
 /**
- * What one ADVANCE or PREVIOUS press would do to `session`, decided once for
- * everything that needs to know — the action handler carries the step out,
- * the admin view announces it, and the presenter preview describes it.
- * Precedence: the leaderboard when it is up (it covers the screen, so a press
+ * What one admin action would do to `session`, decided once for everything
+ * that needs to know — the action handler carries the step out, the admin
+ * view announces it, and the presenter preview describes it. Any action other
+ * than ADVANCE and PREVIOUS is a plain transition through the state machine,
+ * or blocked when it is illegal.
+ * Precedence for ADVANCE and PREVIOUS: the leaderboard when it is up (it covers the screen, so a press
  * only ever reveals a rank or hides the board and never moves the quiz
  * underneath), then what is underneath it — see planUnderlyingMove.
  */
-export function planMove(session: SessionState, movement: Movement): MoveStep {
+export function planMove(session: SessionState, action: GameAction): MoveStep {
+  if (!isMovement(action)) return planTransition(session, action);
+  return planMovement(session, action);
+}
+
+/** What the next press does: START_QUIZ in the lobby (the lobby's Advance), ADVANCE everywhere else — and under the leaderboard ADVANCE drives the board. */
+export function planNextPress(session: SessionState): MoveStep {
+  const { status, isLeaderboardVisible } = session.progress;
+  return status === 'lobby' && !isLeaderboardVisible
+    ? planTransition(session, 'START_QUIZ')
+    : planMove(session, 'ADVANCE');
+}
+
+function planTransition(session: SessionState, action: GameAction): MoveStep {
+  try {
+    return {
+      kind: 'transition',
+      progress: getNextGameState(
+        session.progress,
+        action,
+        getGameContext(session),
+      ),
+    };
+  } catch (cause) {
+    return { kind: 'blocked', cause };
+  }
+}
+
+function planMovement(session: SessionState, movement: Movement): MoveStep {
   const { progress } = session;
   if (!progress.isLeaderboardVisible)
     return planUnderlyingMove(session, movement);
@@ -114,14 +158,28 @@ function planUnderlyingMove(
     if (stepped) return { kind: 'closest_guess_step', session: stepped };
   }
 
-  try {
-    return {
-      kind: 'transition',
-      progress: getNextGameState(progress, movement, getGameContext(session)),
-    };
-  } catch (cause) {
-    return { kind: 'blocked', cause };
+  const step = planTransition(session, movement);
+  return movement === 'ADVANCE' ? planGradingGate(session, step) : step;
+}
+
+/** Turns the break's ADVANCE into the reveal into a grading-pending step while the session's cached ungraded set is not empty. */
+function planGradingGate(session: SessionState, step: MoveStep): MoveStep {
+  const { status } = session.progress;
+  const isLeavingBreak = status === 'break_intro' || status === 'break';
+  const isEnteringReveal =
+    step.kind === 'transition' && step.progress.status === 'reveal_intro';
+  if (
+    !isLeavingBreak ||
+    !isEnteringReveal ||
+    session.ungradedQuestionIds.length === 0
+  ) {
+    return step;
   }
+  return {
+    kind: 'grading_pending',
+    progress: step.progress,
+    ungradedQuestionIds: [...session.ungradedQuestionIds],
+  };
 }
 
 function planShowdownStep(

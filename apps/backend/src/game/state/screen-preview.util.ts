@@ -1,7 +1,6 @@
 import {
   SOCKET_ROOMS,
   getBreakNumber,
-  getNextGameState,
   getQuizStructureSummary,
   type OnAirScreen,
   type PresenterContextPayload,
@@ -11,7 +10,7 @@ import {
   getBlockSeededQuestions,
   getCurrentQuestion,
 } from '@/game/state/block-questions.util';
-import { planMove, type MoveStep } from '@/game/state/move-plan.util';
+import { planNextPress, type MoveStep } from '@/game/state/move-plan.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 
@@ -123,26 +122,6 @@ export function describeScreen(session: SessionState): ScreenPreview {
   return describeOnAirScreenText(session, onAirScreen);
 }
 
-/** What the next press does when the quiz hasn't started: START_QUIZ is the lobby's Advance. */
-function planNextPress(session: SessionState): MoveStep {
-  const { status, isLeaderboardVisible } = session.progress;
-  if (status !== 'lobby' || isLeaderboardVisible) {
-    return planMove(session, 'ADVANCE');
-  }
-  try {
-    return {
-      kind: 'transition',
-      progress: getNextGameState(
-        session.progress,
-        'START_QUIZ',
-        getGameContext(session),
-      ),
-    };
-  } catch (cause) {
-    return { kind: 'blocked', cause };
-  }
-}
-
 function describeStep(
   session: SessionState,
   step: MoveStep,
@@ -157,6 +136,8 @@ function describeStep(
           };
     case 'showdown_waiting':
       return { heading: 'Showdown', body: 'Waiting for every guess' };
+    case 'grading_pending':
+      return { heading: 'Grading', body: 'Waiting for grading' };
     case 'leaderboard_reveal':
       return {
         heading: 'Leaderboard',

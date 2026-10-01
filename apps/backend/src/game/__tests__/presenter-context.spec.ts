@@ -247,39 +247,16 @@ describe('GameStateService — getPresenterContext', () => {
     });
   });
   describe('the preview agrees with the real press across whole quizzes', () => {
-    /** One-line reasons for every place today's preview and press disagree; later tickets remove them one at a time. */
-    const UNGRADED_BREAK_PREVIEWS_REVEAL = 'ungraded break previews the reveal';
-    const KNOWN_DISAGREEMENTS: Record<string, string> = {
-      [UNGRADED_BREAK_PREVIEWS_REVEAL]:
-        'the preview projects the next status without the grading gate, so it names the reveal while Advance out of the break is refused until every answer is graded',
-    };
-
     /** Names a mismatch by what was on air and what the preview claimed. */
     function nameDisagreement({
       outcome,
       before,
     }: Omit<PressResult, 'disagreement'>): string {
-      const isRefusedBreakAdvance =
-        outcome === 'refused' &&
-        before.status === 'break_intro' &&
-        before.next !== null &&
-        HEADING_BY_SCREEN.reveal_intro.test(before.next.heading);
-      if (isRefusedBreakAdvance) return UNGRADED_BREAK_PREVIEWS_REVEAL;
-      return `unexplained: ${outcome} from "${before.currentHeading}" previewed "${before.next?.heading ?? null}" (${before.next?.body ?? '-'})`;
+      return `${outcome} from "${before.currentHeading}" previewed "${before.next?.heading ?? null}" (${before.next?.body ?? '-'})`;
     }
 
     function previewWalk() {
       return createPreviewWalk(game, nameDisagreement);
-    }
-
-    function expectOnlyKnownDisagreements(
-      { disagreements }: { disagreements: string[] },
-      expected: string[],
-    ) {
-      expect(disagreements).toEqual([...expected].sort());
-      for (const name of disagreements) {
-        expect(KNOWN_DISAGREEMENTS).toHaveProperty([name]);
-      }
     }
 
     const TWO_BLOCK_WALK_QUIZ: QuizRoundSpec[] = [
@@ -323,7 +300,7 @@ describe('GameStateService — getPresenterContext', () => {
           'leaderboard',
         ]),
       );
-      expectOnlyKnownDisagreements({ disagreements }, []);
+      expect(disagreements).toEqual([]);
     });
 
     it('agrees when a leaderboard has a tie', async () => {
@@ -338,7 +315,7 @@ describe('GameStateService — getPresenterContext', () => {
       expect(
         result.presses.some(({ after }) => after.kind === 'leaderboard'),
       ).toBe(true);
-      expectOnlyKnownDisagreements(result, []);
+      expect(result.disagreements).toEqual([]);
     });
 
     const MAX_PRESSES_TO_BREAK = 30;
@@ -437,13 +414,18 @@ describe('GameStateService — getPresenterContext', () => {
 
         const refused = await walk.pressAndCompare();
         await gradeFirstAnswer();
+        expect(walk.observe().next?.heading).toMatch(
+          HEADING_BY_SCREEN.reveal_intro,
+        );
         const rest = await walk.walk();
 
         expect(refused.outcome).toBe('refused');
-        expectOnlyKnownDisagreements(
-          summarise([...toBreak, refused, ...rest.presses]),
-          [UNGRADED_BREAK_PREVIEWS_REVEAL],
-        );
+        expect(refused.before.next).toMatchObject({
+          body: 'Waiting for grading',
+        });
+        expect(
+          summarise([...toBreak, refused, ...rest.presses]).disagreements,
+        ).toEqual([]);
       });
 
       it('is refused after a live key fix leaves a matched answer ungraded, then advances once it is graded', async () => {
@@ -453,13 +435,18 @@ describe('GameStateService — getPresenterContext', () => {
 
         const refused = await walk.pressAndCompare();
         await gradeFirstAnswer();
+        expect(walk.observe().next?.heading).toMatch(
+          HEADING_BY_SCREEN.reveal_intro,
+        );
         const rest = await walk.walk();
 
         expect(refused.outcome).toBe('refused');
-        expectOnlyKnownDisagreements(
-          summarise([...toBreak, refused, ...rest.presses]),
-          [UNGRADED_BREAK_PREVIEWS_REVEAL],
-        );
+        expect(refused.before.next).toMatchObject({
+          body: 'Waiting for grading',
+        });
+        expect(
+          summarise([...toBreak, refused, ...rest.presses]).disagreements,
+        ).toEqual([]);
       });
     });
 
@@ -519,7 +506,7 @@ describe('GameStateService — getPresenterContext', () => {
         });
 
         expect(phase).toBe('done');
-        expectOnlyKnownDisagreements(result, []);
+        expect(result.disagreements).toEqual([]);
       });
     });
 
@@ -556,7 +543,7 @@ describe('GameStateService — getPresenterContext', () => {
           ({ before }) => before.kind === 'leaderboard',
         );
         expect(boards.length).toBeGreaterThan(5);
-        expectOnlyKnownDisagreements(result, []);
+        expect(result.disagreements).toEqual([]);
       });
     });
 
@@ -597,10 +584,9 @@ describe('GameStateService — getPresenterContext', () => {
         expect(waiting.outcome).toBe('refused');
         expect(waiting.before.next?.body).toBe('Waiting for every guess');
         expect(rest.presses.at(-1)?.outcome).toBe('unmoved');
-        expectOnlyKnownDisagreements(
-          summarise([...cleared, waiting, ...rest.presses]),
-          [],
-        );
+        expect(
+          summarise([...cleared, waiting, ...rest.presses]).disagreements,
+        ).toEqual([]);
       });
     });
   });
