@@ -6,10 +6,16 @@ Parent spec: `.scratch/session-settle/spec.md`
 
 **Blocked by:** 02 (Restart and creation pin the derived session fields)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The settle step takes one named input object — no positional argument lists — and derives every progress-dependent field
-- [ ] Creating a session settles from the lobby with no action; the fresh-session builder keeps only progress-independent defaults (teams, empty caches, display text scale)
-- [ ] Restoring after a restart settles the saved progress with the saved phase timer in one call; the hand-written kahoot deadline recompute on restore is deleted
-- [ ] Restore semantics are unchanged: the phase timer resumes exactly, the auto-lock deadline re-arms fresh, the kahoot deadline follows the resumed phase timer
-- [ ] The settle step has no tests of its own; ticket 02's cases and the existing restart, timer, persistence and session lifecycle specs pass unchanged
+- [x] The settle step takes one named input object — no positional argument lists — and derives every progress-dependent field
+- [x] Creating a session settles from the lobby with no action; the fresh-session builder keeps only progress-independent defaults (teams, empty caches, display text scale)
+- [x] Restoring after a restart settles the saved progress with the saved phase timer in one call; the hand-written kahoot deadline recompute on restore is deleted
+- [x] Restore semantics are unchanged: the phase timer resumes exactly, the auto-lock deadline re-arms fresh, the kahoot deadline follows the resumed phase timer
+- [x] The settle step has no tests of its own; ticket 02's cases and the existing restart, timer, persistence and session lifecycle specs pass unchanged
+
+## Comments
+
+Implemented in one commit (hash in git history). New `session-settle.util.ts` holds `settleSession` (one named input: session, progress, action or null, now, optional saved phase timer) and now owns the lock-deadline, kahoot-deadline and break-end rules. `freshSessionState` only sets progress-independent defaults; `createSession` and `onModuleInit` settle through it, and the hand-written kahoot recompute is gone. `now` was added as an optional trailing parameter on `computePhaseTimerFields`, and `action` widened to `GameAction | null` on the reveal-count and closest_guess step helpers. No new tests; all `src/game` specs pass unchanged. `computeQuestionLockAt` / `computeKahootQuestionEndsAt` stay exported only because `applyTransition` still assembles fields by hand until ticket 04.
+
+Full run: shared-types and backend green, lint clean. 5 frontend failures in `app/play/__tests__/break-and-reveal.test.tsx` also fail on a clean main (untouched by this change).

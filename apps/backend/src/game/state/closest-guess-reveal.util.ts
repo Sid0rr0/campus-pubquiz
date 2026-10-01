@@ -90,7 +90,7 @@ export function tryStepClosestGuessReveal(
 export function computeInitialRevealStep(
   session: SessionState,
   progress: GameProgress,
-  action: GameAction,
+  action: GameAction | null,
 ): number {
   if (progress.status !== 'reveal') return 0;
   const question = getRevealTargetQuestion(

@@ -24,6 +24,7 @@ export function computePhaseTimerFields(
   currentLivePhaseKey: string | null,
   currentPhaseStartedAt: number | null,
   currentPhaseElapsedByKey: Record<string, number>,
+  now: number = Date.now(),
 ): {
   livePhaseKey: string | null;
   phaseStartedAt: number | null;
@@ -48,13 +49,13 @@ export function computePhaseTimerFields(
     currentLivePhaseKey !== null && currentPhaseStartedAt !== null
       ? {
           ...currentPhaseElapsedByKey,
-          [currentLivePhaseKey]: Date.now() - currentPhaseStartedAt,
+          [currentLivePhaseKey]: now - currentPhaseStartedAt,
         }
       : currentPhaseElapsedByKey;
 
   return {
     livePhaseKey: newKey,
-    phaseStartedAt: Date.now(),
+    phaseStartedAt: now,
     phaseElapsedByKey,
   };
 }

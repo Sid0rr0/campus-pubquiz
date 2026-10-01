@@ -14,7 +14,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                   | Blocked by          |
 | --- | ------------------------------------------------------------------------------------------------------------------------ | ------------------- |
-| 03  | [Creation and restore go through the settle step](session-settle/issues/03-settle-step-for-create-and-restore.md)        | 02                  |
 | 04  | [Advance and Previous settle through the same step](session-settle/issues/04-advance-previous-settle.md)                 | 03, advance-plan 02 |
 
 ### question-kind-module ([spec](question-kind-module/spec.md))
@@ -61,6 +60,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| session-settle           | 03  | [Creation and restore go through the settle step](session-settle/issues/03-settle-step-for-create-and-restore.md)                                       | —         |
 | session-settle           | 02  | [Restart and creation pin the derived session fields](session-settle/issues/02-restart-and-creation-characterization.md)                                | —         |
 | session-settle           | 01  | [Named status groups replace the inline status lists](session-settle/issues/01-named-status-groups.md)                                                   | —         |
 | advance-plan             | 05  | [Contract: delete the old Advance contract](advance-plan/issues/05-contract-delete-old-advance-contract.md)                                              | —         |

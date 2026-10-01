@@ -1,6 +1,5 @@
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
-  getTimedPhaseKey,
   type ClosestGuessRevealData,
   type GameContext,
   type GameProgress,
@@ -97,35 +96,24 @@ export interface ActiveShowdownRoundState {
   resolved: boolean;
 }
 
+/**
+ * A session with only its progress-independent defaults. Every
+ * progress-dependent field starts neutral — run it through settleSession to
+ * move it to a real progress.
+ */
 export function freshSessionState(
   seededGame: SeededGame,
-  progress: GameProgress,
+  progress: GameProgress = LOBBY_PROGRESS,
 ): SessionState {
-  // Covers both a genuinely fresh session and post-restart rehydration —
-  // same restart tradeoff as questionLockAt below: a timed phase always
-  // resumes live rather than recovering its true elapsed time.
-  const livePhaseKey = getTimedPhaseKey(
-    progress,
-    contextFromSeededGame(seededGame),
-  );
   return {
     seededGame,
     progress,
-    questionLockAt: computeQuestionLockAt(
-      progress,
-      seededGame.settings.lockGraceSeconds * 1000,
-    ),
-    kahootQuestionEndsAt: computeKahootQuestionEndsAt(
-      progress,
-      contextFromSeededGame(seededGame),
-      seededGame.settings.kahootQuestionTimerSeconds,
-      livePhaseKey,
-      livePhaseKey !== null ? Date.now() : null,
-    ),
+    questionLockAt: null,
+    kahootQuestionEndsAt: null,
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
-    livePhaseKey,
-    phaseStartedAt: livePhaseKey !== null ? Date.now() : null,
+    livePhaseKey: null,
+    phaseStartedAt: null,
     phaseElapsedByKey: {},
     leaderboard: [],
     leaderboardRevealCount: 0,
@@ -140,56 +128,13 @@ export function freshSessionState(
   };
 }
 
-/**
- * Recomputes the auto-lock deadline for a given progress: armed only while
- * in the 'locking' countdown, so a gateway timer can advance into the break
- * automatically without the admin clicking Advance.
- */
-export function computeQuestionLockAt(
-  progress: GameProgress,
-  lockDurationMs: number,
-): number | null {
-  return progress.status === 'locking' ? Date.now() + lockDurationMs : null;
-}
-
-/**
- * Recomputes the kahoot question auto-lock deadline: armed only while
- * `question_open` IS the live frontier phase (not a Previous-revisited
- * historical question — same displayedKey === livePhaseKey check
- * resolveCurrentPhaseTimerView uses) in a kahootMode round, with a
- * non-null per-session timer configured. Anchored to phaseStartedAt (the
- * moment this question genuinely opened) rather than Date.now(), since —
- * unlike computeQuestionLockAt's 'locking' countdown, which is always a
- * fresh restart — this deadline has a real persisted anchor to stay
- * accurate against (including across a backend restart).
- */
-export function computeKahootQuestionEndsAt(
-  progress: GameProgress,
-  context: GameContext,
-  kahootQuestionTimerSeconds: number | null,
-  livePhaseKey: string | null,
-  phaseStartedAt: number | null,
-): number | null {
-  if (progress.status !== 'question_open') return null;
-  if (kahootQuestionTimerSeconds === null) return null;
-  if (!context.rounds[progress.roundIndex]?.kahootMode) return null;
-  if (phaseStartedAt === null) return null;
-  if (getTimedPhaseKey(progress, context) !== livePhaseKey) return null;
-  return phaseStartedAt + kahootQuestionTimerSeconds * 1000;
-}
-
 export function getGameContext(session: SessionState): GameContext {
-  return contextFromSeededGame(session.seededGame);
-}
-
-/** Extracted from getGameContext so freshSessionState can compute a GameContext before a SessionState exists to hand it. */
-function contextFromSeededGame(seededGame: SeededGame): GameContext {
   return {
-    rounds: seededGame.rounds.map((round) => ({
+    rounds: session.seededGame.rounds.map((round) => ({
       questionCount: round.questions.length,
       breakAfter: round.breakAfter,
       kahootMode: round.kahootMode ?? false,
     })),
-    showRoundOverview: seededGame.settings.showRoundOverview,
+    showRoundOverview: session.seededGame.settings.showRoundOverview,
   };
 }

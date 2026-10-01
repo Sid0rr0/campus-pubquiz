@@ -29,6 +29,11 @@ import {
 } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
+import {
+  computeKahootQuestionEndsAt,
+  computeQuestionLockAt,
+  settleSession,
+} from '@/game/state/session-settle.util';
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
@@ -41,8 +46,6 @@ import { SessionCloseBlockedError } from '@/game/state/errors/session-close-bloc
 import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import {
   LOBBY_PROGRESS,
-  computeKahootQuestionEndsAt,
-  computeQuestionLockAt,
   freshSessionState,
   getGameContext,
   type ActiveShowdownRoundState,
@@ -105,35 +108,19 @@ export class GameStateService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const seededGame = await this.seedService.seed();
     const saved = await this.progressRepository.load(seededGame.gameSessionId);
-    const session = freshSessionState(
-      seededGame,
-      saved?.progress ?? { ...LOBBY_PROGRESS },
-    );
+    // A saved phase timer is restored exactly (unlike the auto-lock deadline's
+    // deliberate re-arm-fresh) — its epoch-ms start time is real and
+    // persisted, so the elapsed time it shows after a restart is still
+    // accurate, downtime included.
     this.sessionStore.set(
       seededGame.joinCode,
-      // A saved phase timer is restored exactly (unlike questionLockAt's
-      // deliberate re-arm-fresh below) — its epoch-ms start time is real and
-      // persisted, so the elapsed time it shows after a restart is still
-      // accurate, downtime included.
-      saved
-        ? {
-            ...session,
-            livePhaseKey: saved.livePhaseKey,
-            phaseStartedAt: saved.phaseStartedAt,
-            phaseElapsedByKey: saved.phaseElapsedByKey,
-            // freshSessionState above already computed kahootQuestionEndsAt
-            // from a throwaway Date.now()-based livePhaseKey/phaseStartedAt
-            // guess — recompute it against the final saved fields, or a
-            // restart mid-kahoot-question would arm the wrong deadline.
-            kahootQuestionEndsAt: computeKahootQuestionEndsAt(
-              session.progress,
-              getGameContext(session),
-              session.seededGame.settings.kahootQuestionTimerSeconds,
-              saved.livePhaseKey,
-              saved.phaseStartedAt,
-            ),
-          }
-        : session,
+      settleSession({
+        session: freshSessionState(seededGame),
+        progress: saved?.progress ?? { ...LOBBY_PROGRESS },
+        action: null,
+        now: Date.now(),
+        savedPhaseTimer: saved ?? undefined,
+      }),
     );
     this.sessionStore.markInitialized();
   }
@@ -205,8 +192,15 @@ export class GameStateService implements OnModuleInit {
     );
     // The fresh game_sessions row already starts in lobby state, so there is
     // no progress to persist here.
-    const session = freshSessionState(seededGame, { ...LOBBY_PROGRESS });
-    this.sessionStore.set(seededGame.joinCode, session);
+    this.sessionStore.set(
+      seededGame.joinCode,
+      settleSession({
+        session: freshSessionState(seededGame),
+        progress: { ...LOBBY_PROGRESS },
+        action: null,
+        now: Date.now(),
+      }),
+    );
     return this.getSnapshot(seededGame.joinCode);
   }
 

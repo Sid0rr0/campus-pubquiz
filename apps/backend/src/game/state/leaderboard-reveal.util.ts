@@ -25,7 +25,7 @@ import {
  * one-team-at-a-time reveal, just capped to the top 5 above.
  */
 export function computeLeaderboardRevealCount(
-  action: GameAction,
+  action: GameAction | null,
   wasLeaderboardVisible: boolean,
   newProgress: GameProgress,
   leaderboard: LeaderboardEntry[],
