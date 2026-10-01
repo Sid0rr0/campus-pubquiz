@@ -12,6 +12,12 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 03  | [A restored session knows its ungraded questions straight away](ungraded-source/issues/03-restore-refreshes-ungraded.md)                                  | 02, session-settle 03 |
 | 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md)                                     | 02                    |
 
+### free-text-moderator-grading (no spec — single ticket)
+
+| #   | Ticket                                                                                                                                                              | Blocked by |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [A free_text answer that doesn't match the answer key waits for the moderator](free-text-moderator-grading/issues/01-non-matching-free-text-needs-the-moderator.md) | —          |
+
 ### rename-grading-status-group (no spec — single ticket)
 
 | #   | Ticket                                                                                                                                                | Blocked by |
