@@ -6,8 +6,12 @@ Parent spec: `.scratch/ungraded-source/spec.md`
 
 **Blocked by:** 02 (same file; avoids a merge fight)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The three grading stages call one private step to refresh the leaderboard; the three inline fetch-and-apply copies are deleted
-- [ ] `teamRemoved`, `bonusChanged` and the answer-change path are unchanged
-- [ ] Existing leaderboard, kahoot scoring and live-edit regrade specs pass unchanged
+- [x] The three grading stages call one private step to refresh the leaderboard; the three inline fetch-and-apply copies are deleted
+- [x] `teamRemoved`, `bonusChanged` and the answer-change path are unchanged
+- [x] Existing leaderboard, kahoot scoring and live-edit regrade specs pass unchanged
+
+## Comments
+
+Implemented as a private `withFreshLeaderboard` in `block-grading.service.ts`; committed on main (see git history for the hash). Full suite, typecheck and lint pass; code review found nothing.

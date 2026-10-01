@@ -68,15 +68,9 @@ export class BlockGradingService {
       };
     }
 
-    // closest_guess questions are graded automatically right here rather
-    // than through GRADE_ANSWER/AWARD_BONUS (the only other two places that
-    // refresh session.leaderboard) — without this, the points just written
-    // above wouldn't show up in the team table until the next explicit grade
-    // or a leaderboard toggle.
-    const leaderboard = await this.standingsService.leaderboard(
-      session.seededGame.gameSessionId,
-    );
-    return { ...session, closestGuessSummaries: summaries, leaderboard };
+    return this.withFreshLeaderboard(session, {
+      closestGuessSummaries: summaries,
+    });
   }
 
   /**
@@ -110,10 +104,7 @@ export class BlockGradingService {
       session.seededGame.settings.kahootQuestionTimerSeconds,
     );
 
-    const leaderboard = await this.standingsService.leaderboard(
-      session.seededGame.gameSessionId,
-    );
-    return { ...session, leaderboard };
+    return this.withFreshLeaderboard(session, {});
   }
 
   /**
@@ -185,11 +176,31 @@ export class BlockGradingService {
       return { session, regradedQuestionIds };
     }
 
-    const leaderboard = await this.standingsService.leaderboard(gameSessionId);
     return {
-      session: { ...session, closestGuessSummaries: summaries, leaderboard },
+      session: await this.withFreshLeaderboard(session, {
+        closestGuessSummaries: summaries,
+      }),
       regradedQuestionIds,
     };
+  }
+
+  /**
+   * The step every grading stage ends with: the points it just wrote aren't
+   * in session.leaderboard yet (the other places that refresh it are
+   * GRADE_ANSWER/AWARD_BONUS), so fetch the standings and return the session
+   * with them plus the stage's own changes. Deliberately private and
+   * returning the session: the other standings fetches fetch-then-apply in
+   * one synchronous update, and sharing this across an `await` there would
+   * invite a lost-update race.
+   */
+  private async withFreshLeaderboard(
+    session: SessionState,
+    changes: Pick<Partial<SessionState>, 'closestGuessSummaries'>,
+  ): Promise<SessionState> {
+    const leaderboard = await this.standingsService.leaderboard(
+      session.seededGame.gameSessionId,
+    );
+    return { ...session, ...changes, leaderboard };
   }
 
   /**

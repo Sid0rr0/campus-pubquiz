@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### ungraded-source ([spec](ungraded-source/spec.md))
-
-| #   | Ticket                                                                                                                   | Blocked by            |
-| --- | ------------------------------------------------------------------------------------------------------------------------ | --------------------- |
-| 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md)    | 02                    |
-
 ### rename-grading-status-group (no spec — single ticket)
 
 | #   | Ticket                                                                                                                                                | Blocked by |
@@ -27,6 +21,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | Feature                  | #   | Ticket                                                                                                                                                                 | Commit    |
 | ------------------------ | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | typed-answer-grading     | 01  | [A typed answer that matches the key grades itself; anything else waits for the moderator](typed-answer-grading/issues/01-match-auto-grades-otherwise-moderator.md)    | —         |
+| ungraded-source          | 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md) | — |
 | ungraded-source          | 03  | [A restored session knows its ungraded questions straight away](ungraded-source/issues/03-restore-refreshes-ungraded.md)                                               | —         |
 | ungraded-source          | 02  | [One reader answers "which questions are ungraded" for the gate, the refresh and the per-answer update](ungraded-source/issues/02-one-ungraded-reader.md)              | —         |
 | ungraded-source          | 01  | [Agreement walk pins the admin view's ungraded set against the database](ungraded-source/issues/01-agreement-walk.md)                                                  | —         |
