@@ -25,7 +25,6 @@ import {
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
-import { BreakRoundIntroScreen } from '@/app/display/break-round-intro-screen';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
 import { LobbyScreen } from '@/app/display/lobby-screen';
 import { QuestionDisplay } from '@/app/display/question-display';
@@ -34,7 +33,7 @@ import {
   QuestionLockHeading,
 } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
-import { RevealIntroScreen } from '@/app/display/reveal-intro-screen';
+import { RoundTitleCard } from '@/app/display/round-title-card';
 import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
 import { TriviaHeader } from '@/app/display/trivia-header';
 
@@ -229,20 +228,11 @@ function DisplayPageContent() {
         );
       case 'round_title':
         return (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-            <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
-              ROUND {progress.roundIndex + 1}
-              {roundCategory ? ` — ${roundCategory}` : ''}
-            </p>
-            <h1 className="text-balance font-display text-display-6xl text-magenta">
-              {roundTitle}
-            </h1>
-            {roundAuthor && (
-              <p className="text-display-lg font-bold text-foreground/60">
-                by {roundAuthor}
-              </p>
-            )}
-          </div>
+          <RoundTitleCard
+            label={`ROUND ${progress.roundIndex + 1}${roundCategory ? ` — ${roundCategory}` : ''}`}
+            roundTitle={roundTitle}
+            author={roundAuthor}
+          />
         );
       case 'question':
         if (!currentQuestion) return null;
@@ -293,16 +283,16 @@ function DisplayPageContent() {
       case 'break_round_title':
         if (!screenBlockQuestion) return null;
         return (
-          <BreakRoundIntroScreen
-            roundNumber={screenBlockQuestion.roundNumber}
+          <RoundTitleCard
+            label={`ROUND ${screenBlockQuestion.roundNumber}`}
             roundTitle={screenBlockQuestion.roundTitle}
           />
         );
       case 'reveal_intro':
         if (!revealQuestion) return null;
         return (
-          <RevealIntroScreen
-            roundNumber={revealQuestion.roundNumber}
+          <RoundTitleCard
+            label={`REVEALING ANSWERS · ROUND ${revealQuestion.roundNumber}`}
             roundTitle={revealQuestion.roundTitle}
           />
         );

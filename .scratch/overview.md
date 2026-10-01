@@ -2,18 +2,11 @@
 
 All features under `.scratch/`. A ticket is unblocked once every ticket in its "Blocked by" column is under **Done** (numbers refer to tickets in the same feature unless a feature is named). Each feature has a `spec.md` and an `issues/` folder.
 
-## Not implemented
-
-### round-title-card (no spec — single ticket)
-
-| #   | Ticket                                                                                                                                      | Blocked by |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md) | —          |
-
 ## Done
 
 | Feature                  | #   | Ticket                                                                                                                                                                 | Commit    |
 | ------------------------ | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| round-title-card | 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md) | — |
 | rename-grading-status-group | 01  | [Rename the `grading` status group to name the break, not the act of grading](rename-grading-status-group/issues/01-rename-grading-group-to-break.md) | —         |
 | typed-answer-grading     | 01  | [A typed answer that matches the key grades itself; anything else waits for the moderator](typed-answer-grading/issues/01-match-auto-grades-otherwise-moderator.md)    | —         |
 | ungraded-source          | 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md) | — |

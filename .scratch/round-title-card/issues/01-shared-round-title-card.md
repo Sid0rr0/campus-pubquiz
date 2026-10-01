@@ -1,6 +1,6 @@
 # 01: One round title card component for round_intro, break_round_intro and reveal_intro
 
-**Status:** needs-triage
+**Status:** done
 
 **What to build:** The big screen draws a round title card (see **Round title card** in `CONTEXT.md`) in three statuses, with three copies of the same markup:
 
@@ -10,6 +10,10 @@
 
 Extract one display component that takes the label line, the round title and an optional author, and draw all three cards with it. This is a display-only refactor: the three **statuses** stay separate (DOCUMENTATION.md's Statuses section explains why `break_round_intro` must not reuse the other two), and what each card says stays the same. The label's text size currently differs (`text-display-sm` vs `text-display-lg` on the reveal card); pick one deliberately or keep it a prop.
 
-- [ ] One round title card component is used for all three statuses; the two single-purpose screen files and the inline `round_intro` markup are gone
-- [ ] Each card still shows the same text as today (existing display tests for round intro, break and reveal pass unchanged)
-- [ ] No change to game statuses, transitions or the backend
+- [x] One round title card component is used for all three statuses; the two single-purpose screen files and the inline `round_intro` markup are gone
+- [x] Each card still shows the same text as today (existing display tests for round intro, break and reveal pass unchanged)
+- [x] No change to game statuses, transitions or the backend
+
+## Comments
+
+Implemented in the commit titled `refactor(frontend): one round title card for round_title, break_round_title and reveal_intro`. New `apps/frontend/app/display/round-title-card.tsx` takes `label`, `roundTitle` and an optional `author`; the two single-purpose screen files and the inline markup are gone. Decision: the label is now `text-display-sm` on all three cards, so the reveal card's label is smaller than before (it was `text-display-lg`). Display tests pass unchanged; no backend or status changes.
