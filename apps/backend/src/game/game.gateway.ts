@@ -1,4 +1,8 @@
-import { Logger, type OnModuleDestroy } from '@nestjs/common';
+import {
+  Logger,
+  type OnApplicationBootstrap,
+  type OnModuleDestroy,
+} from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   ConnectedSocket,
@@ -61,7 +65,11 @@ import { ShowdownService } from '@/showdown/showdown.service';
   cors: { origin: corsOriginValidator, credentials: true },
 })
 export class GameGateway
-  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
+  implements
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnApplicationBootstrap,
+    OnModuleDestroy
 {
   @WebSocketServer()
   server!: Server;
@@ -79,6 +87,17 @@ export class GameGateway
     private readonly orm: MikroORM,
     private readonly showdownService: ShowdownService,
   ) {}
+
+  /**
+   * Runs once every module's onModuleInit has loaded the session store, so a
+   * backend restart mid-countdown or mid-kahoot-question restores its
+   * deadlines — otherwise nothing re-arms them until the next admin action.
+   */
+  onApplicationBootstrap(): void {
+    for (const { joinCode } of this.gameState.listSessions()) {
+      this.rearmTimers(joinCode);
+    }
+  }
 
   onModuleDestroy(): void {
     this.lockTimers.clearAll();

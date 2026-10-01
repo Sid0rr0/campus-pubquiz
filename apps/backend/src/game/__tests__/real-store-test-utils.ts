@@ -502,6 +502,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.showdownService,
     );
     gateways.push(gateway);
+    // Nest runs this after every module's onModuleInit — i.e. after the
+    // session store is loaded — so a restart re-arms its timers here.
+    gateway.onApplicationBootstrap();
     const server = createMockServer();
     gateway.server = asServer(server);
     const emits = captureRoomEmits(server);

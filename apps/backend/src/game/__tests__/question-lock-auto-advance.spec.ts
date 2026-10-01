@@ -69,10 +69,12 @@ describe('GameGateway — question lock auto-advance timer', () => {
     expect(game.roomEmits()).toEqual([]);
   }
 
-  async function waitForBreakIntro(): Promise<void> {
+  async function waitForBreakIntro(
+    target: RealStoreGateway = game,
+  ): Promise<void> {
     const deadline = Date.now() + AUTO_ADVANCE_WAIT_MS;
     const hasBreakIntro = () =>
-      game
+      target
         .payloadsTo<StateSnapshotPayload>(
           SOCKET_ROOMS.DISPLAY,
           SOCKET_EVENTS.STATE_UPDATED,
@@ -108,6 +110,15 @@ describe('GameGateway — question lock auto-advance timer', () => {
           .map(({ progress }) => progress.status),
       ).toContain('break_intro');
     }
+  });
+
+  it('still auto-advances to break after a backend restart mid-countdown', async () => {
+    await enterLockingCountdown();
+
+    const restarted = await game.restart();
+    restarted.clearEmits();
+
+    await waitForBreakIntro(restarted);
   });
 
   it('cancels the pending auto-lock when the admin advances manually before it fires', async () => {
