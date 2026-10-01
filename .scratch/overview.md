@@ -34,6 +34,28 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)      | 01         |
 | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                   | 04         |
 
+### display-screen-kind ([spec](display-screen-kind/spec.md))
+
+| #   | Ticket                                                                                                           | Blocked by |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [/display renders by the On-air screen's kind](display-screen-kind/issues/01-display-switches-on-screen-kind.md) | —          |
+
+### phone-question-selection ([spec](phone-question-selection/spec.md))
+
+| #   | Ticket                                                                                                                                   | Blocked by |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [A pure module picks the phone's question and its neighbours](phone-question-selection/issues/01-selection-precedence-and-neighbours.md) | —          |
+| 02  | [Snap back and re-pin move into the selection module](phone-question-selection/issues/02-snap-back-and-re-pin.md)                        | 01         |
+
+### ungraded-source ([spec](ungraded-source/spec.md))
+
+| #   | Ticket                                                                                                                                                    | Blocked by            |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| 01  | [Agreement walk pins the admin view's ungraded set against the database](ungraded-source/issues/01-agreement-walk.md)                                     | —                     |
+| 02  | [One reader answers "which questions are ungraded" for the gate, the refresh and the per-answer update](ungraded-source/issues/02-one-ungraded-reader.md) | 01                    |
+| 03  | [A restored session knows its ungraded questions straight away](ungraded-source/issues/03-restore-refreshes-ungraded.md)                                  | 02, session-settle 03 |
+| 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md)                                     | 02                    |
+
 ### role-socket-hooks ([spec](role-socket-hooks/spec.md))
 
 | #   | Ticket                                                                                                                                    | Blocked by |
