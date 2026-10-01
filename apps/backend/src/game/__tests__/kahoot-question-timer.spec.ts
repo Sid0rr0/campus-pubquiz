@@ -91,7 +91,8 @@ describe('GameGateway — kahoot question timer deadline', () => {
     await openFirstQuestion(game); // q0 (live)
     await game.act('ADVANCE'); // -> locking q0
     await game.act('ADVANCE'); // -> reveal q0
-    await game.act('ADVANCE'); // -> question_open q1 (now live)
+    await game.act('ADVANCE'); // -> question_open q1 (now live), behind the board
+    await game.act('ADVANCE'); // hides the board
 
     await game.act('PREVIOUS'); // -> reveal q0
     await game.act('PREVIOUS'); // -> locking q0

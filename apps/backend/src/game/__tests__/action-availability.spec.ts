@@ -1,7 +1,9 @@
 import {
   SOCKET_ROOMS,
   getLeaderboardRevealStepCount,
+  type AdvanceSlotStep,
   type GameAction,
+  type PreviousState,
 } from '@campus-pubquiz/types';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import type { GameSessionStore } from '@/game/state/game-session.store';
@@ -43,27 +45,53 @@ describe('Screen projection — Advance/Previous availability', () => {
     ]);
   }
 
-  /** Presses the button; true when the handler accepted it and it moved the quiz. */
+  /** Where the quiz is, including the leaderboard: a revealed rank or a hidden board counts as moving. */
+  function positionWithBoard() {
+    const { leaderboardRevealCount, progress } = game.gameState.getSnapshot(
+      game.joinCode,
+    );
+    return JSON.stringify([
+      position(),
+      progress.isLeaderboardVisible,
+      leaderboardRevealCount,
+    ]);
+  }
+
+  /** Presses the button; true when the handler accepted it and it moved the quiz or the board. */
   async function press(action: Movement): Promise<boolean> {
-    const before = position();
+    const before = positionWithBoard();
     try {
       await game.act(action);
     } catch {
       return false;
     }
-    return position() !== before;
+    return positionWithBoard() !== before;
   }
 
-  const FLAG_BY_ACTION = {
-    ADVANCE: 'canAdvance',
-    PREVIOUS: 'canGoToPreviousQuestion',
-  } as const;
+  /** Whether the admin view announces `action` as pressable: an Advance slot step other than none, or Previous available. */
+  function isAnnouncedAvailable(action: Movement): boolean {
+    const { advanceStep, previousState } = game.gameState.getView(
+      game.joinCode,
+      SOCKET_ROOMS.ADMIN,
+    );
+    return action === 'ADVANCE'
+      ? advanceStep !== 'none'
+      : previousState === 'available';
+  }
 
-  /** Asserts the flag for `action` matches what the handler does. The quiz moves if it was accepted. */
+  /** Hides the board when it is up, the way the Leaderboard toggle does, so Previous is not covered. */
+  async function clearBoard() {
+    const { isLeaderboardVisible } = game.gameState.getSnapshot(
+      game.joinCode,
+    ).progress;
+    if (isLeaderboardVisible) await game.act('TOGGLE_LEADERBOARD');
+  }
+
+  /** Asserts the announced availability for `action` matches what the handler does. The quiz moves if it was accepted. */
   async function expectFlagMatchesHandler(action: Movement): Promise<boolean> {
-    const flag = flags()[FLAG_BY_ACTION[action]];
+    const announced = isAnnouncedAvailable(action);
     const accepted = await press(action);
-    expect(flag).toBe(accepted);
+    expect(announced).toBe(accepted);
     return accepted;
   }
 
@@ -89,6 +117,7 @@ describe('Screen projection — Advance/Previous availability', () => {
         // walk to the end
       }
 
+      await clearBoard();
       let steps = 0;
       while (await expectFlagMatchesHandler('PREVIOUS')) steps += 1;
 
@@ -189,6 +218,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       while (await expectFlagMatchesHandler('ADVANCE')) {
         // each accepted press moves to the next sub-step or question
       }
+      await clearBoard();
       while (await expectFlagMatchesHandler('PREVIOUS')) {
         // and back again
       }
@@ -236,21 +266,10 @@ describe('Screen projection — Advance/Previous availability', () => {
   });
 
   describe('the announced Advance slot and Previous state across whole quizzes', () => {
-    /** What /control's and /remote's Advance button does for the admin view it was handed (NavigationButtons): reveal a rank, hide the board, advance, or no button. */
-    type AdvanceSlot =
-      | 'reveal_next_team'
-      | 'hide_leaderboard'
-      | 'advance'
-      | 'none';
-    const ACTION_BY_SLOT: Record<Exclude<AdvanceSlot, 'none'>, GameAction> = {
-      reveal_next_team: 'REVEAL_NEXT_TEAM',
-      hide_leaderboard: 'TOGGLE_LEADERBOARD',
-      advance: 'ADVANCE',
-    };
     const MAX_WALK_STEPS = 120;
 
     interface WalkPoint {
-      slot: AdvanceSlot;
+      slot: AdvanceSlotStep;
       status: string;
       isBoardUp: boolean;
       revealCount: number;
@@ -262,25 +281,12 @@ describe('Screen projection — Advance/Previous availability', () => {
       return game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
     }
 
-    function announcedAdvanceSlot(): AdvanceSlot {
-      const view = adminView();
-      const stepCount = getLeaderboardRevealStepCount(
-        view.leaderboard,
-        view.isCurrentRoundKahoot ?? false,
-      );
-      const isBoardUp = view.progress.isLeaderboardVisible;
-      if (isBoardUp && view.leaderboardRevealCount < stepCount) {
-        return 'reveal_next_team';
-      }
-      if (isBoardUp && view.canAdvance) return 'hide_leaderboard';
-      return view.canAdvance ? 'advance' : 'none';
+    function announcedAdvanceSlot(): AdvanceSlotStep {
+      return adminView().advanceStep;
     }
 
-    /** Previous is shown only when the server allows it, and greyed out while the board covers the screen. */
-    function announcedPrevious(): 'available' | 'covered' | 'unavailable' {
-      const view = adminView();
-      if (!view.canGoToPreviousQuestion) return 'unavailable';
-      return view.progress.isLeaderboardVisible ? 'covered' : 'available';
+    function announcedPrevious(): PreviousState {
+      return adminView().previousState;
     }
 
     function boardState() {
@@ -367,8 +373,7 @@ describe('Screen projection — Advance/Previous availability', () => {
     }
 
     /**
-     * Presses the Advance slot the way today's clients do until it is gone,
-     * checking at every point that what was announced is what happened and
+     * Presses a raw ADVANCE until the Advance slot is gone, checking at every point that what was announced is what happened and
      * that the presenter preview's "next" line is empty exactly when it did
      * nothing.
      */
@@ -395,22 +400,15 @@ describe('Screen projection — Advance/Previous availability', () => {
         const before = boardState();
 
         if (slot === 'none') {
-          if (before.isBoardUp) {
-            // Known divergence, pinned until the Move plan lands: with every
-            // rank of the final board shown there is no Advance button, yet
-            // the preview still names the screen under the board.
-            expect(next).toEqual({ heading: 'Quiz complete!' });
-          } else {
-            expect(next).toBeNull();
-            expect(await tryAct('ADVANCE')).toBe(false);
-            expect(boardState()).toEqual(before);
-          }
+          expect(next).toBeNull();
+          expect(await tryAct('ADVANCE')).toBe(false);
+          expect(boardState()).toEqual(before);
           return points;
         }
 
-        await game.act(ACTION_BY_SLOT[slot]);
+        await game.act('ADVANCE');
         const after = boardState();
-        if (slot === 'reveal_next_team') {
+        if (slot === 'reveal_next_rank') {
           expect(next).not.toBeNull();
           expect(after.position).toBe(before.position);
           expect(after.revealCount).toBe(before.revealCount + 1);
@@ -433,20 +431,22 @@ describe('Screen projection — Advance/Previous availability', () => {
     }
 
     /**
-     * Presses Previous until it is gone. Like today's clients it never
-     * presses Previous under the board: it hides the board with the
-     * Leaderboard toggle first, and checks Previous is greyed out or hidden
-     * while the board is up.
+     * Presses Previous until it is gone. Under the board it checks Previous is
+     * announced as covered and a raw PREVIOUS is rejected without changing
+     * anything, then hides the board with the Leaderboard toggle.
      */
     async function walkBackward(): Promise<number> {
       let steps = 0;
       for (let guard = 0; guard < MAX_WALK_STEPS; guard += 1) {
         if (adminView().progress.isLeaderboardVisible) {
-          expect(announcedPrevious()).not.toBe('available');
+          expect(announcedPrevious()).toBe('covered_by_leaderboard');
+          const covered = boardState();
+          expect(await tryAct('PREVIOUS')).toBe(false);
+          expect(boardState()).toEqual(covered);
           await game.act('TOGGLE_LEADERBOARD');
         }
         const announced = announcedPrevious();
-        expect(announced).not.toBe('covered');
+        expect(announced).not.toBe('covered_by_leaderboard');
         const accepted = await press('PREVIOUS');
         expect(announced === 'available').toBe(accepted);
         if (!accepted) return steps;
@@ -475,7 +475,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       },
     ];
 
-    function slotsOf(points: WalkPoint[]): Set<AdvanceSlot> {
+    function slotsOf(points: WalkPoint[]): Set<AdvanceSlotStep> {
       return new Set(points.map((point) => point.slot));
     }
 
@@ -494,7 +494,7 @@ describe('Screen projection — Advance/Previous availability', () => {
         const points = await walkForward(answer);
 
         expect(slotsOf(points)).toEqual(
-          new Set(['advance', 'reveal_next_team', 'hide_leaderboard', 'none']),
+          new Set(['advance', 'reveal_next_rank', 'hide_leaderboard', 'none']),
         );
         expect(points.at(-1)).toMatchObject({ status: 'ended' });
         // Both blocks end on a board: the mid-quiz one and the final one.
@@ -582,7 +582,7 @@ describe('Screen projection — Advance/Previous availability', () => {
         );
         expect(roundEnd.every((point) => point.stepCount === 5)).toBe(true);
         expect(
-          roundEnd.filter((point) => point.slot === 'reveal_next_team'),
+          roundEnd.filter((point) => point.slot === 'reveal_next_rank'),
         ).toHaveLength(5);
       });
 
@@ -667,13 +667,10 @@ describe('Screen projection — Advance/Previous availability', () => {
         });
       }
 
-      /** Clears the end-of-quiz board the way the clients do: reveal each rank, then hide it. */
+      /** Clears the end-of-quiz board with raw ADVANCE: reveal each rank, then hide it. */
       async function clearBoard() {
-        while (announcedAdvanceSlot() === 'reveal_next_team') {
-          await game.act('REVEAL_NEXT_TEAM');
-        }
-        if (adminView().progress.isLeaderboardVisible) {
-          await game.act('TOGGLE_LEADERBOARD');
+        while (adminView().progress.isLeaderboardVisible) {
+          await game.act('ADVANCE');
         }
       }
 

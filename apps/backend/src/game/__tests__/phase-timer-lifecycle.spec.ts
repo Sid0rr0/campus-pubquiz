@@ -246,7 +246,8 @@ describe('GameGateway — phase elapsed timer', () => {
       await game.act('ADVANCE'); // -> reveal
 
       advanceClockBy(50_000); // revealing/awarding bonuses takes 50s
-      await game.act('ADVANCE'); // -> round_intro(1), untimed
+      await game.act('ADVANCE'); // -> round_intro(1), untimed, behind the board
+      await game.act('TOGGLE_LEADERBOARD'); // hides the end-of-block board
       const r2q1 = await game.act('ADVANCE'); // -> r2q1 (genuinely new question)
 
       expect(r2q1.progress).toMatchObject({

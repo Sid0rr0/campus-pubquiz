@@ -140,7 +140,8 @@ describe('GameGateway — set break end time', () => {
       const secondBreak = await actAll([
         'ADVANCE', // -> reveal_intro
         'ADVANCE', // -> reveal
-        'ADVANCE', // -> round_intro(1)
+        'ADVANCE', // -> round_intro(1), behind the end-of-block board
+        'TOGGLE_LEADERBOARD', // hides the board
         'ADVANCE', // -> r2q1 (question_open)
         'ADVANCE', // -> locking
         'ADVANCE', // -> break_intro (fresh)

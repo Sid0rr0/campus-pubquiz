@@ -66,7 +66,11 @@ import {
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import { planMove, type MoveStep } from '@/game/state/move-plan.util';
+import {
+  effectiveActionOf,
+  planMove,
+  type MoveStep,
+} from '@/game/state/move-plan.util';
 import { ShowdownGuessesPendingError } from '@/game/state/errors/showdown-guesses-pending.error';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import { ShowdownService } from '@/showdown/showdown.service';
@@ -525,9 +529,15 @@ export class GameStateService implements OnModuleInit {
         this.sessionStore.set(joinCode, step.session);
         return this.getSnapshot(joinCode);
       case 'transition':
+      case 'leaderboard_reveal':
+      case 'leaderboard_hide':
         break;
     }
     const { progress } = step;
+    // A raw ADVANCE under the leaderboard is carried out as the action it
+    // plans — REVEAL_NEXT_TEAM or TOGGLE_LEADERBOARD — so the reveal count,
+    // the kahoot timer and everything else downstream treat it identically.
+    const effectiveAction = effectiveActionOf(step, action);
 
     // Committing out of the break/grading screens into reveal — the one
     // moment this must be DB-authoritative rather than relying on the
@@ -555,11 +565,12 @@ export class GameStateService implements OnModuleInit {
     );
     const sessionWithGradingStatus =
       await this.grading.refreshUngradedQuestionIds(gradedSession, progress);
-    const closestGuessRevealStep = computeInitialRevealStep(
-      sessionWithGradingStatus,
-      progress,
-      action,
-    );
+    // Showing a rank or hiding the board leaves the quiz underneath exactly
+    // where it was, including a closest_guess reveal mid-way through.
+    const closestGuessRevealStep =
+      step.kind === 'transition'
+        ? computeInitialRevealStep(sessionWithGradingStatus, progress, action)
+        : sessionWithGradingStatus.closestGuessRevealStep;
     const { livePhaseKey, phaseStartedAt, phaseElapsedByKey } =
       computePhaseTimerFields(
         progress,
@@ -600,7 +611,7 @@ export class GameStateService implements OnModuleInit {
           ? null
           : sessionWithGradingStatus.breakEndsAt,
       leaderboardRevealCount: computeLeaderboardRevealCount(
-        action,
+        effectiveAction,
         session.progress.isLeaderboardVisible,
         progress,
         sessionWithGradingStatus.leaderboard,

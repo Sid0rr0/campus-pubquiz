@@ -332,11 +332,28 @@ export interface DisplayStatePayload extends StateSnapshotPayload {
   /** True while the between-questions leaderboard covers a kahoot question that is already open underneath. */
   isBetweenKahootQuestions: boolean;
 }
+/** What the admin's Advance slot does on its next press, decided by the server: reveal the next leaderboard rank, hide the leaderboard, advance the quiz (a transition, a showdown or closest_guess step), or nothing. */
+export type AdvanceSlotStep =
+  | 'reveal_next_rank'
+  | 'hide_leaderboard'
+  | 'advance'
+  | 'none';
+
+/** Whether the admin's Previous button works: available, shown greyed out because the leaderboard covers the screen, or unavailable (hidden). */
+export type PreviousState =
+  | 'available'
+  | 'covered_by_leaderboard'
+  | 'unavailable';
+
 /** The quiz master's view: the snapshot plus the screen on air and what /control's question browser marks as on air. */
 export interface AdminStatePayload
   extends StateSnapshotPayload, AdminIndicators {
   onAirScreen: OnAirScreen;
-  /** Whether the server will accept ADVANCE right now — decided by the same intercepts and state machine the action handler applies. */
+  /** What a press of the Advance slot does next — the Move plan's step for ADVANCE. */
+  advanceStep: AdvanceSlotStep;
+  /** Whether PREVIOUS works, is covered by the leaderboard, or is unavailable — the Move plan's verdict for PREVIOUS. */
+  previousState: PreviousState;
+  /** Whether the server will accept ADVANCE right now with the leaderboard set aside — decided by the same intercepts and state machine the action handler applies. Kept for clients that still derive the leaderboard steps themselves. */
   canAdvance: boolean;
   /** Whether the server will accept PREVIOUS right now and it does something. */
   canGoToPreviousQuestion: boolean;

@@ -167,8 +167,10 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Next place (1 of 1)',
       });
 
-      await game.act('REVEAL_NEXT_TEAM');
-      expect(screens()).toMatchObject({ next: 'Quiz complete!' });
+      await game.act('ADVANCE');
+      // Every rank is shown and nothing waits under the final board, so
+      // Advance does nothing and the preview names no next screen.
+      expect(screens()).toMatchObject({ next: null });
     });
   });
 

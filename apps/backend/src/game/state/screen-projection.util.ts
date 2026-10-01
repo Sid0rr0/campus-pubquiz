@@ -11,7 +11,11 @@ import {
   isLastQuestionBeforeBreak,
   isShowdownEligible,
 } from '@/game/state/admin-view-flags.util';
-import { isMoveAvailable } from '@/game/state/move-plan.util';
+import {
+  describeAdvanceStep,
+  describePreviousState,
+  isUnderlyingMoveAvailable,
+} from '@/game/state/move-plan.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
 import {
@@ -54,8 +58,10 @@ export function projectScreen(
         ...snapshot,
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
-        canAdvance: isMoveAvailable(session, 'ADVANCE'),
-        canGoToPreviousQuestion: isMoveAvailable(session, 'PREVIOUS'),
+        advanceStep: describeAdvanceStep(session),
+        previousState: describePreviousState(session),
+        canAdvance: isUnderlyingMoveAvailable(session, 'ADVANCE'),
+        canGoToPreviousQuestion: isUnderlyingMoveAvailable(session, 'PREVIOUS'),
         activeBlockStartIndex: getActiveBlockStartIndex(session),
         isShowdownEligible: isShowdownEligible(session),
         isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),

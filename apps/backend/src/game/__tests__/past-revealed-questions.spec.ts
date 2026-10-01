@@ -82,6 +82,8 @@ describe('GameGateway — past-block revealed questions', () => {
       [idB, 'Answer-B1', 2, 1, 'Round B'],
     ]);
 
+    await game.act('TOGGLE_LEADERBOARD'); // hides the end-of-block board
+
     // Once round C's own question opens, it shows up in blockQuestions
     // (answer-free, still in progress) while the finished first block stays
     // fully visible in pastRevealedQuestions.

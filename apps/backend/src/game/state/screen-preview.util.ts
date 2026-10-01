@@ -1,6 +1,5 @@
 import {
   SOCKET_ROOMS,
-  getLeaderboardRevealStepCount,
   getBreakNumber,
   getNextGameState,
   getQuizStructureSummary,
@@ -124,15 +123,12 @@ export function describeScreen(session: SessionState): ScreenPreview {
   return describeOnAirScreenText(session, onAirScreen);
 }
 
-function getLeaderboardRevealSteps(session: SessionState): number {
-  const isKahoot =
-    session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ?? false;
-  return getLeaderboardRevealStepCount(session.leaderboard, isKahoot);
-}
-
 /** What the next press does when the quiz hasn't started: START_QUIZ is the lobby's Advance. */
 function planNextPress(session: SessionState): MoveStep {
-  if (session.progress.status !== 'lobby') return planMove(session, 'ADVANCE');
+  const { status, isLeaderboardVisible } = session.progress;
+  if (status !== 'lobby' || isLeaderboardVisible) {
+    return planMove(session, 'ADVANCE');
+  }
   try {
     return {
       kind: 'transition',
@@ -161,6 +157,13 @@ function describeStep(
           };
     case 'showdown_waiting':
       return { heading: 'Showdown', body: 'Waiting for every guess' };
+    case 'leaderboard_reveal':
+      return {
+        heading: 'Leaderboard',
+        body: `Next place (${step.place} of ${step.placeCount})`,
+      };
+    case 'leaderboard_hide':
+      return describeScreen({ ...session, progress: step.progress });
     case 'closest_guess_step':
       return { ...describeScreen(session), body: 'Next closest-guess step' };
     case 'transition':
@@ -170,31 +173,10 @@ function describeStep(
   }
 }
 
-/**
- * The screen /display will show after /remote's Advance slot is pressed:
- * while the leaderboard is up, the next rank and then the screen under it
- * (the browser's NavigationButtons reveal ranks itself until the Move plan
- * takes that over); otherwise the planned Advance step.
- */
+/** The screen /display will show after /remote's Advance slot is pressed: the planned Advance step. */
 export function describeNextScreen(
   session: SessionState,
 ): ScreenPreview | null {
-  const { progress } = session;
-
-  if (progress.isLeaderboardVisible) {
-    const stepCount = getLeaderboardRevealSteps(session);
-    if (session.leaderboardRevealCount < stepCount) {
-      return {
-        heading: 'Leaderboard',
-        body: `Next place (${session.leaderboardRevealCount + 1} of ${stepCount})`,
-      };
-    }
-    return describeScreen({
-      ...session,
-      progress: { ...progress, isLeaderboardVisible: false },
-    });
-  }
-
   return describeStep(session, planNextPress(session));
 }
 

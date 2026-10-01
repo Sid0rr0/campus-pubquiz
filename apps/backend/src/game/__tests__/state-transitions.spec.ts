@@ -264,12 +264,13 @@ describe('GameGateway — state transitions', () => {
       expect(ended.progress.status).toBe('ended');
       expect(ended.progress.previousStatus).toBe('reveal');
 
+      await game.act('TOGGLE_LEADERBOARD'); // PREVIOUS is covered while the board is up
       const revealAgain = await game.act('PREVIOUS');
       expect(revealAgain.progress).toEqual({
         status: 'reveal',
         roundIndex: 1,
         questionIndex: 1,
-        isLeaderboardVisible: true,
+        isLeaderboardVisible: false,
         revealIndex: 3,
         furthestOpenIndex: 3,
         previousStatus: null,
@@ -377,6 +378,7 @@ describe('GameGateway — state transitions', () => {
       expect(nextOpen.progress.questionIndex).toBe(1);
       expect(nextOpen.currentQuestion?.id).toBe(secondId);
 
+      await kahoot.act('ADVANCE'); // hides the between-questions board
       await kahoot.act('ADVANCE'); // -> locking q1
       const secondReveal = await kahoot.act('ADVANCE');
       expect(secondReveal.progress.status).toBe('reveal');
@@ -422,7 +424,8 @@ describe('GameGateway — state transitions', () => {
           ...KAHOOT_TO_FIRST_QUESTION,
           'ADVANCE', // -> locking q0
           'ADVANCE', // -> reveal q0
-          'ADVANCE', // -> question_open q1
+          'ADVANCE', // -> question_open q1, hidden behind the board
+          'ADVANCE', // hides the board
         ],
         kahoot,
       );
