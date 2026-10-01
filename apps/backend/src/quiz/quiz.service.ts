@@ -5,7 +5,7 @@ import {
   parseYoutubeClipFromNotes,
   type ImportQuestionPreview,
   type ImportRoundPreview,
-  type MatchScoringMode,
+  type QuestionPayload,
   type QuizDraft,
   type QuizDraftIssue,
   type QuizDraftSaveResult,
@@ -17,18 +17,11 @@ import { Round } from '@/db/entities/round.entity';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
+import { readQuestionPayload } from '@/db/question-payload';
 import { validateQuizDraft } from '@/quiz/quiz-draft.schema';
 
-interface QuestionPayload {
-  options?: string[];
-  matchTargets?: string[];
-  matchScoringMode?: MatchScoringMode;
-  mediaUrl?: string;
-  answerMediaUrl?: string;
-}
-
-function toSummaryPayload(payload: unknown): QuestionPayload {
-  const { options, matchTargets } = payload as QuestionPayload;
+function toSummaryPayload(question: Question): QuestionPayload {
+  const { options, matchTargets } = readQuestionPayload(question);
   return {
     ...(options !== undefined ? { options } : {}),
     ...(matchTargets !== undefined ? { matchTargets } : {}),
@@ -36,7 +29,7 @@ function toSummaryPayload(payload: unknown): QuestionPayload {
 }
 
 function toQuestionPreview(question: Question): ImportQuestionPreview {
-  const payload = question.payload as QuestionPayload;
+  const payload = readQuestionPayload(question);
   return {
     questionId: question.id,
     type: question.type,
@@ -119,7 +112,7 @@ export class QuizService {
           type: question.type,
           prompt: question.prompt,
           answer: question.answer,
-          ...toSummaryPayload(question.payload),
+          ...toSummaryPayload(question),
         })),
       })),
     }));

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import type {
   AnswerView,
-  MatchScoringMode,
   ScoredQuestion,
   TeamAnswerView,
   Verdict,
@@ -17,6 +16,7 @@ import {
 import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
+import { readQuestionPayload } from '@/db/question-payload';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -37,10 +37,6 @@ export interface GradedAnswer {
 
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. RevealQuestionView satisfies it. */
 export type GradableQuestion = ScoredQuestion & { id: number };
-
-interface QuestionPayload {
-  matchScoringMode?: MatchScoringMode;
-}
 
 @Injectable()
 export class AnswerService {
@@ -65,7 +61,7 @@ export class AnswerService {
       type: row.type,
       answer: row.answer,
       points: row.points,
-      matchScoringMode: (row.payload as QuestionPayload).matchScoringMode,
+      matchScoringMode: readQuestionPayload(row).matchScoringMode,
     };
     // Multiple choice, sort, match, and free_text are all gradable without
     // admin judgement the instant they're submitted (see Scoring's

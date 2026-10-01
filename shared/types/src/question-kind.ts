@@ -9,6 +9,16 @@ import {
   sortPreviewSchema,
   youtubePreviewSchema,
 } from './question-preview-schema';
+import {
+  audioPayloadSchema,
+  closestGuessPayloadSchema,
+  freeTextPayloadSchema,
+  matchPayloadSchema,
+  multipleChoicePayloadSchema,
+  sortPayloadSchema,
+  youtubePayloadSchema,
+  type QuestionPayload,
+} from './question-payload-schema';
 
 /** How a type's answers are graded: at submit, in one batch after lock, or by the quiz master. */
 export type GradingMode = 'auto' | 'batch' | 'human';
@@ -22,6 +32,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   type: T;
   /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
   schema: z.ZodType;
+  /** The payload codec: stored JSON is parsed against this (via `parseQuestionPayload`), never cast. */
+  payload: z.ZodType<QuestionPayload>;
   gradingMode: GradingMode;
   /** Whether the admin can regrade a single answer. */
   overridable: boolean;
@@ -35,6 +47,7 @@ export const QUESTION_KINDS: {
   free_text: {
     type: 'free_text',
     schema: freeTextPreviewSchema,
+    payload: freeTextPayloadSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: false,
@@ -42,6 +55,7 @@ export const QUESTION_KINDS: {
   multiple_choice: {
     type: 'multiple_choice',
     schema: multipleChoicePreviewSchema,
+    payload: multipleChoicePayloadSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
@@ -49,6 +63,7 @@ export const QUESTION_KINDS: {
   audio: {
     type: 'audio',
     schema: audioPreviewSchema,
+    payload: audioPayloadSchema,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
@@ -56,6 +71,7 @@ export const QUESTION_KINDS: {
   youtube: {
     type: 'youtube',
     schema: youtubePreviewSchema,
+    payload: youtubePayloadSchema,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
@@ -63,6 +79,7 @@ export const QUESTION_KINDS: {
   sort: {
     type: 'sort',
     schema: sortPreviewSchema,
+    payload: sortPayloadSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
@@ -70,6 +87,7 @@ export const QUESTION_KINDS: {
   match: {
     type: 'match',
     schema: matchPreviewSchema,
+    payload: matchPayloadSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
@@ -77,6 +95,7 @@ export const QUESTION_KINDS: {
   closest_guess: {
     type: 'closest_guess',
     schema: closestGuessPreviewSchema,
+    payload: closestGuessPayloadSchema,
     gradingMode: 'batch',
     overridable: false,
     kahootAllowed: false,
@@ -121,4 +140,21 @@ export function checkQuestion(candidate: { type?: unknown }): QuestionCheck {
           message,
         })),
       };
+}
+
+/**
+ * Parses a question's stored JSON payload with its kind's codec. Throws an
+ * Error naming the type and the offending fields, so a malformed or old row
+ * fails when it is loaded, not midway through a live game.
+ */
+export function parseQuestionPayload(
+  type: QuestionType,
+  stored: unknown,
+): QuestionPayload {
+  const parsed = QUESTION_KINDS[type].payload.safeParse(stored);
+  if (parsed.success) return parsed.data;
+  const problems = parsed.error.issues
+    .map((issue) => `${issue.path.join('.') || '(payload)'}: ${issue.message}`)
+    .join('; ');
+  throw new Error(`Stored ${type} payload is malformed — ${problems}`);
 }

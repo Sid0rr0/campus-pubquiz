@@ -17,3 +17,4 @@ export * from './question-types';
 export * from './question-row-schema';
 export * from './question-preview-schema';
 export * from './question-kind';
+export * from './question-payload-schema';

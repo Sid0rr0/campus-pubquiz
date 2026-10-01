@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DEFAULT_SESSION_SETTINGS,
-  type MatchScoringMode,
   type SessionSettings,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -13,6 +12,7 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
+import { readQuestionPayload } from '@/db/question-payload';
 import { generateJoinCode } from '@/db/join-code.util';
 import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
 import type {
@@ -20,40 +20,6 @@ import type {
   SeededGame,
   SeededRound,
 } from '@/db/seed.types';
-
-interface QuestionPayload {
-  options?: string[];
-  matchTargets?: string[];
-  matchScoringMode?: MatchScoringMode;
-  mediaUrl?: string;
-  answerMediaUrl?: string;
-  mediaStartSeconds?: number;
-  mediaEndSeconds?: number;
-}
-
-// Picks only the player-safe payload fields: imported questions also carry
-// the correct answer in their payload, which must never reach a QuestionView
-// (snapshots go to every connected phone and the big screen).
-function toViewPayload(payload: unknown): QuestionPayload {
-  const {
-    options,
-    matchTargets,
-    matchScoringMode,
-    mediaUrl,
-    answerMediaUrl,
-    mediaStartSeconds,
-    mediaEndSeconds,
-  } = payload as QuestionPayload;
-  return {
-    ...(options !== undefined ? { options } : {}),
-    ...(matchTargets !== undefined ? { matchTargets } : {}),
-    ...(matchScoringMode !== undefined ? { matchScoringMode } : {}),
-    ...(mediaUrl !== undefined ? { mediaUrl } : {}),
-    ...(answerMediaUrl !== undefined ? { answerMediaUrl } : {}),
-    ...(mediaStartSeconds !== undefined ? { mediaStartSeconds } : {}),
-    ...(mediaEndSeconds !== undefined ? { mediaEndSeconds } : {}),
-  };
-}
 
 @Injectable()
 export class SeedService {
@@ -161,7 +127,10 @@ export class SeedService {
           prompt: row.prompt,
           points: row.points,
           answer: row.answer,
-          ...toViewPayload(row.payload),
+          // The codec keeps only the player-safe payload fields: imported questions
+          // also carry the correct answer in their payload, which must never reach a
+          // QuestionView (snapshots go to every connected phone and the big screen).
+          ...readQuestionPayload(row),
         })),
         questionNotesById: Object.fromEntries(
           questionRows.map((row) => [row.id, row.notes ?? null]),
@@ -216,7 +185,7 @@ export class SeedService {
           prompt: questionRow.prompt,
           points: questionRow.points,
           answer: questionRow.answer,
-          ...toViewPayload(questionRow.payload),
+          ...readQuestionPayload(questionRow),
         });
       }
 
