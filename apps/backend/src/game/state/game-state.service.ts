@@ -22,10 +22,7 @@ import {
   getPastRevealedQuestions,
 } from '@/game/state/block-questions.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
-import {
-  BlockGradingService,
-  canBeUngraded,
-} from '@/game/state/block-grading.service';
+import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { settleSession } from '@/game/state/session-settle.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
@@ -678,15 +675,14 @@ export class GameStateService implements OnModuleInit {
     questionId: number,
   ): Promise<SessionOutcome> {
     const gameSessionId = this.getGameSessionId(joinCode);
-    const [answers, leaderboard] = await Promise.all([
+    const [answers, leaderboard, ungradedQuestionIds] = await Promise.all([
       this.answerService.listForQuestion(gameSessionId, questionId),
       this.standingsService.leaderboard(gameSessionId),
+      this.grading.listUngradedQuestionIds(this.sessionStore.get(joinCode), [
+        questionId,
+      ]),
     ]);
-    const question = this.findQuestion(joinCode, questionId);
-    const hasUngradedAnswers =
-      question !== undefined &&
-      canBeUngraded(question) &&
-      answers.some((answer) => answer.gradedAt === null);
+    const hasUngradedAnswers = ungradedQuestionIds.length > 0;
     this.update(joinCode, (session) =>
       withQuestionGradedStatus(
         withAnsweredTeamIds(
@@ -707,13 +703,6 @@ export class GameStateService implements OnModuleInit {
     change: (session: SessionState) => SessionState,
   ): void {
     this.sessionStore.set(joinCode, change(this.sessionStore.get(joinCode)));
-  }
-
-  private findQuestion(joinCode: string, questionId: number) {
-    return this.sessionStore
-      .get(joinCode)
-      .seededGame.rounds.flatMap((round) => round.questions)
-      .find((question) => question.id === questionId);
   }
 
   /**

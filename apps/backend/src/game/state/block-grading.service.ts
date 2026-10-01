@@ -177,14 +177,33 @@ export class BlockGradingService {
     };
   }
 
-  /** Current-block question IDs (closest_guess excluded) with at least one ungraded submitted answer, read fresh from the DB. */
-  async getUngradedBlockQuestionIds(session: SessionState): Promise<number[]> {
-    const questionIds = getBlockSeededQuestions(session)
-      .filter(canBeUngraded)
-      .map((question) => question.id);
+  /**
+   * The one reader for "which of these questions are ungraded": drops the
+   * questions that can't be (closest_guess, via canBeUngraded) and asks the
+   * database which of the rest have an answer with no grading time. Used by
+   * the reveal gate, the bulk refresh and the per-answer update.
+   */
+  async listUngradedQuestionIds(
+    session: SessionState,
+    questionIds: number[],
+  ): Promise<number[]> {
+    const gradableIds = new Set(
+      session.seededGame.rounds
+        .flatMap((round) => round.questions)
+        .filter(canBeUngraded)
+        .map((question) => question.id),
+    );
     return this.answerService.listUngradedQuestionIds(
       session.seededGame.gameSessionId,
-      questionIds,
+      questionIds.filter((id) => gradableIds.has(id)),
+    );
+  }
+
+  /** Current-block question IDs with at least one ungraded submitted answer, read fresh from the DB. */
+  async getUngradedBlockQuestionIds(session: SessionState): Promise<number[]> {
+    return this.listUngradedQuestionIds(
+      session,
+      getBlockSeededQuestions(session).map((question) => question.id),
     );
   }
 
