@@ -1,10 +1,10 @@
+import { isGradingStatus } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
   GameProgress,
   JoinAcceptedPayload,
   QuestionView,
-  isGradingStatus,
 } from '@campus-pubquiz/types';
 import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
