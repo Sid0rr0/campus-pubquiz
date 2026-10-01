@@ -39,12 +39,30 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                         | 02         |
 | 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md) | 03, 04     |
 
+### rename-grading-status-group (no spec — single ticket)
+
+| #   | Ticket                                                                                                                                                | Blocked by |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Rename the `grading` status group to name the break, not the act of grading](rename-grading-status-group/issues/01-rename-grading-group-to-break.md) | —          |
+
+### round-title-card (no spec — single ticket)
+
+| #   | Ticket                                                                                                                                      | Blocked by |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md) | —          |
+
+### moderator-guide (no spec — single ticket)
+
+| #   | Ticket                                                                                                                                             | Blocked by |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Rewrite `/guide` around the moderator's tasks, fed from the app's own sources](moderator-guide/issues/01-task-based-guide-from-shared-sources.md) | —          |
+
 ## Done
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| question-kind-module     | 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md)                       | —         |
-| question-kind-module     | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                                     | —         |
+| question-kind-module     | 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md)                        | —         |
+| question-kind-module     | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                                      | —         |
 | question-kind-module     | 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)                         | —         |
 | question-kind-module     | 04  | [CSV encode and decode live in the entries, with a round-trip test](question-kind-module/issues/04-csv-in-entries-with-round-trip.md)                    | —         |
 | question-kind-module     | 03  | [Persistence parses stored payloads instead of casting](question-kind-module/issues/03-payload-codec-replaces-casts.md)                                  | —         |
