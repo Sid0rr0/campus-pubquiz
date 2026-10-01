@@ -3,6 +3,7 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { UsersController } from '@/auth/users.controller';
 import { UserNotFoundError, type AuthService } from '@/auth/auth.service';
+import type { GameGateway } from '@/game/game.gateway';
 import type { UsersListedPayload } from '@campus-pubquiz/types';
 
 function makeController() {
@@ -12,8 +13,12 @@ function makeController() {
     deactivate: jest.fn(),
     deny: jest.fn(),
   };
-  const controller = new UsersController(authService as unknown as AuthService);
-  return { controller, authService };
+  const gateway = { disconnectUser: jest.fn() };
+  const controller = new UsersController(
+    authService as unknown as AuthService,
+    gateway as unknown as GameGateway,
+  );
+  return { controller, authService, gateway };
 }
 
 describe('UsersController', () => {
@@ -72,6 +77,26 @@ describe('UsersController', () => {
   });
 
   describe('deactivate', () => {
+    it("drops the deactivated user's live sockets after revoking their sessions", async () => {
+      const { controller, authService, gateway } = makeController();
+
+      await controller.deactivate(5);
+
+      expect(gateway.disconnectUser).toHaveBeenCalledWith(5);
+      expect(authService.deactivate.mock.invocationCallOrder[0]).toBeLessThan(
+        gateway.disconnectUser.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('leaves sockets alone when the user does not exist', async () => {
+      const { controller, authService, gateway } = makeController();
+      authService.deactivate.mockRejectedValue(new UserNotFoundError(5));
+
+      await expect(controller.deactivate(5)).rejects.toThrow(NotFoundException);
+
+      expect(gateway.disconnectUser).not.toHaveBeenCalled();
+    });
+
     it('deactivates the given user id', async () => {
       const { controller, authService } = makeController();
 

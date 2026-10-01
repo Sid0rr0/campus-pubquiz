@@ -17,6 +17,7 @@ import type { Server, Socket } from 'socket.io';
 import type { z } from 'zod';
 import {
   type AckResult,
+  type AuthUser,
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
@@ -364,6 +365,18 @@ export class GameGateway
       this.gameState.getKahootQuestionEndsAt(joinCode),
       () => void this.handleKahootQuestionTimerExpired(joinCode),
     );
+  }
+
+  /**
+   * Called by UsersController once it has deactivated a user — revoking their
+   * session rows only stops future requests; an already-open /control socket
+   * would otherwise keep its admin powers until it happened to disconnect.
+   */
+  disconnectUser(userId: number): void {
+    for (const socket of this.server.sockets.sockets.values()) {
+      const user = (socket.data as { user?: AuthUser }).user;
+      if (user?.id === userId) socket.disconnect(true);
+    }
   }
 
   /**
