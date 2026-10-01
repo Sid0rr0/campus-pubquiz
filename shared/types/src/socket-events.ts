@@ -212,7 +212,7 @@ export interface StateSnapshotPayload {
    * unless a question is open/locking.
    */
   upcomingQuestions: UpcomingQuestionPosition[];
-  /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. */
+  /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. The players view carries only the reveal walk so far (see the Screen projection). */
   revealQuestions: BlockRevealQuestionView[];
   /**
    * Every question from blocks that finished before the current one, with

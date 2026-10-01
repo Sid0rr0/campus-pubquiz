@@ -191,7 +191,12 @@ the display view names the screen on air; the admin view adds what `/control`
 marks as on air plus server-decided Advance/Previous availability; the
 players view adds answerability and drops anything teams haven't been shown
 yet (a kahoot question hidden behind the leaderboard is removed server-side,
-never filtered by the client).
+never filtered by the client). In particular it carries only the reveal walk so
+far: `revealQuestions` holds the questions before `revealIndex`, plus the one at
+`revealIndex` once its `reveal` step is on air. A question the walk hasn't
+reached stays in `blockQuestions` without its answer, so the phone shows a
+correct answer exactly when one arrives and stepping back with Previous takes it
+away again.
 
 ### The snapshot
 

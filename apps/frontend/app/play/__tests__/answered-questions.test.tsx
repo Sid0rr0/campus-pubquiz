@@ -197,8 +197,12 @@ describe('PlayPage — answered questions history', () => {
     ).toBeInTheDocument();
   });
 
-  it('reveals points in the history panel one question at a time as the display steps through the reveal walk', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+  describe('across the reveal walk', () => {
+    function omitAnswer<T extends { answer: string }>(question: T) {
+      return Object.fromEntries(
+        Object.entries(question).filter(([key]) => key !== 'answer'),
+      ) as Omit<T, 'answer'>;
+    }
     const q1 = {
       id: 1,
       type: 'free_text' as const,
@@ -219,6 +223,8 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Mars',
     };
+    const q1Hidden = omitAnswer(q1);
+    const q2Hidden = omitAnswer(q2);
     const myAnswerGrades = {
       1: {
         pointsAwarded: 3,
@@ -231,13 +237,22 @@ describe('PlayPage — answered questions history', () => {
         verdict: 'correct',
       },
     };
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({
+
+    // The phone is sent only the walk so far: `shown` are the reveal
+    // questions the server has trimmed to, the rest of the block arrives
+    // without answers.
+    function walkResult(shown: (typeof q1)[]) {
+      const shownIds = new Set(shown.map((question) => question.id));
+      const blockQuestions = [q1Hidden, q2Hidden];
+      return socketResult({
         snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
+          progress: progress({
+            status: 'reveal',
+            revealIndex: shown.length - 1,
+          }),
           currentQuestion: null,
-          blockQuestions: [q1, q2],
-          revealQuestions: [q1, q2],
+          blockQuestions,
+          revealQuestions: shown,
         },
         team: {
           teamId: 1,
@@ -246,36 +261,48 @@ describe('PlayPage — answered questions history', () => {
         },
         myAnswers: { 1: 'Banana', 2: 'Mars' },
         myAnswerGrades,
-        seenQuestions: { 1: q1, 2: q2 },
-      }),
-    );
-    const { rerender } = renderWithQuery(<PlayPage />);
+        seenQuestions: Object.fromEntries(
+          [q1, q2].map((question) => [
+            question.id,
+            shownIds.has(question.id)
+              ? question
+              : blockQuestions.find((hidden) => hidden.id === question.id),
+          ]),
+        ),
+      });
+    }
 
-    expect(screen.getByText('3 / 5')).toBeInTheDocument();
-    expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
+    beforeEach(() => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    });
 
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 1 }),
-          currentQuestion: null,
-          blockQuestions: [q1, q2],
-          revealQuestions: [q1, q2],
-        },
-        team: {
-          teamId: 1,
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { 1: 'Banana', 2: 'Mars' },
-        myAnswerGrades,
-        seenQuestions: { 1: q1, 2: q2 },
-      }),
-    );
-    rerender(<PlayPage />);
+    it('shows the correct answer and points only for the questions the walk has reached', () => {
+      mockUsePlayerGame.mockReturnValue(walkResult([q1]));
+      const { rerender } = renderWithQuery(<PlayPage />);
 
-    expect(screen.getByText('3 / 5')).toBeInTheDocument();
-    expect(screen.getByText('5 / 5')).toBeInTheDocument();
+      expect(screen.getAllByText(/^Correct:/)).toHaveLength(1);
+      expect(screen.getByText('3 / 5')).toBeInTheDocument();
+      expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
+
+      mockUsePlayerGame.mockReturnValue(walkResult([q1, q2]));
+      rerender(<PlayPage />);
+
+      expect(screen.getAllByText(/^Correct:/)).toHaveLength(2);
+      expect(screen.getByText('3 / 5')).toBeInTheDocument();
+      expect(screen.getByText('5 / 5')).toBeInTheDocument();
+    });
+
+    it('stops showing a question’s correct answer once the walk steps back past it', () => {
+      mockUsePlayerGame.mockReturnValue(walkResult([q1, q2]));
+      const { rerender } = renderWithQuery(<PlayPage />);
+      expect(screen.getByText('5 / 5')).toBeInTheDocument();
+
+      mockUsePlayerGame.mockReturnValue(walkResult([q1]));
+      rerender(<PlayPage />);
+
+      expect(screen.getAllByText(/^Correct:/)).toHaveLength(1);
+      expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
+    });
   });
 
   it('does not show points in the history panel before the question is revealed, even if already graded', () => {

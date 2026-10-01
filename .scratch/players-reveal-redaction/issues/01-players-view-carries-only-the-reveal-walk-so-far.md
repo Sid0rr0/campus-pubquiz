@@ -11,13 +11,17 @@ See the spec: `.scratch/players-reveal-redaction/spec.md`, sections "Reveal reda
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] At the players projection, in `reveal_intro` at the block's first position, there are no reveal questions; in `reveal` at position 0, there is one (with its answer); in `reveal` at position 2, there are three.
-- [ ] In `reveal_intro` crossing into a second round at position 2, there are two reveal questions, and the round title card still names the upcoming round (the On-air screen and players fields are computed before the trim).
-- [ ] The leaderboard covering the reveal doesn't change the trim.
-- [ ] The display and admin views at the same point still carry the full block.
-- [ ] `/play`: with a trimmed snapshot, the history list shows "Correct:" for the revealed question only, not for the block's other questions.
-- [ ] `/play`: after a snapshot with one fewer reveal question (Previous), that question's correct answer is no longer shown.
-- [ ] The phone's reveal filter is deleted; the opened-questions unit test keeps its pairing and points cases.
-- [ ] `DOCUMENTATION.md`'s per-room views paragraph says the players view carries only the reveal walk so far.
+- [x] At the players projection, in `reveal_intro` at the block's first position, there are no reveal questions; in `reveal` at position 0, there is one (with its answer); in `reveal` at position 2, there are three.
+- [x] In `reveal_intro` crossing into a second round at position 2, there are two reveal questions, and the round title card still names the upcoming round (the On-air screen and players fields are computed before the trim).
+- [x] The leaderboard covering the reveal doesn't change the trim.
+- [x] The display and admin views at the same point still carry the full block.
+- [x] `/play`: with a trimmed snapshot, the history list shows "Correct:" for the revealed question only, not for the block's other questions.
+- [x] `/play`: after a snapshot with one fewer reveal question (Previous), that question's correct answer is no longer shown.
+- [x] The phone's reveal filter is deleted; the opened-questions unit test keeps its pairing and points cases.
+- [x] `DOCUMENTATION.md`'s per-room views paragraph says the players view carries only the reveal walk so far.
+
+## Comments
+
+The Screen projection's players case now trims `revealQuestions` to the reveal walk so far (`trimToRevealWalk` in `screen-projection.util.ts`) after the On-air screen and players-screen fields are computed from the untrimmed snapshot. The phone's `isDisplayRevealed` filter and the reveal-walk parameter of `buildOpenedQuestions` are deleted; a question counts as revealed when it arrives with an answer. The seen-questions merge needed no change: block questions are added before reveal questions, so a question the walk stepped back past arrives as a block question and overwrites its revealed copy (pinned by a new `merge-seen-questions.test.ts`). The code landed in the commit `feat(backend): the players view carries only the reveal walk so far`.

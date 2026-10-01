@@ -286,11 +286,6 @@ function PlayPageContent() {
     seenQuestions,
     myAnswers,
     myAnswerGrades,
-    {
-      status: progress.status,
-      revealIndex: progress.revealIndex,
-      revealQuestions,
-    },
   );
   // Only the active block's questions can actually be jumped to in the
   // browser above — older, already-closed blocks aren't rendered there.

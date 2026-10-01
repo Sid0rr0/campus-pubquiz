@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                                 | Blocked by |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [The players view carries only the reveal walk so far](players-reveal-redaction/issues/01-players-view-carries-only-the-reveal-walk-so-far.md)                         | —          |
 | 02  | [Phones draw the phone screen the server names](players-reveal-redaction/issues/02-phones-draw-the-phone-screen-the-server-names.md)                                   | 01         |
 | 03  | [A closest-guess reveal reaches phones one step at a time](players-reveal-redaction/issues/03-closest-guess-reveal-reaches-phones-step-by-step.md)                     | 01         |
 | 04  | [The final block's answers survive a reconnect after the quiz ends](players-reveal-redaction/issues/04-final-block-answers-survive-a-reconnect-after-the-quiz-ends.md) | 01         |
@@ -17,10 +16,11 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| commit-a-move               | 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md) | —         |
-| commit-a-move               | 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md) | —         |
-| commit-a-move               | 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md) | —         |
-| commit-a-move               | 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md) | —         |
+| players-reveal-redaction    | 01  | [The players view carries only the reveal walk so far](players-reveal-redaction/issues/01-players-view-carries-only-the-reveal-walk-so-far.md)                         | —         |
+| commit-a-move               | 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md)                                                                      | —         |
+| commit-a-move               | 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md)                                                                    | —         |
+| commit-a-move               | 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md)                                                      | —         |
+| commit-a-move               | 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md)                                                              | —         |
 | commit-a-move               | 02  | [The Settle step knows the step kind](commit-a-move/issues/02-settle-step-knows-step-kind.md)                                                                          | —         |
 | commit-a-move               | 01  | [Agreement walk pins today's preview against the real press](commit-a-move/issues/01-agreement-walk-pins-preview.md)                                                   | —         |
 | grading-refresh             | 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md)               | —         |

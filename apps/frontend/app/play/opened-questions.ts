@@ -1,19 +1,10 @@
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
-  GameStatus,
   QuestionType,
   Verdict,
 } from '@campus-pubquiz/types';
 import type { MyAnswerGrade } from '@/app/lib/use-player-game';
-
-/** The current snapshot's reveal walk — lets points be gated to "shown on display yet", not just "block has started revealing". */
-interface ActiveRevealWalk {
-  status: GameStatus;
-  revealIndex: number;
-  /** The block currently on the reveal walk, in display order — array position is compared against revealIndex. */
-  revealQuestions: BlockRevealQuestionView[];
-}
 
 export interface OpenedQuestionEntry {
   id: number;
@@ -41,45 +32,18 @@ function isRevealed(
   return 'answer' in question;
 }
 
-/**
- * Whether the display has actually stepped to this question's position yet
- * — true once passed (position strictly before the current revealIndex, so
- * still true if the walk has since moved into a later round's intro card),
- * or currently showing it (position === revealIndex and status is the
- * per-question 'reveal' step, not the round's 'reveal_intro' title card).
- * Undefined position (not part of the block currently on the walk — either
- * an older, already-finished block, or not yet started) counts as shown:
- * an older block's walk necessarily finished before the game moved on.
- */
-function isDisplayRevealed(
-  questionId: number,
-  activeReveal: ActiveRevealWalk | null,
-): boolean {
-  if (!activeReveal) return true;
-  const position = activeReveal.revealQuestions.findIndex(
-    (question) => question.id === questionId,
-  );
-  if (position === -1) return true;
-  return (
-    position < activeReveal.revealIndex ||
-    (position === activeReveal.revealIndex && activeReveal.status === 'reveal')
-  );
-}
-
-/** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded plus verdict (shown once the display has actually stepped to that question — 0 for an unanswered question — even if the answer was actually graded earlier). Both come from the team's own synced graded answers, closest_guess included. */
+/** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded plus verdict (shown once the question arrives with its answer — 0 for an unanswered question — even if the answer was actually graded earlier). A question counts as revealed when it arrives with an answer: the players view only carries answers the big screen has already shown. Both come from the team's own synced graded answers, closest_guess included. */
 export function buildOpenedQuestions(
   seenQuestions: Record<number, BlockQuestionView | BlockRevealQuestionView>,
   myAnswers: Record<number, string>,
   myAnswerGrades: Record<number, MyAnswerGrade> = {},
-  activeReveal: ActiveRevealWalk | null = null,
 ): OpenedQuestionEntry[] {
   return Object.values(seenQuestions)
     .map((question) => {
       const myAnswer = myAnswers[question.id] ?? null;
       const revealed = isRevealed(question);
-      const isShown = revealed && isDisplayRevealed(question.id, activeReveal);
-      const grade = isShown ? myAnswerGrades[question.id] : undefined;
-      const pointsAwarded = !isShown
+      const grade = revealed ? myAnswerGrades[question.id] : undefined;
+      const pointsAwarded = !revealed
         ? null
         : (grade?.pointsAwarded ?? (myAnswer === null ? 0 : null));
       return {

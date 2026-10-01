@@ -1,5 +1,7 @@
 import {
   SOCKET_ROOMS,
+  type BlockRevealQuestionView,
+  type GameProgress,
   describeAdminIndicators,
   describeOnAirScreen,
   describePlayersScreen,
@@ -21,6 +23,20 @@ import {
   buildSnapshot,
   isBlockAnswerable,
 } from '@/game/state/session-snapshot.util';
+
+/**
+ * The reveal questions the big screen has shown so far: everything before
+ * revealIndex, plus the one at revealIndex once its own 'reveal' step is on
+ * air (not during the round's 'reveal_intro' title card). A removal, not a
+ * mask — the leaderboard flag doesn't change what has been shown underneath.
+ */
+function trimToRevealWalk(
+  revealQuestions: readonly BlockRevealQuestionView[],
+  { status, revealIndex }: GameProgress,
+): BlockRevealQuestionView[] {
+  const shownCount = status === 'reveal' ? revealIndex + 1 : revealIndex;
+  return revealQuestions.slice(0, shownCount);
+}
 
 /**
  * The Screen projection: the view of a live session that one audience (a
@@ -64,10 +80,17 @@ export function projectScreen(
         isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),
       };
     case SOCKET_ROOMS.PLAYERS: {
+      // The screen fields read the untrimmed block (the reveal_intro card
+      // needs the upcoming question's round title); only what leaves the
+      // server is trimmed.
       const view = {
         ...snapshot,
         ...describePlayersScreen(snapshot),
         isAnswerable: isBlockAnswerable(session),
+        revealQuestions: trimToRevealWalk(
+          snapshot.revealQuestions,
+          snapshot.progress,
+        ),
       };
       return isQuestionHiddenBehindKahootLeaderboard(session)
         ? { ...view, currentQuestion: null, blockQuestions: [] }
