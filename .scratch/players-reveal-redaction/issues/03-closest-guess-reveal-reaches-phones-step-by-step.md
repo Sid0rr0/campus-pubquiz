@@ -1,0 +1,36 @@
+# 03: A closest-guess reveal reaches phones one step at a time
+
+**What to build:** On the big screen, a closest-guess question's reveal builds up over five steps:
+
+- (0) the question
+- (1) + the lowest guess
+- (2) + the highest guess
+- (3) + the correct answer
+- (4) + the closest team(s)
+
+The players view sends that question with all of it from step 0. So a team's phone, and its history list since ticket 01, has the correct answer and the winners while the big screen is still on the question. After this, the players view carries, for the closest-guess question at `revealIndex`:
+
+- the lowest guess from step 1
+- the highest guess from step 2
+- the correct answer (and answer media) from step 3
+- the closest teams from step 4
+
+The question at `revealIndex` counts as revealed on the phone (it shows "Correct:" and points) only from step 3. A closest-guess question with no submissions keeps its single-step reveal, with the answer straight away. Questions earlier in the walk, and the display and admin views, are unchanged. This uses the same technique `ActiveShowdownView` uses: fields are included progressively by step.
+
+Out of scope in the spec (`.scratch/players-reveal-redaction/spec.md`, "Closest-guess step data"); this ticket picks it up.
+
+**Blocked by:** 01 (it narrows the same players reveal trim)
+
+**Status:** ready-for-agent
+
+- [ ] At the players projection, a closest-guess question at `revealIndex` with submissions carries:
+  - step 0: no answer, no stats
+  - step 1: the lowest guess only
+  - step 2: the lowest and highest guesses
+  - step 3: those plus the answer
+  - step 4: everything
+- [ ] A closest-guess question with no submissions carries its answer at step 0.
+- [ ] Earlier closest-guess questions in the walk, and the display and admin views, carry the full data at every step.
+- [ ] Previous back through the steps removes the later fields again.
+- [ ] `/play`: at step 0–2, the history list shows no "Correct:" or points for that question; at step 3, it does; the phone's closest-guess reveal draws the same lines at each step as today.
+- [ ] `DOCUMENTATION.md`'s closest-guess reveal description notes that phones receive each step's data only once it is on air.
