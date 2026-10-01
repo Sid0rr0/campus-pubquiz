@@ -20,6 +20,7 @@ import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
+import { selectPhoneQuestion } from '@/app/play/phone-question-selection';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { storedJoinOptions } from '@/app/lib/team-storage';
 import {
@@ -244,24 +245,13 @@ function PlayPageContent() {
   const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
-  // During reveal, the big screen walks one question at a time via
-  // revealIndex — teams should see the same one (the server names it in the
-  // players view), not stay pinned to the block's last question the way
-  // question_open/break does.
-  const revealDisplayQuestion =
-    onScreenQuestionId === null
-      ? undefined
-      : blockQuestions.find((question) => question.id === onScreenQuestionId);
-  // Defaults to the block's last (furthest-ever-opened) question rather than
-  // currentQuestion, which tracks the display's literal position - stepping
-  // the display backward with PREVIOUS must not drag /play's default view
-  // back with it, since teams should keep answering the newest question.
-  const selectedQuestion =
-    blockQuestions.find((question) => question.id === browsedQuestionId) ??
-    revealDisplayQuestion ??
-    blockQuestions[blockQuestions.length - 1] ??
-    currentQuestion ??
-    null;
+  const { selectedQuestion, previousQuestion, nextQuestion } =
+    selectPhoneQuestion({
+      openedQuestions: blockQuestions,
+      currentQuestion,
+      onScreenQuestionId,
+      browsedQuestionId,
+    });
   // With auto-advance off, freeze the view on whatever's currently
   // resolved above — both the instant the setting turns off (browsedQuestionId
   // is still null, so nothing above matched it) and any time the pin stops
@@ -276,22 +266,14 @@ function PlayPageContent() {
   ) {
     setBrowsedQuestionId(selectedQuestion.id);
   }
-  // Prev/Next bounds for manual-advance mode — stepping within the current
-  // block only, same array QuestionPicker already treats as "opened so far".
-  const blockQuestionIndex = blockQuestions.findIndex(
-    (question) => question.id === selectedQuestion?.id,
-  );
-  const canGoBackToQuestion = blockQuestionIndex > 0;
-  const canGoForwardToQuestion =
-    blockQuestionIndex !== -1 && blockQuestionIndex < blockQuestions.length - 1;
   function goToPreviousQuestion(): void {
-    if (blockQuestionIndex > 0) {
-      setBrowsedQuestionId(blockQuestions[blockQuestionIndex - 1].id);
+    if (previousQuestion) {
+      setBrowsedQuestionId(previousQuestion.id);
     }
   }
   function goToNextQuestion(): void {
-    if (canGoForwardToQuestion) {
-      setBrowsedQuestionId(blockQuestions[blockQuestionIndex + 1].id);
+    if (nextQuestion) {
+      setBrowsedQuestionId(nextQuestion.id);
     }
   }
   // The same question with its correct answer attached, for showing "your
@@ -421,8 +403,8 @@ function PlayPageContent() {
                 autoAdvanceEnabled
                   ? undefined
                   : {
-                      canGoBack: canGoBackToQuestion,
-                      canGoForward: canGoForwardToQuestion,
+                      canGoBack: previousQuestion !== null,
+                      canGoForward: nextQuestion !== null,
                       onBack: goToPreviousQuestion,
                       onForward: goToNextQuestion,
                     }
