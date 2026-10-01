@@ -16,13 +16,24 @@ export interface SavedPhaseTimer {
   phaseElapsedByKey: Record<string, number>;
 }
 
+/**
+ * What is being settled: one of the Move plan's progress-moving steps with the
+ * action it is carried out as, or `place` for creating and restoring a session.
+ */
+export type SettleStep =
+  | { kind: 'place' }
+  | {
+      kind: 'transition' | 'leaderboard_reveal' | 'leaderboard_hide';
+      action: GameAction;
+    };
+
 export interface SettleInput {
   /** The session as it stands (already graded, when grading applies). */
   session: SessionState;
   /** The progress the session is moving to. */
   progress: GameProgress;
-  /** The action that caused the move, or null for creating and restoring. */
-  action: GameAction | null;
+  /** The kind of step that caused the move — `place` for creating and restoring. */
+  step: SettleStep;
   /** Epoch-ms the move happens at. */
   now: number;
   /** Restore only: the saved phase timer to resume instead of deriving one. */
@@ -38,12 +49,13 @@ export interface SettleInput {
 export function settleSession({
   session,
   progress,
-  action,
+  step,
   now,
   savedPhaseTimer,
 }: SettleInput): SessionState {
   const context = getGameContext(session);
   const { settings } = session.seededGame;
+  const action = step.kind === 'place' ? null : step.action;
 
   const { livePhaseKey, phaseStartedAt, phaseElapsedByKey } =
     savedPhaseTimer ??
@@ -83,7 +95,12 @@ export function settleSession({
       session.leaderboardRevealCount,
       context.rounds[progress.roundIndex]?.kahootMode ?? false,
     ),
-    closestGuessRevealStep: computeInitialRevealStep(session, progress, action),
+    // Showing a rank or hiding the board leaves the quiz underneath exactly
+    // where it was, including a closest_guess reveal mid-way through.
+    closestGuessRevealStep:
+      step.kind === 'leaderboard_reveal' || step.kind === 'leaderboard_hide'
+        ? session.closestGuessRevealStep
+        : computeInitialRevealStep(session, progress, action),
   };
 }
 

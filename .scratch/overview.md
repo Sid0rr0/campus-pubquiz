@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                            | Blocked by                    |
 | --- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| 02  | [The Settle step knows the step kind](commit-a-move/issues/02-settle-step-knows-step-kind.md)                     | 01                            |
 | 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md) | 01                            |
 | 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md)         | 01, 03, grading-refresh (all) |
 | 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md)               | 02, 03, 04                    |
@@ -27,6 +26,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| commit-a-move               | 02  | [The Settle step knows the step kind](commit-a-move/issues/02-settle-step-knows-step-kind.md)                                                                          | —         |
 | commit-a-move               | 01  | [Agreement walk pins today's preview against the real press](commit-a-move/issues/01-agreement-walk-pins-preview.md)                                                   | —         |
 | grading-refresh             | 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md)               | —         |
 | grading-refresh             | 02  | [Answer submitted or graded ends through the grading refresh](grading-refresh/issues/02-answer-changes-through-refresh.md)                                             | —         |

@@ -115,7 +115,7 @@ export class GameStateService implements OnModuleInit {
       settleSession({
         session: restoredSession,
         progress,
-        action: null,
+        step: { kind: 'place' },
         now: Date.now(),
         savedPhaseTimer: saved ?? undefined,
       }),
@@ -195,7 +195,7 @@ export class GameStateService implements OnModuleInit {
       settleSession({
         session: freshSessionState(seededGame),
         progress: { ...LOBBY_PROGRESS },
-        action: null,
+        step: { kind: 'place' },
         now: Date.now(),
       }),
     );
@@ -593,22 +593,12 @@ export class GameStateService implements OnModuleInit {
     );
     const sessionWithGradingStatus =
       await this.grading.refreshUngradedQuestionIds(gradedSession, progress);
-    const settled = settleSession({
+    const updated = settleSession({
       session: sessionWithGradingStatus,
       progress,
-      action: effectiveAction,
+      step: { kind: step.kind, action: effectiveAction },
       now: Date.now(),
     });
-    // Showing a rank or hiding the board leaves the quiz underneath exactly
-    // where it was, including a closest_guess reveal mid-way through.
-    const updated: SessionState =
-      step.kind === 'transition'
-        ? settled
-        : {
-            ...settled,
-            closestGuessRevealStep:
-              sessionWithGradingStatus.closestGuessRevealStep,
-          };
     this.sessionStore.set(joinCode, updated);
     await this.progressRepository.save(updated.seededGame.gameSessionId, {
       progress,
