@@ -29,7 +29,12 @@ import {
 import { youtubeClipNotes, type ClipNotesCodec } from './youtube';
 
 /** How a type's answers are graded: at submit, in one batch after lock, or by the quiz master. */
-export type GradingMode = 'auto' | 'batch' | 'human';
+/**
+ * 'auto' grades every submission at submit; 'batch' grades all together once
+ * the question locks; 'match-or-human' grades a submission matching the key
+ * correct at submit and leaves any other to the moderator.
+ */
+export type GradingMode = 'auto' | 'batch' | 'match-or-human';
 
 /** Which answer input a type renders on the phone, and which editor section holds its answer. */
 export type AnswerInputKind = 'text' | 'number' | 'choice' | 'sort' | 'match';
@@ -59,7 +64,7 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   gradingMode: GradingMode;
   /** Whether the admin can regrade a single answer. */
   overridable: boolean;
-  /** Its own field, never derived from `gradingMode`: free_text auto-grades but is excluded (ADR 0001). */
+  /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
   kahootAllowed: boolean;
 }
 
@@ -73,14 +78,14 @@ export const QUESTION_KINDS: {
     type: 'free_text',
     label: 'Free text',
     moderatorNote:
-      'No options. Graded automatically when a team submits, against the answer text (case and whitespace are ignored); you can still override any mark by hand.',
+      'No options. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it, and you can override any mark by hand.',
     inputKind: 'text',
     requiresMedia: false,
     choices: 'none',
     schema: freeTextPreviewSchema,
     payload: freeTextPayloadSchema,
     csv: answerOnlyCsv,
-    gradingMode: 'auto',
+    gradingMode: 'match-or-human',
     overridable: true,
     kahootAllowed: false,
   },
@@ -103,14 +108,14 @@ export const QUESTION_KINDS: {
     type: 'audio',
     label: 'Audio',
     moderatorNote:
-      'Needs an http audio link as its media. You can add options if you like; either way you grade each answer by hand.',
+      'Needs an http audio link as its media. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
     inputKind: 'text',
     requiresMedia: true,
     choices: 'optional',
     schema: audioPreviewSchema,
     payload: audioPayloadSchema,
     csv: choicesCsv,
-    gradingMode: 'human',
+    gradingMode: 'match-or-human',
     overridable: true,
     kahootAllowed: false,
   },
@@ -118,7 +123,7 @@ export const QUESTION_KINDS: {
     type: 'youtube',
     label: 'YouTube video',
     moderatorNote:
-      'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like; either way you grade each answer by hand.',
+      'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
     inputKind: 'text',
     requiresMedia: true,
     choices: 'optional',
@@ -126,7 +131,7 @@ export const QUESTION_KINDS: {
     payload: youtubePayloadSchema,
     csv: choicesCsv,
     clipNotes: youtubeClipNotes,
-    gradingMode: 'human',
+    gradingMode: 'match-or-human',
     overridable: true,
     kahootAllowed: false,
   },

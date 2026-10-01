@@ -1,8 +1,13 @@
-import type { GameProgress, QuestionType } from '@campus-pubquiz/types';
+import type {
+  GameProgress,
+  QuestionType,
+  ScoredQuestion,
+} from '@campus-pubquiz/types';
 import {
   isAutoGradedType,
   isBatchGradedType,
   isGradedStatus,
+  isMatchOrHumanType,
   isGradingStatus,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
@@ -114,17 +119,20 @@ export class BlockGradingService {
   /**
    * Re-grades already-shown questions after a live edit changed their
    * answer/points — `session.seededGame` must already be reloaded, since
-   * that's where the corrected key is read from. Auto-graded types re-score
-   * every answer (kahoot questions re-apply speed scaling from the response
-   * times stored at submit);
+   * that's where the corrected key is read from, and `previousQuestions`
+   * holds each edited question as it stood before the edit (a question
+   * missing from it is taken as unchanged). Auto-graded types re-score every
+   * answer (kahoot questions re-apply speed scaling from the response times
+   * stored at submit); match-or-human types grade new matches correct, keep
+   * the moderator's grades and leave other non-matches ungraded;
    * closest_guess re-runs its batch only if it was already graded (otherwise
-   * the normal lock flow grades it with the new key); human-graded types keep
-   * the admin's judgement. Recomputes the leaderboard if anything changed,
-   * and names the questions it re-scored.
+   * the normal lock flow grades it with the new key). Recomputes the
+   * leaderboard if anything changed, and names the questions it re-scored.
    */
   async regradeQuestions(
     session: SessionState,
     questionIds: readonly number[],
+    previousQuestions: ReadonlyMap<number, ScoredQuestion> = new Map(),
   ): Promise<{
     session: SessionState;
     regradedQuestionIds: readonly number[];
@@ -149,6 +157,13 @@ export class BlockGradingService {
           gameSessionId,
           question,
           kahootTimerSeconds,
+        );
+        regradedQuestionIds.push(question.id);
+      } else if (isMatchOrHumanType(question.type)) {
+        await this.answerService.regradeMatchOrHuman(
+          gameSessionId,
+          question,
+          previousQuestions.get(question.id) ?? question,
         );
         regradedQuestionIds.push(question.id);
       } else if (

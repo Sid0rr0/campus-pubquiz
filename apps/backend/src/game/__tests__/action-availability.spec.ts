@@ -7,7 +7,7 @@ import {
 } from '@campus-pubquiz/types';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import type { GameSessionStore } from '@/game/state/game-session.store';
-import { asSocket } from '@/game/__tests__/test-utils';
+import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
   setupRealStoreGatewayTest,
@@ -349,6 +349,22 @@ describe('Screen projection — Advance/Previous availability', () => {
         [...specById.keys()].map((id, ordinal) => [id, ordinal]),
       );
       const answered = new Set<number>();
+      let admin: MockSocket | undefined;
+      // A wrong typed answer waits for the moderator, so the walk grades it
+      // zero — Advance out of the break is refused while any is ungraded.
+      async function gradeWrongAnswersZero(questionId: number) {
+        admin ??= await game.connectAdmin();
+        const answers = await game.inRequestContext(() =>
+          game.answerService.listForQuestion(game.gameSessionId, questionId),
+        );
+        for (const { answerId, gradedAt } of answers) {
+          if (gradedAt !== null) continue;
+          await game.gateway.handleGradeAnswer(asSocket(admin), {
+            answerId,
+            pointsAwarded: 0,
+          });
+        }
+      }
       return async () => {
         const view = adminView();
         const question = view.currentQuestion;
@@ -372,6 +388,7 @@ describe('Screen projection — Advance/Previous availability', () => {
             value: right ? spec.answer : wrong,
           });
         }
+        if (spec.type === 'free_text') await gradeWrongAnswersZero(question.id);
       };
     }
 

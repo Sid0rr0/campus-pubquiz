@@ -121,7 +121,8 @@ revealed — reusing either during break review would reopen a locked round
 for answers or leak an unrevealed one.
 
 Grading is not tied to a status. The admin can grade an answer as soon as it
-arrives (a team revising a human-graded answer clears its grade); the break is
+arrives (a team revising an answer into something that doesn't match the key
+clears its grade); the break is
 where remaining grading must be finished, since leaving it is refused while
 any answer in the block is ungraded.
 
@@ -275,16 +276,19 @@ table (`GameSessionTeam`).
 `sort`, `match`, or `closest_guess`. Each has its own submission format and
 grading behavior:
 
-- **`free_text`** — any typed answer (`FreeTextAnswer`). Auto-graded at
-  submit time against the stored `answer`, compared trimmed and
-  case-insensitively (so "Paris"/" paris "/"PARIS" all match). The admin can
-  override any answer the match missed — a synonym, a typo worth accepting.
+- **`free_text`** — any typed answer (`FreeTextAnswer`). An answer matching
+  the stored `answer` (trimmed, case-insensitive, so "Paris"/" paris "/"PARIS"
+  all match) is graded correct at submit time. Any other answer is left
+  ungraded for the admin — a synonym or typo worth accepting, or a plain
+  miss. The admin can override any answer, matching or not.
 - **`multiple_choice`** — players pick one of `options`. Auto-graded at
   submit time by exact match against the stored `answer`.
 - **`audio`** — `media_url` is required and plays on `/display` as an
   autoplaying `<audio controls>` element. Teams type an answer, or pick from
   `options` when the author adds at least two (the answer must then be one of
-  them, as for `multiple_choice`). Graded by hand either way.
+  them, as for `multiple_choice`). Same rule as `free_text`: an answer
+  matching the key (a picked option is stored as its text) is graded correct
+  at submit time, any other waits for the admin.
 - **`youtube`** — `media_url` is required and must resolve to a
   `youtube.com`/`youtu.be` video id (enforced by both the CSV import schema
   and the manual editor's save validation). The display renders it as an
@@ -341,9 +345,15 @@ grading behavior:
   `/play`). A question with zero submissions collapses back to the normal
   single-shot reveal, since there's nothing to walk through.
 
-`multiple_choice`/`sort`/`match`/`free_text` are auto-graded the instant a
-team submits, and the admin can still override any of them per answer;
-`audio`/`youtube` need the admin's judgment; `closest_guess` is auto-graded
+`multiple_choice`/`sort`/`match` are auto-graded the instant a team submits,
+and the admin can still override any of them per answer;
+`free_text`/`audio`/`youtube` (grading mode `match-or-human`) are graded
+correct at submit when the answer matches the key and otherwise left ungraded
+for the admin, who can override any of them too. A revision that matches is
+graded correct (replacing any earlier grade); a revision that doesn't match
+and differs from the previous value goes back to ungraded, even if the admin
+had graded the previous value; resubmitting the same value leaves its grade
+alone. `closest_guess` is auto-graded
 but deferred to a single batch pass once the block locks, and is the one type
 that can't be overridden. Which list each type is in (auto-graded,
 overridable, kahoot-allowed) is defined once per type in the question type
@@ -385,12 +395,16 @@ editor's disabled controls:
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If a shown question's `answer` or `points` changed, its existing answers are
 re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
-(`multiple_choice`/`sort`/`match`/`free_text`) re-score every answer — overwriting any
+(`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
 speed scaling from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
 speed-scaled like any other); an already-graded `closest_guess` re-runs its batch;
-human-graded types keep the admin's grades. The editor keeps sort/match
+`match-or-human` types (`free_text`/`audio`/`youtube`) grade answers that
+match the corrected key correct, keep the admin's grade on a non-matching
+answer, and send any other non-matching answer back to ungraded — including
+one that was auto-graded correct under the old key (told apart by re-running
+the submit-time grade against the key as it stood before the edit). The editor keeps sort/match
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
 reshuffle what players see.
 

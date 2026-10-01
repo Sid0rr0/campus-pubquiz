@@ -37,7 +37,7 @@ export interface JoinTeamOptions {
   joinCode?: string;
 }
 
-/** A team's own graded answer to one question — absent from the map entirely until grading happens (instantly for auto-graded types, on admin grading for the rest). */
+/** A team's own graded answer to one question — absent from the map entirely until grading happens (at submit when the answer is graded automatically, on admin grading otherwise). */
 export interface MyAnswerGrade {
   pointsAwarded: number;
   gradedAt: string;

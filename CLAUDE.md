@@ -41,7 +41,7 @@ pnpm workspace, run from repo root unless noted:
 - **JSON payload column** — flexible for new question types; requires per-type Zod validation at import time or crashes will happen live on stage.
 - **Last-write-wins answers** — teams can revise until the block locks. This is the desired pub-quiz behavior.
 - **localStorage tokens** — private browsing or cleared storage loses team identity (admin/moderator session cookies have the same weakness). Admin needs a "re-link phone to team" escape hatch.
-- **Live answer-key fixes overwrite manual overrides** — correcting a shown auto-graded question's answer/points during a live session re-scores every answer to it, discarding any per-answer override (e.g. adjusted `match` partial credit); the admin re-overrides in break if needed.
+- **Live answer-key fixes overwrite manual overrides** — correcting a shown auto-graded question's answer/points during a live session re-scores every answer to it, discarding any per-answer override (e.g. adjusted `match` partial credit); the admin re-overrides in break if needed. Typed-answer types (`free_text`/`audio`/`youtube`) are the exception: the moderator's grade on a non-matching answer survives a key fix. "Graded automatically" is inferred by re-running the submit-time grade against the pre-edit key, so a moderator grade identical to that automatic grade (e.g. confirming a match) is cleared by a later key fix that no longer matches it.
 - **Grading isn't attributed on `Answer` rows** — grading a specific answer doesn't stamp a `gradedBy` user id. Fine until an audit trail of who-graded-what is needed.
 
 ## Keeping docs current

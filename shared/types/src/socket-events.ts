@@ -395,9 +395,9 @@ export interface AnswerReceivedPayload {
   teamId: number;
   teamName: string;
   value: string;
-  /** Set for auto-graded types (multiple_choice/sort/match/free_text), graded the instant they're submitted; 0 for types that need admin grading (audio/youtube) until GRADE_ANSWER fires. */
+  /** Set when the answer is graded at submit (always for multiple_choice/sort/match, only on a match for free_text/audio/youtube); 0 for an answer waiting on admin grading until GRADE_ANSWER fires. */
   pointsAwarded: number;
-  /** Set the instant auto-graded types are submitted; null until the admin grades an audio/youtube answer. */
+  /** Set the instant an answer is graded at submit; null until the admin grades a free_text/audio/youtube answer that missed the key. */
   gradedAt: string | null;
   /** Set together with gradedAt; null until graded. */
   verdict: Verdict | null;
@@ -416,7 +416,7 @@ export interface TeamAnswerView {
   questionId: number;
   value: string;
   pointsAwarded: number;
-  /** Set once this answer is graded (instantly for auto-graded types, on admin grading for the rest) — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
+  /** Set once this answer is graded (at submit when the answer is graded automatically, on admin grading otherwise) — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
   gradedAt: string | null;
   /** Set together with gradedAt: how the answer was judged, independent of speed scaling or partial rounding. Null until graded. */
   verdict: Verdict | null;

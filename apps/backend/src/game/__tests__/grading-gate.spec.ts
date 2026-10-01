@@ -41,12 +41,14 @@ describe('GameGateway — grading gate before reveal', () => {
     }
   });
 
-  async function submitAnswerToFirstQuestion(): Promise<number> {
+  async function submitAnswerToFirstQuestion(
+    value = 'Banana',
+  ): Promise<number> {
     const [{ socket, teamId }] = game.teams;
     await game.gateway.handleSubmitAnswer(asSocket(socket), {
       questionId: firstQuestionId,
       teamId,
-      value: 'Banana',
+      value,
     });
     const [answer] = await game.inRequestContext(() =>
       game.answerService.listForQuestion(game.gameSessionId, firstQuestionId),
@@ -70,6 +72,16 @@ describe('GameGateway — grading gate before reveal', () => {
 
     // The rejected transition must not have been persisted.
     expect((await game.snapshot()).progress.status).toBe('break_intro');
+  });
+
+  it('lets ADVANCE out of break_intro when the only answer matches the key and was graded at submit', async () => {
+    await submitAnswerToFirstQuestion(' queen ');
+    const breakIntro = await advanceToBreakIntro();
+    expect(breakIntro.ungradedQuestionIds).toEqual([]);
+
+    const revealIntro = await game.act('ADVANCE');
+
+    expect(revealIntro.progress.status).toBe('reveal_intro');
   });
 
   it('reports the ungraded question ids on the snapshot while reviewing the break screen', async () => {
@@ -101,6 +113,49 @@ describe('GameGateway — grading gate before reveal', () => {
 
     const revealIntro = await game.act('ADVANCE');
 
+    expect(revealIntro.progress.status).toBe('reveal_intro');
+  });
+});
+
+describe('GameGateway — grading gate for a wrong free_text answer', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('refuses ADVANCE out of the break until the moderator grades the answer', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Largest planet?', answer: 'Jupiter' },
+          ],
+        },
+      ],
+    });
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(await game.connectAdmin());
+    const [{ socket, teamId }] = game.teams;
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId,
+      teamId,
+      value: 'Jupitor',
+    });
+    await game.act('ADVANCE'); // -> locking
+    const breakIntro = await game.act('ADVANCE'); // -> break_intro
+    expect(breakIntro.ungradedQuestionIds).toEqual([questionId]);
+
+    await expect(game.act('ADVANCE')).rejects.toThrow(WsException);
+
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    const admin = await game.connectAdmin();
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 1,
+    });
+    const revealIntro = await game.act('ADVANCE');
     expect(revealIntro.progress.status).toBe('reveal_intro');
   });
 });

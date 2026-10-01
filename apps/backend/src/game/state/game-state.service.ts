@@ -8,6 +8,7 @@ import {
   type AdminQuestionContext,
   type GameAction,
   type PresenterContextPayload,
+  type ScoredQuestion,
   type SessionSettings,
   type SocketRoomName,
   type StateSnapshotPayload,
@@ -213,16 +214,22 @@ export class GameStateService implements OnModuleInit {
   /**
    * Re-grades already-shown questions whose answer/points were corrected by
    * a live edit — call after reloadActiveQuiz, so the corrected key is what
-   * gets graded against. See BlockGradingService.regradeQuestions. Returns
-   * the ids of the questions it actually re-scored.
+   * gets graded against. `previousQuestions` are the edited questions as
+   * they were before the reload. See BlockGradingService.regradeQuestions.
+   * Returns the ids of the questions it actually re-scored.
    */
   async regradeQuestions(
     joinCode: string,
     questionIds: readonly number[],
+    previousQuestions?: ReadonlyMap<number, ScoredQuestion>,
   ): Promise<readonly number[]> {
     const session = this.sessionStore.get(joinCode);
     const { session: regraded, regradedQuestionIds } =
-      await this.grading.regradeQuestions(session, questionIds);
+      await this.grading.regradeQuestions(
+        session,
+        questionIds,
+        previousQuestions,
+      );
     this.sessionStore.set(joinCode, regraded);
     return regradedQuestionIds;
   }
@@ -239,10 +246,20 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     regradeQuestionIds: readonly number[] = [],
   ): Promise<SessionOutcome> {
+    const previousQuestions = new Map(
+      this.sessionStore
+        .get(joinCode)
+        .seededGame.rounds.flatMap((round) => round.questions)
+        .map((question) => [question.id, question] as const),
+    );
     await this.reloadActiveQuiz(joinCode);
     const regradedQuestionIds =
       regradeQuestionIds.length > 0
-        ? await this.regradeQuestions(joinCode, regradeQuestionIds)
+        ? await this.regradeQuestions(
+            joinCode,
+            regradeQuestionIds,
+            previousQuestions,
+          )
         : [];
     if (regradedQuestionIds.length === 0) return BROADCAST_STATE_OUTCOME;
 

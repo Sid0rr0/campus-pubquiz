@@ -13,9 +13,10 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-// One block holding both human-graded types, an auto-graded free_text and
-// multiple_choice, and the batch-graded closest_guess — every kind of
-// question the ungraded set has a rule for.
+// One block holding the three typed-answer types (audio, youtube, free_text:
+// graded at submit only on a match, otherwise left for the moderator), an
+// auto-graded multiple_choice and the batch-graded closest_guess — every kind
+// of question the ungraded set has a rule for.
 const ONE_BLOCK_QUIZ: QuizRoundSpec[] = [
   {
     title: 'Everything Round',
@@ -185,35 +186,54 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
   it('keeps the ungraded set in step with the database through a whole block', async () => {
     await game.openFirstQuestion(admin); // -> audio
 
-    // Human-graded audio: each answer waits for the quiz master.
-    await step('audio submitted', () => submit(teamA, audio, 'Queen'), [audio]);
-    await step('second audio submitted', () => submit(teamB, audio, 'Abba'), [
-      audio,
-    ]);
-    await step('one audio answer graded', () => grade(teamA, audio), [audio]);
-    await step('last audio answer graded', () => grade(teamB, audio), []);
+    // A typed answer matching the key is graded at submit; any other waits
+    // for the quiz master.
     await step(
-      'graded audio answer revised',
-      () => submit(teamA, audio, 'Freddie Mercury'),
+      'matching audio submitted',
+      () => submit(teamA, audio, 'Queen'),
+      [],
+    );
+    await step(
+      'non-matching audio submitted',
+      () => submit(teamB, audio, 'Abba'),
+      [audio],
+    );
+    await step('audio answer graded', () => grade(teamB, audio), []);
+    await step(
+      'graded audio answer revised into another non-match',
+      () => submit(teamB, audio, 'Freddie Mercury'),
       [audio],
     );
 
     await step('youtube opened', () => game.act('ADVANCE'), [audio]);
-    await step('youtube submitted', () => submit(teamA, youtube, 'Jaws'), [
-      audio,
-      youtube,
-    ]);
+    await step(
+      'non-matching youtube submitted',
+      () => submit(teamA, youtube, 'Jaws 2'),
+      [audio, youtube],
+    );
+    await step(
+      'youtube revised into a match',
+      () => submit(teamA, youtube, 'Jaws'),
+      [audio],
+    );
+    await step(
+      'youtube revised into a non-match',
+      () => submit(teamA, youtube, 'Jaws 3'),
+      [audio, youtube],
+    );
 
-    // free_text grades itself on every submission, revisions included.
+    // free_text follows the same rule, revisions included.
     await step('free_text opened', () => game.act('ADVANCE'), [audio, youtube]);
     await step('free_text submitted', () => submit(teamA, freeText, 'Saturn'), [
       audio,
       youtube,
+      freeText,
     ]);
-    await step('free_text revised', () => submit(teamA, freeText, 'Jupiter'), [
-      audio,
-      youtube,
-    ]);
+    await step(
+      'free_text revised into a match',
+      () => submit(teamA, freeText, 'Jupiter'),
+      [audio, youtube],
+    );
 
     await step('multiple_choice opened', () => game.act('ADVANCE'), [
       audio,
@@ -260,7 +280,7 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
       [audio],
     );
     await step(
-      'human-graded answer key fixed live',
+      'typed-answer key fixed live',
       () => fixAnswerKey(audio, 'Queen II'),
       [audio],
     );
@@ -272,10 +292,9 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
     await step('team with an ungraded answer kicked', () => kick(teamA), [
       audio,
     ]);
-    await step(
-      "kicked team's revised answer graded",
-      () => grade(teamA, audio),
-      [],
-    );
+    await step("kicked team's answer graded", () => grade(teamA, audio), [
+      audio,
+    ]);
+    await step('last audio answer graded', () => grade(teamB, audio), []);
   });
 });

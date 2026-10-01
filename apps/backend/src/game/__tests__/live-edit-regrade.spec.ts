@@ -160,38 +160,45 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     ]);
   });
 
-  it('leaves a human-graded question alone, without touching the leaderboard', async () => {
+  it('grades a newly matching audio answer on a key fix and keeps the moderator grades', async () => {
     const { game, admin } = await start({
-      teamNames: ['Tune Team'],
+      teamNames: ['Tune Team', 'Abba Fan', 'Moderated'],
       rounds: AUDIO_QUIZ,
     });
-    const [team] = game.teams;
+    const [tune, abba, moderated] = game.teams;
     const [questionId] = game.rounds[0].questionIds;
     await game.openFirstQuestion(admin);
-    await submit(game, team, questionId, 'Queen');
-    const [{ answerId }] = await game.inRequestContext(() =>
+    await submit(game, tune, questionId, 'Queen'); // auto-graded under the old key
+    await submit(game, abba, questionId, 'Abba'); // waits for the moderator
+    await submit(game, moderated, questionId, 'Bowie');
+    const answers = await game.inRequestContext(() =>
       game.answerService.listForQuestion(game.gameSessionId, questionId),
     );
+    const moderatedAnswer = answers.find((a) => a.teamName === 'Moderated')!;
     await game.gateway.handleGradeAnswer(asSocket(admin), {
-      answerId,
+      answerId: moderatedAnswer.answerId,
       pointsAwarded: 1,
     });
+    expect(await storedPoints(game, questionId)).toEqual({
+      'Tune Team': 2,
+      'Abba Fan': 0,
+      Moderated: 1,
+    });
     await correctAnswerKey(game, questionId, { answer: 'Abba', points: 5 });
-    game.clearEmits();
 
     await editQuiz(game, [questionId]);
 
-    expect(await storedPoints(game, questionId)).toEqual({ 'Tune Team': 1 });
+    expect(await storedPoints(game, questionId)).toEqual({
+      'Tune Team': 0, // no longer matches: back to ungraded
+      'Abba Fan': 5, // now matches
+      Moderated: 1, // the moderator's grade survives
+    });
+    const after = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
     expect(
-      game
-        .payloadsTo(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED)
-        .concat(
-          game.payloadsTo(
-            SOCKET_ROOMS.ADMIN,
-            SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-          ),
-        ),
-    ).toEqual([]);
+      Object.fromEntries(after.map((a) => [a.teamName, a.gradedAt !== null])),
+    ).toEqual({ 'Tune Team': false, 'Abba Fan': true, Moderated: true });
   });
 
   it('re-applies the speed scaling from the stored response time after a kahoot question was scored', async () => {

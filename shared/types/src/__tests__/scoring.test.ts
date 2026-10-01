@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   AUTO_GRADED_TYPES,
   BATCH_GRADED_TYPES,
-  HUMAN_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
+  MATCH_OR_HUMAN_TYPES,
   OVERRIDABLE_TYPES,
+  gradeAtSubmit,
   gradeClosestGuessBatch,
   halfPoints,
   scoreSubmission,
@@ -41,14 +42,48 @@ describe('scoreSubmission — exact-match types', () => {
   );
 
   it.each(['audio', 'youtube', 'closest_guess'] as const)(
-    'scores nothing for %s, which is not graded at submit',
+    'scores nothing for %s unless it matches the key',
     (type) => {
-      expect(scoreSubmission({ type, answer: '5', points: 10 }, '5')).toEqual({
+      expect(scoreSubmission({ type, answer: '5', points: 10 }, '6')).toEqual({
         points: 0,
         verdict: 'incorrect',
       });
     },
   );
+});
+
+describe('gradeAtSubmit', () => {
+  it.each(['free_text', 'audio', 'youtube'] as const)(
+    '%s: a value matching the key (trimmed, any case) is correct',
+    (type) => {
+      const question = { type, answer: 'Queen', points: 10 };
+      for (const value of ['Queen', ' queen ', 'QUEEN']) {
+        expect(gradeAtSubmit(question, value)).toEqual({
+          points: 10,
+          verdict: 'correct',
+        });
+      }
+    },
+  );
+
+  it.each(['free_text', 'audio', 'youtube'] as const)(
+    '%s: a value that does not match the key has no automatic verdict',
+    (type) => {
+      expect(
+        gradeAtSubmit({ type, answer: 'Queen', points: 10 }, 'Queens'),
+      ).toBeNull();
+    },
+  );
+
+  it('grades an auto type either way and never grades closest_guess', () => {
+    expect(gradeAtSubmit(mc, 'Rome')).toEqual({
+      points: 0,
+      verdict: 'incorrect',
+    });
+    expect(
+      gradeAtSubmit({ type: 'closest_guess', answer: '5', points: 10 }, '5'),
+    ).toBeNull();
+  });
 });
 
 describe('scoreSubmission — match', () => {
@@ -230,15 +265,19 @@ describe('halfPoints', () => {
 });
 
 describe('category lists', () => {
-  it('grades multiple_choice, sort, match and free_text at submit', () => {
+  it('grades multiple_choice, sort and match at submit', () => {
     expect([...AUTO_GRADED_TYPES].sort()).toEqual(
-      ['free_text', 'match', 'multiple_choice', 'sort'].sort(),
+      ['match', 'multiple_choice', 'sort'].sort(),
     );
   });
 
-  it('batch-grades closest_guess and leaves audio/youtube to a human', () => {
+  it('batch-grades closest_guess and grades free_text/audio/youtube only on a match', () => {
     expect(BATCH_GRADED_TYPES).toEqual(['closest_guess']);
-    expect([...HUMAN_GRADED_TYPES].sort()).toEqual(['audio', 'youtube']);
+    expect([...MATCH_OR_HUMAN_TYPES].sort()).toEqual([
+      'audio',
+      'free_text',
+      'youtube',
+    ]);
   });
 
   it('allows only multiple_choice, sort and match in kahoot rounds', () => {
@@ -247,8 +286,7 @@ describe('category lists', () => {
     );
   });
 
-  it('auto-grades free_text without allowing it in kahoot rounds', () => {
-    expect(AUTO_GRADED_TYPES).toContain('free_text');
+  it('keeps free_text out of kahoot rounds', () => {
     expect(KAHOOT_ALLOWED_TYPES).not.toContain('free_text');
   });
 

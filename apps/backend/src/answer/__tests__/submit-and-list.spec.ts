@@ -108,9 +108,9 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     );
 
     expect(answers).toHaveLength(2);
-    // Both questions are free_text, so both are auto-graded immediately on
-    // submit — 'Banana' mismatches state.question's answer ('Apple'),
-    // 'Carrot' exactly matches question2's, hence the differing points.
+    // Both questions are free_text: 'Carrot' matches question2's key so it is
+    // graded at submit, while 'Banana' misses state.question's ('Apple') and
+    // waits for the moderator.
     const firstAnswer = answers.find(
       (answer) => answer.questionId === state.question.id,
     );
@@ -118,7 +118,7 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
       (answer) => answer.questionId === question2.id,
     );
     expect(firstAnswer).toMatchObject({ value: 'Banana', pointsAwarded: 0 });
-    expect(firstAnswer?.gradedAt).not.toBeNull();
+    expect(firstAnswer?.gradedAt).toBeNull();
     expect(secondAnswer).toMatchObject({ value: 'Carrot', pointsAwarded: 1 });
     expect(secondAnswer?.gradedAt).not.toBeNull();
   });
@@ -194,7 +194,7 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     expect(row.responseMs).toBe(1000);
   });
 
-  it('lists a human-graded answer with zero points and a null gradedAt before grading', async () => {
+  it('lists a non-matching audio answer with zero points and a null gradedAt before grading', async () => {
     const audioQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,

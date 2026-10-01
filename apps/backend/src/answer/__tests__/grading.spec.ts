@@ -58,7 +58,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       state.question.id,
     );
     expect(answer.pointsAwarded).toBe(0);
-    expect(answer.gradedAt).not.toBeNull();
+    expect(answer.gradedAt).toBeNull();
   });
 
   it('grades an answer with half points', async () => {
@@ -173,7 +173,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answer.gradedAt).not.toBeNull();
   });
 
-  it('re-grades a free_text answer against the answer key on every resubmission, discarding a manual override', async () => {
+  it('keeps a moderator-graded free_text answer intact when resubmitted with the same value', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
@@ -183,26 +183,51 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     );
     await state.answerService.grade(state.session.id, submitted.answerId, 1);
 
-    // Resubmitting (even the same wrong value) re-runs auto-grading against
-    // the answer key, same as multiple_choice/sort/match — it does not
-    // preserve the admin's manual override, unlike the human-graded types
-    // above.
-    await state.answerService.submit(
+    const ack = await state.answerService.submit(
       state.session.id,
       state.question.id,
       team.id,
       'Banana',
+    );
+
+    expect(ack.pointsAwarded).toBe(1);
+    expect(ack.gradedAt).not.toBeNull();
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      state.question.id,
+    );
+    expect(answer.pointsAwarded).toBe(1);
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('resets a moderator-graded free_text answer to ungraded when the team changes it to another non-match', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Banana',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+    await state.answerService.submit(
+      state.session.id,
+      state.question.id,
+      team.id,
+      'Mango',
     );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
       state.question.id,
     );
+    expect(answer.value).toBe('Mango');
     expect(answer.pointsAwarded).toBe(0);
-    expect(answer.gradedAt).not.toBeNull();
+    expect(answer.gradedAt).toBeNull();
+    expect(answer.verdict).toBeNull();
   });
 
-  it('re-grades (rather than resets) a free_text answer when the team changes it after manual grading', async () => {
+  it('auto-grades a free_text answer correct when the team revises it into a match after manual grading', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
@@ -210,7 +235,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       team.id,
       'Banana',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+    await state.answerService.grade(state.session.id, submitted.answerId, 0);
 
     await state.answerService.submit(
       state.session.id,
@@ -225,6 +250,35 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     );
     expect(answer.value).toBe('Apple');
     expect(answer.pointsAwarded).toBe(1);
+    expect(answer.verdict).toBe('correct');
+    expect(answer.gradedAt).not.toBeNull();
+  });
+
+  it('grades a matching audio answer correct at submit', async () => {
+    const audioQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'audio',
+      prompt: 'Name that tune',
+      answer: 'Queen',
+      points: 2,
+    });
+    await state.em.flush();
+    const team = await insertTeam('The Quizzards', 'token-1');
+
+    await state.answerService.submit(
+      state.session.id,
+      audioQuestion.id,
+      team.id,
+      ' queen ',
+    );
+
+    const [answer] = await state.answerService.listForQuestion(
+      state.session.id,
+      audioQuestion.id,
+    );
+    expect(answer.pointsAwarded).toBe(2);
+    expect(answer.verdict).toBe('correct');
     expect(answer.gradedAt).not.toBeNull();
   });
 
@@ -495,38 +549,6 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
     });
 
-    it('re-scores every free_text answer case-insensitively against a corrected answer key', async () => {
-      const teamA = await insertTeam('Team A', 'token-a');
-      const teamB = await insertTeam('Team B', 'token-b');
-      await state.answerService.submit(
-        state.session.id,
-        state.question.id,
-        teamA.id,
-        'pear',
-      );
-      await state.answerService.submit(
-        state.session.id,
-        state.question.id,
-        teamB.id,
-        'APPLE',
-      );
-
-      await state.answerService.regradeAutoGraded(state.session.id, {
-        id: state.question.id,
-        type: 'free_text',
-        answer: 'Pear',
-        points: 1,
-      });
-
-      const answers = await state.answerService.listForQuestion(
-        state.session.id,
-        state.question.id,
-      );
-      expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(1);
-      expect(answers.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(0);
-      expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
-    });
-
     it('re-scores match partial credit against new points, replacing a manual override', async () => {
       const matchQuestion = state.em.create(Question, {
         round: state.round,
@@ -602,6 +624,107 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         matchQuestion.id,
       );
       expect(answer.pointsAwarded).toBe(4);
+    });
+  });
+
+  describe('regradeMatchOrHuman', () => {
+    const previous = { type: 'free_text', answer: 'Apple', points: 1 } as const;
+
+    async function submitAs(teamName: string, value: string) {
+      const team = await insertTeam(teamName, `token-${teamName}`);
+      const submitted = await state.answerService.submit(
+        state.session.id,
+        state.question.id,
+        team.id,
+        value,
+      );
+      return { team, submitted };
+    }
+
+    async function byTeam() {
+      const answers = await state.answerService.listForQuestion(
+        state.session.id,
+        state.question.id,
+      );
+      return new Map(answers.map((a) => [a.teamName, a]));
+    }
+
+    it('grades a newly matching answer correct, case-insensitively', async () => {
+      await submitAs('A', 'APPLE');
+      await submitAs('B', 'pear');
+
+      await state.answerService.regradeMatchOrHuman(
+        state.session.id,
+        { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
+        previous,
+      );
+
+      const answers = await byTeam();
+      expect(answers.get('B')).toMatchObject({
+        pointsAwarded: 1,
+        verdict: 'correct',
+      });
+      expect(answers.get('B')?.gradedAt).not.toBeNull();
+    });
+
+    it('sends an answer that was auto-graded correct under the old key back to ungraded', async () => {
+      await submitAs('A', 'Apple');
+
+      await state.answerService.regradeMatchOrHuman(
+        state.session.id,
+        { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
+        previous,
+      );
+
+      expect((await byTeam()).get('A')).toMatchObject({
+        pointsAwarded: 0,
+        verdict: null,
+        gradedAt: null,
+      });
+    });
+
+    it("keeps the moderator's grade on an answer that matches neither key", async () => {
+      const { submitted } = await submitAs('A', 'Banana');
+      await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+      await state.answerService.regradeMatchOrHuman(
+        state.session.id,
+        { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
+        previous,
+      );
+
+      expect((await byTeam()).get('A')).toMatchObject({
+        pointsAwarded: 1,
+        verdict: 'correct',
+      });
+    });
+
+    it("keeps a moderator's zero on an answer the old key matched", async () => {
+      const { submitted } = await submitAs('A', 'Apple');
+      await state.answerService.grade(state.session.id, submitted.answerId, 0);
+
+      await state.answerService.regradeMatchOrHuman(
+        state.session.id,
+        { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
+        previous,
+      );
+
+      expect((await byTeam()).get('A')).toMatchObject({
+        pointsAwarded: 0,
+        verdict: 'incorrect',
+      });
+    });
+
+    it('leaves an ungraded non-matching answer ungraded', async () => {
+      await submitAs('A', 'Banana');
+
+      await state.answerService.regradeMatchOrHuman(
+        state.session.id,
+        { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
+        previous,
+      );
+
+      expect((await byTeam()).get('A')?.gradedAt).toBeNull();
     });
   });
 

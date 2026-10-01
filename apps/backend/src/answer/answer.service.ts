@@ -7,8 +7,10 @@ import type {
   Verdict,
 } from '@campus-pubquiz/types';
 import {
+  gradeAtSubmit,
   gradeClosestGuessBatch,
   isAutoGradedType,
+  isMatchOrHumanType,
   isOverridableType,
   scoreSubmission,
   verdictForManualGrade,
@@ -63,28 +65,33 @@ export class AnswerService {
       points: row.points,
       matchScoringMode: readQuestionPayload(row).matchScoringMode,
     };
-    // Multiple choice, sort, match, and free_text are all gradable without
-    // admin judgement the instant they're submitted (see Scoring's
-    // AUTO_GRADED_TYPES), unlike audio/youtube. How a submission scores is
-    // entirely Scoring's concern.
-    const isAutoGraded = isAutoGradedType(question.type);
-    const score = isAutoGraded ? scoreSubmission(question, value) : null;
+    // Whether a submission is graded the instant it lands, and how, is
+    // Scoring's concern (gradeAtSubmit): auto types always, free_text/audio/
+    // youtube only when it matches the key, closest_guess never. A null
+    // score leaves the answer for the moderator (or the lock-time batch).
+    const score = gradeAtSubmit(question, value);
     const pointsAwarded = score?.points ?? 0;
 
-    // The admin can grade audio/youtube answers (the remaining non-auto-
-    // graded types) as soon as they land (grade() has no status gate — see
-    // control's "Grade Questions" panel), well before the block locks. A
-    // team can then revise its answer (last-write-wins, allowed until lock)
-    // — if that revision changes the value, any manual grade already given
-    // belongs to the *old* value and must not silently carry over onto the
-    // new one. Auto-graded types (including free_text) skip this entirely:
-    // every resubmission is just re-graded against its new value below.
+    // The admin can grade an answer as soon as it lands (grade() has no
+    // status gate — see control's "Grade Questions" panel), well before the
+    // block locks. A team can then revise its answer (last-write-wins,
+    // allowed until lock) — if that revision changes the value, any manual
+    // grade already given belongs to the *old* value and must not silently
+    // carry over onto the new one, so a revision with no automatic grade
+    // goes back to ungraded. Resubmitting the same value to a
+    // match-or-human question leaves its grade alone, so the moderator's
+    // survives.
     const existing = await this.answers.findOne(
       { gameSession: gameSessionId, question: questionId, team: teamId },
-      { fields: ['value'] },
+      { fields: ['value', 'gradedAt'] },
     );
-    const resetsGrading =
-      !isAutoGraded && existing !== null && existing.value !== value;
+    const isSameValue = existing !== null && existing.value === value;
+    const keepsGrade =
+      isMatchOrHumanType(question.type) &&
+      isSameValue &&
+      existing.gradedAt !== null;
+    const appliesScore = score !== null && !keepsGrade;
+    const resetsGrading = score === null && existing !== null && !isSameValue;
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
@@ -97,7 +104,7 @@ export class AnswerService {
         value,
         pointsAwarded,
         responseMs,
-        ...(score ? { gradedAt: now, verdict: score.verdict } : {}),
+        ...(appliesScore ? { gradedAt: now, verdict: score.verdict } : {}),
         ...(resetsGrading ? { gradedAt: null, verdict: null } : {}),
         createdAt: now,
         updatedAt: now,
@@ -106,7 +113,7 @@ export class AnswerService {
         onConflictFields: ['gameSession', 'question', 'team'],
         onConflictAction: 'merge',
         onConflictMergeFields:
-          isAutoGraded || resetsGrading
+          appliesScore || resetsGrading
             ? [
                 'value',
                 'updatedAt',
@@ -248,6 +255,52 @@ export class AnswerService {
       row.pointsAwarded = score.points;
       row.verdict = score.verdict;
       row.gradedAt = now;
+    }
+    await this.answers.getEntityManager().flush();
+  }
+
+  /**
+   * Re-grades every existing answer to a match-or-human question (see
+   * Scoring's MATCH_OR_HUMAN_TYPES) against the corrected `question`, after a
+   * live edit to an already-shown question. An answer matching the corrected
+   * key is graded correct. A non-matching one keeps the moderator's grade,
+   * and goes back to ungraded only if it was graded automatically — told
+   * apart by re-running the submit-time grade against `previous`, the
+   * question as it stood before the edit: a grade that equals what the old
+   * key would have given automatically was automatic, anything else was the
+   * moderator's.
+   */
+  async regradeMatchOrHuman(
+    gameSessionId: number,
+    question: GradableQuestion,
+    previous: ScoredQuestion,
+  ): Promise<void> {
+    const rows = await this.answers.find({
+      gameSession: gameSessionId,
+      question: question.id,
+    });
+    if (rows.length === 0) return;
+
+    const now = new Date();
+    for (const row of rows) {
+      const score = gradeAtSubmit(question, row.value);
+      if (score) {
+        row.pointsAwarded = score.points;
+        row.verdict = score.verdict;
+        row.gradedAt = now;
+        continue;
+      }
+      const previousScore = gradeAtSubmit(previous, row.value);
+      const wasGradedAutomatically =
+        previousScore !== null &&
+        row.gradedAt !== null &&
+        row.verdict === previousScore.verdict &&
+        row.pointsAwarded === previousScore.points;
+      if (wasGradedAutomatically) {
+        row.pointsAwarded = 0;
+        row.verdict = null;
+        row.gradedAt = null;
+      }
     }
     await this.answers.getEntityManager().flush();
   }

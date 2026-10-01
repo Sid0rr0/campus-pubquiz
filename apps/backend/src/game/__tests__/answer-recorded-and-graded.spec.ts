@@ -108,10 +108,21 @@ describe('GameGateway — answer recorded / answer graded', () => {
     expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([]);
   });
 
-  it('flags a human-graded question until its last ungraded answer is graded', async () => {
+  it('never flags an audio answer that matches the key, which is graded at submit', async () => {
     const { audio } = game.questionIds;
     await advanceTo(audio);
-    await submit(audio, 'Queen');
+    await submit(audio, ' queen ');
+
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([]);
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).leaderboard).toEqual([
+      expect.objectContaining({ teamId, totalPoints: 2 }),
+    ]);
+  });
+
+  it('flags a question holding a non-matching answer until its last ungraded answer is graded', async () => {
+    const { audio } = game.questionIds;
+    await advanceTo(audio);
+    await submit(audio, 'Freddie');
     expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([
       audio,
     ]);
@@ -127,13 +138,39 @@ describe('GameGateway — answer recorded / answer graded', () => {
   it('flags the question again when a team changes an already-graded answer', async () => {
     const { audio } = game.questionIds;
     await advanceTo(audio);
-    await submit(audio, 'Queen');
+    await submit(audio, 'Freddie');
     await grade(latestAnswerId(audio), 2);
 
     await submit(audio, 'Abba');
 
     expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([
       audio,
+    ]);
+  });
+
+  it('flags a free_text question when a team submits a wrong answer, and clears it on a revision into a match', async () => {
+    const { freeText } = game.questionIds;
+    await advanceTo(freeText);
+    await submit(freeText, 'Mars');
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([
+      freeText,
+    ]);
+
+    await submit(freeText, 'Jupiter');
+
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([]);
+  });
+
+  it('flags the question again when a graded-by-match answer is revised into a non-match', async () => {
+    const { freeText } = game.questionIds;
+    await advanceTo(freeText);
+    await submit(freeText, 'Jupiter');
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([]);
+
+    await submit(freeText, 'Mars');
+
+    expect(lastSnapshot(SOCKET_ROOMS.ADMIN).ungradedQuestionIds).toEqual([
+      freeText,
     ]);
   });
 
@@ -154,7 +191,7 @@ describe('GameGateway — answer recorded / answer graded', () => {
   it('pushes the question’s answer list to the admin room after every submit and grade', async () => {
     const { audio } = game.questionIds;
     await advanceTo(audio);
-    await submit(audio, 'Queen');
+    await submit(audio, 'Freddie');
     await grade(latestAnswerId(audio), 1);
 
     const lists = roomPayloads<AnswersUpdated>(

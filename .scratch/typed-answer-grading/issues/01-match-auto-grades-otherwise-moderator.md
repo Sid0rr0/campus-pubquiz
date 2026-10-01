@@ -1,6 +1,6 @@
 # 01: A typed answer that matches the key grades itself; anything else waits for the moderator
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Blocked by:** None (can start immediately)
 
@@ -62,11 +62,19 @@ Code that reads the grading lists today:
 
 ## Acceptance criteria
 
-- [ ] A free_text, audio or youtube submission matching the answer key (trimmed, case-insensitive) is graded correct at submit
-- [ ] A submission of those types that doesn't match is stored ungraded and appears in the admin view's ungraded list
-- [ ] Advance out of the break is refused while such an answer is ungraded
-- [ ] Revising into a match auto-grades it; revising into a different non-match resets it to ungraded; resubmitting the same value keeps the grade
-- [ ] A live answer-key fix on any of the three types grades new matches correct, keeps the moderator's grades, and leaves other non-matches ungraded
-- [ ] The rule comes from one grading mode in the question type registry, with no type literals in the answer service or grading module
-- [ ] The agreement walk and the affected grading specs are updated and pass
-- [ ] `DOCUMENTATION.md`, the three moderator notes, `/guide` and the project guide's tradeoff are updated
+- [x] A free_text, audio or youtube submission matching the answer key (trimmed, case-insensitive) is graded correct at submit
+- [x] A submission of those types that doesn't match is stored ungraded and appears in the admin view's ungraded list
+- [x] Advance out of the break is refused while such an answer is ungraded
+- [x] Revising into a match auto-grades it; revising into a different non-match resets it to ungraded; resubmitting the same value keeps the grade
+- [x] A live answer-key fix on any of the three types grades new matches correct, keeps the moderator's grades, and leaves other non-matches ungraded
+- [x] The rule comes from one grading mode in the question type registry, with no type literals in the answer service or grading module
+- [x] The agreement walk and the affected grading specs are updated and pass
+- [x] `DOCUMENTATION.md`, the three moderator notes, `/guide` and the project guide's tradeoff are updated
+
+## Comments
+
+Implemented in a single commit on `main` (see git history for `feat(backend): typed answers grade themselves on a match`).
+
+- The rule lives in the new `match-or-human` grading mode in `QUESTION_KINDS`; `gradeAtSubmit` (`shared/types/src/scoring.ts`) is the one reader. `HUMAN_GRADED_TYPES` and the `human` mode are gone since no type uses them.
+- Key-fix regrade (`AnswerService.regradeMatchOrHuman`) tells a moderator grade from an automatic one by re-running the submit-time grade against the question as it stood before the edit (captured in `GameStateService.quizEdited`), so no schema change or migration. Tradeoff recorded in `CLAUDE.md`.
+- Resubmitting the same value to a graded match-or-human answer leaves the grade alone, even when the value matches.

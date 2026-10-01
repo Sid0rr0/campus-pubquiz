@@ -48,9 +48,9 @@ export const BATCH_GRADED_TYPES = typesWhere(
   (kind) => kind.gradingMode === 'batch',
 );
 
-/** Need the quiz master's judgement. */
-export const HUMAN_GRADED_TYPES = typesWhere(
-  (kind) => kind.gradingMode === 'human',
+/** Graded correct at submit when they match the key; any other answer needs the quiz master's judgement. */
+export const MATCH_OR_HUMAN_TYPES = typesWhere(
+  (kind) => kind.gradingMode === 'match-or-human',
 );
 
 /**
@@ -65,6 +65,10 @@ export const OVERRIDABLE_TYPES = typesWhere((kind) => kind.overridable);
 
 export function isAutoGradedType(type: QuestionType): boolean {
   return AUTO_GRADED_TYPES.includes(type);
+}
+
+export function isMatchOrHumanType(type: QuestionType): boolean {
+  return QUESTION_KINDS[type].gradingMode === 'match-or-human';
 }
 
 export function isBatchGradedType(type: QuestionType): boolean {
@@ -118,15 +122,19 @@ function scoreMatch(question: ScoredQuestion, value: string): ScoreResult {
   };
 }
 
+/** Whether a typed (or option-picked) value equals the key: trimmed and case-insensitive. */
+function matchesKey(question: ScoredQuestion, value: string): boolean {
+  return normalizeFreeText(value) === normalizeFreeText(question.answer);
+}
+
 function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
   const correct: ScoreResult = { points: question.points, verdict: 'correct' };
+  if (isMatchOrHumanType(question.type)) {
+    return matchesKey(question, value) ? correct : INCORRECT;
+  }
   switch (question.type) {
     case 'match':
       return scoreMatch(question, value);
-    case 'free_text':
-      return normalizeFreeText(value) === normalizeFreeText(question.answer)
-        ? correct
-        : INCORRECT;
     case 'sort':
       // Same tolerance as match: stray whitespace and empty items don't cost
       // a team the question.
@@ -160,6 +168,23 @@ export function scoreSubmission(
     points: Math.round(base.points * speedMultiplier(speed)),
     verdict: base.verdict,
   };
+}
+
+/**
+ * The grade a submission gets the moment it lands, or null when it gets none
+ * and waits for the quiz master: every submission to an auto type is graded,
+ * a match-or-human type only when it matches the key, and a batch type never.
+ */
+export function gradeAtSubmit(
+  question: ScoredQuestion,
+  value: string,
+): ScoreResult | null {
+  const { gradingMode } = QUESTION_KINDS[question.type];
+  if (gradingMode === 'auto') return scoreSubmission(question, value);
+  if (gradingMode === 'match-or-human' && matchesKey(question, value)) {
+    return scoreSubmission(question, value);
+  }
+  return null;
 }
 
 /** The verdict for points the admin typed in: full (or more) is correct, zero (or less) incorrect, anything between partial. */

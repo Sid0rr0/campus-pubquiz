@@ -6,7 +6,7 @@ import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import {
   AUTO_GRADED_TYPES,
   BATCH_GRADED_TYPES,
-  HUMAN_GRADED_TYPES,
+  MATCH_OR_HUMAN_TYPES,
   KAHOOT_ALLOWED_TYPES,
   OVERRIDABLE_TYPES,
 } from '../scoring';
@@ -234,20 +234,32 @@ const CASES: ParityCase[] = [
 ];
 
 interface GradingFlags {
-  gradingMode: 'auto' | 'batch' | 'human';
+  gradingMode: 'auto' | 'batch' | 'match-or-human';
   overridable: boolean;
   kahootAllowed: boolean;
 }
 
 const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
-  free_text: { gradingMode: 'auto', overridable: true, kahootAllowed: false },
+  free_text: {
+    gradingMode: 'match-or-human',
+    overridable: true,
+    kahootAllowed: false,
+  },
   multiple_choice: {
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
   },
-  audio: { gradingMode: 'human', overridable: true, kahootAllowed: false },
-  youtube: { gradingMode: 'human', overridable: true, kahootAllowed: false },
+  audio: {
+    gradingMode: 'match-or-human',
+    overridable: true,
+    kahootAllowed: false,
+  },
+  youtube: {
+    gradingMode: 'match-or-human',
+    overridable: true,
+    kahootAllowed: false,
+  },
   sort: { gradingMode: 'auto', overridable: true, kahootAllowed: true },
   match: { gradingMode: 'auto', overridable: true, kahootAllowed: true },
   closest_guess: {
@@ -319,16 +331,16 @@ describe('question kind grading flags', () => {
       expect(BATCH_GRADED_TYPES.includes(type)).toBe(
         kind.gradingMode === 'batch',
       );
-      expect(HUMAN_GRADED_TYPES.includes(type)).toBe(
-        kind.gradingMode === 'human',
+      expect(MATCH_OR_HUMAN_TYPES.includes(type)).toBe(
+        kind.gradingMode === 'match-or-human',
       );
       expect(OVERRIDABLE_TYPES.includes(type)).toBe(kind.overridable);
       expect(KAHOOT_ALLOWED_TYPES.includes(type)).toBe(kind.kahootAllowed);
     }
   });
 
-  it('keeps free_text out of kahoot rounds although it auto-grades (ADR 0001)', () => {
-    expect(QUESTION_KINDS.free_text.gradingMode).toBe('auto');
+  it('keeps free_text out of kahoot rounds although it grades itself on a match (ADR 0001)', () => {
+    expect(QUESTION_KINDS.free_text.gradingMode).toBe('match-or-human');
     expect(QUESTION_KINDS.free_text.kahootAllowed).toBe(false);
   });
 });

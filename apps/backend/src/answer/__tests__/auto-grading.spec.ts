@@ -416,7 +416,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.gradedAt).not.toBeNull();
   });
 
-  it('auto-grades an incorrect free_text answer on submit as zero points', async () => {
+  it('leaves a non-matching free_text answer ungraded for the moderator', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
 
     await state.answerService.submit(
@@ -431,7 +431,8 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       state.question.id,
     );
     expect(answer.pointsAwarded).toBe(0);
-    expect(answer.gradedAt).not.toBeNull();
+    expect(answer.gradedAt).toBeNull();
+    expect(answer.verdict).toBeNull();
   });
 
   it('re-grades a free_text answer when the team revises it before locking', async () => {

@@ -30,7 +30,7 @@ A tiebreak played between teams tied on the leaderboard, with the teams taking t
 _Avoid_: tiebreaker round, sudden death
 
 **Grading**:
-The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then changes a human-graded answer, its mark is cleared and must be given again.
+The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then revises an answer into something that doesn't match the key, its mark is cleared and must be given again. A typed answer (free text, audio, YouTube) that matches the key is graded correct automatically; only the others wait for the quiz master.
 _Avoid_: scoring, marking
 
 **Break**:
