@@ -21,10 +21,7 @@ import {
   getBlockSeededQuestions,
   getPastRevealedQuestions,
 } from '@/game/state/block-questions.util';
-import {
-  computeInitialRevealStep,
-  tryStepClosestGuessReveal,
-} from '@/game/state/closest-guess-reveal.util';
+import { computeInitialRevealStep } from '@/game/state/closest-guess-reveal.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import {
   BlockGradingService,
@@ -69,7 +66,8 @@ import {
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import { tryStepShowdownReveal } from '@/game/state/showdown-reveal.util';
+import { planMove, type MoveStep } from '@/game/state/move-plan.util';
+import { ShowdownGuessesPendingError } from '@/game/state/errors/showdown-guesses-pending.error';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import { ShowdownService } from '@/showdown/showdown.service';
 import type { TeamRosterEntry } from '@/team/team.service';
@@ -497,68 +495,39 @@ export class GameStateService implements OnModuleInit {
   ): Promise<StateSnapshotPayload> {
     const session = this.sessionStore.get(joinCode);
 
-    // Mid-showdown-reveal intercept — checked first, ahead of the normal
-    // status switch below. Gated on status === 'ended' rather than just
-    // activeShowdownRound !== null: the admin can compose/save the
-    // tiebreaker question as soon as the final block is graded, well before
-    // the quiz reaches 'ended' (see ShowdownPanel), so an active round can
-    // exist while the block's own answers still haven't been revealed.
-    // Without this guard, ADVANCE/PREVIOUS would hijack into the showdown
-    // reveal walk immediately and the audience would never see the final
-    // round's answers revealed. Once status genuinely is 'ended', it never
-    // reaches getNextGameState; status stays 'ended' throughout, nothing
-    // persisted.
-    if (
-      (action === 'ADVANCE' || action === 'PREVIOUS') &&
-      session.activeShowdownRound !== null &&
-      session.progress.status === 'ended'
-    ) {
-      const stepped = tryStepShowdownReveal(session, action);
-      if (stepped) {
-        let updated = stepped.session;
-        if (stepped.shouldResolve && updated.activeShowdownRound) {
-          const { winnerTeamId, isTie } = await this.showdownService.resolve(
-            updated.activeShowdownRound.id,
-          );
-          const resolvedRound: ActiveShowdownRoundState = {
-            ...updated.activeShowdownRound,
-            winnerTeamId,
-            isTie,
-            resolved: true,
+    const step: MoveStep =
+      action === 'ADVANCE' || action === 'PREVIOUS'
+        ? planMove(session, action)
+        : {
+            kind: 'transition',
+            progress: getNextGameState(
+              session.progress,
+              action,
+              getGameContext(session),
+            ),
           };
-          const leaderboard = await this.standingsService.leaderboard(
-            updated.seededGame.gameSessionId,
-          );
-          updated = {
-            ...updated,
-            activeShowdownRound: resolvedRound,
-            leaderboard,
-          };
-        }
-        this.sessionStore.set(joinCode, updated);
-        return this.getSnapshot(joinCode);
-      }
-    }
 
-    // Mid-reveal-sequence intercept for closest_guess questions — never
-    // reaches getNextGameState, GameProgress untouched, nothing persisted.
-    // See tryStepClosestGuessReveal for why this stays entirely ephemeral.
-    if (
-      (action === 'ADVANCE' || action === 'PREVIOUS') &&
-      session.progress.status === 'reveal'
-    ) {
-      const stepped = tryStepClosestGuessReveal(session, action);
-      if (stepped) {
-        this.sessionStore.set(joinCode, stepped);
+    // The ephemeral steps (showdown reveal, closest_guess sub-steps) never
+    // reach getNextGameState: GameProgress is untouched and nothing is
+    // persisted. See tryStepClosestGuessReveal for why they stay ephemeral.
+    switch (step.kind) {
+      case 'blocked':
+        throw step.cause;
+      case 'showdown_waiting':
+        throw new ShowdownGuessesPendingError();
+      case 'showdown_step':
+        this.sessionStore.set(
+          joinCode,
+          await this.resolveShowdownIfFinished(step),
+        );
         return this.getSnapshot(joinCode);
-      }
+      case 'closest_guess_step':
+        this.sessionStore.set(joinCode, step.session);
+        return this.getSnapshot(joinCode);
+      case 'transition':
+        break;
     }
-
-    const progress = getNextGameState(
-      session.progress,
-      action,
-      getGameContext(session),
-    );
+    const { progress } = step;
 
     // Committing out of the break/grading screens into reveal — the one
     // moment this must be DB-authoritative rather than relying on the
@@ -649,6 +618,27 @@ export class GameStateService implements OnModuleInit {
       phaseElapsedByKey: updated.phaseElapsedByKey,
     });
     return this.getSnapshot(joinCode);
+  }
+
+  /** Crossing into a showdown's final reveal step records the winner and refreshes the leaderboard it moves. */
+  private async resolveShowdownIfFinished(
+    step: Extract<MoveStep, { kind: 'showdown_step' }>,
+  ): Promise<SessionState> {
+    const { session, shouldResolve } = step;
+    if (!shouldResolve || !session.activeShowdownRound) return session;
+    const { winnerTeamId, isTie } = await this.showdownService.resolve(
+      session.activeShowdownRound.id,
+    );
+    const resolvedRound: ActiveShowdownRoundState = {
+      ...session.activeShowdownRound,
+      winnerTeamId,
+      isTie,
+      resolved: true,
+    };
+    const leaderboard = await this.standingsService.leaderboard(
+      session.seededGame.gameSessionId,
+    );
+    return { ...session, activeShowdownRound: resolvedRound, leaderboard };
   }
 
   /**

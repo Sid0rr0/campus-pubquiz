@@ -4,7 +4,6 @@ import {
   getBreakNumber,
   getNextGameState,
   getQuizStructureSummary,
-  type GameProgress,
   type OnAirScreen,
   type PresenterContextPayload,
   type ScreenPreview,
@@ -13,10 +12,9 @@ import {
   getBlockSeededQuestions,
   getCurrentQuestion,
 } from '@/game/state/block-questions.util';
-import { tryStepClosestGuessReveal } from '@/game/state/closest-guess-reveal.util';
+import { planMove, type MoveStep } from '@/game/state/move-plan.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
-import { tryStepShowdownReveal } from '@/game/state/showdown-reveal.util';
 
 function describeBreakIntro(session: SessionState): ScreenPreview {
   const { progress } = session;
@@ -132,39 +130,51 @@ function getLeaderboardRevealSteps(session: SessionState): number {
   return getLeaderboardRevealStepCount(session.leaderboard, isKahoot);
 }
 
-/** The progress plain ADVANCE (START_QUIZ from the lobby) moves to, or null when it's illegal here. */
-function getAdvancedProgress(session: SessionState): GameProgress | null {
-  const action = session.progress.status === 'lobby' ? 'START_QUIZ' : 'ADVANCE';
+/** What the next press does when the quiz hasn't started: START_QUIZ is the lobby's Advance. */
+function planNextPress(session: SessionState): MoveStep {
+  if (session.progress.status !== 'lobby') return planMove(session, 'ADVANCE');
   try {
-    return getNextGameState(session.progress, action, getGameContext(session));
-  } catch {
-    return null;
+    return {
+      kind: 'transition',
+      progress: getNextGameState(
+        session.progress,
+        'START_QUIZ',
+        getGameContext(session),
+      ),
+    };
+  } catch (cause) {
+    return { kind: 'blocked', cause };
   }
 }
 
-function tryPreviewShowdownStep(session: SessionState): ScreenPreview | null {
-  try {
-    const stepped = tryStepShowdownReveal(session, 'ADVANCE');
-    if (
-      !stepped ||
-      stepped.session.showdownRevealStep === session.showdownRevealStep
-    ) {
+function describeStep(
+  session: SessionState,
+  step: MoveStep,
+): ScreenPreview | null {
+  switch (step.kind) {
+    case 'showdown_step':
+      return step.session.showdownRevealStep === session.showdownRevealStep
+        ? null
+        : {
+            heading: 'Showdown',
+            body: `Reveal step ${step.session.showdownRevealStep}`,
+          };
+    case 'showdown_waiting':
+      return { heading: 'Showdown', body: 'Waiting for every guess' };
+    case 'closest_guess_step':
+      return { ...describeScreen(session), body: 'Next closest-guess step' };
+    case 'transition':
+      return describeScreen({ ...session, progress: step.progress });
+    case 'blocked':
       return null;
-    }
-    return {
-      heading: 'Showdown',
-      body: `Reveal step ${stepped.session.showdownRevealStep}`,
-    };
-  } catch {
-    return { heading: 'Showdown', body: 'Waiting for every guess' };
   }
 }
 
 /**
- * The screen /display will show after /remote's Advance slot is pressed —
- * mirrors NavigationButtons (reveal the next leaderboard team, then hide
- * the board) and GameStateService.applyAction's intercepts (showdown and
- * closest_guess sub-steps) before falling through to the state machine.
+ * The screen /display will show after /remote's Advance slot is pressed:
+ * while the leaderboard is up, the next rank and then the screen under it
+ * (the browser's NavigationButtons reveal ranks itself until the Move plan
+ * takes that over); otherwise the planned Advance step.
  */
 export function describeNextScreen(
   session: SessionState,
@@ -185,19 +195,7 @@ export function describeNextScreen(
     });
   }
 
-  if (progress.status === 'ended') {
-    return session.activeShowdownRound ? tryPreviewShowdownStep(session) : null;
-  }
-
-  if (
-    progress.status === 'reveal' &&
-    tryStepClosestGuessReveal(session, 'ADVANCE')
-  ) {
-    return { ...describeScreen(session), body: 'Next closest-guess step' };
-  }
-
-  const next = getAdvancedProgress(session);
-  return next ? describeScreen({ ...session, progress: next }) : null;
+  return describeStep(session, planNextPress(session));
 }
 
 /**

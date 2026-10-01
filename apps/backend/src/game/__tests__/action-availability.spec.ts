@@ -3,7 +3,7 @@ import {
   getLeaderboardRevealStepCount,
   type GameAction,
 } from '@campus-pubquiz/types';
-import { getActionAvailability } from '@/game/state/action-availability.util';
+import { projectScreen } from '@/game/state/screen-projection.util';
 import type { GameSessionStore } from '@/game/state/game-session.store';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
@@ -128,7 +128,9 @@ describe('Screen projection — Advance/Previous availability', () => {
       ).sessionStore.get(game.joinCode);
       const legacy = { ...session, progress: { ...session.progress } };
       delete legacy.progress.previousStatus;
-      expect(getActionAvailability(legacy).canGoToPreviousQuestion).toBe(false);
+      expect(
+        projectScreen(legacy, SOCKET_ROOMS.ADMIN).canGoToPreviousQuestion,
+      ).toBe(false);
     });
 
     it('takes the block start from the session rounds', async () => {

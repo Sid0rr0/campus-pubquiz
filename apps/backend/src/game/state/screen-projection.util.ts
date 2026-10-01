@@ -7,11 +7,11 @@ import {
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import {
-  getActionAvailability,
   getActiveBlockStartIndex,
   isLastQuestionBeforeBreak,
   isShowdownEligible,
-} from '@/game/state/action-availability.util';
+} from '@/game/state/admin-view-flags.util';
+import { isMoveAvailable } from '@/game/state/move-plan.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
 import {
@@ -54,7 +54,8 @@ export function projectScreen(
         ...snapshot,
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
-        ...getActionAvailability(session),
+        canAdvance: isMoveAvailable(session, 'ADVANCE'),
+        canGoToPreviousQuestion: isMoveAvailable(session, 'PREVIOUS'),
         activeBlockStartIndex: getActiveBlockStartIndex(session),
         isShowdownEligible: isShowdownEligible(session),
         isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),
