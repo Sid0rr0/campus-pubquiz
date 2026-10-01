@@ -8,6 +8,61 @@ and controls the game from an admin laptop.
 - **`/control`** — quiz master's laptop
 - **`/play`** — team phones
 
+No apps to install and no answer sheets — teams scan a QR code and they're in.
+If a phone sleeps, the Wi-Fi drops or the server restarts mid-game, everyone
+reconnects and picks up exactly where they left off.
+
+## Features
+
+### For teams (`/play`)
+
+- Join from any phone with a team name and join code, or by scanning the QR
+  code on the big screen
+- Teammates can join on a second phone using the team's recovery code
+- Revise answers until the block locks
+- See every question asked so far in a running history
+
+### On the big screen (`/display`)
+
+- Covers the whole evening: lobby with QR code, rules, round intros,
+  questions, last-call countdown, breaks, answer reveals and the leaderboard
+- Leaderboard revealed one rank at a time
+- Showdown tiebreaks between teams tied on the leaderboard
+
+### For the quiz master (`/control`)
+
+- Move the quiz forward or back with Advance and Previous (with keyboard
+  shortcuts)
+- Grade answers live as they arrive; auto-graded types score themselves
+- Fix a wrong answer key mid-game, which re-scores every answer to it
+- Award bonus points, manage the team roster, remove disconnected teams
+- Run several quizzes at once, each with its own join code
+
+### Question types
+
+- Free text, multiple choice, audio, YouTube video, sort/order, match pairs
+  and closest guess
+- Kahoot-style rounds, where each question is locked, scored and revealed on
+  its own
+
+### Quiz authoring
+
+- In-browser quiz editor: rounds, questions, points, media and where the
+  breaks go
+- Import from CSV or a Google Sheets link; export back to CSV
+- Every row is validated at import, so a broken question is caught before it
+  reaches the stage
+- Safe live editing: fix typos while a quiz is running without breaking the
+  game
+
+### Accounts and reliability
+
+- Admin and moderator roles; new accounts need an admin's approval
+- Everything is saved to Postgres as it happens, so a server restart loses no
+  answers, teams or scores
+- Teams keep their identity across quiz nights
+- A built-in moderator guide at `/guide`
+
 ## Stack
 
 Next.js 16 + React 19 frontend, NestJS 11 + Socket.IO backend, Postgres via
