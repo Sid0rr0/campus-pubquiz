@@ -185,6 +185,25 @@ describe('GameGateway — phase elapsed timer', () => {
       expect(Date.now() - restored.phaseStartedAt!).toBe(10_000);
     });
 
+    it('restores every phase’s elapsed time exactly across a restart, downtime included', async () => {
+      await actAll(['START_QUIZ', 'ADVANCE', 'ADVANCE']); // -> r1q1 (live)
+      advanceClockBy(12_345);
+      const live = await game.act('ADVANCE'); // -> r1q2 (live), closes r1q1 @ 12_345
+      const r1q2StartedAt = live.phaseStartedAt as number;
+      advanceClockBy(5_000);
+
+      advanceClockBy(60_000); // downtime before the backend comes back
+      const restarted = await game.restart();
+
+      const resumed = await restarted.snapshot();
+      expect(resumed.phaseStartedAt).toBe(r1q2StartedAt);
+      expect(resumed.phaseElapsedMs).toBeNull();
+      expect(Date.now() - resumed.phaseStartedAt!).toBe(65_000);
+      const back = await restarted.act('PREVIOUS'); // -> r1q1 (closed)
+      expect(back.phaseStartedAt).toBeNull();
+      expect(back.phaseElapsedMs).toBe(12_345);
+    });
+
     it('leaves the frontier untouched for TOGGLE_LEADERBOARD and a rank reveal, which never change the timed phase', async () => {
       await actAll(['START_QUIZ', 'ADVANCE', 'ADVANCE']); // -> r1q1 (live)
 

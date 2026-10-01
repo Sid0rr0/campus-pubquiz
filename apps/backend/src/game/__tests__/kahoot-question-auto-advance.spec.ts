@@ -14,6 +14,7 @@ const KAHOOT_TIMER_SECONDS = 1;
 const TIMER_WAIT_MS = 10_000;
 const QUIET_PERIOD_MS = 2_500;
 const POLL_INTERVAL_MS = 25;
+const RESTART_AFTER_MS = 1_200;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -102,6 +103,24 @@ describe('GameGateway — kahoot question auto-advance timer', () => {
       await waitForDisplayStatus(game, 'reveal'); // lock timer -> reveal
 
       expect(displayStatuses(game)).toEqual(['locking', 'reveal']);
+    },
+    2 * TIMER_WAIT_MS,
+  );
+
+  it(
+    'still auto-locks on the original deadline after a restart mid-question',
+    async () => {
+      const game = await openKahootQuestion({ kahootQuestionTimerSeconds: 2 });
+      const deadline = (await game.snapshot()).kahootQuestionEndsAt as number;
+      await delay(RESTART_AFTER_MS);
+
+      const restarted = await game.restart();
+      restarted.clearEmits();
+
+      expect((await restarted.snapshot()).kahootQuestionEndsAt).toBe(deadline);
+      await waitForDisplayStatus(restarted, 'locking');
+      // A deadline re-armed fresh from the restart would land RESTART_AFTER_MS later.
+      expect(Date.now()).toBeLessThan(deadline + RESTART_AFTER_MS / 2);
     },
     2 * TIMER_WAIT_MS,
   );
