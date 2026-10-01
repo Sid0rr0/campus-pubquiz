@@ -21,7 +21,7 @@ import type { SessionState } from '@/game/state/session-state';
  * The one rule for which questions can ever count as "ungraded": closest_guess
  * is graded in a single batch once the question locks and can't be graded by
  * hand, so its answers never leave the admin anything to do. Shared by the
- * per-question incremental update and the bulk refresh so they can't diverge.
+ * grading refresh and the reveal gate so they can't diverge.
  */
 export function canBeUngraded(question: { type: QuestionType }): boolean {
   return !isBatchGradedType(question.type);
@@ -237,7 +237,7 @@ export class BlockGradingService {
    * The one reader for "which of these questions are ungraded": drops the
    * questions that can't be (closest_guess, via canBeUngraded) and asks the
    * database which of the rest have an answer with no grading time. Used by
-   * the reveal gate, the bulk refresh and the per-answer update.
+   * the reveal gate and the grading refresh.
    */
   async listUngradedQuestionIds(
     session: SessionState,
@@ -266,7 +266,7 @@ export class BlockGradingService {
   /**
    * Bulk-recomputes ungradedQuestionIds from the DB whenever the block just
    * entered (or is still within) a break status — the authoritative
-   * baseline the per-question refresh in GameStateService.recordAnswer/answerGraded
+   * baseline the grading refresh in GameStateService.recordAnswer/answerGraded
    * build on between these recomputes. A no-op outside the break statuses,
    * since nothing there can be graded and the cached value can't go stale.
    */

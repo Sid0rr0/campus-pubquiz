@@ -50,7 +50,6 @@ import {
   withDisplayTextScale,
   withLeaderboard,
   withGradingRefresh,
-  withQuestionGradedStatus,
   withShowdownGuess,
   withTeamConnected,
   withTeams,
@@ -719,24 +718,23 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     questionId: number,
   ): Promise<SessionOutcome> {
-    const gameSessionId = this.getGameSessionId(joinCode);
-    const [answers, leaderboard, ungradedQuestionIds] = await Promise.all([
-      this.answerService.listForQuestion(gameSessionId, questionId),
-      this.standingsService.leaderboard(gameSessionId),
-      this.grading.listUngradedQuestionIds(this.sessionStore.get(joinCode), [
+    const [answers, refresh] = await Promise.all([
+      this.answerService.listForQuestion(
+        this.getGameSessionId(joinCode),
+        questionId,
+      ),
+      this.grading.gradingRefresh(this.sessionStore.get(joinCode), [
         questionId,
       ]),
     ]);
-    const hasUngradedAnswers = ungradedQuestionIds.length > 0;
     this.update(joinCode, (session) =>
-      withQuestionGradedStatus(
+      withGradingRefresh(
         withAnsweredTeamIds(
-          withLeaderboard(session, leaderboard),
+          session,
           questionId,
           answers.map((answer) => answer.teamId),
         ),
-        questionId,
-        hasUngradedAnswers,
+        refresh,
       ),
     );
     return { ...BROADCAST_STATE_OUTCOME, answerListQuestionIds: [questionId] };

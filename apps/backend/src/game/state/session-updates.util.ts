@@ -79,23 +79,6 @@ export function withAnsweredTeamIds(
   };
 }
 
-/** Patches the ungraded-question cache for one questionId. */
-export function withQuestionGradedStatus(
-  session: SessionState,
-  questionId: number,
-  hasUngradedAnswers: boolean,
-): SessionState {
-  const withoutQuestion = session.ungradedQuestionIds.filter(
-    (id) => id !== questionId,
-  );
-  return {
-    ...session,
-    ungradedQuestionIds: hasUngradedAnswers
-      ? [...withoutQuestion, questionId]
-      : withoutQuestion,
-  };
-}
-
 /** Applies a grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise) and the leaderboard is replaced. */
 export function withGradingRefresh(
   session: SessionState,

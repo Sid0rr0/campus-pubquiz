@@ -6,9 +6,18 @@ Parent spec: `.scratch/grading-refresh/spec.md`
 
 **Blocked by:** 01 (A live answer-key fix refreshes /control's ungraded markers).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The answer-change path gets the question's ungraded flag and the standings from the grading refresh, and applies them in the same synchronous update as the answered-team ids, keeping its fetch-then-apply shape.
-- [ ] The one-question update helper for the ungraded set is deleted, or becomes the grading refresh's own way of applying its change. Nothing else writes the ungraded set.
-- [ ] The outcome still names the question for a fresh admin answer list.
-- [ ] Pass unchanged: the ungraded agreement walk, answer recorded and graded, grading, the grading gate, admin flags projection, and the `/control` grading browsing tests.
+- [x] The answer-change path gets the question's ungraded flag and the standings from the grading refresh, and applies them in the same synchronous update as the answered-team ids, keeping its fetch-then-apply shape.
+- [x] The one-question update helper for the ungraded set is deleted, or becomes the grading refresh's own way of applying its change. Nothing else writes the ungraded set.
+- [x] The outcome still names the question for a fresh admin answer list.
+- [x] Pass unchanged: the ungraded agreement walk, answer recorded and graded, grading, the grading gate, admin flags projection, and the `/control` grading browsing tests.
+
+## Comments
+
+Implemented in the commit titled `feat(backend): answer submitted or graded ends through the grading refresh` (see git history for the hash).
+
+- `GameStateService.refreshAfterAnswerChange` fetches the answer list and `gradingRefresh` together, then applies the answered-team ids and the refresh in one synchronous update.
+- `withQuestionGradedStatus` is deleted; `withGradingRefresh` is now the only writer of the per-question ungraded set.
+- The refresh only covers the current block's questions, so an answer change to a question outside it no longer touches the cached set. That can't happen in play.
+- The full backend suite passes unchanged.
