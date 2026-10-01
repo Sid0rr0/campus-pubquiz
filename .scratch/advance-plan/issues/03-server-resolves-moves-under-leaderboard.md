@@ -6,7 +6,7 @@ Parent spec: `.scratch/advance-plan/spec.md`
 
 **Blocked by:** 02 (One Move plan drives the handler, button availability and the /remote preview)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] A raw ADVANCE under the board reveals one step (ties share a step, kahoot rounds cap at the top 5) and never changes status, round, question or reveal position underneath
 - [x] Once every rank is shown, a raw ADVANCE hides the board through the same state change as the Leaderboard toggle; if the underlying status has nowhere to go, Advance is blocked

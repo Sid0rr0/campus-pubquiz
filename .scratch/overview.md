@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### advance-plan ([spec](advance-plan/spec.md))
-
-| #   | Ticket                                                                                                                                                                 | Blocked by |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 03  | [The server resolves Advance and Previous under the leaderboard; the admin view announces the step](advance-plan/issues/03-server-resolves-moves-under-leaderboard.md) | 02         |
-
 ### phone-question-selection ([spec](phone-question-selection/spec.md))
 
 | #   | Ticket                                                                                                                                   | Blocked by |
@@ -25,13 +19,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 02  | [One reader answers "which questions are ungraded" for the gate, the refresh and the per-answer update](ungraded-source/issues/02-one-ungraded-reader.md) | 01                    |
 | 03  | [A restored session knows its ungraded questions straight away](ungraded-source/issues/03-restore-refreshes-ungraded.md)                                  | 02, session-settle 03 |
 | 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md)                                     | 02                    |
-
-### role-socket-hooks ([spec](role-socket-hooks/spec.md))
-
-| #   | Ticket                                                                                                                                    | Blocked by |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md)                         | 02         |
-| 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md) | 03, 04     |
 
 ### rename-grading-status-group (no spec — single ticket)
 
@@ -62,6 +49,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | session-settle           | 03  | [Creation and restore go through the settle step](session-settle/issues/03-settle-step-for-create-and-restore.md)                                        | —         |
 | session-settle           | 02  | [Restart and creation pin the derived session fields](session-settle/issues/02-restart-and-creation-characterization.md)                                 | —         |
 | session-settle           | 01  | [Named status groups replace the inline status lists](session-settle/issues/01-named-status-groups.md)                                                   | —         |
+| advance-plan             | 03  | [The server resolves Advance and Previous under the leaderboard; the admin view announces the step](advance-plan/issues/03-server-resolves-moves-under-leaderboard.md) | `ce63df0` |
 | advance-plan             | 05  | [Contract: delete the old Advance contract](advance-plan/issues/05-contract-delete-old-advance-contract.md)                                              | —         |
 | advance-plan             | 04  | [/control and /remote render the announced step and send only ADVANCE/PREVIOUS](advance-plan/issues/04-clients-render-announced-step.md)                 | —         |
 | advance-plan             | 02  | [One Move plan drives the handler, button availability and the /remote preview](advance-plan/issues/02-move-plan-drives-handler-availability-preview.md) | —         |
@@ -75,6 +63,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | props-refactor           | 02  | [One shared function for the admin controls, used by /control and /remote](props-refactor/issues/02-shared-admin-controls.md)                            | —         |
 | props-refactor           | 04  | [Rules content and the phone's game status screens take the session settings object](props-refactor/issues/04-rules-content-takes-settings.md)           | —         |
 | props-refactor           | 01  | [The admin view decides showdown eligibility and last-question-before-break](props-refactor/issues/01-server-decided-showdown-and-break-flags.md)        | —         |
+| role-socket-hooks        | 06  | [Display game hook; delete the three-room hook and the legacy "exception" emit](role-socket-hooks/issues/06-display-hook-and-contract.md) | `7134768` |
 | role-socket-hooks        | 04  | [Shared admin-session connection hook; /remote moves to the admin game hook](role-socket-hooks/issues/04-admin-session-connection-remote.md)             | —         |
 | role-socket-hooks        | 03  | [Player game hook; /play and the join flow switch over](role-socket-hooks/issues/03-player-game-hook-play.md)                                            | —         |
 | role-socket-hooks        | 02  | [Admin game hook on a shared connection core; /control switches over](role-socket-hooks/issues/02-admin-game-hook-control.md)                            | —         |
@@ -108,3 +97,9 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | screen-projection        | 04  | [Admin view: the question on display and the round indicators](screen-projection/issues/04-admin-view-on-display-question-and-indicators.md)             | —         |
 | screen-projection        | 05  | [Advance/Previous availability decided server-side](screen-projection/issues/05-advance-legality-server-side.md)                                         | —         |
 | screen-projection        | 06  | [Players view: answerability and the question on screen](screen-projection/issues/06-players-view-answerability-and-on-screen-question.md)               | —         |
+
+## Won't do
+
+| Feature           | #   | Ticket                                                                                                            | Why                                                                       |
+| ----------------- | --- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| role-socket-hooks | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md) | Marked `wontfix`; props-refactor 03's single Control panel prop covers it |
