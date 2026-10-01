@@ -6,11 +6,20 @@ A table-driven spec in the shared types workspace runs one shared table of valid
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every question type has a registry entry, and a type missing an entry fails the build
-- [ ] There is one definition of the question type list; the import and quiz editor lists are not yet removed but point at or are checked against it
-- [ ] The parity table covers every type with valid and invalid cases and runs through both the import and draft paths
-- [ ] The duplicate multiple-choice option and match pairing disagreements appear as named divergences in the table
-- [ ] Grading mode, overridable and kahoot-allowed per type are asserted equal to today's values, including free_text not being kahoot-allowed
-- [ ] All existing import, draft, scoring and grading specs pass unchanged
+- [x] Every question type has a registry entry, and a type missing an entry fails the build
+- [x] There is one definition of the question type list; the import and quiz editor lists are not yet removed but point at or are checked against it
+- [x] The parity table covers every type with valid and invalid cases and runs through both the import and draft paths
+- [x] The duplicate multiple-choice option and match pairing disagreements appear as named divergences in the table
+- [x] Grading mode, overridable and kahoot-allowed per type are asserted equal to today's values, including free_text not being kahoot-allowed
+- [x] All existing import, draft, scoring and grading specs pass unchanged
+
+## Comments
+
+Implemented in a single commit (see git history for the hash).
+
+- `shared/types` now owns `QUESTION_TYPES` (`question-types.ts`; `QuestionType` is derived from it), the per-type import schemas and sheet-row decoding (`question-row-schema.ts`), the per-type draft schemas (`question-preview-schema.ts`) and the `QUESTION_KINDS` registry (`question-kind.ts`), typed as a mapped type over `QuestionType` so a missing entry fails to compile. The schemas moved from the backend unchanged; `zod` is now a `shared/types` dependency.
+- The backend import parser and draft validator import those schemas and `QUESTION_TYPES`; the quiz editor's labels are a `Record<QuestionType, string>`, so a type without a label fails to compile.
+- `shared/types/src/__tests__/question-kind-parity.test.ts` runs 23 cases through both paths and pins the grading flags. The named divergences are duplicate multiple-choice options and match pairing (repeated left or right items); ticket 02 flips them.
+- Registry entries are not read by app code yet (scoring lists stay as they are until ticket 05).

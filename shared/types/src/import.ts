@@ -1,4 +1,5 @@
-import type { MatchScoringMode, QuestionType } from './socket-events';
+import type { QuestionType } from './question-types';
+import type { MatchScoringMode } from './socket-events';
 
 /**
  * One data row of the imported sheet, raw cell strings as exported by the

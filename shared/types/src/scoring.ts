@@ -1,4 +1,5 @@
-import type { MatchScoringMode, QuestionType } from './socket-events';
+import type { QuestionType } from './question-types';
+import type { MatchScoringMode } from './socket-events';
 import { splitPipeList } from './sort-match';
 
 /**

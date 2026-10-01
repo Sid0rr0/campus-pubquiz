@@ -60,15 +60,21 @@ const PLACED_ISSUE_FIELDS = new Set([
   'type',
 ]);
 
-const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
-  { value: 'multiple_choice', label: 'Multiple choice' },
-  { value: 'free_text', label: 'Free text' },
-  { value: 'audio', label: 'Audio' },
-  { value: 'youtube', label: 'YouTube video' },
-  { value: 'sort', label: 'Sort / order' },
-  { value: 'match', label: 'Match pairs' },
-  { value: 'closest_guess', label: 'Closest guess' },
-];
+// Keyed by the shared QuestionType, so a type missing a label fails to
+// compile; key order is the picker order.
+const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  multiple_choice: 'Multiple choice',
+  free_text: 'Free text',
+  audio: 'Audio',
+  youtube: 'YouTube video',
+  sort: 'Sort / order',
+  match: 'Match pairs',
+  closest_guess: 'Closest guess',
+};
+
+const QUESTION_TYPES = (
+  Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]
+).map((value) => ({ value, label: QUESTION_TYPE_LABELS[value] }));
 
 function typeButtonClass(isActive: boolean): string {
   return isActive

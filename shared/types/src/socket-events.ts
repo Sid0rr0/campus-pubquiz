@@ -10,6 +10,7 @@ import type {
   GameStatus,
   QuizStructureSummary,
 } from './game-state';
+import type { QuestionType } from './question-types';
 import type { Verdict } from './scoring';
 
 export const SOCKET_EVENTS = {
@@ -61,15 +62,6 @@ export interface GameSocketHandshakeQuery {
 export function sessionRoom(code: string, role: SocketRoomName): string {
   return `${role}:${code}`;
 }
-
-export type QuestionType =
-  | 'free_text'
-  | 'multiple_choice'
-  | 'audio'
-  | 'youtube'
-  | 'sort'
-  | 'match'
-  | 'closest_guess';
 
 /**
  * Match only: how Scoring's scoreSubmission scores a submitted pairing.
