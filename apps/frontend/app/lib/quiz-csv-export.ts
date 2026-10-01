@@ -1,5 +1,5 @@
 import {
-  splitPipeList,
+  encodeSheetRow,
   type ImportQuestionPreview,
   type ImportRoundPreview,
 } from '@campus-pubquiz/types';
@@ -23,54 +23,32 @@ const CSV_HEADER = [
 /** Lets Excel read the file as UTF-8; the importer strips it (`bom: true`). */
 const UTF8_BOM = '﻿';
 const ROW_SEPARATOR = '\r\n';
-const LIST_SEPARATOR = '|';
-const PAIR_SEPARATOR = '+';
 const FALLBACK_FILENAME = 'quiz';
 
 function escapeCell(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-/** `match` packs both lists into one cell — `left1|left2+right1|right2` — see splitMatchOptions in the backend's question-row.schema.ts. */
-function optionsCell(question: ImportQuestionPreview): string {
-  const options = (question.options ?? []).join(LIST_SEPARATOR);
-  if (question.type !== 'match') return options;
-  const targets = (question.matchTargets ?? []).join(LIST_SEPARATOR);
-  return `${options}${PAIR_SEPARATOR}${targets}`;
-}
-
-/** A stored `match` answer lists just the right item for each left item, in left order; the CSV wants explicit `left+right` pairs. */
-function answerCell(question: ImportQuestionPreview): string {
-  if (question.type !== 'match') return question.answer;
-  const rightItems = splitPipeList(question.answer);
-  return (question.options ?? [])
-    .map((left, index) => `${left}${PAIR_SEPARATOR}${rightItems[index] ?? ''}`)
-    .join(LIST_SEPARATOR);
-}
-
+/** A sheet row's cells in CSV_HEADER order; each question's cells come from its kind (encodeSheetRow). */
 function questionRow(
   round: ImportRoundPreview,
   question: ImportQuestionPreview,
   isLastInRound: boolean,
 ): string[] {
+  const row = encodeSheetRow(round, question, isLastInRound);
   return [
-    round.title,
-    question.type,
-    question.prompt,
-    optionsCell(question),
-    answerCell(question),
-    String(question.points),
-    question.mediaUrl ?? '',
-    question.answerMediaUrl ?? '',
-    question.notes ?? '',
-    // A round breaks once any of its rows says so; the last row is where
-    // authors conventionally put it (see sample-quiz-import.csv).
-    isLastInRound && round.breakAfter ? '1' : '',
-    // category/author are round-level metadata; only the last row carries
-    // them, matching break_after's convention and the importer's "first
-    // non-blank cell wins" grouping.
-    isLastInRound ? (round.category ?? '') : '',
-    isLastInRound ? (round.author ?? '') : '',
+    row.round,
+    row.type,
+    row.question,
+    row.options,
+    row.answer,
+    row.points,
+    row.mediaUrl,
+    row.answerMediaUrl,
+    row.notes,
+    row.breakAfter,
+    row.category,
+    row.author,
   ];
 }
 

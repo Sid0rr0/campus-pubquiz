@@ -8,6 +8,7 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons';
 import {
+  QUESTION_KINDS,
   extractYoutubeVideoId,
   isKahootAllowedType,
   type MatchScoringMode,
@@ -82,39 +83,9 @@ function typeButtonClass(isActive: boolean): string {
     : 'px-3 py-2 text-xs font-extrabold bg-white text-foreground';
 }
 
-// The backend derives mediaStartSeconds/mediaEndSeconds by regexing a
-// question's notes for start:/end: (see parseYoutubeClipFromNotes) — no
-// dedicated schema field. This is the editor's own canonical line format for
-// that convention, so the two clip inputs below can round-trip through the
-// same `notes` string the Notes textarea edits. Notes written by hand in a
-// looser format (or via CSV import) still work at save time; they just won't
-// pre-fill these two inputs since they don't match this exact line shape.
-const CLIP_LINE_PATTERN =
-  /\n?YouTube clip: \{start: "([^"]*)", end: "([^"]*)"\}$/;
-
-function splitClipFromNotes(notes: string): {
-  freeNotes: string;
-  clipStart: string;
-  clipEnd: string;
-} {
-  const match = CLIP_LINE_PATTERN.exec(notes);
-  if (!match) return { freeNotes: notes, clipStart: '', clipEnd: '' };
-  return {
-    freeNotes: notes.slice(0, match.index),
-    clipStart: match[1],
-    clipEnd: match[2],
-  };
-}
-
-function composeNotesWithClip(
-  freeNotes: string,
-  clipStart: string,
-  clipEnd: string,
-): string {
-  if (!clipStart && !clipEnd) return freeNotes;
-  const clipLine = `YouTube clip: {start: "${clipStart}", end: "${clipEnd}"}`;
-  return freeNotes ? `${freeNotes}\n${clipLine}` : clipLine;
-}
+// A clip lives in the question's notes, in the youtube kind's line format
+// (parseYoutubeClipFromNotes reads it at save time) — no dedicated field.
+const { clipNotes } = QUESTION_KINDS.youtube;
 
 /** The types this question's picker offers: all of them, or in a kahoot round only the kahoot-allowed ones — plus the question's current type, so a disallowed one that arrived with a loaded quiz stays visible (and is flagged by save validation) instead of vanishing. */
 function pickerTypes(
@@ -154,11 +125,11 @@ export function QuizQuestionEditor({
     question.type === 'youtube' ||
     extractYoutubeVideoId(question.mediaUrl) !== undefined;
   const { freeNotes, clipStart, clipEnd } = isYoutubeMedia
-    ? splitClipFromNotes(question.notes)
+    ? clipNotes.read(question.notes)
     : { freeNotes: question.notes, clipStart: '', clipEnd: '' };
 
   function updateClip(nextStart: string, nextEnd: string): void {
-    onChange({ notes: composeNotesWithClip(freeNotes, nextStart, nextEnd) });
+    onChange({ notes: clipNotes.write(freeNotes, nextStart, nextEnd) });
   }
 
   function normalizedOptionText(text: string): string {
@@ -607,11 +578,7 @@ export function QuizQuestionEditor({
           value={freeNotes}
           onChange={(event) =>
             onChange({
-              notes: composeNotesWithClip(
-                event.target.value,
-                clipStart,
-                clipEnd,
-              ),
+              notes: clipNotes.write(event.target.value, clipStart, clipEnd),
             })
           }
           rows={1}

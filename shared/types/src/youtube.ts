@@ -51,3 +51,40 @@ export function parseYoutubeClipFromNotes(
     ...(endSeconds !== undefined ? { endSeconds } : {}),
   };
 }
+
+/** A notes string split into the author's free text and the clip start/end the editor's clip inputs show. */
+export interface ClipNotes {
+  freeNotes: string;
+  clipStart: string;
+  clipEnd: string;
+}
+
+/** Reads and writes a YouTube clip inside a question's free-text `notes`. */
+export interface ClipNotesCodec {
+  read(notes: string): ClipNotes;
+  write(freeNotes: string, clipStart: string, clipEnd: string): string;
+}
+
+// The canonical clip line: a shape `parseYoutubeClipFromNotes` reads, so a
+// clip set in the editor reaches mediaStartSeconds/mediaEndSeconds at save
+// time and survives the CSV notes column. Hand-written notes in a looser
+// format still clip at save time; they just read back as free notes.
+const CLIP_LINE_PATTERN =
+  /\n?YouTube clip: \{start: "([^"]*)", end: "([^"]*)"\}$/;
+
+export const youtubeClipNotes: ClipNotesCodec = {
+  read(notes) {
+    const match = CLIP_LINE_PATTERN.exec(notes);
+    if (!match) return { freeNotes: notes, clipStart: '', clipEnd: '' };
+    return {
+      freeNotes: notes.slice(0, match.index),
+      clipStart: match[1],
+      clipEnd: match[2],
+    };
+  },
+  write(freeNotes, clipStart, clipEnd) {
+    if (!clipStart && !clipEnd) return freeNotes;
+    const clipLine = `YouTube clip: {start: "${clipStart}", end: "${clipEnd}"}`;
+    return freeNotes ? `${freeNotes}\n${clipLine}` : clipLine;
+  },
+};

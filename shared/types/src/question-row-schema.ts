@@ -1,16 +1,20 @@
 import { z } from 'zod';
-import type { SheetRow } from './import';
-import type { QuestionIssue } from './question-kind';
+import type {
+  ImportQuestionPreview,
+  ImportRoundPreview,
+  SheetRow,
+} from './import';
+import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
-import { splitPipeList } from './sort-match';
 
 /**
- * Sheet-only half of import validation. The question itself is validated by
- * the question kind's schema (`QUESTION_KINDS[type].schema`) after
- * `decodeSheetRow` turns the row into an ImportQuestionPreview-shaped
- * candidate; this file owns what only a sheet row has (round name,
- * break_after) and the mapping of issue paths back to sheet column names.
+ * Sheet-row half of the CSV format, both directions. The question's own
+ * options/answer cells are each kind's `csv` codec
+ * (`QUESTION_KINDS[type].csv`), and the decoded question is validated by the
+ * kind's schema; this file owns the columns every type shares, what only a
+ * sheet row has (round name, break_after, category, author) and the mapping
+ * of issue paths back to sheet column names.
  */
 
 // CSV/Sheets rows never carry kahootMode (it's manual-editor-only), so a
@@ -65,82 +69,6 @@ export function sheetFieldForIssue(issue: QuestionIssue): string {
   return SHEET_COLUMN_BY_QUESTION_FIELD[field] ?? field;
 }
 
-function splitOptions(rawOptions: string): string[] | undefined {
-  const options = rawOptions
-    .split('|')
-    .map((option) => option.trim())
-    .filter((option) => option !== '');
-  return options.length > 0 ? options : undefined;
-}
-
-// A `match` row's `options` cell packs both lists into one string, split by
-// a single `+`: `left1|left2+right1|right2`. Always returns arrays (never
-// undefined) so the zod `.min(2, "…")` messages fire instead of a generic
-// type-mismatch error when the cell is malformed.
-function splitMatchOptions(rawOptions: string): {
-  left: string[];
-  right: string[];
-} {
-  const separatorIndex = rawOptions.indexOf('+');
-  if (separatorIndex === -1) {
-    return { left: splitOptions(rawOptions) ?? [], right: [] };
-  }
-  return {
-    left: splitOptions(rawOptions.slice(0, separatorIndex)) ?? [],
-    right: splitOptions(rawOptions.slice(separatorIndex + 1)) ?? [],
-  };
-}
-
-/**
- * A `match` row's `answer` cell lists correct pairs as `left+right`,
- * pipe-separated, in any order (e.g. "arthur+excalibur|robin hood+bow").
- * Reorders them into `left`'s order so the stored answer is directly
- * comparable (by exact string equality) to a player's submitted value, which
- * is built positionally the same way — see AnswerForm's match UI. Returns
- * undefined if the pairs don't form a perfect one-to-one matching between
- * `left` and `right`.
- */
-export function toCanonicalMatchAnswer(
-  rawAnswer: string,
-  left: string[],
-  right: string[],
-): string | undefined {
-  const pairs = splitPipeList(rawAnswer).map((pair) => {
-    const separatorIndex = pair.indexOf('+');
-    if (separatorIndex === -1) return undefined;
-    const pairLeft = pair.slice(0, separatorIndex).trim();
-    const pairRight = pair.slice(separatorIndex + 1).trim();
-    return pairLeft && pairRight
-      ? { left: pairLeft, right: pairRight }
-      : undefined;
-  });
-  if (
-    pairs.length !== left.length ||
-    pairs.some((pair) => pair === undefined)
-  ) {
-    return undefined;
-  }
-
-  const rightByLeft = new Map(pairs.map((pair) => [pair!.left, pair!.right]));
-  if (rightByLeft.size !== left.length) return undefined;
-
-  const usedRight = new Set<string>();
-  const canonical: string[] = [];
-  for (const leftItem of left) {
-    const rightItem = rightByLeft.get(leftItem);
-    if (
-      rightItem === undefined ||
-      !right.includes(rightItem) ||
-      usedRight.has(rightItem)
-    ) {
-      return undefined;
-    }
-    usedRight.add(rightItem);
-    canonical.push(rightItem);
-  }
-  return canonical.join('|');
-}
-
 /** Decodes a raw sheet row into its round-level cells and the question candidate the kind's schema validates. */
 export function decodeSheetRow(
   row: SheetRow,
@@ -152,61 +80,65 @@ export function decodeSheetRow(
   sheetAnswerIssue?: QuestionIssue;
 } {
   const trimmedPoints = row.points.trim();
-  const trimmedNotes = row.notes.trim();
-  const trimmedAnswer = row.answer.trim();
-  const trimmedMediaUrl = row.mediaUrl.trim();
-  const trimmedAnswerMediaUrl = row.answerMediaUrl.trim();
-  const matchOptions = splitMatchOptions(row.options);
-  const options =
-    type === 'match' ? matchOptions.left : (splitOptions(row.options) ?? []);
-  const isUnpairedMatchAnswer =
-    type === 'match' &&
-    toCanonicalMatchAnswer(
-      trimmedAnswer,
-      matchOptions.left,
-      matchOptions.right,
-    ) === undefined;
+  const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
+    options: row.options,
+    answer: row.answer,
+  });
   return {
-    sheetAnswerIssue: isUnpairedMatchAnswer
-      ? {
-          path: ['answer'],
-          code: 'custom',
-          message:
-            'Answer must pair each left item with a right item, e.g. "left1+right1|left2+right2"',
-        }
-      : undefined,
+    sheetAnswerIssue: answerIssue,
     meta: {
       round: row.round.trim(),
       break_after: row.breakAfter.trim(),
       category: resolveCategoryCell(row.category),
-      author: row.author.trim() === '' ? undefined : row.author.trim(),
+      author: blankToUndefined(row.author),
     },
     question: {
       type,
       prompt: row.question.trim(),
-      answer: decodeAnswer(type, trimmedAnswer, matchOptions),
-      notes: trimmedNotes === '' ? undefined : trimmedNotes,
+      ...choices,
+      notes: blankToUndefined(row.notes),
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
-      options,
-      matchTargets: matchOptions.right,
-      mediaUrl: trimmedMediaUrl === '' ? undefined : trimmedMediaUrl,
-      answerMediaUrl:
-        trimmedAnswerMediaUrl === '' ? undefined : trimmedAnswerMediaUrl,
+      mediaUrl: blankToUndefined(row.mediaUrl),
+      answerMediaUrl: blankToUndefined(row.answerMediaUrl),
     },
   };
 }
 
-// Sort and match answers are stored in one canonical form; a match answer
-// that isn't a clean one-to-one pairing is passed through raw so the schema
-// rejects it on `answer`.
-function decodeAnswer(
-  type: QuestionType,
-  answer: string,
-  match: { left: string[]; right: string[] },
-): string {
-  if (type === 'sort') return splitPipeList(answer).join('|');
-  if (type === 'match') {
-    return toCanonicalMatchAnswer(answer, match.left, match.right) ?? answer;
-  }
-  return answer;
+/**
+ * Encodes one question of `round` as the sheet row `decodeSheetRow` reads
+ * back as the same question. Round-level cells (break_after, category,
+ * author) are written only on the round's last row — the importer lets any
+ * row carry them, and the last is where authors conventionally put them.
+ * Fields with no column (questionId, matchScoringMode, round kahootMode)
+ * are not written.
+ */
+export function encodeSheetRow(
+  round: Pick<
+    ImportRoundPreview,
+    'title' | 'breakAfter' | 'category' | 'author'
+  >,
+  question: ImportQuestionPreview,
+  isLastInRound: boolean,
+): Omit<SheetRow, 'rowNumber'> {
+  const { options, answer } =
+    QUESTION_KINDS[question.type].csv.encode(question);
+  return {
+    round: round.title,
+    type: question.type,
+    question: question.prompt,
+    options,
+    answer,
+    points: String(question.points),
+    mediaUrl: question.mediaUrl ?? '',
+    answerMediaUrl: question.answerMediaUrl ?? '',
+    notes: question.notes ?? '',
+    breakAfter: isLastInRound && round.breakAfter ? '1' : '',
+    category: isLastInRound ? (round.category ?? '') : '',
+    author: isLastInRound ? (round.author ?? '') : '',
+  };
+}
+
+function blankToUndefined(cell: string): string | undefined {
+  const trimmed = cell.trim();
+  return trimmed === '' ? undefined : trimmed;
 }

@@ -19,6 +19,14 @@ import {
   youtubePayloadSchema,
   type QuestionPayload,
 } from './question-payload-schema';
+import {
+  answerOnlyCsv,
+  choicesCsv,
+  matchCsv,
+  sortCsv,
+  type QuestionCsvCodec,
+} from './question-csv-codec';
+import { youtubeClipNotes, type ClipNotesCodec } from './youtube';
 
 /** How a type's answers are graded: at submit, in one batch after lock, or by the quiz master. */
 export type GradingMode = 'auto' | 'batch' | 'human';
@@ -34,6 +42,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   schema: z.ZodType;
   /** The payload codec: stored JSON is parsed against this (via `parseQuestionPayload`), never cast. */
   payload: z.ZodType<QuestionPayload>;
+  /** How the question's options and answer map to and from the sheet's `options`/`answer` cells. */
+  csv: QuestionCsvCodec;
   gradingMode: GradingMode;
   /** Whether the admin can regrade a single answer. */
   overridable: boolean;
@@ -43,11 +53,15 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
 
 export const QUESTION_KINDS: {
   readonly [T in QuestionType]: QuestionKind<T>;
+} & {
+  /** The clip start/end a YouTube question carries in its `notes` (read at save time by `parseYoutubeClipFromNotes`). */
+  readonly youtube: { readonly clipNotes: ClipNotesCodec };
 } = {
   free_text: {
     type: 'free_text',
     schema: freeTextPreviewSchema,
     payload: freeTextPayloadSchema,
+    csv: answerOnlyCsv,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: false,
@@ -56,6 +70,7 @@ export const QUESTION_KINDS: {
     type: 'multiple_choice',
     schema: multipleChoicePreviewSchema,
     payload: multipleChoicePayloadSchema,
+    csv: choicesCsv,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
@@ -64,6 +79,7 @@ export const QUESTION_KINDS: {
     type: 'audio',
     schema: audioPreviewSchema,
     payload: audioPayloadSchema,
+    csv: answerOnlyCsv,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
@@ -72,6 +88,8 @@ export const QUESTION_KINDS: {
     type: 'youtube',
     schema: youtubePreviewSchema,
     payload: youtubePayloadSchema,
+    csv: answerOnlyCsv,
+    clipNotes: youtubeClipNotes,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
@@ -80,6 +98,7 @@ export const QUESTION_KINDS: {
     type: 'sort',
     schema: sortPreviewSchema,
     payload: sortPayloadSchema,
+    csv: sortCsv,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
@@ -88,6 +107,7 @@ export const QUESTION_KINDS: {
     type: 'match',
     schema: matchPreviewSchema,
     payload: matchPayloadSchema,
+    csv: matchCsv,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
@@ -96,6 +116,7 @@ export const QUESTION_KINDS: {
     type: 'closest_guess',
     schema: closestGuessPreviewSchema,
     payload: closestGuessPayloadSchema,
+    csv: answerOnlyCsv,
     gradingMode: 'batch',
     overridable: false,
     kahootAllowed: false,

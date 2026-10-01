@@ -12,11 +12,10 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ### question-kind-module ([spec](question-kind-module/spec.md))
 
-| #   | Ticket                                                                                                                                | Blocked by |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 04  | [CSV encode and decode live in the entries, with a round-trip test](question-kind-module/issues/04-csv-in-entries-with-round-trip.md) | 02         |
-| 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)      | 01         |
-| 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                   | 04         |
+| #   | Ticket                                                                                                                           | Blocked by |
+| --- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md) | 01         |
+| 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)              | 04         |
 
 ### display-screen-kind ([spec](display-screen-kind/spec.md))
 
@@ -51,6 +50,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| question-kind-module     | 04  | [CSV encode and decode live in the entries, with a round-trip test](question-kind-module/issues/04-csv-in-entries-with-round-trip.md)                    | —         |
 | question-kind-module     | 03  | [Persistence parses stored payloads instead of casting](question-kind-module/issues/03-payload-codec-replaces-casts.md)                                  | —         |
 | question-kind-module     | 02  | [Import and draft save share one schema](question-kind-module/issues/02-shared-schema-for-import-and-draft.md)                                           | —         |
 | question-kind-module     | 01  | [Registry skeleton with parity and characterization table](question-kind-module/issues/01-question-kind-registry-and-parity-table.md)                    | —         |
