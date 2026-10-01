@@ -88,7 +88,7 @@ export function settleSession({
 }
 
 /** Armed only while in the 'locking' countdown, so a gateway timer can advance into the break without the admin clicking Advance. */
-export function computeQuestionLockAt(
+function computeQuestionLockAt(
   progress: GameProgress,
   lockDurationMs: number,
   now: number = Date.now(),
@@ -102,7 +102,7 @@ export function computeQuestionLockAt(
  * per-session timer configured. Anchored to phaseStartedAt, the moment this
  * question genuinely opened, so it stays accurate across a backend restart.
  */
-export function computeKahootQuestionEndsAt(
+function computeKahootQuestionEndsAt(
   progress: GameProgress,
   context: GameContext,
   kahootQuestionTimerSeconds: number | null,

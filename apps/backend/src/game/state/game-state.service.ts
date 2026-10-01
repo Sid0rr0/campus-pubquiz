@@ -21,20 +21,13 @@ import {
   getBlockSeededQuestions,
   getPastRevealedQuestions,
 } from '@/game/state/block-questions.util';
-import { computeInitialRevealStep } from '@/game/state/closest-guess-reveal.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import {
   BlockGradingService,
   canBeUngraded,
 } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
-import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
-import {
-  computeKahootQuestionEndsAt,
-  computeQuestionLockAt,
-  settleSession,
-} from '@/game/state/session-settle.util';
-import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
+import { settleSession } from '@/game/state/session-settle.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import {
@@ -559,62 +552,22 @@ export class GameStateService implements OnModuleInit {
     );
     const sessionWithGradingStatus =
       await this.grading.refreshUngradedQuestionIds(gradedSession, progress);
+    const settled = settleSession({
+      session: sessionWithGradingStatus,
+      progress,
+      action: effectiveAction,
+      now: Date.now(),
+    });
     // Showing a rank or hiding the board leaves the quiz underneath exactly
     // where it was, including a closest_guess reveal mid-way through.
-    const closestGuessRevealStep =
+    const updated: SessionState =
       step.kind === 'transition'
-        ? computeInitialRevealStep(sessionWithGradingStatus, progress, action)
-        : sessionWithGradingStatus.closestGuessRevealStep;
-    const { livePhaseKey, phaseStartedAt, phaseElapsedByKey } =
-      computePhaseTimerFields(
-        progress,
-        getGameContext(session),
-        session.livePhaseKey,
-        session.phaseStartedAt,
-        session.phaseElapsedByKey,
-      );
-    const updated: SessionState = {
-      ...sessionWithGradingStatus,
-      progress,
-      livePhaseKey,
-      phaseStartedAt,
-      phaseElapsedByKey,
-      questionLockAt: computeQuestionLockAt(
-        progress,
-        sessionWithGradingStatus.seededGame.settings.lockGraceSeconds * 1000,
-      ),
-      kahootQuestionEndsAt: computeKahootQuestionEndsAt(
-        progress,
-        getGameContext(session),
-        sessionWithGradingStatus.seededGame.settings.kahootQuestionTimerSeconds,
-        livePhaseKey,
-        phaseStartedAt,
-      ),
-      // A fresh break starting (the only path into 'break_intro') clears a
-      // *stale* end-time left over from a previous break, so the display
-      // never shows a past time. It does NOT clear one the admin set in
-      // advance while still on the block's last question (BreakEndTimeControl
-      // now allows this) — that value is still in the future, so it's kept.
-      // Navigating within the same break (break_intro/break/break_round_intro)
-      // via Previous/Advance always leaves it untouched regardless.
-      breakEndsAt:
-        session.progress.status === 'locking' &&
-        progress.status === 'break_intro' &&
-        sessionWithGradingStatus.breakEndsAt !== null &&
-        sessionWithGradingStatus.breakEndsAt <= Date.now()
-          ? null
-          : sessionWithGradingStatus.breakEndsAt,
-      leaderboardRevealCount: computeLeaderboardRevealCount(
-        effectiveAction,
-        session.progress.isLeaderboardVisible,
-        progress,
-        sessionWithGradingStatus.leaderboard,
-        sessionWithGradingStatus.leaderboardRevealCount,
-        getGameContext(session).rounds[progress.roundIndex]?.kahootMode ??
-          false,
-      ),
-      closestGuessRevealStep,
-    };
+        ? settled
+        : {
+            ...settled,
+            closestGuessRevealStep:
+              sessionWithGradingStatus.closestGuessRevealStep,
+          };
     this.sessionStore.set(joinCode, updated);
     await this.progressRepository.save(updated.seededGame.gameSessionId, {
       progress,
