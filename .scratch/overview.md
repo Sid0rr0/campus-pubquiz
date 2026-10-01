@@ -12,10 +12,11 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ### question-kind-module ([spec](question-kind-module/spec.md))
 
-| #   | Ticket                                                                                                                           | Blocked by |
-| --- | -------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md) | 01         |
-| 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)              | 04         |
+| #   | Ticket                                                                                                                            | Blocked by |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)  | 01         |
+| 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)               | 04         |
+| 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md) | 06         |
 
 ### display-screen-kind ([spec](display-screen-kind/spec.md))
 
