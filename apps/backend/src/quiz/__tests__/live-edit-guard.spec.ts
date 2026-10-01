@@ -51,6 +51,50 @@ describe('findLiveEditViolations', () => {
     ]);
   });
 
+  it("rejects changing a round's breakAfter", () => {
+    const current = [round(), round({ title: 'Round 2' })];
+    const incoming = [round({ breakAfter: true }), round({ title: 'Round 2' })];
+
+    const issues = findLiveEditViolations(current, incoming, []);
+
+    expect(issues).toEqual([
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: null,
+        field: 'breakAfter',
+      }),
+    ]);
+  });
+
+  it("ignores the last round's breakAfter, which is always forced on at save", () => {
+    const current = [round({ breakAfter: true })];
+    const incoming = [round({ breakAfter: false })];
+
+    expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
+  });
+
+  it("rejects changing a round's kahootMode", () => {
+    const current = [round()];
+    const incoming = [round({ kahootMode: true })];
+
+    const issues = findLiveEditViolations(current, incoming, []);
+
+    expect(issues).toEqual([
+      expect.objectContaining({
+        roundIndex: 0,
+        questionIndex: null,
+        field: 'kahootMode',
+      }),
+    ]);
+  });
+
+  it('treats an unset kahootMode as false', () => {
+    const current = [round({ kahootMode: false })];
+    const incoming = [round({ kahootMode: undefined })];
+
+    expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
+  });
+
   it('rejects adding or removing a question within a round', () => {
     const current = [round()];
     const incoming = [

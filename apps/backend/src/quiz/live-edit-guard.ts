@@ -28,6 +28,15 @@ const GRADING_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'matchScoringMode',
 ];
 
+/** The last round always breaks (QuizService forces it at save), so its stored value never reflects the draft's. */
+function effectiveBreakAfter(
+  round: ImportRoundPreview,
+  roundIndex: number,
+  roundCount: number,
+): boolean {
+  return roundIndex === roundCount - 1 || round.breakAfter;
+}
+
 function diffQuestionFields(
   current: ImportQuestionPreview,
   incoming: ImportQuestionPreview,
@@ -42,7 +51,7 @@ function diffQuestionFields(
 /**
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Fix-in-place only: any
- * structural change (adding/removing/reordering rounds or questions) is
+ * structural change (adding/removing/reordering rounds or questions, or changing a round's breakAfter/kahootMode) is
  * rejected outright, regardless of lock state — game progress is positional,
  * so a shift would move the game onto a different question. A question in
  * `lockedQuestionIds` (already shown or in progress) can still have its
@@ -73,6 +82,29 @@ export function findLiveEditViolations(
   for (let roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
     const currentRound = currentRounds[roundIndex];
     const incomingRound = incomingRounds[roundIndex];
+
+    // Game progress is positional over blocks, which breakAfter and kahootMode
+    // both shape — changing either shifts what saved positions point at.
+    const hasBlockShapeChanged = {
+      // With a different round count the last round isn't the same one, and
+      // the count mismatch above is already the issue to report.
+      breakAfter:
+        currentRounds.length === incomingRounds.length &&
+        effectiveBreakAfter(currentRound, roundIndex, currentRounds.length) !==
+          effectiveBreakAfter(incomingRound, roundIndex, incomingRounds.length),
+      kahootMode:
+        (currentRound.kahootMode ?? false) !==
+        (incomingRound.kahootMode ?? false),
+    };
+    for (const [field, hasChanged] of Object.entries(hasBlockShapeChanged)) {
+      if (!hasChanged) continue;
+      issues.push({
+        roundIndex,
+        questionIndex: null,
+        field,
+        message: `Cannot change a round's ${field} while a session is live on this quiz`,
+      });
+    }
 
     if (currentRound.questions.length !== incomingRound.questions.length) {
       issues.push({
