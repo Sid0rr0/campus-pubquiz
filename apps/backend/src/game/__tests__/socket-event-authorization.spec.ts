@@ -6,6 +6,7 @@ import {
   type SocketRoomName,
 } from '@campus-pubquiz/types';
 import type { GameGateway } from '@/game/game.gateway';
+import { SOCKET_EVENT_DECLARATIONS } from '@/game/socket/socket-event-declarations';
 import {
   asSocket,
   createMockSocket,
@@ -17,17 +18,14 @@ import {
 } from '@/game/__tests__/real-store-test-utils';
 
 const NO_SESSION_ERROR = 'Connection not associated with a game session';
-const CLIENT_EVENT_COUNT = 11;
 
 interface Ids {
   teamId: number;
   questionId: number;
 }
 
-interface EventCase {
-  name: string;
-  allowedRoom: SocketRoomName;
-  rejection: string;
+/** How to send one declared event: the gateway method that handles it and a well-formed payload. */
+interface EventSender {
   send: (
     gateway: GameGateway,
     socket: MockSocket,
@@ -36,29 +34,22 @@ interface EventCase {
   payload: (ids: Ids) => unknown;
 }
 
-// Deliberately its own list, not derived from the gateway: the spec pins
-// today's authorization so a refactor of how events are declared can't move it.
-const EVENT_CASES: EventCase[] = [
-  {
-    name: SOCKET_EVENTS.ADMIN_ACTION,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may perform game actions',
+const D = SOCKET_EVENT_DECLARATIONS;
+
+// Keyed by declaration, so the rooms and rejection messages come from the
+// table itself and a new declaration without a sender fails the coverage case.
+const SENDERS: Record<keyof typeof D, EventSender> = {
+  adminAction: {
     send: (gateway, socket, payload) =>
       gateway.handleAdminAction(asSocket(socket), payload),
     payload: () => ({ action: 'ADVANCE' }),
   },
-  {
-    name: SOCKET_EVENTS.JOIN_PLAYERS,
-    allowedRoom: SOCKET_ROOMS.PLAYERS,
-    rejection: 'Only player clients may join a team',
+  joinPlayers: {
     send: (gateway, socket, payload) =>
       gateway.handleJoinPlayers(asSocket(socket), payload),
     payload: () => ({ teamName: 'Intruders' }),
   },
-  {
-    name: SOCKET_EVENTS.SUBMIT_ANSWER,
-    allowedRoom: SOCKET_ROOMS.PLAYERS,
-    rejection: 'Only player clients may submit answers',
+  submitAnswer: {
     send: (gateway, socket, payload) =>
       gateway.handleSubmitAnswer(asSocket(socket), payload),
     payload: ({ teamId, questionId }) => ({
@@ -67,71 +58,62 @@ const EVENT_CASES: EventCase[] = [
       value: 'Paris',
     }),
   },
-  {
-    name: SOCKET_EVENTS.GRADE_ANSWER,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may grade answers',
+  gradeAnswer: {
     send: (gateway, socket, payload) =>
       gateway.handleGradeAnswer(asSocket(socket), payload),
     payload: () => ({ answerId: 1, pointsAwarded: 1 }),
   },
-  {
-    name: SOCKET_EVENTS.KICK_TEAM,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may remove a team',
+  kickTeam: {
     send: (gateway, socket, payload) =>
       gateway.handleKickTeam(asSocket(socket), payload),
     payload: ({ teamId }) => ({ teamId }),
   },
-  {
-    name: SOCKET_EVENTS.LEAVE_SESSION,
-    allowedRoom: SOCKET_ROOMS.PLAYERS,
-    rejection: 'Only player clients may leave a session',
+  leaveSession: {
     send: (gateway, socket, payload) =>
       gateway.handleLeaveSession(asSocket(socket), payload),
     payload: ({ teamId }) => ({ teamId }),
   },
-  {
-    name: SOCKET_EVENTS.SET_BREAK_END_TIME,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may set the break end time',
+  setBreakEndTime: {
     send: (gateway, socket, payload) =>
       gateway.handleSetBreakEndTime(asSocket(socket), payload),
     payload: () => ({ breakEndsAt: null }),
   },
-  {
-    name: SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may set the display text scale',
+  setDisplayTextScale: {
     send: (gateway, socket, payload) =>
       gateway.handleSetDisplayTextScale(asSocket(socket), payload),
     payload: () => ({ displayTextScale: DISPLAY_TEXT_SCALE_STEPS[0] }),
   },
-  {
-    name: SOCKET_EVENTS.AWARD_BONUS,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may award bonus points',
+  awardBonus: {
     send: (gateway, socket, payload) =>
       gateway.handleAwardBonus(asSocket(socket), payload),
     payload: ({ teamId }) => ({ teamId, category: 'custom', points: 1 }),
   },
-  {
-    name: SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND,
-    allowedRoom: SOCKET_ROOMS.ADMIN,
-    rejection: 'Only admin clients may start a showdown round',
+  createShowdownRound: {
     send: (gateway, socket, payload) =>
       gateway.handleCreateShowdownRound(asSocket(socket), payload),
     payload: () => ({ question: 'How many?', answer: '42', points: 1 }),
   },
-  {
-    name: SOCKET_EVENTS.SUBMIT_SHOWDOWN_GUESS,
-    allowedRoom: SOCKET_ROOMS.PLAYERS,
-    rejection: 'Only player clients may submit a showdown guess',
+  submitShowdownGuess: {
     send: (gateway, socket, payload) =>
       gateway.handleSubmitShowdownGuess(asSocket(socket), payload),
     payload: ({ teamId }) => ({ showdownRoundId: 1, teamId, value: '42' }),
   },
-];
+};
+
+interface EventCase extends EventSender {
+  name: string;
+  allowedRoom: SocketRoomName;
+  rejection: string;
+}
+
+const EVENT_CASES: EventCase[] = Object.entries(D).map(
+  ([key, declaration]) => ({
+    name: declaration.event,
+    allowedRoom: declaration.allowedRoom,
+    rejection: declaration.rejection,
+    ...SENDERS[key as keyof typeof D],
+  }),
+);
 
 const ALL_ROOMS: SocketRoomName[] = [
   SOCKET_ROOMS.ADMIN,
@@ -186,10 +168,15 @@ describe('GameGateway — socket event authorization', () => {
     );
   }
 
-  it('lists every client-to-server socket event once', () => {
-    expect(new Set(EVENT_CASES.map((event) => event.name)).size).toBe(
-      CLIENT_EVENT_COUNT,
+  it('declares every client-to-server socket event once, with a sender here', () => {
+    const clientEvents = Object.values(SOCKET_EVENTS).filter((event) =>
+      EVENT_CASES.some((declared) => declared.name === event),
     );
+    expect(new Set(EVENT_CASES.map((event) => event.name)).size).toBe(
+      EVENT_CASES.length,
+    );
+    expect(clientEvents).toHaveLength(EVENT_CASES.length);
+    expect(Object.keys(SENDERS).sort()).toEqual(Object.keys(D).sort());
   });
 
   it.each(wrongRoomRows)(

@@ -4,13 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### gateway-handler-template ([spec](gateway-handler-template/spec.md))
-
-| #   | Ticket                                                                                                                                          | Blocked by                 |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| 02  | [Declare each event once and route it through one dispatch step](gateway-handler-template/issues/02-event-declarations-and-guarded-dispatch.md) | 01, live-session-module 07 |
-| 03  | [Delete the pass-through handlers and fix the doc comments](gateway-handler-template/issues/03-delete-pass-through-handlers.md)                 | 02                         |
-
 ### role-socket-hooks ([spec](role-socket-hooks/spec.md))
 
 | #   | Ticket                                                                                                                                       | Blocked by |
@@ -23,6 +16,8 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature             | #   | Ticket                                                                                                                          | Commit    |
 | ------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| gateway-handler-template | 03  | [Delete the pass-through handlers and fix the doc comments](gateway-handler-template/issues/03-delete-pass-through-handlers.md) | —         |
+| gateway-handler-template | 02  | [Declare each event once and route it through one dispatch step](gateway-handler-template/issues/02-event-declarations-and-guarded-dispatch.md) | —         |
 | gateway-handler-template | 01  | [Test that every event rejects the wrong room](gateway-handler-template/issues/01-authorization-characterization-spec.md) | —         |
 | props-refactor      | 03  | [The Control panel prop replaces the 32-field sidebar interface](props-refactor/issues/03-control-panel-prop.md) | —         |
 | props-refactor      | 06  | [The question display takes a question object](props-refactor/issues/06-question-display-takes-question.md) | —         |

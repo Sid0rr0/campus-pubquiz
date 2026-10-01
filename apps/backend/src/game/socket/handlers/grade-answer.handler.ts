@@ -1,19 +1,15 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server } from 'socket.io';
 import type { GradeAnswerPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 export async function gradeTeamAnswer(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    server: Server;
-  },
-  joinCode: string,
-  payload: GradeAnswerPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload }: EventContext<GradeAnswerPayload>,
+): Promise<EventResult> {
   const gameSessionId = deps.gameState.getGameSessionId(joinCode);
 
   let questionId: number;
@@ -29,9 +25,5 @@ export async function gradeTeamAnswer(
     throw new WsException(message);
   }
 
-  await deliverOutcome(
-    deps,
-    joinCode,
-    await deps.gameState.answerGraded(joinCode, questionId),
-  );
+  return await deps.gameState.answerGraded(joinCode, questionId);
 }

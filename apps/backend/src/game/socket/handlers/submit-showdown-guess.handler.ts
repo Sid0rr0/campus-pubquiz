@@ -1,25 +1,16 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
 import type { SubmitShowdownGuessPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
-import {
-  InvalidShowdownError,
-  ShowdownService,
-} from '@/showdown/showdown.service';
+import { InvalidShowdownError } from '@/showdown/showdown.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 export async function submitShowdownGuess(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    showdownService: ShowdownService;
-    server: Server;
-  },
-  client: Socket,
-  joinCode: string,
-  payload: SubmitShowdownGuessPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload, client }: EventContext<SubmitShowdownGuessPayload>,
+): Promise<EventResult> {
   const activeRound = deps.gameState.getActiveShowdownRound(joinCode);
   if (
     !activeRound ||
@@ -56,13 +47,9 @@ export async function submitShowdownGuess(
     throw error;
   }
 
-  await deliverOutcome(
-    deps,
+  return deps.gameState.showdownGuessSubmitted(
     joinCode,
-    deps.gameState.showdownGuessSubmitted(
-      joinCode,
-      payload.teamId,
-      payload.value,
-    ),
+    payload.teamId,
+    payload.value,
   );
 }

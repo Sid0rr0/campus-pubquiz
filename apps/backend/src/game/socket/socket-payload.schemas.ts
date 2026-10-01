@@ -7,7 +7,7 @@ import {
   type GameAction,
 } from '@campus-pubquiz/types';
 
-// Every @SubscribeMessage handler in game.gateway.ts validates its raw,
+// Every socket event declared in socket-event-declarations.ts validates its raw,
 // client-controlled payload against one of these before touching game
 // state — mirrors the Zod validation already used for CSV import
 // (question-row.schema.ts). Without this, a hand-crafted socket.io-client
@@ -102,7 +102,10 @@ export const submitShowdownGuessPayloadSchema = z.object({
 });
 
 /** Parses a raw socket payload against `schema`, or throws a client-safe WsException. */
-export function parseSocketPayload<T>(schema: z.ZodType<T>, raw: unknown): T {
+export function parseSocketPayload<S extends z.ZodType>(
+  schema: S,
+  raw: unknown,
+): z.infer<S> {
   const result = schema.safeParse(raw);
   if (!result.success) {
     const issue = result.error.issues[0];

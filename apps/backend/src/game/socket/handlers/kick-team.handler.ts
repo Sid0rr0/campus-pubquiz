@@ -1,20 +1,14 @@
-import type { Server } from 'socket.io';
 import type { KickTeamPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
-import type { TeamService } from '@/team/team.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 export async function kickTeamFromSession(
-  deps: {
-    gameState: GameStateService;
-    teamService: TeamService;
-    answerService: AnswerService;
-    server: Server;
-  },
-  joinCode: string,
-  payload: KickTeamPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload }: EventContext<KickTeamPayload>,
+): Promise<EventResult> {
   const socketId = deps.gameState.getConnectedSocketId(
     joinCode,
     payload.teamId,
@@ -27,17 +21,17 @@ export async function kickTeamFromSession(
   await deps.teamService.removeFromRoster(gameSessionId, payload.teamId);
   const roster = await deps.teamService.listForSession(gameSessionId);
 
-  await deliverOutcome(
-    deps,
+  const outcome = await deps.gameState.teamRemoved(
     joinCode,
-    await deps.gameState.teamRemoved(
-      joinCode,
-      payload.teamId,
-      roster,
-      'kicked',
-    ),
+    payload.teamId,
+    roster,
+    'kicked',
   );
-
   // After delivery, so the TEAM_KICKED notice is out before the socket closes.
-  if (socketId) deps.server.sockets.sockets.get(socketId)?.disconnect(true);
+  return {
+    outcome,
+    afterDelivery: () => {
+      if (socketId) deps.server.sockets.sockets.get(socketId)?.disconnect(true);
+    },
+  };
 }

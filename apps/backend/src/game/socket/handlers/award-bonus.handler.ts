@@ -1,21 +1,16 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server } from 'socket.io';
 import type { AwardBonusPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
+import { InvalidBonusAwardError } from '@/bonus/bonus.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 export async function awardTeamBonus(
-  deps: {
-    gameState: GameStateService;
-    bonusService: BonusService;
-    answerService: AnswerService;
-    server: Server;
-  },
-  joinCode: string,
-  payload: AwardBonusPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload }: EventContext<AwardBonusPayload>,
+): Promise<EventResult> {
   try {
     await deps.bonusService.award(
       deps.gameState.getGameSessionId(joinCode),
@@ -33,16 +28,12 @@ export async function awardTeamBonus(
     throw error;
   }
 
-  await deliverOutcome(
-    deps,
-    joinCode,
-    await deps.gameState.bonusChanged(joinCode, {
-      teamId: payload.teamId,
-      notice: {
-        category: payload.category,
-        points: payload.points,
-        reason: payload.reason,
-      },
-    }),
-  );
+  return await deps.gameState.bonusChanged(joinCode, {
+    teamId: payload.teamId,
+    notice: {
+      category: payload.category,
+      points: payload.points,
+      reason: payload.reason,
+    },
+  });
 }

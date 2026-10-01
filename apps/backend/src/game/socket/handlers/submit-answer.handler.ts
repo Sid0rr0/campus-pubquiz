@@ -1,20 +1,15 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 import { SOCKET_EVENTS, type SubmitAnswerPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
 
 export async function submitTeamAnswer(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    server: Server;
-  },
-  client: Socket,
-  joinCode: string,
-  payload: SubmitAnswerPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload, client }: EventContext<SubmitAnswerPayload>,
+): Promise<EventResult> {
   if (
     !deps.gameState.isQuestionOpenForAnswering(joinCode, payload.questionId)
   ) {
@@ -49,9 +44,5 @@ export async function submitTeamAnswer(
     verdict: submitted.verdict,
   });
 
-  await deliverOutcome(
-    deps,
-    joinCode,
-    await deps.gameState.recordAnswer(joinCode, payload.questionId),
-  );
+  return await deps.gameState.recordAnswer(joinCode, payload.questionId);
 }

@@ -1,24 +1,15 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
 import { SOCKET_EVENTS, type JoinPlayersPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import type { BonusService } from '@/bonus/bonus.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
-import type { TeamService } from '@/team/team.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 export async function joinPlayerTeam(
-  deps: {
-    gameState: GameStateService;
-    teamService: TeamService;
-    answerService: AnswerService;
-    bonusService: BonusService;
-    server: Server;
-  },
-  client: Socket,
-  joinCode: string,
-  payload: JoinPlayersPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload, client }: EventContext<JoinPlayersPayload>,
+): Promise<EventResult> {
   try {
     const team = await deps.teamService.join(
       deps.gameState.getGameSessionId(joinCode),
@@ -77,7 +68,7 @@ export async function joinPlayerTeam(
       bonusAwards: savedBonusAwards,
     });
 
-    await deliverOutcome(deps, joinCode, outcome);
+    return outcome;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to join';
     throw new WsException(message);

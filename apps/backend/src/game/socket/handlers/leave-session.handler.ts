@@ -1,10 +1,10 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server } from 'socket.io';
 import type { LeaveSessionPayload } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
-import type { TeamService } from '@/team/team.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 /**
  * A team's own explicit "log out" — unlike a transport disconnect (which
@@ -15,21 +15,14 @@ import type { TeamService } from '@/team/team.service';
  * a stale entry in /control that the admin has to kick by hand.
  */
 export async function leaveSessionAsTeam(
-  deps: {
-    gameState: GameStateService;
-    teamService: TeamService;
-    answerService: AnswerService;
-    server: Server;
-  },
-  joinCode: string,
-  callerSocketId: string,
-  payload: LeaveSessionPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload, client }: EventContext<LeaveSessionPayload>,
+): Promise<EventResult> {
   const connectedSocketId = deps.gameState.getConnectedSocketId(
     joinCode,
     payload.teamId,
   );
-  if (connectedSocketId !== callerSocketId) {
+  if (connectedSocketId !== client.id) {
     throw new WsException('Can only leave the session as your own team');
   }
 
@@ -37,9 +30,10 @@ export async function leaveSessionAsTeam(
   await deps.teamService.removeFromRoster(gameSessionId, payload.teamId);
   const roster = await deps.teamService.listForSession(gameSessionId);
 
-  await deliverOutcome(
-    deps,
+  return await deps.gameState.teamRemoved(
     joinCode,
-    await deps.gameState.teamRemoved(joinCode, payload.teamId, roster, 'left'),
+    payload.teamId,
+    roster,
+    'left',
   );
 }

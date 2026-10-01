@@ -21,9 +21,13 @@ Every subscribed gateway method becomes a single dispatch call. Method names and
 
 **Status:** ready-for-agent
 
-- [ ] Every socket event is declared in one table. A declaration with no allowed room is a type error.
-- [ ] Every subscribed gateway method's body is one dispatch call. No gateway method repeats the parse, find-session, room-check or log steps by hand.
-- [ ] Ticket 01's authorization spec iterates over the declarations instead of its own list, so adding an event automatically extends coverage, and it still passes.
-- [ ] The payload-validation, event-logging and session-room-scoping specs pass unchanged in intent: same error messages, same check order, same log content.
-- [ ] Each socket event still gets its own database request context.
-- [ ] Connection/disconnection handling, timer callbacks and the REST notification entry points are untouched.
+- [x] Every socket event is declared in one table. A declaration with no allowed room is a type error.
+- [x] Every subscribed gateway method's body is one dispatch call. No gateway method repeats the parse, find-session, room-check or log steps by hand.
+- [x] Ticket 01's authorization spec iterates over the declarations instead of its own list, so adding an event automatically extends coverage, and it still passes.
+- [x] The payload-validation, event-logging and session-room-scoping specs pass unchanged in intent: same error messages, same check order, same log content.
+- [x] Each socket event still gets its own database request context.
+- [x] Connection/disconnection handling, timer callbacks and the REST notification entry points are untouched.
+
+## Comments
+
+Implemented: `socket/socket-event-declarations.ts` (one table, `allowedRoom` required), `socket/guarded-dispatch.util.ts` (plain-function dispatch; bodies return a `SessionOutcome`, optionally with an `afterDelivery` hook used for kick's socket close and admin-action timer re-arming), handlers now take `(EventServices, EventContext)`. The authorization spec iterates `SOCKET_EVENT_DECLARATIONS` and fails if a declaration has no sender. Full backend suite, lint and build green. Commit: see git history (single commit covering tickets 02 and 03). `Status:` left as `ready-for-agent` since the triage vocabulary has no "done" state.

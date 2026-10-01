@@ -1,28 +1,20 @@
 import { WsException } from '@nestjs/websockets';
-import type { Server } from 'socket.io';
 import {
   getTiedForFirst,
   type CreateShowdownRoundPayload,
 } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import type { GameStateService } from '@/game/state/game-state.service';
 import type { ActiveShowdownRoundState } from '@/game/state/session-state';
-import {
-  InvalidShowdownError,
-  ShowdownService,
-} from '@/showdown/showdown.service';
+import { InvalidShowdownError } from '@/showdown/showdown.service';
+import type { EventServices } from '@/game/socket/handlers/event-services';
+import type {
+  EventContext,
+  EventResult,
+} from '@/game/socket/guarded-dispatch.util';
 
 export async function createShowdownRound(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    showdownService: ShowdownService;
-    server: Server;
-  },
-  joinCode: string,
-  payload: CreateShowdownRoundPayload,
-): Promise<void> {
+  deps: EventServices,
+  { joinCode, payload }: EventContext<CreateShowdownRoundPayload>,
+): Promise<EventResult> {
   const snapshot = deps.gameState.getSnapshot(joinCode);
   // Re-derives the tied teams server-side rather than trusting a
   // client-supplied list — same reasoning as every other admin-action
@@ -49,7 +41,6 @@ export async function createShowdownRound(
     throw error;
   }
 
-  const outcome = deps.gameState.showdownRoundCreated(joinCode, round);
   // Leaves isLeaderboardVisible untouched — the admin's own "Hide
   // Leaderboard" press (already wired into NavigationButtons' Advance
   // button whenever the leaderboard is up) is what clears it before the
@@ -57,5 +48,5 @@ export async function createShowdownRound(
   // and the next. Forcing it false here would yank the final standings off
   // the display the instant the tiebreaker question is saved, even though
   // it can now be created mid-break, well before anyone's seen them.
-  await deliverOutcome(deps, joinCode, outcome);
+  return deps.gameState.showdownRoundCreated(joinCode, round);
 }

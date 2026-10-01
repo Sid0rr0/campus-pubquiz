@@ -4,6 +4,7 @@ import type { GameAction } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
 import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
+import type { SessionOutcome } from '@/game/state/session-outcome';
 
 interface AdminActionDeps {
   gameState: GameStateService;
@@ -22,12 +23,24 @@ export async function runAdminAction(
   joinCode: string,
   action: GameAction,
 ): Promise<void> {
-  const outcome = await deps.gameState
+  await deliverOutcome(
+    deps,
+    joinCode,
+    await applyAdminAction(deps.gameState, joinCode, action),
+  );
+}
+
+/** Applies one action without delivering it, for callers that deliver through the dispatch step. */
+export function applyAdminAction(
+  gameState: GameStateService,
+  joinCode: string,
+  action: GameAction,
+): Promise<SessionOutcome> {
+  return gameState
     .applyAdminAction(joinCode, action)
     .catch((error: unknown) => {
       throw new WsException(
         error instanceof Error ? error.message : 'Invalid game action',
       );
     });
-  await deliverOutcome(deps, joinCode, outcome);
 }
