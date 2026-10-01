@@ -98,6 +98,25 @@ describe('parseQuestionRow - multiple choice and common fields', () => {
     }
   });
 
+  it('rejects multiple choice with duplicate options, naming the row and field', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'multiple_choice',
+        options: 'Paris|Paris|London',
+        answer: 'Paris',
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual({
+        rowNumber: 2,
+        field: 'options',
+        message: 'Options must not repeat',
+      });
+    }
+  });
+
   it('rejects multiple choice with fewer than two options', () => {
     const result = parseQuestionRow(
       makeRow({ type: 'multiple_choice', options: 'Paris', answer: 'Paris' }),

@@ -6,8 +6,14 @@ import { extractYoutubeVideoId } from './youtube';
  * Draft-path validation: one Zod schema per question type over the
  * already-structured ImportQuestionPreview shape (real numbers/arrays) that
  * both the manual editor and CSV-preview-to-draft conversion produce, instead
- * of raw CSV cell strings. Mirrors question-row-schema.ts's per-type rules.
+ * of raw CSV cell strings. This is the one schema per type: import decodes a
+ * sheet row into this shape (`decodeSheetRow`) and validates with it too.
  */
+
+const hasNoRepeats = (items: string[]) => {
+  const normalized = items.map((item) => item.trim());
+  return new Set(normalized).size === normalized.length;
+};
 
 const httpUrl = z.url({
   protocol: /^https?$/,
@@ -43,13 +49,10 @@ export const multipleChoicePreviewSchema = z
     path: ['answer'],
     error: 'Answer must be one of the options',
   })
-  .refine(
-    (question) => {
-      const normalized = question.options.map((option) => option.trim());
-      return new Set(normalized).size === normalized.length;
-    },
-    { path: ['options'], error: 'Options must not repeat' },
-  );
+  .refine((question) => hasNoRepeats(question.options), {
+    path: ['options'],
+    error: 'Options must not repeat',
+  });
 
 export const audioPreviewSchema = z.object({
   type: z.literal('audio'),
@@ -112,21 +115,25 @@ export const matchPreviewSchema = z
       error: 'Left and right lists must have the same number of items',
     },
   )
-  .refine(
-    (question) =>
-      isSameMultiset(question.matchTargets, splitPipeList(question.answer)),
-    {
-      path: ['answer'],
-      error: 'Answer must pair every right item to a left item, one each',
-    },
-  );
-
-export const questionPreviewSchema = z.discriminatedUnion('type', [
-  freeTextPreviewSchema,
-  multipleChoicePreviewSchema,
-  audioPreviewSchema,
-  youtubePreviewSchema,
-  closestGuessPreviewSchema,
-  sortPreviewSchema,
-  matchPreviewSchema,
-]);
+  .superRefine((question, context) => {
+    // Answer is only checkable against a clean left list, so a repeat is
+    // reported alone rather than alongside a knock-on answer issue.
+    if (!hasNoRepeats(question.options)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: 'Left items must not repeat',
+      });
+      return;
+    }
+    const isAnswerPairing =
+      hasNoRepeats(question.matchTargets) &&
+      isSameMultiset(question.matchTargets, splitPipeList(question.answer));
+    if (!isAnswerPairing) {
+      context.addIssue({
+        code: 'custom',
+        path: ['answer'],
+        message: 'Answer must pair every right item to a left item, one each',
+      });
+    }
+  });

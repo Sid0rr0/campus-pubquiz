@@ -1,10 +1,10 @@
 import {
   QUESTION_TYPES,
   createImportPreview,
+  checkQuestion,
   decodeSheetRow,
-  questionRowSchema,
-  splitPipeList,
-  toCanonicalMatchAnswer,
+  sheetFieldForIssue,
+  sheetRowMetaSchema,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRowIssue,
@@ -51,58 +51,49 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     };
   }
 
-  const parsed = questionRowSchema.safeParse(
-    decodeSheetRow(row, type as QuestionType),
-  );
-  if (!parsed.success) {
+  const {
+    meta,
+    question: candidate,
+    sheetAnswerIssue,
+  } = decodeSheetRow(row, type as QuestionType);
+  const parsedMeta = sheetRowMetaSchema.safeParse(meta);
+  const checkedQuestion = checkQuestion(candidate);
+  // Only when the schema passed: a failing pairing is already reported there.
+  const questionIssues = checkedQuestion.success
+    ? sheetAnswerIssue
+      ? [sheetAnswerIssue]
+      : []
+    : checkedQuestion.issues;
+  if (!parsedMeta.success || questionIssues.length > 0) {
+    const issues = [
+      ...(parsedMeta.success
+        ? []
+        : parsedMeta.error.issues.map(({ path, code, message }) => ({
+            path,
+            code,
+            message,
+          }))),
+      ...questionIssues,
+    ];
     return {
       ok: false,
-      issues: parsed.error.issues.map((issue) => ({
+      issues: issues.map((issue) => ({
         rowNumber: row.rowNumber,
-        field: String(issue.path[0] ?? 'row'),
+        field: sheetFieldForIssue(issue),
         message: issue.message,
       })),
     };
   }
 
-  const { round, question, notes, points, break_after, category, author } =
-    parsed.data;
-  const answer =
-    parsed.data.type === 'sort'
-      ? splitPipeList(parsed.data.answer).join('|')
-      : parsed.data.type === 'match'
-        ? toCanonicalMatchAnswer(
-            parsed.data.answer,
-            parsed.data.match_left,
-            parsed.data.match_right,
-          )!
-        : parsed.data.answer;
+  const { round, break_after, category, author } = parsedMeta.data;
   return {
     ok: true,
     roundTitle: round,
     roundBreakAfter: break_after === '1',
-    roundCategory: category ?? '',
+    roundCategory: category,
     roundAuthor: author ?? '',
-    question: {
-      type: parsed.data.type,
-      prompt: question,
-      answer,
-      ...(notes ? { notes } : {}),
-      points,
-      ...(parsed.data.type === 'multiple_choice' || parsed.data.type === 'sort'
-        ? { options: parsed.data.options }
-        : {}),
-      ...(parsed.data.type === 'match'
-        ? {
-            options: parsed.data.match_left,
-            matchTargets: parsed.data.match_right,
-          }
-        : {}),
-      ...(parsed.data.media_url ? { mediaUrl: parsed.data.media_url } : {}),
-      ...(parsed.data.answer_media_url
-        ? { answerMediaUrl: parsed.data.answer_media_url }
-        : {}),
-    },
+    question: (checkedQuestion as { data: unknown })
+      .data as ImportQuestionPreview,
   };
 }
 

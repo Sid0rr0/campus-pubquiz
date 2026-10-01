@@ -1,24 +1,21 @@
 import { z } from 'zod';
 import type { SheetRow } from './import';
+import type { QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
-import { isSameMultiset, splitPipeList } from './sort-match';
-import { extractYoutubeVideoId } from './youtube';
+import { splitPipeList } from './sort-match';
 
 /**
- * Import-path validation: one Zod schema per question type over a decoded
- * sheet row (`decodeSheetRow`). Schema keys use the sheet column names so Zod
- * issue paths map straight to the ImportRowIssue.field the quiz author sees.
+ * Sheet-only half of import validation. The question itself is validated by
+ * the question kind's schema (`QUESTION_KINDS[type].schema`) after
+ * `decodeSheetRow` turns the row into an ImportQuestionPreview-shaped
+ * candidate; this file owns what only a sheet row has (round name,
+ * break_after) and the mapping of issue paths back to sheet column names.
  */
 
 // CSV/Sheets rows never carry kahootMode (it's manual-editor-only), so a
 // blank points cell always falls back to the non-kahoot default.
 const DEFAULT_POINTS = 1;
-
-const httpUrl = z.url({
-  protocol: /^https?$/,
-  error: 'Media URL must be a valid http(s) URL',
-});
 
 // Case-insensitive lookup so "science & nature" in a sheet still resolves to
 // the canonical "Science & nature" — authors shouldn't have to match casing
@@ -34,15 +31,9 @@ function resolveCategoryCell(rawCategory: string): string {
   return ROUND_CATEGORY_BY_LOWERCASE.get(trimmed.toLowerCase()) ?? '';
 }
 
-const baseFields = {
+/** Round-level cells of a sheet row, keyed by sheet column name so issue paths are the field the author sees. */
+export const sheetRowMetaSchema = z.object({
   round: z.string().min(1, 'Missing round name'),
-  question: z.string().min(1, 'Missing question text'),
-  answer: z.string().min(1, 'Missing answer'),
-  notes: z.string().optional(),
-  points: z
-    .number('Points must be a positive whole number')
-    .int('Points must be a positive whole number')
-    .positive('Points must be a positive whole number'),
   break_after: z.enum(['', '0', '1'], {
     error: 'break_after must be "1", "0", or blank',
   }),
@@ -50,111 +41,29 @@ const baseFields = {
   // here — resolveCategoryCell already blanked out anything unrecognized.
   category: z.string(),
   author: z.string().optional(),
+});
+
+export type SheetRowMeta = z.infer<typeof sheetRowMetaSchema>;
+
+// The question schemas speak ImportQuestionPreview field names; sheet authors
+// know the column names.
+const SHEET_COLUMN_BY_QUESTION_FIELD: Record<string, string> = {
+  prompt: 'question',
+  mediaUrl: 'media_url',
+  answerMediaUrl: 'answer_media_url',
+  matchTargets: 'match_right',
 };
 
-export const freeTextRowSchema = z.object({
-  type: z.literal('free_text'),
-  ...baseFields,
-  media_url: httpUrl.optional(),
-  answer_media_url: httpUrl.optional(),
-});
-
-export const multipleChoiceRowSchema = z
-  .object({
-    type: z.literal('multiple_choice'),
-    ...baseFields,
-    options: z
-      .array(z.string(), 'Provide at least two pipe-separated options')
-      .min(2, 'Provide at least two pipe-separated options'),
-    media_url: httpUrl.optional(),
-    answer_media_url: httpUrl.optional(),
-  })
-  .refine((row) => row.answer === '' || row.options.includes(row.answer), {
-    path: ['answer'],
-    error: 'Answer must be one of the options',
-  });
-
-export const audioRowSchema = z.object({
-  type: z.literal('audio'),
-  ...baseFields,
-  media_url: httpUrl,
-  answer_media_url: httpUrl.optional(),
-});
-
-export const youtubeRowSchema = z.object({
-  type: z.literal('youtube'),
-  ...baseFields,
-  media_url: httpUrl.refine((url) => extractYoutubeVideoId(url) !== undefined, {
-    error: 'media_url must be a youtube.com/youtu.be link for type youtube',
-  }),
-  answer_media_url: httpUrl.optional(),
-});
-
-export const closestGuessRowSchema = z.object({
-  type: z.literal('closest_guess'),
-  ...baseFields,
-  answer: z
-    .string()
-    .refine((value) => value !== '' && Number.isFinite(Number(value)), {
-      error: 'Answer must be a number',
-    }),
-  media_url: httpUrl.optional(),
-  answer_media_url: httpUrl.optional(),
-});
-
-export const sortRowSchema = z
-  .object({
-    type: z.literal('sort'),
-    ...baseFields,
-    options: z
-      .array(z.string(), 'Provide at least two pipe-separated items')
-      .min(2, 'Provide at least two pipe-separated items'),
-    media_url: httpUrl.optional(),
-    answer_media_url: httpUrl.optional(),
-  })
-  .refine((row) => isSameMultiset(row.options, splitPipeList(row.answer)), {
-    path: ['answer'],
-    error:
-      'Answer must list every option exactly once, in the correct order (pipe-separated)',
-  });
-
-export const matchRowSchema = z
-  .object({
-    type: z.literal('match'),
-    ...baseFields,
-    match_left: z
-      .array(z.string(), 'Provide at least two pipe-separated left items')
-      .min(2, 'Provide at least two pipe-separated left items'),
-    match_right: z
-      .array(z.string(), 'Provide at least two pipe-separated right items')
-      .min(2, 'Provide at least two pipe-separated right items'),
-    media_url: httpUrl.optional(),
-    answer_media_url: httpUrl.optional(),
-  })
-  .refine((row) => row.match_left.length === row.match_right.length, {
-    path: ['options'],
-    error: 'Left and right lists must have the same number of items',
-  })
-  .refine(
-    (row) =>
-      toCanonicalMatchAnswer(row.answer, row.match_left, row.match_right) !==
-      undefined,
-    {
-      path: ['answer'],
-      error:
-        'Answer must pair each left item with a right item, e.g. "left1+right1|left2+right2"',
-    },
-  );
-
-export const questionRowSchema = z.discriminatedUnion('type', [
-  freeTextRowSchema,
-  multipleChoiceRowSchema,
-  audioRowSchema,
-  youtubeRowSchema,
-  closestGuessRowSchema,
-  sortRowSchema,
-  matchRowSchema,
-]);
+/**
+ * The sheet column an issue from a question schema belongs to. The one
+ * cross-field issue on `matchTargets` is "left and right lists differ in
+ * length", which the sheet reports against the shared `options` cell.
+ */
+export function sheetFieldForIssue(issue: QuestionIssue): string {
+  const field = String(issue.path[0] ?? 'row');
+  if (field === 'matchTargets' && issue.code === 'custom') return 'options';
+  return SHEET_COLUMN_BY_QUESTION_FIELD[field] ?? field;
+}
 
 function splitOptions(rawOptions: string): string[] | undefined {
   const options = rawOptions
@@ -232,26 +141,72 @@ export function toCanonicalMatchAnswer(
   return canonical.join('|');
 }
 
-/** Decodes a raw sheet row into the candidate object `questionRowSchema` validates. */
-export function decodeSheetRow(row: SheetRow, type: QuestionType): unknown {
+/** Decodes a raw sheet row into its round-level cells and the question candidate the kind's schema validates. */
+export function decodeSheetRow(
+  row: SheetRow,
+  type: QuestionType,
+): {
+  meta: unknown;
+  question: { type: QuestionType } & Record<string, unknown>;
+  /** Set when a match answer isn't written as `left+right` pairs — the question schema alone can't see that, as a bare right-hand list is a valid draft answer. */
+  sheetAnswerIssue?: QuestionIssue;
+} {
   const trimmedPoints = row.points.trim();
   const trimmedNotes = row.notes.trim();
+  const trimmedAnswer = row.answer.trim();
+  const trimmedMediaUrl = row.mediaUrl.trim();
+  const trimmedAnswerMediaUrl = row.answerMediaUrl.trim();
   const matchOptions = splitMatchOptions(row.options);
+  const options =
+    type === 'match' ? matchOptions.left : (splitOptions(row.options) ?? []);
+  const isUnpairedMatchAnswer =
+    type === 'match' &&
+    toCanonicalMatchAnswer(
+      trimmedAnswer,
+      matchOptions.left,
+      matchOptions.right,
+    ) === undefined;
   return {
-    type,
-    round: row.round.trim(),
-    question: row.question.trim(),
-    answer: row.answer.trim(),
-    notes: trimmedNotes === '' ? undefined : trimmedNotes,
-    points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
-    options: splitOptions(row.options),
-    match_left: matchOptions.left,
-    match_right: matchOptions.right,
-    media_url: row.mediaUrl.trim() === '' ? undefined : row.mediaUrl.trim(),
-    answer_media_url:
-      row.answerMediaUrl.trim() === '' ? undefined : row.answerMediaUrl.trim(),
-    break_after: row.breakAfter.trim(),
-    category: resolveCategoryCell(row.category),
-    author: row.author.trim() === '' ? undefined : row.author.trim(),
+    sheetAnswerIssue: isUnpairedMatchAnswer
+      ? {
+          path: ['answer'],
+          code: 'custom',
+          message:
+            'Answer must pair each left item with a right item, e.g. "left1+right1|left2+right2"',
+        }
+      : undefined,
+    meta: {
+      round: row.round.trim(),
+      break_after: row.breakAfter.trim(),
+      category: resolveCategoryCell(row.category),
+      author: row.author.trim() === '' ? undefined : row.author.trim(),
+    },
+    question: {
+      type,
+      prompt: row.question.trim(),
+      answer: decodeAnswer(type, trimmedAnswer, matchOptions),
+      notes: trimmedNotes === '' ? undefined : trimmedNotes,
+      points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
+      options,
+      matchTargets: matchOptions.right,
+      mediaUrl: trimmedMediaUrl === '' ? undefined : trimmedMediaUrl,
+      answerMediaUrl:
+        trimmedAnswerMediaUrl === '' ? undefined : trimmedAnswerMediaUrl,
+    },
   };
+}
+
+// Sort and match answers are stored in one canonical form; a match answer
+// that isn't a clean one-to-one pairing is passed through raw so the schema
+// rejects it on `answer`.
+function decodeAnswer(
+  type: QuestionType,
+  answer: string,
+  match: { left: string[]; right: string[] },
+): string {
+  if (type === 'sort') return splitPipeList(answer).join('|');
+  if (type === 'match') {
+    return toCanonicalMatchAnswer(answer, match.left, match.right) ?? answer;
+  }
+  return answer;
 }

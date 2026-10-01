@@ -101,6 +101,52 @@ describe('validateQuizDraft - per-question-type field validation', () => {
     );
   });
 
+  it('reports a match question with a repeated right-hand item', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'match',
+                answer: 'excalibur|excalibur',
+                options: ['arthur', 'robin hood'],
+                matchTargets: ['excalibur', 'excalibur'],
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({ questionIndex: 0, field: 'answer' }),
+    );
+  });
+
+  it('reports a match question with a repeated left-hand item', () => {
+    const issues = validateQuizDraft(
+      makeRequest({
+        rounds: [
+          makeRound({
+            questions: [
+              makeQuestion({
+                type: 'match',
+                answer: 'excalibur|bow',
+                options: ['arthur', 'arthur'],
+                matchTargets: ['excalibur', 'bow'],
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({ questionIndex: 0, field: 'options' }),
+    );
+  });
+
   it('reports a match answer that is not a permutation of the right-hand list', () => {
     const issues = validateQuizDraft(
       makeRequest({

@@ -14,7 +14,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                | Blocked by |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 02  | [Import and draft save share one schema](question-kind-module/issues/02-shared-schema-for-import-and-draft.md)                        | 01         |
 | 03  | [Persistence parses stored payloads instead of casting](question-kind-module/issues/03-payload-codec-replaces-casts.md)               | 01         |
 | 04  | [CSV encode and decode live in the entries, with a round-trip test](question-kind-module/issues/04-csv-in-entries-with-round-trip.md) | 02         |
 | 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)      | 01         |
@@ -53,10 +52,11 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| question-kind-module     | 01  | [Registry skeleton with parity and characterization table](question-kind-module/issues/01-question-kind-registry-and-parity-table.md)                   | —         |
+| question-kind-module     | 02  | [Import and draft save share one schema](question-kind-module/issues/02-shared-schema-for-import-and-draft.md)                                           | —         |
+| question-kind-module     | 01  | [Registry skeleton with parity and characterization table](question-kind-module/issues/01-question-kind-registry-and-parity-table.md)                    | —         |
 | session-settle           | 04  | [Advance and Previous settle through the same step](session-settle/issues/04-advance-previous-settle.md)                                                 | —         |
-| session-settle           | 03  | [Creation and restore go through the settle step](session-settle/issues/03-settle-step-for-create-and-restore.md)                                       | —         |
-| session-settle           | 02  | [Restart and creation pin the derived session fields](session-settle/issues/02-restart-and-creation-characterization.md)                                | —         |
+| session-settle           | 03  | [Creation and restore go through the settle step](session-settle/issues/03-settle-step-for-create-and-restore.md)                                        | —         |
+| session-settle           | 02  | [Restart and creation pin the derived session fields](session-settle/issues/02-restart-and-creation-characterization.md)                                 | —         |
 | session-settle           | 01  | [Named status groups replace the inline status lists](session-settle/issues/01-named-status-groups.md)                                                   | —         |
 | advance-plan             | 05  | [Contract: delete the old Advance contract](advance-plan/issues/05-contract-delete-old-advance-contract.md)                                              | —         |
 | advance-plan             | 04  | [/control and /remote render the announced step and send only ADVANCE/PREVIOUS](advance-plan/issues/04-clients-render-announced-step.md)                 | —         |

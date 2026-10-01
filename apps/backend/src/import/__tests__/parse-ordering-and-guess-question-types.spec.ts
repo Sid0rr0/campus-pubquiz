@@ -119,6 +119,23 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
     }
   });
 
+  it('rejects a match answer written as a bare right-hand list instead of pairs', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'match',
+        options: 'arthur|robin hood+excalibur|bow',
+        answer: 'excalibur|bow',
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({ rowNumber: 2, field: 'answer' }),
+      );
+    }
+  });
+
   it('rejects a match answer that reuses the same right item twice', () => {
     const result = parseQuestionRow(
       makeRow({

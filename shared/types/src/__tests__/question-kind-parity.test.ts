@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ImportQuestionPreview, SheetRow } from '../import';
-import { QUESTION_KINDS } from '../question-kind';
+import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { decodeSheetRow } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import {
@@ -16,10 +16,8 @@ type Verdict = 'valid' | 'invalid';
 interface ParityCase {
   name: string;
   question: ImportQuestionPreview;
-  import: Verdict;
-  draft: Verdict;
-  /** Set only where the two paths disagree today; ticket 02 flips these. */
-  divergence?: string;
+  /** Both import and draft save must reach this verdict (the stricter rule where they once disagreed). */
+  verdict: Verdict;
 }
 
 const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -68,26 +66,22 @@ const CASES: ParityCase[] = [
   {
     name: 'free_text with an answer',
     question: q({ type: 'free_text', answer: 'Paris' }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'free_text with a blank answer',
     question: q({ type: 'free_text', answer: '' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
     name: 'free_text with a non-http media url',
     question: q({ type: 'free_text', mediaUrl: 'ftp://example.com/x.png' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
     name: 'free_text with zero points',
     question: q({ type: 'free_text', points: 0 }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
 
   // multiple_choice
@@ -98,8 +92,7 @@ const CASES: ParityCase[] = [
       options: ['Paris', 'London'],
       answer: 'Paris',
     }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'multiple_choice with a single option',
@@ -108,8 +101,7 @@ const CASES: ParityCase[] = [
       options: ['Paris'],
       answer: 'Paris',
     }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
     name: 'multiple_choice whose answer is not an option',
@@ -118,87 +110,74 @@ const CASES: ParityCase[] = [
       options: ['Paris', 'London'],
       answer: 'Rome',
     }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
-    name: 'multiple_choice with duplicate options',
+    name: 'multiple_choice with duplicate options (was import-only valid)',
     question: q({
       type: 'multiple_choice',
       options: ['Paris', 'Paris', 'London'],
       answer: 'Paris',
     }),
-    import: 'valid',
-    draft: 'invalid',
-    divergence: 'duplicate multiple-choice options',
+    verdict: 'invalid',
   },
 
   // audio
   {
     name: 'audio with a media url',
     question: q({ type: 'audio', mediaUrl: AUDIO }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'audio without a media url',
     question: q({ type: 'audio' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
 
   // youtube
   {
     name: 'youtube with a youtube link',
     question: q({ type: 'youtube', mediaUrl: YOUTUBE }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'youtube with a non-youtube link',
     question: q({ type: 'youtube', mediaUrl: AUDIO }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
     name: 'youtube without a media url',
     question: q({ type: 'youtube' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
 
   // closest_guess
   {
     name: 'closest_guess with a numeric answer',
     question: q({ type: 'closest_guess', answer: '42.5' }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'closest_guess with a non-numeric answer',
     question: q({ type: 'closest_guess', answer: 'lots' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
 
   // sort
   {
     name: 'sort whose answer reorders the options',
     question: q({ type: 'sort', options: ['a', 'b', 'c'], answer: 'c|a|b' }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'sort whose answer drops an option',
     question: q({ type: 'sort', options: ['a', 'b', 'c'], answer: 'a|b' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
     name: 'sort with a single item',
     question: q({ type: 'sort', options: ['a'], answer: 'a' }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
 
   // match
@@ -210,8 +189,7 @@ const CASES: ParityCase[] = [
       matchTargets: ['x', 'y'],
       answer: 'y|x',
     }),
-    import: 'valid',
-    draft: 'valid',
+    verdict: 'valid',
   },
   {
     name: 'match with unequal list lengths',
@@ -221,8 +199,7 @@ const CASES: ParityCase[] = [
       matchTargets: ['x', 'y', 'z'],
       answer: 'x|y',
     }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
     name: 'match whose answer uses an unknown right item',
@@ -232,32 +209,27 @@ const CASES: ParityCase[] = [
       matchTargets: ['x', 'y'],
       answer: 'x|z',
     }),
-    import: 'invalid',
-    draft: 'invalid',
+    verdict: 'invalid',
   },
   {
-    name: 'match with a repeated left item',
+    name: 'match with a repeated left item (was draft-only valid)',
     question: q({
       type: 'match',
       options: ['a', 'a'],
       matchTargets: ['x', 'y'],
       answer: 'x|y',
     }),
-    import: 'invalid',
-    draft: 'valid',
-    divergence: 'match pairing',
+    verdict: 'invalid',
   },
   {
-    name: 'match with a repeated right item',
+    name: 'match with a repeated right item (was draft-only valid)',
     question: q({
       type: 'match',
       options: ['a', 'b'],
       matchTargets: ['x', 'x'],
       answer: 'x|x',
     }),
-    import: 'invalid',
-    draft: 'valid',
-    divergence: 'match pairing',
+    verdict: 'invalid',
   },
 ];
 
@@ -285,18 +257,24 @@ const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
   },
 };
 
-function importVerdict(question: ImportQuestionPreview): Verdict {
-  const candidate = decodeSheetRow(toSheetRow(question), question.type);
-  return QUESTION_KINDS[question.type].importSchema.safeParse(candidate).success
-    ? 'valid'
-    : 'invalid';
+/** Issue messages the import path produces for `question` (empty when valid). */
+function importMessages(question: ImportQuestionPreview): string[] {
+  const { question: candidate } = decodeSheetRow(
+    toSheetRow(question),
+    question.type,
+  );
+  const checked = checkQuestion(candidate);
+  return checked.success ? [] : checked.issues.map((i) => i.message);
 }
 
-function draftVerdict(question: ImportQuestionPreview): Verdict {
-  return QUESTION_KINDS[question.type].draftSchema.safeParse(question).success
-    ? 'valid'
-    : 'invalid';
+/** Issue messages draft save produces for `question` (empty when valid). */
+function draftMessages(question: ImportQuestionPreview): string[] {
+  const checked = checkQuestion(question);
+  return checked.success ? [] : checked.issues.map((i) => i.message);
 }
+
+const verdictOf = (messages: string[]): Verdict =>
+  messages.length === 0 ? 'valid' : 'invalid';
 
 describe('question kind registry', () => {
   it('has exactly one entry per question type', () => {
@@ -359,30 +337,26 @@ describe('import and draft validation parity', () => {
   it('covers valid and invalid cases for every type', () => {
     for (const type of QUESTION_TYPES) {
       const verdicts = CASES.filter((c) => c.question.type === type).map(
-        (c) => c.draft,
+        (c) => c.verdict,
       );
       expect(verdicts, type).toContain('valid');
       expect(verdicts, type).toContain('invalid');
     }
   });
 
-  it.each(CASES)('$name: import and draft verdicts are pinned', (testCase) => {
-    expect(importVerdict(testCase.question)).toBe(testCase.import);
-    expect(draftVerdict(testCase.question)).toBe(testCase.draft);
+  it.each(CASES)('$name: import and draft agree', (testCase) => {
+    const fromImport = importMessages(testCase.question);
+    const fromDraft = draftMessages(testCase.question);
+    expect(verdictOf(fromImport)).toBe(testCase.verdict);
+    expect(verdictOf(fromDraft)).toBe(testCase.verdict);
+    expect(fromImport).toEqual(fromDraft);
   });
 
-  it('names a divergence for exactly the cases where the paths disagree', () => {
-    for (const testCase of CASES) {
-      expect(testCase.import !== testCase.draft, testCase.name).toBe(
-        testCase.divergence !== undefined,
-      );
-    }
-  });
-
-  it('records the two known divergences', () => {
-    const named = new Set(CASES.map((c) => c.divergence).filter(Boolean));
-    expect(named).toEqual(
-      new Set(['duplicate multiple-choice options', 'match pairing']),
-    );
+  it('reports an unknown type as an issue on type instead of throwing', () => {
+    const checked = checkQuestion({ type: 'picture' });
+    expect(checked).toMatchObject({
+      success: false,
+      issues: [{ path: ['type'] }],
+    });
   });
 });

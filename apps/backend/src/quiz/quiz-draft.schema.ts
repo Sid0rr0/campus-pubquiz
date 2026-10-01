@@ -1,6 +1,6 @@
 import {
   isKahootAllowedType,
-  questionPreviewSchema,
+  checkQuestion,
   ROUND_CATEGORIES,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
@@ -85,8 +85,8 @@ export function validateQuizDraft(
     }
 
     round.questions.forEach((question, questionIndex) => {
-      const parsed = questionPreviewSchema.safeParse(question);
-      if (parsed.success) {
+      const checked = checkQuestion(question);
+      if (checked.success) {
         if (round.kahootMode && !isKahootAllowedType(question.type)) {
           issues.push({
             roundIndex,
@@ -98,7 +98,7 @@ export function validateQuizDraft(
         }
         return;
       }
-      for (const issue of parsed.error.issues) {
+      for (const issue of checked.issues) {
         issues.push({
           roundIndex,
           questionIndex,

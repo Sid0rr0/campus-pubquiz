@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { QuestionType } from './question-types';
+import { QUESTION_TYPES, type QuestionType } from './question-types';
 import {
   audioPreviewSchema,
   closestGuessPreviewSchema,
@@ -9,15 +9,6 @@ import {
   sortPreviewSchema,
   youtubePreviewSchema,
 } from './question-preview-schema';
-import {
-  audioRowSchema,
-  closestGuessRowSchema,
-  freeTextRowSchema,
-  matchRowSchema,
-  multipleChoiceRowSchema,
-  sortRowSchema,
-  youtubeRowSchema,
-} from './question-row-schema';
 
 /** How a type's answers are graded: at submit, in one batch after lock, or by the quiz master. */
 export type GradingMode = 'auto' | 'batch' | 'human';
@@ -29,10 +20,8 @@ export type GradingMode = 'auto' | 'batch' | 'human';
  */
 export interface QuestionKind<T extends QuestionType = QuestionType> {
   type: T;
-  /** Import path: validates a sheet row decoded by `decodeSheetRow`. */
-  importSchema: z.ZodType;
-  /** Draft path: validates an ImportQuestionPreview from the editor or a CSV preview. */
-  draftSchema: z.ZodType;
+  /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
+  schema: z.ZodType;
   gradingMode: GradingMode;
   /** Whether the admin can regrade a single answer. */
   overridable: boolean;
@@ -45,58 +34,91 @@ export const QUESTION_KINDS: {
 } = {
   free_text: {
     type: 'free_text',
-    importSchema: freeTextRowSchema,
-    draftSchema: freeTextPreviewSchema,
+    schema: freeTextPreviewSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: false,
   },
   multiple_choice: {
     type: 'multiple_choice',
-    importSchema: multipleChoiceRowSchema,
-    draftSchema: multipleChoicePreviewSchema,
+    schema: multipleChoicePreviewSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
   },
   audio: {
     type: 'audio',
-    importSchema: audioRowSchema,
-    draftSchema: audioPreviewSchema,
+    schema: audioPreviewSchema,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
   },
   youtube: {
     type: 'youtube',
-    importSchema: youtubeRowSchema,
-    draftSchema: youtubePreviewSchema,
+    schema: youtubePreviewSchema,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
   },
   sort: {
     type: 'sort',
-    importSchema: sortRowSchema,
-    draftSchema: sortPreviewSchema,
+    schema: sortPreviewSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
   },
   match: {
     type: 'match',
-    importSchema: matchRowSchema,
-    draftSchema: matchPreviewSchema,
+    schema: matchPreviewSchema,
     gradingMode: 'auto',
     overridable: true,
     kahootAllowed: true,
   },
   closest_guess: {
     type: 'closest_guess',
-    importSchema: closestGuessRowSchema,
-    draftSchema: closestGuessPreviewSchema,
+    schema: closestGuessPreviewSchema,
     gradingMode: 'batch',
     overridable: false,
     kahootAllowed: false,
   },
 };
+
+export interface QuestionIssue {
+  path: PropertyKey[];
+  /** Zod issue code; 'custom' marks a cross-field refinement. */
+  code: string;
+  message: string;
+}
+
+export type QuestionCheck =
+  | { success: true; data: unknown }
+  | { success: false; issues: QuestionIssue[] };
+
+/** Validates a question-shaped candidate with its kind's schema; an unknown or missing type is an issue on `type`, never a throw. */
+export function checkQuestion(candidate: { type?: unknown }): QuestionCheck {
+  const type = candidate.type;
+  if (!(QUESTION_TYPES as readonly unknown[]).includes(type)) {
+    return {
+      success: false,
+      issues: [
+        {
+          path: ['type'],
+          code: 'invalid_value',
+          message: `Unknown question type — expected one of: ${QUESTION_TYPES.join(', ')}`,
+        },
+      ],
+    };
+  }
+  const parsed =
+    QUESTION_KINDS[type as QuestionType].schema.safeParse(candidate);
+  return parsed.success
+    ? { success: true, data: parsed.data }
+    : {
+        success: false,
+        issues: parsed.error.issues.map(({ path, code, message }) => ({
+          path,
+          code,
+          message,
+        })),
+      };
+}
