@@ -5,6 +5,7 @@ import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import {
   IDK_ANSWER_VALUE,
   answerInputKind,
+  QUESTION_KINDS,
   type QuestionView,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -91,7 +92,11 @@ export function AnswerForm({
     );
   }
 
-  if (inputKind === 'choice' && question.options) {
+  // Audio/youtube questions pick from choices only when they carry some.
+  if (
+    QUESTION_KINDS[question.type].choices !== 'none' &&
+    question.options?.length
+  ) {
     const isSubmitted = value !== '' && value === initialValue;
     function handleOptionClick(option: string) {
       if (isKahootMode) {

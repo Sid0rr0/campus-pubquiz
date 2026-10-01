@@ -26,9 +26,12 @@ export const multipleChoicePayloadSchema = z.object({
   options: stringList,
 });
 
-export const audioPayloadSchema = z.object(media);
+export const audioPayloadSchema = z.object({ ...media, options: stringList });
 
-export const youtubePayloadSchema = z.object(media);
+export const youtubePayloadSchema = z.object({
+  ...media,
+  options: stringList,
+});
 
 export const sortPayloadSchema = z.object({ ...media, options: stringList });
 

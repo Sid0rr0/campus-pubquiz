@@ -123,13 +123,24 @@ export function makeRound(id: string, title = ''): EditorRound {
   };
 }
 
+/** Whether the question's answer is picked from its choices: always for a `required` kind, and for an `optional` kind once any choice has text. */
+export function hasEditorChoices(question: EditorQuestion): boolean {
+  const { choices } = QUESTION_KINDS[question.type];
+  if (choices === 'optional') {
+    return question.options.some((option) => option.text.trim() !== '');
+  }
+  return choices === 'required';
+}
+
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
   id: string,
   question: ImportQuestionPreview,
 ): EditorQuestion {
-  const { inputKind } = QUESTION_KINDS[question.type];
-  const isMc = inputKind === 'choice';
+  const { inputKind, choices } = QUESTION_KINDS[question.type];
+  const isMc =
+    choices === 'required' ||
+    (choices === 'optional' && (question.options?.length ?? 0) > 0);
   const isSort = inputKind === 'sort';
   const isMatch = inputKind === 'match';
   // sortItems/matchPairs reconstruct from `answer` (the correct order/pairing),
@@ -231,7 +242,7 @@ export function questionToPreview(
   question: EditorQuestion,
 ): ImportQuestionPreview {
   const { inputKind } = QUESTION_KINDS[question.type];
-  const isMc = inputKind === 'choice';
+  const isMc = hasEditorChoices(question);
   const isSort = inputKind === 'sort';
   const isMatch = inputKind === 'match';
   const sortItems = question.sortItems

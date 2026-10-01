@@ -10,12 +10,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | 03  | [The server resolves Advance and Previous under the leaderboard; the admin view announces the step](advance-plan/issues/03-server-resolves-moves-under-leaderboard.md) | 02         |
 
-### question-kind-module ([spec](question-kind-module/spec.md))
-
-| #   | Ticket                                                                                                                            | Blocked by |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md) | 06         |
-
 ### display-screen-kind ([spec](display-screen-kind/spec.md))
 
 | #   | Ticket                                                                                                           | Blocked by |
@@ -49,6 +43,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| question-kind-module     | 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md)                       | —         |
 | question-kind-module     | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                                     | —         |
 | question-kind-module     | 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)                         | —         |
 | question-kind-module     | 04  | [CSV encode and decode live in the entries, with a round-trip test](question-kind-module/issues/04-csv-in-entries-with-round-trip.md)                    | —         |

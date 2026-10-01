@@ -21,6 +21,7 @@ import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import { MediaUrlField } from '@/app/quizzes/[id]/media-url-field';
 import {
   makeMatchPair,
+  hasEditorChoices,
   makeOption,
   type EditorQuestion,
 } from '@/app/quizzes/[id]/quiz-draft-state';
@@ -106,9 +107,13 @@ export function QuizQuestionEditor({
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
   );
-  const { inputKind, requiresMedia: needsMediaUrl } =
-    QUESTION_KINDS[question.type];
-  const isMc = inputKind === 'choice';
+  const {
+    inputKind,
+    choices,
+    requiresMedia: needsMediaUrl,
+  } = QUESTION_KINDS[question.type];
+  const isMc = choices !== 'none';
+  const isTypedAnswer = !isMc || !hasEditorChoices(question);
   const isSort = inputKind === 'sort';
   const isMatch = inputKind === 'match';
   const isYoutubeMedia =
@@ -211,6 +216,22 @@ export function QuizQuestionEditor({
     });
   }
 
+  const typedAnswerField = (
+    <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
+      <span className="flex items-center gap-2">
+        Correct answer
+        <input
+          type={inputKind === 'number' ? 'number' : 'text'}
+          value={question.correctText}
+          onChange={(event) => onChange({ correctText: event.target.value })}
+          placeholder="Accepted answer"
+          className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+        />
+      </span>
+      <FieldErrors issues={fieldIssues(issues, 'answer')} />
+    </label>
+  );
+
   return (
     <div
       id={questionAnchorId(question.id)}
@@ -300,62 +321,71 @@ export function QuizQuestionEditor({
       <FieldErrors issues={fieldIssues(issues, 'points')} />
 
       {isMc ? (
-        <div className="flex flex-col gap-2">
-          {question.options.map((option, optionIndex) => {
-            const isDuplicate = isDuplicateOption(optionIndex);
-            return (
-              <div key={optionIndex} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={option.isCorrect}
-                  onChange={() => setCorrectOption(optionIndex)}
-                  aria-label={`Mark option ${optionIndex + 1} as correct`}
-                  className="h-4 w-4 accent-green"
-                />
-                <input
-                  value={option.text}
-                  onChange={(event) =>
-                    updateOption(optionIndex, event.target.value)
-                  }
-                  disabled={isLocked}
-                  placeholder="Option text"
-                  aria-invalid={isDuplicate}
-                  className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50 ${
-                    isDuplicate ? 'border-magenta' : 'border-foreground/20'
-                  }`}
-                />
-                <Button
-                  type="button"
-                  onClick={() => removeOption(optionIndex)}
-                  disabled={isLocked || question.options.length <= 2}
-                  variant="icon-danger"
-                  size="icon-sm"
-                  aria-label={`Remove option ${optionIndex + 1}`}
-                >
-                  <Cross2Icon aria-hidden="true" />
-                </Button>
-              </div>
-            );
-          })}
-          {question.options.some((_, i) => isDuplicateOption(i)) && (
-            <p className="text-xs font-extrabold text-magenta">
-              Options must be unique
-            </p>
-          )}
-          <FieldErrors issues={fieldIssues(issues, 'options')} />
-          <FieldErrors issues={fieldIssues(issues, 'answer')} />
-          <Button
-            type="button"
-            onClick={addOption}
-            disabled={isLocked}
-            variant="outline-dashed"
-            size="xs"
-            className="self-start"
-          >
-            <PlusIcon aria-hidden="true" />
-            Add option
-          </Button>
-        </div>
+        <>
+          {choices === 'optional' && isTypedAnswer && typedAnswerField}
+          <div className="flex flex-col gap-2">
+            {choices === 'optional' && (
+              <p className="text-xs font-extrabold text-foreground/60">
+                Choices (optional) — fill in at least two to let teams pick
+                instead of typing
+              </p>
+            )}
+            {question.options.map((option, optionIndex) => {
+              const isDuplicate = isDuplicateOption(optionIndex);
+              return (
+                <div key={optionIndex} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={option.isCorrect}
+                    onChange={() => setCorrectOption(optionIndex)}
+                    aria-label={`Mark option ${optionIndex + 1} as correct`}
+                    className="h-4 w-4 accent-green"
+                  />
+                  <input
+                    value={option.text}
+                    onChange={(event) =>
+                      updateOption(optionIndex, event.target.value)
+                    }
+                    disabled={isLocked}
+                    placeholder="Option text"
+                    aria-invalid={isDuplicate}
+                    className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50 ${
+                      isDuplicate ? 'border-magenta' : 'border-foreground/20'
+                    }`}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => removeOption(optionIndex)}
+                    disabled={isLocked || question.options.length <= 2}
+                    variant="icon-danger"
+                    size="icon-sm"
+                    aria-label={`Remove option ${optionIndex + 1}`}
+                  >
+                    <Cross2Icon aria-hidden="true" />
+                  </Button>
+                </div>
+              );
+            })}
+            {question.options.some((_, i) => isDuplicateOption(i)) && (
+              <p className="text-xs font-extrabold text-magenta">
+                Options must be unique
+              </p>
+            )}
+            <FieldErrors issues={fieldIssues(issues, 'options')} />
+            <FieldErrors issues={fieldIssues(issues, 'answer')} />
+            <Button
+              type="button"
+              onClick={addOption}
+              disabled={isLocked}
+              variant="outline-dashed"
+              size="xs"
+              className="self-start"
+            >
+              <PlusIcon aria-hidden="true" />
+              Add option
+            </Button>
+          </div>
+        </>
       ) : isSort ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-extrabold text-foreground/60">
@@ -498,21 +528,7 @@ export function QuizQuestionEditor({
           <FieldErrors issues={fieldIssues(issues, 'answer')} />
         </div>
       ) : (
-        <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
-          <span className="flex items-center gap-2">
-            Correct answer
-            <input
-              type={inputKind === 'number' ? 'number' : 'text'}
-              value={question.correctText}
-              onChange={(event) =>
-                onChange({ correctText: event.target.value })
-              }
-              placeholder="Accepted answer"
-              className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-            />
-          </span>
-          <FieldErrors issues={fieldIssues(issues, 'answer')} />
-        </label>
+        typedAnswerField
       )}
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

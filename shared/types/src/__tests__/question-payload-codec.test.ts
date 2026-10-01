@@ -70,6 +70,15 @@ describe('question payload codec', () => {
     ).toEqual({ mediaUrl: IMAGE });
   });
 
+  it.each(['audio', 'youtube'] as const)(
+    'keeps the options a stored %s payload carries',
+    (type) => {
+      expect(
+        parseQuestionPayload(type, { options: ['A', 'B'], mediaUrl: IMAGE }),
+      ).toEqual({ options: ['A', 'B'], mediaUrl: IMAGE });
+    },
+  );
+
   it('names the question type in the failure', () => {
     expect(() => parseQuestionPayload('sort', { options: 3 })).toThrow(/sort/);
   });

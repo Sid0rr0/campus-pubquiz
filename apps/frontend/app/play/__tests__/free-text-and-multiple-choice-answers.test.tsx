@@ -54,6 +54,50 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
   });
 
+  it.each([
+    ['with options', ['Jaws', 'Alien'], 'button'],
+    ['without options', undefined, 'textbox'],
+  ] as const)(
+    'shows the right input for an audio question %s',
+    (_label, options, expectedRole) => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      mockUsePlayerGame.mockReturnValue(
+        socketResult({
+          snapshot: {
+            progress: progress({ status: 'question_open' }),
+            currentQuestion: {
+              id: 'r1q1',
+              type: 'audio',
+              prompt: 'Name the film',
+              points: 1,
+              mediaUrl: 'https://example.com/clip.mp3',
+              ...(options ? { options: [...options] } : {}),
+            },
+          },
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      if (expectedRole === 'button') {
+        expect(
+          screen.getByRole('button', { name: /jaws/i }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByRole('textbox', { name: /your answer/i }),
+        ).not.toBeInTheDocument();
+      } else {
+        expect(
+          screen.getByRole('textbox', { name: /your answer/i }),
+        ).toBeInTheDocument();
+      }
+    },
+  );
+
   it('submits the typed free-text answer with the question and team id', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();

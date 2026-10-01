@@ -46,6 +46,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   inputKind: AnswerInputKind;
   /** Whether the question is unusable without a `mediaUrl` (the editor marks the field required). */
   requiresMedia: boolean;
+  /** Whether the question carries a list of choices: never, always, or only when the author adds some (the answer is then one of them). */
+  choices: 'none' | 'required' | 'optional';
   /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
   schema: z.ZodType;
   /** The payload codec: stored JSON is parsed against this (via `parseQuestionPayload`), never cast. */
@@ -70,6 +72,7 @@ export const QUESTION_KINDS: {
     label: 'Free text',
     inputKind: 'text',
     requiresMedia: false,
+    choices: 'none',
     schema: freeTextPreviewSchema,
     payload: freeTextPayloadSchema,
     csv: answerOnlyCsv,
@@ -82,6 +85,7 @@ export const QUESTION_KINDS: {
     label: 'Multiple choice',
     inputKind: 'choice',
     requiresMedia: false,
+    choices: 'required',
     schema: multipleChoicePreviewSchema,
     payload: multipleChoicePayloadSchema,
     csv: choicesCsv,
@@ -94,9 +98,10 @@ export const QUESTION_KINDS: {
     label: 'Audio',
     inputKind: 'text',
     requiresMedia: true,
+    choices: 'optional',
     schema: audioPreviewSchema,
     payload: audioPayloadSchema,
-    csv: answerOnlyCsv,
+    csv: choicesCsv,
     gradingMode: 'human',
     overridable: true,
     kahootAllowed: false,
@@ -106,9 +111,10 @@ export const QUESTION_KINDS: {
     label: 'YouTube video',
     inputKind: 'text',
     requiresMedia: true,
+    choices: 'optional',
     schema: youtubePreviewSchema,
     payload: youtubePayloadSchema,
-    csv: answerOnlyCsv,
+    csv: choicesCsv,
     clipNotes: youtubeClipNotes,
     gradingMode: 'human',
     overridable: true,
@@ -119,6 +125,7 @@ export const QUESTION_KINDS: {
     label: 'Sort / order',
     inputKind: 'sort',
     requiresMedia: false,
+    choices: 'none',
     schema: sortPreviewSchema,
     payload: sortPayloadSchema,
     csv: sortCsv,
@@ -131,6 +138,7 @@ export const QUESTION_KINDS: {
     label: 'Match pairs',
     inputKind: 'match',
     requiresMedia: false,
+    choices: 'none',
     schema: matchPreviewSchema,
     payload: matchPayloadSchema,
     csv: matchCsv,
@@ -143,6 +151,7 @@ export const QUESTION_KINDS: {
     label: 'Closest guess',
     inputKind: 'number',
     requiresMedia: false,
+    choices: 'none',
     schema: closestGuessPreviewSchema,
     payload: closestGuessPayloadSchema,
     csv: answerOnlyCsv,

@@ -75,6 +75,39 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(questionToPreview(question)).toEqual(preview);
   });
 
+  it.each(['audio', 'youtube'] as const)(
+    'round-trips a %s question with choices and one without',
+    (type) => {
+      const mediaUrl =
+        type === 'audio'
+          ? 'https://example.com/clip.mp3'
+          : 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+      const withChoices: ImportQuestionPreview = {
+        type,
+        prompt: 'Which one?',
+        answer: 'B',
+        points: 1,
+        mediaUrl,
+        options: ['A', 'B'],
+      };
+      const withoutChoices: ImportQuestionPreview = {
+        type,
+        prompt: 'Which one?',
+        answer: 'B',
+        points: 1,
+        mediaUrl,
+      };
+
+      const editable = questionFromPreview('q1', withChoices);
+
+      expect(editable.options[1]).toEqual({ text: 'B', isCorrect: true });
+      expect(questionToPreview(editable)).toEqual(withChoices);
+      expect(
+        questionToPreview(questionFromPreview('q2', withoutChoices)),
+      ).toEqual(withoutChoices);
+    },
+  );
+
   it('carries notes and media urls through for a question with an image mediaUrl', () => {
     const preview: ImportQuestionPreview = {
       type: 'free_text',
@@ -316,7 +349,7 @@ describe('questionToPreview after a type change', () => {
     return questionToPreview(question);
   }
 
-  it.each(['free_text', 'audio', 'youtube', 'closest_guess'] as const)(
+  it.each(['free_text', 'closest_guess'] as const)(
     'drops options and pairs, keeping the typed answer, for %s',
     (type) => {
       const preview = staleQuestion(type);
@@ -325,6 +358,17 @@ describe('questionToPreview after a type change', () => {
       expect(preview).not.toHaveProperty('matchTargets');
       expect(preview).not.toHaveProperty('matchScoringMode');
       expect(preview.answer).toBe('42');
+    },
+  );
+
+  it.each(['audio', 'youtube'] as const)(
+    'keeps the choices already entered, as optional choices, for %s',
+    (type) => {
+      const preview = staleQuestion(type);
+
+      expect(preview.options).toEqual(['Paris', 'Rome']);
+      expect(preview.answer).toBe('Paris');
+      expect(preview).not.toHaveProperty('matchTargets');
     },
   );
 

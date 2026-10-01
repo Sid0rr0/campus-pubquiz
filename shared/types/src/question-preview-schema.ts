@@ -54,19 +54,53 @@ export const multipleChoicePreviewSchema = z
     error: 'Options must not repeat',
   });
 
-export const audioPreviewSchema = z.object({
-  type: z.literal('audio'),
-  ...baseQuestionFields,
-  mediaUrl: httpUrl,
-});
+// An empty list (a blank CSV cell, an editor with no choices typed) means "no
+// choices", so the question stays free-typed.
+const optionalChoices = z.preprocess(
+  (value) => (Array.isArray(value) && value.length === 0 ? undefined : value),
+  z.array(z.string().min(1)).min(2, 'Provide at least two options').optional(),
+);
 
-export const youtubePreviewSchema = z.object({
-  type: z.literal('youtube'),
-  ...baseQuestionFields,
-  mediaUrl: httpUrl.refine((url) => extractYoutubeVideoId(url) !== undefined, {
-    error: 'Media URL must be a youtube.com/youtu.be link for type youtube',
+/** The `multiple_choice` rules, applied only when the question carries choices. */
+function withOptionalChoiceRules<
+  T extends z.ZodType<{ options?: string[]; answer: string }>,
+>(schema: T) {
+  return schema
+    .refine(
+      (question) =>
+        question.options === undefined ||
+        question.options.includes(question.answer),
+      { path: ['answer'], error: 'Answer must be one of the options' },
+    )
+    .refine(
+      (question) =>
+        question.options === undefined || hasNoRepeats(question.options),
+      { path: ['options'], error: 'Options must not repeat' },
+    );
+}
+
+export const audioPreviewSchema = withOptionalChoiceRules(
+  z.object({
+    type: z.literal('audio'),
+    ...baseQuestionFields,
+    options: optionalChoices,
+    mediaUrl: httpUrl,
   }),
-});
+);
+
+export const youtubePreviewSchema = withOptionalChoiceRules(
+  z.object({
+    type: z.literal('youtube'),
+    ...baseQuestionFields,
+    options: optionalChoices,
+    mediaUrl: httpUrl.refine(
+      (url) => extractYoutubeVideoId(url) !== undefined,
+      {
+        error: 'Media URL must be a youtube.com/youtu.be link for type youtube',
+      },
+    ),
+  }),
+);
 
 export const closestGuessPreviewSchema = z.object({
   type: z.literal('closest_guess'),
