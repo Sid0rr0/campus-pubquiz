@@ -7,6 +7,7 @@ import {
   DEFAULT_DISPLAY_TEXT_SCALE,
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
+  isBatchGradedType,
   isShowingLastBreak,
   type LeaderboardEntry,
   isQuestionOnAirStatus,
@@ -325,7 +326,7 @@ function DisplayPageContent() {
               )}
               {progress.status === 'reveal' &&
                 revealQuestion &&
-                (revealQuestion.type === 'closest_guess' &&
+                (isBatchGradedType(revealQuestion.type) &&
                 revealQuestion.closestGuess ? (
                   <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                     <ClosestGuessRevealScreen

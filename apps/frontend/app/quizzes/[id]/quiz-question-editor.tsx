@@ -9,6 +9,7 @@ import {
 } from '@radix-ui/react-icons';
 import {
   QUESTION_KINDS,
+  QUESTION_TYPES,
   extractYoutubeVideoId,
   isKahootAllowedType,
   type MatchScoringMode,
@@ -61,21 +62,10 @@ const PLACED_ISSUE_FIELDS = new Set([
   'type',
 ]);
 
-// Keyed by the shared QuestionType, so a type missing a label fails to
-// compile; key order is the picker order.
-const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-  multiple_choice: 'Multiple choice',
-  free_text: 'Free text',
-  audio: 'Audio',
-  youtube: 'YouTube video',
-  sort: 'Sort / order',
-  match: 'Match pairs',
-  closest_guess: 'Closest guess',
-};
-
-const QUESTION_TYPES = (
-  Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]
-).map((value) => ({ value, label: QUESTION_TYPE_LABELS[value] }));
+const QUESTION_TYPE_OPTIONS = QUESTION_TYPES.map((value) => ({
+  value,
+  label: QUESTION_KINDS[value].label,
+}));
 
 function typeButtonClass(isActive: boolean): string {
   return isActive
@@ -92,8 +82,8 @@ function pickerTypes(
   isKahootRound: boolean,
   currentType: QuestionType,
 ): { value: QuestionType; label: string }[] {
-  if (!isKahootRound) return QUESTION_TYPES;
-  return QUESTION_TYPES.filter(
+  if (!isKahootRound) return QUESTION_TYPE_OPTIONS;
+  return QUESTION_TYPE_OPTIONS.filter(
     (option) =>
       isKahootAllowedType(option.value) || option.value === currentType,
   );
@@ -116,11 +106,11 @@ export function QuizQuestionEditor({
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
   );
-  const isMc = question.type === 'multiple_choice';
-  const isSort = question.type === 'sort';
-  const isMatch = question.type === 'match';
-  const needsMediaUrl =
-    question.type === 'audio' || question.type === 'youtube';
+  const { inputKind, requiresMedia: needsMediaUrl } =
+    QUESTION_KINDS[question.type];
+  const isMc = inputKind === 'choice';
+  const isSort = inputKind === 'sort';
+  const isMatch = inputKind === 'match';
   const isYoutubeMedia =
     question.type === 'youtube' ||
     extractYoutubeVideoId(question.mediaUrl) !== undefined;
@@ -512,7 +502,7 @@ export function QuizQuestionEditor({
           <span className="flex items-center gap-2">
             Correct answer
             <input
-              type={question.type === 'closest_guess' ? 'number' : 'text'}
+              type={inputKind === 'number' ? 'number' : 'text'}
               value={question.correctText}
               onChange={(event) =>
                 onChange({ correctText: event.target.value })

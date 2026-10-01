@@ -31,6 +31,9 @@ import { youtubeClipNotes, type ClipNotesCodec } from './youtube';
 /** How a type's answers are graded: at submit, in one batch after lock, or by the quiz master. */
 export type GradingMode = 'auto' | 'batch' | 'human';
 
+/** Which answer input a type renders on the phone, and which editor section holds its answer. */
+export type AnswerInputKind = 'text' | 'number' | 'choice' | 'sort' | 'match';
+
 /**
  * Everything the app knows about one question type. Entries are plain data
  * (no I/O); `QUESTION_KINDS` is keyed by every `QuestionType`, so a type
@@ -38,6 +41,11 @@ export type GradingMode = 'auto' | 'batch' | 'human';
  */
 export interface QuestionKind<T extends QuestionType = QuestionType> {
   type: T;
+  /** The name the quiz editor's type picker shows. */
+  label: string;
+  inputKind: AnswerInputKind;
+  /** Whether the question is unusable without a `mediaUrl` (the editor marks the field required). */
+  requiresMedia: boolean;
   /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
   schema: z.ZodType;
   /** The payload codec: stored JSON is parsed against this (via `parseQuestionPayload`), never cast. */
@@ -59,6 +67,9 @@ export const QUESTION_KINDS: {
 } = {
   free_text: {
     type: 'free_text',
+    label: 'Free text',
+    inputKind: 'text',
+    requiresMedia: false,
     schema: freeTextPreviewSchema,
     payload: freeTextPayloadSchema,
     csv: answerOnlyCsv,
@@ -68,6 +79,9 @@ export const QUESTION_KINDS: {
   },
   multiple_choice: {
     type: 'multiple_choice',
+    label: 'Multiple choice',
+    inputKind: 'choice',
+    requiresMedia: false,
     schema: multipleChoicePreviewSchema,
     payload: multipleChoicePayloadSchema,
     csv: choicesCsv,
@@ -77,6 +91,9 @@ export const QUESTION_KINDS: {
   },
   audio: {
     type: 'audio',
+    label: 'Audio',
+    inputKind: 'text',
+    requiresMedia: true,
     schema: audioPreviewSchema,
     payload: audioPayloadSchema,
     csv: answerOnlyCsv,
@@ -86,6 +103,9 @@ export const QUESTION_KINDS: {
   },
   youtube: {
     type: 'youtube',
+    label: 'YouTube video',
+    inputKind: 'text',
+    requiresMedia: true,
     schema: youtubePreviewSchema,
     payload: youtubePayloadSchema,
     csv: answerOnlyCsv,
@@ -96,6 +116,9 @@ export const QUESTION_KINDS: {
   },
   sort: {
     type: 'sort',
+    label: 'Sort / order',
+    inputKind: 'sort',
+    requiresMedia: false,
     schema: sortPreviewSchema,
     payload: sortPayloadSchema,
     csv: sortCsv,
@@ -105,6 +128,9 @@ export const QUESTION_KINDS: {
   },
   match: {
     type: 'match',
+    label: 'Match pairs',
+    inputKind: 'match',
+    requiresMedia: false,
     schema: matchPreviewSchema,
     payload: matchPayloadSchema,
     csv: matchCsv,
@@ -114,6 +140,9 @@ export const QUESTION_KINDS: {
   },
   closest_guess: {
     type: 'closest_guess',
+    label: 'Closest guess',
+    inputKind: 'number',
+    requiresMedia: false,
     schema: closestGuessPreviewSchema,
     payload: closestGuessPayloadSchema,
     csv: answerOnlyCsv,
@@ -122,6 +151,10 @@ export const QUESTION_KINDS: {
     kahootAllowed: false,
   },
 };
+
+export function answerInputKind(type: QuestionType): AnswerInputKind {
+  return QUESTION_KINDS[type].inputKind;
+}
 
 export interface QuestionIssue {
   path: PropertyKey[];

@@ -301,6 +301,57 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
   });
 });
 
+describe('questionToPreview after a type change', () => {
+  function staleQuestion(type: ImportQuestionPreview['type']) {
+    const question = makeQuestion('q1');
+    question.prompt = 'Anything?';
+    question.options = [
+      { text: 'Paris', isCorrect: true },
+      { text: 'Rome', isCorrect: false },
+    ];
+    question.sortItems = ['a', 'b'];
+    question.matchPairs = [makeMatchPair('x', '1'), makeMatchPair('y', '2')];
+    question.correctText = '42';
+    question.type = type;
+    return questionToPreview(question);
+  }
+
+  it.each(['free_text', 'audio', 'youtube', 'closest_guess'] as const)(
+    'drops options and pairs, keeping the typed answer, for %s',
+    (type) => {
+      const preview = staleQuestion(type);
+
+      expect(preview).not.toHaveProperty('options');
+      expect(preview).not.toHaveProperty('matchTargets');
+      expect(preview).not.toHaveProperty('matchScoringMode');
+      expect(preview.answer).toBe('42');
+    },
+  );
+
+  it('keeps only the multiple choice fields for multiple_choice', () => {
+    const preview = staleQuestion('multiple_choice');
+
+    expect(preview.options).toEqual(['Paris', 'Rome']);
+    expect(preview.answer).toBe('Paris');
+    expect(preview).not.toHaveProperty('matchTargets');
+  });
+
+  it('keeps only the sort fields for sort', () => {
+    const preview = staleQuestion('sort');
+
+    expect([...(preview.options ?? [])].sort()).toEqual(['a', 'b']);
+    expect(preview.answer).toBe('a|b');
+    expect(preview).not.toHaveProperty('matchTargets');
+  });
+
+  it('keeps only the pairing fields for match', () => {
+    const preview = staleQuestion('match');
+
+    expect(preview.options).toEqual(['x', 'y']);
+    expect(preview.answer).toBe('1|2');
+  });
+});
+
 describe('roundFromPreview', () => {
   it('assigns a generated id to every question via the id factory', () => {
     const round: ImportRoundPreview = {

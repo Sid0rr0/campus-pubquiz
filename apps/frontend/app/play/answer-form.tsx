@@ -2,7 +2,11 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
-import { IDK_ANSWER_VALUE, type QuestionView } from '@campus-pubquiz/types';
+import {
+  IDK_ANSWER_VALUE,
+  answerInputKind,
+  type QuestionView,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { getOptionLetter } from '@/app/lib/option-letters';
 import { MatchAnswer } from '@/app/play/match-answer';
@@ -51,6 +55,7 @@ export function AnswerForm({
 }: AnswerFormProps) {
   const [value, setValue] = useState(initialValue);
   const [hasAnswered, setHasAnswered] = useState(initialValue !== '');
+  const inputKind = answerInputKind(question.type);
   const isIdk = initialValue === IDK_ANSWER_VALUE;
   const idkButton = (
     <IdkButton
@@ -59,7 +64,7 @@ export function AnswerForm({
     />
   );
 
-  if (question.type === 'sort' && question.options) {
+  if (inputKind === 'sort' && question.options) {
     return (
       <div className="flex flex-col gap-3">
         <SortAnswer
@@ -72,7 +77,7 @@ export function AnswerForm({
     );
   }
 
-  if (question.type === 'match' && question.options && question.matchTargets) {
+  if (inputKind === 'match' && question.options && question.matchTargets) {
     return (
       <div className="flex flex-col gap-3">
         <MatchAnswer
@@ -86,7 +91,7 @@ export function AnswerForm({
     );
   }
 
-  if (question.type === 'multiple_choice' && question.options) {
+  if (inputKind === 'choice' && question.options) {
     const isSubmitted = value !== '' && value === initialValue;
     function handleOptionClick(option: string) {
       if (isKahootMode) {
@@ -158,8 +163,8 @@ export function AnswerForm({
       </label>
       <input
         id="answer-value"
-        type={question.type === 'closest_guess' ? 'number' : 'text'}
-        inputMode={question.type === 'closest_guess' ? 'decimal' : undefined}
+        type={inputKind === 'number' ? 'number' : 'text'}
+        inputMode={inputKind === 'number' ? 'decimal' : undefined}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"

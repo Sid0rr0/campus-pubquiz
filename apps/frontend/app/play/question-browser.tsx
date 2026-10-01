@@ -1,4 +1,4 @@
-import { isGradingStatus } from '@campus-pubquiz/types';
+import { isBatchGradedType, isGradingStatus } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -102,7 +102,7 @@ export function QuestionBrowser({
       )}
       {progress.status === 'reveal' && revealQuestion ? (
         <div className="flex flex-col items-center gap-6 text-center">
-          {revealQuestion.type === 'closest_guess' &&
+          {isBatchGradedType(revealQuestion.type) &&
           revealQuestion.closestGuess ? (
             <ClosestGuessRevealScreen
               prompt={revealQuestion.prompt}

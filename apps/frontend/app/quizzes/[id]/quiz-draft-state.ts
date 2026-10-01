@@ -1,4 +1,5 @@
 import {
+  QUESTION_KINDS,
   splitPipeList,
   type ImportQuestionPreview,
   type ImportRoundPreview,
@@ -127,9 +128,10 @@ export function questionFromPreview(
   id: string,
   question: ImportQuestionPreview,
 ): EditorQuestion {
-  const isMc = question.type === 'multiple_choice';
-  const isSort = question.type === 'sort';
-  const isMatch = question.type === 'match';
+  const { inputKind } = QUESTION_KINDS[question.type];
+  const isMc = inputKind === 'choice';
+  const isSort = inputKind === 'sort';
+  const isMatch = inputKind === 'match';
   // sortItems/matchPairs reconstruct from `answer` (the correct order/pairing),
   // not `options`/`matchTargets` (the display order) — that display order is
   // kept aside in savedDisplayOrder so re-saving doesn't reshuffle it.
@@ -228,9 +230,10 @@ export function mergeRoundsFromPreview(
 export function questionToPreview(
   question: EditorQuestion,
 ): ImportQuestionPreview {
-  const isMc = question.type === 'multiple_choice';
-  const isSort = question.type === 'sort';
-  const isMatch = question.type === 'match';
+  const { inputKind } = QUESTION_KINDS[question.type];
+  const isMc = inputKind === 'choice';
+  const isSort = inputKind === 'sort';
+  const isMatch = inputKind === 'match';
   const sortItems = question.sortItems
     .map((item) => item.trim())
     .filter((item) => item !== '');

@@ -1,5 +1,6 @@
 import {
   IDK_ANSWER_VALUE,
+  answerInputKind,
   splitPipeList,
   type QuestionType,
 } from '@campus-pubquiz/types';
@@ -21,8 +22,9 @@ export function formatAnswerValue(
   leftItems?: string[],
 ): string {
   if (value === IDK_ANSWER_VALUE) return "🤷 I don't know";
-  if (type === 'sort') return splitPipeList(value).join(' → ');
-  if (type === 'match') {
+  const inputKind = answerInputKind(type);
+  if (inputKind === 'sort') return splitPipeList(value).join(' → ');
+  if (inputKind === 'match') {
     const rightItems = splitPipeList(value);
     if (leftItems && leftItems.length === rightItems.length) {
       return leftItems

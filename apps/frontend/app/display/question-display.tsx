@@ -1,5 +1,6 @@
 import { useState, type SyntheticEvent } from 'react';
 import {
+  answerInputKind,
   extractYoutubeVideoId,
   splitPipeList,
   type QuestionView,
@@ -171,8 +172,8 @@ export function QuestionDisplay({
   // together, question image smaller, answer image bigger, side by side — see
   // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
-  const isSort = type === 'sort';
-  const isMatch = type === 'match';
+  const isSort = answerInputKind(type) === 'sort';
+  const isMatch = answerInputKind(type) === 'match';
   const sortCorrectOrder =
     isSort && isRevealing && correctAnswer
       ? splitPipeList(correctAnswer)
