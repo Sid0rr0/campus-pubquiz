@@ -4,6 +4,7 @@ import type {
   GameProgress,
   JoinAcceptedPayload,
   QuestionView,
+  isGradingStatus,
 } from '@campus-pubquiz/types';
 import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
@@ -175,14 +176,11 @@ export function QuestionBrowser({
               }
             />
           )}
-          {!isAnswerable &&
-            (progress.status === 'break_intro' ||
-              progress.status === 'break' ||
-              progress.status === 'break_round_intro') && (
-              <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-                Answering is locked for this question
-              </p>
-            )}
+          {!isAnswerable && isGradingStatus(progress.status) && (
+            <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
+              Answering is locked for this question
+            </p>
+          )}
           {!isAnswerable && progress.status === 'reveal' && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               Revealing answers…

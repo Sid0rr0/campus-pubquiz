@@ -4,6 +4,7 @@ import {
   type AdminQuestionContext,
   type StateSnapshotPayload,
   type TeamView,
+  isAnsweringStatus,
 } from '@campus-pubquiz/types';
 import type { SeededRound } from '@/db/seed.types';
 import {
@@ -15,10 +16,7 @@ import {
   getRevealQuestions,
   getUpcomingQuestionPositions,
 } from '@/game/state/block-questions.util';
-import {
-  isAnsweringPhase,
-  isQuestionHiddenBehindKahootLeaderboard,
-} from '@/game/state/kahoot-visibility.util';
+import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
 
@@ -109,7 +107,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
  */
 export function isBlockAnswerable(session: SessionState): boolean {
   return (
-    isAnsweringPhase(session.progress.status) &&
+    isAnsweringStatus(session.progress.status) &&
     !isQuestionHiddenBehindKahootLeaderboard(session) &&
     getBlockQuestions(session).length > 0
   );

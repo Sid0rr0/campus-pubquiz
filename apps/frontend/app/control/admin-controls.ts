@@ -1,4 +1,8 @@
-import { getTiedForFirst, type AdminStatePayload } from '@campus-pubquiz/types';
+import {
+  getTiedForFirst,
+  isQuestionOnAirStatus,
+  type AdminStatePayload,
+} from '@campus-pubquiz/types';
 import { isYoutubeMediaUrl } from '@/app/display/question-display';
 
 export interface AdminControls {
@@ -31,7 +35,7 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
     canReplayMedia:
       status === 'question_open' &&
       isYoutubeMediaUrl(view.currentQuestion?.mediaUrl),
-    showAnswerStatus: status === 'question_open' || status === 'locking',
+    showAnswerStatus: isQuestionOnAirStatus(status),
     tiedTeamNames: getTiedForFirst(leaderboard).map((entry) => entry.teamName),
   };
 }

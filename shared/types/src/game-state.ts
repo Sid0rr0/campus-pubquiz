@@ -25,6 +25,7 @@ import {
 
 export * from './game-state-types';
 export * from './game-state-structure';
+export * from './game-state-groups';
 export {
   getBlockStartPosition,
   getBlockEndPosition,

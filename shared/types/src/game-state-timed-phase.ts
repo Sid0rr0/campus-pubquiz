@@ -2,6 +2,7 @@ import {
   getBlockPositionForQuestion,
   getBlockStartPosition,
 } from './game-state-block-position';
+import { isGradingStatus, isQuestionOnAirStatus } from './game-state-groups';
 import type { GameContext, GameProgress } from './game-state-types';
 
 /**
@@ -16,7 +17,7 @@ export function getTimedPhaseKey(
   progress: GameProgress,
   context: GameContext,
 ): string | null {
-  if (progress.status === 'question_open' || progress.status === 'locking') {
+  if (isQuestionOnAirStatus(progress.status)) {
     // A kahootMode question opened behind the leaderboard (see
     // advanceFromReveal) isn't "live" yet — its answer-speed timer must not
     // start ticking until the admin dismisses the leaderboard and the
@@ -42,11 +43,7 @@ export function getTimedPhaseKey(
     );
     return `q:${blockStart.roundIndex}:${blockStart.questionIndex}:${position}`;
   }
-  if (
-    progress.status === 'break_intro' ||
-    progress.status === 'break' ||
-    progress.status === 'break_round_intro'
-  ) {
+  if (isGradingStatus(progress.status)) {
     const blockStart = getBlockStartPosition(
       progress.roundIndex,
       progress.questionIndex,

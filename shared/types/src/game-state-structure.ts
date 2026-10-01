@@ -1,4 +1,5 @@
-import type { GameContext, GameProgress, GameStatus } from './game-state-types';
+import { isGradingStatus } from './game-state-groups';
+import type { GameContext, GameProgress } from './game-state-types';
 
 export interface QuizStructureSummary {
   /** Number of grading breaks — each block of rounds between breaks, inclusive of the final one. */
@@ -36,12 +37,6 @@ export function getBreakNumber(
   return index === -1 ? 0 : index + 1;
 }
 
-const BREAK_SCREEN_STATUSES: GameStatus[] = [
-  'break_intro',
-  'break',
-  'break_round_intro',
-];
-
 /**
  * True while `progress` is showing a break-related screen (break_intro,
  * break, or break_round_intro) for the quiz's *last* break — the one after
@@ -53,7 +48,7 @@ export function isShowingLastBreak(
   progress: GameProgress,
   quizStructure: QuizStructureSummary,
 ): boolean {
-  if (!BREAK_SCREEN_STATUSES.includes(progress.status)) return false;
+  if (!isGradingStatus(progress.status)) return false;
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   return breakNumber > 0 && breakNumber === quizStructure.blockCount;
 }

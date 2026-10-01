@@ -1,27 +1,14 @@
-import type { GameProgress, GameStatus } from '@campus-pubquiz/types';
-import { isAutoGradedType } from '@campus-pubquiz/types';
+import type { GameProgress } from '@campus-pubquiz/types';
+import {
+  isAutoGradedType,
+  isGradedStatus,
+  isGradingStatus,
+} from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { StandingsService } from '@/standings/standings.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
-
-/** Statuses in which the break/grading screens are actively reviewing the just-locked block — the window where ungradedQuestionIds is kept fresh. */
-const GRADING_STATUSES: GameStatus[] = [
-  'break_intro',
-  'break',
-  'break_round_intro',
-];
-
-/** Statuses in which a block's grading is complete or being reviewed — ungradedQuestionIds can be trusted from here on. */
-export const GRADED_STATUSES: readonly GameStatus[] = [
-  'break_intro',
-  'break',
-  'break_round_intro',
-  'reveal_intro',
-  'reveal',
-  'ended',
-];
 
 /**
  * The one rule for which questions can ever count as "ungraded": closest_guess
@@ -50,7 +37,7 @@ export class BlockGradingService {
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<SessionState> {
-    if (!GRADED_STATUSES.includes(newProgress.status)) return session;
+    if (!isGradedStatus(newProgress.status)) return session;
 
     const blockQuestions = getBlockSeededQuestions({
       ...session,
@@ -204,14 +191,14 @@ export class BlockGradingService {
    * Bulk-recomputes ungradedQuestionIds from the DB whenever the block just
    * entered (or is still within) a grading status — the authoritative
    * baseline the per-question refresh in GameStateService.recordAnswer/answerGraded
-   * build on between these recomputes. A no-op outside GRADING_STATUSES,
+   * build on between these recomputes. A no-op outside the grading statuses,
    * since nothing there can be graded and the cached value can't go stale.
    */
   async refreshUngradedQuestionIds(
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<SessionState> {
-    if (!GRADING_STATUSES.includes(newProgress.status)) return session;
+    if (!isGradingStatus(newProgress.status)) return session;
     const ungradedQuestionIds = await this.getUngradedBlockQuestionIds({
       ...session,
       progress: newProgress,

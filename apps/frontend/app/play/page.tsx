@@ -7,6 +7,7 @@ import {
   DEFAULT_SESSION_SETTINGS,
   isShowingLastBreak,
   type GameStatus,
+  isBlockReviewStatus,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
@@ -299,12 +300,7 @@ function PlayPageContent() {
     progress.status === 'reveal' && selectedQuestion
       ? revealQuestions.find((question) => question.id === selectedQuestion.id)
       : undefined;
-  const isBreakOrReveal =
-    progress.status === 'break_intro' ||
-    progress.status === 'break' ||
-    progress.status === 'break_round_intro' ||
-    progress.status === 'reveal_intro' ||
-    progress.status === 'reveal';
+  const isBreakOrReveal = isBlockReviewStatus(progress.status);
   // The block browser (question picker + prompt) stays up through break/reveal
   // too, so teams can review the block they just answered — unless the
   // leaderboard overlay is toggled on, which takes over the screen instead.

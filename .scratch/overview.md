@@ -14,7 +14,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                   | Blocked by          |
 | --- | ------------------------------------------------------------------------------------------------------------------------ | ------------------- |
-| 01  | [Named status groups replace the inline status lists](session-settle/issues/01-named-status-groups.md)                   | —                   |
 | 02  | [Restart and creation pin the derived session fields](session-settle/issues/02-restart-and-creation-characterization.md) | —                   |
 | 03  | [Creation and restore go through the settle step](session-settle/issues/03-settle-step-for-create-and-restore.md)        | 02                  |
 | 04  | [Advance and Previous settle through the same step](session-settle/issues/04-advance-previous-settle.md)                 | 03, advance-plan 02 |
@@ -63,8 +62,9 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| session-settle           | 01  | [Named status groups replace the inline status lists](session-settle/issues/01-named-status-groups.md)                                                   | —         |
 | advance-plan             | 05  | [Contract: delete the old Advance contract](advance-plan/issues/05-contract-delete-old-advance-contract.md)                                              | —         |
-| advance-plan             | 04  | [/control and /remote render the announced step and send only ADVANCE/PREVIOUS](advance-plan/issues/04-clients-render-announced-step.md)               | —         |
+| advance-plan             | 04  | [/control and /remote render the announced step and send only ADVANCE/PREVIOUS](advance-plan/issues/04-clients-render-announced-step.md)                 | —         |
 | advance-plan             | 02  | [One Move plan drives the handler, button availability and the /remote preview](advance-plan/issues/02-move-plan-drives-handler-availability-preview.md) | —         |
 | advance-plan             | 01  | [Agreement walk pins today's Advance and Previous](advance-plan/issues/01-agreement-walk-characterization.md)                                            | —         |
 | gateway-handler-template | 03  | [Delete the pass-through handlers and fix the doc comments](gateway-handler-template/issues/03-delete-pass-through-handlers.md)                          | —         |

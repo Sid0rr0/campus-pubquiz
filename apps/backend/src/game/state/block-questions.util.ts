@@ -8,6 +8,10 @@ import {
   type QuestionView,
   type RevealQuestionView,
   type UpcomingQuestionPosition,
+  isAnsweringStatus,
+  isBlockStartedStatus,
+  isQuestionOnAirStatus,
+  isRevealingStatus,
 } from '@campus-pubquiz/types';
 import {
   toBlockQuestionView,
@@ -51,10 +55,7 @@ export function getCurrentRoundTitle(session: SessionState): string {
 // remain submittable during the countdown — display simply doesn't render
 // it during 'locking', but /play keeps showing the last question.
 export function getCurrentQuestion(session: SessionState): QuestionView | null {
-  if (
-    session.progress.status !== 'question_open' &&
-    session.progress.status !== 'locking'
-  ) {
+  if (!isQuestionOnAirStatus(session.progress.status)) {
     return null;
   }
   const question =
@@ -83,27 +84,14 @@ export function getBlockSeededQuestions(
 ): BlockRevealQuestionView[] {
   const { status, roundIndex, questionIndex, furthestOpenIndex } =
     session.progress;
-  if (
-    status !== 'question_open' &&
-    status !== 'locking' &&
-    status !== 'round_intro' &&
-    status !== 'break_intro' &&
-    status !== 'break' &&
-    status !== 'break_round_intro' &&
-    status !== 'reveal_intro' &&
-    status !== 'reveal' &&
-    status !== 'ended'
-  ) {
+  if (!isBlockStartedStatus(status)) {
     return [];
   }
 
   const context = getGameContext(session);
   const rounds = session.seededGame.rounds;
   const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
-  const isOpenPhase =
-    status === 'question_open' ||
-    status === 'locking' ||
-    status === 'round_intro';
+  const isOpenPhase = isAnsweringStatus(status);
   const revealBoundaryPosition = isOpenPhase
     ? furthestOpenIndex
     : getBlockPositionForQuestion(roundIndex, questionIndex, context);
@@ -252,11 +240,7 @@ export function getUpcomingQuestionPositions(
   session: SessionState,
 ): UpcomingQuestionPosition[] {
   const { status } = session.progress;
-  if (
-    status !== 'question_open' &&
-    status !== 'locking' &&
-    status !== 'round_intro'
-  ) {
+  if (!isAnsweringStatus(status)) {
     return [];
   }
   const target = getFurthestOpenPosition(session);
@@ -308,10 +292,7 @@ export function getUpcomingQuestionPositions(
 export function getRevealQuestions(
   session: SessionState,
 ): BlockRevealQuestionView[] {
-  if (
-    session.progress.status !== 'reveal_intro' &&
-    session.progress.status !== 'reveal'
-  ) {
+  if (!isRevealingStatus(session.progress.status)) {
     return [];
   }
   return getBlockSeededQuestions(session);

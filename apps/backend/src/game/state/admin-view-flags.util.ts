@@ -1,8 +1,9 @@
 import {
   getBlockStartPosition,
   isBreakPointQuestion,
+  isGradedStatus,
+  isQuestionOnAirStatus,
 } from '@campus-pubquiz/types';
-import { GRADED_STATUSES } from '@/game/state/block-grading.service';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 
 /** roundIndex of the first round in the block the session is currently in — where the question browser's active block starts. */
@@ -21,7 +22,7 @@ export function isShowdownEligible(session: SessionState): boolean {
     rounds.length > 0 &&
     roundIndex >= rounds.length - 1 &&
     session.ungradedQuestionIds.length === 0 &&
-    GRADED_STATUSES.includes(status)
+    isGradedStatus(status)
   );
 }
 
@@ -31,7 +32,7 @@ export function isLastQuestionBeforeBreak(session: SessionState): boolean {
   const { status, roundIndex, questionIndex } = session.progress;
   return (
     context.rounds.length > roundIndex &&
-    (status === 'question_open' || status === 'locking') &&
+    isQuestionOnAirStatus(status) &&
     isBreakPointQuestion(roundIndex, questionIndex, context)
   );
 }

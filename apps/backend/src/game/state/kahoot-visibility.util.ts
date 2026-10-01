@@ -1,14 +1,5 @@
-import type { GameStatus } from '@campus-pubquiz/types';
+import { isAnsweringStatus } from '@campus-pubquiz/types';
 import type { SessionState } from '@/game/state/session-state';
-
-/** The statuses in which a block's questions are open for (re-)answering. */
-export function isAnsweringPhase(status: GameStatus): boolean {
-  return (
-    status === 'question_open' ||
-    status === 'locking' ||
-    status === 'round_intro'
-  );
-}
 
 /**
  * A kahootMode question opens right after the previous one's reveal (see
@@ -23,5 +14,5 @@ export function isQuestionHiddenBehindKahootLeaderboard(
   const { status, roundIndex, isLeaderboardVisible } = session.progress;
   const isKahootRound =
     session.seededGame.rounds[roundIndex]?.kahootMode ?? false;
-  return isAnsweringPhase(status) && isKahootRound && isLeaderboardVisible;
+  return isAnsweringStatus(status) && isKahootRound && isLeaderboardVisible;
 }

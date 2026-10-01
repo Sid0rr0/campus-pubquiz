@@ -9,6 +9,7 @@ import {
   getBreakNumber,
   isShowingLastBreak,
   type LeaderboardEntry,
+  isQuestionOnAirStatus,
 } from '@campus-pubquiz/types';
 import { useDisplayGame } from '@/app/lib/use-display-game';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
@@ -145,8 +146,7 @@ function DisplayPageContent() {
   // the between-questions board. Capturing on 'reveal' too would grab the
   // already-updated totals one step early, leaving old === new and nothing
   // to animate once the board appears.
-  const isBeforeGrading =
-    progress.status === 'question_open' || progress.status === 'locking';
+  const isBeforeGrading = isQuestionOnAirStatus(progress.status);
   if (
     isBeforeGrading &&
     !progress.isLeaderboardVisible &&
