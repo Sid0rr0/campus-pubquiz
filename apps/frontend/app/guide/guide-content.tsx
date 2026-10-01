@@ -1,3 +1,6 @@
+import { QUESTION_KINDS, QUESTION_TYPES } from '@campus-pubquiz/types';
+import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
+
 interface GuideLink {
   href: string;
   label: string;
@@ -11,104 +14,104 @@ interface GuideSection {
   link?: GuideLink;
 }
 
+const QUESTION_TYPE_BULLETS = QUESTION_TYPES.map(
+  (type) =>
+    `${QUESTION_KINDS[type].label} — ${QUESTION_KINDS[type].moderatorNote}`,
+);
+
+const CSV_TYPE_BULLETS = QUESTION_TYPES.map(
+  (type) =>
+    `${type} (${QUESTION_KINDS[type].label}) — ${QUESTION_KINDS[type].moderatorNote}`,
+);
+
+const SHORTCUT_BULLETS = Object.values(ADMIN_SHORTCUTS).map(
+  (shortcut) => `${shortcut.keyName} — ${shortcut.description}`,
+);
+
 const GUIDE_SECTIONS: GuideSection[] = [
   {
-    title: 'Session lifecycle',
+    title: 'Before the night',
     paragraphs: [
-      'A session moves through lobby → rules → question open → locked → break (grading) → reveal → ended.',
-      'Question open, break, and reveal are the only states that can be repeated multiple times in a single session.',
-    ],
-    bullets: [
-      'Lobby — teams can join, settings can be changed, and the moderator can start the quiz.',
-      'Rules — read the rules',
-      'Question open — a question is open for teams to answer.',
-      'Break (grading) — the question is locked, and grading is finishing during this break.',
-      'Reveal — the question is revealed to all teams, and the leaderboard shows who got it right.',
-      'Ended — the quiz has finished; no more questions will be opened.',
+      'Build the quiz ahead of time (see "Creating a quiz" below) and open it once from the Sessions page to check every round and question. Have the big screen open on /display and your own laptop on /control; teams join from their phones with the join code.',
+      'The quiz is split into blocks: a run of rounds that is graded and revealed together, ending at a round you marked to break after it. The last round always ends a block.',
     ],
   },
   {
     title: 'Starting a session',
     paragraphs: [
-      'While the session is in the lobby, the Session Settings panel lets you pick the quiz, edit the rules text, and enable bonus categories before pressing Start Quiz.',
+      'While teams are joining, the Session Settings panel lets you pick the quiz, edit the rules text, and enable bonus categories before pressing Start Quiz. The big screen shows the join code and QR code until you start.',
+      'Starting shows the rules, then an overview of every round, then the first round title card. Each press of Advance moves on.',
     ],
   },
   {
     title: 'Running questions',
     paragraphs: [
-      'Previous and Advance step through the game. Advance opens a question, then locks it (with a countdown sound near the end), then reveals it. Previous is only available while it would not undo grading already done.',
-    ],
-  },
-  {
-    title: 'Remote',
-    paragraphs: [
-      'From the Sessions page, the Remote link opens a phone-friendly companion page for a session — the current question’s notes, a preview of what’s up next, and Previous/Advance/leaderboard controls, so a moderator can walk the room instead of staying at the laptop.',
-      'It shares the same admin connection as Control, so actions taken from either one stay in sync with the other and with the display.',
-    ],
-  },
-  {
-    title: 'Keyboard shortcuts',
-    paragraphs: [
-      'Available anywhere on the admin page except while typing in a form field (so grading a text answer never gets hijacked by a stray arrow key):',
-    ],
-    bullets: [
-      'Right arrow — reveal the next team on the leaderboard if one is waiting, otherwise Advance (or hide the leaderboard once every team is revealed).',
-      'Left arrow — Previous, when available and the leaderboard isn’t showing.',
-      'Up arrow — show the leaderboard.',
-      'Down arrow — hide the leaderboard.',
-      'Space — toggle a fullscreen view of the current question’s image or YouTube video on the display screen.',
+      'Each round opens with a round title card, then Advance opens its questions one at a time. Teams can answer or change their answer on any question already opened in the current block, so earlier questions stay answerable until the block ends.',
+      'On the last question of a block, Advance starts the final countdown (with a sound near the end). Teams can still answer until it runs out and the break starts. Previous is only available while it would not undo grading already done.',
+      'In a kahoot round every question is its own block, so each one is scored and revealed before the next opens.',
     ],
   },
   {
     title: 'Grading',
     paragraphs: [
-      'Grading happens during the break, in the teams/answers table.',
+      'You can grade an answer as soon as it arrives, in the teams/answers table. If a team changes an answer you already graded by hand, the mark is cleared and you need to grade it again. Whatever is still ungraded must be finished during the break: the quiz will not leave the break while an answer is ungraded.',
+      'How each question type is graded:',
     ],
-    bullets: [
-      'Audio and YouTube questions need your judgement — grade each answer by hand.',
-      'Multiple choice, sort, match, and free text are auto-graded the moment a team submits (free text matches case- and whitespace-insensitively) — you can still override any of them by hand.',
-      'Closest guess is graded in one batch once the question locks: every team tied for the smallest distance gets full points, everyone else gets zero.',
+    bullets: QUESTION_TYPE_BULLETS,
+  },
+  {
+    title: 'The break and break review',
+    paragraphs: [
+      'When a block ends, the questions stop accepting answers and the break starts. The big screen shows a break card with the break timer and the bonus categories; use this time to finish grading. The Break End Time control sets or extends how long the break countdown runs.',
+      "To show a question to the room again during the break, press Previous to step back through the block's questions. Answers stay hidden while you do this (break review). Stepping back across the start of a round shows that round's title card again.",
     ],
   },
   {
-    title: 'Break & leaderboard',
+    title: 'The reveal',
     paragraphs: [
-      'The Break End Time control sets or extends how long the break countdown runs on the display. The leaderboard toggle is independent of the game status — it is safe to show or hide it at any point without disrupting grading or question flow.',
+      'Once grading is finished, Advance leaves the break and reveals the block: each round shows a title card announcing its answers, then each question appears with its correct answer. Teams see their own answer, the correct answer and their points on their phones.',
+      'After the last reveal of the last block, Advance ends the quiz.',
     ],
   },
   {
-    title: 'Showdown',
+    title: 'The leaderboard',
     paragraphs: [
-      'When teams are tied for first place at a reveal-eligible point in the game, the Showdown panel becomes available. Creating a showdown round adds a tiebreaker round for just the tied teams.',
+      'The leaderboard can be shown or hidden at any point without disrupting grading or the flow of the quiz; hiding it resumes exactly where you were. While it is showing, Advance and Previous only work the leaderboard and never move the quiz underneath.',
+    ],
+  },
+  {
+    title: 'Ties and showdowns',
+    paragraphs: [
+      'When teams are tied for first place at a point where answers have been revealed, the Showdown panel becomes available. A showdown is a tiebreak between just the tied teams, who take turns in a fixed seat order.',
     ],
   },
   {
     title: 'Teams',
     paragraphs: [
-      'The Teams panel shows which teams are connected and, while a question is open, which of them have answered yet. Kick a team here if it needs to be removed from the session.',
+      'The Teams panel shows which teams are connected and, while a question is open, which of them have answered yet. Kick a team here if it needs to be removed from the session. A phone that drops its connection picks up exactly where the quiz is when it reconnects.',
     ],
+  },
+  {
+    title: 'Remote and keyboard shortcuts',
+    paragraphs: [
+      "From the Sessions page, the Remote link opens a phone-friendly companion page for a session — the current question's notes, a preview of what's up next, and Previous/Advance/leaderboard controls, so you can walk the room instead of staying at the laptop. It shares the same admin connection as Control, so actions taken from either one stay in sync.",
+      'On the Control page these keyboard shortcuts work anywhere except while typing in a form field (so grading a text answer never gets hijacked by a stray arrow key):',
+    ],
+    bullets: SHORTCUT_BULLETS,
   },
   {
     title: 'Ending',
     paragraphs: [
-      'End Quiz finishes the current quiz and moves the session to its ended state. Close Session shuts the session down entirely — use it once the event is over.',
+      'The quiz ends after the last reveal, or earlier with End Quiz. Close Session shuts the session down entirely — use it once the event is over.',
     ],
   },
   {
     title: 'Creating a quiz',
     paragraphs: [
       'From the Sessions page, "New Quiz" opens the quiz editor. Start from a blank round and fill it in by hand, or import a CSV export of a spreadsheet to populate rounds and questions automatically — either way, everything stays editable before you press Save quiz. Reopening a saved quiz from the Sessions page lets you keep editing it, including importing another CSV: by default a fresh import replaces the rounds currently in the editor (save first if you want to keep both versions), but checking "Add to quiz instead of replacing" first appends the import instead — questions land in an existing round when its title matches, otherwise the CSV\'s round is added as a new one, so you can top up a quiz with just a round or a handful of questions at a time.',
-      'CSV columns: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after. One row per question; a round grades (breaks) after itself once any of its rows has break_after = 1 — the last round always breaks regardless, since the game can’t reveal answers otherwise.',
+      "CSV columns: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after. One row per question; a round ends a block once any of its rows has break_after = 1 — the last round always does, since the game can't reveal answers otherwise. The type column takes one of the identifiers below; what each type needs:",
     ],
-    bullets: [
-      'free_text — no options; auto-graded against the answer text (case- and whitespace-insensitive), overridable by hand.',
-      'multiple_choice — options pipe-separated (e.g. Paris|London|Berlin); answer must match one option exactly.',
-      'audio — media_url is required (any http audio link); graded by hand.',
-      'youtube — media_url must be a youtube.com/youtu.be link; notes can clip it, e.g. {start: "0:10", end: "0:25"}.',
-      'sort — options pipe-separated in any order; answer lists them pipe-separated in the correct order.',
-      'match — options packs both lists as left1|left2+right1|right2; answer pairs them left+right, pipe-separated (e.g. Paris+France|Tokyo+Japan).',
-      'closest_guess — answer is a number; graded once the question locks, and every team tied for the closest guess gets full points.',
-    ],
+    bullets: CSV_TYPE_BULLETS,
     link: {
       href: '/sample-quiz-import.csv',
       label: 'Download sample CSV (one row per question type)',

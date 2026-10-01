@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { ADMIN_SHORTCUTS } from '@/app/control/admin-keyboard-shortcuts';
 import type {
   AdvanceSlotStep,
   GameAction,
@@ -41,33 +42,36 @@ export function useAdminKeyboardShortcuts({
       if (isEditableTarget(event.target)) {
         return;
       }
-      if (event.key === 'ArrowLeft') {
+      if (event.key === ADMIN_SHORTCUTS.previous.key) {
         if (previousState === 'available') {
           event.preventDefault();
           sendAction('PREVIOUS');
         }
         return;
       }
-      if (event.key === 'ArrowRight') {
+      if (event.key === ADMIN_SHORTCUTS.advance.key) {
         if (advanceStep !== 'none') {
           event.preventDefault();
           sendAction('ADVANCE');
         }
         return;
       }
-      if (event.key === 'ArrowUp') {
+      if (event.key === ADMIN_SHORTCUTS.showLeaderboard.key) {
         if (!isLeaderboardVisible) {
           event.preventDefault();
           sendAction('TOGGLE_LEADERBOARD');
         }
         return;
       }
-      if (event.key === 'ArrowDown' && isLeaderboardVisible) {
+      if (
+        event.key === ADMIN_SHORTCUTS.hideLeaderboard.key &&
+        isLeaderboardVisible
+      ) {
         event.preventDefault();
         sendAction('TOGGLE_LEADERBOARD');
         return;
       }
-      if (event.key === ' ') {
+      if (event.key === ADMIN_SHORTCUTS.toggleMedia.key) {
         event.preventDefault();
         sendAction('TOGGLE_MEDIA_FULLSCREEN');
       }

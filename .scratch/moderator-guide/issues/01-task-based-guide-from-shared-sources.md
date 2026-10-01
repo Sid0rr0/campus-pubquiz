@@ -1,6 +1,6 @@
 # 01: Rewrite `/guide` around the moderator's tasks, fed from the app's own sources
 
-**Status:** needs-triage
+**Status:** done
 
 **What to build:** The `/guide` page (`apps/frontend/app/guide/guide-content.tsx`) is the moderator's guide to running a quiz night. It is hand-written prose that has drifted from the app:
 
@@ -15,9 +15,13 @@ Rewrite it as task-oriented sections in the glossary's language (no status names
 
 Then pin it with a test so drift fails CI instead of reaching a quiz night.
 
-- [ ] Sections follow the moderator's tasks; the page uses glossary terms (block, break, break review, round title card, question type) and no raw status names
-- [ ] Lifecycle and grading text match `CONTEXT.md` / DOCUMENTATION.md: no `locked` status, grading allowed before the break and required to finish in it
-- [ ] Per-type notes are rendered from the question type registry, so a new type shows up in the guide without editing it
-- [ ] Keyboard shortcuts are rendered from the shortcut definitions the control page uses
-- [ ] A guide test asserts every question type and every shortcut appears, and that no raw status name (`locked`, `question_open`, `break_round_intro`, …) does
-- [ ] `CLAUDE.md`'s "Keeping docs current" rule (moderator-visible changes update `/guide`) is satisfied by this structure
+- [x] Sections follow the moderator's tasks; the page uses glossary terms (block, break, break review, round title card, question type) and no raw status names
+- [x] Lifecycle and grading text match `CONTEXT.md` / DOCUMENTATION.md: no `locked` status, grading allowed before the break and required to finish in it
+- [x] Per-type notes are rendered from the question type registry, so a new type shows up in the guide without editing it
+- [x] Keyboard shortcuts are rendered from the shortcut definitions the control page uses
+- [x] A guide test asserts every question type and every shortcut appears, and that no raw status name (`locked`, `question_open`, `break_round_intro`, …) does
+- [x] `CLAUDE.md`'s "Keeping docs current" rule (moderator-visible changes update `/guide`) is satisfied by this structure
+
+## Comments
+
+Implemented in the commit titled `feat(frontend): rewrite /guide around moderator tasks, fed from shared sources` (see git history). Per-type notes come from a new `moderatorNote` on each `QUESTION_KINDS` entry; shortcuts from `ADMIN_SHORTCUTS` in `apps/frontend/app/control/admin-keyboard-shortcuts.ts`, which the keyboard hook also reads.

@@ -51,16 +51,11 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md) | —          |
 
-### moderator-guide (no spec — single ticket)
-
-| #   | Ticket                                                                                                                                             | Blocked by |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [Rewrite `/guide` around the moderator's tasks, fed from the app's own sources](moderator-guide/issues/01-task-based-guide-from-shared-sources.md) | —          |
-
 ## Done
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| moderator-guide          | 01  | [Rewrite `/guide` around the moderator's tasks, fed from the app's own sources](moderator-guide/issues/01-task-based-guide-from-shared-sources.md)       | —         |
 | question-kind-module     | 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md)                        | —         |
 | question-kind-module     | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                                      | —         |
 | question-kind-module     | 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)                         | —         |

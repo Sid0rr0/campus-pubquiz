@@ -43,6 +43,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   type: T;
   /** The name the quiz editor's type picker shows. */
   label: string;
+  /** One moderator-facing sentence for the `/guide` page: how to author the question and how it is graded. */
+  moderatorNote: string;
   inputKind: AnswerInputKind;
   /** Whether the question is unusable without a `mediaUrl` (the editor marks the field required). */
   requiresMedia: boolean;
@@ -70,6 +72,8 @@ export const QUESTION_KINDS: {
   free_text: {
     type: 'free_text',
     label: 'Free text',
+    moderatorNote:
+      'No options. Graded automatically when a team submits, against the answer text (case and whitespace are ignored); you can still override any mark by hand.',
     inputKind: 'text',
     requiresMedia: false,
     choices: 'none',
@@ -83,6 +87,8 @@ export const QUESTION_KINDS: {
   multiple_choice: {
     type: 'multiple_choice',
     label: 'Multiple choice',
+    moderatorNote:
+      'Options are separated by pipes (Paris|London|Berlin) and the answer must match one option exactly. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'choice',
     requiresMedia: false,
     choices: 'required',
@@ -96,6 +102,8 @@ export const QUESTION_KINDS: {
   audio: {
     type: 'audio',
     label: 'Audio',
+    moderatorNote:
+      'Needs an http audio link as its media. You can add options if you like; either way you grade each answer by hand.',
     inputKind: 'text',
     requiresMedia: true,
     choices: 'optional',
@@ -109,6 +117,8 @@ export const QUESTION_KINDS: {
   youtube: {
     type: 'youtube',
     label: 'YouTube video',
+    moderatorNote:
+      'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like; either way you grade each answer by hand.',
     inputKind: 'text',
     requiresMedia: true,
     choices: 'optional',
@@ -123,6 +133,8 @@ export const QUESTION_KINDS: {
   sort: {
     type: 'sort',
     label: 'Sort / order',
+    moderatorNote:
+      'Options are pipe-separated in any order and the answer lists them in the correct order. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'sort',
     requiresMedia: false,
     choices: 'none',
@@ -136,6 +148,8 @@ export const QUESTION_KINDS: {
   match: {
     type: 'match',
     label: 'Match pairs',
+    moderatorNote:
+      'Options hold both lists as left1|left2+right1|right2 and the answer pairs them (Paris+France|Tokyo+Japan). Graded automatically when a team submits; you can override by hand.',
     inputKind: 'match',
     requiresMedia: false,
     choices: 'none',
@@ -149,6 +163,8 @@ export const QUESTION_KINDS: {
   closest_guess: {
     type: 'closest_guess',
     label: 'Closest guess',
+    moderatorNote:
+      'The answer is a number. Graded in one batch when the break starts: every team tied for the closest guess gets full points and everyone else gets zero. It cannot be overridden by hand.',
     inputKind: 'number',
     requiresMedia: false,
     choices: 'none',
