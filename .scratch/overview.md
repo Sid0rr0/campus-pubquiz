@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                                 | Blocked by |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [Agreement walk pins today's Advance and Previous](advance-plan/issues/01-agreement-walk-characterization.md)                                                          | —          |
 | 02  | [One Move plan drives the handler, button availability and the /remote preview](advance-plan/issues/02-move-plan-drives-handler-availability-preview.md)               | 01         |
 | 03  | [The server resolves Advance and Previous under the leaderboard; the admin view announces the step](advance-plan/issues/03-server-resolves-moves-under-leaderboard.md) | 02         |
 | 04  | [/control and /remote render the announced step and send only ADVANCE/PREVIOUS](advance-plan/issues/04-clients-render-announced-step.md)                               | 03         |
@@ -67,6 +66,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                            | Commit    |
 | ------------------------ | --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| advance-plan             | 01  | [Agreement walk pins today's Advance and Previous](advance-plan/issues/01-agreement-walk-characterization.md)                                     | —         |
 | gateway-handler-template | 03  | [Delete the pass-through handlers and fix the doc comments](gateway-handler-template/issues/03-delete-pass-through-handlers.md)                   | —         |
 | gateway-handler-template | 02  | [Declare each event once and route it through one dispatch step](gateway-handler-template/issues/02-event-declarations-and-guarded-dispatch.md)   | —         |
 | gateway-handler-template | 01  | [Test that every event rejects the wrong room](gateway-handler-template/issues/01-authorization-characterization-spec.md)                         | —         |
