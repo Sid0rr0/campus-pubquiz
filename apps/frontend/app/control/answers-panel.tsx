@@ -4,6 +4,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import { motion } from 'motion/react';
 import {
   halfPoints,
+  isBatchGradedType,
   type AnswerView,
   type AnswersUpdatedPayload,
   type QuestionType,
@@ -160,7 +161,7 @@ export function AnswersPanel({
   const answersByTeamId = new Map(
     answers.map((answer) => [answer.teamId, answer]),
   );
-  const readOnly = question.type === 'closest_guess';
+  const readOnly = isBatchGradedType(question.type);
   const correctCount = countCorrectAnswers(liveAnswers);
   const answeredCount = answers.length;
   const sortedTeams = [...teams].sort(

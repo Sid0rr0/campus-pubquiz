@@ -1,6 +1,7 @@
-import type { GameProgress } from '@campus-pubquiz/types';
+import type { GameProgress, QuestionType } from '@campus-pubquiz/types';
 import {
   isAutoGradedType,
+  isBatchGradedType,
   isGradedStatus,
   isGradingStatus,
 } from '@campus-pubquiz/types';
@@ -16,8 +17,8 @@ import type { SessionState } from '@/game/state/session-state';
  * hand, so its answers never leave the admin anything to do. Shared by the
  * per-question incremental update and the bulk refresh so they can't diverge.
  */
-export function canBeUngraded(question: { type: string }): boolean {
-  return question.type !== 'closest_guess';
+export function canBeUngraded(question: { type: QuestionType }): boolean {
+  return !isBatchGradedType(question.type);
 }
 
 /**
@@ -45,7 +46,7 @@ export class BlockGradingService {
     });
     const ungraded = blockQuestions.filter(
       (question) =>
-        question.type === 'closest_guess' &&
+        isBatchGradedType(question.type) &&
         session.closestGuessSummaries[question.id] === undefined,
     );
     if (ungraded.length === 0) return session;
@@ -151,7 +152,7 @@ export class BlockGradingService {
         );
         regradedQuestionIds.push(question.id);
       } else if (
-        question.type === 'closest_guess' &&
+        isBatchGradedType(question.type) &&
         summaries[question.id] !== undefined
       ) {
         const graded = await this.answerService.gradeClosestGuess(

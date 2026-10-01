@@ -1,4 +1,5 @@
-import type { QuestionType } from './question-types';
+import { QUESTION_KINDS, type QuestionKind } from './question-kind';
+import { QUESTION_TYPES, type QuestionType } from './question-types';
 import type { MatchScoringMode } from './socket-events';
 import { splitPipeList } from './sort-match';
 
@@ -31,39 +32,43 @@ export interface SpeedContext {
   timerMs: number | null;
 }
 
+function typesWhere(
+  matches: (kind: QuestionKind) => boolean,
+): readonly QuestionType[] {
+  return QUESTION_TYPES.filter((type) => matches(QUESTION_KINDS[type]));
+}
+
 /** Graded the instant they're submitted. */
-export const AUTO_GRADED_TYPES: readonly QuestionType[] = [
-  'multiple_choice',
-  'sort',
-  'match',
-  'free_text',
-];
+export const AUTO_GRADED_TYPES = typesWhere(
+  (kind) => kind.gradingMode === 'auto',
+);
 
 /** Graded in one pass once the question locks, comparing every guess. */
-export const BATCH_GRADED_TYPES: readonly QuestionType[] = ['closest_guess'];
+export const BATCH_GRADED_TYPES = typesWhere(
+  (kind) => kind.gradingMode === 'batch',
+);
 
 /** Need the quiz master's judgement. */
-export const HUMAN_GRADED_TYPES: readonly QuestionType[] = ['audio', 'youtube'];
+export const HUMAN_GRADED_TYPES = typesWhere(
+  (kind) => kind.gradingMode === 'human',
+);
 
 /**
- * The only types a kahoot round accepts. Deliberately its own list rather
- * than derived from AUTO_GRADED_TYPES: free_text grades at submit but would
- * turn the speed race into typing speed and spelling (see ADR 0001).
+ * The only types a kahoot round accepts. Its own entry field rather than
+ * derived from the grading mode: free_text grades at submit but would turn
+ * the speed race into typing speed and spelling (see ADR 0001).
  */
-export const KAHOOT_ALLOWED_TYPES: readonly QuestionType[] = [
-  'multiple_choice',
-  'sort',
-  'match',
-];
+export const KAHOOT_ALLOWED_TYPES = typesWhere((kind) => kind.kahootAllowed);
 
 /** Types the admin can regrade per answer — closest_guess is recomputed as a batch. */
-export const OVERRIDABLE_TYPES: readonly QuestionType[] = [
-  ...AUTO_GRADED_TYPES,
-  ...HUMAN_GRADED_TYPES,
-];
+export const OVERRIDABLE_TYPES = typesWhere((kind) => kind.overridable);
 
 export function isAutoGradedType(type: QuestionType): boolean {
   return AUTO_GRADED_TYPES.includes(type);
+}
+
+export function isBatchGradedType(type: QuestionType): boolean {
+  return QUESTION_KINDS[type].gradingMode === 'batch';
 }
 
 export function isKahootAllowedType(type: QuestionType): boolean {

@@ -14,7 +14,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                            | Blocked by |
 | --- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)  | 01         |
 | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)               | 04         |
 | 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md) | 06         |
 
@@ -51,6 +50,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| question-kind-module     | 05  | [Scoring lists derive from entries, and closest_guess literals go](question-kind-module/issues/05-scoring-lists-from-entries.md)                         | —         |
 | question-kind-module     | 04  | [CSV encode and decode live in the entries, with a round-trip test](question-kind-module/issues/04-csv-in-entries-with-round-trip.md)                    | —         |
 | question-kind-module     | 03  | [Persistence parses stored payloads instead of casting](question-kind-module/issues/03-payload-codec-replaces-casts.md)                                  | —         |
 | question-kind-module     | 02  | [Import and draft save share one schema](question-kind-module/issues/02-shared-schema-for-import-and-draft.md)                                           | —         |

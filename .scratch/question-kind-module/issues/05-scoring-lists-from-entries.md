@@ -6,10 +6,14 @@ Kahoot-allowed stays its own field on each entry and is never derived from auto-
 
 **Blocked by:** 01 (Registry skeleton with parity and characterization table).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The five per-type lists and their predicates are derived from entry fields and keep their public names and results
-- [ ] No `closest_guess` literal comparison remains in block grading or the answers panel
-- [ ] kahootAllowed is an independent entry field: free_text is auto-graded and not kahoot-allowed
-- [ ] The existing scoring, grading and answers-panel specs pass unchanged
-- [ ] The per-type flag assertions from ticket 01 still pass
+- [x] The five per-type lists and their predicates are derived from entry fields and keep their public names and results
+- [x] No `closest_guess` literal comparison remains in block grading or the answers panel
+- [x] kahootAllowed is an independent entry field: free_text is auto-graded and not kahoot-allowed
+- [x] The existing scoring, grading and answers-panel specs pass unchanged
+- [x] The per-type flag assertions from ticket 01 still pass
+
+## Comments
+
+Implemented in the commit titled "feat(shared-types): scoring lists derive from question kind entries" (hash in git history). Added `isBatchGradedType`, used by `canBeUngraded`/block grading and the answers panel. `closest-guess-reveal.util.ts` keeps its literal — it is reveal stepping, not block grading or the answers panel.
