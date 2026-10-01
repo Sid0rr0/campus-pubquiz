@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -10,6 +10,7 @@ import {
   isBatchGradedType,
   isShowingLastBreak,
   type LeaderboardEntry,
+  type OnAirScreen,
   isQuestionOnAirStatus,
 } from '@campus-pubquiz/types';
 import { useDisplayGame } from '@/app/lib/use-display-game';
@@ -162,15 +163,197 @@ function DisplayPageContent() {
   // there), so it is looked up by id rather than worked out here.
   const screenQuestionId =
     'questionId' in onAirScreen ? onAirScreen.questionId : null;
-  const breakReviewQuestion = blockQuestions.find(
+  const screenBlockQuestion = blockQuestions.find(
     (question) => question.id === screenQuestionId,
   );
-  const breakRoundIntroQuestion = breakReviewQuestion;
   const revealQuestion = revealQuestions.find(
     (question) => question.id === screenQuestionId,
   );
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
+
+  function renderScreen(screen: OnAirScreen): ReactNode {
+    switch (screen.kind) {
+      case 'leaderboard':
+        return (
+          <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
+            <h1 className="text-center font-display text-display-4xl">
+              <span className="text-magenta">Leaderboard</span>
+            </h1>
+            <Leaderboard
+              entries={leaderboard}
+              previousEntries={
+                isBetweenKahootQuestions ? previousLeaderboard : undefined
+              }
+              // For a Kahoot round's own round-end/quiz-end reveal (not
+              // caught by isBetweenKahootQuestions above, so it keeps its
+              // one-by-one suspense walk rather than animating), the trend
+              // icon still needs the real captured standings — comparing
+              // to "this round's points backed out" via currentRoundIndex
+              // would net out every question in the round, not just the
+              // last one, producing a bogus shared baseline whenever the
+              // round is the quiz's first (see currentRoundIndex's docs).
+              trendBaseline={
+                isCurrentRoundKahoot ? previousLeaderboard : undefined
+              }
+              revealCount={leaderboardRevealCount}
+              maxRank={
+                isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined
+              }
+              currentRoundIndex={progress.roundIndex}
+            />
+          </div>
+        );
+      case 'lobby':
+        return (
+          <LobbyScreen
+            teams={teams}
+            joinCode={codeFromUrl}
+            maxPlayersPerTeam={settings.maxPlayersPerTeam}
+            extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+          />
+        );
+      case 'rules':
+        return (
+          <div className="flex flex-1 items-center justify-center px-16 py-10">
+            <RulesContent quizStructure={quizStructure} settings={settings} />
+          </div>
+        );
+      case 'round_overview':
+        return (
+          <RoundOverviewScreen
+            roundTitles={roundTitles}
+            roundCategories={roundCategories}
+            roundAuthors={roundAuthors}
+          />
+        );
+      case 'round_title':
+        return (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
+            <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
+              ROUND {progress.roundIndex + 1}
+              {roundCategory ? ` — ${roundCategory}` : ''}
+            </p>
+            <h1 className="text-balance font-display text-display-6xl text-magenta">
+              {roundTitle}
+            </h1>
+            {roundAuthor && (
+              <p className="text-display-lg font-bold text-foreground/60">
+                by {roundAuthor}
+              </p>
+            )}
+          </div>
+        );
+      case 'question':
+        if (!currentQuestion) return null;
+        return (
+          <QuestionOpenScreen
+            question={currentQuestion}
+            answeredCount={answeredTeamIds.length}
+            totalTeams={teams.length}
+            autoplayMedia={settings.autoplayMedia}
+            isFullscreen={progress.isMediaFullscreen}
+            mediaReplayToken={progress.mediaReplayToken}
+            kahootQuestionEndsAt={kahootQuestionEndsAt}
+          />
+        );
+      case 'locking':
+        if (questionLockAt === null) return null;
+        return (
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
+            <QuestionLockHeading
+              key={`heading-${questionLockAt}`}
+              lockAt={questionLockAt}
+            />
+            <QuestionLockCountdown
+              key={`ring-${questionLockAt}`}
+              lockAt={questionLockAt}
+            />
+          </div>
+        );
+      case 'break_intro':
+        return (
+          <BreakIntroScreen
+            roundNumber={progress.roundIndex + 1}
+            breakNumber={breakNumber}
+            enabledBonusCategories={settings.enabledBonusCategories}
+            breakEndsAt={breakEndsAt}
+            quizStructure={quizStructure}
+            showBonusList={showBonusList}
+          />
+        );
+      case 'break_review':
+        if (!screenBlockQuestion) return null;
+        return (
+          <BreakReviewScreen
+            question={screenBlockQuestion}
+            autoplayMedia={settings.autoplayMedia}
+          />
+        );
+      case 'break_round_title':
+        if (!screenBlockQuestion) return null;
+        return (
+          <BreakRoundIntroScreen
+            roundNumber={screenBlockQuestion.roundNumber}
+            roundTitle={screenBlockQuestion.roundTitle}
+          />
+        );
+      case 'reveal_intro':
+        if (!revealQuestion) return null;
+        return (
+          <RevealIntroScreen
+            roundNumber={revealQuestion.roundNumber}
+            roundTitle={revealQuestion.roundTitle}
+          />
+        );
+      case 'reveal':
+        if (!revealQuestion) return null;
+        return isBatchGradedType(revealQuestion.type) &&
+          revealQuestion.closestGuess ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+            <ClosestGuessRevealScreen
+              prompt={revealQuestion.prompt}
+              step={closestGuessRevealStep}
+              correctAnswer={revealQuestion.answer}
+              answerMediaUrl={revealQuestion.answerMediaUrl}
+              closestGuess={revealQuestion.closestGuess}
+              mediaTestIdPrefix="reveal"
+              autoplayMedia={settings.autoplayMedia}
+            />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+            <QuestionDisplay
+              question={revealQuestion}
+              mediaTestIdPrefix="reveal"
+              autoplayMedia={settings.autoplayMedia}
+              isFullscreen={progress.isMediaFullscreen}
+            />
+          </div>
+        );
+      case 'ended':
+        return (
+          <div className="flex flex-1 items-center justify-center px-16 text-center">
+            <h1 className="font-display text-display-4xl">Quiz complete!</h1>
+          </div>
+        );
+      case 'showdown':
+        if (!activeShowdown) return null;
+        return (
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
+            <ShowdownRevealScreen
+              activeShowdown={activeShowdown}
+              step={showdownRevealStep}
+            />
+          </div>
+        );
+      default: {
+        const unhandled: never = screen;
+        return unhandled;
+      }
+    }
+  }
+
   return (
     <main
       className="flex h-dvh flex-col bg-background text-foreground"
@@ -193,179 +376,7 @@ function DisplayPageContent() {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          {progress.isLeaderboardVisible ? (
-            <div className="flex flex-1 flex-col justify-center gap-6 px-24 py-10">
-              <h1 className="text-center font-display text-display-4xl">
-                <span className="text-magenta">Leaderboard</span>
-              </h1>
-              <Leaderboard
-                entries={leaderboard}
-                previousEntries={
-                  isBetweenKahootQuestions ? previousLeaderboard : undefined
-                }
-                // For a Kahoot round's own round-end/quiz-end reveal (not
-                // caught by isBetweenKahootQuestions above, so it keeps its
-                // one-by-one suspense walk rather than animating), the trend
-                // icon still needs the real captured standings — comparing
-                // to "this round's points backed out" via currentRoundIndex
-                // would net out every question in the round, not just the
-                // last one, producing a bogus shared baseline whenever the
-                // round is the quiz's first (see currentRoundIndex's docs).
-                trendBaseline={
-                  isCurrentRoundKahoot ? previousLeaderboard : undefined
-                }
-                revealCount={leaderboardRevealCount}
-                maxRank={
-                  isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined
-                }
-                currentRoundIndex={progress.roundIndex}
-              />
-            </div>
-          ) : (
-            <>
-              {progress.status === 'lobby' && (
-                <LobbyScreen
-                  teams={teams}
-                  joinCode={codeFromUrl}
-                  maxPlayersPerTeam={settings.maxPlayersPerTeam}
-                  extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
-                />
-              )}
-              {progress.status === 'rules' && (
-                <div className="flex flex-1 items-center justify-center px-16 py-10">
-                  <RulesContent
-                    quizStructure={quizStructure}
-                    settings={settings}
-                  />
-                </div>
-              )}
-              {progress.status === 'round_overview' && (
-                <RoundOverviewScreen
-                  roundTitles={roundTitles}
-                  roundCategories={roundCategories}
-                  roundAuthors={roundAuthors}
-                />
-              )}
-              {progress.status === 'round_intro' && (
-                <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16 text-center">
-                  <p className="text-display-sm font-extrabold tracking-wide text-foreground/55">
-                    ROUND {progress.roundIndex + 1}
-                    {roundCategory ? ` — ${roundCategory}` : ''}
-                  </p>
-                  <h1 className="text-balance font-display text-display-6xl text-magenta">
-                    {roundTitle}
-                  </h1>
-                  {roundAuthor && (
-                    <p className="text-display-lg font-bold text-foreground/60">
-                      by {roundAuthor}
-                    </p>
-                  )}
-                </div>
-              )}
-              {progress.status === 'question_open' && currentQuestion && (
-                <QuestionOpenScreen
-                  question={currentQuestion}
-                  answeredCount={answeredTeamIds.length}
-                  totalTeams={teams.length}
-                  autoplayMedia={settings.autoplayMedia}
-                  isFullscreen={progress.isMediaFullscreen}
-                  mediaReplayToken={progress.mediaReplayToken}
-                  kahootQuestionEndsAt={kahootQuestionEndsAt}
-                />
-              )}
-              {progress.status === 'locking' && questionLockAt !== null && (
-                <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">
-                  <QuestionLockHeading
-                    key={`heading-${questionLockAt}`}
-                    lockAt={questionLockAt}
-                  />
-                  <QuestionLockCountdown
-                    key={`ring-${questionLockAt}`}
-                    lockAt={questionLockAt}
-                  />
-                </div>
-              )}
-              {progress.status === 'break_intro' && (
-                <BreakIntroScreen
-                  roundNumber={progress.roundIndex + 1}
-                  breakNumber={breakNumber}
-                  enabledBonusCategories={settings.enabledBonusCategories}
-                  breakEndsAt={breakEndsAt}
-                  quizStructure={quizStructure}
-                  showBonusList={showBonusList}
-                />
-              )}
-              {progress.status === 'break' &&
-                (breakReviewQuestion ? (
-                  <BreakReviewScreen
-                    question={breakReviewQuestion}
-                    autoplayMedia={settings.autoplayMedia}
-                  />
-                ) : (
-                  <BreakIntroScreen
-                    roundNumber={progress.roundIndex + 1}
-                    breakNumber={breakNumber}
-                    enabledBonusCategories={settings.enabledBonusCategories}
-                    breakEndsAt={breakEndsAt}
-                    quizStructure={quizStructure}
-                    showBonusList={showBonusList}
-                  />
-                ))}
-              {progress.status === 'break_round_intro' &&
-                breakRoundIntroQuestion && (
-                  <BreakRoundIntroScreen
-                    roundNumber={breakRoundIntroQuestion.roundNumber}
-                    roundTitle={breakRoundIntroQuestion.roundTitle}
-                  />
-                )}
-              {progress.status === 'reveal_intro' && revealQuestion && (
-                <RevealIntroScreen
-                  roundNumber={revealQuestion.roundNumber}
-                  roundTitle={revealQuestion.roundTitle}
-                />
-              )}
-              {progress.status === 'reveal' &&
-                revealQuestion &&
-                (isBatchGradedType(revealQuestion.type) &&
-                revealQuestion.closestGuess ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                    <ClosestGuessRevealScreen
-                      prompt={revealQuestion.prompt}
-                      step={closestGuessRevealStep}
-                      correctAnswer={revealQuestion.answer}
-                      answerMediaUrl={revealQuestion.answerMediaUrl}
-                      closestGuess={revealQuestion.closestGuess}
-                      mediaTestIdPrefix="reveal"
-                      autoplayMedia={settings.autoplayMedia}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                    <QuestionDisplay
-                      question={revealQuestion}
-                      mediaTestIdPrefix="reveal"
-                      autoplayMedia={settings.autoplayMedia}
-                      isFullscreen={progress.isMediaFullscreen}
-                    />
-                  </div>
-                ))}
-              {progress.status === 'ended' &&
-                (activeShowdown ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-                    <ShowdownRevealScreen
-                      activeShowdown={activeShowdown}
-                      step={showdownRevealStep}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-1 items-center justify-center px-16 text-center">
-                    <h1 className="font-display text-display-4xl">
-                      Quiz complete!
-                    </h1>
-                  </div>
-                ))}
-            </>
-          )}
+          {renderScreen(onAirScreen)}
         </motion.div>
       </AnimatePresence>
     </main>

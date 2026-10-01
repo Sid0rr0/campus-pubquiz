@@ -6,11 +6,15 @@ Parent spec: `.scratch/display-screen-kind/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The page switches on `onAirScreen.kind` with one case per kind and a never-check; adding a kind without a drawing fails the build
-- [ ] The inline `progress.status` chain, the separate leaderboard-first branch, the duplicated break-fallback JSX and the `activeShowdown` ternary are deleted from `/display`
-- [ ] Existing `/display` tests pass unchanged
-- [ ] New cases: a `leaderboard` screen covers any underlying status; `break` with no reviewable question shows the break intro; `ended` with and without an active showdown; a `question` screen with no current question and a `locking` screen with no lock deadline render nothing without throwing
-- [ ] The previous-leaderboard capture and `isBetweenKahootQuestions` are untouched
-- [ ] No new fields on `OnAirScreen`; the admin and players views are unchanged
+- [x] The page switches on `onAirScreen.kind` with one case per kind and a never-check; adding a kind without a drawing fails the build
+- [x] The inline `progress.status` chain, the separate leaderboard-first branch, the duplicated break-fallback JSX and the `activeShowdown` ternary are deleted from `/display`
+- [x] Existing `/display` tests pass unchanged
+- [x] New cases: a `leaderboard` screen covers any underlying status; `break` with no reviewable question shows the break intro; `ended` with and without an active showdown; a `question` screen with no current question and a `locking` screen with no lock deadline render nothing without throwing
+- [x] The previous-leaderboard capture and `isBetweenKahootQuestions` are untouched
+- [x] No new fields on `OnAirScreen`; the admin and players views are unchanged
+
+## Comments
+
+Implemented in the commit that closes this ticket (`feat(frontend): render /display by the on-air screen kind`; see git history for the hash). New cases are in `apps/frontend/app/display/__tests__/screen-kind.test.tsx`; they set `onAirScreen` explicitly, so they pin the page to the screen kind rather than the status underneath.

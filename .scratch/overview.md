@@ -10,12 +10,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | 03  | [The server resolves Advance and Previous under the leaderboard; the admin view announces the step](advance-plan/issues/03-server-resolves-moves-under-leaderboard.md) | 02         |
 
-### display-screen-kind ([spec](display-screen-kind/spec.md))
-
-| #   | Ticket                                                                                                           | Blocked by |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [/display renders by the On-air screen's kind](display-screen-kind/issues/01-display-switches-on-screen-kind.md) | —          |
-
 ### phone-question-selection ([spec](phone-question-selection/spec.md))
 
 | #   | Ticket                                                                                                                                   | Blocked by |
@@ -55,6 +49,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                   | Commit    |
 | ------------------------ | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| display-screen-kind      | 01  | [/display renders by the On-air screen's kind](display-screen-kind/issues/01-display-switches-on-screen-kind.md)                                         | —         |
 | moderator-guide          | 01  | [Rewrite `/guide` around the moderator's tasks, fed from the app's own sources](moderator-guide/issues/01-task-based-guide-from-shared-sources.md)       | —         |
 | question-kind-module     | 07  | [Audio and YouTube questions can carry multiple-choice options](question-kind-module/issues/07-audio-youtube-optional-choices.md)                        | —         |
 | question-kind-module     | 06  | [Editor and answer/display select by entry](question-kind-module/issues/06-editor-and-answer-display-read-entry.md)                                      | —         |
