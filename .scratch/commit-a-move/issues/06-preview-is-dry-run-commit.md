@@ -6,9 +6,13 @@ Parent spec: `.scratch/commit-a-move/spec.md`
 
 **Blocked by:** 05 (One Commit-a-move module carries out every press)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The presenter preview's "next" screen comes from the module's dry run, using the same plan and Settle step as a commit
-- [ ] A dry run writes nothing: no grades, no showdown resolve, no saved progress, and the in-memory session is unchanged
-- [ ] Every remaining named exception in the 01 agreement walk is removed and the walk passes with none left
-- [ ] The presenter context and action-availability specs pass unchanged
+- [x] The presenter preview's "next" screen comes from the module's dry run, using the same plan and Settle step as a commit
+- [x] A dry run writes nothing: no grades, no showdown resolve, no saved progress, and the in-memory session is unchanged
+- [x] Every remaining named exception in the 01 agreement walk is removed and the walk passes with none left
+- [x] The presenter context and action-availability specs pass unchanged
+
+## Comments
+
+Added `previewMove` beside `MoveCommitter` (`apps/backend/src/game/state/commit-a-move.service.ts`): the same `planMove` and Settle step as a commit (shared `settleMove`), with the grading stages, showdown resolve and save left out. `describeNextScreen` now asks `nextPressAction` (new in the Move plan, replacing the lobby special case) and projects the previewed session. The walk in `presenter-context.spec.ts` already had no named exceptions left after 05 and still passes with none; `commit-a-move.spec.ts` gains a spec that the preview saves nothing and leaves the snapshot unchanged. Committed on main; see git history for the hash.

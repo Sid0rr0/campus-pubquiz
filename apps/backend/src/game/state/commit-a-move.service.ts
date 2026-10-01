@@ -150,12 +150,7 @@ export class MoveCommitter {
     // reveal count, the kahoot timer and everything else downstream treat it
     // identically.
     const action = effectiveActionOf(step, pressed);
-    const settled = settleSession({
-      session: refreshed,
-      progress,
-      step: { kind: step.kind, action },
-      now: Date.now(),
-    });
+    const settled = settleMove(refreshed, step, pressed);
     const committed = await this.withBoardFreshIfTurnedOn(settled, action);
 
     await this.progressRepository.save(
@@ -231,6 +226,52 @@ export class MoveCommitter {
       session.seededGame.gameSessionId,
     );
     return { ...session, activeShowdownRound: resolvedRound, leaderboard };
+  }
+}
+
+/** The Settle step for a progress-moving step, carried out as the action it plans. */
+function settleMove(
+  session: SessionState,
+  step: ProgressMoveStep,
+  pressed: GameAction,
+): SessionState {
+  return settleSession({
+    session,
+    progress: step.progress,
+    step: { kind: step.kind, action: effectiveActionOf(step, pressed) },
+    now: Date.now(),
+  });
+}
+
+/** What a press would do, with the session as it would then stand. */
+export interface PreviewedMove {
+  step: MoveStep;
+  /** The session after the press; `step`'s own session for the ephemeral steps, the current one for a press that moves nothing. */
+  session: SessionState;
+}
+
+/**
+ * A dry-run commit: the same plan and Settle step as `commit`, with no
+ * grading writes, no showdown resolve and nothing saved. The session passed
+ * in is never changed.
+ */
+export function previewMove(
+  session: SessionState,
+  action: GameAction,
+): PreviewedMove {
+  const step = planMove(session, action);
+  switch (step.kind) {
+    case 'transition':
+    case 'leaderboard_reveal':
+    case 'leaderboard_hide':
+      return { step, session: settleMove(session, step, action) };
+    case 'showdown_step':
+    case 'closest_guess_step':
+      return { step, session: step.session };
+    case 'grading_pending':
+    case 'showdown_waiting':
+    case 'blocked':
+      return { step, session };
   }
 }
 

@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### commit-a-move ([spec](commit-a-move/spec.md))
-
-| #   | Ticket                                                                                                            | Blocked by                    |
-| --- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md)                 | 05                            |
-
 ### players-reveal-redaction ([spec](players-reveal-redaction/spec.md))
 
 | #   | Ticket                                                                                                                                                                 | Blocked by |
@@ -23,6 +17,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| commit-a-move               | 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md) | —         |
 | commit-a-move               | 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md) | —         |
 | commit-a-move               | 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md) | —         |
 | commit-a-move               | 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md) | —         |

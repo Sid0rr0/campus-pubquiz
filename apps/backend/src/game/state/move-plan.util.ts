@@ -68,12 +68,15 @@ export function planMove(session: SessionState, action: GameAction): MoveStep {
   return planMovement(session, action);
 }
 
-/** What the next press does: START_QUIZ in the lobby (the lobby's Advance), ADVANCE everywhere else — and under the leaderboard ADVANCE drives the board. */
-export function planNextPress(session: SessionState): MoveStep {
+/** The action the next press carries out: START_QUIZ in the lobby (the lobby's Advance), ADVANCE everywhere else — and under the leaderboard ADVANCE drives the board. */
+export function nextPressAction(session: SessionState): GameAction {
   const { status, isLeaderboardVisible } = session.progress;
-  return status === 'lobby' && !isLeaderboardVisible
-    ? planTransition(session, 'START_QUIZ')
-    : planMove(session, 'ADVANCE');
+  return status === 'lobby' && !isLeaderboardVisible ? 'START_QUIZ' : 'ADVANCE';
+}
+
+/** What the next press does. */
+export function planNextPress(session: SessionState): MoveStep {
+  return planMove(session, nextPressAction(session));
 }
 
 function planTransition(session: SessionState, action: GameAction): MoveStep {

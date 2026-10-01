@@ -85,4 +85,20 @@ describe('GameStateService — committing a move', () => {
       expect(outcome.teamSyncTeamIds).toEqual([]);
     });
   });
+
+  describe('the presenter preview, a dry run of the next press', () => {
+    it('saves nothing and leaves the session where it was', async () => {
+      // Arrange
+      const before = await game.snapshot();
+      const save = jest.spyOn(game.progressRepository, 'save');
+
+      // Act
+      const { nextScreen } = game.gameState.getPresenterContext(game.joinCode);
+
+      // Assert
+      expect(nextScreen).not.toBeNull();
+      expect(save).not.toHaveBeenCalled();
+      expect(await game.snapshot()).toEqual(before);
+    });
+  });
 });

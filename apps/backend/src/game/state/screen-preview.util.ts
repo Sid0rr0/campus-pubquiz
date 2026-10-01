@@ -10,7 +10,11 @@ import {
   getBlockSeededQuestions,
   getCurrentQuestion,
 } from '@/game/state/block-questions.util';
-import { planNextPress, type MoveStep } from '@/game/state/move-plan.util';
+import {
+  previewMove,
+  type PreviewedMove,
+} from '@/game/state/commit-a-move.service';
+import { nextPressAction } from '@/game/state/move-plan.util';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 
@@ -122,17 +126,18 @@ export function describeScreen(session: SessionState): ScreenPreview {
   return describeOnAirScreenText(session, onAirScreen);
 }
 
-function describeStep(
+/** Words for what a dry-run commit of the next press leaves on air; waiting and blocked steps move no screen and are described from the step. */
+function describePreviewedMove(
   session: SessionState,
-  step: MoveStep,
+  { step, session: after }: PreviewedMove,
 ): ScreenPreview | null {
   switch (step.kind) {
     case 'showdown_step':
-      return step.session.showdownRevealStep === session.showdownRevealStep
+      return after.showdownRevealStep === session.showdownRevealStep
         ? null
         : {
             heading: 'Showdown',
-            body: `Reveal step ${step.session.showdownRevealStep}`,
+            body: `Reveal step ${after.showdownRevealStep}`,
           };
     case 'showdown_waiting':
       return { heading: 'Showdown', body: 'Waiting for every guess' };
@@ -143,22 +148,24 @@ function describeStep(
         heading: 'Leaderboard',
         body: `Next place (${step.place} of ${step.placeCount})`,
       };
-    case 'leaderboard_hide':
-      return describeScreen({ ...session, progress: step.progress });
     case 'closest_guess_step':
       return { ...describeScreen(session), body: 'Next closest-guess step' };
+    case 'leaderboard_hide':
     case 'transition':
-      return describeScreen({ ...session, progress: step.progress });
+      return describeScreen(after);
     case 'blocked':
       return null;
   }
 }
 
-/** The screen /display will show after /remote's Advance slot is pressed: the planned Advance step. */
+/** The screen /display will show after /remote's Advance slot is pressed: the next press, as a dry-run commit leaves it. */
 export function describeNextScreen(
   session: SessionState,
 ): ScreenPreview | null {
-  return describeStep(session, planNextPress(session));
+  return describePreviewedMove(
+    session,
+    previewMove(session, nextPressAction(session)),
+  );
 }
 
 /**
