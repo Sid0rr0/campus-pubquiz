@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                            | Blocked by                    |
 | --- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md) | 01                            |
 | 05  | [One Commit-a-move module carries out every press](commit-a-move/issues/05-commit-a-move-module.md)               | 02, 03, 04                    |
 | 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md)                 | 05                            |
 
@@ -25,6 +24,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| commit-a-move               | 03  | [The Move plan plans every action, lobby start included](commit-a-move/issues/03-move-plan-plans-every-action.md) | —         |
 | commit-a-move               | 04  | [/remote says Advance is waiting for grading](commit-a-move/issues/04-remote-says-waiting-for-grading.md) | —         |
 | commit-a-move               | 02  | [The Settle step knows the step kind](commit-a-move/issues/02-settle-step-knows-step-kind.md)                                                                          | —         |
 | commit-a-move               | 01  | [Agreement walk pins today's preview against the real press](commit-a-move/issues/01-agreement-walk-pins-preview.md)                                                   | —         |
