@@ -8,14 +8,23 @@ Parent spec: `.scratch/grading-refresh/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] New ungraded agreement-walk steps are written first and fail against today's code:
+- [x] New ungraded agreement-walk steps are written first and fail against today's code:
   - in the break, a key fix on a typed question whose answers were all auto-matched makes one stop matching, and the question appears in the set
   - in the break, a key fix makes a question's only waiting answer match, and the question disappears from the set
-- [ ] Agreement-walk steps for a key fix on a typed question while it is still open for answering, in both directions.
-- [ ] On the last block, a key fix that leaves an answer ungraded makes showdown eligibility false until that answer is graded. Put this check wherever showdown eligibility is pinned today.
-- [ ] The existing key-fix steps in the walk still pass: auto-graded, typed with the question already ungraded, and closest_guess.
-- [ ] The key fix applies the refresh without a read-modify-write of the session across an `await`.
-- [ ] The leaderboard, the admin's answer lists and the phones' team sync after a key fix are as today. The live edit regrade spec passes unchanged.
-- [ ] `CONTEXT.md` gains **Ungraded** (an answer still waiting for the quiz master, and a question with one) and **Grading refresh** (the one step every change to grades ends through), the latter next to **Settle step**.
+- [x] Agreement-walk steps for a key fix on a typed question while it is still open for answering, in both directions.
+- [x] On the last block, a key fix that leaves an answer ungraded makes showdown eligibility false until that answer is graded. Put this check wherever showdown eligibility is pinned today.
+- [x] The existing key-fix steps in the walk still pass: auto-graded, typed with the question already ungraded, and closest_guess.
+- [x] The key fix applies the refresh without a read-modify-write of the session across an `await`.
+- [x] The leaderboard, the admin's answer lists and the phones' team sync after a key fix are as today. The live edit regrade spec passes unchanged.
+- [x] `CONTEXT.md` gains **Ungraded** (an answer still waiting for the quiz master, and a question with one) and **Grading refresh** (the one step every change to grades ends through), the latter next to **Settle step**.
+
+## Comments
+
+Implemented in the commit titled `feat(backend): a live answer-key fix refreshes the ungraded markers` (see git history for the hash).
+
+- `BlockGradingService.gradingRefresh` returns the ungraded ids and fresh standings; `withGradingRefresh` applies them. `regradeQuestions` now only writes grades, and `GameStateService.regradeQuestions` ends through the refresh.
+- The refresh only covers questions in the current block, since the cached set describes the block in play. A key fix on a past block's question changes no marker.
+- The new walk steps live in `ungraded-agreement.spec.ts`, showdown eligibility included, and failed against the old code first.
+- `/guide` says nothing about markers after a key fix, so it is unchanged.

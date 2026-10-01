@@ -1,5 +1,6 @@
 import type {
   GameProgress,
+  LeaderboardEntry,
   QuestionType,
   ScoredQuestion,
 } from '@campus-pubquiz/types';
@@ -24,6 +25,17 @@ import type { SessionState } from '@/game/state/session-state';
  */
 export function canBeUngraded(question: { type: QuestionType }): boolean {
   return !isBatchGradedType(question.type);
+}
+
+/**
+ * What the grading refresh hands back for the caller to apply to the session
+ * in one synchronous update: which of the questions whose grades just changed
+ * are ungraded, and the standings those grades produced.
+ */
+export interface GradingRefresh {
+  questionIds: readonly number[];
+  ungradedQuestionIds: readonly number[];
+  leaderboard: LeaderboardEntry[];
 }
 
 /**
@@ -117,16 +129,18 @@ export class BlockGradingService {
    * stored at submit); match-or-human types grade new matches correct, keep
    * the moderator's grades and leave other non-matches ungraded;
    * closest_guess re-runs its batch only if it was already graded (otherwise
-   * the normal lock flow grades it with the new key). Recomputes the
-   * leaderboard if anything changed, and names the questions it re-scored.
+   * the normal lock flow grades it with the new key). Only writes grades:
+   * names the questions it re-scored and the closest_guess summaries it
+   * recomputed, and leaves the session to the caller, which ends through
+   * gradingRefresh.
    */
   async regradeQuestions(
     session: SessionState,
     questionIds: readonly number[],
     previousQuestions: ReadonlyMap<number, ScoredQuestion> = new Map(),
   ): Promise<{
-    session: SessionState;
     regradedQuestionIds: readonly number[];
+    closestGuessSummaries: SessionState['closestGuessSummaries'];
   }> {
     const { gameSessionId } = session.seededGame;
     const { kahootQuestionTimerSeconds } = session.seededGame.settings;
@@ -140,7 +154,7 @@ export class BlockGradingService {
       )
       .filter(({ question }) => questionIds.includes(question.id));
 
-    let summaries = session.closestGuessSummaries;
+    let summaries: SessionState['closestGuessSummaries'] = {};
     const regradedQuestionIds: number[] = [];
     for (const { question, kahootTimerSeconds } of questions) {
       if (isAutoGradedType(question.type)) {
@@ -159,7 +173,7 @@ export class BlockGradingService {
         regradedQuestionIds.push(question.id);
       } else if (
         isBatchGradedType(question.type) &&
-        summaries[question.id] !== undefined
+        session.closestGuessSummaries[question.id] !== undefined
       ) {
         const graded = await this.answerService.gradeClosestGuess(
           gameSessionId,
@@ -172,16 +186,32 @@ export class BlockGradingService {
         regradedQuestionIds.push(question.id);
       }
     }
-    if (regradedQuestionIds.length === 0) {
-      return { session, regradedQuestionIds };
-    }
+    return { regradedQuestionIds, closestGuessSummaries: summaries };
+  }
 
-    return {
-      session: await this.withFreshLeaderboard(session, {
-        closestGuessSummaries: summaries,
-      }),
-      regradedQuestionIds,
-    };
+  /**
+   * The grading refresh: after grades changed for `questionIds`, reads which
+   * of the current block's questions among them are ungraded (through the one
+   * ungraded reader, so closest_guess is still dropped) and fetches fresh
+   * standings. Returns the change for the caller to apply in one synchronous
+   * update — it must not become a read-modify-write of the session across an
+   * `await`, so it never takes the session back. Questions outside the
+   * current block are left alone: the cached set only ever describes the
+   * block in play.
+   */
+  async gradingRefresh(
+    session: SessionState,
+    questionIds: readonly number[],
+  ): Promise<GradingRefresh> {
+    const blockQuestionIds = new Set(
+      getBlockSeededQuestions(session).map((question) => question.id),
+    );
+    const refreshedIds = questionIds.filter((id) => blockQuestionIds.has(id));
+    const [ungradedQuestionIds, leaderboard] = await Promise.all([
+      this.listUngradedQuestionIds(session, [...refreshedIds]),
+      this.standingsService.leaderboard(session.seededGame.gameSessionId),
+    ]);
+    return { questionIds: refreshedIds, ungradedQuestionIds, leaderboard };
   }
 
   /**

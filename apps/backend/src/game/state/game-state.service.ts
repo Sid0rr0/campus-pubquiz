@@ -49,6 +49,7 @@ import {
   withBreakEndTime,
   withDisplayTextScale,
   withLeaderboard,
+  withGradingRefresh,
   withQuestionGradedStatus,
   withShowdownGuess,
   withTeamConnected,
@@ -222,7 +223,11 @@ export class GameStateService implements OnModuleInit {
    * Re-grades already-shown questions whose answer/points were corrected by
    * a live edit — call after reloadActiveQuiz, so the corrected key is what
    * gets graded against. `previousQuestions` are the edited questions as
-   * they were before the reload. See BlockGradingService.regradeQuestions.
+   * they were before the reload. Ends through the grading refresh: fetched,
+   * then applied in one synchronous update on the session as it is by then,
+   * never a read-modify-write of the whole session across an await. Like the
+   * answer-change path, the fetched values can be a moment old; a break entry
+   * re-reads the whole block. See BlockGradingService.regradeQuestions.
    * Returns the ids of the questions it actually re-scored.
    */
   async regradeQuestions(
@@ -230,14 +235,30 @@ export class GameStateService implements OnModuleInit {
     questionIds: readonly number[],
     previousQuestions?: ReadonlyMap<number, ScoredQuestion>,
   ): Promise<readonly number[]> {
-    const session = this.sessionStore.get(joinCode);
-    const { session: regraded, regradedQuestionIds } =
+    const { regradedQuestionIds, closestGuessSummaries } =
       await this.grading.regradeQuestions(
-        session,
+        this.sessionStore.get(joinCode),
         questionIds,
         previousQuestions,
       );
-    this.sessionStore.set(joinCode, regraded);
+    if (regradedQuestionIds.length === 0) return regradedQuestionIds;
+
+    const refresh = await this.grading.gradingRefresh(
+      this.sessionStore.get(joinCode),
+      regradedQuestionIds,
+    );
+    this.update(joinCode, (session) =>
+      withGradingRefresh(
+        {
+          ...session,
+          closestGuessSummaries: {
+            ...session.closestGuessSummaries,
+            ...closestGuessSummaries,
+          },
+        },
+        refresh,
+      ),
+    );
     return regradedQuestionIds;
   }
 

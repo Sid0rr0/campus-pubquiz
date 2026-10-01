@@ -2,6 +2,7 @@ import { RequestContext } from '@mikro-orm/postgresql';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  type AdminStatePayload,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
@@ -296,5 +297,74 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
       audio,
     ]);
     await step('last audio answer graded', () => grade(teamB, audio), []);
+  });
+
+  /** Presses through every question up to the lock, so the next ADVANCE enters the break. */
+  async function advanceToLastLock(): Promise<void> {
+    // audio -> youtube -> free_text -> multiple_choice -> closest_guess -> locking
+    for (let press = 0; press < 5; press += 1) await game.act('ADVANCE');
+  }
+
+  // The one round is also the last block, so the break decides the showdown.
+  function isShowdownEligible(): boolean {
+    return (latestAdminView() as AdminStatePayload).isShowdownEligible;
+  }
+
+  it('lists a typed question when a key fix stops its auto-matched answer matching, and withholds the showdown until it is graded', async () => {
+    await game.openFirstQuestion(admin);
+    await submit(teamA, audio, 'Queen');
+    await advanceToLastLock();
+    await step(
+      'break entered with every answer matched',
+      () => game.act('ADVANCE'),
+      [],
+    );
+
+    await step(
+      'typed-answer key fixed so the matched answer stops matching',
+      () => fixAnswerKey(audio, 'Queen II'),
+      [audio],
+    );
+    expect(isShowdownEligible()).toBe(false);
+
+    await step('the unmatched answer graded', () => grade(teamA, audio), []);
+    expect(isShowdownEligible()).toBe(true);
+  });
+
+  it('drops a typed question when a key fix makes its only waiting answer match', async () => {
+    await game.openFirstQuestion(admin);
+    await submit(teamA, audio, 'Abba');
+    await advanceToLastLock();
+    await step(
+      'break entered with a waiting answer',
+      () => game.act('ADVANCE'),
+      [audio],
+    );
+
+    await step(
+      'typed-answer key fixed so the waiting answer matches',
+      () => fixAnswerKey(audio, 'Abba'),
+      [],
+    );
+    expect(isShowdownEligible()).toBe(true);
+  });
+
+  it('keeps the set right across typed-answer key fixes while the question is still open', async () => {
+    await game.openFirstQuestion(admin);
+    await step(
+      'matching audio submitted',
+      () => submit(teamA, audio, 'Queen'),
+      [],
+    );
+    await step(
+      'open key fixed so the matched answer stops matching',
+      () => fixAnswerKey(audio, 'Queen II'),
+      [audio],
+    );
+    await step(
+      'open key fixed so the waiting answer matches',
+      () => fixAnswerKey(audio, 'Queen'),
+      [],
+    );
   });
 });

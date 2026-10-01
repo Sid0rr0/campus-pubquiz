@@ -33,6 +33,10 @@ _Avoid_: tiebreaker round, sudden death
 The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then revises an answer into something that doesn't match the key, its mark is cleared and must be given again. A typed answer (free text, audio, YouTube) that matches the key is graded correct automatically; only the others wait for the quiz master.
 _Avoid_: scoring, marking
 
+**Ungraded**:
+An answer still waiting for the quiz master to grade it, and a question with at least one such answer. closest*guess is never ungraded: it is graded in one batch at the lock.
+\_Avoid*: unmarked, pending
+
 **Break**:
 The pause after a block locks, in which the quiz master finishes any grading still open. The quiz cannot leave the break while an answer is ungraded.
 
@@ -73,3 +77,6 @@ What one press of Advance or Previous does right now: reveal the next leaderboar
 
 **Settle step**:
 Bringing a session's timers, deadlines and reveal counters into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
+
+**Grading refresh**:
+The one step every change to grades ends through: given the questions whose grades just changed, it works out which of them are ungraded and fetches fresh standings, and the session takes both in a single update. Today a live answer-key fix ends through it.

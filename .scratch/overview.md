@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                   | Blocked by |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [A live answer-key fix refreshes /control's ungraded markers](grading-refresh/issues/01-key-fix-refreshes-ungraded.md)                                   | —          |
 | 02  | [Answer submitted or graded ends through the grading refresh](grading-refresh/issues/02-answer-changes-through-refresh.md)                               | 01         |
 | 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md) | 01         |
 
@@ -36,6 +35,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| grading-refresh             | 01  | [A live answer-key fix refreshes /control's ungraded markers](grading-refresh/issues/01-key-fix-refreshes-ungraded.md)                                                 | —         |
 | round-title-card            | 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md)                            | —         |
 | rename-grading-status-group | 01  | [Rename the `grading` status group to name the break, not the act of grading](rename-grading-status-group/issues/01-rename-grading-group-to-break.md)                  | —         |
 | typed-answer-grading        | 01  | [A typed answer that matches the key grades itself; anything else waits for the moderator](typed-answer-grading/issues/01-match-auto-grades-otherwise-moderator.md)    | —         |

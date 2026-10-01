@@ -3,6 +3,7 @@ import type {
   ActiveShowdownRoundState,
   SessionState,
 } from '@/game/state/session-state';
+import type { GradingRefresh } from '@/game/state/block-grading.service';
 import type { TeamRosterEntry } from '@/team/team.service';
 
 /**
@@ -92,6 +93,22 @@ export function withQuestionGradedStatus(
     ungradedQuestionIds: hasUngradedAnswers
       ? [...withoutQuestion, questionId]
       : withoutQuestion,
+  };
+}
+
+/** Applies a grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise) and the leaderboard is replaced. */
+export function withGradingRefresh(
+  session: SessionState,
+  refresh: GradingRefresh,
+): SessionState {
+  const refreshed = new Set(refresh.questionIds);
+  return {
+    ...session,
+    ungradedQuestionIds: [
+      ...session.ungradedQuestionIds.filter((id) => !refreshed.has(id)),
+      ...refresh.ungradedQuestionIds,
+    ],
+    leaderboard: refresh.leaderboard,
   };
 }
 
