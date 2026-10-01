@@ -1,17 +1,17 @@
 # Campus Pub Quiz — Project Guide
 
-## What This Is
+A live pub quiz web app for campus events: a big screen (`/display`) shows the questions, teams answer on their phones (`/play`), and the quiz master runs the game from a laptop (`/control`).
 
-A live pub quiz web app for campus events. One machine displays questions on a big screen, teams answer on their phones, and the quiz master grades answers and controls the game from an admin laptop.
+This file holds only the commands, constraints and conventions future work must respect. Everything else has one home — link to it rather than re-explaining it here:
 
-## Three UIs (one Next.js app, three routes)
-
-| Route      | Who uses it               | Purpose                                                                                                         |
-| ---------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `/display` | Big screen (TV/projector) | Current question, media, countdown, leaderboard between rounds                                                  |
-| `/control` | Quiz master's laptop      | Advance questions, watch live answers, grade free-text, award points                                            |
-| `/play`    | Team phones               | Join via QR + team name, see question, submit answers                                                           |
-| `/rules`   | Anyone, any time          | Standalone rules page (round/topic/break structure + house rules), also shown in-game during the `rules` status |
+| Question                                                                   | Where it's answered                                              |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| What does a domain term mean (block, break, break review, question type…)? | [`CONTEXT.md`](CONTEXT.md)                                       |
+| How does it work: statuses, protocol, question types, CSV, auth, deploy?   | [`DOCUMENTATION.md`](DOCUMENTATION.md)                           |
+| Why was a hard-to-reverse decision made?                                   | [`docs/adr/`](docs/adr/)                                         |
+| How does a moderator run a quiz night?                                     | The in-app `/guide` page (`apps/frontend/app/guide/`)            |
+| How do I set the repo up?                                                  | [`README.md`](README.md)                                         |
+| What's being worked on?                                                    | `.scratch/<feature>/` issues (see [Agent skills](#agent-skills)) |
 
 ## Development Commands
 
@@ -23,78 +23,36 @@ pnpm workspace, run from repo root unless noted:
 - Frontend (`apps/frontend`) uses **Vitest**: `pnpm --filter frontend test <path>` to run a single spec
 - `pnpm --filter backend db:migrate` applies pending MikroORM migrations locally (Postgres must be running — see `docker-compose.yml`); `db:migrate:create` generates one after an entity change
 
-## Architecture Decisions
+## Constraints
 
-### Real-time: Socket.IO gateway (NestJS)
-
-The backend owns authoritative game state as a round-aware state machine:
-`lobby → rules → question_open → locked → break → reveal → ended`
-
-Grading happens inside `break` (no separate grading status). Rounds carry a `breakAfter` flag, so "grade after every N rounds" is data, not a hardcoded loop — `break`/`reveal` only fire once a round with `breakAfter: true` finishes. The leaderboard is **not** a state — it's a separate `isLeaderboardVisible` flag the admin can toggle from any status, so hiding it always resumes exactly where things were.
-
-`rules` is a one-time screen shown once per quiz, right after `START_QUIZ`, before any question opens — the admin dismisses it with `ADVANCE` (same action that later steps through questions). Its round/topic/break sentence is computed from the active quiz's rounds via `getQuizStructureSummary` (rounds grouped into "blocks" by `breakAfter`, same grouping the reveal/grading flow already uses), not hardcoded.
-
-Only admin actions advance the state. Clients in three rooms (`display`, `admin`, `players`) receive broadcasts, but **each room gets its own view**, built by the Screen projection (`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`): the display view names the screen on air, the admin view adds what `/control` marks as on air plus server-decided Advance/Previous availability, and the players view adds answerability and drops anything teams haven't been shown yet (a kahoot question hidden behind the leaderboard is removed server-side, never filtered by the client). On reconnect, any client receives the full current view for its own role — reconnection is a **core feature**, not a nice-to-have (phones sleep, networks drop).
-
-### Auth
-
-- Admin/moderator: per-user accounts with two roles — `admin` (everything, including user management) and `moderator` (everything except user management). Self-registration creates a `pending` account; an existing admin approves it and assigns a role before it can log in. Passwords are bcrypt-hashed (`bcryptjs`); login issues an opaque, DB-backed session token (`Session` entity) with sliding expiration, delivered as an httpOnly cookie (`campus_pubquiz_session`) rather than a token the frontend handles directly. REST requests send it automatically via `credentials: 'include'` (checked by `SessionGuard`/`RolesGuard`); the Socket.IO handshake reads it from the raw `Cookie` header (`extractSessionCookie` in `session-cookie.ts`), since `cookie-parser`'s middleware doesn't run on the WS upgrade. Deactivating a user revokes all of its sessions immediately. The first admin is bootstrapped at startup from `BOOTSTRAP_ADMIN_USERNAME`/`BOOTSTRAP_ADMIN_PASSWORD` env vars (`AuthBootstrapService`), since self-registration alone can never produce the first approver — a no-op once any admin exists.
-- Teams: short join code per game session → token stored in `localStorage`. Token survives page refresh; reconnecting restores team identity.
-
-### Question types
-
-`QuestionType` (`shared/types`) is the single source of truth — seven types, each with different grading:
-
-- **`free_text`** — any typed answer. Auto-graded at `SUBMIT_ANSWER` time against the stored answer, compared trimmed and case-insensitively (so "Paris"/" paris "/"PARIS" all match) — not tied to fixed `options` the way `multiple_choice` is, so it can't be exact-match case-sensitive the way that type is.
-- **`multiple_choice`** — pick one of `options`. Auto-graded at `SUBMIT_ANSWER` time by exact match against the stored answer.
-- **`audio`** — an audio `mediaUrl` plays on `/display`; teams type an answer, or pick from `options` when the author adds at least two (the answer must be one of them, as for `multiple_choice`). Human-graded either way, same as `youtube`.
-- **`youtube`** — a YouTube `mediaUrl`, optionally clipped to `mediaStartSeconds`/`mediaEndSeconds` (derived from the CSV `notes` column). Optional `options`, and human grading, same as `audio`.
-- **`sort`** — teams reorder `options` into what they think is the correct order; graded by exact match against the pipe-joined correct order, at submit time.
-- **`match`** — teams pair `options` (left) with `matchTargets` (right); graded at submit time by comparing the pipe-joined submitted pairing against the correct one position-by-position. How the correct-pair count becomes points depends on the question's `matchScoringMode` (manual-editor-only, like `kahootMode` — never CSV-settable, undefined behaves as `'partial'`): `'partial'` (default) splits question points evenly across pairs and rounds (e.g. 4 points/4 pairs with 1 correct → 1 point); `'all_or_nothing'` awards full points when every pair is correct, half points (rounded) when exactly one pair is wrong, and zero otherwise.
-- **`closest_guess`** — teams submit a number; the correct answer is numeric. Unlike every other type this can't be graded per-answer as it arrives — it's graded in one batch (`gradeClosestGuess`) once the question locks, comparing every team's guess by distance from the target. Every team tied for smallest distance gets full points, no partial credit; everyone else gets zero.
-
-`multiple_choice`/`sort`/`match`/`free_text` are auto-graded (`AUTO_GRADED_TYPES` in the pure Scoring module, `shared/types/src/scoring.ts`, which also owns the kahoot-allowed and overridable lists), and the admin can still override any of them per answer during `break` (notably `match`, to adjust its per-pair partial credit, or `free_text`, for an answer the exact-match missed — a synonym, a typo the admin wants to accept); `audio`/`youtube` need the admin's judgment; `closest_guess` is auto-graded but deferred to a batch pass and is the one type that can't be overridden per answer (`AnswerService.grade` rejects it). Any type can carry `mediaUrl`/`answerMediaUrl` — image vs. audio vs. YouTube is inferred from the URL, not tied to a specific type (there is deliberately no dedicated `picture` type).
-
-### Question import: Google Sheets → CSV
-
-Import works by uploading an **exported CSV file**, or by pasting the
-**Google Sheets URL** directly (sheet must be shared "Anyone with the link
-can view"); the backend fetches it server-side with SSRF guards — see
-`DOCUMENTATION.md`'s "Google Sheets URL import mechanics" for details.
-
-Sheet format (one row per question):
-
-```cvs
-round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after
-```
-
-`options` is pipe-separated for multiple choice (e.g. `Paris|London|Berlin|Rome`).
-
-`answer_media_url` is optional and shown alongside the correct answer during reveal, independent of the question's own `media_url` and `type` — e.g. a `free_text` question can reveal a photo. Display infers image vs. audio from the URL's file extension rather than a separate type column.
-
-`break_after` is optional and per-row; a round grades after itself once any of its rows has `break_after` = `1` (blank/`0` = no break). The last round always breaks regardless of its `break_after` cells — the state machine has no way to reveal answers otherwise, so import forces it on rather than requiring authors to remember it.
-
-### Media: uploaded images behind `MediaStorage`
-
-The quiz editor uploads images through `POST /media`, which stores them via the `MediaStorage` interface (`apps/backend/src/media/`) and returns a public URL that lands in `mediaUrl`/`answerMediaUrl` like any pasted link — nothing downstream knows an upload happened. Only Vercel Blob ships; swapping providers (e.g. Cloudflare R2) means one new driver + one case in `createMediaStorage`, selected by `MEDIA_STORAGE_PROVIDER` — see `DOCUMENTATION.md`. Using `@vercel/blob` from the backend is just an HTTP client; it doesn't conflict with the "backend never on Vercel" rule below. Never trust the client's filename/MIME: type is sniffed from magic bytes and keys are server-generated UUIDs.
-
-### Hosting: Cloud
-
-Both apps deployed together with Postgres. Venue internet is a hard dependency — mitigation is that phones on mobile data just work, and a phone hotspot can carry the two PCs if Wi-Fi dies. **Do not deploy the backend to Vercel** — serverless and Socket.IO are incompatible.
-
-One backend instance only. No horizontal scaling, no Redis adapter. At pub-quiz scale (dozens of teams) this is intentional and correct.
+- **The backend owns game state.** Only admin actions (`ADVANCE`, `PREVIOUS`, …) move it. Clients render what they're sent and never work out game logic themselves — each room (`display`, `admin`, `players`) gets its own server-built view, and anything teams mustn't see yet is removed server-side, never filtered by the client.
+- **Reconnection is a core feature.** Any client that reconnects receives the full current view for its role. Phones sleep and venue networks drop; build and test the resync path with every change that touches state.
+- **Quiz structure is data.** Breaks come from each round's `breakAfter`, and the rules screen's structure sentence is computed from the quiz's rounds — never hardcode a loop or a sentence.
+- **The leaderboard is a flag, not a status** (`isLeaderboardVisible`), so hiding it resumes exactly where the quiz was.
+- **Question types are defined once**, in the question type registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`). Grading mode, overridability and kahoot eligibility come from there; don't compare against type literals elsewhere.
+- **Validate everything at the boundary.** Imported rows and saved drafts go through the per-type Zod schema; stored JSON payloads are parsed, never cast. A bad row must fail at import, not live on stage.
+- **Never trust uploads.** Media type is sniffed from magic bytes and storage keys are server-generated UUIDs. Media providers sit behind the `MediaStorage` interface.
+- **Hosting:** both apps deploy together with Postgres. **Do not deploy the backend to Vercel** — serverless and Socket.IO are incompatible. One backend instance only: no horizontal scaling, no Redis adapter; at pub-quiz scale that's intentional.
 
 ## Known Tradeoffs (Accepted)
 
-- **Internet dependency at venue** — deliberate. Phones-on-mobile-data is the UX win.
+- **Internet dependency at venue** — deliberate. Phones-on-mobile-data is the UX win; a phone hotspot can carry the two PCs if Wi-Fi dies.
 - **Single backend instance** — redeploy drops all sockets (~10s freeze, no data loss). Reconnect/resync path must be built and tested early.
 - **JSON payload column** — flexible for new question types; requires per-type Zod validation at import time or crashes will happen live on stage.
-- **Last-write-wins answers** — teams can revise until question locks. This is the desired pub-quiz behavior.
-- **localStorage tokens** — private browsing or cleared storage loses team identity (this now also applies to admin/moderator session tokens, matching the existing team-token precedent). Admin needs a "re-link phone to team" escape hatch.
+- **Last-write-wins answers** — teams can revise until the block locks. This is the desired pub-quiz behavior.
+- **localStorage tokens** — private browsing or cleared storage loses team identity (admin/moderator session cookies have the same weakness). Admin needs a "re-link phone to team" escape hatch.
 - **Live answer-key fixes overwrite manual overrides** — correcting a shown auto-graded question's answer/points during a live session re-scores every answer to it, discarding any per-answer override (e.g. adjusted `match` partial credit); the admin re-overrides in break if needed.
-- **Grading isn't attributed on `Answer` rows** — sessions identify who's connected to the admin room, but grading a specific answer doesn't yet stamp a `gradedBy` user id. Smaller residual tradeoff now that per-user accounts exist; fine until an audit trail of who-graded-what is needed.
+- **Grading isn't attributed on `Answer` rows** — grading a specific answer doesn't stamp a `gradedBy` user id. Fine until an audit trail of who-graded-what is needed.
 
-Completed-milestone implementation detail (including which question types exist) lives in `.claude/tdd/milestone-*.tdd.md`, not here — this file only tracks decisions and constraints future work must respect, since a changelog of finished work goes stale (and duplicates git history and code) faster than anyone remembers to update it.
+## Keeping docs current
+
+A change updates the doc that owns what it changed, in the same commit:
+
+- a new or changed domain term → `CONTEXT.md`
+- changed behaviour (statuses, protocol, question types, CSV, auth, deploy) → `DOCUMENTATION.md`
+- a change to what the moderator sees or does on `/control` → the `/guide` page
+
+Completed-milestone history lives in `.claude/tdd/milestone-*.tdd.md` and git, not in any of the above.
 
 ## Git Commit Convention
 

@@ -24,6 +24,7 @@ laptop. This document describes the system as currently built.
   - [Persistence and Restart Resilience](#persistence-and-restart-resilience)
   - [Authentication](#authentication)
   - [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
+  - [Deploy and CI](#deploy-and-ci)
 
 ## System Overview
 
@@ -76,52 +77,60 @@ round and the next form a **block** — the unit of locking and grading.
 
 ### Statuses
 
-```
-lobby → rules → round_intro → question_open → locking → break
-      → break_round_intro (per round boundary crossed backward) → reveal_intro
-      → reveal → (next block: round_intro …) → ended
+One block, forward with `ADVANCE`:
+
+```text
+lobby → rules → round_overview (optional)
+  → round_intro → question_open … → locking            answering
+  → break_intro  (break review: break ⇄ break_round_intro, via PREVIOUS)
+  → reveal_intro → reveal …                            revealing
+  → next block's round_intro … → ended
 ```
 
-- `lobby` — waiting for teams; display shows the QR code and join code.
-- `rules` — a one-time screen shown once per quiz, right after `START_QUIZ`,
-  before the first round starts.
-- `round_intro` — a title-card beat announcing the round before its first
-  question opens.
-- `question_open` — the admin walks the display through questions one at a
-  time with `ADVANCE`. **Every question revealed so far in the current block
-  stays open**: teams can browse back and change answers (last write wins).
-- `locking` — a brief transient status entered when the admin advances off the
-  last question of a `breakAfter` round, on the way to `break`.
-- `break` — the whole block locks at once; the admin grades its answers
-  question by question, walking backward through the block with `PREVIOUS`.
-  The display shows a plain "BREAK" card for the entry beat (the block's
-  last question, where break starts), then mirrors whichever question is
-  under review (prompt + media, no answer yet — same layout as
-  `question_open`) once `PREVIOUS` steps `revealIndex` off that entry
-  position.
-- `break_round_intro` — a title-card beat during break review, entered
-  whenever `PREVIOUS` walks `revealIndex` back onto a round's first question
-  (mirroring `round_intro`/`reveal_intro`'s treatment, one per round crossed,
-  including the quiz's very first round — so it stays reachable purely by
-  walking `PREVIOUS`). `ADVANCE` resumes into `break` at the same
-  `revealIndex`; `PREVIOUS` continues into the previous round's last question
-  (still `break`, never `reveal` — these answers haven't been publicly
-  revealed) or, at the block's very first question, crosses into the previous
-  block's `reveal` instead of rejecting. Deliberately a separate status from
-  `round_intro`/`reveal_intro`: those two treat their round as still
-  live/open (open for answering, or already revealed) — reusing either here
-  would either reopen a locked round for answers or leak an unrevealed one.
-- `reveal_intro` / `reveal` — grading finished; the admin talks through the
-  answers. `ADVANCE` moves to the next block's `round_intro`, or to `ended`
-  after the final round. For a `closest_guess` question with at least one
-  submitted guess, `ADVANCE`/`PREVIOUS` first walk a 5-step cumulative reveal
-  on that one question (smallest guess → highest guess → correct answer →
-  closest team(s)) before falling through to the normal forward/backward
-  transition — see [Question Types](#question-types) below. This sub-walk is
-  ephemeral (`closestGuessRevealStep` on the snapshot), not part of
-  `GameProgress`.
-- `ended` — final state; the admin can toggle the leaderboard or select a new
-  quiz.
+Meanings of these terms (block, break, break review, round title card,
+status groups) live in [`CONTEXT.md`](CONTEXT.md); this table is the
+behaviour of each status.
+
+| Status              | Big screen                                                            | Phones                                                                                      | Reached by                                                                                                                         | `ADVANCE` goes to                                                                                                      |
+| ------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `lobby`             | QR code and join code                                                 | "Waiting for the quiz to start…" + rules link                                               | Session created                                                                                                                    | — (`START_QUIZ` → `rules`)                                                                                             |
+| `rules`             | Rules: round/topic/break structure + house rules, shown once per quiz | The same rules                                                                              | `START_QUIZ`                                                                                                                       | `round_overview`, or `round_intro` if the overview is turned off                                                       |
+| `round_overview`    | Every round's title (with category/author), shown once                | "Look at the screen — Rounds"                                                               | `ADVANCE` from `rules`                                                                                                             | First round's `round_intro`                                                                                            |
+| `round_intro`       | Round title card: "ROUND N — category", title, author                 | "Look at the screen" + round title; the block browser instead if questions are already open | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
+| `question_open`     | The current question (prompt + media)                                 | Block browser: every question opened so far in the block, answerable (last write wins)      | `ADVANCE` from `round_intro` or the previous question                                                                              | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
+| `locking`           | Countdown on the block's last question                                | Still answerable                                                                            | `ADVANCE` from the block's last question                                                                                           | `break_intro` — the block locks; a kahoot round goes straight to `reveal`                                              |
+| `break_intro`       | "BREAK N" card, break timer, bonus categories                         | Block browser, read-only                                                                    | The block locking                                                                                                                  | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
+| `break`             | One locked question under break review (prompt + media, no answer)    | Block browser, read-only                                                                    | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                        | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
+| `break_round_intro` | Round title card: "ROUND N", title — no answers implied               | "Look at the screen" + round title                                                          | `PREVIOUS` across the start of a round during break review                                                                         | Back into `break` on the same question                                                                                 |
+| `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                | "Look at the screen" + round title                                                          | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                      | `reveal` on that round's first question                                                                                |
+| `reveal`            | One question with its correct answer (and `answer_media_url`)         | Block browser with the team's answer, the correct answer and points                         | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                         | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
+| `ended`             | Final screen, or an active showdown                                   | "Quiz complete!", or the showdown guess form / reveal                                       | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                      | —                                                                                                                      |
+
+`PREVIOUS` walks the same path backward, symmetrically, including back
+across a block boundary into the previous block's `reveal`. During the
+break it is how break review starts: from `break_intro` it shows the
+block's last question, then steps back one question at a time, stopping on
+a `break_round_intro` card at the start of each round (the quiz's first
+round included), and from the block's first round card it crosses into the
+previous block's `reveal`.
+
+`break_round_intro` is deliberately a separate status from
+`round_intro`/`reveal_intro`, even though all three draw a round title card:
+those two treat their round as live (open for answering) or already
+revealed — reusing either during break review would reopen a locked round
+for answers or leak an unrevealed one.
+
+Grading is not tied to a status. The admin can grade an answer as soon as it
+arrives (a team revising a human-graded answer clears its grade); the break is
+where remaining grading must be finished, since leaving it is refused while
+any answer in the block is ungraded.
+
+For a `closest_guess` question with at least one submitted guess,
+`ADVANCE`/`PREVIOUS` in `reveal` first walk a 5-step cumulative reveal on that
+one question (smallest guess → highest guess → correct answer → closest
+team(s)) before falling through to the normal transition — see
+[Question Types](#question-types) below. This sub-walk is ephemeral
+(`closestGuessRevealStep` on the snapshot), not part of `GameProgress`.
 
 There is **no per-question locking** — locking is purely a consequence of
 finishing a `breakAfter` round. A `locked` status existed in an earlier
@@ -136,13 +145,13 @@ where the game was.
 
 ### Admin actions
 
-| Action               | Legal from                                                       | Effect                                                                                          |
-| -------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `START_QUIZ`         | `lobby`                                                          | → `rules`                                                                                       |
-| `ADVANCE`            | `rules`, `round_intro`, `question_open`, `reveal`/`reveal_intro` | Steps forward through the sequence above, crossing block boundaries automatically               |
-| `PREVIOUS`           | most non-terminal statuses                                       | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
-| `END_QUIZ`           | any except `ended`                                               | Force-end                                                                                       |
-| `TOGGLE_LEADERBOARD` | any                                                              | Flips `isLeaderboardVisible`, status untouched                                                  |
+| Action               | Legal from                              | Effect                                                                                          |
+| -------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `START_QUIZ`         | `lobby`                                 | → `rules`                                                                                       |
+| `ADVANCE`            | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                      |
+| `PREVIOUS`           | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
+| `END_QUIZ`           | any except `ended`                      | Force-end                                                                                       |
+| `TOGGLE_LEADERBOARD` | any                                     | Flips `isLeaderboardVisible`, status untouched                                                  |
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
@@ -169,6 +178,14 @@ feature, since phones sleep and venue Wi-Fi drops. If a session expires or is
 revoked mid-event, only that one admin socket drops — live game state lives
 server-side independent of any admin connection, so `display`/`players`
 clients are unaffected; the admin just reconnects with a fresh token.
+
+Each room gets **its own view**, built by the screen projection
+(`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`):
+the display view names the screen on air; the admin view adds what `/control`
+marks as on air plus server-decided Advance/Previous availability; the
+players view adds answerability and drops anything teams haven't been shown
+yet (a kahoot question hidden behind the leaderboard is removed server-side,
+never filtered by the client).
 
 ### The snapshot
 
@@ -213,10 +230,12 @@ itself — the display and other players just see counts.
    uses to tick its checkmarks; the admin room gets the full `ANSWERS_UPDATED`
    list; everyone gets a fresh snapshot whose `answeredTeamIds` drives the
    admin's per-team ✓ marks and the display's "X of Y teams answered" counter.
-4. **Grade** — during `break`, the admin browses the locked block
-   question-by-question and awards 0 / half / full points per answer. Grades
-   are written to the answer row; grading an answer twice is prevented in the
-   UI. Exception: `closest_guess` answers are graded automatically once the
+4. **Grade** — the admin can grade an answer as soon as it arrives (0 / half
+   / full points), and must finish any remaining grading in the `break`:
+   leaving it is refused while an answer in the block is ungraded. If a team
+   changes a hand-graded (`audio`/`youtube`) answer, its grade is cleared,
+   since it belonged to the old value. Grades are written to the answer row;
+   grading an answer twice is prevented in the UI. Exception: `closest_guess` answers are graded automatically once the
    block locks and reject a manual `GRADE_ANSWER` — see
    [Question Types](#question-types).
 5. **Bonus points** — separately from per-question grading, the admin can
@@ -256,15 +275,16 @@ table (`GameSessionTeam`).
 `sort`, `match`, or `closest_guess`. Each has its own submission format and
 grading behavior:
 
-- **`free_text`** — any typed answer (`FreeTextAnswer`). Always graded
-  manually by the admin during `break`; there's no auto-match to fall back
-  to.
+- **`free_text`** — any typed answer (`FreeTextAnswer`). Auto-graded at
+  submit time against the stored `answer`, compared trimmed and
+  case-insensitively (so "Paris"/" paris "/"PARIS" all match). The admin can
+  override any answer the match missed — a synonym, a typo worth accepting.
 - **`multiple_choice`** — players pick one of `options`. Auto-graded at
   submit time by exact match against the stored `answer`.
 - **`audio`** — `media_url` is required and plays on `/display` as an
-  autoplaying `<audio controls>` element. Grading follows `free_text`
-  (manual, during `break`) — the type only changes what's rendered, not how
-  it's scored.
+  autoplaying `<audio controls>` element. Teams type an answer, or pick from
+  `options` when the author adds at least two (the answer must then be one of
+  them, as for `multiple_choice`). Graded by hand either way.
 - **`youtube`** — `media_url` is required and must resolve to a
   `youtube.com`/`youtu.be` video id (enforced by both the CSV import schema
   and the manual editor's save validation). The display renders it as an
@@ -281,7 +301,8 @@ grading behavior:
   editor's Save), which derives `mediaStartSeconds`/`mediaEndSeconds` into
   the question's JSON `payload` alongside `mediaUrl`. `answer_media_url`
   never gets clip times (no notes channel of its own) — a YouTube answer
-  video always renders full-length. Grading follows `free_text` (manual).
+  video always renders full-length. Optional `options` and hand grading,
+  same as `audio`.
 - **`sort`** — players drag `options` into what they think is the correct
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must
@@ -295,7 +316,14 @@ grading behavior:
   correct pairs as `left+right`, pipe-separated, in any order (e.g.
   `arthur+excalibur|robin hood+bow`) — import canonicalizes it into `left`'s
   order so it's directly comparable to a submission, which is built the same
-  positional way. Auto-graded at submit time by exact match.
+  positional way. Auto-graded at submit time by counting correct pairs
+  position-by-position. How that count becomes points depends on the
+  question's `matchScoringMode` (set in the manual editor only, like
+  `kahootMode` — never from CSV; unset behaves as `partial`): `partial`
+  splits the question's points evenly across pairs and rounds (4 points,
+  4 pairs, 1 correct → 1 point); `all_or_nothing` gives full points when every
+  pair is correct, half (rounded) when exactly one is wrong, and zero
+  otherwise.
 - **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
   a number); players type a guess in a `type="number"` input. It is
   **auto-graded**, but not at submit time like
@@ -313,10 +341,15 @@ grading behavior:
   `/play`). A question with zero submissions collapses back to the normal
   single-shot reveal, since there's nothing to walk through.
 
-`multiple_choice`/`sort`/`match` are auto-graded the instant a team submits;
-`free_text`/`audio`/`youtube` need the admin's judgment during `break`;
-`closest_guess` is auto-graded but deferred to a single batch pass once the
-block locks.
+`multiple_choice`/`sort`/`match`/`free_text` are auto-graded the instant a
+team submits, and the admin can still override any of them per answer;
+`audio`/`youtube` need the admin's judgment; `closest_guess` is auto-graded
+but deferred to a single batch pass once the block locks, and is the one type
+that can't be overridden. Which list each type is in (auto-graded,
+overridable, kahoot-allowed) is defined once per type in the question type
+registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`). Any type can
+carry `media_url`/`answer_media_url` — image vs. audio vs. YouTube is inferred
+from the URL, so there is deliberately no dedicated `picture` type.
 
 ## Quiz Authoring and CSV Import
 
@@ -352,7 +385,7 @@ editor's disabled controls:
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If a shown question's `answer` or `points` changed, its existing answers are
 re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
-(`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
+(`multiple_choice`/`sort`/`match`/`free_text`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
 speed scaling from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
@@ -456,7 +489,7 @@ same list as a `<select>`, so it can never produce an invalid value.
 Postgres via MikroORM. Two halves of the schema:
 
 - **Authoring time**: `quizzes → rounds → questions`. Questions have a `type`
-  (`free_text`, `multiple_choice`, `audio`, `youtube`) plus a JSON
+  (any [question type](#question-types)) plus a JSON
   payload for type-specific data (options, media URL), so new question types
   don't need migrations.
 - **Runtime**: `game_sessions → teams → answers`, plus `bonus_awards` and the
@@ -519,3 +552,21 @@ admin/moderator landing page for managing them:
 Picking or starting a session in `/sessions` routes the admin to
 `/control?code=<joinCode>`, which binds that admin tab to one specific session
 for the rest of the flow.
+
+## Deploy and CI
+
+- **Backend** deploys to Render (`render.yaml`) on the Docker runtime
+  (`apps/backend/Dockerfile`), as a single instance — no horizontal scaling,
+  no Redis adapter (see `CLAUDE.md` → Known Tradeoffs). It must never go on
+  Vercel: serverless and Socket.IO are incompatible.
+- **Frontend** deploys separately; its origin is what `FRONTEND_ORIGIN`
+  allows through CORS (see `cors.config.spec.ts`).
+- **CI** (`.github/workflows/ci.yml`) runs `pnpm build && pnpm lint && pnpm test`
+  on every push to `main` and every PR. Build must come first:
+  `@campus-pubquiz/types` resolves via its `dist/`, so frontend/backend type
+  checking needs it built; `pnpm -r` runs workspaces in topological order, so
+  `pnpm build` alone handles that.
+- The backend's Postgres integration spec uses `@testcontainers/postgresql`
+  to start a real `postgres:16-alpine` container. That works on GitHub's
+  `ubuntu-latest` runners without a `services:` block, since Docker is
+  preinstalled.

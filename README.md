@@ -56,10 +56,17 @@ cd apps/backend && pnpm test:cov   # coverage (Testcontainers needs Docker)
 
 ## Docs
 
-- [DOCUMENTATION.md](DOCUMENTATION.md) — how the app works: game flow, state
-  machine, real-time protocol, auth, persistence
-- [CLAUDE.md](CLAUDE.md) — architecture decisions and conventions for
+Each file has one job; link to it rather than repeating it elsewhere.
+
+- [CONTEXT.md](CONTEXT.md) — the glossary: what each domain term (block,
+  break, break review, question type…) means
+- [DOCUMENTATION.md](DOCUMENTATION.md) — how the app works: statuses,
+  real-time protocol, question types, CSV import, auth, persistence, deploy
+  and CI
+- [docs/adr/](docs/adr/) — why hard-to-reverse decisions were made
+- [CLAUDE.md](CLAUDE.md) — commands, constraints and conventions for
   contributors (human or AI)
+- `/guide` in the running app — the moderator's guide to running a quiz night
 
 ## License
 

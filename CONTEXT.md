@@ -1,29 +1,75 @@
 # Campus Pub Quiz — Domain Language
 
-Terms the code and specs use with one fixed meaning.
+A live pub quiz: a quiz master runs the game, a big screen shows it, and teams answer on their phones.
 
-## Move plan
+## Quiz structure
 
-What one press of Advance or Previous does right now, decided once in the Live session module (`planMove`, `apps/backend/src/game/state/move-plan.util.ts`) and nowhere else. It resolves to a single step: reveal the next leaderboard rank, hide the leaderboard, a showdown or closest_guess reveal step, a state-machine transition, or nothing.
+**Round**:
+A titled group of questions in a quiz, shown to teams under one round intro.
 
-The leaderboard takes precedence — while it is up, a press only reveals a rank or hides the board and never moves the quiz underneath, and Previous is covered. Otherwise the step is whatever the quiz underneath would do.
+**Block**:
+A run of consecutive rounds that is graded and revealed together, ending at a round marked to break after it. The last round always ends a block.
+_Avoid_: section, segment, grading group
 
-The action handler carries the step out, the admin view announces it (`advanceStep`, `previousState`), and the presenter preview describes it. Clients render the announced step and send only `ADVANCE` or `PREVIOUS`; they never work out what a press means themselves.
+**Kahoot round**:
+A round where every question is its own block, so each one is locked, scored and revealed before the next.
 
-## Settle step
+**Locked**:
+A question that no longer accepts answers. A block's questions lock together when its break starts; locked is a property of questions, not a status of the game.
 
-The one pure step in the Live session module (`settleSession`, `apps/backend/src/game/state/session-settle.util.ts`) that derives every progress-dependent field of a session: the phase timer, the auto-lock and kahoot deadlines, the break end time, the leaderboard reveal count and the closest_guess reveal step. It takes one named input — the session (already graded, when grading applies), the progress it is moving to, the causing action or none, the time, and for restore the saved phase timer — and its internal order is fixed (phase timer first, since the kahoot deadline reads it).
+**Locking**:
+The final countdown on a block's last question; teams can still answer until it runs out and the break starts. Earlier questions in the block stay open until then.
+_Avoid_: closing, last call
 
-Creating a session, restoring after a restart and Advance/Previous are its only callers; nothing else computes those fields.
+**Question type**:
+What a question asks teams to do (free text, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
+_Avoid_: question kind, question format
 
-## Status groups
+**Showdown**:
+A tiebreak played between teams tied on the leaderboard, with the teams taking turns in a fixed seat order.
+_Avoid_: tiebreaker round, sudden death
 
-Named, read-only sets of game statuses in shared types next to the state machine, each the single definition of what it means; every status list in the backend and frontend reads one. Membership is pinned by a table test.
+**Grading**:
+The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then changes a human-graded answer, its mark is cleared and must be given again.
+_Avoid_: scoring, marking
 
-- **answering** — question_open, locking, round_intro: teams can answer
-- **question on air** — question_open, locking
-- **grading** — break_intro, break, break_round_intro: the block is being graded
-- **graded** — grading plus reveal_intro, reveal, ended: grading can be trusted
-- **revealing** — reveal_intro, reveal
-- **block review** — grading plus revealing: the phone's break and reveal screens
-- **block started** — answering plus graded: every status where a block's questions exist
+**Break**:
+The pause after a block locks, in which the quiz master finishes any grading still open. The quiz cannot leave the break while an answer is ungraded.
+
+**Break review**:
+Stepping back through a block's locked questions during its break, with answers still hidden, e.g. to show a question to the room again.
+
+**Round title card**:
+A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
+
+## Game status
+
+**Status groups**:
+The game is always in exactly one status, but most of the app only needs a yes/no answer to a question about it. Each status group is the fixed answer to one such question, so the phones, the big screen and the backend can never disagree.
+
+One block, in order:
+
+```text
+lobby → rules → round_overview
+  → round_intro → question_open … → locking        ← answering
+  → break_intro (+ break, break_round_intro in break review)  ← in the break
+  → reveal_intro → reveal                           ← revealing
+  → (next block) … → ended
+```
+
+- **answering** — can teams submit or change answers? (question_open, locking, round_intro)
+- **question on air** — is a question showing on the big screen? (question_open, locking)
+- **grading** — is the block in its break? (break_intro, break, break_round_intro). Named for the break's purpose; grading itself can start earlier.
+- **graded** — is grading finished, so scores can be trusted and shown? (the break statuses, reveal_intro, reveal, ended)
+- **revealing** — are correct answers being shown? (reveal_intro, reveal)
+- **block review** — is the phone showing the break or reveal screen? (the break statuses plus revealing)
+- **block started** — do the current block's questions exist for teams yet? (answering plus graded)
+
+## Moving through the quiz
+
+**Move plan**:
+What one press of Advance or Previous does right now: reveal the next leaderboard rank, hide the leaderboard, take a showdown or closest*guess reveal step, move the quiz to its next status, or nothing. While the leaderboard is up, a press only works the leaderboard and never moves the quiz underneath.
+\_Avoid*: next step, action result
+
+**Settle step**:
+Bringing a session's timers, deadlines and reveal counters into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
