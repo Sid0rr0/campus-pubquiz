@@ -5,7 +5,7 @@ import type { LeaderboardEntry } from './socket-events';
 export const KAHOOT_LEADERBOARD_TOP_N = 5;
 
 /**
- * How many Advance/REVEAL_NEXT_TEAM steps the bottom-up leaderboard reveal
+ * How many Advance steps the bottom-up leaderboard reveal
  * takes — one per tie group (see rankTeams), not per team, so a tie reveals
  * in a single step (matching the display's Leaderboard, which walks whole
  * rank groups). A kahootMode round only counts the groups within its

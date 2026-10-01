@@ -14,7 +14,6 @@ import {
 import {
   describeAdvanceStep,
   describePreviousState,
-  isUnderlyingMoveAvailable,
 } from '@/game/state/move-plan.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -60,8 +59,6 @@ export function projectScreen(
         ...describeAdminIndicators(snapshot),
         advanceStep: describeAdvanceStep(session),
         previousState: describePreviousState(session),
-        canAdvance: isUnderlyingMoveAvailable(session, 'ADVANCE'),
-        canGoToPreviousQuestion: isUnderlyingMoveAvailable(session, 'PREVIOUS'),
         activeBlockStartIndex: getActiveBlockStartIndex(session),
         isShowdownEligible: isShowdownEligible(session),
         isLastQuestionBeforeBreak: isLastQuestionBeforeBreak(session),

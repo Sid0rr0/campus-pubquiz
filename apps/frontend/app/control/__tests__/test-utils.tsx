@@ -82,18 +82,15 @@ const STATUSES_WITH_PREVIOUS = new Set<GameStatus>([
 ]);
 
 /**
- * Fixture default for the flags the server decides: whether Advance/Previous
- * are accepted. The real rules live in (and are tested against) the backend's
+ * Fixture default for what the server announces: the Advance step and the
+ * Previous state. The real rules live in (and are tested against) the backend's
  * projection; a test that needs a different answer sets the flag itself.
  */
 function defaultActionAvailability(snapshot: {
   progress: GameProgress;
   activeShowdown?: OnAirInput['activeShowdown'];
   showdownRevealStep?: number;
-}): Pick<
-  AdminStatePayload,
-  'canAdvance' | 'canGoToPreviousQuestion' | 'advanceStep' | 'previousState'
-> {
+}): Pick<AdminStatePayload, 'advanceStep' | 'previousState'> {
   const { status, previousStatus, isLeaderboardVisible } = snapshot.progress;
   const hasShowdown = snapshot.activeShowdown != null;
   const canAdvance =
@@ -111,8 +108,6 @@ function defaultActionAvailability(snapshot: {
       : 'available';
   }
   return {
-    canAdvance,
-    canGoToPreviousQuestion,
     // Under the leaderboard the step depends on the reveal count, which only
     // the server knows — a test that needs a reveal or hide step sets it.
     advanceStep: canAdvance ? 'advance' : 'none',
@@ -139,10 +134,7 @@ export function adminView<
 ): T &
   Pick<AdminStatePayload, 'onAirScreen'> &
   AdminIndicators &
-  Pick<
-    AdminStatePayload,
-    'canAdvance' | 'canGoToPreviousQuestion' | 'advanceStep' | 'previousState'
-  > &
+  Pick<AdminStatePayload, 'advanceStep' | 'previousState'> &
   Pick<AdminStatePayload, 'isShowdownEligible' | 'isLastQuestionBeforeBreak'> {
   return {
     onAirScreen: describeOnAirScreen(snapshot).screen,

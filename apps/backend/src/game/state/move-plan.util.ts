@@ -152,14 +152,7 @@ export function effectiveActionOf(
   step: MoveStep,
   pressed: GameAction,
 ): GameAction {
-  switch (step.kind) {
-    case 'leaderboard_reveal':
-      return 'REVEAL_NEXT_TEAM';
-    case 'leaderboard_hide':
-      return 'TOGGLE_LEADERBOARD';
-    default:
-      return pressed;
-  }
+  return step.kind === 'leaderboard_hide' ? 'TOGGLE_LEADERBOARD' : pressed;
 }
 
 /** Whether pressing the step does something the admin should be offered. The ungraded-answers gate and a showdown waiting for guesses count as pressable — pressing them answers with what is missing. */
@@ -189,8 +182,8 @@ export function describePreviousState(session: SessionState): PreviousState {
     : 'available';
 }
 
-/** Whether the admin's button for `movement` would be on with the leaderboard set aside — the flag today's clients combine with their own reveal-step count. */
-export function isUnderlyingMoveAvailable(
+/** Whether the admin's button for `movement` would be on with the leaderboard set aside. */
+function isUnderlyingMoveAvailable(
   session: SessionState,
   movement: Movement,
 ): boolean {

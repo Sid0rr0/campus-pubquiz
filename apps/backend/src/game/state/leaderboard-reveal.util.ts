@@ -7,8 +7,8 @@ import {
 
 /**
  * Toggling the board resets the reveal to nothing shown; from then on,
- * ADVANCE and REVEAL_NEXT_TEAM both step the reveal forward one rank at a
- * time (bottom-up) — whichever button the admin has on screen works. Teams
+ * ADVANCE steps the reveal forward one rank at a
+ * time (bottom-up). Teams
  * tied on points share a rank and appear together in one step, so a tie
  * never costs the admin extra clicks that change nothing on screen.
  *
@@ -53,10 +53,7 @@ export function computeLeaderboardRevealCount(
   if (!wasLeaderboardVisible && newProgress.isLeaderboardVisible) {
     return 0;
   }
-  if (
-    (action === 'ADVANCE' || action === 'REVEAL_NEXT_TEAM') &&
-    newProgress.isLeaderboardVisible
-  ) {
+  if (action === 'ADVANCE' && newProgress.isLeaderboardVisible) {
     return Math.min(currentRevealCount + 1, revealTarget);
   }
   return currentRevealCount;

@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -46,20 +45,19 @@ describe('GameGateway — leaderboard', () => {
     );
   });
 
-  it('reveals teams one at a time via REVEAL_NEXT_TEAM, bottom-up and bounded by team count', async () => {
+  it('reveals teams one at a time via ADVANCE, bottom-up and bounded by team count', async () => {
     await scoreFirstTeamOnFirstQuestion();
     await game.act('TOGGLE_LEADERBOARD');
     expect((await game.snapshot()).leaderboardRevealCount).toBe(0);
 
-    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(1);
-    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(2);
+    expect((await game.act('ADVANCE')).leaderboardRevealCount).toBe(1);
+    expect((await game.act('ADVANCE')).leaderboardRevealCount).toBe(2);
 
-    // Bounded: a further reveal doesn't exceed the number of teams.
-    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(2);
-  });
-
-  it('rejects REVEAL_NEXT_TEAM while the leaderboard is hidden', async () => {
-    await expect(game.act('REVEAL_NEXT_TEAM')).rejects.toThrow(WsException);
+    // Bounded: with every rank shown, a further press hides the board
+    // instead of revealing past the number of teams.
+    const hidden = await game.act('ADVANCE');
+    expect(hidden.progress.isLeaderboardVisible).toBe(false);
+    expect(hidden.leaderboardRevealCount).toBe(0);
   });
 
   it('also advances the leaderboard reveal on ADVANCE while the board is visible', async () => {
@@ -75,7 +73,7 @@ describe('GameGateway — leaderboard', () => {
   it('resets the reveal count whenever the leaderboard is toggled', async () => {
     await game.act('START_QUIZ');
     await game.act('TOGGLE_LEADERBOARD');
-    expect((await game.act('REVEAL_NEXT_TEAM')).leaderboardRevealCount).toBe(1);
+    expect((await game.act('ADVANCE')).leaderboardRevealCount).toBe(1);
 
     expect((await game.act('TOGGLE_LEADERBOARD')).leaderboardRevealCount).toBe(
       0,
@@ -98,7 +96,7 @@ describe('GameGateway — leaderboard', () => {
     expect(withLeaderboard.progress.isLeaderboardVisible).toBe(true);
     expect(withLeaderboard.leaderboardRevealCount).toBe(0);
 
-    const afterFirstReveal = await game.act('REVEAL_NEXT_TEAM');
+    const afterFirstReveal = await game.act('ADVANCE');
     expect(afterFirstReveal.leaderboardRevealCount).toBe(1);
   });
 

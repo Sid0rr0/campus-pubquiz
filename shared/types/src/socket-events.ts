@@ -245,7 +245,7 @@ export interface StateSnapshotPayload {
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
-   * the leaderboard, driven by REVEAL_NEXT_TEAM / ADVANCE while the board is
+   * the leaderboard, driven by ADVANCE while the board is
    * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
    */
   leaderboardRevealCount: number;
@@ -353,10 +353,6 @@ export interface AdminStatePayload
   advanceStep: AdvanceSlotStep;
   /** Whether PREVIOUS works, is covered by the leaderboard, or is unavailable — the Move plan's verdict for PREVIOUS. */
   previousState: PreviousState;
-  /** Whether the server will accept ADVANCE right now with the leaderboard set aside — decided by the same intercepts and state machine the action handler applies. Kept for clients that still derive the leaderboard steps themselves. */
-  canAdvance: boolean;
-  /** Whether the server will accept PREVIOUS right now and it does something. */
-  canGoToPreviousQuestion: boolean;
   /** roundIndex of the first round in the block that is open, locked or under review, per the session's own rounds — where the question browser's active block begins. */
   activeBlockStartIndex: number;
   /** Whether the quiz master may set up the showdown tiebreaker now: the final round is graded (no ungraded questions left, in a graded status). */

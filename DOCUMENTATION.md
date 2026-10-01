@@ -143,7 +143,6 @@ where the game was.
 | `PREVIOUS`           | most non-terminal statuses                                       | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
 | `END_QUIZ`           | any except `ended`                                               | Force-end                                                                                       |
 | `TOGGLE_LEADERBOARD` | any                                                              | Flips `isLeaderboardVisible`, status untouched                                                  |
-| `REVEAL_NEXT_TEAM`   | while leaderboard visible                                        | Advances the leaderboard's team-by-team reveal (no status change)                               |
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are

@@ -63,8 +63,6 @@ function baseSnapshot(overrides: Record<string, unknown> = {}) {
   return {
     // The server announces what the Advance slot and Previous do (admin
     // view); these fixtures just say both work.
-    canAdvance: true,
-    canGoToPreviousQuestion: true,
     advanceStep: 'advance',
     previousState: 'available',
     progress: progress(),

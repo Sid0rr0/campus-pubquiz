@@ -71,8 +71,8 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
       expect(adminView().previousState).toBe('available');
     });
 
-    it('still lets clients that send REVEAL_NEXT_TEAM and TOGGLE_LEADERBOARD drive the board', async () => {
-      await game.act('REVEAL_NEXT_TEAM');
+    it('lets the Leaderboard toggle hide a board whose ranks are partly shown', async () => {
+      await game.act('ADVANCE');
       expect(adminView().leaderboardRevealCount).toBe(1);
 
       await game.act('TOGGLE_LEADERBOARD');

@@ -72,14 +72,6 @@ export function getNextGameState(
     };
   }
 
-  // Reveal progress itself isn't part of GameProgress (it's ephemeral,
-  // tracked by GameStateService) — this is a no-op on progress, only legal
-  // while the board is up, so the caller's side effect has something to act on.
-  if (action === 'REVEAL_NEXT_TEAM') {
-    if (!progress.isLeaderboardVisible) illegal(progress.status, action);
-    return progress;
-  }
-
   if (action === 'END_QUIZ') {
     if (progress.status === 'ended') {
       illegal(progress.status, action);

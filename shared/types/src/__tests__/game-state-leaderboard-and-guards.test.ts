@@ -8,7 +8,7 @@ import {
 } from '../game-state';
 import { lobby, twoRoundsWithBreakAfterSecond } from './game-state-fixtures';
 
-describe('getNextGameState — leaderboard visibility and REVEAL_NEXT_TEAM', () => {
+describe('getNextGameState — leaderboard visibility', () => {
   it('toggles the leaderboard on without changing the underlying status', () => {
     const open: GameProgress = {
       status: 'question_open',
@@ -62,41 +62,6 @@ describe('getNextGameState — leaderboard visibility and REVEAL_NEXT_TEAM', () 
     );
     expect(next.isLeaderboardVisible).toBe(true);
     expect(next.status).toBe('ended');
-  });
-
-  it('allows REVEAL_NEXT_TEAM without changing progress while the leaderboard is visible', () => {
-    const openWithLeaderboard: GameProgress = {
-      status: 'question_open',
-      roundIndex: 0,
-      questionIndex: 0,
-      isLeaderboardVisible: true,
-      revealIndex: 0,
-      furthestOpenIndex: 0,
-    };
-    const next = getNextGameState(
-      openWithLeaderboard,
-      'REVEAL_NEXT_TEAM',
-      twoRoundsWithBreakAfterSecond,
-    );
-    expect(next).toEqual(openWithLeaderboard);
-  });
-
-  it('rejects REVEAL_NEXT_TEAM while the leaderboard is hidden', () => {
-    const openWithoutLeaderboard: GameProgress = {
-      status: 'question_open',
-      roundIndex: 0,
-      questionIndex: 0,
-      isLeaderboardVisible: false,
-      revealIndex: 0,
-      furthestOpenIndex: 0,
-    };
-    expect(() =>
-      getNextGameState(
-        openWithoutLeaderboard,
-        'REVEAL_NEXT_TEAM',
-        twoRoundsWithBreakAfterSecond,
-      ),
-    ).toThrow(IllegalGameTransitionError);
   });
 
   it('force-ends the quiz from any in-progress status', () => {

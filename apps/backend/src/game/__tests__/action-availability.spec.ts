@@ -24,11 +24,14 @@ describe('Screen projection — Advance/Previous availability', () => {
   let game: RealStoreGateway;
 
   function flags() {
-    const { canAdvance, canGoToPreviousQuestion } = game.gameState.getView(
+    const { advanceStep, previousState } = game.gameState.getView(
       game.joinCode,
       SOCKET_ROOMS.ADMIN,
     );
-    return { canAdvance, canGoToPreviousQuestion };
+    return {
+      canAdvance: advanceStep !== 'none',
+      canGoToPreviousQuestion: previousState !== 'unavailable',
+    };
   }
 
   function position() {
@@ -157,9 +160,9 @@ describe('Screen projection — Advance/Previous availability', () => {
       ).sessionStore.get(game.joinCode);
       const legacy = { ...session, progress: { ...session.progress } };
       delete legacy.progress.previousStatus;
-      expect(
-        projectScreen(legacy, SOCKET_ROOMS.ADMIN).canGoToPreviousQuestion,
-      ).toBe(false);
+      expect(projectScreen(legacy, SOCKET_ROOMS.ADMIN).previousState).toBe(
+        'unavailable',
+      );
     });
 
     it('takes the block start from the session rounds', async () => {

@@ -185,7 +185,7 @@ describe('GameGateway — phase elapsed timer', () => {
       expect(Date.now() - restored.phaseStartedAt!).toBe(10_000);
     });
 
-    it('leaves the frontier untouched for TOGGLE_LEADERBOARD and REVEAL_NEXT_TEAM, which never change the timed phase', async () => {
+    it('leaves the frontier untouched for TOGGLE_LEADERBOARD and a rank reveal, which never change the timed phase', async () => {
       await actAll(['START_QUIZ', 'ADVANCE', 'ADVANCE']); // -> r1q1 (live)
 
       advanceClockBy(4_000);
@@ -198,7 +198,7 @@ describe('GameGateway — phase elapsed timer', () => {
       expect(toggled.phaseElapsedMs).toBeNull();
 
       advanceClockBy(1_000);
-      const revealed = await game.act('REVEAL_NEXT_TEAM');
+      const revealed = await game.act('ADVANCE');
 
       expect(revealed.progress.status).toBe('question_open');
       expect(revealed.phaseStartedAt).toBe(startedAt);

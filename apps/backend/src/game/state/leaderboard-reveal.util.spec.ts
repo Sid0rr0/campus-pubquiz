@@ -60,7 +60,7 @@ describe('computeLeaderboardRevealCount', () => {
     let revealCount = shown;
     for (let click = 1; click <= 6; click++) {
       revealCount = computeLeaderboardRevealCount(
-        'REVEAL_NEXT_TEAM',
+        'ADVANCE',
         true,
         progress({ status: 'ended', isLeaderboardVisible: true }),
         eightTeams,
@@ -85,7 +85,7 @@ describe('computeLeaderboardRevealCount', () => {
 
     for (let click = 1; click <= 8; click++) {
       revealCount = computeLeaderboardRevealCount(
-        'REVEAL_NEXT_TEAM',
+        'ADVANCE',
         true,
         progress({ status: 'round_intro', isLeaderboardVisible: true }),
         eightTeams,

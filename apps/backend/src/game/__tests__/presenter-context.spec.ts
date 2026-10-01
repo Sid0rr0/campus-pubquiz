@@ -246,7 +246,7 @@ describe('GameStateService — getPresenterContext', () => {
         nextBody: 'Next place (1 of 1)',
       });
 
-      await game.act('REVEAL_NEXT_TEAM');
+      await game.act('ADVANCE');
       expect(screens()).toMatchObject({
         next: 'Round 2 title',
         nextBody: 'Sport',

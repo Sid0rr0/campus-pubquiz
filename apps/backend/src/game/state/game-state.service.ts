@@ -535,7 +535,7 @@ export class GameStateService implements OnModuleInit {
     }
     const { progress } = step;
     // A raw ADVANCE under the leaderboard is carried out as the action it
-    // plans — REVEAL_NEXT_TEAM or TOGGLE_LEADERBOARD — so the reveal count,
+    // plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the reveal count,
     // the kahoot timer and everything else downstream treat it identically.
     const effectiveAction = effectiveActionOf(step, action);
 

@@ -20,7 +20,6 @@ const GAME_ACTIONS: readonly GameAction[] = [
   'PREVIOUS',
   'END_QUIZ',
   'TOGGLE_LEADERBOARD',
-  'REVEAL_NEXT_TEAM',
   'TOGGLE_MEDIA_FULLSCREEN',
   'REPLAY_MEDIA',
 ];
