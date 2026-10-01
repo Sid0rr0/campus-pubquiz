@@ -103,11 +103,18 @@ export class GameStateService implements OnModuleInit {
     // deliberate re-arm-fresh) — its epoch-ms start time is real and
     // persisted, so the elapsed time it shows after a restart is still
     // accurate, downtime included.
+    const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
+    // The ungraded cache lives in memory only; inside the break it must be
+    // rebuilt so /control and showdown eligibility are right straight away.
+    const restoredSession = await this.grading.refreshUngradedQuestionIds(
+      freshSessionState(seededGame),
+      progress,
+    );
     this.sessionStore.set(
       seededGame.joinCode,
       settleSession({
-        session: freshSessionState(seededGame),
-        progress: saved?.progress ?? { ...LOBBY_PROGRESS },
+        session: restoredSession,
+        progress,
         action: null,
         now: Date.now(),
         savedPhaseTimer: saved ?? undefined,
