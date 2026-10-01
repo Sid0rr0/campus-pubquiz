@@ -134,7 +134,7 @@ describe('AdminPage — keyboard shortcuts', () => {
     expect(sendAction).not.toHaveBeenCalled();
   });
 
-  it('sends REVEAL_NEXT_TEAM on ArrowRight while teams remain hidden on the leaderboard', async () => {
+  it('sends ADVANCE on ArrowRight when the server announces a rank reveal', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
@@ -155,6 +155,7 @@ describe('AdminPage — keyboard shortcuts', () => {
           },
         ],
         leaderboardRevealCount: 0,
+        advanceStep: 'reveal_next_rank',
       }),
       connectionError: null,
       sendAction,
@@ -163,10 +164,11 @@ describe('AdminPage — keyboard shortcuts', () => {
 
     await userEvent.keyboard('{ArrowRight}');
 
-    expect(sendAction).toHaveBeenCalledWith('REVEAL_NEXT_TEAM');
+    expect(sendAction).toHaveBeenCalledTimes(1);
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
-  it('sends TOGGLE_LEADERBOARD on ArrowRight once every team has been revealed', async () => {
+  it('sends ADVANCE on ArrowRight when the server announces a hide', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
@@ -184,6 +186,7 @@ describe('AdminPage — keyboard shortcuts', () => {
           },
         ],
         leaderboardRevealCount: 1,
+        advanceStep: 'hide_leaderboard',
       }),
       connectionError: null,
       sendAction,
@@ -192,7 +195,27 @@ describe('AdminPage — keyboard shortcuts', () => {
 
     await userEvent.keyboard('{ArrowRight}');
 
-    expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
+    expect(sendAction).toHaveBeenCalledTimes(1);
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it('ignores ArrowRight and ArrowLeft while the board is up, nothing is left to do and Previous is covered', async () => {
+    const sendAction = vi.fn();
+    mockUseAdminGame.mockReturnValue({
+      snapshot: adminView({
+        progress: progress({ status: 'break', isLeaderboardVisible: true }),
+        currentQuestion: null,
+        advanceStep: 'none',
+        previousState: 'covered_by_leaderboard',
+      }),
+      connectionError: null,
+      sendAction,
+    });
+    renderWithQuery(<AdminPage />);
+
+    await userEvent.keyboard('{ArrowRight}{ArrowLeft}');
+
+    expect(sendAction).not.toHaveBeenCalled();
   });
 
   it('sends TOGGLE_MEDIA_FULLSCREEN when Space is pressed', async () => {

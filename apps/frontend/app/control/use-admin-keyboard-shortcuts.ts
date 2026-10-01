@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
-import type { GameAction } from '@campus-pubquiz/types';
+import type {
+  AdvanceSlotStep,
+  GameAction,
+  PreviousState,
+} from '@campus-pubquiz/types';
 
 export interface UseAdminKeyboardShortcutsOptions {
-  canAdvance: boolean;
-  canGoToPreviousQuestion: boolean;
-  hasUnrevealedTeams: boolean;
+  advanceStep: AdvanceSlotStep;
+  previousState: PreviousState;
   isLeaderboardVisible: boolean;
   sendAction: (action: GameAction) => void;
 }
@@ -22,16 +25,14 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Left/Right step through Previous/Advance (reveal leaderboard teams one at a
- * time once the board is up, then hide it again once every team's shown);
- * Up/Down show/hide the leaderboard; Space toggles a fullscreen view of the
+ * Left/Right send PREVIOUS/ADVANCE whenever the server's announced step
+ * allows it (the server resolves what a leaderboard press means); Up/Down show/hide the leaderboard; Space toggles a fullscreen view of the
  * current question's media on /display. Ignored while focus is in a form
  * field so typing a password or a grade isn't hijacked.
  */
 export function useAdminKeyboardShortcuts({
-  canAdvance,
-  canGoToPreviousQuestion,
-  hasUnrevealedTeams,
+  advanceStep,
+  previousState,
   isLeaderboardVisible,
   sendAction,
 }: UseAdminKeyboardShortcutsOptions): void {
@@ -41,22 +42,14 @@ export function useAdminKeyboardShortcuts({
         return;
       }
       if (event.key === 'ArrowLeft') {
-        if (canGoToPreviousQuestion && !isLeaderboardVisible) {
+        if (previousState === 'available') {
           event.preventDefault();
           sendAction('PREVIOUS');
         }
         return;
       }
       if (event.key === 'ArrowRight') {
-        if (hasUnrevealedTeams) {
-          event.preventDefault();
-          sendAction('REVEAL_NEXT_TEAM');
-        } else if (isLeaderboardVisible) {
-          if (canAdvance) {
-            event.preventDefault();
-            sendAction('TOGGLE_LEADERBOARD');
-          }
-        } else if (canAdvance) {
+        if (advanceStep !== 'none') {
           event.preventDefault();
           sendAction('ADVANCE');
         }
@@ -82,11 +75,5 @@ export function useAdminKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    canAdvance,
-    canGoToPreviousQuestion,
-    hasUnrevealedTeams,
-    isLeaderboardVisible,
-    sendAction,
-  ]);
+  }, [advanceStep, previousState, isLeaderboardVisible, sendAction]);
 }

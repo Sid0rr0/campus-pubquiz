@@ -121,11 +121,8 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
       </Dialog.Root>
       <NavigationButtons
         progressStatus={progress.status}
-        canGoToPreviousQuestion={view.canGoToPreviousQuestion}
-        canAdvance={view.canAdvance}
-        isLeaderboardVisible={progress.isLeaderboardVisible}
-        leaderboardRevealCount={view.leaderboardRevealCount}
-        leaderboardTeamCount={controls.leaderboardStepCount}
+        advanceStep={view.advanceStep}
+        previousState={view.previousState}
         onAction={actions.sendAction}
         className="flex-1"
       />

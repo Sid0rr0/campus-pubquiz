@@ -90,18 +90,33 @@ function defaultActionAvailability(snapshot: {
   progress: GameProgress;
   activeShowdown?: OnAirInput['activeShowdown'];
   showdownRevealStep?: number;
-}): Pick<AdminStatePayload, 'canAdvance' | 'canGoToPreviousQuestion'> {
-  const { status, previousStatus } = snapshot.progress;
+}): Pick<
+  AdminStatePayload,
+  'canAdvance' | 'canGoToPreviousQuestion' | 'advanceStep' | 'previousState'
+> {
+  const { status, previousStatus, isLeaderboardVisible } = snapshot.progress;
   const hasShowdown = snapshot.activeShowdown != null;
+  const canAdvance =
+    STATUSES_WITH_ADVANCE.has(status) || (status === 'ended' && hasShowdown);
+  const canGoToPreviousQuestion =
+    STATUSES_WITH_PREVIOUS.has(status) ||
+    (status === 'ended' && previousStatus != null) ||
+    (status === 'ended' &&
+      hasShowdown &&
+      (snapshot.showdownRevealStep ?? 0) > 0);
+  let previousState: AdminStatePayload['previousState'] = 'unavailable';
+  if (canGoToPreviousQuestion) {
+    previousState = isLeaderboardVisible
+      ? 'covered_by_leaderboard'
+      : 'available';
+  }
   return {
-    canAdvance:
-      STATUSES_WITH_ADVANCE.has(status) || (status === 'ended' && hasShowdown),
-    canGoToPreviousQuestion:
-      STATUSES_WITH_PREVIOUS.has(status) ||
-      (status === 'ended' && previousStatus != null) ||
-      (status === 'ended' &&
-        hasShowdown &&
-        (snapshot.showdownRevealStep ?? 0) > 0),
+    canAdvance,
+    canGoToPreviousQuestion,
+    // Under the leaderboard the step depends on the reveal count, which only
+    // the server knows — a test that needs a reveal or hide step sets it.
+    advanceStep: canAdvance ? 'advance' : 'none',
+    previousState,
   };
 }
 
@@ -109,7 +124,7 @@ function defaultActionAvailability(snapshot: {
  * Builds the view /control is sent from a partial fixture: the fixture is the
  * core snapshot, and the fields the server adds to the admin view are filled
  * in — the on-air fields from the same shared rule the backend projection
- * uses, the button availability from a per-status default, and the
+ * uses, the Advance step and Previous state from a per-status default, and the
  * always-present snapshot fields a test didn't bother to set from empty defaults. Fields the
  * fixture sets itself win.
  */
@@ -124,7 +139,10 @@ export function adminView<
 ): T &
   Pick<AdminStatePayload, 'onAirScreen'> &
   AdminIndicators &
-  Pick<AdminStatePayload, 'canAdvance' | 'canGoToPreviousQuestion'> &
+  Pick<
+    AdminStatePayload,
+    'canAdvance' | 'canGoToPreviousQuestion' | 'advanceStep' | 'previousState'
+  > &
   Pick<AdminStatePayload, 'isShowdownEligible' | 'isLastQuestionBeforeBreak'> {
   return {
     onAirScreen: describeOnAirScreen(snapshot).screen,

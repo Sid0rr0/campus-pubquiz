@@ -11,9 +11,8 @@ function renderShortcuts(
 ) {
   const sendAction = vi.fn();
   const options: UseAdminKeyboardShortcutsOptions = {
-    canAdvance: false,
-    canGoToPreviousQuestion: false,
-    hasUnrevealedTeams: false,
+    advanceStep: 'none',
+    previousState: 'unavailable',
     isLeaderboardVisible: false,
     sendAction,
     ...overrides,
@@ -29,58 +28,53 @@ function renderShortcuts(
 }
 
 describe('useAdminKeyboardShortcuts', () => {
-  it('sends ADVANCE on ArrowRight when advancing is allowed', async () => {
-    const { sendAction } = renderShortcuts({ canAdvance: true });
+  it.each(['advance', 'reveal_next_rank', 'hide_leaderboard'] as const)(
+    'sends ADVANCE on ArrowRight when the announced step is %s',
+    async (advanceStep) => {
+      const { sendAction } = renderShortcuts({
+        advanceStep,
+        isLeaderboardVisible: advanceStep !== 'advance',
+      });
 
-    await userEvent.keyboard('{ArrowRight}');
+      await userEvent.keyboard('{ArrowRight}');
 
-    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
-  });
+      expect(sendAction).toHaveBeenCalledTimes(1);
+      expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+    },
+  );
 
-  it('sends PREVIOUS on ArrowLeft when going back is allowed', async () => {
-    const { sendAction } = renderShortcuts({ canGoToPreviousQuestion: true });
-
-    await userEvent.keyboard('{ArrowLeft}');
-
-    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
-  });
-
-  it('sends REVEAL_NEXT_TEAM on ArrowRight instead of ADVANCE while teams remain hidden', async () => {
+  it('ignores ArrowRight when the announced step is none', async () => {
     const { sendAction } = renderShortcuts({
-      canAdvance: true,
-      hasUnrevealedTeams: true,
-    });
-
-    await userEvent.keyboard('{ArrowRight}');
-
-    expect(sendAction).toHaveBeenCalledWith('REVEAL_NEXT_TEAM');
-    expect(sendAction).not.toHaveBeenCalledWith('ADVANCE');
-  });
-
-  it('sends TOGGLE_LEADERBOARD on ArrowRight once every team has been revealed, instead of ADVANCE', async () => {
-    const { sendAction } = renderShortcuts({
-      canAdvance: true,
+      advanceStep: 'none',
       isLeaderboardVisible: true,
-      hasUnrevealedTeams: false,
-    });
-
-    await userEvent.keyboard('{ArrowRight}');
-
-    expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
-    expect(sendAction).not.toHaveBeenCalledWith('ADVANCE');
-  });
-
-  it('ignores ArrowRight while the leaderboard is visible with nothing left to advance to', async () => {
-    const { sendAction } = renderShortcuts({
-      canAdvance: false,
-      isLeaderboardVisible: true,
-      hasUnrevealedTeams: false,
     });
 
     await userEvent.keyboard('{ArrowRight}');
 
     expect(sendAction).not.toHaveBeenCalled();
   });
+
+  it('sends PREVIOUS on ArrowLeft when Previous is available', async () => {
+    const { sendAction } = renderShortcuts({ previousState: 'available' });
+
+    await userEvent.keyboard('{ArrowLeft}');
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
+  it.each(['covered_by_leaderboard', 'unavailable'] as const)(
+    'ignores ArrowLeft when Previous is %s',
+    async (previousState) => {
+      const { sendAction } = renderShortcuts({
+        previousState,
+        isLeaderboardVisible: previousState === 'covered_by_leaderboard',
+      });
+
+      await userEvent.keyboard('{ArrowLeft}');
+
+      expect(sendAction).not.toHaveBeenCalled();
+    },
+  );
 
   it('sends TOGGLE_LEADERBOARD on ArrowUp only while the leaderboard is hidden', async () => {
     const { sendAction } = renderShortcuts({ isLeaderboardVisible: false });
@@ -112,8 +106,8 @@ describe('useAdminKeyboardShortcuts', () => {
     input.focus();
 
     const { sendAction } = renderShortcuts({
-      canAdvance: true,
-      canGoToPreviousQuestion: true,
+      advanceStep: 'advance',
+      previousState: 'available',
       isLeaderboardVisible: false,
     });
 
@@ -144,16 +138,15 @@ describe('useAdminKeyboardShortcuts', () => {
     document.body.innerHTML = '';
   });
 
-  it('re-subscribes with fresh flags after a rerender', async () => {
-    const { sendAction, rerender } = renderShortcuts({ canAdvance: false });
+  it('re-subscribes with a fresh announced step after a rerender', async () => {
+    const { sendAction, rerender } = renderShortcuts({ advanceStep: 'none' });
 
     await userEvent.keyboard('{ArrowRight}');
     expect(sendAction).not.toHaveBeenCalled();
 
     rerender({
-      canAdvance: true,
-      canGoToPreviousQuestion: false,
-      hasUnrevealedTeams: false,
+      advanceStep: 'advance',
+      previousState: 'unavailable',
       isLeaderboardVisible: false,
       sendAction,
     });

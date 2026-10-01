@@ -2,23 +2,36 @@
 
 import type { ReactNode } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
-import type { GameAction, GameStatus } from '@campus-pubquiz/types';
+import type {
+  AdvanceSlotStep,
+  GameAction,
+  GameStatus,
+  PreviousState,
+} from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
 interface NavigationButtonsProps {
   progressStatus: GameStatus;
-  canGoToPreviousQuestion: boolean;
-  canAdvance: boolean;
-  isLeaderboardVisible: boolean;
-  leaderboardRevealCount: number;
-  leaderboardTeamCount: number;
+  /** What the Advance slot does next, as announced by the server. */
+  advanceStep: AdvanceSlotStep;
+  /** Whether Previous works, is greyed out under the leaderboard, or is hidden — as announced by the server. */
+  previousState: PreviousState;
   onAction: (action: GameAction) => void;
   className?: string;
   /** Rendered between the Previous and Advance buttons — e.g. /remote's MediaFullscreenToggle. */
   children?: ReactNode;
 }
 
-function getAdvanceLabel(progressStatus: GameStatus): string {
+function getAdvanceSlotLabel(
+  advanceStep: AdvanceSlotStep,
+  progressStatus: GameStatus,
+): string {
+  if (advanceStep === 'reveal_next_rank') {
+    return 'Show Next Team';
+  }
+  if (advanceStep === 'hide_leaderboard') {
+    return 'Hide Leaderboard';
+  }
   if (progressStatus === 'rules') {
     return 'Begin Quiz';
   }
@@ -34,48 +47,27 @@ function getAdvanceLabel(progressStatus: GameStatus): string {
 /** Previous/Advance side by side — the two most-used controls during a live game. */
 export function NavigationButtons({
   progressStatus,
-  canGoToPreviousQuestion,
-  canAdvance,
-  isLeaderboardVisible,
-  leaderboardRevealCount,
-  leaderboardTeamCount,
+  advanceStep,
+  previousState,
   onAction,
   className = '',
   children,
 }: NavigationButtonsProps) {
-  // While the board is up, Advance takes over revealing teams one at a time;
-  // once every team has been shown, it hides the board instead of sitting
-  // disabled — the underlying status (e.g. a round's title card) has already
-  // advanced and is just waiting to be uncovered by a further press.
-  const hasUnrevealedTeams =
-    isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
-  const shouldHideLeaderboard =
-    isLeaderboardVisible && !hasUnrevealedTeams && canAdvance;
-  const showAdvanceSlot = canAdvance || hasUnrevealedTeams;
+  const showAdvanceSlot = advanceStep !== 'none';
+  const showPrevious = previousState !== 'unavailable';
 
-  if (!canGoToPreviousQuestion && !showAdvanceSlot) {
+  if (!showPrevious && !showAdvanceSlot) {
     return null;
   }
 
-  const advanceSlotAction: GameAction = hasUnrevealedTeams
-    ? 'REVEAL_NEXT_TEAM'
-    : shouldHideLeaderboard
-      ? 'TOGGLE_LEADERBOARD'
-      : 'ADVANCE';
-  const advanceSlotLabel = hasUnrevealedTeams
-    ? 'Show Next Team'
-    : shouldHideLeaderboard
-      ? 'Hide Leaderboard'
-      : getAdvanceLabel(progressStatus);
-
   return (
     <div className={`flex gap-2 ${className}`}>
-      {canGoToPreviousQuestion && (
+      {showPrevious && (
         <Button
           variant="outline"
           size="lg"
           onClick={() => onAction('PREVIOUS')}
-          disabled={isLeaderboardVisible}
+          disabled={previousState === 'covered_by_leaderboard'}
           className="flex-1 disabled:opacity-40"
         >
           <ChevronLeftIcon aria-hidden="true" />
@@ -87,10 +79,10 @@ export function NavigationButtons({
         <Button
           variant="outline"
           size="lg"
-          onClick={() => onAction(advanceSlotAction)}
+          onClick={() => onAction('ADVANCE')}
           className="flex-1 disabled:opacity-40"
         >
-          {advanceSlotLabel}
+          {getAdvanceSlotLabel(advanceStep, progressStatus)}
           <ChevronRightIcon aria-hidden="true" />
         </Button>
       )}

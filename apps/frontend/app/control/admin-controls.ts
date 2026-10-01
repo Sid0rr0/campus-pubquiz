@@ -1,8 +1,4 @@
-import {
-  getLeaderboardRevealStepCount,
-  getTiedForFirst,
-  type AdminStatePayload,
-} from '@campus-pubquiz/types';
+import { getTiedForFirst, type AdminStatePayload } from '@campus-pubquiz/types';
 import { isYoutubeMediaUrl } from '@/app/display/question-display';
 
 export interface AdminControls {
@@ -11,13 +7,12 @@ export interface AdminControls {
   canCloseSession: boolean;
   canReplayMedia: boolean;
   showAnswerStatus: boolean;
-  leaderboardStepCount: number;
   tiedTeamNames: string[];
 }
 
 type AdminControlsView = Pick<
   AdminStatePayload,
-  'progress' | 'currentQuestion' | 'leaderboard' | 'isCurrentRoundKahoot'
+  'progress' | 'currentQuestion' | 'leaderboard'
 >;
 
 /**
@@ -37,14 +32,6 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
       status === 'question_open' &&
       isYoutubeMediaUrl(view.currentQuestion?.mediaUrl),
     showAnswerStatus: status === 'question_open' || status === 'locking',
-    // Reveal steps, not teams: tied teams share a rank and appear together in
-    // one step, and a kahootMode round only reveals through its top 5 — same
-    // cutoff the display enforces via maxRank — so "Show Next Team" switches
-    // to "Hide Leaderboard" once every distinct rank on screen is shown.
-    leaderboardStepCount: getLeaderboardRevealStepCount(
-      leaderboard,
-      view.isCurrentRoundKahoot ?? false,
-    ),
     tiedTeamNames: getTiedForFirst(leaderboard).map((entry) => entry.teamName),
   };
 }

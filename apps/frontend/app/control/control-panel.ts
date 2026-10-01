@@ -12,9 +12,8 @@ export type ControlPanelView = Pick<
   | 'breakEndsAt'
   | 'displayTextScale'
   | 'activeShowdown'
-  | 'leaderboardRevealCount'
-  | 'canAdvance'
-  | 'canGoToPreviousQuestion'
+  | 'advanceStep'
+  | 'previousState'
   | 'isShowdownEligible'
   | 'isLastQuestionBeforeBreak'
 >;

@@ -106,12 +106,10 @@ function RemotePageContent() {
   } = snapshot;
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
-  const { canReplayMedia, showAnswerStatus, leaderboardStepCount } =
-    getAdminControls(snapshot);
-  // Availability is decided by the server (the admin view), so the presenter's
-  // phone gates the buttons exactly as the admin console does.
-  const { canAdvance, canGoToPreviousQuestion } = snapshot;
-  const leaderboardRevealCount = snapshot.leaderboardRevealCount ?? 0;
+  const { canReplayMedia, showAnswerStatus } = getAdminControls(snapshot);
+  // What Advance and Previous do is announced by the server (the admin view),
+  // so the presenter's phone shows the buttons exactly as the admin console.
+  const { advanceStep, previousState } = snapshot;
 
   return (
     <main className="flex min-h-screen flex-col gap-2 bg-background p-2 pt-0 pb-28 text-foreground">
@@ -192,11 +190,8 @@ function RemotePageContent() {
       <div className="fixed inset-x-0 bottom-0 border-t-2 border-foreground/10 bg-background p-3">
         <NavigationButtons
           progressStatus={gameStatus}
-          canGoToPreviousQuestion={canGoToPreviousQuestion}
-          canAdvance={canAdvance}
-          isLeaderboardVisible={progress.isLeaderboardVisible}
-          leaderboardRevealCount={leaderboardRevealCount}
-          leaderboardTeamCount={leaderboardStepCount}
+          advanceStep={advanceStep}
+          previousState={previousState}
           onAction={sendAction}
         >
           <MediaFullscreenToggle

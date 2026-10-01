@@ -26,11 +26,8 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
       <div className="flex flex-col gap-2">
         <NavigationButtons
           progressStatus={progress.status}
-          canGoToPreviousQuestion={view.canGoToPreviousQuestion}
-          canAdvance={view.canAdvance}
-          isLeaderboardVisible={progress.isLeaderboardVisible}
-          leaderboardRevealCount={view.leaderboardRevealCount}
-          leaderboardTeamCount={controls.leaderboardStepCount}
+          advanceStep={view.advanceStep}
+          previousState={view.previousState}
           onAction={actions.sendAction}
         />
         <AdminActions

@@ -61,10 +61,12 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
 
 function baseSnapshot(overrides: Record<string, unknown> = {}) {
   return {
-    // The server decides button availability (admin view); these fixtures
-    // just say both are allowed.
+    // The server announces what the Advance slot and Previous do (admin
+    // view); these fixtures just say both work.
     canAdvance: true,
     canGoToPreviousQuestion: true,
+    advanceStep: 'advance',
+    previousState: 'available',
     progress: progress(),
     joinCode: 'ABCDEF',
     quizStructure: { breakRoundNumbers: [] },
@@ -110,6 +112,72 @@ describe('RemotePage — content', () => {
     fireEvent.click(screen.getByRole('button', { name: /advance/i }));
 
     expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it.each([
+    ['reveal_next_rank', /show next team/i],
+    ['hide_leaderboard', /hide leaderboard/i],
+  ] as const)(
+    'labels the Advance slot from the announced %s step and sends ADVANCE',
+    (advanceStep, label) => {
+      const sendAction = vi.fn();
+      mockUseAdminGame.mockReturnValue({
+        snapshot: baseSnapshot({
+          advanceStep,
+          previousState: 'covered_by_leaderboard',
+          progress: progress({ isLeaderboardVisible: true }),
+        }),
+        connectionError: null,
+        sendAction,
+        presenterContext: null,
+      });
+      renderWithQuery(<RemotePage />);
+
+      fireEvent.click(screen.getByRole('button', { name: label }));
+
+      expect(sendAction).toHaveBeenCalledTimes(1);
+      expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+    },
+  );
+
+  it('hides the Advance slot when the announced step is none', () => {
+    mockUseAdminGame.mockReturnValue({
+      snapshot: baseSnapshot({ advanceStep: 'none' }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(
+      screen.queryByRole('button', { name: /advance|next team|hide/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('greys Previous out while the leaderboard covers the screen and hides it when unavailable', () => {
+    mockUseAdminGame.mockReturnValue({
+      snapshot: baseSnapshot({
+        previousState: 'covered_by_leaderboard',
+        progress: progress({ isLeaderboardVisible: true }),
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    const { unmount } = renderWithQuery(<RemotePage />);
+    expect(screen.getByRole('button', { name: /previous/i })).toBeDisabled();
+    unmount();
+
+    mockUseAdminGame.mockReturnValue({
+      snapshot: baseSnapshot({ previousState: 'unavailable' }),
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: null,
+    });
+    renderWithQuery(<RemotePage />);
+    expect(
+      screen.queryByRole('button', { name: /previous/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps a rejected Advance out of the connection banner', async () => {

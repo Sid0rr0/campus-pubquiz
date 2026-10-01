@@ -215,22 +215,14 @@ function AdminPageContent() {
   }
 
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  const controls = snapshot ? getAdminControls(snapshot) : null;
-  const leaderboardTeamCount = controls?.leaderboardStepCount ?? 0;
-  const leaderboardRevealCount = snapshot?.leaderboardRevealCount ?? 0;
-  // Where the active block starts, and whether Advance/Previous are
-  // accepted right now, are decided by the server (the admin view) from the
-  // session's own rounds and the same steps the action handler applies.
+  // Where the active block starts, and what the Advance slot and Previous do
+  // next, are decided by the server (the admin view) from the session's own
+  // rounds and the same plan the action handler applies.
   const activeBlockStartIndex = snapshot?.activeBlockStartIndex ?? 0;
-  const canAdvance = snapshot?.canAdvance ?? false;
-  const canGoToPreviousQuestion = snapshot?.canGoToPreviousQuestion ?? false;
-  const hasUnrevealedTeams =
-    isLeaderboardVisible && leaderboardRevealCount < leaderboardTeamCount;
 
   useAdminKeyboardShortcuts({
-    canAdvance,
-    canGoToPreviousQuestion,
-    hasUnrevealedTeams,
+    advanceStep: snapshot?.advanceStep ?? 'none',
+    previousState: snapshot?.previousState ?? 'unavailable',
     isLeaderboardVisible,
     sendAction,
   });

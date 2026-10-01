@@ -117,7 +117,7 @@ describe('AdminPage — leaderboard', () => {
     expect(getDesktopButton(/^previous$/i)).toBeDisabled();
   });
 
-  it('swaps Advance for "Show Next Team" and sends REVEAL_NEXT_TEAM while teams remain hidden', async () => {
+  it('labels the Advance slot "Show Next Team" and sends ADVANCE when the server announces a rank reveal', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
@@ -138,6 +138,7 @@ describe('AdminPage — leaderboard', () => {
           },
         ],
         leaderboardRevealCount: 0,
+        advanceStep: 'reveal_next_rank',
       }),
       connectionError: null,
       sendAction,
@@ -149,10 +150,11 @@ describe('AdminPage — leaderboard', () => {
     ).not.toBeInTheDocument();
     await userEvent.click(getDesktopButton(/show next team/i));
 
-    expect(sendAction).toHaveBeenCalledWith('REVEAL_NEXT_TEAM');
+    expect(sendAction).toHaveBeenCalledTimes(1);
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
   });
 
-  it('swaps Advance for "Hide Leaderboard" once every team is revealed', async () => {
+  it('labels the Advance slot "Hide Leaderboard" and sends ADVANCE when the server announces a hide', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
       snapshot: adminView({
@@ -170,6 +172,7 @@ describe('AdminPage — leaderboard', () => {
           },
         ],
         leaderboardRevealCount: 1,
+        advanceStep: 'hide_leaderboard',
       }),
       connectionError: null,
       sendAction,
@@ -187,7 +190,28 @@ describe('AdminPage — leaderboard', () => {
     expect(hideButton).not.toBeDisabled();
     await userEvent.click(hideButton);
 
-    expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
+    expect(sendAction).toHaveBeenCalledTimes(1);
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
+
+  it('hides the Advance slot while the board is up and the server announces nothing to do', () => {
+    mockUseAdminGame.mockReturnValue({
+      snapshot: adminView({
+        progress: progress({ status: 'ended', isLeaderboardVisible: true }),
+        currentQuestion: null,
+        advanceStep: 'none',
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    renderWithQuery(<AdminPage />);
+
+    const sidebar = within(screen.getByRole('complementary'));
+    expect(
+      sidebar.queryByRole('button', {
+        name: /hide leaderboard|show next team|advance/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('re-enables Advance once the leaderboard is closed after a full reveal', async () => {

@@ -246,7 +246,7 @@ describe('AdminPage — previous button', () => {
       snapshot: adminView({
         // The server allows stepping back from here because an earlier block
         // exists; whether it does is decided (and tested) in the projection.
-        canGoToPreviousQuestion: true,
+        previousState: 'available',
         progress: progress({
           status: 'break_round_intro',
           roundIndex: 1,
