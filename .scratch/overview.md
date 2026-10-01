@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                    | Blocked by            |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| 01  | [Agreement walk pins the admin view's ungraded set against the database](ungraded-source/issues/01-agreement-walk.md)                                     | —                     |
 | 02  | [One reader answers "which questions are ungraded" for the gate, the refresh and the per-answer update](ungraded-source/issues/02-one-ungraded-reader.md) | 01                    |
 | 03  | [A restored session knows its ungraded questions straight away](ungraded-source/issues/03-restore-refreshes-ungraded.md)                                  | 02, session-settle 03 |
 | 04  | [The grading stages end through one standings step](ungraded-source/issues/04-grading-stages-share-standings-step.md)                                     | 02                    |
@@ -29,6 +28,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                                 | Commit    |
 | ------------------------ | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| ungraded-source          | 01  | [Agreement walk pins the admin view's ungraded set against the database](ungraded-source/issues/01-agreement-walk.md)                                                  | —         |
 | phone-question-selection | 02  | [Snap back and re-pin move into the selection module](phone-question-selection/issues/02-snap-back-and-re-pin.md)                                                      | —         |
 | phone-question-selection | 01  | [A pure module picks the phone's question and its neighbours](phone-question-selection/issues/01-selection-precedence-and-neighbours.md)                               | —         |
 | display-screen-kind      | 01  | [/display renders by the On-air screen's kind](display-screen-kind/issues/01-display-switches-on-screen-kind.md)                                                       | —         |
