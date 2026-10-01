@@ -20,7 +20,10 @@ import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
-import { selectPhoneQuestion } from '@/app/play/phone-question-selection';
+import {
+  browsedQuestionAfterAutoAdvanceChange,
+  selectPhoneQuestion,
+} from '@/app/play/phone-question-selection';
 import { useTeamJoin } from '@/app/lib/use-team-join';
 import { storedJoinOptions } from '@/app/lib/team-storage';
 import {
@@ -84,10 +87,9 @@ function PlayPageContent() {
   function handleAutoAdvanceChange(enabled: boolean): void {
     writeAutoAdvanceSetting(enabled);
     setAutoAdvanceEnabled(enabled);
-    if (enabled) {
-      // Resume following the newest question immediately.
-      setBrowsedQuestionId(null);
-    }
+    setBrowsedQuestionId(
+      browsedQuestionAfterAutoAdvanceChange(enabled, browsedQuestionId),
+    );
   }
   const gameStatus = snapshot?.progress.status;
   const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
@@ -96,24 +98,10 @@ function PlayPageContent() {
   // throughout break/reveal), so this alone can key the reveal-walk sync.
   const revealSyncKey = gameStatus === 'reveal' ? revealIndex : null;
 
-  // Snap back to the newest question whenever the quiz master reveals a new
-  // question, or steps through the reveal walk — unless the team has turned
-  // off auto-advance, in which case their view stays put (see the
-  // selectedQuestion re-pin below for how it's held/self-heals instead).
-  // Adjusted during render rather than in an Effect, per
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  // What selectPhoneQuestion compares against to spot a new question or
+  // reveal step; synced during render after the call below.
   const [prevQuestionId, setPrevQuestionId] = useState(currentQuestionId);
   const [prevRevealSyncKey, setPrevRevealSyncKey] = useState(revealSyncKey);
-  if (
-    currentQuestionId !== prevQuestionId ||
-    revealSyncKey !== prevRevealSyncKey
-  ) {
-    setPrevQuestionId(currentQuestionId);
-    setPrevRevealSyncKey(revealSyncKey);
-    if (autoAdvanceEnabled) {
-      setBrowsedQuestionId(null);
-    }
-  }
 
   const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
   useEffect(() => {
@@ -245,26 +233,31 @@ function PlayPageContent() {
   const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
-  const { selectedQuestion, previousQuestion, nextQuestion } =
-    selectPhoneQuestion({
-      openedQuestions: blockQuestions,
-      currentQuestion,
-      onScreenQuestionId,
-      browsedQuestionId,
-    });
-  // With auto-advance off, freeze the view on whatever's currently
-  // resolved above — both the instant the setting turns off (browsedQuestionId
-  // is still null, so nothing above matched it) and any time the pin stops
-  // resolving (e.g. a new block replaced blockQuestions entirely): either
-  // way selectedQuestion.id won't equal browsedQuestionId, so re-adopt it as
-  // the new pin rather than silently auto-following forever. Adjusted during
-  // render, same idiom as the reset-on-new-content block above.
-  if (
-    !autoAdvanceEnabled &&
-    selectedQuestion &&
-    browsedQuestionId !== selectedQuestion.id
-  ) {
-    setBrowsedQuestionId(selectedQuestion.id);
+  const {
+    selectedQuestion,
+    previousQuestion,
+    nextQuestion,
+    browsedQuestionId: nextBrowsedQuestionId,
+  } = selectPhoneQuestion({
+    openedQuestions: blockQuestions,
+    currentQuestion,
+    onScreenQuestionId,
+    browsedQuestionId,
+    autoAdvanceEnabled,
+    revealSyncKey,
+    previousCurrentQuestionId: prevQuestionId,
+    previousRevealSyncKey: prevRevealSyncKey,
+  });
+  // Adjusted during render rather than in an Effect, per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (nextBrowsedQuestionId !== browsedQuestionId) {
+    setBrowsedQuestionId(nextBrowsedQuestionId);
+  }
+  if (currentQuestionId !== prevQuestionId) {
+    setPrevQuestionId(currentQuestionId);
+  }
+  if (revealSyncKey !== prevRevealSyncKey) {
+    setPrevRevealSyncKey(revealSyncKey);
   }
   function goToPreviousQuestion(): void {
     if (previousQuestion) {

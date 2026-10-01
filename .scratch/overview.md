@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### phone-question-selection ([spec](phone-question-selection/spec.md))
-
-| #   | Ticket                                                                                                            | Blocked by |
-| --- | ----------------------------------------------------------------------------------------------------------------- | ---------- |
-| 02  | [Snap back and re-pin move into the selection module](phone-question-selection/issues/02-snap-back-and-re-pin.md) | 01         |
-
 ### ungraded-source ([spec](ungraded-source/spec.md))
 
 | #   | Ticket                                                                                                                                                    | Blocked by            |
@@ -35,6 +29,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                  | #   | Ticket                                                                                                                                                                 | Commit    |
 | ------------------------ | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| phone-question-selection | 02  | [Snap back and re-pin move into the selection module](phone-question-selection/issues/02-snap-back-and-re-pin.md)                                                      | —         |
 | phone-question-selection | 01  | [A pure module picks the phone's question and its neighbours](phone-question-selection/issues/01-selection-precedence-and-neighbours.md)                               | —         |
 | display-screen-kind      | 01  | [/display renders by the On-air screen's kind](display-screen-kind/issues/01-display-switches-on-screen-kind.md)                                                       | —         |
 | moderator-guide          | 01  | [Rewrite `/guide` around the moderator's tasks, fed from the app's own sources](moderator-guide/issues/01-task-based-guide-from-shared-sources.md)                     | —         |

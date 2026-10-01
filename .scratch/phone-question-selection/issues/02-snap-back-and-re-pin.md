@@ -6,10 +6,14 @@ Parent spec: `.scratch/phone-question-selection/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The module returns the browsed pick to remember next, in addition to the question to show and its neighbours
-- [ ] Table test rows cover: snap back on a new current question and on a reveal step, with auto-advance on and off; no snap back when nothing changed; re-pin right after auto-advance is turned off; re-pin when a new block replaces the pinned question; turning auto-advance on clears the pick
-- [ ] The render-time snap-back block and re-pin block are deleted from `/play`; the page holds only the browsed id, the auto-advance setting and the change-detection values it passes in
-- [ ] Existing `/play` tests (`auto-advance-setting`, `question-navigator`, `question-visibility`) pass unchanged
-- [ ] No change to what the phone shows in any status
+- [x] The module returns the browsed pick to remember next, in addition to the question to show and its neighbours
+- [x] Table test rows cover: snap back on a new current question and on a reveal step, with auto-advance on and off; no snap back when nothing changed; re-pin right after auto-advance is turned off; re-pin when a new block replaces the pinned question; turning auto-advance on clears the pick
+- [x] The render-time snap-back block and re-pin block are deleted from `/play`; the page holds only the browsed id, the auto-advance setting and the change-detection values it passes in
+- [x] Existing `/play` tests (`auto-advance-setting`, `question-navigator`, `question-visibility`) pass unchanged
+- [x] No change to what the phone shows in any status
+
+## Comments
+
+Implemented in the commit titled `feat(frontend): move snap back and re-pin into the phone question selection module` (see git history for the hash). `selectPhoneQuestion` now also takes the auto-advance setting, the reveal step and the previous current-question id / reveal step, and returns the browsed pick to remember next. `/play` keeps the browsed id, the setting and the two previous values, and syncs them after the one call. `browsedQuestionAfterAutoAdvanceChange` covers "turning auto-advance on clears the pick" for the settings handler.
