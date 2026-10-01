@@ -13,9 +13,18 @@ Parent spec: `.scratch/grading-refresh/spec.md`
 
 **Blocked by:** 01 (A live answer-key fix refreshes /control's ungraded markers).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The closest_guess batch and kahoot speed scoring end through the grading refresh, and the internal standings step is deleted.
-- [ ] Break entry and restore fill the ungraded set through the grading refresh, only in the break statuses, as today.
-- [ ] Advance out of the break is still refused with the list of ungraded questions, read from the database rather than the cached set.
-- [ ] Pass unchanged: the ungraded agreement walk, ungraded restore, the grading gate, leaderboard, kahoot scoring, and the closest_guess reveal specs.
+- [x] The closest_guess batch and kahoot speed scoring end through the grading refresh, and the internal standings step is deleted.
+- [x] Break entry and restore fill the ungraded set through the grading refresh, only in the break statuses, as today.
+- [x] Advance out of the break is still refused with the list of ungraded questions, read from the database rather than the cached set.
+- [x] Pass unchanged: the ungraded agreement walk, ungraded restore, the grading gate, leaderboard, kahoot scoring, and the closest_guess reveal specs.
+
+## Comments
+
+Implemented in the commit titled `feat(backend): the grading stages, break entry and restore end through the grading refresh` (see git history for the hash).
+
+- `ensureBlockGraded` and `ensureKahootSpeedScored` pass the questions they scored to `gradingRefresh` and apply it with `withGradingRefresh`; the private `withFreshLeaderboard` standings step is deleted.
+- `refreshUngradedQuestionIds` (break entry and restore) refreshes the whole block through `gradingRefresh`, still gated on the break statuses, and replaces the cached set outright so nothing from an earlier block survives.
+- The leave-break gate still reads `getUngradedBlockQuestionIds` straight from the database.
+- The backend suite passes apart from `presenter-context.spec.ts`, which has someone else's uncommitted work in progress; it fails identically with and without this change.

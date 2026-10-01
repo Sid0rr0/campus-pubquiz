@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### grading-refresh ([spec](grading-refresh/spec.md))
-
-| #   | Ticket                                                                                                                                                   | Blocked by |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md) | 01         |
-
 ### commit-a-move ([spec](commit-a-move/spec.md))
 
 | #   | Ticket                                                                                                               | Blocked by                    |
@@ -34,6 +28,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| grading-refresh             | 03  | [The grading stages, break entry and restore end through the grading refresh](grading-refresh/issues/03-grading-stages-break-restore-through-refresh.md)                | —         |
 | grading-refresh             | 02  | [Answer submitted or graded ends through the grading refresh](grading-refresh/issues/02-answer-changes-through-refresh.md)                                             | —         |
 | grading-refresh             | 01  | [A live answer-key fix refreshes /control's ungraded markers](grading-refresh/issues/01-key-fix-refreshes-ungraded.md)                                                 | —         |
 | round-title-card            | 01  | [One round title card component for round_intro, break_round_intro and reveal_intro](round-title-card/issues/01-shared-round-title-card.md)                            | —         |

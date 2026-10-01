@@ -16,6 +16,7 @@ import { StandingsService } from '@/standings/standings.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
+import { withGradingRefresh } from '@/game/state/session-updates.util';
 
 /**
  * The one rule for which questions can ever count as "ungraded": closest_guess
@@ -80,9 +81,16 @@ export class BlockGradingService {
       };
     }
 
-    return this.withFreshLeaderboard(session, {
-      closestGuessSummaries: summaries,
-    });
+    // The batch scored these questions; closest_guess can never be ungraded,
+    // so only the standings move.
+    const refresh = await this.gradingRefresh(
+      { ...session, progress: newProgress },
+      ungraded.map((question) => question.id),
+    );
+    return withGradingRefresh(
+      { ...session, closestGuessSummaries: summaries },
+      refresh,
+    );
   }
 
   /**
@@ -94,7 +102,7 @@ export class BlockGradingService {
    * time as stored at submit, so a redundant re-run (e.g. PREVIOUS from
    * 'reveal' back into 'locking' followed by another ADVANCE) recomputes the
    * same points — the status transition is the only guard needed. Recomputes
-   * the leaderboard afterward, same as ensureBlockGraded.
+   * the leaderboard afterward, same as ensureBlockGraded (both end through gradingRefresh).
    */
   async ensureKahootSpeedScored(
     session: SessionState,
@@ -116,7 +124,8 @@ export class BlockGradingService {
       session.seededGame.settings.kahootQuestionTimerSeconds,
     );
 
-    return this.withFreshLeaderboard(session, {});
+    const refresh = await this.gradingRefresh(session, [question.id]);
+    return withGradingRefresh(session, refresh);
   }
 
   /**
@@ -215,25 +224,6 @@ export class BlockGradingService {
   }
 
   /**
-   * The step every grading stage ends with: the points it just wrote aren't
-   * in session.leaderboard yet (the other places that refresh it are
-   * GRADE_ANSWER/AWARD_BONUS), so fetch the standings and return the session
-   * with them plus the stage's own changes. Deliberately private and
-   * returning the session: the other standings fetches fetch-then-apply in
-   * one synchronous update, and sharing this across an `await` there would
-   * invite a lost-update race.
-   */
-  private async withFreshLeaderboard(
-    session: SessionState,
-    changes: Pick<Partial<SessionState>, 'closestGuessSummaries'>,
-  ): Promise<SessionState> {
-    const leaderboard = await this.standingsService.leaderboard(
-      session.seededGame.gameSessionId,
-    );
-    return { ...session, ...changes, leaderboard };
-  }
-
-  /**
    * The one reader for "which of these questions are ungraded": drops the
    * questions that can't be (closest_guess, via canBeUngraded) and asks the
    * database which of the rest have an answer with no grading time. Used by
@@ -264,7 +254,8 @@ export class BlockGradingService {
   }
 
   /**
-   * Bulk-recomputes ungradedQuestionIds from the DB whenever the block just
+   * Bulk-refreshes the block through the grading refresh (ungraded set and
+   * standings from the DB) whenever the block just
    * entered (or is still within) a break status — the authoritative
    * baseline the grading refresh in GameStateService.recordAnswer/answerGraded
    * build on between these recomputes. A no-op outside the break statuses,
@@ -275,10 +266,16 @@ export class BlockGradingService {
     newProgress: GameProgress,
   ): Promise<SessionState> {
     if (!isBreakStatus(newProgress.status)) return session;
-    const ungradedQuestionIds = await this.getUngradedBlockQuestionIds({
-      ...session,
-      progress: newProgress,
-    });
-    return { ...session, ungradedQuestionIds };
+    const blockSession = { ...session, progress: newProgress };
+    const refresh = await this.gradingRefresh(
+      blockSession,
+      getBlockSeededQuestions(blockSession).map((question) => question.id),
+    );
+    // The refresh covers the whole block, so its set replaces the cached one
+    // outright — nothing from an earlier block or a live edit survives.
+    return {
+      ...withGradingRefresh(session, refresh),
+      ungradedQuestionIds: [...refresh.ungradedQuestionIds],
+    };
   }
 }
