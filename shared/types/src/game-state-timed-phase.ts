@@ -2,7 +2,7 @@ import {
   getBlockPositionForQuestion,
   getBlockStartPosition,
 } from './game-state-block-position';
-import { isGradingStatus, isQuestionOnAirStatus } from './game-state-groups';
+import { isBreakStatus, isQuestionOnAirStatus } from './game-state-groups';
 import type { GameContext, GameProgress } from './game-state-types';
 
 /**
@@ -43,7 +43,7 @@ export function getTimedPhaseKey(
     );
     return `q:${blockStart.roundIndex}:${blockStart.questionIndex}:${position}`;
   }
-  if (isGradingStatus(progress.status)) {
+  if (isBreakStatus(progress.status)) {
     const blockStart = getBlockStartPosition(
       progress.roundIndex,
       progress.questionIndex,

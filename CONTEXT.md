@@ -59,7 +59,7 @@ lobby → rules → round_overview
 
 - **answering** — can teams submit or change answers? (question_open, locking, round_intro)
 - **question on air** — is a question showing on the big screen? (question_open, locking)
-- **grading** — is the block in its break? (break_intro, break, break_round_intro). Named for the break's purpose; grading itself can start earlier.
+- **break** — is the block in its break? (break_intro, break, break_round_intro)
 - **graded** — is grading finished, so scores can be trusted and shown? (the break statuses, reveal_intro, reveal, ended)
 - **revealing** — are correct answers being shown? (reveal_intro, reveal)
 - **block review** — is the phone showing the break or reveal screen? (the break statuses plus revealing)

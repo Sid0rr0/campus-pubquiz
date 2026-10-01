@@ -15,8 +15,8 @@ export const QUESTION_ON_AIR_STATUSES: StatusGroup = new Set<GameStatus>([
   'locking',
 ]);
 
-/** The just-locked block is being graded and reviewed by the quiz master. */
-export const GRADING_STATUSES: StatusGroup = new Set<GameStatus>([
+/** The block is in its break (the quiz master reviews and finishes grading here; grading itself can start earlier). */
+export const BREAK_STATUSES: StatusGroup = new Set<GameStatus>([
   'break_intro',
   'break',
   'break_round_intro',
@@ -24,7 +24,7 @@ export const GRADING_STATUSES: StatusGroup = new Set<GameStatus>([
 
 /** A block's grading is complete or under review — ungradedQuestionIds can be trusted from here on. */
 export const GRADED_STATUSES: StatusGroup = new Set<GameStatus>([
-  ...GRADING_STATUSES,
+  ...BREAK_STATUSES,
   'reveal_intro',
   'reveal',
   'ended',
@@ -38,7 +38,7 @@ export const REVEALING_STATUSES: StatusGroup = new Set<GameStatus>([
 
 /** The phone is reviewing the block it just answered (its break and reveal screens). */
 export const BLOCK_REVIEW_STATUSES: StatusGroup = new Set<GameStatus>([
-  ...GRADING_STATUSES,
+  ...BREAK_STATUSES,
   ...REVEALING_STATUSES,
 ]);
 
@@ -56,8 +56,8 @@ export function isQuestionOnAirStatus(status: GameStatus): boolean {
   return QUESTION_ON_AIR_STATUSES.has(status);
 }
 
-export function isGradingStatus(status: GameStatus): boolean {
-  return GRADING_STATUSES.has(status);
+export function isBreakStatus(status: GameStatus): boolean {
+  return BREAK_STATUSES.has(status);
 }
 
 export function isGradedStatus(status: GameStatus): boolean {

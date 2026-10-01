@@ -8,7 +8,7 @@ import {
   isBatchGradedType,
   isGradedStatus,
   isMatchOrHumanType,
-  isGradingStatus,
+  isBreakStatus,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { StandingsService } from '@/standings/standings.service';
@@ -235,16 +235,16 @@ export class BlockGradingService {
 
   /**
    * Bulk-recomputes ungradedQuestionIds from the DB whenever the block just
-   * entered (or is still within) a grading status — the authoritative
+   * entered (or is still within) a break status — the authoritative
    * baseline the per-question refresh in GameStateService.recordAnswer/answerGraded
-   * build on between these recomputes. A no-op outside the grading statuses,
+   * build on between these recomputes. A no-op outside the break statuses,
    * since nothing there can be graded and the cached value can't go stale.
    */
   async refreshUngradedQuestionIds(
     session: SessionState,
     newProgress: GameProgress,
   ): Promise<SessionState> {
-    if (!isGradingStatus(newProgress.status)) return session;
+    if (!isBreakStatus(newProgress.status)) return session;
     const ungradedQuestionIds = await this.getUngradedBlockQuestionIds({
       ...session,
       progress: newProgress,

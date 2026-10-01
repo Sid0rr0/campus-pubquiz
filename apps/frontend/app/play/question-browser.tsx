@@ -1,4 +1,4 @@
-import { isBatchGradedType, isGradingStatus } from '@campus-pubquiz/types';
+import { isBatchGradedType, isBreakStatus } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -176,7 +176,7 @@ export function QuestionBrowser({
               }
             />
           )}
-          {!isAnswerable && isGradingStatus(progress.status) && (
+          {!isAnswerable && isBreakStatus(progress.status) && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               Answering is locked for this question
             </p>

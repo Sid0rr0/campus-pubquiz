@@ -4,14 +4,14 @@ import {
   BLOCK_REVIEW_STATUSES,
   BLOCK_STARTED_STATUSES,
   GRADED_STATUSES,
-  GRADING_STATUSES,
+  BREAK_STATUSES,
   QUESTION_ON_AIR_STATUSES,
   REVEALING_STATUSES,
   isAnsweringStatus,
   isBlockReviewStatus,
   isBlockStartedStatus,
   isGradedStatus,
-  isGradingStatus,
+  isBreakStatus,
   isQuestionOnAirStatus,
   isRevealingStatus,
   type GameStatus,
@@ -20,7 +20,7 @@ import {
 interface Membership {
   answering: boolean;
   questionOnAir: boolean;
-  grading: boolean;
+  break: boolean;
   graded: boolean;
   revealing: boolean;
   blockReview: boolean;
@@ -41,19 +41,19 @@ const MEMBERSHIP: Record<GameStatus, Membership> = {
   }),
   locking: m({ answering: true, questionOnAir: true, blockStarted: true }),
   break_intro: m({
-    grading: true,
+    break: true,
     graded: true,
     blockReview: true,
     blockStarted: true,
   }),
   break: m({
-    grading: true,
+    break: true,
     graded: true,
     blockReview: true,
     blockStarted: true,
   }),
   break_round_intro: m({
-    grading: true,
+    break: true,
     graded: true,
     blockReview: true,
     blockStarted: true,
@@ -77,7 +77,7 @@ function m(overrides: Partial<Membership> = {}): Membership {
   return {
     answering: false,
     questionOnAir: false,
-    grading: false,
+    break: false,
     graded: false,
     revealing: false,
     blockReview: false,
@@ -89,7 +89,7 @@ function m(overrides: Partial<Membership> = {}): Membership {
 const GROUPS = [
   ['answering', ANSWERING_STATUSES, isAnsweringStatus],
   ['questionOnAir', QUESTION_ON_AIR_STATUSES, isQuestionOnAirStatus],
-  ['grading', GRADING_STATUSES, isGradingStatus],
+  ['break', BREAK_STATUSES, isBreakStatus],
   ['graded', GRADED_STATUSES, isGradedStatus],
   ['revealing', REVEALING_STATUSES, isRevealingStatus],
   ['blockReview', BLOCK_REVIEW_STATUSES, isBlockReviewStatus],

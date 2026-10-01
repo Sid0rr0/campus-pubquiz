@@ -1,4 +1,4 @@
-import { isGradingStatus } from './game-state-groups';
+import { isBreakStatus } from './game-state-groups';
 import type { GameContext, GameProgress } from './game-state-types';
 
 export interface QuizStructureSummary {
@@ -48,7 +48,7 @@ export function isShowingLastBreak(
   progress: GameProgress,
   quizStructure: QuizStructureSummary,
 ): boolean {
-  if (!isGradingStatus(progress.status)) return false;
+  if (!isBreakStatus(progress.status)) return false;
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   return breakNumber > 0 && breakNumber === quizStructure.blockCount;
 }

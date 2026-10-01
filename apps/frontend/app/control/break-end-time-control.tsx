@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { isGradingStatus, type GameStatus } from '@campus-pubquiz/types';
+import { isBreakStatus, type GameStatus } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
 interface BreakEndTimeControlProps {
@@ -69,7 +69,7 @@ export function BreakEndTimeControl({
     setInputValue(breakEndsAt !== null ? toTimeInputValue(breakEndsAt) : '');
   }
 
-  const isDuringBreak = isGradingStatus(progressStatus);
+  const isDuringBreak = isBreakStatus(progressStatus);
   if (!isDuringBreak && !isLastQuestionBeforeBreak) {
     return null;
   }
