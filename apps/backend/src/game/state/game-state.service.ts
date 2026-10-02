@@ -73,7 +73,9 @@ const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
-  private readonly logger = new Logger(GameStateService.name);
+  // A string, not `GameStateService.name`: `nest build` crashes with
+  // "reading 'checkJsDirective'" on that self-reference in this file.
+  private readonly logger = new Logger('GameStateService');
   private readonly sessionStore = new GameSessionStore();
   private readonly sessionWrites = new SessionWriteQueue();
   private readonly grading: BlockGradingService;
