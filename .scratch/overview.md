@@ -31,18 +31,18 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ### backend-test-speed ([spec](backend-test-speed/spec.md))
 
-| #   | Ticket                                                                                                                                 | Blocked by |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 01  | [One Postgres container per test run, with the real-store gateway harness on it](backend-test-speed/issues/01-shared-test-database.md) | —          |
-| 02  | [Every remaining Postgres spec uses the shared test database](backend-test-speed/issues/02-remaining-specs-on-shared-database.md)      | 01         |
-| 03  | [Gateway specs wait for a settled session instead of sleeping](backend-test-speed/issues/03-wait-for-settled-session.md)               | —          |
-| 04  | [Gateway specs fire phase timers on demand](backend-test-speed/issues/04-fire-phase-timers-on-demand.md)                               | 03         |
-| 05  | [Prove the backend suite is fast and never fails by chance](backend-test-speed/issues/05-prove-fast-reliable-suite.md)                 | 02, 04     |
+| #   | Ticket                                                                                                                            | Blocked by |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 02  | [Every remaining Postgres spec uses the shared test database](backend-test-speed/issues/02-remaining-specs-on-shared-database.md) | 01         |
+| 03  | [Gateway specs wait for a settled session instead of sleeping](backend-test-speed/issues/03-wait-for-settled-session.md)          | —          |
+| 04  | [Gateway specs fire phase timers on demand](backend-test-speed/issues/04-fire-phase-timers-on-demand.md)                          | 03         |
+| 05  | [Prove the backend suite is fast and never fails by chance](backend-test-speed/issues/05-prove-fast-reliable-suite.md)            | 02, 04     |
 
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| backend-test-speed          | 01  | [One Postgres container per test run, with the real-store gateway harness on it](backend-test-speed/issues/01-shared-test-database.md)                                 | —         |
 | session-write               | 08  | [A press whose standings read fails still leaves memory matching the database](session-write/issues/08-press-survives-failed-standings-read.md)                        | —         |
 | session-write               | 07  | [Contract: standings only from the session write; delete the old write paths](session-write/issues/07-contract-delete-old-write-paths.md)                              | —         |
 | session-write               | 06  | [The remaining events go through the session write, declared as not touching scores](session-write/issues/06-remaining-events-through-session-write.md)                | —         |

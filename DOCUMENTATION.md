@@ -609,7 +609,13 @@ for the rest of the flow.
   `@campus-pubquiz/types` resolves via its `dist/`, so frontend/backend type
   checking needs it built; `pnpm -r` runs workspaces in topological order, so
   `pnpm build` alone handles that.
-- The backend's Postgres integration spec uses `@testcontainers/postgresql`
-  to start a real `postgres:16-alpine` container. That works on GitHub's
-  `ubuntu-latest` runners without a `services:` block, since Docker is
-  preinstalled.
+- The backend's Postgres specs share one real `postgres:16-alpine` container
+  per test run (`@testcontainers/postgresql`). Jest's global set-up
+  (`apps/backend/src/test-db/`) starts it and runs the real migrations on a
+  template database once; each Jest worker clones its own database from that
+  template, and a spec gets it by calling `useTestDatabase()` inside a
+  top-level `describe` (every entity table is emptied after each test). The
+  global teardown stops the container. That works on GitHub's `ubuntu-latest`
+  runners without a `services:` block, since Docker is preinstalled; with
+  Docker stopped the run fails once with "Docker is required". Specs not yet
+  moved onto `useTestDatabase()` still start their own container.

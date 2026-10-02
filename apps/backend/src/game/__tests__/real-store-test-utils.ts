@@ -1,8 +1,4 @@
 import { WsException } from '@nestjs/websockets';
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
 import { MikroORM, RequestContext } from '@mikro-orm/postgresql';
 import {
   DEFAULT_SESSION_SETTINGS,
@@ -28,6 +24,7 @@ import { Round } from '@/db/entities/round.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { Team } from '@/db/entities/team.entity';
+import { useTestDatabase } from '@/test-db/test-database';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -58,9 +55,6 @@ import {
 } from '@/game/__tests__/test-utils';
 
 export const REAL_STORE_JOIN_CODE = 'REALST';
-
-const TRUNCATE_GAME_TABLES =
-  'TRUNCATE showdown_round_teams, showdown_rounds, bonus_awards, answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE';
 
 export interface SeededQuestionIds {
   multipleChoice: number;
@@ -313,45 +307,27 @@ function unavailableQuestionIds(): SeededQuestionIds {
  * to test through the gateway, because a fake store that returns the same
  * data on every call can't reveal a missing cache refresh.
  *
- * Call inside a top-level `describe`: one container per spec file, game
- * tables truncated after each test, same shape as setupAnswerServiceTest.
+ * Call inside a top-level `describe`: the database comes from useTestDatabase
+ * (one container per run, game tables emptied after each test).
  */
 export function setupRealStoreGatewayTest(): RealStoreHarness {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
   let gateways: GameGateway[] = [];
 
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
-
-  afterEach(async () => {
+  // Registered before useTestDatabase() so the gateways are destroyed before
+  // its afterEach empties the tables (hooks run in definition order).
+  afterEach(() => {
     // Armed lock/kahoot timers would otherwise fire into truncated tables
     // and keep the worker alive.
     gateways.forEach((gateway) => gateway.onModuleDestroy());
     gateways = [];
-    await orm.em.getConnection().execute(TRUNCATE_GAME_TABLES);
   });
+
+  const db = useTestDatabase();
 
   async function seedPlayableQuiz(
     options: CreateGatewayOptions,
   ): Promise<PlayableQuiz> {
-    const em = orm.em.fork();
+    const em = db.orm.em.fork();
     const quiz = em.create(Quiz, { title: 'Real Store Quiz' });
     const isDefaultQuiz = options.rounds === undefined;
     const roundSpecs: QuizRoundSpec[] = options.rounds ?? [
@@ -409,7 +385,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   // @CreateRequestContext() handlers give each call its own forked em —
   // the way the running app resolves them.
   function buildServices() {
-    const { em } = orm;
+    const { em } = db.orm;
     const sessionTeams = em.getRepository<
       GameSessionTeam,
       GameSessionTeamRepository
@@ -485,7 +461,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const gameState = new GameStateService(
       services.seedService,
       services.progressRepository,
-      orm,
+      db.orm,
       services.answerService,
       services.standingsService,
       services.showdownService,
@@ -498,7 +474,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.answerService,
       services.bonusService,
       asSessionService(sessionService),
-      orm,
+      db.orm,
       services.showdownService,
     );
     gateways.push(gateway);
@@ -625,12 +601,12 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         emits.length = 0;
         server.sockets.sockets.forEach((socket) => socket.emit.mockClear());
       },
-      inRequestContext: (work) => RequestContext.create(orm.em, work),
+      inRequestContext: (work) => RequestContext.create(db.orm.em, work),
       connectAdmin,
       connectPlayer,
       joinTeam,
       sessionService,
-      orm,
+      orm: db.orm,
       openFirstQuestion,
       teams: [],
       act,
