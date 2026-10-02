@@ -1,37 +1,14 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM } from '@mikro-orm/postgresql';
+import { useUnmigratedTestDatabase } from '@/test-db/test-database';
 
 const PREVIOUS_MIGRATION = 'Migration20260928120000_AddNameToGameSessions';
 const QUESTION_POINTS = 10;
 
 describe('AddVerdictToAnswers migration (Postgres integration)', () => {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
-
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
+  const db = useUnmigratedTestDatabase();
 
   it('backfills graded answers from their points and leaves ungraded ones null', async () => {
-    await orm.getMigrator().up({ to: PREVIOUS_MIGRATION });
-    const connection = orm.em.getConnection();
+    await db.orm.getMigrator().up({ to: PREVIOUS_MIGRATION });
+    const connection = db.orm.em.getConnection();
     const [{ id: quizId }] = await connection.execute(
       `insert into quizzes (title, created_at, updated_at) values ('Quiz', now(), now()) returning id`,
     );
@@ -62,7 +39,7 @@ describe('AddVerdictToAnswers migration (Postgres integration)', () => {
       );
     }
 
-    await orm.getMigrator().up();
+    await db.orm.getMigrator().up();
 
     const rows: Array<{ name: string; verdict: string | null }> =
       await connection.execute(

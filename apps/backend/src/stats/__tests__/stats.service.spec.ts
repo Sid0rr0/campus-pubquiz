@@ -1,8 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { EntityManager } from '@mikro-orm/postgresql';
 import type { GameStatus } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
@@ -16,34 +12,15 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { StandingsService } from '@/standings/standings.service';
 import { StatsService } from '@/stats/stats.service';
+import { useTestDatabase } from '@/test-db/test-database';
 
 describe('StatsService (Postgres integration)', () => {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
+  const db = useTestDatabase();
   let em: EntityManager;
   let statsService: StatsService;
 
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
-
   beforeEach(() => {
-    em = orm.em.fork();
+    em = db.orm.em.fork();
     statsService = new StatsService(
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
       new StandingsService(
@@ -52,14 +29,6 @@ describe('StatsService (Postgres integration)', () => {
         ),
       ),
     );
-  });
-
-  afterEach(async () => {
-    await em
-      .getConnection()
-      .execute(
-        'TRUNCATE answers, bonus_awards, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
-      );
   });
 
   /** Builds a quiz with one round per array entry, one question per point value within it. */

@@ -38,6 +38,22 @@ function requireBaseUri(): string {
   return uri;
 }
 
+async function withAdminConnection<T>(
+  baseUri: string,
+  run: (connection: ReturnType<MikroORM['em']['getConnection']>) => Promise<T>,
+): Promise<T> {
+  const admin = await MikroORM.init({
+    clientUrl: baseUri,
+    entities: [],
+    discovery: { warnWhenNoEntities: false },
+  });
+  try {
+    return await run(admin.em.getConnection());
+  } finally {
+    await admin.close(true);
+  }
+}
+
 /** First use on a worker clones the template; later spec files on that worker reuse the database. */
 async function ensureWorkerDatabase(baseUri: string, name: string) {
   const admin = await MikroORM.init({
@@ -105,6 +121,53 @@ export function useTestDatabase(): TestDatabase {
     get orm() {
       if (!orm) {
         throw new Error('useTestDatabase().orm used before beforeAll ran');
+      }
+      return orm;
+    },
+  };
+}
+
+/**
+ * For the rare spec that must start from a database with no tables, such as
+ * one that runs migrations step by step. Creates an empty database for this
+ * worker on the shared container before the file and drops it after. Nothing
+ * is migrated and nothing is emptied between tests: the spec owns the schema.
+ */
+export function useUnmigratedTestDatabase(): TestDatabase {
+  let orm: MikroORM | undefined;
+  const baseUri = () => requireBaseUri();
+  const name = `${workerDatabaseName()}_unmigrated`;
+
+  beforeAll(async () => {
+    await withAdminConnection(baseUri(), async (connection) => {
+      await connection.execute(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+      await connection.execute(`CREATE DATABASE ${name} TEMPLATE template0`);
+    });
+    orm = await MikroORM.init({
+      clientUrl: uriForDatabase(baseUri(), name),
+      entities: ['./dist/db/entities/*.entity.js'],
+      entitiesTs: ['./src/db/entities/*.entity.ts'],
+      migrations: {
+        path: './dist/db/migrations',
+        pathTs: './src/db/migrations',
+        snapshot: false,
+      },
+    });
+  }, CONNECT_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await orm?.close(true);
+    await withAdminConnection(baseUri(), (connection) =>
+      connection.execute(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`),
+    );
+  }, CONNECT_TIMEOUT_MS);
+
+  return {
+    get orm() {
+      if (!orm) {
+        throw new Error(
+          'useUnmigratedTestDatabase().orm used before beforeAll ran',
+        );
       }
       return orm;
     },

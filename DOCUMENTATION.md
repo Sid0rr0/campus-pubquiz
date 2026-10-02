@@ -617,5 +617,7 @@ for the rest of the flow.
   top-level `describe` (every entity table is emptied after each test). The
   global teardown stops the container. That works on GitHub's `ubuntu-latest`
   runners without a `services:` block, since Docker is preinstalled; with
-  Docker stopped the run fails once with "Docker is required". Specs not yet
-  moved onto `useTestDatabase()` still start their own container.
+  Docker stopped the run fails once with "Docker is required". No spec starts
+  its own container. A spec that must begin with no tables (the migration
+  backfill spec) calls `useUnmigratedTestDatabase()` instead, which makes an
+  empty database on the same container and drops it afterwards.

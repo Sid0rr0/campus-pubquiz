@@ -1,8 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { EntityManager } from '@mikro-orm/postgresql';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -14,6 +10,7 @@ import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { AnswerService } from '@/answer/answer.service';
+import { useTestDatabase } from '@/test-db/test-database';
 
 export interface AnswerServiceTestState {
   em: EntityManager;
@@ -29,9 +26,9 @@ export interface AnswerServiceTestContext {
 }
 
 /**
- * Spins up a fresh Postgres testcontainer + MikroORM instance for
+ * Uses the shared test database (emptied after every test) for
  * AnswerService integration tests, seeding a quiz/round/free_text-question/
- * game-session before each test and truncating game tables after each.
+ * game-session before each test.
  *
  * Call inside a top-level `describe` block — Jest attaches the
  * beforeAll/beforeEach/afterEach/afterAll hooks registered here to whichever
@@ -40,31 +37,11 @@ export interface AnswerServiceTestContext {
  * (after the hook has run), not at module scope.
  */
 export function setupAnswerServiceTest(): AnswerServiceTestContext {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
+  const db = useTestDatabase();
   const state = {} as AnswerServiceTestState;
 
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
-
   beforeEach(async () => {
-    state.em = orm.em.fork();
+    state.em = db.orm.em.fork();
     state.answerService = new AnswerService(
       state.em.getRepository<Answer, AnswerRepository>(Answer),
       state.em.getRepository<Team, TeamRepository>(Team),
@@ -89,14 +66,6 @@ export function setupAnswerServiceTest(): AnswerServiceTestContext {
       joinCode: 'ABCDEF',
     });
     await state.em.flush();
-  });
-
-  afterEach(async () => {
-    await state.em
-      .getConnection()
-      .execute(
-        'TRUNCATE answers, bonus_awards, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
-      );
   });
 
   async function insertTeam(name: string, token: string): Promise<Team> {

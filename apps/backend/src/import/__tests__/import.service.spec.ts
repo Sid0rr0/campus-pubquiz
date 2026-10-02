@@ -1,8 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { EntityManager } from '@mikro-orm/postgresql';
 import { SeedService } from '@/db/seed.service';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -21,6 +17,7 @@ import {
 } from '@/import/import.service';
 import { fetchSheetCsv, SheetFetchError } from '@/import/sheet-url-fetcher';
 import { QuizService } from '@/quiz/quiz.service';
+import { useTestDatabase } from '@/test-db/test-database';
 
 jest.mock('@/import/sheet-url-fetcher', () => ({
   ...jest.requireActual<typeof import('@/import/sheet-url-fetcher')>(
@@ -80,40 +77,12 @@ function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
 }
 
 describe('ImportService (Postgres integration)', () => {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
+  const db = useTestDatabase();
   let em: EntityManager;
 
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
-
   beforeEach(() => {
-    em = orm.em.fork();
+    em = db.orm.em.fork();
     mockedFetchSheetCsv.mockReset();
-  });
-
-  afterEach(async () => {
-    await em
-      .getConnection()
-      .execute(
-        'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
-      );
   });
 
   function makeService(overrides: Partial<GameStateStub> = {}) {

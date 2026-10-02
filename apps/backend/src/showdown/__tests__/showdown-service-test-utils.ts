@@ -1,8 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { EntityManager } from '@mikro-orm/postgresql';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -16,6 +12,7 @@ import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.reposi
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
 import { BonusService } from '@/bonus/bonus.service';
 import { ShowdownService } from '@/showdown/showdown.service';
+import { useTestDatabase } from '@/test-db/test-database';
 
 export interface ShowdownServiceTestState {
   em: EntityManager;
@@ -30,37 +27,17 @@ export interface ShowdownServiceTestContext {
 }
 
 /**
- * Spins up a fresh Postgres testcontainer + MikroORM instance for
+ * Uses the shared test database (emptied after every test) for
  * ShowdownService integration tests, seeding a quiz/game-session before each
- * test and truncating game tables after each — same shape as
+ * test — same shape as
  * setupAnswerServiceTest (answer-service-test-utils.ts).
  */
 export function setupShowdownServiceTest(): ShowdownServiceTestContext {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
+  const db = useTestDatabase();
   const state = {} as ShowdownServiceTestState;
 
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
-
   beforeEach(async () => {
-    state.em = orm.em.fork();
+    state.em = db.orm.em.fork();
     state.bonusService = new BonusService(
       state.em.getRepository<BonusAward, BonusAwardRepository>(BonusAward),
       state.em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
@@ -82,14 +59,6 @@ export function setupShowdownServiceTest(): ShowdownServiceTestContext {
       joinCode: 'ABCDEF',
     });
     await state.em.flush();
-  });
-
-  afterEach(async () => {
-    await state.em
-      .getConnection()
-      .execute(
-        'TRUNCATE showdown_round_teams, showdown_rounds, bonus_awards, game_session_teams, teams, game_sessions, quizzes CASCADE',
-      );
   });
 
   async function insertTeam(name: string, token: string): Promise<Team> {

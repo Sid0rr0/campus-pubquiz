@@ -1,8 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { EntityManager } from '@mikro-orm/postgresql';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -15,35 +11,16 @@ import {
   TeamCodeRequiredError,
   TeamService,
 } from '@/team/team.service';
+import { useTestDatabase } from '@/test-db/test-database';
 
 describe('TeamService (Postgres integration)', () => {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
+  const db = useTestDatabase();
   let em: EntityManager;
   let teamService: TeamService;
   let sessionId: number;
 
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
-
   beforeEach(async () => {
-    em = orm.em.fork();
+    em = db.orm.em.fork();
     teamService = new TeamService(
       em.getRepository<Team, TeamRepository>(Team),
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
@@ -55,14 +32,6 @@ describe('TeamService (Postgres integration)', () => {
     const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });
     await em.flush();
     sessionId = session.id;
-  });
-
-  afterEach(async () => {
-    await em
-      .getConnection()
-      .execute(
-        'TRUNCATE answers, game_session_teams, teams, game_sessions, questions, rounds, quizzes CASCADE',
-      );
   });
 
   async function createSecondSession(joinCode: string): Promise<number> {

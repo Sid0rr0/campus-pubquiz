@@ -1,8 +1,4 @@
-import {
-  PostgreSqlContainer,
-  StartedPostgreSqlContainer,
-} from '@testcontainers/postgresql';
-import { MikroORM, type EntityManager } from '@mikro-orm/postgresql';
+import type { EntityManager } from '@mikro-orm/postgresql';
 import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -13,31 +9,12 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
 import { SeedService } from '@/db/seed.service';
+import { useTestDatabase } from '@/test-db/test-database';
 
 describe('SeedService (Postgres integration)', () => {
-  let container: StartedPostgreSqlContainer;
-  let orm: MikroORM;
+  const db = useTestDatabase();
   let em: EntityManager;
   let seedService: SeedService;
-
-  beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
-    orm = await MikroORM.init({
-      clientUrl: container.getConnectionUri(),
-      entities: ['./dist/db/entities/*.entity.js'],
-      entitiesTs: ['./src/db/entities/*.entity.ts'],
-      migrations: {
-        path: './dist/db/migrations',
-        pathTs: './src/db/migrations',
-      },
-    });
-    await orm.getMigrator().up();
-  }, 60_000);
-
-  afterAll(async () => {
-    await orm.close(true);
-    await container.stop();
-  });
 
   function makeSeedService(scope: EntityManager): SeedService {
     return new SeedService(
@@ -49,16 +26,8 @@ describe('SeedService (Postgres integration)', () => {
   }
 
   beforeEach(() => {
-    em = orm.em.fork();
+    em = db.orm.em.fork();
     seedService = makeSeedService(em);
-  });
-
-  afterEach(async () => {
-    await em
-      .getConnection()
-      .execute(
-        'TRUNCATE answers, teams, game_sessions, questions, rounds, quizzes CASCADE',
-      );
   });
 
   it('creates the quiz/rounds/questions/session from the hardcoded fixture on first seed', async () => {
@@ -160,7 +129,7 @@ describe('SeedService (Postgres integration)', () => {
     });
     await em.flush();
 
-    const resumed = await makeSeedService(orm.em.fork()).seed();
+    const resumed = await makeSeedService(db.orm.em.fork()).seed();
 
     expect(resumed.gameSessionId).toBe(newerSession.id);
     expect(resumed.joinCode).toBe('ZZZZZZ');
