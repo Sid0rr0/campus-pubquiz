@@ -10,10 +10,14 @@ Parent spec: `.scratch/session-write/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: two bonus awards for one team, with the first award's standings read held until the second finishes. The final admin snapshot's leaderboard reflects both, and no snapshot after the second award shows the first award's older totals.
-- [ ] Two sessions: holding one session's bonus write doesn't delay a bonus write in the other session.
-- [ ] A bonus write that fails (the standings read rejects once) leaves the session unchanged, returns its error to the caller, and the next bonus change on that session still lands.
-- [ ] The harness's hold-a-call helper is reusable by later tickets and documented in the harness.
-- [ ] `bonus-changed.spec.ts` and the other existing specs pass unchanged.
+- [x] Written first, failing against today's code: two bonus awards for one team, with the first award's standings read held until the second finishes. The final admin snapshot's leaderboard reflects both, and no snapshot after the second award shows the first award's older totals.
+- [x] Two sessions: holding one session's bonus write doesn't delay a bonus write in the other session.
+- [x] A bonus write that fails (the standings read rejects once) leaves the session unchanged, returns its error to the caller, and the next bonus change on that session still lands.
+- [x] The harness's hold-a-call helper is reusable by later tickets and documented in the harness.
+- [x] `bonus-changed.spec.ts` and the other existing specs pass unchanged.
+
+## Comments
+
+Implemented in the commit `feat(backend): bonus changes go through one session write` (see git history for the hash). The queue is `SessionWriteQueue` (`apps/backend/src/game/state/session-write-queue.ts`); `GameStateService.writeSession` runs a change, reads standings last (opt-out: `refreshStandings: false`) and stores. The harness helper is `holdNextCall` in `real-store-test-utils.ts`. New spec: `session-write.spec.ts`. `CONTEXT.md` gains a **Session write** entry.

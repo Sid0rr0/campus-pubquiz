@@ -24,6 +24,7 @@ import {
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
+import { SessionWriteQueue } from '@/game/state/session-write-queue';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { projectScreen } from '@/game/state/screen-projection.util';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
@@ -66,6 +67,7 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 @Injectable()
 export class GameStateService implements OnModuleInit {
   private readonly sessionStore = new GameSessionStore();
+  private readonly sessionWrites = new SessionWriteQueue();
   private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
 
@@ -551,24 +553,25 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     awarded?: { teamId: number; notice: TeamBonusAwardView },
   ): Promise<SessionOutcome> {
-    const leaderboard = await this.standingsService.leaderboard(
-      this.getGameSessionId(joinCode),
-    );
-    this.update(joinCode, (session) => withLeaderboard(session, leaderboard));
-    const socketId = awarded
-      ? this.getConnectedSocketId(joinCode, awarded.teamId)
-      : undefined;
-    const notices =
-      awarded && socketId
-        ? [
-            {
-              socketId,
-              event: SOCKET_EVENTS.BONUS_AWARDED,
-              payload: awarded.notice,
-            },
-          ]
-        : [];
-    return { ...BROADCAST_STATE_OUTCOME, notices };
+    return this.writeSession(joinCode, (session) => {
+      const socketId = awarded
+        ? session.connectedTeamSockets[awarded.teamId]
+        : undefined;
+      const notices =
+        awarded && socketId
+          ? [
+              {
+                socketId,
+                event: SOCKET_EVENTS.BONUS_AWARDED,
+                payload: awarded.notice,
+              },
+            ]
+          : [];
+      return Promise.resolve({
+        session,
+        outcome: { ...BROADCAST_STATE_OUTCOME, notices },
+      });
+    });
   }
 
   private async refreshAfterAnswerChange(
@@ -595,6 +598,43 @@ export class GameStateService implements OnModuleInit {
       ),
     );
     return { ...BROADCAST_STATE_OUTCOME, answerListQuestionIds: [questionId] };
+  }
+
+  /**
+   * A session write: runs `change` against the session as the previous write
+   * for this join code left it, reads standings once as the last step
+   * (unless the write says it doesn't change scores), stores the result and
+   * returns the change's outcome. A change that throws stores nothing and
+   * doesn't hold up the next write. Not re-entrant: `change` must not call
+   * another public event method of this module.
+   */
+  private writeSession<T>(
+    joinCode: string,
+    change: (
+      session: SessionState,
+    ) => Promise<{ session: SessionState; outcome: T }>,
+    { refreshStandings = true }: { refreshStandings?: boolean } = {},
+  ): Promise<T> {
+    return this.sessionWrites.run(joinCode, async () => {
+      const started = this.sessionStore.get(joinCode);
+      const { session, outcome } = await change(started);
+      const leaderboard = refreshStandings
+        ? await this.standingsService.leaderboard(
+            session.seededGame.gameSessionId,
+          )
+        : undefined;
+      // Events that haven't moved onto the session write yet can still store
+      // while the standings read is in flight. A change that left the session
+      // as it found it must not put its old copy back over them (or over a
+      // closed session, which `get` rejects).
+      const base =
+        session === started ? this.sessionStore.get(joinCode) : session;
+      this.sessionStore.set(
+        joinCode,
+        leaderboard ? withLeaderboard(base, leaderboard) : base,
+      );
+      return outcome;
+    });
   }
 
   /** Applies a pure update to the session record — the only way this module writes a single field. */

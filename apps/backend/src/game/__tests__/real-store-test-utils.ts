@@ -691,3 +691,47 @@ export function advanceClockBy(milliseconds: number): void {
 export function restoreClock(): void {
   jest.useRealTimers();
 }
+
+export interface HeldCall {
+  /** Resolves once the held call has been made and its real result computed. */
+  started: Promise<void>;
+  /** Lets the held call return the result it computed when it started. */
+  release: () => void;
+}
+
+/**
+ * Holds open the next call to `target[method]` — a database-facing
+ * collaborator such as `game.standingsService.leaderboard`,
+ * `game.progressRepository.save` or `game.answerService.submit` — so a spec
+ * can force two events to overlap: start the first event, `await
+ * held.started`, send the second, then `held.release()`.
+ *
+ * The call runs for real the moment it is made, so it sees the database as it
+ * stood then; only its resolution waits for `release()`, which is what makes
+ * its result stale by the time it lands. Only that one call is held — later
+ * calls (and calls for other sessions) pass straight through, because the
+ * method is restored the moment the held call is made.
+ */
+export function holdNextCall<T extends object, K extends string & keyof T>(
+  target: T,
+  method: K,
+): HeldCall {
+  type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
+  const asyncTarget = target as unknown as Record<string, AsyncMethod>;
+  const original = asyncTarget[method];
+  const callOriginal = (...args: unknown[]): Promise<unknown> =>
+    Reflect.apply(original, target, args);
+  let markStarted!: () => void;
+  const started = new Promise<void>((resolve) => (markStarted = resolve));
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => (release = resolve));
+  asyncTarget[method] = async (...args: unknown[]) => {
+    asyncTarget[method] = original;
+    const result = callOriginal(...args);
+    markStarted();
+    const value = await result;
+    await released;
+    return value;
+  };
+  return { started, release };
+}
