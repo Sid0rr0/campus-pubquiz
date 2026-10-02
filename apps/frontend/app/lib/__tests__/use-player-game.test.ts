@@ -41,6 +41,7 @@ const JOIN_ACCEPTED_PAYLOAD = {
     },
   ],
   bonusAwards: [{ id: 1, category: 'shot', points: 1, reason: null }],
+  roundRatings: [{ roundId: 11, stars: 4 }],
 };
 const LOCKED_MESSAGE = 'Answers are locked for this question';
 
@@ -167,6 +168,20 @@ describe('usePlayerGame', () => {
       expect(result.current.myBonusAwards).toEqual(
         JOIN_ACCEPTED_PAYLOAD.bonusAwards,
       );
+    });
+
+    it('restores the saved round ratings from the join payload, replacing what an earlier join held', () => {
+      const { result, socket } = renderLinkedPlayer();
+      expect(result.current.myRoundRatings).toEqual({ 11: 4 });
+
+      act(() =>
+        socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+          ...JOIN_ACCEPTED_PAYLOAD,
+          roundRatings: [{ roundId: 12, stars: 2 }],
+        }),
+      );
+
+      expect(result.current.myRoundRatings).toEqual({ 12: 2 });
     });
 
     it('marks the team unlinked on disconnect and tells the player it is reconnecting', () => {
@@ -453,6 +468,69 @@ describe('usePlayerGame', () => {
     });
   });
 
+  describe('rating a round', () => {
+    it('emits the rating and resolves to its acknowledgement', async () => {
+      const { result, socket } = renderLinkedPlayer();
+
+      let pending!: Promise<AckResult>;
+      act(() => {
+        pending = result.current.rateRound(12, 5);
+      });
+      expect(socket.lastEmitOf(SOCKET_EVENTS.RATE_ROUND).payload).toEqual({
+        roundId: 12,
+        stars: 5,
+      });
+      await act(async () => socket.acknowledge(SOCKET_EVENTS.RATE_ROUND));
+
+      await expect(pending).resolves.toEqual({ success: true });
+    });
+
+    it('keeps an acknowledged rating in myRoundRatings, so a remounted card still shows it', async () => {
+      const { result, socket } = renderLinkedPlayer();
+
+      act(() => {
+        void result.current.rateRound(12, 5);
+      });
+      expect(result.current.myRoundRatings).toEqual({ 11: 4 });
+      await act(async () => socket.acknowledge(SOCKET_EVENTS.RATE_ROUND));
+
+      expect(result.current.myRoundRatings).toEqual({ 11: 4, 12: 5 });
+    });
+
+    it('does not keep a refused rating, and counts each join payload', async () => {
+      const { result, socket } = renderLinkedPlayer();
+      const epochAfterFirstJoin = result.current.roundRatingsEpoch;
+
+      act(() => {
+        void result.current.rateRound(12, 5);
+      });
+      await act(async () =>
+        socket.reject(SOCKET_EVENTS.RATE_ROUND, 'Not open'),
+      );
+      expect(result.current.myRoundRatings).toEqual({ 11: 4 });
+
+      act(() =>
+        socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, JOIN_ACCEPTED_PAYLOAD),
+      );
+      expect(result.current.roundRatingsEpoch).toBe(epochAfterFirstJoin + 1);
+    });
+
+    it('resolves to the refusal without toasting or a connection error, since the card shows it', async () => {
+      const { result, socket } = renderLinkedPlayer();
+      const reason = "This round can't be rated right now";
+
+      let pending!: Promise<AckResult>;
+      act(() => {
+        pending = result.current.rateRound(12, 5);
+      });
+      await act(async () => socket.reject(SOCKET_EVENTS.RATE_ROUND, reason));
+
+      await expect(pending).resolves.toEqual({ success: false, error: reason });
+      expect(mockToastError).not.toHaveBeenCalled();
+      expect(result.current.connectionError).toBeNull();
+    });
+  });
+
   it('exposes no admin-only members', () => {
     const { result } = renderConnectedPlayer();
 
@@ -466,7 +544,10 @@ describe('usePlayerGame', () => {
         'myAnswerGrades',
         'myAnswers',
         'myBonusAwards',
+        'myRoundRatings',
+        'rateRound',
         'reconnectedAt',
+        'roundRatingsEpoch',
         'seenQuestions',
         'sessionClosed',
         'snapshot',

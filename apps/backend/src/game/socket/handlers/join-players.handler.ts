@@ -59,6 +59,11 @@ export async function joinPlayerTeam(
       deps.gameState.getGameSessionId(joinCode),
       team.id,
     );
+    const savedRoundRatings =
+      await deps.feedbackService.listRoundRatingsForTeam(
+        deps.gameState.getGameSessionId(joinCode),
+        team.id,
+      );
     client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
       teamId: team.id,
       teamName: team.name,
@@ -66,6 +71,7 @@ export async function joinPlayerTeam(
       teamCode: team.code,
       answers: savedAnswers,
       bonusAwards: savedBonusAwards,
+      roundRatings: savedRoundRatings,
     });
 
     return outcome;

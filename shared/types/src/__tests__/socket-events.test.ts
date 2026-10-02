@@ -39,6 +39,7 @@ describe('SOCKET_EVENTS', () => {
       SET_DISPLAY_TEXT_SCALE: 'game:set_display_text_scale',
       CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
       SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
+      RATE_ROUND: 'game:rate_round',
     });
   });
 });
@@ -159,6 +160,7 @@ describe('block answering payloads', () => {
         { questionId: 1, value: '42', pointsAwarded: 0, gradedAt: null },
       ],
       bonusAwards: [{ category: 'shot', points: 1 }],
+      roundRatings: [{ roundId: 1, stars: 4 }],
     };
 
     expect(joined.answers).toEqual([

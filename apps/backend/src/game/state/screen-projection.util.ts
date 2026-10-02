@@ -21,6 +21,7 @@ import {
   describeAdvanceStep,
   describePreviousState,
 } from '@/game/state/move-plan.util';
+import { getFeedbackField } from '@/game/state/feedback-rounds.util';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -165,6 +166,7 @@ export function projectScreen(
         ...snapshot,
         ...describePlayersScreen({ ...snapshot, isAnswerable }),
         isAnswerable,
+        feedback: getFeedbackField(session),
         revealQuestions:
           snapshot.progress.status === 'ended'
             ? endedRevealWalk(session)

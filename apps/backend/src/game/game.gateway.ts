@@ -28,6 +28,7 @@ import { SessionService } from '@/auth/session.service';
 import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
+import { FeedbackService } from '@/feedback/feedback.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
 import {
@@ -45,6 +46,7 @@ import { gradeTeamAnswer } from '@/game/socket/handlers/grade-answer.handler';
 import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
 import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
 import { leaveSessionAsTeam } from '@/game/socket/handlers/leave-session.handler';
+import { rateRoundAsTeam } from '@/game/socket/handlers/rate-round.handler';
 import { submitShowdownGuess } from '@/game/socket/handlers/submit-showdown-guess.handler';
 import { submitTeamAnswer } from '@/game/socket/handlers/submit-answer.handler';
 import {
@@ -100,6 +102,7 @@ export class GameGateway
     private readonly sessions: SessionService,
     private readonly orm: MikroORM,
     private readonly showdownService: ShowdownService,
+    private readonly feedbackService: FeedbackService,
     @Optional()
     @Inject(PHASE_TIMER_SCHEDULERS)
     timerSchedulers?: PhaseTimerSchedulers,
@@ -202,6 +205,20 @@ export class GameGateway
       rawPayload,
       client,
       (context) => submitTeamAnswer(this.services, context),
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.rateRound.event)
+  @CreateRequestContext()
+  async handleRateRound(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.rateRound,
+      rawPayload,
+      client,
+      (context) => rateRoundAsTeam(this.services, context),
     );
   }
 
@@ -459,6 +476,7 @@ export class GameGateway
       teamService: this.teamService,
       answerService: this.answerService,
       bonusService: this.bonusService,
+      feedbackService: this.feedbackService,
       showdownService: this.showdownService,
       server: this.server,
     };

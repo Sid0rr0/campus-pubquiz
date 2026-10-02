@@ -32,6 +32,9 @@ const SHOWDOWN_QUESTION_MAX_LENGTH = 500;
 const SHOWDOWN_ANSWER_MAX_LENGTH = 100;
 const SHOWDOWN_GUESS_MAX_LENGTH = 100;
 
+const MIN_STARS = 1;
+const MAX_STARS = 5;
+
 const positiveInt = z.number().int().positive();
 const finiteNumber = z.number().finite();
 
@@ -55,6 +58,11 @@ export const submitAnswerPayloadSchema = z.object({
   questionId: positiveInt,
   teamId: positiveInt,
   value: z.string().max(ANSWER_VALUE_MAX_LENGTH),
+});
+
+export const rateRoundPayloadSchema = z.object({
+  roundId: positiveInt,
+  stars: z.number().int().min(MIN_STARS).max(MAX_STARS),
 });
 
 export const gradeAnswerPayloadSchema = z.object({

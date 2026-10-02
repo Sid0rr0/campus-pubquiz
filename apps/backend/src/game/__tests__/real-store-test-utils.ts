@@ -14,6 +14,7 @@ import {
 import { AnswerService } from '@/answer/answer.service';
 import { StandingsService } from '@/standings/standings.service';
 import { BonusService } from '@/bonus/bonus.service';
+import { FeedbackService } from '@/feedback/feedback.service';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -21,6 +22,7 @@ import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
+import { RoundRating } from '@/db/entities/round-rating.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -32,6 +34,7 @@ import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.r
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
+import { RoundRatingRepository } from '@/db/repositories/round-rating.repository';
 import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -448,6 +451,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       standingsService: new StandingsService(sessionTeams),
       teamService: new TeamService(teams, sessions, sessionTeams),
       bonusService,
+      feedbackService: new FeedbackService(
+        em.getRepository<RoundRating, RoundRatingRepository>(RoundRating),
+      ),
       showdownService: new ShowdownService(
         em.getRepository<ShowdownRound, ShowdownRoundRepository>(ShowdownRound),
         em.getRepository<ShowdownRoundTeam, ShowdownRoundTeamRepository>(
@@ -519,6 +525,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       asSessionService(sessionService),
       db.orm,
       services.showdownService,
+      services.feedbackService,
       { lock: lockScheduler, kahoot: kahootScheduler },
     );
     gateways.push(gateway);

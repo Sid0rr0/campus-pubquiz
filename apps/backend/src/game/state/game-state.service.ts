@@ -22,6 +22,7 @@ import {
   getBlockSeededQuestions,
   getPastRevealedQuestions,
 } from '@/game/state/block-questions.util';
+import { getFeedbackField } from '@/game/state/feedback-rounds.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
@@ -344,6 +345,17 @@ export class GameStateService implements OnModuleInit {
       ...getPastRevealedQuestions(session),
       ...getBlockSeededQuestions(session),
     ].map((question) => question.id);
+  }
+
+  /** The team whose phone is on `socketId`, or null when that socket isn't a team's. */
+  getTeamIdForSocket(joinCode: string, socketId: string): number | null {
+    return findTeamIdBySocketId(this.sessionStore.get(joinCode), socketId);
+  }
+
+  /** Whether `roundId` is open for rating right now — the players view's feedback field is the same rule. */
+  isRoundOpenForRating(joinCode: string, roundId: number): boolean {
+    const feedback = getFeedbackField(this.sessionStore.get(joinCode));
+    return feedback?.rounds.some((round) => round.id === roundId) ?? false;
   }
 
   /** The socket currently connected for `teamId`, if any. */

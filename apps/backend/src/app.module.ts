@@ -28,6 +28,7 @@ import { ImportController } from '@/import/import.controller';
 import { ImportService } from '@/import/import.service';
 import { createMediaStorage } from '@/media/create-media-storage';
 import { MEDIA_STORAGE } from '@/media/media-storage';
+import { FeedbackService } from '@/feedback/feedback.service';
 import { MediaController } from '@/media/media.controller';
 import { MediaService } from '@/media/media.service';
 import { SessionsController } from '@/session/sessions.controller';
@@ -71,6 +72,7 @@ import { StatsService } from '@/stats/stats.service';
     AnswerService,
     StandingsService,
     BonusService,
+    FeedbackService,
     QuizService,
     GameProgressRepository,
     GameStateService,

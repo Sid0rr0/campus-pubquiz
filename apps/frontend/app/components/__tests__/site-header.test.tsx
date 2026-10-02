@@ -227,6 +227,7 @@ describe('SiteHeader', () => {
           teamName: 'The Quizzards',
           answers: [],
           bonusAwards: [],
+          roundRatings: [],
         },
         onLogOut,
       }),

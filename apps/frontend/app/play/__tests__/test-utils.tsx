@@ -30,7 +30,7 @@ type PlayersFixture = OnAirInput & { isCurrentRoundKahoot?: boolean };
  */
 export function playersView<T extends PlayersFixture>(
   snapshot: T,
-): T & Pick<PlayersStatePayload, 'isAnswerable'> {
+): T & Pick<PlayersStatePayload, 'isAnswerable' | 'feedback'> {
   const { status, isLeaderboardVisible } = snapshot.progress;
   const isHiddenKahoot =
     (snapshot.isCurrentRoundKahoot ?? false) && isLeaderboardVisible;
@@ -47,6 +47,7 @@ export function playersView<T extends PlayersFixture>(
   return {
     ...describePlayersScreen({ ...snapshot, isAnswerable }),
     isAnswerable,
+    feedback: null,
     ...snapshot,
   };
 }
@@ -66,6 +67,9 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     myAnswers: {},
     myAnswerGrades: {},
     myBonusAwards: [],
+    myRoundRatings: {},
+    roundRatingsEpoch: 0,
+    rateRound: vi.fn().mockResolvedValue({ success: true }),
     seenQuestions: {},
     // A fixed "already connected" marker — useTeamJoin's join effect only
     // sends once this is non-null (it mirrors usePlayerGame's real

@@ -211,6 +211,16 @@ its history): the whole block after advancing past the last reveal, the walk so
 far if End Quiz was pressed mid-reveal, nothing if it was pressed before the
 reveal started. Previous out of `ended` returns to the normal trim.
 
+The players view also carries a **feedback field** (`feedback`): what the phone
+is offered to rate right now, shared by every team's phone. It is
+`{ kind: 'break_card', rounds: [{ id, title }] }` while the session is in a
+break status (`break_intro`, `break`, `break_round_intro`), listing the rounds of
+the block that just locked, and `null` in every other status. The rule lives in
+one place (`getFeedbackField`, `game/state/feedback-rounds.util.ts`, on the
+shared `describeFeedback`) and is used both to build the field and to accept a
+rating, so the two can't disagree; the phone draws from it and never decides for
+itself.
+
 ### The snapshot
 
 `StateSnapshotPayload` is the single source of truth every client renders:
@@ -231,13 +241,23 @@ Server → client: `STATE_SYNC`, `STATE_UPDATED`, `JOIN_ACCEPTED`,
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
 `SESSION_CLOSED`.
 
-Client → server: `ADMIN_ACTION`, `JOIN_PLAYERS`, `SUBMIT_ANSWER`,
+Client → server: `ADMIN_ACTION`, `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `RATE_ROUND`,
 `GRADE_ANSWER`, `SELECT_QUIZ`, `KICK_TEAM`, `AWARD_BONUS` (all admin-only
-except `JOIN_PLAYERS`/`SUBMIT_ANSWER`, which are players-only). Room
+except `JOIN_PLAYERS`/`SUBMIT_ANSWER`/`RATE_ROUND`, which are players-only). Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
 close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
 [Sessions](#sessions-running-multiple-quizzes-at-once).
+
+`RATE_ROUND` — `{ roundId, stars }`, `stars` an integer 1–5 (Zod-validated) —
+saves a team's **round rating** for one round of the break card. The ack is the
+result: `{ success: true }` once saved, or an error with a reason — "This round
+can't be rated right now" when the round isn't in the feedback field's list (a
+round outside the current block, or any status that isn't a break), or a
+validation error for stars outside 1–5. The team is the one whose socket sent
+it. One rating is kept per (session, round, team); rating again overwrites it
+(last write wins). It is a plain team-scoped write: it broadcasts nothing and
+doesn't go through the session write.
 
 Answer _content_ only ever goes to the admin room and the answering team
 itself — the display and other players just see counts.
@@ -271,7 +291,9 @@ itself — the display and other players just see counts.
 
 A team's saved answers ride along on `JOIN_ACCEPTED`, so a phone that
 reconnects (or reopens the tab) restores its checkmarks and can still revise
-anything in the open block.
+anything in the open block. So do its own round ratings (`roundRatings`, a list
+of `{ roundId, stars }`, never another team's): the phone draws its stars from
+this, so a rating whose save never reached the server shows as empty again.
 
 ## Teams: Join, Reconnect, and Kick
 

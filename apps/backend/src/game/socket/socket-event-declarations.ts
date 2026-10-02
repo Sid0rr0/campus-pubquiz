@@ -12,6 +12,7 @@ import {
   joinPlayersPayloadSchema,
   kickTeamPayloadSchema,
   leaveSessionPayloadSchema,
+  rateRoundPayloadSchema,
   setBreakEndTimePayloadSchema,
   setDisplayTextScalePayloadSchema,
   submitAnswerPayloadSchema,
@@ -57,6 +58,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may submit answers',
     logFields: ['questionId', 'teamId'],
+  }),
+  rateRound: declare({
+    event: SOCKET_EVENTS.RATE_ROUND,
+    schema: rateRoundPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.PLAYERS,
+    rejection: 'Only player clients may rate a round',
+    logFields: ['roundId', 'stars'],
   }),
   gradeAnswer: declare({
     event: SOCKET_EVENTS.GRADE_ANSWER,

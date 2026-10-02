@@ -13,6 +13,8 @@ import {
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type LeaveSessionPayload,
+  type RateRoundPayload,
+  type RoundRatingView,
   type SessionClosedPayload,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -69,6 +71,10 @@ export interface UsePlayerGameResult {
   myAnswerGrades: Record<number, MyAnswerGrade>;
   /** Every bonus award this team has received so far this session, in award order. */
   myBonusAwards: TeamBonusAwardView[];
+  /** The team's saved round ratings by round id: what the join payload last carried plus every rating the server has acknowledged since, so a reconnecting phone shows its stars again (a tap that never reached the server is not in it). */
+  myRoundRatings: Record<number, number>;
+  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
+  roundRatingsEpoch: number;
   /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the snapshot only ever covers the current block. */
   seenQuestions: SeenQuestions;
   /** Resolves to the server's verdict on the join; the caller shows a rejection (it is not toasted here). */
@@ -79,6 +85,8 @@ export interface UsePlayerGameResult {
     teamId: number,
     value: string,
   ) => Promise<AckResult>;
+  /** Resolves to the server's verdict on one round rating; the rating card shows it, so nothing is toasted here. */
+  rateRound: (roundId: number, stars: number) => Promise<AckResult>;
   /** Tells the server this team is intentionally leaving (log out) — removes its roster row so it doesn't linger in /control until an admin kicks it by hand. */
   leaveSession: (teamId: number) => Promise<AckResult>;
   submitShowdownGuess: (
@@ -106,6 +114,14 @@ export function mergeSeenQuestions(
     next[question.id] = question;
   }
   return next;
+}
+
+export function buildMyRoundRatings(
+  ratings: RoundRatingView[],
+): Record<number, number> {
+  return Object.fromEntries(
+    ratings.map((rating) => [rating.roundId, rating.stars]),
+  );
 }
 
 export function buildMyAnswers(
@@ -162,6 +178,10 @@ export function usePlayerGame(
     Record<number, MyAnswerGrade>
   >({});
   const [myBonusAwards, setMyBonusAwards] = useState<TeamBonusAwardView[]>([]);
+  const [myRoundRatings, setMyRoundRatings] = useState<Record<number, number>>(
+    {},
+  );
+  const [roundRatingsEpoch, setRoundRatingsEpoch] = useState(0);
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
@@ -221,6 +241,8 @@ export function usePlayerGame(
         setMyAnswers(buildMyAnswers(payload.answers ?? []));
         setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
         setMyBonusAwards(payload.bonusAwards ?? []);
+        setMyRoundRatings(buildMyRoundRatings(payload.roundRatings ?? []));
+        setRoundRatingsEpoch((epoch) => epoch + 1);
         linkedSocketIdRef.current = socket.id ?? null;
         setTeamLinked(true);
         resendPendingRef.current();
@@ -295,6 +317,7 @@ export function usePlayerGame(
       setMyAnswers({});
       setMyAnswerGrades({});
       setMyBonusAwards([]);
+      setMyRoundRatings({});
       setSeenQuestions({});
       setSessionClosed(null);
       setKicked(false);
@@ -393,6 +416,18 @@ export function usePlayerGame(
     [emitWithAck],
   );
 
+  const rateRound = useCallback(
+    async (roundId: number, stars: number) => {
+      const payload: RateRoundPayload = { roundId, stars };
+      const result = await emitWithAck(SOCKET_EVENTS.RATE_ROUND, payload);
+      if (result.success) {
+        setMyRoundRatings((current) => ({ ...current, [roundId]: stars }));
+      }
+      return result;
+    },
+    [emitWithAck],
+  );
+
   const submitShowdownGuess = useCallback(
     async (showdownRoundId: number, teamId: number, value: string) => {
       const payload: SubmitShowdownGuessPayload = {
@@ -419,10 +454,13 @@ export function usePlayerGame(
     myAnswers,
     myAnswerGrades,
     myBonusAwards,
+    myRoundRatings,
+    roundRatingsEpoch,
     seenQuestions,
     joinTeam,
     submitAnswer,
     leaveSession,
+    rateRound,
     submitShowdownGuess,
   };
 }

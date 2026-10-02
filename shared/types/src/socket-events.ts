@@ -1,5 +1,6 @@
 import type {
   AdminIndicators,
+  FeedbackField,
   HeaderContent,
   OnAirScreen,
   PlayersScreenFields,
@@ -37,6 +38,7 @@ export const SOCKET_EVENTS = {
   SET_DISPLAY_TEXT_SCALE: 'game:set_display_text_scale',
   CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
   SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
+  RATE_ROUND: 'game:rate_round',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -360,6 +362,8 @@ export interface AdminStatePayload
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export interface PlayersStatePayload
   extends Omit<StateSnapshotPayload, 'revealQuestions'>, PlayersScreenFields {
+  /** Which rounds the phone offers for rating right now — null when none; the same rule the server accepts a rating by. */
+  feedback: FeedbackField;
   /** The reveal walk so far: questions the big screen has shown, plus the closest_guess question mid-walk without its not-yet-shown fields. */
   revealQuestions: (BlockRevealQuestionView | PendingClosestGuessRevealView)[];
   /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
@@ -375,6 +379,19 @@ export interface StateViewByRoom {
 
 export interface AdminActionPayload {
   action: GameAction;
+}
+
+/** One round a team has rated: what a team's own ratings are restored from on join. */
+export interface RoundRatingView {
+  roundId: number;
+  stars: number;
+}
+
+/** A team rating one round of the break card; the ack says whether it was saved. */
+export interface RateRoundPayload {
+  roundId: number;
+  /** An integer from 1 to 5. */
+  stars: number;
 }
 
 export interface SubmitAnswerPayload {
@@ -438,6 +455,8 @@ export interface JoinAcceptedPayload {
   answers: TeamAnswerView[];
   /** The team's own bonus awards so far this session, so reconnects restore them. */
   bonusAwards: TeamBonusAwardView[];
+  /** The team's own saved round ratings this session, so a reconnecting phone shows its stars again. */
+  roundRatings: RoundRatingView[];
 }
 
 export interface AnswerView {

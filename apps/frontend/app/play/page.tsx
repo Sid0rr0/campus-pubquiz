@@ -13,6 +13,7 @@ import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
+import { RoundRatingCard } from '@/app/play/round-rating-card';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
@@ -56,6 +57,9 @@ function PlayPageContent() {
     myAnswers = {},
     myAnswerGrades = {},
     myBonusAwards = [],
+    myRoundRatings = {},
+    roundRatingsEpoch = 0,
+    rateRound,
     seenQuestions = {},
     handleJoin,
     handleLogOut,
@@ -226,6 +230,7 @@ function PlayPageContent() {
     showdownRevealStep = 0,
     isAnswerable = false,
     phoneScreen,
+    feedback = null,
   } = snapshot;
   const onScreenQuestionId =
     phoneScreen.kind === 'block' ? phoneScreen.onScreenQuestionId : null;
@@ -353,6 +358,17 @@ function PlayPageContent() {
         </p>
       )}
       <div className="order-2 md:order-3">
+        {feedback?.kind === 'break_card' && (
+          // A join payload replaces the saved ratings, so a reconnect starts
+          // the card afresh: a tap still waiting on the old connection's ack
+          // is dropped rather than shown as saved.
+          <RoundRatingCard
+            key={roundRatingsEpoch}
+            rounds={feedback.rounds}
+            savedRatings={myRoundRatings}
+            onRate={rateRound}
+          />
+        )}
         <GameStatusScreens
           phoneScreen={phoneScreen}
           quizStructure={quizStructure}
