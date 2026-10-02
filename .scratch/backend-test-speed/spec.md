@@ -1,6 +1,6 @@
 # Spec: The backend suite runs in under a minute and never fails by chance
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
