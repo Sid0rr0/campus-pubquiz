@@ -4,6 +4,12 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
+### session-write ([spec](session-write/spec.md))
+
+| #   | Ticket                                                                                                                                          | Blocked by |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 08  | [A press whose standings read fails still leaves memory matching the database](session-write/issues/08-press-survives-failed-standings-read.md) | 07         |
+
 ### live-session-events ([spec](live-session-events/spec.md))
 
 | #   | Ticket                                                                                                                                                     | Blocked by             |
