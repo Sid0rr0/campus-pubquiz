@@ -7,6 +7,7 @@ import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
+import { RoundRating } from '@/db/entities/round-rating.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -456,6 +457,64 @@ describe('StatsService (Postgres integration)', () => {
 
       expect(result.teamCount).toBe(2);
       expect(result.questions[0].correctRate).toBe(1);
+    });
+  });
+
+  describe('getSessionDetail round ratings', () => {
+    async function rate(
+      session: GameSession,
+      round: Round,
+      team: Team,
+      stars: number,
+    ): Promise<void> {
+      em.create(RoundRating, { gameSession: session, round, team, stars });
+      await em.flush();
+    }
+
+    it('reports each round’s average and count, and null for an unrated round', async () => {
+      const { quiz, questions } = await createQuiz('Quiz', [[1], [1], [1]]);
+      const session = await createSession(quiz, 'RATED1', 'ended');
+      const alpha = await joinTeam(session, 'Alpha');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      await rate(session, questions[0][0].round, alpha, 5);
+      await rate(session, questions[0][0].round, beta, 4);
+      await rate(session, questions[0][0].round, gamma, 4);
+      await rate(session, questions[1][0].round, alpha, 2);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.rounds.map((r) => r.rating)).toEqual([
+        { average: 13 / 3, count: 3 },
+        { average: 2, count: 1 },
+        null,
+      ]);
+    });
+
+    it('ignores ratings from another session of the same quiz', async () => {
+      const { quiz, questions } = await createQuiz('Quiz', [[1]]);
+      const session = await createSession(quiz, 'RATED2', 'ended');
+      const other = await createSession(quiz, 'RATED3', 'ended');
+      const team = await joinTeam(other, 'Alpha');
+      await rate(other, questions[0][0].round, team, 5);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.rounds[0].rating).toBeNull();
+    });
+
+    it('carries no team id or name for any rating', async () => {
+      const { quiz, questions } = await createQuiz('Quiz', [[1]]);
+      const session = await createSession(quiz, 'RATED4', 'ended');
+      const team = await joinTeam(session, 'SecretSquad');
+      await rate(session, questions[0][0].round, team, 3);
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(Object.keys(result.rounds[0].rating ?? {}).sort()).toEqual([
+        'average',
+        'count',
+      ]);
     });
   });
 

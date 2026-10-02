@@ -38,6 +38,12 @@ interface SessionRoundRow {
   orderIndex: number;
 }
 
+interface SessionRoundRatingRow {
+  roundId: number;
+  average: string | number;
+  count: string | number;
+}
+
 interface SessionQuestionRow {
   questionId: number;
   roundId: number;
@@ -235,6 +241,14 @@ export class StatsService {
         'r.order_index as orderIndex',
       )) as SessionRoundRow[];
 
+    // Aggregated in SQL so no row ever carries a team id — ratings stay anonymous.
+    const roundRatings = (await knex('round_ratings')
+      .where('game_session_id', gameSessionId)
+      .groupBy('round_id')
+      .select('round_id as roundId')
+      .select(knex.raw('avg(stars) as average'))
+      .select(knex.raw('count(*) as count'))) as SessionRoundRatingRow[];
+
     const questions = (await knex('questions as q')
       .join('rounds as r', 'r.id', 'q.round_id')
       .where('r.quiz_id', header.quizId)
@@ -278,6 +292,11 @@ export class StatsService {
         title: r.title,
         category: r.category,
         orderIndex: r.orderIndex,
+      })),
+      roundRatings: roundRatings.map((r) => ({
+        roundId: r.roundId,
+        average: Number(r.average),
+        count: Number(r.count),
       })),
       questions: questions.map((q) => ({
         questionId: q.questionId,

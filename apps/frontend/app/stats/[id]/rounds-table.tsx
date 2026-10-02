@@ -1,5 +1,13 @@
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 
+type RoundRating = SessionDetailStats['rounds'][number]['rating'];
+
+function formatRating(rating: RoundRating): string {
+  if (!rating) return '—';
+  const teams = rating.count === 1 ? 'team' : 'teams';
+  return `★ ${rating.average.toFixed(1)} · ${rating.count} ${teams}`;
+}
+
 interface RoundsTableProps {
   rounds: SessionDetailStats['rounds'];
   hardestRoundId: number | null;
@@ -23,13 +31,16 @@ export function RoundsTable({ rounds, hardestRoundId }: RoundsTableProps) {
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
               Points earned
             </th>
+            <th className="px-4 py-2 font-display text-sm text-foreground/70">
+              Rating
+            </th>
           </tr>
         </thead>
         <tbody>
           {rounds.length === 0 ? (
             <tr>
               <td
-                colSpan={4}
+                colSpan={5}
                 className="px-4 py-3 text-center text-foreground/50"
               >
                 No rounds in this quiz.
@@ -57,6 +68,7 @@ export function RoundsTable({ rounds, hardestRoundId }: RoundsTableProps) {
                   {(round.correctRate * 100).toFixed(0)}%
                 </td>
                 <td className="px-4 py-2">{round.pointsPercent.toFixed(0)}%</td>
+                <td className="px-4 py-2">{formatRating(round.rating)}</td>
               </tr>
             ))
           )}

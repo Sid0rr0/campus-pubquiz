@@ -32,6 +32,12 @@ export interface SessionDetailRoundInputRow {
   orderIndex: number;
 }
 
+export interface SessionDetailRoundRatingInputRow {
+  roundId: number;
+  average: number;
+  count: number;
+}
+
 export interface SessionDetailQuestionInputRow {
   questionId: number;
   roundId: number;
@@ -62,6 +68,8 @@ export interface SessionDetailInput {
   /** Who took part and how they rank — decided by the Standings service, passed through as given. */
   standings: SessionStandings;
   rounds: SessionDetailRoundInputRow[];
+  /** One row per round at least one team rated; an unrated round has none. */
+  roundRatings: SessionDetailRoundRatingInputRow[];
   questions: SessionDetailQuestionInputRow[];
   answers: SessionDetailAnswerInputRow[];
   bonusAwards: SessionDetailBonusInputRow[];
@@ -183,6 +191,7 @@ export function computeSessionDetail(
     session,
     standings: sessionStandings,
     rounds,
+    roundRatings,
     questions,
     answers,
     bonusAwards,
@@ -233,6 +242,7 @@ export function computeSessionDetail(
     sortedRounds.map((round, index) => [round.roundId, index]),
   );
 
+  const ratingByRoundId = new Map(roundRatings.map((r) => [r.roundId, r]));
   const roundRows: SessionDetailRoundRow[] = sortedRounds.map((round) => {
     const roundQuestions = questions.filter((q) => q.roundId === round.roundId);
     const roundQuestionIds = new Set(roundQuestions.map((q) => q.questionId));
@@ -241,10 +251,12 @@ export function computeSessionDetail(
       roundQuestionIds.has(a.questionId),
     );
     const achievablePoints = teamCount * roundMaxPoints;
+    const rating = ratingByRoundId.get(round.roundId);
     return {
       roundId: round.roundId,
       title: round.title,
       category: round.category,
+      rating: rating ? { average: rating.average, count: rating.count } : null,
       correctRate:
         teamCount > 0 && roundQuestions.length > 0
           ? roundAnswers.filter(isCorrect).length /

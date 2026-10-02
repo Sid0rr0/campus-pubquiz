@@ -55,6 +55,7 @@ const DETAIL: SessionDetailStats = {
       roundId: 100,
       title: 'Round 1',
       category: 'History',
+      rating: { average: 4, count: 2 },
       correctRate: 0.5,
       pointsPercent: 40,
     },

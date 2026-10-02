@@ -24,6 +24,7 @@ laptop. This document describes the system as currently built.
   - [Persistence and Restart Resilience](#persistence-and-restart-resilience)
   - [Authentication](#authentication)
   - [Sessions: Running Multiple Quizzes at Once](#sessions-running-multiple-quizzes-at-once)
+  - [Session Stats](#session-stats)
   - [Deploy and CI](#deploy-and-ci)
 
 ## System Overview
@@ -104,7 +105,7 @@ behaviour of each status.
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied               | "Look at the screen" + round title                                                          | `PREVIOUS` across the start of a round during break review                                                                         | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                | "Look at the screen" + round title                                                          | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                      | `reveal` on that round's first question                                                                                |
 | `reveal`            | One question with its correct answer (and `answer_media_url`)         | Block browser with the team's answer, the correct answer and points                         | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                         | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
-| `ended`             | Final screen, or an active showdown                                   | "Quiz complete!", or the showdown guess form / reveal                                       | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                      | —                                                                                                                      |
+| `ended`             | Final screen, or an active showdown                                   | "Quiz complete!" followed by the final feedback form (every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                      | —                                                                                                                      |
 
 `PREVIOUS` walks the same path backward, symmetrically, including back
 across a block boundary into the previous block's `reveal`. During the
@@ -213,10 +214,21 @@ reveal started. Previous out of `ended` returns to the normal trim.
 
 The players view also carries a **feedback field** (`feedback`): what the phone
 is offered to rate right now, shared by every team's phone. It is
-`{ kind: 'break_card', rounds: [{ id, title }] }` while the session is in a
-break status (`break_intro`, `break`, `break_round_intro`), listing the rounds of
-the block that just locked, and `null` in every other status. The rule lives in
-one place (`getFeedbackField`, `game/state/feedback-rounds.util.ts`, on the
+`{ kind, rounds: [{ id, title }] }`, or `null` when nothing is open for rating:
+
+- `kind: 'break_card'` while the session is in a break status (`break_intro`,
+  `break`, `break_round_intro`), listing the rounds of the block that just
+  locked. Kahoot rounds never reach a break, so they never appear here.
+- `kind: 'final_form'` at `ended`, listing **every** round of the quiz, kahoot
+  rounds included, once no showdown is still being played (no showdown round, or
+  the one created has been decided). A showdown being played keeps the field
+  `null` and the phones on the showdown screens; a decided one lets the form
+  appear under them.
+- `null` in every other status. Previous out of `ended` therefore empties the
+  field and the form disappears; the ratings stay, and reaching `ended` again
+  lists the rounds filled in from the team's saved ratings.
+
+The rule lives in one place (`getFeedbackField`, `game/state/feedback-rounds.util.ts`, on the
 shared `describeFeedback`) and is used both to build the field and to accept a
 rating, so the two can't disagree; the phone draws from it and never decides for
 itself.
@@ -250,10 +262,10 @@ close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
 [Sessions](#sessions-running-multiple-quizzes-at-once).
 
 `RATE_ROUND` — `{ roundId, stars }`, `stars` an integer 1–5 (Zod-validated) —
-saves a team's **round rating** for one round of the break card. The ack is the
+saves a team's **round rating** for one round of the break card or the final form. The ack is the
 result: `{ success: true }` once saved, or an error with a reason — "This round
 can't be rated right now" when the round isn't in the feedback field's list (a
-round outside the current block, or any status that isn't a break), or a
+round outside the current block, a status that is neither a break nor `ended`, or a showdown still being played), or a
 validation error for stars outside 1–5. The team is the one whose socket sent
 it. One rating is kept per (session, round, team); rating again overwrites it
 (last write wins). It is a plain team-scoped write: it broadcasts nothing and
@@ -617,6 +629,19 @@ admin/moderator landing page for managing them:
 Picking or starting a session in `/sessions` routes the admin to
 `/control?code=<joinCode>`, which binds that admin tab to one specific session
 for the rest of the flow.
+
+## Session Stats
+
+`/stats` lists every **ended** session; `/stats/:id` (`GET /stats/sessions/:id`,
+`getSessionDetail`) is the deep dive for one: standings, a rounds table,
+a questions table and highlight tiles. All of it is computed per request from
+the stored rows, never cached.
+
+The rounds table carries each round's **rating**: `rating: { average, count } | null`
+on the session detail's round rows, shown as "★ 4.2 · 9 teams", or "—" when no
+team rated the round. It is aggregated in SQL from the round ratings of that one
+session (`avg(stars)`, `count(*)` per round), so the response never carries a
+team id or name for any rating — ratings are anonymous on this page and in the API.
 
 ## Deploy and CI
 

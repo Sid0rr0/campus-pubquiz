@@ -8,9 +8,9 @@ Parent spec: `.scratch/feedback/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: the stats service returns each round's average and count, and `null` for an unrated round.
-- [ ] The response carries no team id or name for any rating.
-- [ ] Stats page: the Rating column shows "★ 4.2 · 9 teams" and "—".
-- [ ] `DOCUMENTATION.md`'s stats section mentions the rating.
+- [x] Written first, failing against today's code: the stats service returns each round's average and count, and `null` for an unrated round.
+- [x] The response carries no team id or name for any rating.
+- [x] Stats page: the Rating column shows "★ 4.2 · 9 teams" and "—".
+- [x] `DOCUMENTATION.md`'s stats section mentions the rating.

@@ -63,10 +63,18 @@ export interface SessionDetailStandingRow {
   avgResponseMs: number | null;
 }
 
+/** Anonymous summary of the 1–5 star ratings teams gave a round — never says who rated. */
+export interface SessionDetailRoundRating {
+  average: number;
+  count: number;
+}
+
 export interface SessionDetailRoundRow {
   roundId: number;
   title: string;
   category: string | null;
+  /** Null when no team rated the round. */
+  rating: SessionDetailRoundRating | null;
   // Correct answers ÷ (teamCount * questions in this round).
   correctRate: number;
   // Points actually earned ÷ points achievable (teamCount * round's max points).

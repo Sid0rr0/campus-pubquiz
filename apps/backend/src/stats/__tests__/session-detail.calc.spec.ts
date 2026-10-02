@@ -73,6 +73,7 @@ function buildInput({
     session: BASE_SESSION,
     standings: standings ?? standingsFor(teams, answers, bonusAwards),
     rounds: [],
+    roundRatings: [],
     questions: [],
     answers,
     bonusAwards,
