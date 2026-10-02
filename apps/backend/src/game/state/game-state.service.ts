@@ -474,21 +474,22 @@ export class GameStateService implements OnModuleInit {
    * what must be pushed. Carries the press out through the Move committer —
    * every follow-up it implies (the fresh leaderboard when it is toggled on,
    * the per-team answer sync on reveal entry) comes back in the outcome — so
-   * the admin path and both timer paths behave the same. The session is
-   * stored only once its progress is saved, so a refused press leaves it
-   * where it was. Throws whatever the commit throws (illegal transition,
-   * ungraded answers, a failed save).
+   * the admin path and both timer paths behave the same. A session write:
+   * the commit runs against the session as the previous write left it, so
+   * no other session write (answers, grades, bonuses, roster changes, other
+   * presses) that landed while the press waited on the database is lost —
+   * events not yet on the session write (disconnects, break end time) still
+   * store directly. The session is stored only once its progress is saved,
+   * so a refused press leaves it where it was. Throws whatever the commit
+   * throws (illegal transition, ungraded answers, a failed save).
    */
-  async applyAdminAction(
+  applyAdminAction(
     joinCode: string,
     action: GameAction,
   ): Promise<SessionOutcome> {
-    const { session, outcome } = await this.moveCommitter.commit(
-      this.sessionStore.get(joinCode),
-      action,
+    return this.writeSession(joinCode, (session) =>
+      this.moveCommitter.commit(session, action),
     );
-    this.sessionStore.set(joinCode, session);
-    return outcome;
   }
 
   /** The same press as applyAdminAction, answering with the snapshot it leaves behind. */

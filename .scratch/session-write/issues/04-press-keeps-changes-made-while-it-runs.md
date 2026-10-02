@@ -8,12 +8,16 @@ Parent spec: `.scratch/session-write/spec.md`
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: an answer submitted while an Advance waits on its progress save is in the admin snapshot's answered markers and answer list once both finish.
-- [ ] A team joining while a press waits on its save shows as connected and on the leaderboard afterwards.
-- [ ] A bonus awarded while a timer expiry waits on its save is on the final leaderboard.
-- [ ] A kick during a press: the roster and leaderboard both lose the team, and it doesn't come back.
-- [ ] A refused Advance out of the break (an ungraded answer), followed by a grade: the press reports its refusal, the grade lands, and the session hasn't moved.
-- [ ] A progress save that rejects once, followed by an answer: the press reports its failure and the answer still lands.
-- [ ] The commit-a-move, admin-actions, timer and agreement-walk specs pass unchanged.
+- [x] Written first, failing against today's code: an answer submitted while an Advance waits on its progress save is in the admin snapshot's answered markers and answer list once both finish.
+- [x] A team joining while a press waits on its save shows as connected and on the leaderboard afterwards.
+- [x] A bonus awarded while a timer expiry waits on its save is on the final leaderboard.
+- [x] A kick during a press: the roster and leaderboard both lose the team, and it doesn't come back.
+- [x] A refused Advance out of the break (an ungraded answer), followed by a grade: the press reports its refusal, the grade lands, and the session hasn't moved.
+- [x] A progress save that rejects once, followed by an answer: the press reports its failure and the answer still lands.
+- [x] The commit-a-move, admin-actions, timer and agreement-walk specs pass unchanged.
+
+## Comments
+
+Implemented in the commit `feat(backend): a press keeps changes made while it runs` (see git history for the hash). `applyAdminAction`, which the admin press and both timer expiries all call, is now a session write that runs Commit a move against the session as the previous write left it. Commit a move's interface is unchanged and its own standings reads stay for 07, so a press now reads standings once more at the end of the write. The held-save specs for an answer, a join, a kick and a lock-timer expiry with a bonus failed against the old code. The refused-press-then-grade and failed-save-then-answer specs already held and are kept as guards. Known gap, for 06: disconnects and the break end time still store directly, so one landing mid-press can still be overwritten.

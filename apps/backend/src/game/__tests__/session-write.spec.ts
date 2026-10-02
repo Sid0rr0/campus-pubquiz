@@ -364,3 +364,227 @@ describe('GameGateway — session write: roster changes', () => {
     expect(kickedNotices).toHaveLength(1);
   });
 });
+
+describe('GameGateway — session write: presses', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: JoinedTeam;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function lastAdminSnapshot(): StateSnapshotPayload {
+    const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
+    const snapshots = game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(adminRoom) &&
+          emit.event === SOCKET_EVENTS.STATE_UPDATED,
+      )
+      .map((emit) => emit.payload as StateSnapshotPayload);
+    return snapshots[snapshots.length - 1];
+  }
+
+  function press() {
+    return game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  it('keeps an answer submitted while an Advance waits on its progress save', async () => {
+    const questionId = game.questionIds.multipleChoice;
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = press();
+    await held.started;
+
+    const submitting = game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId,
+      teamId: team.teamId,
+      value: 'Paris',
+    });
+    await settle();
+    held.release();
+    await Promise.all([pressing, submitting]);
+    // The press moved on to the next question; step back to read this one's marker.
+    await game.act('PREVIOUS');
+
+    expect(lastAdminSnapshot().answeredTeamIds).toContain(team.teamId);
+    const answers = game
+      .payloadsTo<{
+        questionId: number;
+        answers: unknown[];
+      }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED)
+      .filter((payload) => payload.questionId === questionId);
+    expect(answers[answers.length - 1].answers).toHaveLength(1);
+  });
+
+  it('shows a team that joins while a press waits on its save as connected and on the leaderboard', async () => {
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = press();
+    await held.started;
+
+    const socket = await game.connectPlayer();
+    const joining = game.gateway.handleJoinPlayers(asSocket(socket), {
+      teamName: 'Latecomers',
+      joinCode: game.joinCode,
+    });
+    await settle();
+    held.release();
+    await Promise.all([pressing, joining]);
+
+    const snapshot = lastAdminSnapshot();
+    const latecomer = snapshot.teams.find(
+      (entry) => entry.teamName === 'Latecomers',
+    );
+    expect(latecomer?.isConnected).toBe(true);
+    expect(snapshot.leaderboard.map((entry) => entry.teamId)).toContain(
+      latecomer?.teamId,
+    );
+  });
+
+  it('removes a team kicked during a press from the roster and leaderboard for good', async () => {
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = press();
+    await held.started;
+
+    const kicking = game.gateway.handleKickTeam(asSocket(admin), {
+      teamId: team.teamId,
+    });
+    await settle();
+    held.release();
+    await Promise.all([pressing, kicking]);
+
+    const snapshot = await game.snapshot();
+    expect(snapshot.teams.map((entry) => entry.teamId)).not.toContain(
+      team.teamId,
+    );
+    expect(snapshot.leaderboard.map((entry) => entry.teamId)).not.toContain(
+      team.teamId,
+    );
+  });
+
+  it('reports a failed progress save and still lands the next answer', async () => {
+    jest
+      .spyOn(game.progressRepository, 'save')
+      .mockRejectedValueOnce(new Error('database is down'));
+
+    await expect(press()).resolves.toMatchObject({ success: false });
+    game.clearEmits();
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: game.questionIds.multipleChoice,
+      teamId: team.teamId,
+      value: 'Paris',
+    });
+
+    expect(lastAdminSnapshot().answeredTeamIds).toContain(team.teamId);
+  });
+});
+
+describe('GameGateway — session write: a refused press', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('reports its refusal, lets the grade land and leaves the session in the break', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'audio', prompt: 'Name that tune', answer: 'Queen' },
+          ],
+        },
+      ],
+    });
+    const admin = await game.connectAdmin();
+    const [{ socket, teamId }] = game.teams;
+    const questionId = game.rounds[0].questionIds[0];
+    for (const action of ['START_QUIZ', 'ADVANCE', 'ADVANCE'] as const) {
+      await game.act(action);
+    }
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId,
+      teamId,
+      value: 'Banana',
+    });
+    await game.act('ADVANCE'); // -> locking
+    await game.act('ADVANCE'); // -> break_intro
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+
+    const refused = game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+    const graded = game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 1,
+    });
+    const [pressResult] = await Promise.all([refused, graded]);
+
+    expect(pressResult).toMatchObject({ success: false });
+    const snapshot = await game.snapshot();
+    expect(snapshot.progress.status).toBe('break_intro');
+    expect(snapshot.ungradedQuestionIds).toEqual([]);
+    expect(
+      snapshot.leaderboard.find((entry) => entry.teamId === teamId)
+        ?.totalPoints,
+    ).toBe(1);
+  });
+});
+
+describe('GameGateway — session write: a timer expiry', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('keeps a bonus awarded while the lock timer’s expiry waits on its save', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Timed Team'],
+      settings: { lockGraceSeconds: 1 },
+      rounds: [
+        {
+          title: 'Round A',
+          breakAfter: true,
+          questions: [{ type: 'free_text', prompt: 'QA1', answer: 'A1' }],
+        },
+      ],
+    });
+    const admin = await game.connectAdmin();
+    const [{ teamId }] = game.teams;
+    for (const action of ['START_QUIZ', 'ADVANCE', 'ADVANCE'] as const) {
+      await game.act(action);
+    }
+    await game.act('ADVANCE'); // -> locking, lock armed
+    const held = holdNextCall(game.progressRepository, 'save');
+    await held.started;
+
+    const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId,
+      category: 'shot',
+      points: 2,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    held.release();
+    await awarding;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const snapshot = await game.snapshot();
+    expect(snapshot.progress.status).toBe('break_intro');
+    expect(
+      snapshot.leaderboard.find((entry) => entry.teamId === teamId)
+        ?.bonusPoints,
+    ).toBe(2);
+  });
+});
