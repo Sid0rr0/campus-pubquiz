@@ -5,6 +5,7 @@ import {
   type LeaderboardEntry,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
+import { Round } from '@/db/entities/round.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   holdNextCall,
@@ -586,5 +587,120 @@ describe('GameGateway — session write: a timer expiry', () => {
       snapshot.leaderboard.find((entry) => entry.teamId === teamId)
         ?.bonusPoints,
     ).toBe(2);
+  });
+});
+
+describe('GameGateway — session write: quiz edits and re-imports', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: JoinedTeam;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
+  });
+
+  function lastAdminSnapshot(): StateSnapshotPayload {
+    const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
+    const snapshots = game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(adminRoom) &&
+          emit.event === SOCKET_EVENTS.STATE_UPDATED,
+      )
+      .map((emit) => emit.payload as StateSnapshotPayload);
+    return snapshots[snapshots.length - 1];
+  }
+
+  // QuizController.update and the re-import both end in notifyQuizEdited,
+  // inside an HTTP request context.
+  function editQuiz() {
+    return game.inRequestContext(() =>
+      game.gateway.notifyQuizEdited(game.joinCode),
+    );
+  }
+
+  function submit(questionId: number, value: string) {
+    return game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId,
+      teamId: team.teamId,
+      value,
+    });
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  it('keeps a grade, and the cleared ungraded marker, made while a quiz edit waits on its reload', async () => {
+    await game.act('ADVANCE'); // -> free_text
+    const questionId = game.questionIds.freeText;
+    await submit(questionId, 'Saturn');
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([questionId]);
+
+    const held = holdNextCall(game.seedService, 'loadGame');
+    const editing = editQuiz();
+    await held.started;
+    const grading = game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 1,
+    });
+    await settle();
+    held.release();
+    await Promise.all([editing, grading]);
+
+    expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([]);
+    const snapshot = await game.snapshot();
+    expect(snapshot.ungradedQuestionIds).toEqual([]);
+    expect(
+      snapshot.leaderboard.find((entry) => entry.teamId === team.teamId)
+        ?.totalPoints,
+    ).toBe(1);
+  });
+
+  it('still shows an answer submitted while a reload is held as answered', async () => {
+    const questionId = game.questionIds.multipleChoice;
+
+    const held = holdNextCall(game.seedService, 'loadGame');
+    const editing = editQuiz();
+    await held.started;
+    const submitting = submit(questionId, 'Paris');
+    await settle();
+    held.release();
+    await Promise.all([editing, submitting]);
+
+    expect(lastAdminSnapshot().answeredTeamIds).toContain(team.teamId);
+    expect((await game.snapshot()).answeredTeamIds).toContain(team.teamId);
+  });
+
+  it('finishes a quiz edit made while a press is held after the press, with both changes in the final snapshot', async () => {
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+    await held.started;
+    const before = await game.snapshot();
+    await game.inRequestContext(async () => {
+      const em = game.orm.em.fork();
+      const round = await em.findOneOrFail(Round, { title: 'Round 1' });
+      round.title = 'Renamed Round';
+      await em.flush();
+    });
+
+    const editing = editQuiz();
+    await settle();
+    held.release();
+    await Promise.all([pressing, editing]);
+
+    const snapshot = await game.snapshot();
+    expect(snapshot.progress).not.toEqual(before.progress);
+    expect(snapshot.roundTitles).toContain('Renamed Round');
+    expect(lastAdminSnapshot().roundTitles).toContain('Renamed Round');
   });
 });

@@ -191,51 +191,52 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * Re-reads the active quiz's rounds from the database, keeping the
-   * session, join code and progress. Private to quizEdited — an editor save
-   * and a re-import both come through it — so a reload always ends in a
-   * broadcast.
+   * session, join code and progress. A step of quizEdited, so it takes and
+   * returns a session value and never queues.
    */
-  private async reloadActiveQuiz(joinCode: string): Promise<void> {
-    const session = this.sessionStore.get(joinCode);
-    const { quizId, gameSessionId } = session.seededGame;
+  private async withReloadedQuiz(session: SessionState): Promise<SessionState> {
+    const { quizId, gameSessionId, joinCode } = session.seededGame;
     const seededGame = await this.seedService.loadGame(
       quizId,
       gameSessionId,
       joinCode,
     );
-    this.sessionStore.set(joinCode, { ...session, seededGame });
+    return { ...session, seededGame };
   }
 
   /**
    * Re-grades already-shown questions whose answer/points were corrected by
-   * a live edit — call after reloadActiveQuiz, so the corrected key is what
-   * gets graded against. `previousQuestions` are the edited questions as
-   * they were before the reload. Ends through the grading refresh: fetched,
-   * then applied in one synchronous update on the session as it is by then,
-   * never a read-modify-write of the whole session across an await. Like the
-   * answer-change path, the fetched values can be a moment old; a break entry
-   * re-reads the whole block. See BlockGradingService.regradeQuestions.
-   * Returns the ids of the questions it actually re-scored.
+   * a live edit — a step of quizEdited, run on the session after
+   * withReloadedQuiz so the corrected key is what gets graded against.
+   * `previousQuestions` are the edited questions as they were before the
+   * reload. Ends through the grading refresh. Returns the session with the
+   * re-scored questions refreshed, and the ids of the questions it actually
+   * re-scored. See BlockGradingService.regradeQuestions.
    */
-  async regradeQuestions(
-    joinCode: string,
+  private async withRegradedQuestions(
+    session: SessionState,
     questionIds: readonly number[],
-    previousQuestions?: ReadonlyMap<number, ScoredQuestion>,
-  ): Promise<readonly number[]> {
+    previousQuestions: ReadonlyMap<number, ScoredQuestion>,
+  ): Promise<{
+    session: SessionState;
+    regradedQuestionIds: readonly number[];
+  }> {
     const { regradedQuestionIds, closestGuessSummaries } =
       await this.grading.regradeQuestions(
-        this.sessionStore.get(joinCode),
+        session,
         questionIds,
         previousQuestions,
       );
-    if (regradedQuestionIds.length === 0) return regradedQuestionIds;
+    if (regradedQuestionIds.length === 0) {
+      return { session, regradedQuestionIds };
+    }
 
     const refresh = await this.grading.gradingRefresh(
-      this.sessionStore.get(joinCode),
+      session,
       regradedQuestionIds,
     );
-    this.update(joinCode, (session) =>
-      withGradingRefresh(
+    return {
+      session: withGradingRefresh(
         {
           ...session,
           closestGuessSummaries: {
@@ -245,58 +246,70 @@ export class GameStateService implements OnModuleInit {
         },
         refresh,
       ),
-    );
-    return regradedQuestionIds;
+      regradedQuestionIds,
+    };
   }
 
   /**
-   * The quiz behind a live session was edited in place: reloads its
-   * questions and re-grades `regradeQuestionIds` (already-shown questions
-   * whose answer/points were corrected). The outcome names every re-scored
-   * question for a fresh admin answer list, and every connected team with an
-   * answer to one for a per-team sync — so the grading panel, the big screen
-   * and the phones all show the corrected points.
+   * The quiz behind a live session was edited in place (an editor save or a
+   * re-import): a session write that reloads its questions and re-grades
+   * `regradeQuestionIds` (already-shown questions whose answer/points were
+   * corrected), so answers and grades that land at the same moment are
+   * neither undone nor out of step with the ungraded markers. The outcome
+   * names every re-scored question for a fresh admin answer list, and every
+   * connected team with an answer to one for a per-team sync — so the
+   * grading panel, the big screen and the phones all show the corrected
+   * points. A reload always ends in a broadcast.
    */
-  async quizEdited(
+  quizEdited(
     joinCode: string,
     regradeQuestionIds: readonly number[] = [],
   ): Promise<SessionOutcome> {
-    const previousQuestions = new Map(
-      this.sessionStore
-        .get(joinCode)
-        .seededGame.rounds.flatMap((round) => round.questions)
-        .map((question) => [question.id, question] as const),
-    );
-    await this.reloadActiveQuiz(joinCode);
-    const regradedQuestionIds =
-      regradeQuestionIds.length > 0
-        ? await this.regradeQuestions(
-            joinCode,
-            regradeQuestionIds,
-            previousQuestions,
-          )
-        : [];
-    if (regradedQuestionIds.length === 0) return BROADCAST_STATE_OUTCOME;
+    return this.writeSession(joinCode, async (started) => {
+      const previousQuestions = new Map(
+        started.seededGame.rounds
+          .flatMap((round) => round.questions)
+          .map((question) => [question.id, question] as const),
+      );
+      const reloaded = await this.withReloadedQuiz(started);
+      if (regradeQuestionIds.length === 0) {
+        return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
+      }
 
-    const gameSessionId = this.getGameSessionId(joinCode);
-    const answerLists = await Promise.all(
-      regradedQuestionIds.map((questionId) =>
-        this.answerService.listForQuestion(gameSessionId, questionId),
-      ),
-    );
-    const answeredTeamIds = new Set(
-      answerLists.flat().map((answer) => answer.teamId),
-    );
-    const teamSyncTeamIds = this.getSnapshot(joinCode)
-      .teams.filter(
-        (team) => team.isConnected && answeredTeamIds.has(team.teamId),
-      )
-      .map((team) => team.teamId);
-    return {
-      ...BROADCAST_STATE_OUTCOME,
-      answerListQuestionIds: regradedQuestionIds,
-      teamSyncTeamIds,
-    };
+      const { session, regradedQuestionIds } = await this.withRegradedQuestions(
+        reloaded,
+        regradeQuestionIds,
+        previousQuestions,
+      );
+      if (regradedQuestionIds.length === 0) {
+        return { session, outcome: BROADCAST_STATE_OUTCOME };
+      }
+
+      const answerLists = await Promise.all(
+        regradedQuestionIds.map((questionId) =>
+          this.answerService.listForQuestion(
+            session.seededGame.gameSessionId,
+            questionId,
+          ),
+        ),
+      );
+      const answeredTeamIds = new Set(
+        answerLists.flat().map((answer) => answer.teamId),
+      );
+      const teamSyncTeamIds = buildSnapshot(session)
+        .teams.filter(
+          (team) => team.isConnected && answeredTeamIds.has(team.teamId),
+        )
+        .map((team) => team.teamId);
+      return {
+        session,
+        outcome: {
+          ...BROADCAST_STATE_OUTCOME,
+          answerListQuestionIds: regradedQuestionIds,
+          teamSyncTeamIds,
+        },
+      };
+    });
   }
 
   /**

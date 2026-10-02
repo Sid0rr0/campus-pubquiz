@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                  | Blocked by         |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| 05  | [A quiz edit and a re-import go through the session write](session-write/issues/05-quiz-edit-and-reimport-through-session-write.md)                     | 02                 |
 | 06  | [The remaining events go through the session write, declared as not touching scores](session-write/issues/06-remaining-events-through-session-write.md) | 01                 |
 | 07  | [Contract: standings only from the session write; delete the old write paths](session-write/issues/07-contract-delete-old-write-paths.md)               | 02, 03, 04, 05, 06 |
 
@@ -29,10 +28,11 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| session-write               | 04  | [A press no longer overwrites changes made while it runs](session-write/issues/04-press-keeps-changes-made-while-it-runs.md) | —         |
-| session-write               | 03  | [Team joined, kicked or left goes through the session write](session-write/issues/03-roster-changes-through-session-write.md) | —         |
-| session-write               | 02  | [Answers recorded and graded go through the session write](session-write/issues/02-answers-recorded-and-graded-through-session-write.md) | —         |
-| session-write               | 01  | [Bonus changes go through one session write that ends with fresh standings](session-write/issues/01-bonus-changes-through-session-write.md) | —         |
+| session-write               | 05  | [A quiz edit and a re-import go through the session write](session-write/issues/05-quiz-edit-and-reimport-through-session-write.md)                                    | —         |
+| session-write               | 04  | [A press no longer overwrites changes made while it runs](session-write/issues/04-press-keeps-changes-made-while-it-runs.md)                                           | —         |
+| session-write               | 03  | [Team joined, kicked or left goes through the session write](session-write/issues/03-roster-changes-through-session-write.md)                                          | —         |
+| session-write               | 02  | [Answers recorded and graded go through the session write](session-write/issues/02-answers-recorded-and-graded-through-session-write.md)                               | —         |
+| session-write               | 01  | [Bonus changes go through one session write that ends with fresh standings](session-write/issues/01-bonus-changes-through-session-write.md)                            | —         |
 | players-reveal-redaction    | 04  | [The final block's answers survive a reconnect after the quiz ends](players-reveal-redaction/issues/04-final-block-answers-survive-a-reconnect-after-the-quiz-ends.md) | —         |
 | players-reveal-redaction    | 03  | [A closest-guess reveal reaches phones one step at a time](players-reveal-redaction/issues/03-closest-guess-reveal-reaches-phones-step-by-step.md)                     | —         |
 | players-reveal-redaction    | 02  | [Phones draw the phone screen the server names](players-reveal-redaction/issues/02-phones-draw-the-phone-screen-the-server-names.md)                                   | —         |
