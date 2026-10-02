@@ -98,7 +98,7 @@ Carrying out one planned press from start to finish: plan it, grade what it impl
 \_Avoid\*: apply action
 
 **Session write**:
-Every change to a live session: one at a time per session, ending with fresh standings. Writes to different sessions run in parallel. A write that fails stores nothing and doesn't block the next one. A write can declare that it doesn't change scores and skip the standings read. Every event reaches a live session this way; session creation and restart restore place a session through the same last step, so a restored session has its leaderboard in the first snapshot.
+Every change to a live session: one at a time per session, ending with fresh standings. Writes to different sessions run in parallel. A write whose change fails stores nothing and doesn't block the next one. If only the final standings read fails, the change's work is already done (a press has saved its progress), so the write counts as done: the failure is logged, the session is stored with its earlier leaderboard and clients are told as usual; the next write reads standings again. A write can declare that it doesn't change scores and skip the standings read. Every event reaches a live session this way; session creation and restart restore place a session through the same last step, so a restored session has its leaderboard in the first snapshot.
 
 **Grading refresh**:
 The one step every change to grades ends through: given the questions whose grades just changed, it works out which of them are ungraded, and the session takes that in a single update. Standings are left to the Session write.

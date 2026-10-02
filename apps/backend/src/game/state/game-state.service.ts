@@ -1,4 +1,4 @@
-import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   DEFAULT_SESSION_SETTINGS,
@@ -6,6 +6,7 @@ import {
   type ActiveSessionSummary,
   type AdminQuestionContext,
   type GameAction,
+  type LeaderboardEntry,
   type PresenterContextPayload,
   type ScoredQuestion,
   type SessionSettings,
@@ -72,6 +73,7 @@ const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
+  private readonly logger = new Logger(GameStateService.name);
   private readonly sessionStore = new GameSessionStore();
   private readonly sessionWrites = new SessionWriteQueue();
   private readonly grading: BlockGradingService;
@@ -679,7 +681,9 @@ export class GameStateService implements OnModuleInit {
    * for this join code left it, reads standings once as the last step
    * (unless the write says it doesn't change scores), stores the result and
    * returns the change's outcome. A change that throws stores nothing and
-   * doesn't hold up the next write. Not re-entrant: `change` must not call
+   * doesn't hold up the next write; a failed standings read, after the change
+   * has done its work, is logged and the session is stored with its earlier
+   * leaderboard. Not re-entrant: `change` must not call
    * another public event method of this module.
    */
   private writeSession<T>(
@@ -692,11 +696,26 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrites.run(joinCode, async () => {
       const started = this.sessionStore.get(joinCode);
       const { session, outcome } = await change(started);
-      const leaderboard = refreshStandings
-        ? await this.standingsService.leaderboard(
-            session.seededGame.gameSessionId,
-          )
-        : undefined;
+      if (!refreshStandings) {
+        this.sessionStore.set(joinCode, session);
+        return outcome;
+      }
+      // The change has already done its database work (a press has saved its
+      // progress), so it counts as done even if the standings read fails:
+      // memory must match what was saved and clients must hear about it. The
+      // session keeps its earlier leaderboard and the next write reads
+      // standings again.
+      let leaderboard: LeaderboardEntry[] | undefined;
+      try {
+        leaderboard = await this.standingsService.leaderboard(
+          session.seededGame.gameSessionId,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Standings read failed for session ${joinCode}; keeping the earlier leaderboard until the next write`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
       this.sessionStore.set(
         joinCode,
         leaderboard ? withLeaderboard(session, leaderboard) : session,

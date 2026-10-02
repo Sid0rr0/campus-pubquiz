@@ -4,12 +4,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 ## Not implemented
 
-### session-write ([spec](session-write/spec.md))
-
-| #   | Ticket                                                                                                                                          | Blocked by |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 08  | [A press whose standings read fails still leaves memory matching the database](session-write/issues/08-press-survives-failed-standings-read.md) | 07         |
-
 ### live-session-events ([spec](live-session-events/spec.md))
 
 | #   | Ticket                                                                                                                                                     | Blocked by             |
@@ -49,6 +43,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| session-write               | 08  | [A press whose standings read fails still leaves memory matching the database](session-write/issues/08-press-survives-failed-standings-read.md)                        | —         |
 | session-write               | 07  | [Contract: standings only from the session write; delete the old write paths](session-write/issues/07-contract-delete-old-write-paths.md)                              | —         |
 | session-write               | 06  | [The remaining events go through the session write, declared as not touching scores](session-write/issues/06-remaining-events-through-session-write.md)                | —         |
 | session-write               | 05  | [A quiz edit and a re-import go through the session write](session-write/issues/05-quiz-edit-and-reimport-through-session-write.md)                                    | —         |

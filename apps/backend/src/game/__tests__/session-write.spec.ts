@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -109,23 +110,22 @@ describe('GameGateway — session write: bonus changes', () => {
     await blocked;
   });
 
-  it('leaves the session unchanged when a bonus write fails, returns the error, and still applies the next change', async () => {
+  it('keeps the earlier leaderboard when the standings read after a bonus fails, and shows both awards after the next change', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     jest
       .spyOn(game.standingsService, 'leaderboard')
       .mockRejectedValueOnce(new Error('standings unavailable'));
     const before = await game.snapshot();
 
-    await expect(award(1)).resolves.toEqual({
-      success: false,
-      error: 'Internal server error',
-    });
+    // The award itself is saved, so the write counts as done.
+    await expect(award(1)).resolves.toEqual({ success: true });
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
 
     game.clearEmits();
     await award(2);
 
     const snapshots = adminSnapshots();
-    // Both awards are stored; the failed one's points show once standings are re-read.
+    // Both awards are stored; the first one's points show once standings are re-read.
     expect(bonusIn(snapshots[snapshots.length - 1])).toBe(3);
   });
 });

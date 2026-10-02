@@ -189,7 +189,10 @@ Events for one session are applied one at a time: each change to a live
 session (an answer, a grade, a bonus, a roster change, a press, a quiz edit)
 runs after the previous one for that session has finished, sees the session as
 that one left it, and ends by reading fresh standings. Sessions don't wait for
-each other.
+each other. If that final standings read fails, the write still counts as done
+(a press has already saved its progress, so memory must match the database and
+clients must hear about it): the failure is logged, the session keeps its
+earlier leaderboard, and the next write catches it up.
 
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`):

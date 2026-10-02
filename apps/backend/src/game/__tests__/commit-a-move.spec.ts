@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
@@ -54,6 +55,54 @@ describe('GameStateService — committing a move', () => {
 
       // Assert
       expect(after.progress.status).not.toBe(before.progress.status);
+    });
+  });
+
+  describe('when the standings cannot be read after the progress is saved', () => {
+    let logError: jest.SpyInstance;
+
+    beforeEach(() => {
+      logError = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      jest
+        .spyOn(game.standingsService, 'leaderboard')
+        .mockRejectedValueOnce(new Error('database is down'));
+    });
+
+    it('carries the press out on the saved status and logs the failure', async () => {
+      // Act
+      const after = await game.act('ADVANCE');
+
+      // Assert
+      expect(after.progress.status).toBe('round_intro');
+      expect((await game.snapshot()).progress.status).toBe('round_intro');
+      expect(logError).toHaveBeenCalledTimes(1);
+    });
+
+    it('plans the next press from the saved status', async () => {
+      // Arrange
+      await game.act('ADVANCE');
+
+      // Act
+      const after = await game.act('ADVANCE');
+
+      // Assert
+      expect(after.progress.status).toBe('question_open');
+    });
+
+    it('catches the leaderboard up on the next write', async () => {
+      // Arrange
+      const [{ teamId }] = game.teams;
+      await game.act('ADVANCE');
+
+      // Act
+      const after = await game.act('ADVANCE');
+
+      // Assert
+      expect(after.leaderboard).toEqual([
+        expect.objectContaining({ teamId, totalPoints: 0 }),
+      ]);
     });
   });
 
