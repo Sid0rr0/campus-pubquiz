@@ -52,4 +52,17 @@ describe('mergeSeenQuestions', () => {
 
     expect(afterPrevious[1]).toEqual(hidden);
   });
+
+  it('gives a fresh phone the final block’s answers from an ended snapshot', () => {
+    const seen = mergeSeenQuestions(
+      {},
+      payload({
+        progress: { status: 'ended' } as StateSnapshotPayload['progress'],
+        blockQuestions: [hidden],
+        revealQuestions: [revealed],
+      }),
+    );
+
+    expect(seen[1]).toEqual(revealed);
+  });
 });

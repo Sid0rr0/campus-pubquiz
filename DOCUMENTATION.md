@@ -196,7 +196,11 @@ far: `revealQuestions` holds the questions before `revealIndex`, plus the one at
 `revealIndex` once its `reveal` step is on air. A question the walk hasn't
 reached stays in `blockQuestions` without its answer, so the phone shows a
 correct answer exactly when one arrives and stepping back with Previous takes it
-away again.
+away again. At `ended` the players view keeps the final block's walk as it stood
+when the quiz ended (trimmed by `previousStatus`, so a reconnecting phone keeps
+its history): the whole block after advancing past the last reveal, the walk so
+far if End Quiz was pressed mid-reveal, nothing if it was pressed before the
+reveal started. Previous out of `ended` returns to the normal trim.
 
 ### The snapshot
 

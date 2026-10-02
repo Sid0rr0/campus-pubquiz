@@ -138,6 +138,75 @@ describe('Screen projection — players view reveal redaction', () => {
   });
 });
 
+describe('Screen projection — players view after the quiz ends', () => {
+  const ended = (progress: Partial<GameProgress>) =>
+    session(BLOCK, {
+      status: 'ended',
+      isLeaderboardVisible: true,
+      ...progress,
+    });
+
+  it('carries the whole final block when the last reveal was advanced past', () => {
+    const state = ended({ previousStatus: 'reveal', revealIndex: 3 });
+
+    expect(playerRevealIds(state)).toEqual([10, 11, 20, 21]);
+  });
+
+  it('carries the walk up to the on-air question when End Quiz was pressed in reveal', () => {
+    const state = ended({ previousStatus: 'reveal', revealIndex: 1 });
+
+    expect(playerRevealIds(state)).toEqual([10, 11]);
+  });
+
+  it('carries the walk before the title card when End Quiz was pressed in reveal_intro', () => {
+    const state = ended({ previousStatus: 'reveal_intro', revealIndex: 2 });
+
+    expect(playerRevealIds(state)).toEqual([10, 11]);
+  });
+
+  it.each(['question_open', 'break', 'locking'] as const)(
+    'carries nothing when End Quiz was pressed from %s',
+    (previousStatus) => {
+      const state = ended({ previousStatus, revealIndex: 2 });
+
+      expect(playerRevealIds(state)).toEqual([]);
+    },
+  );
+
+  it('carries nothing for a legacy ended session with no previous status', () => {
+    expect(playerRevealIds(ended({ previousStatus: null }))).toEqual([]);
+  });
+
+  it('is not changed by an active showdown', () => {
+    const state = {
+      ...ended({ previousStatus: 'reveal', revealIndex: 3 }),
+      activeShowdownRound: {
+        id: 1,
+        question: 'Tie-break?',
+        answer: '42',
+        participants: [],
+        winnerTeamId: null,
+        isTie: false,
+        resolved: false,
+      },
+    };
+
+    expect(playerRevealIds(state)).toEqual([10, 11, 20, 21]);
+  });
+
+  it('goes back to the normal reveal trim after Previous', () => {
+    const state = session(BLOCK, { status: 'reveal', revealIndex: 3 });
+
+    expect(playerRevealIds(state)).toEqual([10, 11, 20, 21]);
+    expect(
+      playerRevealIds({
+        ...state,
+        progress: { ...state.progress, revealIndex: 1 },
+      }),
+    ).toEqual([10, 11]);
+  });
+});
+
 describe('Screen projection — players view closest-guess steps', () => {
   const SUMMARY = {
     hasSubmissions: true,

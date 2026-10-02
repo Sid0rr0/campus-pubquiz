@@ -14,11 +14,15 @@ Out of scope in the spec (`.scratch/players-reveal-redaction/spec.md`, "The fina
 
 **Blocked by:** 01 (it reuses the players reveal trim)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] At the players projection, at `ended` reached by advancing past the final reveal, every final-block question is carried with its answer.
-- [ ] At `ended` reached by End Quiz during `reveal` at position k, positions 0..k are carried; during `reveal_intro` at position k, positions 0..k-1 are carried.
-- [ ] At `ended` reached by End Quiz from a non-revealing status (e.g. `question_open`, `break`), no final-block answers are carried.
-- [ ] An active showdown at `ended` doesn't change what is carried.
-- [ ] `/play`: a fresh phone given an `ended` snapshot shows the final block's correct answers and points in its history list.
-- [ ] `DOCUMENTATION.md` notes that the players view at `ended` keeps the final block's reveal walk.
+- [x] At the players projection, at `ended` reached by advancing past the final reveal, every final-block question is carried with its answer.
+- [x] At `ended` reached by End Quiz during `reveal` at position k, positions 0..k are carried; during `reveal_intro` at position k, positions 0..k-1 are carried.
+- [x] At `ended` reached by End Quiz from a non-revealing status (e.g. `question_open`, `break`), no final-block answers are carried.
+- [x] An active showdown at `ended` doesn't change what is carried.
+- [x] `/play`: a fresh phone given an `ended` snapshot shows the final block's correct answers and points in its history list.
+- [x] `DOCUMENTATION.md` notes that the players view at `ended` keeps the final block's reveal walk.
+
+## Comments
+
+At `ended` the players projection now builds the final block's walk itself (`endedRevealWalk` in `screen-projection.util.ts`): it re-reads the block as it stood under `previousStatus` and applies ticket 01's trim, so advancing past the last reveal carries the whole block, End Quiz mid-`reveal` at k carries 0..k, mid-`reveal_intro` at k carries 0..k-1, and any non-revealing `previousStatus` (or a legacy `null`) carries nothing. The on-air question is carried whole (no closest-guess step trim — nothing is being revealed any more). An active showdown doesn't affect it. No phone change was needed: `mergeSeenQuestions` is status-agnostic, so a fresh phone given the `ended` snapshot lists the answers; tests pin that. The code landed in the commit `feat(backend): a reconnecting phone keeps the final block's answers after the quiz ends`.

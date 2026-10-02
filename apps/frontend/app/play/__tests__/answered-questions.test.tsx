@@ -75,6 +75,42 @@ describe('PlayPage — answered questions history', () => {
     expect(screen.getByText('No answer submitted')).toBeInTheDocument();
   });
 
+  it('shows the final block’s correct answers and points once the quiz has ended', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const finalQuestion = {
+      id: 9,
+      type: 'free_text' as const,
+      prompt: 'Name the last planet',
+      points: 3,
+      roundNumber: 2,
+      questionNumberInRound: 4,
+      roundTitle: 'Round 2',
+      answer: 'Neptune',
+    };
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({
+        snapshot: {
+          progress: progress({ status: 'ended' }),
+          currentQuestion: null,
+          blockQuestions: [],
+        },
+        team: {
+          teamId: 1,
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+        myAnswers: { 9: 'Neptune' },
+        myAnswerGrades: { 9: { pointsAwarded: 3, verdict: 'correct' } },
+        seenQuestions: { 9: finalQuestion },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('Name the last planet')).toBeInTheDocument();
+    expect(screen.getAllByText('Neptune').length).toBeGreaterThan(0);
+    expect(screen.getByText(/3\s*\/\s*3|3 pts|\+3/)).toBeInTheDocument();
+  });
+
   it('shows points awarded for a graded question in the history panel once it is revealed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const q1 = {

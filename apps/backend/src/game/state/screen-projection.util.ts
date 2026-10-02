@@ -8,6 +8,7 @@ import {
   describeAdminIndicators,
   describeOnAirScreen,
   describePlayersScreen,
+  isRevealingStatus,
   type SocketRoomName,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
@@ -20,6 +21,7 @@ import {
   describeAdvanceStep,
   describePreviousState,
 } from '@/game/state/move-plan.util';
+import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
 import {
@@ -90,6 +92,30 @@ function trimToRevealWalk(
 }
 
 /**
+ * The final block's reveal walk as it stood when the quiz ended, so a phone
+ * that reconnects at 'ended' keeps its answers (the block is in neither
+ * revealQuestions nor pastRevealedQuestions by then). Trims by the status the
+ * quiz ended from; ending from a status that isn't revealing carries nothing.
+ * The on-air question is carried whole — nothing is being revealed any more.
+ */
+function endedRevealWalk(
+  session: SessionState,
+): (BlockRevealQuestionView | PendingClosestGuessRevealView)[] {
+  const { progress } = session;
+  if (!progress.previousStatus || !isRevealingStatus(progress.previousStatus)) {
+    return [];
+  }
+  return trimToRevealWalk(
+    getBlockSeededQuestions({
+      ...session,
+      progress: { ...progress, status: progress.previousStatus },
+    }),
+    { ...progress, status: progress.previousStatus },
+    CLOSEST_TEAMS_STEP,
+  );
+}
+
+/**
  * The Screen projection: the view of a live session that one audience (a
  * socket room) is sent on every state broadcast and on connect/reconnect.
  * Pure — every view is the snapshot plus what that audience needs computed;
@@ -139,11 +165,14 @@ export function projectScreen(
         ...snapshot,
         ...describePlayersScreen({ ...snapshot, isAnswerable }),
         isAnswerable,
-        revealQuestions: trimToRevealWalk(
-          snapshot.revealQuestions,
-          snapshot.progress,
-          snapshot.closestGuessRevealStep,
-        ),
+        revealQuestions:
+          snapshot.progress.status === 'ended'
+            ? endedRevealWalk(session)
+            : trimToRevealWalk(
+                snapshot.revealQuestions,
+                snapshot.progress,
+                snapshot.closestGuessRevealStep,
+              ),
       };
       return isQuestionHiddenBehindKahootLeaderboard(session)
         ? { ...view, currentQuestion: null, blockQuestions: [] }
