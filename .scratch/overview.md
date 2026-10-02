@@ -35,6 +35,16 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 06  | [Round ratings on the session stats page](feedback/issues/06-round-ratings-on-session-stats.md)             | 01         |
 | 07  | [Comments and topics on the session stats page](feedback/issues/07-comments-and-topics-on-session-stats.md) | 03, 04, 06 |
 
+### backend-test-speed ([spec](backend-test-speed/spec.md))
+
+| #   | Ticket                                                                                                                                 | Blocked by |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [One Postgres container per test run, with the real-store gateway harness on it](backend-test-speed/issues/01-shared-test-database.md) | —          |
+| 02  | [Every remaining Postgres spec uses the shared test database](backend-test-speed/issues/02-remaining-specs-on-shared-database.md)      | 01         |
+| 03  | [Gateway specs wait for a settled session instead of sleeping](backend-test-speed/issues/03-wait-for-settled-session.md)               | —          |
+| 04  | [Gateway specs fire phase timers on demand](backend-test-speed/issues/04-fire-phase-timers-on-demand.md)                               | 03         |
+| 05  | [Prove the backend suite is fast and never fails by chance](backend-test-speed/issues/05-prove-fast-reliable-suite.md)                 | 02, 04     |
+
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
