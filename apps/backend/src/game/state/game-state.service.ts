@@ -85,10 +85,7 @@ export class GameStateService implements OnModuleInit {
     private readonly standingsService: StandingsService,
     private readonly showdownService: ShowdownService,
   ) {
-    this.grading = new BlockGradingService(
-      this.answerService,
-      this.standingsService,
-    );
+    this.grading = new BlockGradingService(this.answerService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,

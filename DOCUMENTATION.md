@@ -185,6 +185,12 @@ revoked mid-event, only that one admin socket drops — live game state lives
 server-side independent of any admin connection, so `display`/`players`
 clients are unaffected; the admin just reconnects with a fresh token.
 
+Events for one session are applied one at a time: each change to a live
+session (an answer, a grade, a bonus, a roster change, a press, a quiz edit)
+runs after the previous one for that session has finished, sees the session as
+that one left it, and ends by reading fresh standings. Sessions don't wait for
+each other.
+
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`):
 the display view names the screen on air; the admin view adds what `/control`

@@ -1,6 +1,5 @@
 import type {
   GameProgress,
-  LeaderboardEntry,
   QuestionType,
   ScoredQuestion,
 } from '@campus-pubquiz/types';
@@ -12,7 +11,6 @@ import {
   isBreakStatus,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-import { StandingsService } from '@/standings/standings.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
@@ -31,12 +29,11 @@ export function canBeUngraded(question: { type: QuestionType }): boolean {
 /**
  * What the grading refresh hands back for the caller to apply to the session
  * in one synchronous update: which of the questions whose grades just changed
- * are ungraded, and the standings those grades produced.
+ * are ungraded. Standings are not part of it — the session write reads them.
  */
 export interface GradingRefresh {
   questionIds: readonly number[];
   ungradedQuestionIds: readonly number[];
-  leaderboard: LeaderboardEntry[];
 }
 
 /**
@@ -46,10 +43,7 @@ export interface GradingRefresh {
  * state machine itself, only in what happens around it.
  */
 export class BlockGradingService {
-  constructor(
-    private readonly answerService: AnswerService,
-    private readonly standingsService: StandingsService,
-  ) {}
+  constructor(private readonly answerService: AnswerService) {}
 
   /** Batch-grades every closest_guess question in the block once it reaches a graded status, caching the result — safe to call every applyAction since it skips questions already in closestGuessSummaries. */
   async ensureBlockGraded(
@@ -82,7 +76,7 @@ export class BlockGradingService {
     }
 
     // The batch scored these questions; closest_guess can never be ungraded,
-    // so only the standings move.
+    // so the refresh has nothing to change in the ungraded set.
     const refresh = await this.gradingRefresh(
       { ...session, progress: newProgress },
       ungraded.map((question) => question.id),
@@ -201,10 +195,7 @@ export class BlockGradingService {
   /**
    * The grading refresh: after grades changed for `questionIds`, reads which
    * of the current block's questions among them are ungraded (through the one
-   * ungraded reader, so closest_guess is still dropped) and fetches fresh
-   * standings. Returns the change for the caller to apply in one synchronous
-   * update — it must not become a read-modify-write of the session across an
-   * `await`, so it never takes the session back. Questions outside the
+   * ungraded reader, so closest_guess is still dropped). Questions outside the
    * current block are left alone: the cached set only ever describes the
    * block in play.
    */
@@ -216,11 +207,10 @@ export class BlockGradingService {
       getBlockSeededQuestions(session).map((question) => question.id),
     );
     const refreshedIds = questionIds.filter((id) => blockQuestionIds.has(id));
-    const [ungradedQuestionIds, leaderboard] = await Promise.all([
-      this.listUngradedQuestionIds(session, [...refreshedIds]),
-      this.standingsService.leaderboard(session.seededGame.gameSessionId),
+    const ungradedQuestionIds = await this.listUngradedQuestionIds(session, [
+      ...refreshedIds,
     ]);
-    return { questionIds: refreshedIds, ungradedQuestionIds, leaderboard };
+    return { questionIds: refreshedIds, ungradedQuestionIds };
   }
 
   /**
@@ -254,9 +244,8 @@ export class BlockGradingService {
   }
 
   /**
-   * Bulk-refreshes the block through the grading refresh (ungraded set and
-   * standings from the DB) whenever the block just
-   * entered (or is still within) a break status — the authoritative
+   * Bulk-refreshes the block through the grading refresh (the ungraded set
+   * from the DB) whenever the block just entered (or is still within) a break status — the authoritative
    * baseline the grading refresh in GameStateService.recordAnswer/answerGraded
    * build on between these recomputes. A no-op outside the break statuses,
    * since nothing there can be graded and the cached value can't go stale.

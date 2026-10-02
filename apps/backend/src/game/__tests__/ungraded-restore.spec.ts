@@ -107,4 +107,32 @@ describe('GameGateway — a restored session knows its ungraded questions', () =
     expect(view.progress.status).toBe('question_open');
     expect(view.ungradedQuestionIds).toEqual([]);
   });
+
+  it('has the leaderboard in the first snapshot of a session restored outside the break', async () => {
+    const ack = await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: freeText,
+      teamId: team.teamId,
+      value: 'Jupiter',
+    });
+    expect(ack).toEqual(expect.objectContaining({ success: true }));
+
+    const view = await adminViewAfter(await game.restart());
+
+    expect(view.progress.status).toBe('question_open');
+    expect(view.leaderboard).toEqual([
+      expect.objectContaining({ teamId: team.teamId, totalPoints: 2 }),
+    ]);
+  });
+
+  it('has the ungraded set and the leaderboard in the first snapshot of a session restored in the break', async () => {
+    await submitNonMatch();
+    await advanceIntoBreak();
+
+    const view = await adminViewAfter(await game.restart());
+
+    expect(view.ungradedQuestionIds).toEqual([freeText]);
+    expect(view.leaderboard).toEqual([
+      expect.objectContaining({ teamId: team.teamId, totalPoints: 0 }),
+    ]);
+  });
 });

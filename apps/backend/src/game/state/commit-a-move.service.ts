@@ -101,7 +101,9 @@ export class MoveCommitter {
   /**
    * Places a session at a starting point — the lobby for a new session, the
    * saved progress and phase timer for a restart restore. Refreshes the
-   * ungraded set inside the break and settles; nothing is saved.
+   * ungraded set inside the break, settles and ends with the standings read
+   * (the same last step a session write takes), so the first snapshot a
+   * client receives already has its leaderboard. Nothing is saved.
    */
   async place(
     session: SessionState,
@@ -118,13 +120,17 @@ export class MoveCommitter {
     // deadline's deliberate re-arm-fresh) — its epoch-ms start time is real
     // and persisted, so the elapsed time it shows after a restart is still
     // accurate, downtime included.
-    return settleSession({
+    const placed = settleSession({
       session: refreshed,
       progress,
       step: { kind: 'place' },
       now: Date.now(),
       savedPhaseTimer,
     });
+    const leaderboard = await this.standingsService.leaderboard(
+      placed.seededGame.gameSessionId,
+    );
+    return withLeaderboard(placed, leaderboard);
   }
 
   private async commitProgressMove(
@@ -145,13 +151,11 @@ export class MoveCommitter {
       graded,
       progress,
     );
-    // A raw ADVANCE under the leaderboard is carried out as the action it
-    // plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
+    // settleMove carries a raw ADVANCE under the leaderboard out as the action
+    // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the kahoot timer and everything else downstream treat it
     // identically.
-    const action = effectiveActionOf(step, pressed);
-    const settled = settleMove(refreshed, step, pressed);
-    const committed = await this.withBoardFreshIfTurnedOn(settled, action);
+    const committed = settleMove(refreshed, step, pressed);
 
     await this.progressRepository.save(
       committed.seededGame.gameSessionId,
@@ -188,26 +192,7 @@ export class MoveCommitter {
     }
   }
 
-  /**
-   * Answers and grades refresh the leaderboard, but a team that hasn't
-   * answered yet isn't on it — recompute fresh when the board is turned on so
-   * every currently-joined team appears, 0 points and all.
-   */
-  private async withBoardFreshIfTurnedOn(
-    session: SessionState,
-    action: GameAction,
-  ): Promise<SessionState> {
-    const isTurnedOn =
-      action === 'TOGGLE_LEADERBOARD' && session.progress.isLeaderboardVisible;
-    if (!isTurnedOn) return session;
-
-    const leaderboard = await this.standingsService.leaderboard(
-      session.seededGame.gameSessionId,
-    );
-    return withLeaderboard(session, leaderboard);
-  }
-
-  /** Crossing into a showdown's final reveal step records the winner and refreshes the leaderboard it moves. */
+  /** Crossing into a showdown's final reveal step records the winner; the session write's standings read then puts its bonus on the leaderboard. */
   private async resolveShowdownIfFinished(
     step: Extract<MoveStep, { kind: 'showdown_step' }>,
   ): Promise<SessionState> {
@@ -222,10 +207,7 @@ export class MoveCommitter {
       isTie,
       resolved: true,
     };
-    const leaderboard = await this.standingsService.leaderboard(
-      session.seededGame.gameSessionId,
-    );
-    return { ...session, activeShowdownRound: resolvedRound, leaderboard };
+    return { ...session, activeShowdownRound: resolvedRound };
   }
 }
 

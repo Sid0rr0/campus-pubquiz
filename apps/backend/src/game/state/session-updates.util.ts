@@ -79,7 +79,7 @@ export function withAnsweredTeamIds(
   };
 }
 
-/** Applies a grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise) and the leaderboard is replaced. */
+/** Applies a grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise). */
 export function withGradingRefresh(
   session: SessionState,
   refresh: GradingRefresh,
@@ -91,7 +91,6 @@ export function withGradingRefresh(
       ...session.ungradedQuestionIds.filter((id) => !refreshed.has(id)),
       ...refresh.ungradedQuestionIds,
     ],
-    leaderboard: refresh.leaderboard,
   };
 }
 

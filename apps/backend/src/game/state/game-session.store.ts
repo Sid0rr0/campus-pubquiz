@@ -2,8 +2,8 @@ import type { SessionState } from '@/game/state/session-state';
 
 /**
  * Owns the in-memory session registry keyed by joinCode — the single source
- * of truth GameStateService and its collaborators (the session-updates helpers,
- * BlockGradingService) read and write through. Composed inside GameStateService
+ * of truth GameStateService reads. It writes only through a session write, and
+ * through session creation and restore. Composed inside GameStateService
  * rather than injected via Nest DI, since nothing outside that service needs
  * its own reference to the registry.
  */
