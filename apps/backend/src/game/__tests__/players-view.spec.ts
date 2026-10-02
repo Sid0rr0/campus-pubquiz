@@ -1,4 +1,8 @@
-import { SOCKET_ROOMS, type GameAction } from '@campus-pubquiz/types';
+import {
+  SOCKET_ROOMS,
+  type GameAction,
+  type PhoneScreen,
+} from '@campus-pubquiz/types';
 import {
   TWO_ROUND_QUIZ,
   setupRealStoreGatewayTest,
@@ -18,46 +22,38 @@ describe('Screen projection — the players view', () => {
       game = await harness.createGateway({ rounds: TWO_ROUND_QUIZ });
     });
 
-    it('says when the block is answerable, and what the phone follows during reveal and title cards', async () => {
+    it('says when the block is answerable, and which screen the phone shows, across a whole walk', async () => {
       const [round1, round2] = game.rounds.map((round) => round.questionIds);
-      const none = { onScreenQuestionId: null, roundTitleCard: null };
-      const steps: [
-        GameAction,
-        boolean,
-        { onScreenQuestionId: number | null; roundTitleCard: string | null },
-      ][] = [
-        ['START_QUIZ', false, none], // rules
-        ['ADVANCE', false, none], // fresh round intro: nothing open yet
-        ['ADVANCE', true, none], // r1q1
-        ['ADVANCE', true, none], // r1q2
-        ['ADVANCE', true, none], // round intro over questions already open
-        ['ADVANCE', true, none], // r2q1
-        ['ADVANCE', true, none], // r2q2
-        ['ADVANCE', true, none], // locking
-        ['ADVANCE', false, none], // break_intro
-        [
-          'ADVANCE',
-          false,
-          { onScreenQuestionId: null, roundTitleCard: 'General Knowledge' },
-        ], // reveal_intro
-        ['ADVANCE', false, { ...none, onScreenQuestionId: round1[0] }],
-        ['ADVANCE', false, { ...none, onScreenQuestionId: round1[1] }],
-        [
-          'ADVANCE',
-          false,
-          { onScreenQuestionId: null, roundTitleCard: 'Landmarks & Flags' },
-        ], // reveal_intro for round 2
-        ['ADVANCE', false, { ...none, onScreenQuestionId: round2[0] }],
+      const block = (
+        onScreenQuestionId: number | null = null,
+      ): PhoneScreen => ({
+        kind: 'block',
+        onScreenQuestionId,
+      });
+      const steps: [GameAction, boolean, PhoneScreen][] = [
+        ['START_QUIZ', false, { kind: 'rules' }],
+        ['ADVANCE', false, { kind: 'round_title', title: 'General Knowledge' }], // fresh round intro
+        ['ADVANCE', true, block()], // r1q1
+        ['ADVANCE', true, block()], // r1q2
+        ['ADVANCE', true, block()], // round intro over questions already open
+        ['ADVANCE', true, block()], // r2q1
+        ['ADVANCE', true, block()], // r2q2
+        ['ADVANCE', true, block()], // locking
+        ['ADVANCE', false, block()], // break_intro
+        ['ADVANCE', false, { kind: 'round_title', title: 'General Knowledge' }], // reveal_intro
+        ['ADVANCE', false, block(round1[0])],
+        ['ADVANCE', false, block(round1[1])],
+        ['ADVANCE', false, { kind: 'round_title', title: 'Landmarks & Flags' }], // reveal_intro for round 2
+        ['ADVANCE', false, block(round2[0])],
       ];
 
-      for (const [action, isAnswerable, screenFields] of steps) {
+      for (const [action, isAnswerable, phoneScreen] of steps) {
         await game.act(action);
         const view = playersView();
         expect({
           isAnswerable: view.isAnswerable,
-          onScreenQuestionId: view.onScreenQuestionId,
-          roundTitleCard: view.roundTitleCard,
-        }).toEqual({ isAnswerable, ...screenFields });
+          phoneScreen: view.phoneScreen,
+        }).toEqual({ isAnswerable, phoneScreen });
       }
     });
 
@@ -89,7 +85,7 @@ describe('Screen projection — the players view', () => {
 
       await game.act('TOGGLE_LEADERBOARD');
 
-      expect(playersView().roundTitleCard).toBe('General Knowledge');
+      expect(playersView().phoneScreen).toEqual({ kind: 'leaderboard' });
     });
   });
 
@@ -124,9 +120,10 @@ describe('Screen projection — the players view', () => {
       await game.act('ADVANCE'); // locking
       await game.act('ADVANCE'); // reveal
 
-      expect(playersView().onScreenQuestionId).toBe(
-        game.questionIds.multipleChoice,
-      );
+      expect(playersView().phoneScreen).toEqual({
+        kind: 'block',
+        onScreenQuestionId: game.questionIds.multipleChoice,
+      });
     });
   });
 });

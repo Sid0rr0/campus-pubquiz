@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react';
 import type {
   ActiveShowdownView,
-  GameProgress,
+  PhoneScreen,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
 import {
@@ -11,12 +12,8 @@ import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
 interface GameStatusScreensProps {
-  progress: GameProgress;
-  isAnswerable: boolean;
+  phoneScreen: PhoneScreen;
   quizStructure: QuizStructureSummary;
-  roundTitle: string;
-  /** The round title on the big screen's reveal-intro or break round-intro card, from the players view. */
-  roundTitleCard?: string | null;
   joinCode: string;
   settings: RulesSettings;
   activeShowdown: ActiveShowdownView | null;
@@ -29,13 +26,31 @@ interface GameStatusScreensProps {
   ) => void;
 }
 
-/** The non-block-browser screens: leaderboard overlay, lobby, rules, round intro, and ended — whichever applies to the current status. Renders nothing when the block browser should be shown instead. */
+function LookAtTheScreen({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className="mt-16 flex flex-col items-center gap-2 text-center">
+      <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+        👀 Look at the screen
+      </p>
+      <h1 className={`font-display text-2xl ${className}`}>{children}</h1>
+    </div>
+  );
+}
+
+/**
+ * Draws every phone screen except the block browser (`block`, which the page
+ * draws itself). One case per kind; a new kind fails to compile until it has
+ * a drawing.
+ */
 export function GameStatusScreens({
-  progress,
-  isAnswerable,
+  phoneScreen,
   quizStructure,
-  roundTitle,
-  roundTitleCard,
   joinCode,
   settings,
   activeShowdown,
@@ -43,23 +58,15 @@ export function GameStatusScreens({
   myTeamId,
   onSubmitShowdownGuess,
 }: GameStatusScreensProps) {
-  const isShowdownParticipant =
-    activeShowdown !== null &&
-    myTeamId !== null &&
-    activeShowdown.participants.some(
-      (participant) => participant.teamId === myTeamId,
-    );
-  return (
-    <>
-      {progress.isLeaderboardVisible && !isAnswerable && (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-            👀 Look at the screen
-          </p>
-          <h1 className="font-display text-2xl text-magenta">Leaderboard</h1>
-        </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'lobby' && (
+  switch (phoneScreen.kind) {
+    case 'block':
+      return null;
+    case 'leaderboard':
+      return (
+        <LookAtTheScreen className="text-magenta">Leaderboard</LookAtTheScreen>
+      );
+    case 'lobby':
+      return (
         <div className="mt-16 flex flex-col items-center gap-3">
           <h1 className="text-center font-display text-2xl">
             Waiting for the quiz to start…
@@ -71,94 +78,57 @@ export function GameStatusScreens({
             Read the rules
           </a>
         </div>
-      )}
-      {!progress.isLeaderboardVisible && progress.status === 'rules' && (
+      );
+    case 'rules':
+      return (
         <div className="mt-6">
           <RulesContent quizStructure={quizStructure} settings={settings} />
         </div>
-      )}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'round_overview' && (
-          <div className="mt-16 flex flex-col items-center gap-2 text-center">
-            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-            <h1 className="font-display text-2xl text-magenta">Rounds</h1>
-          </div>
-        )}
-      {/* Only for a genuinely fresh round (nothing opened yet) - if Previous
-          stepped the display back into an already-open round's intro card,
-          isAnswerable is true and the block browser renders instead so
-          teams can keep answering underneath the card. */}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'round_intro' &&
-        !isAnswerable && (
-          <div className="mt-16 flex flex-col items-center gap-2 text-center">
-            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-            <h1 className="font-display text-2xl">{roundTitle}</h1>
-          </div>
-        )}
-      {/* Reveal crossing into a new round within the same block, or Previous
-          stepping back through break to a round's own title card — same
-          "look at the screen" treatment as round_intro, but the title comes
-          from the players view (roundTitleCard), which the server resolves
-          from the reveal index, since progress.roundIndex stays pinned to
-          the block's last round throughout break/reveal. */}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'reveal_intro' &&
-        roundTitleCard && (
-          <div className="mt-16 flex flex-col items-center gap-2 text-center">
-            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-            <h1 className="font-display text-2xl">{roundTitleCard}</h1>
-          </div>
-        )}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'break_round_intro' &&
-        roundTitleCard && (
-          <div className="mt-16 flex flex-col items-center gap-2 text-center">
-            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-            <h1 className="font-display text-2xl">{roundTitleCard}</h1>
-          </div>
-        )}
-      {!progress.isLeaderboardVisible &&
-        progress.status === 'ended' &&
-        (!activeShowdown ? (
-          <h1 className="mt-16 text-center font-display text-2xl">
-            Quiz complete!
-          </h1>
-        ) : showdownRevealStep > 0 ? (
-          <div className="mt-16 flex flex-col items-center gap-6 px-6 text-center">
-            <ShowdownRevealScreen
-              activeShowdown={activeShowdown}
-              step={showdownRevealStep}
-            />
-          </div>
-        ) : isShowdownParticipant && myTeamId !== null ? (
-          <ShowdownGuessForm
-            question={activeShowdown.question}
-            hasGuessed={
-              activeShowdown.participants.find(
-                (participant) => participant.teamId === myTeamId,
-              )?.hasGuessed ?? false
-            }
-            onSubmit={(value) =>
-              onSubmitShowdownGuess(activeShowdown.id, myTeamId, value)
-            }
+      );
+    case 'round_overview':
+      return <LookAtTheScreen className="text-magenta">Rounds</LookAtTheScreen>;
+    case 'round_title':
+      return <LookAtTheScreen>{phoneScreen.title}</LookAtTheScreen>;
+    case 'ended':
+      return (
+        <h1 className="mt-16 text-center font-display text-2xl">
+          Quiz complete!
+        </h1>
+      );
+    case 'showdown_reveal':
+      return activeShowdown ? (
+        <div className="mt-16 flex flex-col items-center gap-6 px-6 text-center">
+          <ShowdownRevealScreen
+            activeShowdown={activeShowdown}
+            step={showdownRevealStep}
           />
-        ) : (
-          <div className="mt-16 flex flex-col items-center gap-2 text-center">
-            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
-            </p>
-            <h1 className="font-display text-2xl">Tiebreaker in progress</h1>
-          </div>
-        ))}
-    </>
-  );
+        </div>
+      ) : null;
+    case 'showdown_guessing': {
+      // The players room is one broadcast for every team, so which of the
+      // two screens to draw comes from this phone's own team id.
+      const participant =
+        activeShowdown && myTeamId !== null
+          ? activeShowdown.participants.find(
+              (candidate) => candidate.teamId === myTeamId,
+            )
+          : undefined;
+      if (!activeShowdown || myTeamId === null || !participant) {
+        return <LookAtTheScreen>Tiebreaker in progress</LookAtTheScreen>;
+      }
+      return (
+        <ShowdownGuessForm
+          question={activeShowdown.question}
+          hasGuessed={participant.hasGuessed}
+          onSubmit={(value) =>
+            onSubmitShowdownGuess(activeShowdown.id, myTeamId, value)
+          }
+        />
+      );
+    }
+    default: {
+      const unhandled: never = phoneScreen;
+      return unhandled;
+    }
+  }
 }

@@ -189,7 +189,7 @@ Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`):
 the display view names the screen on air; the admin view adds what `/control`
 marks as on air plus server-decided Advance/Previous availability; the
-players view adds answerability and drops anything teams haven't been shown
+players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state), and drops anything teams haven't been shown
 yet (a kahoot question hidden behind the leaderboard is removed server-side,
 never filtered by the client). In particular it carries only the reveal walk so
 far: `revealQuestions` holds the questions before `revealIndex`, plus the one at

@@ -36,12 +36,6 @@ export const REVEALING_STATUSES: StatusGroup = new Set<GameStatus>([
   'reveal',
 ]);
 
-/** The phone is reviewing the block it just answered (its break and reveal screens). */
-export const BLOCK_REVIEW_STATUSES: StatusGroup = new Set<GameStatus>([
-  ...BREAK_STATUSES,
-  ...REVEALING_STATUSES,
-]);
-
 /** Every status where a block's questions exist for the session. */
 export const BLOCK_STARTED_STATUSES: StatusGroup = new Set<GameStatus>([
   ...ANSWERING_STATUSES,
@@ -66,10 +60,6 @@ export function isGradedStatus(status: GameStatus): boolean {
 
 export function isRevealingStatus(status: GameStatus): boolean {
   return REVEALING_STATUSES.has(status);
-}
-
-export function isBlockReviewStatus(status: GameStatus): boolean {
-  return BLOCK_REVIEW_STATUSES.has(status);
 }
 
 export function isBlockStartedStatus(status: GameStatus): boolean {

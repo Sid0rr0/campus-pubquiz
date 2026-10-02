@@ -38,14 +38,15 @@ export function playersView<T extends PlayersFixture>(
     status === 'round_intro'
       ? (snapshot.blockQuestions ?? []).length > 0
       : true;
+  const isAnswerable =
+    !isHiddenKahoot &&
+    (status === 'question_open' ||
+      status === 'locking' ||
+      status === 'round_intro') &&
+    hasOpenQuestions;
   return {
-    ...describePlayersScreen(snapshot),
-    isAnswerable:
-      !isHiddenKahoot &&
-      (status === 'question_open' ||
-        status === 'locking' ||
-        status === 'round_intro') &&
-      hasOpenQuestions,
+    ...describePlayersScreen({ ...snapshot, isAnswerable }),
+    isAnswerable,
     ...snapshot,
   };
 }

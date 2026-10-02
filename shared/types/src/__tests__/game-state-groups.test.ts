@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   ANSWERING_STATUSES,
-  BLOCK_REVIEW_STATUSES,
   BLOCK_STARTED_STATUSES,
   GRADED_STATUSES,
   BREAK_STATUSES,
   QUESTION_ON_AIR_STATUSES,
   REVEALING_STATUSES,
   isAnsweringStatus,
-  isBlockReviewStatus,
   isBlockStartedStatus,
   isGradedStatus,
   isBreakStatus,
@@ -23,7 +21,6 @@ interface Membership {
   break: boolean;
   graded: boolean;
   revealing: boolean;
-  blockReview: boolean;
   blockStarted: boolean;
 }
 
@@ -43,31 +40,26 @@ const MEMBERSHIP: Record<GameStatus, Membership> = {
   break_intro: m({
     break: true,
     graded: true,
-    blockReview: true,
     blockStarted: true,
   }),
   break: m({
     break: true,
     graded: true,
-    blockReview: true,
     blockStarted: true,
   }),
   break_round_intro: m({
     break: true,
     graded: true,
-    blockReview: true,
     blockStarted: true,
   }),
   reveal_intro: m({
     graded: true,
     revealing: true,
-    blockReview: true,
     blockStarted: true,
   }),
   reveal: m({
     graded: true,
     revealing: true,
-    blockReview: true,
     blockStarted: true,
   }),
   ended: m({ graded: true, blockStarted: true }),
@@ -80,7 +72,6 @@ function m(overrides: Partial<Membership> = {}): Membership {
     break: false,
     graded: false,
     revealing: false,
-    blockReview: false,
     blockStarted: false,
     ...overrides,
   };
@@ -92,7 +83,6 @@ const GROUPS = [
   ['break', BREAK_STATUSES, isBreakStatus],
   ['graded', GRADED_STATUSES, isGradedStatus],
   ['revealing', REVEALING_STATUSES, isRevealingStatus],
-  ['blockReview', BLOCK_REVIEW_STATUSES, isBlockReviewStatus],
   ['blockStarted', BLOCK_STARTED_STATUSES, isBlockStartedStatus],
 ] as const;
 

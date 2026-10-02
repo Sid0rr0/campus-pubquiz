@@ -7,7 +7,6 @@ import {
   DEFAULT_SESSION_SETTINGS,
   isShowingLastBreak,
   type GameStatus,
-  isBlockReviewStatus,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
@@ -220,16 +219,16 @@ function PlayPageContent() {
       minQuestionsPerTopic: 0,
       maxQuestionsPerTopic: 0,
     },
-    roundTitle = '',
     isCurrentRoundKahoot = false,
     closestGuessRevealStep = 0,
     settings = DEFAULT_SESSION_SETTINGS,
     activeShowdown = null,
     showdownRevealStep = 0,
     isAnswerable = false,
-    onScreenQuestionId = null,
-    roundTitleCard = null,
+    phoneScreen,
   } = snapshot;
+  const onScreenQuestionId =
+    phoneScreen.kind === 'block' ? phoneScreen.onScreenQuestionId : null;
   const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
@@ -275,13 +274,11 @@ function PlayPageContent() {
     progress.status === 'reveal' && selectedQuestion
       ? revealQuestions.find((question) => question.id === selectedQuestion.id)
       : undefined;
-  const isBreakOrReveal = isBlockReviewStatus(progress.status);
-  // The block browser (question picker + prompt) stays up through break/reveal
-  // too, so teams can review the block they just answered — unless the
-  // leaderboard overlay is toggled on, which takes over the screen instead.
+  // The block browser (question picker + prompt) is the `block` phone
+  // screen: open questions, and break/reveal so teams can review the block
+  // they just answered. It needs a question to show.
   const showBlockBrowser =
-    Boolean(selectedQuestion) &&
-    (isAnswerable || (!progress.isLeaderboardVisible && isBreakOrReveal));
+    phoneScreen.kind === 'block' && Boolean(selectedQuestion);
   const openedQuestions = buildOpenedQuestions(
     seenQuestions,
     myAnswers,
@@ -357,11 +354,8 @@ function PlayPageContent() {
       )}
       <div className="order-2 md:order-3">
         <GameStatusScreens
-          progress={progress}
-          isAnswerable={isAnswerable}
+          phoneScreen={phoneScreen}
           quizStructure={quizStructure}
-          roundTitle={roundTitle}
-          roundTitleCard={roundTitleCard}
           joinCode={snapshot.joinCode}
           settings={settings}
           activeShowdown={activeShowdown}

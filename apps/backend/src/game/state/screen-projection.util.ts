@@ -83,10 +83,11 @@ export function projectScreen(
       // The screen fields read the untrimmed block (the reveal_intro card
       // needs the upcoming question's round title); only what leaves the
       // server is trimmed.
+      const isAnswerable = isBlockAnswerable(session);
       const view = {
         ...snapshot,
-        ...describePlayersScreen(snapshot),
-        isAnswerable: isBlockAnswerable(session),
+        ...describePlayersScreen({ ...snapshot, isAnswerable }),
+        isAnswerable,
         revealQuestions: trimToRevealWalk(
           snapshot.revealQuestions,
           snapshot.progress,

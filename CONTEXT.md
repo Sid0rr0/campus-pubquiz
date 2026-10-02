@@ -46,6 +46,9 @@ Stepping back through a block's locked questions during its break, with answers 
 **Round title card**:
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
 
+**Phone screen**:
+The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries the question the big screen is revealing. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
+
 ## Game status
 
 **Status groups**:
@@ -66,7 +69,6 @@ lobby → rules → round_overview
 - **break** — is the block in its break? (break_intro, break, break_round_intro)
 - **graded** — is grading finished, so scores can be trusted and shown? (the break statuses, reveal_intro, reveal, ended)
 - **revealing** — are correct answers being shown? (reveal_intro, reveal)
-- **block review** — is the phone showing the break or reveal screen? (the break statuses plus revealing)
 - **block started** — do the current block's questions exist for teams yet? (answering plus graded)
 
 ## Moving through the quiz
@@ -80,7 +82,7 @@ Bringing a session's timers, deadlines and reveal counters into line with the po
 
 **Commit a move**:
 Carrying out one planned press from start to finish: plan it, grade what it implies, settle the session, save its progress. An admin press and both timer expiries go through it. The session only moves once its progress is saved, so a press that can't be saved is refused and nothing changes. Session creation and restart restore reach their starting point through the same module, without a save. The presenter preview is a dry-run commit: the same plan and Settle step, with no grading writes, no showdown resolve and nothing saved, so /remote's "next" line describes the session as the press would leave it.
-\_Avoid*: apply action
+\_Avoid\*: apply action
 
 **Grading refresh**:
 The one step every change to grades ends through: given the questions whose grades just changed, it works out which of them are ungraded and fetches fresh standings, and the session takes both in a single update. Today a live answer-key fix ends through it.

@@ -282,43 +282,100 @@ export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
   }
 }
 
-/** What a team's phone follows the big screen for during reveal and round title cards. */
+/**
+ * The screen a team's phone shows, named once by the server. The players
+ * room is one broadcast for every team, so which team a phone belongs to is
+ * not here: on `showdown_guessing` the phone picks the guess form or the
+ * "Tiebreaker in progress" message from its own team id.
+ */
+export type PhoneScreen =
+  | { kind: 'leaderboard' }
+  /** The block browser; carries the question the big screen is revealing (else null) for the phone to follow. */
+  | { kind: 'block'; onScreenQuestionId: number | null }
+  | { kind: 'lobby' }
+  | { kind: 'rules' }
+  | { kind: 'round_overview' }
+  | { kind: 'round_title'; title: string }
+  | { kind: 'ended' }
+  | { kind: 'showdown_guessing' }
+  | { kind: 'showdown_reveal' };
+
+/** What a team's phone is told about its screen. */
 export interface PlayersScreenFields {
-  /** The question the big screen is revealing (the phone shows the same one), else null. */
-  onScreenQuestionId: number | null;
-  /** The round title on the big screen's reveal-intro or break round-intro card, else null. */
-  roundTitleCard: string | null;
+  phoneScreen: PhoneScreen;
+}
+
+/** The core snapshot plus the one server-only fact the phone screen needs. */
+export interface PlayersScreenInput extends OnAirInput {
+  /** Whether the current block can be answered right now (false for a kahoot question hidden behind the board). */
+  isAnswerable: boolean;
+}
+
+function roundTitleOf(
+  questions:
+    | readonly Pick<BlockQuestionView, 'id' | 'roundTitle'>[]
+    | undefined,
+  questionId: number | null,
+): string | null {
+  return (
+    questions?.find((question) => question.id === questionId)?.roundTitle ??
+    null
+  );
 }
 
 /**
- * Like the admin indicators, read from the content the session is on rather
- * than from whether the leaderboard covers it.
+ * First match wins: the board over a block nobody can answer, then a block
+ * teams can answer or review, then the pre-game screens, title cards and the
+ * end. Past the leaderboard it reads the content the session is on, not
+ * whether the board covers it.
  */
-export function describePlayersScreen(input: OnAirInput): PlayersScreenFields {
+export function describePlayersScreen(
+  input: PlayersScreenInput,
+): PlayersScreenFields {
+  return { phoneScreen: getPhoneScreen(input) };
+}
+
+function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
+  if (input.progress.isLeaderboardVisible && !input.isAnswerable) {
+    return { kind: 'leaderboard' };
+  }
+  if (input.isAnswerable) return { kind: 'block', onScreenQuestionId: null };
+
   const { screen } = describeOnAirScreen({
     ...input,
     progress: { ...input.progress, isLeaderboardVisible: false },
   });
   switch (screen.kind) {
+    case 'lobby':
+    case 'rules':
+    case 'round_overview':
+      return { kind: screen.kind };
+    case 'round_title':
+      return { kind: 'round_title', title: input.roundTitle ?? '' };
     case 'reveal':
-      return { onScreenQuestionId: screen.questionId, roundTitleCard: null };
+      return { kind: 'block', onScreenQuestionId: screen.questionId };
     case 'reveal_intro':
+    case 'break_round_title': {
+      const title = roundTitleOf(
+        screen.kind === 'reveal_intro'
+          ? input.revealQuestions
+          : input.blockQuestions,
+        screen.questionId,
+      );
+      return title === null
+        ? { kind: 'block', onScreenQuestionId: null }
+        : { kind: 'round_title', title };
+    }
+    case 'ended':
+      return { kind: 'ended' };
+    case 'showdown':
       return {
-        onScreenQuestionId: null,
-        roundTitleCard:
-          input.revealQuestions?.find(
-            (question) => question.id === screen.questionId,
-          )?.roundTitle ?? null,
-      };
-    case 'break_round_title':
-      return {
-        onScreenQuestionId: null,
-        roundTitleCard:
-          input.blockQuestions?.find(
-            (question) => question.id === screen.questionId,
-          )?.roundTitle ?? null,
+        kind:
+          (input.showdownRevealStep ?? 0) > 0
+            ? 'showdown_reveal'
+            : 'showdown_guessing',
       };
     default:
-      return { onScreenQuestionId: null, roundTitleCard: null };
+      return { kind: 'block', onScreenQuestionId: null };
   }
 }
