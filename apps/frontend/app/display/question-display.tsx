@@ -26,6 +26,44 @@ function isAudioUrl(url: string): boolean {
 // data:/blob: payload that bloats or hangs the shared display. Exported so
 // callers (e.g. QuestionBrowser's "Look at the screen" hint) can detect
 // whether a question has display-worthy media without duplicating this check.
+interface MatchRevealRowProps {
+  isCorrect: boolean;
+  leftLabel: string;
+  left: string;
+  rightLabel: string;
+  right: string;
+}
+
+/** One matched pair on reveal. A fixed three-column grid keeps every arrow on the same vertical line regardless of text length. */
+function MatchRevealRow({
+  isCorrect,
+  leftLabel,
+  left,
+  rightLabel,
+  right,
+}: MatchRevealRowProps) {
+  const accentClass = isCorrect ? 'text-green' : 'text-magenta';
+  return (
+    <li
+      className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground ${
+        isCorrect ? 'border-green' : 'border-magenta'
+      }`}
+    >
+      <span className="flex items-baseline gap-3">
+        <span className={`font-display ${accentClass}`}>{leftLabel}</span>
+        <span>{left}</span>
+      </span>
+      <span aria-hidden="true" className={accentClass}>
+        {isCorrect ? '→' : '✗'}
+      </span>
+      <span className="flex items-baseline gap-3">
+        <span className={`font-display ${accentClass}`}>{rightLabel}</span>
+        <span>{right}</span>
+      </span>
+    </li>
+  );
+}
+
 export function isHttpUrl(url: string): boolean {
   return HTTP_URL_PATTERN.test(url);
 }
@@ -478,67 +516,41 @@ export function QuestionDisplay({
         </div>
       )}
       {isMatch && options && matchCorrectRights && !isPlayerRevealMode && (
-        <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
+        <ul className="flex w-full max-w-6xl flex-col gap-3 text-left">
           {options.map((left, index) => {
             const right = matchCorrectRights[index];
             const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
             return (
-              <li
+              <MatchRevealRow
                 key={index}
-                className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-display-xl font-bold text-foreground"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="font-display text-green">{index + 1}</span>
-                  <span>{left}</span>
-                </span>
-                <span aria-hidden="true" className="text-green">
-                  →
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className="font-display text-green">
-                    {getLowerOptionLetter(
-                      rightLetterIndex >= 0 ? rightLetterIndex : index,
-                    )}
-                  </span>
-                  <span>{right}</span>
-                </span>
-              </li>
+                isCorrect
+                leftLabel={String(index + 1)}
+                left={left}
+                rightLabel={getLowerOptionLetter(
+                  rightLetterIndex >= 0 ? rightLetterIndex : index,
+                )}
+                right={right}
+              />
             );
           })}
         </ul>
       )}
       {isMatch && options && playerMatchOrder && matchCorrectRights && (
-        <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
+        <ul className="flex w-full max-w-6xl flex-col gap-3 text-left">
           {options.map((left, index) => {
             const right = playerMatchOrder[index];
             const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
-            const isCorrect = right === matchCorrectRights[index];
-            const accentClass = isCorrect ? 'text-green' : 'text-magenta';
             return (
-              <li
+              <MatchRevealRow
                 key={index}
-                className={`flex items-center justify-between gap-3 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground ${
-                  isCorrect ? 'border-green' : 'border-magenta'
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <span className={`font-display ${accentClass}`}>
-                    {index + 1}
-                  </span>
-                  <span>{left}</span>
-                </span>
-                <span aria-hidden="true" className={accentClass}>
-                  {isCorrect ? '→' : '✗'}
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className={`font-display ${accentClass}`}>
-                    {getLowerOptionLetter(
-                      rightLetterIndex >= 0 ? rightLetterIndex : index,
-                    )}
-                  </span>
-                  <span>{right}</span>
-                </span>
-              </li>
+                isCorrect={right === matchCorrectRights[index]}
+                leftLabel={String(index + 1)}
+                left={left}
+                rightLabel={getLowerOptionLetter(
+                  rightLetterIndex >= 0 ? rightLetterIndex : index,
+                )}
+                right={right}
+              />
             );
           })}
         </ul>
