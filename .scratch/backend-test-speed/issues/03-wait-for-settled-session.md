@@ -10,11 +10,20 @@ Parent spec: `.scratch/backend-test-speed/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, next to the existing session write queue tests: the idle wait resolves immediately when nothing is queued; waits for a running write; waits for a write queued behind it; still resolves when a queued write throws; doesn't wait for another join code's writes.
-- [ ] `settled()` on the real-store harness, documented in the harness next to `holdNextCall`.
-- [ ] No fixed-duration sleep is left in the four specs named above. Each race test still fails against code without the session write (check one by temporarily bypassing the queue, then restore it).
-- [ ] The session write spec takes under 15s on its own.
-- [ ] The four specs pass 20 runs in a row (`--testPathPattern` loop) with no failures.
-- [ ] Production session write behaviour is unchanged. The existing session write and live session specs pass unchanged.
+- [x] Written first, next to the existing session write queue tests: the idle wait resolves immediately when nothing is queued; waits for a running write; waits for a write queued behind it; still resolves when a queued write throws; doesn't wait for another join code's writes.
+- [x] `settled()` on the real-store harness, documented in the harness next to `holdNextCall`.
+- [x] No fixed-duration sleep is left in the four specs named above. Each race test still fails against code without the session write (check one by temporarily bypassing the queue, then restore it).
+- [x] The session write spec takes under 15s on its own.
+- [x] The four specs pass 20 runs in a row (`--testPathPattern` loop) with no failures.
+- [x] Production session write behaviour is unchanged. The existing session write and live session specs pass unchanged.
+
+## Comments
+
+- Added `SessionWriteQueue.idle(joinCode)`, with its own spec (`session-write-queue.spec.ts`, 6 tests: the five in the first criterion plus a write queued by a running write). `GameStateService.whenSessionWritesIdle` exposes it to the harness; `settled()` on the game handle awaits it, then one macrotask.
+- Most `settle()` calls in the session write spec were not waits for a write to finish: they sat between starting the second event and releasing the held call, giving it time to get in. `settled()` can't do that (it waits for the held call, so it would deadlock). The harness also gets `nextWriteWaiting()`, called before the second event: it resolves once that event's write is waiting behind the held one, or has finished if the queue let it run. `settled()` replaced the waits after release.
+- Bypassing the queue (`run` calling the task directly) failed 21 of the 29 session write tests; the other 8 aren't race tests. Queue restored afterwards.
+- state-transitions (kahoot answer delay) and quiz.service (`updatedAt` bump) now move the clock with `freezeClockAt` / `advanceClockBy` instead of sleeping. The room scoping spec's "clears every armed lock timer on module destroy" test counts the gateway's armed lock timers (a private map, read directly) instead of waiting out a real grace period. Ticket 04 can swap that for the scheduler's armed-state call.
+- Session write spec: about 6s alone (92s before). The four specs plus the queue spec passed 20 runs in a row. Full backend suite: 1200 tests, 129 suites, 39s.
+- Commit: see git history for this ticket's commit.

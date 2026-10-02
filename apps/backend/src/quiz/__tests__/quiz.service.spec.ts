@@ -11,7 +11,15 @@ import {
   QuizNotFoundError,
   QuizService,
 } from '@/quiz/quiz.service';
+import {
+  advanceClockBy,
+  freezeClockAt,
+  restoreClock,
+} from '@/game/__tests__/real-store-test-utils';
 import { useTestDatabase } from '@/test-db/test-database';
+
+const FROZEN_NOW = '2024-01-01T00:00:00.000Z';
+const CLOCK_STEP_MS = 1_000;
 
 describe('QuizService (Postgres integration)', () => {
   const db = useTestDatabase();
@@ -25,6 +33,10 @@ describe('QuizService (Postgres integration)', () => {
       em.getRepository<Round, RoundRepository>(Round),
       em.getRepository<Question, QuestionRepository>(Question),
     );
+  });
+
+  afterEach(() => {
+    restoreClock();
   });
 
   async function insertQuiz(title: string): Promise<Quiz> {
@@ -367,10 +379,11 @@ describe('QuizService (Postgres integration)', () => {
     });
 
     it('bumps updatedAt when only a question changes, even if the title is unchanged', async () => {
+      freezeClockAt(FROZEN_NOW);
       const created = await quizService.create('Trivia Night', [VALID_ROUND]);
       const quizBefore = await em.findOneOrFail(Quiz, { id: created.quizId });
       const updatedAtBefore = quizBefore.updatedAt.getTime();
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      advanceClockBy(CLOCK_STEP_MS);
 
       await quizService.update(created.quizId, 'Trivia Night', [
         {

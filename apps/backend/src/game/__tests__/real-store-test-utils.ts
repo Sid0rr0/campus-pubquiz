@@ -39,6 +39,7 @@ import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
+import type { SessionWriteQueue } from '@/game/state/session-write-queue';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 import {
@@ -200,6 +201,25 @@ export interface RealStoreGateway extends PlayableQuiz {
    * close a session, update settings) — game events go through the gateway.
    */
   gameState: GameStateService;
+  /**
+   * Resolves once every session write in flight for the seeded session has
+   * finished (stored, refused or thrown) and the broadcasts sent at the end
+   * of a write have been recorded. Use it instead of sleeping before
+   * asserting on what a room was sent; to control the order of two writes,
+   * pair it with `holdNextCall` (below) and await it after releasing.
+   */
+  settled: () => Promise<void>;
+  /**
+   * Call before sending the event under test: the returned promise resolves
+   * once that event's session write is either waiting behind a write already
+   * in flight (e.g. one held with `holdNextCall`) or has finished. Await it
+   * before releasing the held call, in place of sleeping to let the second
+   * event "get in". It pairs with a write already held in flight: if the
+   * event is rejected before it queues a write, or finds the queue idle and
+   * runs into the held call itself, the promise never resolves. Each call
+   * covers one write, in the order writes reach the queue (any join code).
+   */
+  nextWriteWaiting: () => Promise<void>;
   /** Sends an admin action through the gateway (connecting an admin on first use) and returns the snapshot the admin room received for it. Throws whatever the gateway rejects with. */
   act: (action: GameAction) => Promise<StateSnapshotPayload>;
   /** The snapshot a freshly connecting client is handed — what a reconnect sees — for the seeded session, or another by `joinCode`. */
@@ -467,6 +487,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.showdownService,
     );
     await gameState.onModuleInit();
+    const nextWriteWaiting = watchNextWrite(gameState);
     const sessionService = createFakeSessionService();
     const gateway = new GameGateway(
       gameState,
@@ -602,6 +623,12 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         server.sockets.sockets.forEach((socket) => socket.emit.mockClear());
       },
       inRequestContext: (work) => RequestContext.create(db.orm.em, work),
+      nextWriteWaiting,
+      settled: async () => {
+        await gameState.whenSessionWritesIdle(quiz.joinCode);
+        // A macrotask turn: every microtask queued by the last write has run.
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      },
       connectAdmin,
       connectPlayer,
       joinTeam,
@@ -666,6 +693,47 @@ export function advanceClockBy(milliseconds: number): void {
 
 export function restoreClock(): void {
   jest.useRealTimers();
+}
+
+type WriteWaiter = (outcome?: Promise<void>) => void;
+
+// Wraps the game's session write queue so a test can learn when the next
+// write handed to it is waiting its turn (one waiter per write, in order).
+// The queue's chain is microtasks only, so one macrotask after the hand-over a
+// write that hasn't started is blocked behind an earlier one; a write that has
+// started runs to the end.
+function watchNextWrite(gameState: GameStateService): () => Promise<void> {
+  type Run = (
+    joinCode: string,
+    task: () => Promise<unknown>,
+  ) => Promise<unknown>;
+  const { sessionWrites: queue } = gameState as unknown as {
+    sessionWrites: SessionWriteQueue;
+  };
+  const target = queue as unknown as { run: Run };
+  const originalRun = target.run;
+  const run: Run = (joinCode, task) =>
+    Reflect.apply(originalRun, queue, [joinCode, task]);
+  const waiters: WriteWaiter[] = [];
+  target.run = (joinCode, task) => {
+    const watching = waiters.shift();
+    if (!watching) return run(joinCode, task);
+    let hasStarted = false;
+    const result = run(joinCode, () => {
+      hasStarted = true;
+      return task();
+    });
+    const finished = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    setImmediate(() => watching(hasStarted ? finished : undefined));
+    return result;
+  };
+  return () =>
+    new Promise<void>((resolve) => {
+      waiters.push(resolve as WriteWaiter);
+    });
 }
 
 export interface HeldCall {

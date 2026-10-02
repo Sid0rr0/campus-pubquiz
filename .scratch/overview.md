@@ -33,7 +33,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                   | Blocked by |
 | --- | ------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| 03  | [Gateway specs wait for a settled session instead of sleeping](backend-test-speed/issues/03-wait-for-settled-session.md) | —          |
 | 04  | [Gateway specs fire phase timers on demand](backend-test-speed/issues/04-fire-phase-timers-on-demand.md)                 | 03         |
 | 05  | [Prove the backend suite is fast and never fails by chance](backend-test-speed/issues/05-prove-fast-reliable-suite.md)   | 02, 04     |
 
@@ -41,6 +40,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| backend-test-speed          | 03  | [Gateway specs wait for a settled session instead of sleeping](backend-test-speed/issues/03-wait-for-settled-session.md)                                               | —         |
 | backend-test-speed          | 02  | [Every remaining Postgres spec uses the shared test database](backend-test-speed/issues/02-remaining-specs-on-shared-database.md)                                      | —         |
 | backend-test-speed          | 01  | [One Postgres container per test run, with the real-store gateway harness on it](backend-test-speed/issues/01-shared-test-database.md)                                 | —         |
 | session-write               | 08  | [A press whose standings read fails still leaves memory matching the database](session-write/issues/08-press-survives-failed-standings-read.md)                        | —         |

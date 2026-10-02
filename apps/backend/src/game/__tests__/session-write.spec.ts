@@ -56,27 +56,14 @@ describe('GameGateway — session write: bonus changes', () => {
     });
   }
 
-  // Gives the second award time to be stored and (on code without a session
-  // write) have its own standings read finish, so it is the older read that
-  // lands last.
-  async function secondAwardStored(): Promise<void> {
-    for (let attempt = 0; attempt < 50; attempt++) {
-      const awards = await game.inRequestContext(() =>
-        game.bonusService.listForTeamAdmin(game.gameSessionId, teamId),
-      );
-      if (awards.length === 2) break;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
   it('ends with both awards on the leaderboard when the first award’s standings read finishes last', async () => {
     const held = holdNextCall(game.standingsService, 'leaderboard');
 
     const first = award(1);
     await held.started;
+    const waiting = game.nextWriteWaiting();
     const second = award(2);
-    await secondAwardStored();
+    await waiting;
     held.release();
     await Promise.all([first, second]);
 
@@ -194,8 +181,6 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     return answers.map((answer) => answer.answerId);
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
-
   function totalPoints(snapshot: StateSnapshotPayload): number {
     return snapshot.leaderboard.reduce(
       (sum, entry) => sum + entry.totalPoints,
@@ -213,8 +198,9 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const held = holdNextCall(game.standingsService, 'leaderboard');
     const first = grade(firstAnswer, 1);
     await held.started;
+    const waiting = game.nextWriteWaiting();
     const second = grade(secondAnswer, 2);
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([first, second]);
 
@@ -227,8 +213,9 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const held = holdNextCall(game.answerService, 'listForQuestion');
     const first = submit(teamA, questionId, 'Paris');
     await held.started;
+    const waiting = game.nextWriteWaiting();
     const second = submit(teamB, questionId, 'Paris');
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([first, second]);
 
@@ -247,8 +234,9 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     const held = holdNextCall(game.answerService, 'listUngradedQuestionIds');
     const first = grade(firstAnswer, 1);
     await held.started;
+    const waiting = game.nextWriteWaiting();
     const second = grade(secondAnswer, 0);
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([first, second]);
 
@@ -299,15 +287,14 @@ describe('GameGateway — session write: roster changes', () => {
     return { joined, socket };
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
-
   it('ends with the joined team connected and the kicked team gone when the kick’s standings read finishes last', async () => {
     const held = holdNextCall(game.standingsService, 'leaderboard');
     const kicking = kick(kicked.teamId);
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const { joined } = await startJoin('Newcomers');
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([kicking, joined]);
 
@@ -337,8 +324,9 @@ describe('GameGateway — session write: roster changes', () => {
     });
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const { joined } = await startJoin('Latecomers');
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([awarding, joined]);
 
@@ -404,20 +392,19 @@ describe('GameGateway — session write: presses', () => {
     });
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
-
   it('keeps an answer submitted while an Advance waits on its progress save', async () => {
     const questionId = game.questionIds.multipleChoice;
     const held = holdNextCall(game.progressRepository, 'save');
     const pressing = press();
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const submitting = game.gateway.handleSubmitAnswer(asSocket(team.socket), {
       questionId,
       teamId: team.teamId,
       value: 'Paris',
     });
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([pressing, submitting]);
     // The press moved on to the next question; step back to read this one's marker.
@@ -439,11 +426,12 @@ describe('GameGateway — session write: presses', () => {
     await held.started;
 
     const socket = await game.connectPlayer();
+    const waiting = game.nextWriteWaiting();
     const joining = game.gateway.handleJoinPlayers(asSocket(socket), {
       teamName: 'Latecomers',
       joinCode: game.joinCode,
     });
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([pressing, joining]);
 
@@ -462,10 +450,11 @@ describe('GameGateway — session write: presses', () => {
     const pressing = press();
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const kicking = game.gateway.handleKickTeam(asSocket(admin), {
       teamId: team.teamId,
     });
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([pressing, kicking]);
 
@@ -572,15 +561,16 @@ describe('GameGateway — session write: a timer expiry', () => {
     const held = holdNextCall(game.progressRepository, 'save');
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
       teamId,
       category: 'shot',
       points: 2,
     });
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waiting;
     held.release();
     await awarding;
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await game.settled();
 
     const snapshot = await game.snapshot();
     expect(snapshot.progress.status).toBe('break_intro');
@@ -634,8 +624,6 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     });
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
-
   it('keeps a grade, and the cleared ungraded marker, made while a quiz edit waits on its reload', async () => {
     await game.act('ADVANCE'); // -> free_text
     const questionId = game.questionIds.freeText;
@@ -648,11 +636,12 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     const held = holdNextCall(game.seedService, 'loadGame');
     const editing = editQuiz();
     await held.started;
+    const waiting = game.nextWriteWaiting();
     const grading = game.gateway.handleGradeAnswer(asSocket(admin), {
       answerId: answer.answerId,
       pointsAwarded: 1,
     });
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([editing, grading]);
 
@@ -671,8 +660,9 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     const held = holdNextCall(game.seedService, 'loadGame');
     const editing = editQuiz();
     await held.started;
+    const waiting = game.nextWriteWaiting();
     const submitting = submit(questionId, 'Paris');
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([editing, submitting]);
 
@@ -694,8 +684,9 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
       await em.flush();
     });
 
+    const waiting = game.nextWriteWaiting();
     const editing = editQuiz();
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([pressing, editing]);
 
@@ -737,8 +728,6 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     return snapshots[snapshots.length - 1];
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
-
   function isTeamConnected(
     snapshot: StateSnapshotPayload,
   ): boolean | undefined {
@@ -755,8 +744,9 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     });
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const disconnecting = game.gateway.handleDisconnect(asSocket(team.socket));
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([awarding, disconnecting]);
 
@@ -771,8 +761,9 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     });
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const disconnecting = game.gateway.handleDisconnect(asSocket(team.socket));
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([pressing, disconnecting]);
 
@@ -788,13 +779,17 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     await held.started;
 
     const breakEndsAt = Date.now() + 600_000;
+    const waiting = Promise.all([
+      game.nextWriteWaiting(),
+      game.nextWriteWaiting(),
+    ]);
     const settingBreak = game.gateway.handleSetBreakEndTime(asSocket(admin), {
       breakEndsAt,
     });
     const scaling = game.gateway.handleSetDisplayTextScale(asSocket(admin), {
       displayTextScale: 1.5,
     });
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([pressing, settingBreak, scaling]);
 
@@ -870,8 +865,9 @@ describe('GameGateway — session write: showdown', () => {
     });
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const guessing = guess();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waiting;
     held.release();
     await Promise.all([awarding, guessing]);
 
@@ -885,8 +881,9 @@ describe('GameGateway — session write: showdown', () => {
     });
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const guessing = guess();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waiting;
     held.release();
     await Promise.all([pressing, guessing]);
 
@@ -938,8 +935,6 @@ describe('GameGateway — session write: lobby settings', () => {
     });
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
-
   function expectSettingsAndTeam(snapshot: StateSnapshotPayload): void {
     expect(
       game.gameState.getSessionSettings(game.joinCode).lockGraceSeconds,
@@ -955,8 +950,9 @@ describe('GameGateway — session write: lobby settings', () => {
     const updating = updateSettings();
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const joining = startJoin('Latecomers');
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([updating, joining]);
 
@@ -968,8 +964,9 @@ describe('GameGateway — session write: lobby settings', () => {
     const joining = startJoin('Latecomers');
     await held.started;
 
+    const waiting = game.nextWriteWaiting();
     const updating = updateSettings();
-    await settle();
+    await waiting;
     held.release();
     await Promise.all([updating, joining]);
 
@@ -1017,11 +1014,15 @@ describe('GameGateway — session write: closing a session', () => {
     const inProgress = bonusChanged();
     await held.started;
 
+    const waiting = Promise.all([
+      game.nextWriteWaiting(),
+      game.nextWriteWaiting(),
+    ]);
     const closing = game.gameState.closeSession(game.joinCode);
     const behindClose = bonusChanged();
     const behindCloseOutcome =
       expect(behindClose).rejects.toThrow(/Unknown game session/);
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waiting;
     held.release();
 
     await expect(inProgress).resolves.toBeDefined();

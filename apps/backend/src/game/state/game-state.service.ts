@@ -142,6 +142,14 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
+   * Resolves once every session write queued for `joinCode` has finished.
+   * Only observes the queue; lets a test assert after in-flight writes land.
+   */
+  whenSessionWritesIdle(joinCode: string): Promise<void> {
+    return this.sessionWrites.idle(joinCode);
+  }
+
+  /**
    * Evicts a session's in-memory state once it's done — the eviction policy
    * decided for phase 4: explicit admin action rather than an idle-timeout
    * sweep, since it's deterministic and needs no background timer. Only

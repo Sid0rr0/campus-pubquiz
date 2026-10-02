@@ -2,6 +2,9 @@ import { type GameAction } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
+  advanceClockBy,
+  freezeClockAt,
+  restoreClock,
   setupRealStoreGatewayTest,
   type QuizRoundSpec,
   type RealStoreGateway,
@@ -9,10 +12,6 @@ import {
 
 const KAHOOT_TIMER_SECONDS = 3;
 const KAHOOT_ANSWER_DELAY_MS = 1_500;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 describe('GameGateway — state transitions', () => {
   const harness = setupRealStoreGatewayTest();
@@ -344,6 +343,14 @@ describe('GameGateway — state transitions', () => {
         teamNames: ['Speedy'],
         settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
       });
+      // Only Date is frozen (timers stay real): how long a question has been
+      // open is whatever the test advances the clock by. Frozen at the real
+      // now, after the team joined, so the join sees a clock that makes sense.
+      freezeClockAt(new Date().toISOString());
+    });
+
+    afterEach(() => {
+      restoreClock();
     });
 
     it('locks, speed-scores, and reveals each question one at a time, skipping break/reveal_intro entirely', async () => {
@@ -353,7 +360,7 @@ describe('GameGateway — state transitions', () => {
 
       // Answering halfway through the question timer is worth less than the
       // full 10 points once the speed scaling is applied at lock time.
-      await delay(KAHOOT_ANSWER_DELAY_MS);
+      advanceClockBy(KAHOOT_ANSWER_DELAY_MS);
       await kahoot.gateway.handleSubmitAnswer(asSocket(team), {
         questionId: firstId,
         teamId,
@@ -442,7 +449,7 @@ describe('GameGateway — state transitions', () => {
     it('does not re-score a question if PREVIOUS reopens locking and ADVANCE re-reveals it', async () => {
       const [{ socket: team, teamId }] = kahoot.teams;
       await actAll(KAHOOT_TO_FIRST_QUESTION, kahoot);
-      await delay(KAHOOT_ANSWER_DELAY_MS);
+      advanceClockBy(KAHOOT_ANSWER_DELAY_MS);
       await kahoot.gateway.handleSubmitAnswer(asSocket(team), {
         questionId: kahoot.rounds[0].questionIds[0],
         teamId,

@@ -21,4 +21,18 @@ export class SessionWriteQueue {
     });
     return result;
   }
+
+  /**
+   * Resolves once every write queued for `joinCode` — and any write those
+   * writes queue — has finished, whether it stored, was refused or threw.
+   * Read-only: it only watches the tail and never changes the order.
+   */
+  async idle(joinCode: string): Promise<void> {
+    for (let tail = this.tails.get(joinCode); tail; ) {
+      await tail;
+      // The tail clears its own entry first; a different one is a newer write.
+      const next = this.tails.get(joinCode);
+      tail = next === tail ? undefined : next;
+    }
+  }
 }

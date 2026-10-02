@@ -10,11 +10,14 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const LOCK_GRACE_SECONDS = 1;
-const PAST_LOCK_GRACE_MS = 1_800;
+// Long enough that no armed timer can fire while the test runs.
+const LOCK_GRACE_SECONDS = 30;
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+// Reads the gateway's armed lock timers directly (one per session), so the
+// test checks they were cleared instead of waiting out the grace period to see
+// whether one fires.
+function armedLockTimerCount(gateway: RealStoreGateway['gateway']): number {
+  return gateway['lockTimers']['timers'].size;
 }
 
 describe('GameGateway — session room scoping', () => {
@@ -146,13 +149,10 @@ describe('GameGateway — session room scoping', () => {
       }
       expect((await armed.snapshot(joinCode)).progress.status).toBe('locking');
     }
+    expect(armedLockTimerCount(armed.gateway)).toBe(2);
 
     armed.gateway.onModuleDestroy();
-    await delay(PAST_LOCK_GRACE_MS);
 
-    // Had either timer survived, the 1s grace would have advanced its session.
-    for (const joinCode of [armed.joinCode, joinCodeB]) {
-      expect((await armed.snapshot(joinCode)).progress.status).toBe('locking');
-    }
+    expect(armedLockTimerCount(armed.gateway)).toBe(0);
   });
 });
