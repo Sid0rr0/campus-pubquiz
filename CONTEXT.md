@@ -49,6 +49,19 @@ A screen showing a round's name before its content: the round intro before its q
 **Phone screen**:
 The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries the question the big screen is revealing. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
 
+## Feedback
+
+**Feedback**:
+What a team tells the quiz master about a session from its phone: round ratings, an "anything else" comment and topic suggestions. Always optional, and given by the team, not by individual players. Staff never see which team gave it.
+_Avoid_: survey, review
+
+**Round rating**:
+A team's 1–5 star score for one round. Asked in the break for the rounds of the block that just locked, and again on the final feedback form, where an earlier rating can be changed. A kahoot round has no break of its own, so it is rated only on the final form.
+_Avoid_: round score (that's points)
+
+**Topic suggestion**:
+One topic a team would like as a round in a future session, entered as its own short line so suggestions from different teams can be counted together.
+
 ## Game status
 
 **Status groups**:

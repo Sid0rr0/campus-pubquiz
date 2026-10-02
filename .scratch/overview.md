@@ -24,6 +24,18 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 | 07  | [Import reports a quiz change through quizEdited](live-session-events/issues/07-import-reports-quiz-change.md)                                             | —                      |
 | 08  | [The getters go](live-session-events/issues/08-the-getters-go.md)                                                                                          | 02, 03, 04, 05, 06, 07 |
 
+### feedback ([spec](feedback/spec.md))
+
+| #   | Ticket                                                                                                      | Blocked by |
+| --- | ----------------------------------------------------------------------------------------------------------- | ---------- |
+| 01  | [Rate the rounds in the break](feedback/issues/01-rate-the-rounds-in-the-break.md)                          | —          |
+| 02  | [Rate every round on the final form](feedback/issues/02-rate-every-round-on-the-final-form.md)              | 01         |
+| 03  | ["Anything else" and topic suggestions](feedback/issues/03-anything-else-and-topic-suggestions.md)          | 02         |
+| 04  | ["Collect feedback" session setting](feedback/issues/04-collect-feedback-session-setting.md)                | 01, 03     |
+| 05  | [Big-screen feedback prompts](feedback/issues/05-big-screen-feedback-prompts.md)                            | 04         |
+| 06  | [Round ratings on the session stats page](feedback/issues/06-round-ratings-on-session-stats.md)             | 01         |
+| 07  | [Comments and topics on the session stats page](feedback/issues/07-comments-and-topics-on-session-stats.md) | 03, 04, 06 |
+
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
