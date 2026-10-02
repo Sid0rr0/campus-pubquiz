@@ -2,6 +2,33 @@
 
 All features under `.scratch/`. A ticket is unblocked once every ticket in its "Blocked by" column is under **Done** (numbers refer to tickets in the same feature unless a feature is named). Each feature has a `spec.md` and an `issues/` folder.
 
+## Not implemented
+
+### session-write ([spec](session-write/spec.md))
+
+| #   | Ticket                                                                                                                                                  | Blocked by         |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| 01  | [Bonus changes go through one session write that ends with fresh standings](session-write/issues/01-bonus-changes-through-session-write.md)             | —                  |
+| 02  | [Answers recorded and graded go through the session write](session-write/issues/02-answers-recorded-and-graded-through-session-write.md)                | 01                 |
+| 03  | [Team joined, kicked or left goes through the session write](session-write/issues/03-roster-changes-through-session-write.md)                           | 01                 |
+| 04  | [A press no longer overwrites changes made while it runs](session-write/issues/04-press-keeps-changes-made-while-it-runs.md)                            | 02, 03             |
+| 05  | [A quiz edit and a re-import go through the session write](session-write/issues/05-quiz-edit-and-reimport-through-session-write.md)                     | 02                 |
+| 06  | [The remaining events go through the session write, declared as not touching scores](session-write/issues/06-remaining-events-through-session-write.md) | 01                 |
+| 07  | [Contract: standings only from the session write; delete the old write paths](session-write/issues/07-contract-delete-old-write-paths.md)               | 02, 03, 04, 05, 06 |
+
+### live-session-events ([spec](live-session-events/spec.md))
+
+| #   | Ticket                                                                                                                                                     | Blocked by             |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 01  | [The Session outcome carries replies, resolved team syncs and sockets to close](live-session-events/issues/01-outcome-carries-replies-syncs-and-closes.md) | —                      |
+| 02  | [Submit answer is one module event](live-session-events/issues/02-submit-answer-is-one-module-event.md)                                                    | 01                     |
+| 03  | [One "accepting guesses" rule for the showdown](live-session-events/issues/03-one-accepting-guesses-rule.md)                                               | 01                     |
+| 04  | [Leave and kick are module events](live-session-events/issues/04-leave-and-kick-are-module-events.md)                                                      | 01                     |
+| 05  | [Join is a module event](live-session-events/issues/05-join-is-a-module-event.md)                                                                          | 01                     |
+| 06  | [Grade answer and award bonus are module events](live-session-events/issues/06-grade-and-bonus-are-module-events.md)                                       | 01                     |
+| 07  | [Import reports a quiz change through quizEdited](live-session-events/issues/07-import-reports-quiz-change.md)                                             | —                      |
+| 08  | [The getters go](live-session-events/issues/08-the-getters-go.md)                                                                                          | 02, 03, 04, 05, 06, 07 |
+
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
