@@ -47,6 +47,7 @@ import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
 import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
 import { leaveSessionAsTeam } from '@/game/socket/handlers/leave-session.handler';
 import { rateRoundAsTeam } from '@/game/socket/handlers/rate-round.handler';
+import { sendFeedbackAsTeam } from '@/game/socket/handlers/send-feedback.handler';
 import { submitShowdownGuess } from '@/game/socket/handlers/submit-showdown-guess.handler';
 import { submitTeamAnswer } from '@/game/socket/handlers/submit-answer.handler';
 import {
@@ -219,6 +220,20 @@ export class GameGateway
       rawPayload,
       client,
       (context) => rateRoundAsTeam(this.services, context),
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.sendFeedback.event)
+  @CreateRequestContext()
+  async handleSendFeedback(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.sendFeedback,
+      rawPayload,
+      client,
+      (context) => sendFeedbackAsTeam(this.services, context),
     );
   }
 

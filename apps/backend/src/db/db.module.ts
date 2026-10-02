@@ -8,6 +8,7 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
+import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { Session } from '@/db/entities/session.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
@@ -29,6 +30,7 @@ import config from '@/mikro-orm.config';
       Answer,
       BonusAward,
       RoundRating,
+      SessionFeedback,
       User,
       Session,
       ShowdownRound,

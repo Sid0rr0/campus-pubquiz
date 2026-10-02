@@ -68,6 +68,8 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     myAnswerGrades: {},
     myBonusAwards: [],
     myRoundRatings: {},
+    myFeedback: { comment: '', topics: [] },
+    sendFeedback: vi.fn().mockResolvedValue({ success: true }),
     roundRatingsEpoch: 0,
     rateRound: vi.fn().mockResolvedValue({ success: true }),
     seenQuestions: {},

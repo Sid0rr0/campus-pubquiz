@@ -63,6 +63,11 @@ const SENDERS: Record<keyof typeof D, EventSender> = {
       gateway.handleRateRound(asSocket(socket), payload),
     payload: () => ({ roundId: 1, stars: 3 }),
   },
+  sendFeedback: {
+    send: (gateway, socket, payload) =>
+      gateway.handleSendFeedback(asSocket(socket), payload),
+    payload: () => ({ comment: 'Great night', topics: ['Geography'] }),
+  },
   gradeAnswer: {
     send: (gateway, socket, payload) =>
       gateway.handleGradeAnswer(asSocket(socket), payload),

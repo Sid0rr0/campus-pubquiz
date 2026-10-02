@@ -358,6 +358,12 @@ export class GameStateService implements OnModuleInit {
     return feedback?.rounds.some((round) => round.id === roundId) ?? false;
   }
 
+  /** Whether the final feedback form is open right now — the same field `isRoundOpenForRating` reads. */
+  isFinalFormOpen(joinCode: string): boolean {
+    const feedback = getFeedbackField(this.sessionStore.get(joinCode));
+    return feedback?.kind === 'final_form';
+  }
+
   /** The socket currently connected for `teamId`, if any. */
   getConnectedSocketId(joinCode: string, teamId: number): string | undefined {
     return this.sessionStore.get(joinCode).connectedTeamSockets[teamId];

@@ -39,6 +39,7 @@ export const SOCKET_EVENTS = {
   CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
   SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
   RATE_ROUND: 'game:rate_round',
+  SEND_FEEDBACK: 'game:send_feedback',
 } as const;
 
 export const SOCKET_ROOMS = {
@@ -387,6 +388,25 @@ export interface RoundRatingView {
   stars: number;
 }
 
+/** The longest "Anything else?" comment a team may send. */
+export const MAX_FEEDBACK_COMMENT_LENGTH = 1000;
+/** How many topic suggestion lines a team may send. */
+export const MAX_FEEDBACK_TOPICS = 10;
+/** The longest single topic suggestion a team may send. */
+export const MAX_FEEDBACK_TOPIC_LENGTH = 60;
+
+/** A team's own comment and topic suggestions: what the final form is restored from on join. */
+export interface TeamFeedbackView {
+  comment: string;
+  topics: string[];
+}
+
+/** A team sending its comment and topic suggestions from the final form; the ack says whether they were saved. Replaces whatever the team sent before. */
+export interface SendFeedbackPayload {
+  comment: string;
+  topics: string[];
+}
+
 /** A team rating one round of the break card; the ack says whether it was saved. */
 export interface RateRoundPayload {
   roundId: number;
@@ -457,6 +477,8 @@ export interface JoinAcceptedPayload {
   bonusAwards: TeamBonusAwardView[];
   /** The team's own saved round ratings this session, so a reconnecting phone shows its stars again. */
   roundRatings: RoundRatingView[];
+  /** The team's own saved comment and topic suggestions this session (empty when it sent none), so a reconnecting phone shows its final form again. */
+  feedback: TeamFeedbackView;
 }
 
 export interface AnswerView {

@@ -33,6 +33,8 @@ import {
 } from '@/app/lib/player-settings-storage';
 import { usePublishPlayerMenu } from '@/app/lib/player-menu-context';
 
+const NO_FEEDBACK = { comment: '', topics: [] };
+
 function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,6 +63,8 @@ function PlayPageContent() {
     myRoundRatings = {},
     roundRatingsEpoch = 0,
     rateRound,
+    myFeedback = NO_FEEDBACK,
+    sendFeedback,
     seenQuestions = {},
     handleJoin,
     handleLogOut,
@@ -382,10 +386,12 @@ function PlayPageContent() {
         />
         {feedback?.kind === 'final_form' && (
           <FinalFeedbackForm
-            key={roundRatingsEpoch}
             rounds={feedback.rounds}
             savedRatings={myRoundRatings}
+            ratingsEpoch={roundRatingsEpoch}
             onRate={rateRound}
+            savedFeedback={myFeedback}
+            onSendFeedback={sendFeedback}
           />
         )}
       </div>

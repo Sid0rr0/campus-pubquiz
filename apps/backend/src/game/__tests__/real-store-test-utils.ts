@@ -23,6 +23,7 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
+import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -35,6 +36,7 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
 import { RoundRatingRepository } from '@/db/repositories/round-rating.repository';
+import { SessionFeedbackRepository } from '@/db/repositories/session-feedback.repository';
 import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -453,6 +455,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       bonusService,
       feedbackService: new FeedbackService(
         em.getRepository<RoundRating, RoundRatingRepository>(RoundRating),
+        em.getRepository<SessionFeedback, SessionFeedbackRepository>(
+          SessionFeedback,
+        ),
       ),
       showdownService: new ShowdownService(
         em.getRepository<ShowdownRound, ShowdownRoundRepository>(ShowdownRound),

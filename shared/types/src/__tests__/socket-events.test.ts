@@ -40,6 +40,7 @@ describe('SOCKET_EVENTS', () => {
       CREATE_SHOWDOWN_ROUND: 'game:create_showdown_round',
       SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
       RATE_ROUND: 'game:rate_round',
+      SEND_FEEDBACK: 'game:send_feedback',
     });
   });
 });

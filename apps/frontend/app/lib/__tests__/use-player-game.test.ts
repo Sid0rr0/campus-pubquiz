@@ -42,6 +42,7 @@ const JOIN_ACCEPTED_PAYLOAD = {
   ],
   bonusAwards: [{ id: 1, category: 'shot', points: 1, reason: null }],
   roundRatings: [{ roundId: 11, stars: 4 }],
+  feedback: { comment: 'Loved it', topics: ['Geography'] },
 };
 const LOCKED_MESSAGE = 'Answers are locked for this question';
 
@@ -531,6 +532,60 @@ describe('usePlayerGame', () => {
     });
   });
 
+  describe('the comment and topic suggestions', () => {
+    it('restores them from the join payload, replacing what an earlier join held', () => {
+      const { result, socket } = renderLinkedPlayer();
+      expect(result.current.myFeedback).toEqual({
+        comment: 'Loved it',
+        topics: ['Geography'],
+      });
+
+      act(() =>
+        socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+          ...JOIN_ACCEPTED_PAYLOAD,
+          feedback: { comment: '', topics: [] },
+        }),
+      );
+
+      expect(result.current.myFeedback).toEqual({ comment: '', topics: [] });
+    });
+
+    it('sends them and keeps what the server acknowledged', async () => {
+      const { result, socket } = renderLinkedPlayer();
+      const feedback = { comment: 'Great', topics: ['Space'] };
+
+      let pending!: Promise<AckResult>;
+      act(() => {
+        pending = result.current.sendFeedback(feedback);
+      });
+      expect(socket.lastEmitOf(SOCKET_EVENTS.SEND_FEEDBACK).payload).toEqual(
+        feedback,
+      );
+      await act(async () => socket.acknowledge(SOCKET_EVENTS.SEND_FEEDBACK));
+
+      await expect(pending).resolves.toEqual({ success: true });
+      expect(result.current.myFeedback).toEqual(feedback);
+    });
+
+    it('keeps the earlier text and resolves to the refusal, without toasting, when the server says no', async () => {
+      const { result, socket } = renderLinkedPlayer();
+      const reason = "Feedback can't be sent right now";
+
+      let pending!: Promise<AckResult>;
+      act(() => {
+        pending = result.current.sendFeedback({ comment: 'x', topics: [] });
+      });
+      await act(async () => socket.reject(SOCKET_EVENTS.SEND_FEEDBACK, reason));
+
+      await expect(pending).resolves.toEqual({ success: false, error: reason });
+      expect(result.current.myFeedback).toEqual({
+        comment: 'Loved it',
+        topics: ['Geography'],
+      });
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+  });
+
   it('exposes no admin-only members', () => {
     const { result } = renderConnectedPlayer();
 
@@ -544,11 +599,13 @@ describe('usePlayerGame', () => {
         'myAnswerGrades',
         'myAnswers',
         'myBonusAwards',
+        'myFeedback',
         'myRoundRatings',
         'rateRound',
         'reconnectedAt',
         'roundRatingsEpoch',
         'seenQuestions',
+        'sendFeedback',
         'sessionClosed',
         'snapshot',
         'submitAnswer',

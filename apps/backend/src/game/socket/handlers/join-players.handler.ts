@@ -64,6 +64,10 @@ export async function joinPlayerTeam(
         deps.gameState.getGameSessionId(joinCode),
         team.id,
       );
+    const savedFeedback = await deps.feedbackService.getFeedbackForTeam(
+      deps.gameState.getGameSessionId(joinCode),
+      team.id,
+    );
     client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
       teamId: team.id,
       teamName: team.name,
@@ -72,6 +76,7 @@ export async function joinPlayerTeam(
       answers: savedAnswers,
       bonusAwards: savedBonusAwards,
       roundRatings: savedRoundRatings,
+      feedback: savedFeedback,
     });
 
     return outcome;

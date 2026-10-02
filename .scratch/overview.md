@@ -21,7 +21,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                      | Blocked by |
 | --- | ----------------------------------------------------------------------------------------------------------- | ---------- |
-| 03  | ["Anything else" and topic suggestions](feedback/issues/03-anything-else-and-topic-suggestions.md)          | 02         |
 | 04  | ["Collect feedback" session setting](feedback/issues/04-collect-feedback-session-setting.md)                | 01, 03     |
 | 05  | [Big-screen feedback prompts](feedback/issues/05-big-screen-feedback-prompts.md)                            | 04         |
 | 06  | [Round ratings on the session stats page](feedback/issues/06-round-ratings-on-session-stats.md)             | 01         |
@@ -31,6 +30,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| feedback                    | 03  | ["Anything else" and topic suggestions](feedback/issues/03-anything-else-and-topic-suggestions.md)                                                                     | —         |
 | feedback                    | 02  | [Rate every round on the final form](feedback/issues/02-rate-every-round-on-the-final-form.md)                                                                         | —         |
 | feedback                    | 01  | [Rate the rounds in the break](feedback/issues/01-rate-the-rounds-in-the-break.md)                                                                                     | —         |
 | backend-test-speed          | 05  | [Prove the backend suite is fast and never fails by chance](backend-test-speed/issues/05-prove-fast-reliable-suite.md)                                                 | —         |

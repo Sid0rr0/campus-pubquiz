@@ -15,6 +15,8 @@ import {
   type LeaveSessionPayload,
   type RateRoundPayload,
   type RoundRatingView,
+  type SendFeedbackPayload,
+  type TeamFeedbackView,
   type SessionClosedPayload,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -73,6 +75,8 @@ export interface UsePlayerGameResult {
   myBonusAwards: TeamBonusAwardView[];
   /** The team's saved round ratings by round id: what the join payload last carried plus every rating the server has acknowledged since, so a reconnecting phone shows its stars again (a tap that never reached the server is not in it). */
   myRoundRatings: Record<number, number>;
+  /** The team's saved comment and topics: what the join payload last carried plus whatever the server has acknowledged since, so a reconnecting phone shows its final form again. */
+  myFeedback: TeamFeedbackView;
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
   roundRatingsEpoch: number;
   /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the snapshot only ever covers the current block. */
@@ -87,6 +91,8 @@ export interface UsePlayerGameResult {
   ) => Promise<AckResult>;
   /** Resolves to the server's verdict on one round rating; the rating card shows it, so nothing is toasted here. */
   rateRound: (roundId: number, stars: number) => Promise<AckResult>;
+  /** Resolves to the server's verdict on the comment and topics; the final form shows it, so nothing is toasted here. */
+  sendFeedback: (feedback: SendFeedbackPayload) => Promise<AckResult>;
   /** Tells the server this team is intentionally leaving (log out) — removes its roster row so it doesn't linger in /control until an admin kicks it by hand. */
   leaveSession: (teamId: number) => Promise<AckResult>;
   submitShowdownGuess: (
@@ -115,6 +121,8 @@ export function mergeSeenQuestions(
   }
   return next;
 }
+
+const EMPTY_FEEDBACK: TeamFeedbackView = { comment: '', topics: [] };
 
 export function buildMyRoundRatings(
   ratings: RoundRatingView[],
@@ -181,6 +189,8 @@ export function usePlayerGame(
   const [myRoundRatings, setMyRoundRatings] = useState<Record<number, number>>(
     {},
   );
+  const [myFeedback, setMyFeedback] =
+    useState<TeamFeedbackView>(EMPTY_FEEDBACK);
   const [roundRatingsEpoch, setRoundRatingsEpoch] = useState(0);
   const [seenQuestions, setSeenQuestions] = useState<SeenQuestions>({});
   const [sessionClosed, setSessionClosed] = useState<string | null>(null);
@@ -242,6 +252,7 @@ export function usePlayerGame(
         setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
         setMyBonusAwards(payload.bonusAwards ?? []);
         setMyRoundRatings(buildMyRoundRatings(payload.roundRatings ?? []));
+        setMyFeedback(payload.feedback ?? EMPTY_FEEDBACK);
         setRoundRatingsEpoch((epoch) => epoch + 1);
         linkedSocketIdRef.current = socket.id ?? null;
         setTeamLinked(true);
@@ -318,6 +329,7 @@ export function usePlayerGame(
       setMyAnswerGrades({});
       setMyBonusAwards([]);
       setMyRoundRatings({});
+      setMyFeedback(EMPTY_FEEDBACK);
       setSeenQuestions({});
       setSessionClosed(null);
       setKicked(false);
@@ -428,6 +440,17 @@ export function usePlayerGame(
     [emitWithAck],
   );
 
+  const sendFeedback = useCallback(
+    async (feedback: SendFeedbackPayload) => {
+      const result = await emitWithAck(SOCKET_EVENTS.SEND_FEEDBACK, feedback);
+      if (result.success) {
+        setMyFeedback({ comment: feedback.comment, topics: feedback.topics });
+      }
+      return result;
+    },
+    [emitWithAck],
+  );
+
   const submitShowdownGuess = useCallback(
     async (showdownRoundId: number, teamId: number, value: string) => {
       const payload: SubmitShowdownGuessPayload = {
@@ -455,12 +478,14 @@ export function usePlayerGame(
     myAnswerGrades,
     myBonusAwards,
     myRoundRatings,
+    myFeedback,
     roundRatingsEpoch,
     seenQuestions,
     joinTeam,
     submitAnswer,
     leaveSession,
     rateRound,
+    sendFeedback,
     submitShowdownGuess,
   };
 }

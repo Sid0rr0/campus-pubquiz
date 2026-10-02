@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { WsException } from '@nestjs/websockets';
 import {
   BONUS_CATEGORIES,
+  MAX_FEEDBACK_COMMENT_LENGTH,
+  MAX_FEEDBACK_TOPICS,
+  MAX_FEEDBACK_TOPIC_LENGTH,
   DISPLAY_TEXT_SCALE_STEPS,
   type BonusCategory,
   type GameAction,
@@ -63,6 +66,20 @@ export const submitAnswerPayloadSchema = z.object({
 export const rateRoundPayloadSchema = z.object({
   roundId: positiveInt,
   stars: z.number().int().min(MIN_STARS).max(MAX_STARS),
+});
+
+// Topics are cleaned before their limits are checked, so a line of spaces or
+// a stray space after a 60-character topic doesn't count against the team.
+const topicsSchema = z
+  .array(z.string())
+  .transform((topics) => topics.map((topic) => topic.trim()).filter(Boolean))
+  .pipe(
+    z.array(z.string().max(MAX_FEEDBACK_TOPIC_LENGTH)).max(MAX_FEEDBACK_TOPICS),
+  );
+
+export const sendFeedbackPayloadSchema = z.object({
+  comment: z.string().max(MAX_FEEDBACK_COMMENT_LENGTH),
+  topics: topicsSchema,
 });
 
 export const gradeAnswerPayloadSchema = z.object({
