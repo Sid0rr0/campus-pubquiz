@@ -7,6 +7,7 @@ import {
 } from '@campus-pubquiz/types';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
+import { GameGateway } from '@/game/game.gateway';
 import { GameStateService } from '@/game/state/game-state.service';
 import { assembleImportPreview } from '@/import/question-row.schema';
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
@@ -47,6 +48,7 @@ export class ImportService {
     @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   /** Validates the uploaded CSV into a preview. Never writes, never throws. */
@@ -155,8 +157,10 @@ export class ImportService {
     const quizId = await this.upsertQuiz(preview.quizTitle);
     await this.quizService.syncRoundsAndQuestions(quizId, preview.rounds);
 
+    // Same path as an editor save, so the lobby/ended screens get the new
+    // rounds broadcast instead of keeping the old ones until the next press.
     if (quizId === this.gameState.getActiveQuizId(joinCode)) {
-      await this.gameState.reloadActiveQuiz(joinCode);
+      await this.gameGateway.notifyQuizEdited(joinCode);
     }
 
     return {

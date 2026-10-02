@@ -186,10 +186,11 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * Re-reads the active quiz's rounds from the database, keeping the
-   * session, join code and progress — used after a re-import updates the
-   * active quiz's questions in place.
+   * session, join code and progress. Private to quizEdited — an editor save
+   * and a re-import both come through it — so a reload always ends in a
+   * broadcast.
    */
-  async reloadActiveQuiz(joinCode: string): Promise<void> {
+  private async reloadActiveQuiz(joinCode: string): Promise<void> {
     const session = this.sessionStore.get(joinCode);
     const { quizId, gameSessionId } = session.seededGame;
     const seededGame = await this.seedService.loadGame(

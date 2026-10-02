@@ -12,6 +12,7 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
+import type { GameGateway } from '@/game/game.gateway';
 import type { GameStateService } from '@/game/state/game-state.service';
 import {
   ImportBlockedError,
@@ -54,25 +55,28 @@ const BROKEN_CSV = [HEADER, 'History,karaoke,Sing it!,,,,,,,0'].join('\n');
 interface GameStateStub {
   status: string;
   activeQuizId: number;
-  reloadActiveQuiz: jest.Mock;
+  notifyQuizEdited: jest.Mock;
 }
 
 function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
   stub: GameStateStub;
   asService: GameStateService;
+  asGateway: GameGateway;
 } {
   const stub: GameStateStub = {
     status: 'lobby',
     activeQuizId: -1,
-    reloadActiveQuiz: jest.fn().mockResolvedValue(undefined),
+    notifyQuizEdited: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
   const asService = {
     getSnapshot: () => ({ progress: { status: stub.status } }),
     getActiveQuizId: () => stub.activeQuizId,
-    reloadActiveQuiz: stub.reloadActiveQuiz,
   } as unknown as GameStateService;
-  return { stub, asService };
+  const asGateway = {
+    notifyQuizEdited: stub.notifyQuizEdited,
+  } as unknown as GameGateway;
+  return { stub, asService, asGateway };
 }
 
 describe('ImportService (Postgres integration)', () => {
@@ -113,7 +117,7 @@ describe('ImportService (Postgres integration)', () => {
   });
 
   function makeService(overrides: Partial<GameStateStub> = {}) {
-    const { stub, asService } = makeGameStateStub(overrides);
+    const { stub, asService, asGateway } = makeGameStateStub(overrides);
     const quizService = new QuizService(
       em.getRepository<Quiz, QuizRepository>(Quiz),
       em.getRepository<Round, RoundRepository>(Round),
@@ -123,6 +127,7 @@ describe('ImportService (Postgres integration)', () => {
       em.getRepository<Quiz, QuizRepository>(Quiz),
       asService,
       quizService,
+      asGateway,
     );
     return { importService, stub };
   }
@@ -314,19 +319,19 @@ describe('ImportService (Postgres integration)', () => {
       expect(result.questionCount).toBe(3);
     });
 
-    it('reloads the in-memory game when the imported quiz is the active one', async () => {
+    it('notifies the live session as a quiz edit when the imported quiz is the active one', async () => {
       const { importService, stub } = makeService();
       const first = await importService.confirm(
         VALID_CSV,
         'ABCDEF',
         'Trivia Night',
       );
-      expect(stub.reloadActiveQuiz).not.toHaveBeenCalled();
+      expect(stub.notifyQuizEdited).not.toHaveBeenCalled();
 
       stub.activeQuizId = first.quizId;
       await importService.confirm(VALID_CSV, 'ABCDEF', 'Trivia Night');
 
-      expect(stub.reloadActiveQuiz).toHaveBeenCalledTimes(1);
+      expect(stub.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF');
     });
 
     it("carries each question's correct answer through the loaded game, alongside its safe payload fields", async () => {

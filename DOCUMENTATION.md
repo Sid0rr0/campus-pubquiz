@@ -439,8 +439,10 @@ has no column, so it isn't exported.
 rounds/questions load straight into the in-page editable draft; saving goes
 through the normal quiz endpoints above. The backend also exposes
 `POST /import/confirm` (upserts a quiz directly, keyed by title, only while a
-session is `lobby`/`ended`), but the current frontend doesn't call it — the
-shipped flow is preview → edit → save.
+session is `lobby`/`ended`; when it overwrites that session's active quiz,
+the session reloads and rebroadcasts through the same `notifyQuizEdited` path
+as an editor save), but the current frontend doesn't call it — the shipped
+flow is preview → edit → save.
 
 **Google Sheets URL import mechanics**: `POST /import/preview-from-url` and
 `POST /import/confirm-from-url` accept a pasted `sheetUrl` instead of
