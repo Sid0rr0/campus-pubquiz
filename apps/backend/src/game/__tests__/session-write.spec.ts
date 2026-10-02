@@ -8,6 +8,7 @@ import {
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   holdNextCall,
+  type JoinedTeam,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -124,5 +125,131 @@ describe('GameGateway — session write: bonus changes', () => {
     const snapshots = adminSnapshots();
     // Both awards are stored; the failed one's points show once standings are re-read.
     expect(bonusIn(snapshots[snapshots.length - 1])).toBe(3);
+  });
+});
+
+describe('GameGateway — session write: answers recorded and graded', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let teamA: JoinedTeam;
+  let teamB: JoinedTeam;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({
+      teamNames: ['The Quizzards', 'Bystanders'],
+    });
+    admin = await game.connectAdmin();
+    [teamA, teamB] = game.teams;
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
+  });
+
+  function adminSnapshots(): StateSnapshotPayload[] {
+    const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
+    return game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(adminRoom) &&
+          emit.event === SOCKET_EVENTS.STATE_UPDATED,
+      )
+      .map((emit) => emit.payload as StateSnapshotPayload);
+  }
+
+  function lastAdminSnapshot(): StateSnapshotPayload {
+    const snapshots = adminSnapshots();
+    return snapshots[snapshots.length - 1];
+  }
+
+  function submit(team: JoinedTeam, questionId: number, value: string) {
+    return game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId,
+      teamId: team.teamId,
+      value,
+    });
+  }
+
+  function grade(answerId: number, pointsAwarded: number) {
+    return game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId,
+      pointsAwarded,
+    });
+  }
+
+  async function advanceToFreeText(): Promise<number> {
+    await game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+    game.clearEmits();
+    return game.questionIds.freeText;
+  }
+
+  async function ungradedAnswerIds(questionId: number): Promise<number[]> {
+    const answers = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    return answers.map((answer) => answer.answerId);
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  function totalPoints(snapshot: StateSnapshotPayload): number {
+    return snapshot.leaderboard.reduce(
+      (sum, entry) => sum + entry.totalPoints,
+      0,
+    );
+  }
+
+  it('ends with both grades on the leaderboard when the first grade’s standings read finishes last', async () => {
+    const questionId = await advanceToFreeText();
+    await submit(teamA, questionId, 'Saturn');
+    await submit(teamB, questionId, 'Mars');
+    const [firstAnswer, secondAnswer] = await ungradedAnswerIds(questionId);
+    game.clearEmits();
+
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const first = grade(firstAnswer, 1);
+    await held.started;
+    const second = grade(secondAnswer, 2);
+    await settle();
+    held.release();
+    await Promise.all([first, second]);
+
+    expect(totalPoints(lastAdminSnapshot())).toBe(3);
+  });
+
+  it('shows both teams as answered when the first answer’s answered-teams read finishes last', async () => {
+    const questionId = game.questionIds.multipleChoice;
+
+    const held = holdNextCall(game.answerService, 'listForQuestion');
+    const first = submit(teamA, questionId, 'Paris');
+    await held.started;
+    const second = submit(teamB, questionId, 'Paris');
+    await settle();
+    held.release();
+    await Promise.all([first, second]);
+
+    expect([...lastAdminSnapshot().answeredTeamIds].sort()).toEqual(
+      [teamA.teamId, teamB.teamId].sort(),
+    );
+  });
+
+  it('clears the ungraded marker when the last waiting answer is graded while another grade overlaps', async () => {
+    const questionId = await advanceToFreeText();
+    await submit(teamA, questionId, 'Saturn');
+    await submit(teamB, questionId, 'Mars');
+    const [firstAnswer, secondAnswer] = await ungradedAnswerIds(questionId);
+    expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([questionId]);
+
+    const held = holdNextCall(game.answerService, 'listUngradedQuestionIds');
+    const first = grade(firstAnswer, 1);
+    await held.started;
+    const second = grade(secondAnswer, 0);
+    await settle();
+    held.release();
+    await Promise.all([first, second]);
+
+    expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([]);
   });
 });

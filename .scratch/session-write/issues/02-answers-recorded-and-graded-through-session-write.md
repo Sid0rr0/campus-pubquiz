@@ -8,9 +8,13 @@ Parent spec: `.scratch/session-write/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: two grades in quick succession, with the first grade's standings read held. The final leaderboard reflects both grades.
-- [ ] Two answers from different teams to the same question, with the first held: the final admin snapshot shows both teams as answered for that question.
-- [ ] Grading the last waiting answer in the break clears that question's ungraded marker, even when another grade overlaps it.
-- [ ] The answer-recorded-and-graded, grading, submit-answer and ungraded agreement specs pass unchanged.
+- [x] Written first, failing against today's code: two grades in quick succession, with the first grade's standings read held. The final leaderboard reflects both grades.
+- [x] Two answers from different teams to the same question, with the first held: the final admin snapshot shows both teams as answered for that question.
+- [x] Grading the last waiting answer in the break clears that question's ungraded marker, even when another grade overlaps it.
+- [x] The answer-recorded-and-graded, grading, submit-answer and ungraded agreement specs pass unchanged.
+
+## Comments
+
+Implemented in the commit `feat(backend): answers recorded and graded go through the session write` (see git history for the hash). `refreshAfterAnswerChange` now runs inside `writeSession`; it applies its result onto the live session after its reads so disconnects and other not-yet-migrated events landing meanwhile aren't put back (tickets 03/04/06 close that fully).

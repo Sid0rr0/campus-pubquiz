@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                  | Blocked by         |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| 02  | [Answers recorded and graded go through the session write](session-write/issues/02-answers-recorded-and-graded-through-session-write.md)                | 01                 |
 | 03  | [Team joined, kicked or left goes through the session write](session-write/issues/03-roster-changes-through-session-write.md)                           | 01                 |
 | 04  | [A press no longer overwrites changes made while it runs](session-write/issues/04-press-keeps-changes-made-while-it-runs.md)                            | 02, 03             |
 | 05  | [A quiz edit and a re-import go through the session write](session-write/issues/05-quiz-edit-and-reimport-through-session-write.md)                     | 02                 |
@@ -32,6 +31,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| session-write               | 02  | [Answers recorded and graded go through the session write](session-write/issues/02-answers-recorded-and-graded-through-session-write.md) | —         |
 | session-write               | 01  | [Bonus changes go through one session write that ends with fresh standings](session-write/issues/01-bonus-changes-through-session-write.md) | —         |
 | players-reveal-redaction    | 04  | [The final block's answers survive a reconnect after the quiz ends](players-reveal-redaction/issues/04-final-block-answers-survive-a-reconnect-after-the-quiz-ends.md) | —         |
 | players-reveal-redaction    | 03  | [A closest-guess reveal reaches phones one step at a time](players-reveal-redaction/issues/03-closest-guess-reveal-reaches-phones-step-by-step.md)                     | —         |

@@ -574,30 +574,37 @@ export class GameStateService implements OnModuleInit {
     });
   }
 
-  private async refreshAfterAnswerChange(
+  private refreshAfterAnswerChange(
     joinCode: string,
     questionId: number,
   ): Promise<SessionOutcome> {
-    const [answers, refresh] = await Promise.all([
-      this.answerService.listForQuestion(
-        this.getGameSessionId(joinCode),
-        questionId,
-      ),
-      this.grading.gradingRefresh(this.sessionStore.get(joinCode), [
-        questionId,
-      ]),
-    ]);
-    this.update(joinCode, (session) =>
-      withGradingRefresh(
-        withAnsweredTeamIds(
-          session,
+    return this.writeSession(joinCode, async (started) => {
+      const [answers, refresh] = await Promise.all([
+        this.answerService.listForQuestion(
+          started.seededGame.gameSessionId,
           questionId,
-          answers.map((answer) => answer.teamId),
         ),
-        refresh,
-      ),
-    );
-    return { ...BROADCAST_STATE_OUTCOME, answerListQuestionIds: [questionId] };
+        this.grading.gradingRefresh(started, [questionId]),
+      ]);
+      // Events not yet on the session write (disconnects, break end time…)
+      // can store while the reads are in flight; apply onto the live session
+      // so their change isn't put back.
+      const session = this.sessionStore.get(joinCode);
+      return {
+        session: withGradingRefresh(
+          withAnsweredTeamIds(
+            session,
+            questionId,
+            answers.map((answer) => answer.teamId),
+          ),
+          refresh,
+        ),
+        outcome: {
+          ...BROADCAST_STATE_OUTCOME,
+          answerListQuestionIds: [questionId],
+        },
+      };
+    });
   }
 
   /**
