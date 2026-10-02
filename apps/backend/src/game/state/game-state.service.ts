@@ -67,6 +67,9 @@ export type RosterLoader = () => Promise<TeamRosterEntry[]>;
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 
+/** The option for a session write whose event doesn't change scores: skips the standings read. */
+const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
+
 @Injectable()
 export class GameStateService implements OnModuleInit {
   private readonly sessionStore = new GameSessionStore();
@@ -144,17 +147,24 @@ export class GameStateService implements OnModuleInit {
    * decided for phase 4: explicit admin action rather than an idle-timeout
    * sweep, since it's deterministic and needs no background timer. Only
    * allowed once the quiz has `ended` — closing a live game would strand any
-   * still-connected display/players.
+   * still-connected display/players. A write queued behind the close fails
+   * with the unknown-session error.
    */
-  closeSession(joinCode: string): void {
-    const session = this.sessionStore.get(joinCode);
-    if (session.progress.status !== 'ended') {
-      throw new SessionCloseBlockedError(
-        joinCode,
-        `still in progress (status: "${session.progress.status}")`,
-      );
-    }
-    this.sessionStore.delete(joinCode);
+  closeSession(joinCode: string): Promise<void> {
+    // On the queue like a session write, but it deletes the session rather
+    // than storing one — so a write still in progress can't put it back, and
+    // one queued behind it finds no session.
+    return this.sessionWrites.run(joinCode, () => {
+      const session = this.sessionStore.get(joinCode);
+      if (session.progress.status !== 'ended') {
+        throw new SessionCloseBlockedError(
+          joinCode,
+          `still in progress (status: "${session.progress.status}")`,
+        );
+      }
+      this.sessionStore.delete(joinCode);
+      return Promise.resolve();
+    });
   }
 
   /**
@@ -354,15 +364,26 @@ export class GameStateService implements OnModuleInit {
     }));
   }
 
-  /** A socket dropped: frees its team, if it held one. Null when the socket wasn't a team's — nothing to push. */
-  teamDisconnected(joinCode: string, socketId: string): SessionOutcome | null {
-    const teamId = findTeamIdBySocketId(
-      this.sessionStore.get(joinCode),
-      socketId,
+  /** A socket dropped: a session write (no standings read) that frees its team, if it held one. Null when the socket wasn't a team's — nothing to push. */
+  teamDisconnected(
+    joinCode: string,
+    socketId: string,
+  ): Promise<SessionOutcome | null> {
+    return this.writeSession<SessionOutcome | null>(
+      joinCode,
+      (session) => {
+        const teamId = findTeamIdBySocketId(session, socketId);
+        return Promise.resolve(
+          teamId === null
+            ? { session, outcome: null }
+            : {
+                session: withoutTeamConnection(session, teamId),
+                outcome: BROADCAST_STATE_OUTCOME,
+              },
+        );
+      },
+      NOT_TOUCHING_SCORES,
     );
-    if (teamId === null) return null;
-    this.update(joinCode, (session) => withoutTeamConnection(session, teamId));
-    return BROADCAST_STATE_OUTCOME;
   }
 
   isQuestionOpenForAnswering(joinCode: string, questionId: number): boolean {
@@ -403,20 +424,32 @@ export class GameStateService implements OnModuleInit {
   breakEndTimeSet(
     joinCode: string,
     breakEndsAt: number | null,
-  ): SessionOutcome {
-    this.update(joinCode, (session) => withBreakEndTime(session, breakEndsAt));
-    return BROADCAST_STATE_OUTCOME;
+  ): Promise<SessionOutcome> {
+    return this.writeSession(
+      joinCode,
+      (session) =>
+        Promise.resolve({
+          session: withBreakEndTime(session, breakEndsAt),
+          outcome: BROADCAST_STATE_OUTCOME,
+        }),
+      NOT_TOUCHING_SCORES,
+    );
   }
 
   /** Admin-set text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
   displayTextScaleSet(
     joinCode: string,
     displayTextScale: number,
-  ): SessionOutcome {
-    this.update(joinCode, (session) =>
-      withDisplayTextScale(session, displayTextScale),
+  ): Promise<SessionOutcome> {
+    return this.writeSession(
+      joinCode,
+      (session) =>
+        Promise.resolve({
+          session: withDisplayTextScale(session, displayTextScale),
+          outcome: BROADCAST_STATE_OUTCOME,
+        }),
+      NOT_TOUCHING_SCORES,
     );
-    return BROADCAST_STATE_OUTCOME;
   }
 
   /** The in-progress/just-resolved showdown round, or null between rounds. */
@@ -433,9 +466,16 @@ export class GameStateService implements OnModuleInit {
   showdownRoundCreated(
     joinCode: string,
     round: ActiveShowdownRoundState,
-  ): SessionOutcome {
-    this.update(joinCode, (session) => withActiveShowdownRound(session, round));
-    return BROADCAST_STATE_OUTCOME;
+  ): Promise<SessionOutcome> {
+    return this.writeSession(
+      joinCode,
+      (session) =>
+        Promise.resolve({
+          session: withActiveShowdownRound(session, round),
+          outcome: BROADCAST_STATE_OUTCOME,
+        }),
+      NOT_TOUCHING_SCORES,
+    );
   }
 
   /** A team's showdown guess was stored: the latest guess replaces any earlier one. */
@@ -443,11 +483,16 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     teamId: number,
     value: string,
-  ): SessionOutcome {
-    this.update(joinCode, (session) =>
-      withShowdownGuess(session, teamId, value),
+  ): Promise<SessionOutcome> {
+    return this.writeSession(
+      joinCode,
+      (session) =>
+        Promise.resolve({
+          session: withShowdownGuess(session, teamId, value),
+          outcome: BROADCAST_STATE_OUTCOME,
+        }),
+      NOT_TOUCHING_SCORES,
     );
-    return BROADCAST_STATE_OUTCOME;
   }
 
   /** This session's current settings — used by the gateway to filter enabled bonus categories. */
@@ -458,28 +503,38 @@ export class GameStateService implements OnModuleInit {
   /**
    * Merges `partial` over the session's current settings, lobby-only — the
    * admin can keep adjusting settings freely up until START_QUIZ, at which
-   * point the values in effect must stop moving under the game.
+   * point the values in effect must stop moving under the game. A session
+   * write (no standings read): the lobby check runs against the session the
+   * previous write left, so a join or START_QUIZ queued first is respected.
    */
   async updateSessionSettings(
     joinCode: string,
     partial: Partial<SessionSettings>,
   ): Promise<void> {
-    const session = this.sessionStore.get(joinCode);
-    if (session.progress.status !== 'lobby') {
-      throw new SessionSettingsUpdateBlockedError(
-        joinCode,
-        `already started (status: "${session.progress.status}")`,
-      );
-    }
-    const settings = { ...session.seededGame.settings, ...partial };
-    await this.seedService.updateSettings(
-      session.seededGame.gameSessionId,
-      settings,
+    await this.writeSession(
+      joinCode,
+      async (session) => {
+        if (session.progress.status !== 'lobby') {
+          throw new SessionSettingsUpdateBlockedError(
+            joinCode,
+            `already started (status: "${session.progress.status}")`,
+          );
+        }
+        const settings = { ...session.seededGame.settings, ...partial };
+        await this.seedService.updateSettings(
+          session.seededGame.gameSessionId,
+          settings,
+        );
+        return {
+          session: {
+            ...session,
+            seededGame: { ...session.seededGame, settings },
+          },
+          outcome: undefined,
+        };
+      },
+      NOT_TOUCHING_SCORES,
     );
-    this.sessionStore.set(joinCode, {
-      ...session,
-      seededGame: { ...session.seededGame, settings },
-    });
   }
 
   /**
@@ -490,9 +545,8 @@ export class GameStateService implements OnModuleInit {
    * the admin path and both timer paths behave the same. A session write:
    * the commit runs against the session as the previous write left it, so
    * no other session write (answers, grades, bonuses, roster changes, other
-   * presses) that landed while the press waited on the database is lost —
-   * events not yet on the session write (disconnects, break end time) still
-   * store directly. The session is stored only once its progress is saved,
+   * presses) that landed while the press waited on the database is lost. The
+   * session is stored only once its progress is saved,
    * so a refused press leaves it where it was. Throws whatever the commit
    * throws (illegal transition, ungraded answers, a failed save).
    */
@@ -606,14 +660,10 @@ export class GameStateService implements OnModuleInit {
         ),
         this.grading.gradingRefresh(started, [questionId]),
       ]);
-      // Events not yet on the session write (disconnects, break end time…)
-      // can store while the reads are in flight; apply onto the live session
-      // so their change isn't put back.
-      const session = this.sessionStore.get(joinCode);
       return {
         session: withGradingRefresh(
           withAnsweredTeamIds(
-            session,
+            started,
             questionId,
             answers.map((answer) => answer.teamId),
           ),
@@ -650,26 +700,12 @@ export class GameStateService implements OnModuleInit {
             session.seededGame.gameSessionId,
           )
         : undefined;
-      // Events that haven't moved onto the session write yet can still store
-      // while the standings read is in flight. A change that left the session
-      // as it found it must not put its old copy back over them (or over a
-      // closed session, which `get` rejects).
-      const base =
-        session === started ? this.sessionStore.get(joinCode) : session;
       this.sessionStore.set(
         joinCode,
-        leaderboard ? withLeaderboard(base, leaderboard) : base,
+        leaderboard ? withLeaderboard(session, leaderboard) : session,
       );
       return outcome;
     });
-  }
-
-  /** Applies a pure update to the session record — the only way this module writes a single field. */
-  private update(
-    joinCode: string,
-    change: (session: SessionState) => SessionState,
-  ): void {
-    this.sessionStore.set(joinCode, change(this.sessionStore.get(joinCode)));
   }
 
   /**

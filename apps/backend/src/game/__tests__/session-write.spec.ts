@@ -11,6 +11,7 @@ import {
   holdNextCall,
   type JoinedTeam,
   setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
@@ -702,5 +703,330 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     expect(snapshot.progress).not.toEqual(before.progress);
     expect(snapshot.roundTitles).toContain('Renamed Round');
     expect(lastAdminSnapshot().roundTitles).toContain('Renamed Round');
+  });
+});
+
+describe('GameGateway — session write: events that do not touch scores', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let team: JoinedTeam;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    admin = await game.connectAdmin();
+    [team] = game.teams;
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function lastAdminSnapshot(): StateSnapshotPayload {
+    const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
+    const snapshots = game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(adminRoom) &&
+          emit.event === SOCKET_EVENTS.STATE_UPDATED,
+      )
+      .map((emit) => emit.payload as StateSnapshotPayload);
+    return snapshots[snapshots.length - 1];
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  function isTeamConnected(
+    snapshot: StateSnapshotPayload,
+  ): boolean | undefined {
+    return snapshot.teams.find((entry) => entry.teamId === team.teamId)
+      ?.isConnected;
+  }
+
+  it('shows a team that disconnects while a bonus write is held as disconnected once both finish', async () => {
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: team.teamId,
+      category: 'shot',
+      points: 1,
+    });
+    await held.started;
+
+    const disconnecting = game.gateway.handleDisconnect(asSocket(team.socket));
+    await settle();
+    held.release();
+    await Promise.all([awarding, disconnecting]);
+
+    expect(isTeamConnected(lastAdminSnapshot())).toBe(false);
+    expect(isTeamConnected(await game.snapshot())).toBe(false);
+  });
+
+  it('shows a team that disconnects while a press waits on its save as disconnected', async () => {
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+    await held.started;
+
+    const disconnecting = game.gateway.handleDisconnect(asSocket(team.socket));
+    await settle();
+    held.release();
+    await Promise.all([pressing, disconnecting]);
+
+    expect(isTeamConnected(lastAdminSnapshot())).toBe(false);
+    expect(isTeamConnected(await game.snapshot())).toBe(false);
+  });
+
+  it('keeps a break end time and a display text size set while a press waits on its save', async () => {
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+    await held.started;
+
+    const breakEndsAt = Date.now() + 600_000;
+    const settingBreak = game.gateway.handleSetBreakEndTime(asSocket(admin), {
+      breakEndsAt,
+    });
+    const scaling = game.gateway.handleSetDisplayTextScale(asSocket(admin), {
+      displayTextScale: 1.5,
+    });
+    await settle();
+    held.release();
+    await Promise.all([pressing, settingBreak, scaling]);
+
+    const snapshot = await game.snapshot();
+    expect(snapshot.breakEndsAt).toBe(breakEndsAt);
+    expect(snapshot.displayTextScale).toBe(1.5);
+    expect(lastAdminSnapshot().displayTextScale).toBe(1.5);
+  });
+
+  it('does not read standings for a disconnect, a break end time or a display text size, and leaves the stored leaderboard as it was', async () => {
+    const before = await game.snapshot();
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await game.gateway.handleDisconnect(asSocket(team.socket));
+    await game.gateway.handleSetBreakEndTime(asSocket(admin), {
+      breakEndsAt: Date.now() + 60_000,
+    });
+    await game.gateway.handleSetDisplayTextScale(asSocket(admin), {
+      displayTextScale: 1.25,
+    });
+
+    expect(leaderboard).not.toHaveBeenCalled();
+    expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
+  });
+});
+
+describe('GameGateway — session write: showdown', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let teamA: JoinedTeam;
+  let showdownRoundId: number;
+
+  const SHOWDOWN_PAYLOAD = { question: 'How many?', answer: '100', points: 5 };
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['Team A', 'Team B'] });
+    await tieOnFirstQuestion(game, game.teams);
+    admin = await game.connectAdmin();
+    [teamA] = game.teams;
+    await game.gateway.handleCreateShowdownRound(
+      asSocket(admin),
+      SHOWDOWN_PAYLOAD,
+    );
+    showdownRoundId = (await game.snapshot()).activeShowdown!.id;
+    game.clearEmits();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function hasGuessed(snapshot: StateSnapshotPayload): boolean | undefined {
+    return snapshot.activeShowdown?.participants.find(
+      (participant) => participant.teamId === teamA.teamId,
+    )?.hasGuessed;
+  }
+
+  function guess() {
+    return game.gateway.handleSubmitShowdownGuess(asSocket(teamA.socket), {
+      showdownRoundId,
+      teamId: teamA.teamId,
+      value: '95',
+    });
+  }
+
+  it('has a showdown guess submitted while a bonus write is held in the final snapshot', async () => {
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: teamA.teamId,
+      category: 'shot',
+      points: 1,
+    });
+    await held.started;
+
+    const guessing = guess();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    held.release();
+    await Promise.all([awarding, guessing]);
+
+    expect(hasGuessed(await game.snapshot())).toBe(true);
+  });
+
+  it('has a showdown guess submitted while a press waits on its save in the final snapshot', async () => {
+    const held = holdNextCall(game.progressRepository, 'save');
+    const pressing = game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'ADVANCE',
+    });
+    await held.started;
+
+    const guessing = guess();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    held.release();
+    await Promise.all([pressing, guessing]);
+
+    expect(hasGuessed(await game.snapshot())).toBe(true);
+  });
+
+  it('does not read standings for a new showdown round or a guess', async () => {
+    const before = await game.snapshot();
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+
+    await guess();
+    await game.inRequestContext(() =>
+      game.gameState.showdownRoundCreated(
+        game.joinCode,
+        game.gameState.getActiveShowdownRound(game.joinCode)!,
+      ),
+    );
+
+    expect(leaderboard).not.toHaveBeenCalled();
+    expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
+  });
+});
+
+describe('GameGateway — session write: lobby settings', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    game = await harness.createGateway();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function updateSettings() {
+    return game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(game.joinCode, {
+        lockGraceSeconds: 17,
+      }),
+    );
+  }
+
+  async function startJoin(teamName: string) {
+    const socket = await game.connectPlayer();
+    return game.gateway.handleJoinPlayers(asSocket(socket), {
+      teamName,
+      joinCode: game.joinCode,
+    });
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  function expectSettingsAndTeam(snapshot: StateSnapshotPayload): void {
+    expect(
+      game.gameState.getSessionSettings(game.joinCode).lockGraceSeconds,
+    ).toBe(17);
+    const joined = snapshot.teams.find(
+      (team) => team.teamName === 'Latecomers',
+    );
+    expect(joined?.isConnected).toBe(true);
+  }
+
+  it('keeps both the new settings and the team that joined while the settings write waits on its save', async () => {
+    const held = holdNextCall(game.seedService, 'updateSettings');
+    const updating = updateSettings();
+    await held.started;
+
+    const joining = startJoin('Latecomers');
+    await settle();
+    held.release();
+    await Promise.all([updating, joining]);
+
+    expectSettingsAndTeam(await game.snapshot());
+  });
+
+  it('keeps both the new settings and the team whose join is held on its standings read', async () => {
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const joining = startJoin('Latecomers');
+    await held.started;
+
+    const updating = updateSettings();
+    await settle();
+    held.release();
+    await Promise.all([updating, joining]);
+
+    expectSettingsAndTeam(await game.snapshot());
+  });
+
+  it('does not read standings for a settings change', async () => {
+    const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
+    const before = await game.snapshot();
+
+    await updateSettings();
+
+    expect(leaderboard).not.toHaveBeenCalled();
+    expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);
+  });
+});
+
+describe('GameGateway — session write: closing a session', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    // The seeded session is the default one, which close refuses to evict —
+    // a second session takes over as default.
+    await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
+    await game.act('START_QUIZ');
+    await game.act('END_QUIZ');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  function bonusChanged() {
+    return game.inRequestContext(() =>
+      game.gameState.bonusChanged(game.joinCode),
+    );
+  }
+
+  it('finishes the write in progress, closes the session for good and fails a write queued behind the close with the unknown-session error', async () => {
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const inProgress = bonusChanged();
+    await held.started;
+
+    const closing = game.gameState.closeSession(game.joinCode);
+    const behindClose = bonusChanged();
+    const behindCloseOutcome =
+      expect(behindClose).rejects.toThrow(/Unknown game session/);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    held.release();
+
+    await expect(inProgress).resolves.toBeDefined();
+    await closing;
+    await behindCloseOutcome;
+    expect(game.gameState.hasSession(game.joinCode)).toBe(false);
   });
 });

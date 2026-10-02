@@ -12,6 +12,7 @@ import type { SessionService } from '@/auth/session.service';
 import type { AnswerService } from '@/answer/answer.service';
 import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
+import type { SessionOutcome } from '@/game/state/session-outcome';
 
 const VALID_ROOMS: string[] = [
   SOCKET_ROOMS.DISPLAY,
@@ -114,7 +115,14 @@ export async function disconnectClient(
   // means nothing here needs cleanup.
   if (!joinCode || !deps.gameState.hasSession(joinCode)) return;
 
-  const outcome = deps.gameState.teamDisconnected(joinCode, client.id);
+  let outcome: SessionOutcome | null;
+  try {
+    outcome = await deps.gameState.teamDisconnected(joinCode, client.id);
+  } catch (error) {
+    // The session was closed while this write waited its turn — nothing left to clean up.
+    if (!deps.gameState.hasSession(joinCode)) return;
+    throw error;
+  }
   if (!outcome) return;
 
   deps.logger.log(`Client ${client.id} disconnected, freeing its team`);

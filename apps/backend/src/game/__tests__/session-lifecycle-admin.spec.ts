@@ -84,7 +84,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       await createOtherSession();
       await game.act('START_QUIZ');
 
-      expect(() => game.gameState.closeSession(game.joinCode)).toThrow(
+      await expect(game.gameState.closeSession(game.joinCode)).rejects.toThrow(
         SessionCloseBlockedError,
       );
       expect(game.gameState.listSessions()).toEqual(
@@ -99,7 +99,7 @@ describe('GameStateService — session lifecycle admin surface (phase 4)', () =>
       await game.act('START_QUIZ');
       await game.act('END_QUIZ');
 
-      game.gameState.closeSession(game.joinCode);
+      await game.gameState.closeSession(game.joinCode);
 
       expect(
         game.gameState

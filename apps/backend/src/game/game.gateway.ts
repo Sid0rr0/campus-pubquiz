@@ -237,9 +237,7 @@ export class GameGateway
       rawPayload,
       client,
       ({ joinCode, payload }) =>
-        Promise.resolve(
-          this.gameState.breakEndTimeSet(joinCode, payload.breakEndsAt),
-        ),
+        this.gameState.breakEndTimeSet(joinCode, payload.breakEndsAt),
     );
   }
 
@@ -254,12 +252,7 @@ export class GameGateway
       rawPayload,
       client,
       ({ joinCode, payload }) =>
-        Promise.resolve(
-          this.gameState.displayTextScaleSet(
-            joinCode,
-            payload.displayTextScale,
-          ),
-        ),
+        this.gameState.displayTextScaleSet(joinCode, payload.displayTextScale),
     );
   }
 

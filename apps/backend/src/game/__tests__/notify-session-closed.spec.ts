@@ -57,7 +57,7 @@ describe('GameGateway — notifySessionClosed', () => {
     );
     await game.act('START_QUIZ');
     await game.act('END_QUIZ');
-    game.gameState.closeSession(game.joinCode);
+    await game.gameState.closeSession(game.joinCode);
 
     await expect(
       game.gateway.handleDisconnect(asSocket(player)),

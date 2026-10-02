@@ -411,51 +411,67 @@ describe('SessionsController', () => {
   });
 
   describe('close', () => {
-    it('closes a known session', () => {
+    it('closes a known session', async () => {
       const { controller, gameState } = makeController();
       gameState.hasSession.mockReturnValue(true);
 
-      controller.close('GHIJKL');
+      await controller.close('GHIJKL');
 
       expect(gameState.closeSession).toHaveBeenCalledWith('GHIJKL');
     });
 
-    it('notifies connected players once the session is evicted', () => {
+    it('notifies connected players once the session is evicted', async () => {
       const { controller, gameState, gameGateway } = makeController();
       gameState.hasSession.mockReturnValue(true);
 
-      controller.close('GHIJKL');
+      await controller.close('GHIJKL');
 
       expect(gameGateway.notifySessionClosed).toHaveBeenCalledWith('GHIJKL');
     });
 
-    it('404s for an unknown join code', () => {
+    it('404s for an unknown join code', async () => {
       const { controller, gameState } = makeController();
       gameState.hasSession.mockReturnValue(false);
 
-      expect(() => controller.close('NOPE12')).toThrow(NotFoundException);
+      await expect(controller.close('NOPE12')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(gameState.closeSession).not.toHaveBeenCalled();
     });
 
-    it('maps a blocked close to 409 conflict without notifying players', () => {
+    it('maps a blocked close to 409 conflict without notifying players', async () => {
       const { controller, gameState, gameGateway } = makeController();
       gameState.hasSession.mockReturnValue(true);
       gameState.closeSession.mockImplementation(() => {
         throw new SessionCloseBlockedError('GHIJKL', 'still in progress');
       });
 
-      expect(() => controller.close('GHIJKL')).toThrow(ConflictException);
+      await expect(controller.close('GHIJKL')).rejects.toThrow(
+        ConflictException,
+      );
       expect(gameGateway.notifySessionClosed).not.toHaveBeenCalled();
     });
 
-    it('lets unexpected errors bubble up unchanged', () => {
+    it('404s when the session was closed by a close that ran first', async () => {
+      const { controller, gameState } = makeController();
+      gameState.hasSession.mockReturnValueOnce(true).mockReturnValue(false);
+      gameState.closeSession.mockRejectedValue(
+        new Error('Unknown game session for join code "GHIJKL"'),
+      );
+
+      await expect(controller.close('GHIJKL')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('lets unexpected errors bubble up unchanged', async () => {
       const { controller, gameState } = makeController();
       gameState.hasSession.mockReturnValue(true);
       gameState.closeSession.mockImplementation(() => {
         throw new Error('db down');
       });
 
-      expect(() => controller.close('GHIJKL')).toThrow('db down');
+      await expect(controller.close('GHIJKL')).rejects.toThrow('db down');
     });
   });
 });

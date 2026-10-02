@@ -127,6 +127,7 @@ export class SessionsController {
       if (error instanceof SessionSettingsUpdateBlockedError) {
         throw new ConflictException(error.message);
       }
+      this.throwIfClosedMeanwhile(joinCode);
       throw error;
     }
     await this.gameGateway.notifySettingsUpdated(joinCode);
@@ -134,19 +135,27 @@ export class SessionsController {
 
   @Delete(':joinCode')
   @UseGuards(SessionGuard, RolesGuard)
-  close(@Param('joinCode') joinCode: string): void {
+  async close(@Param('joinCode') joinCode: string): Promise<void> {
     if (!this.gameState.hasSession(joinCode)) {
       throw new NotFoundException(`Unknown session "${joinCode}"`);
     }
     try {
-      this.gameState.closeSession(joinCode);
+      await this.gameState.closeSession(joinCode);
     } catch (error) {
       if (error instanceof SessionCloseBlockedError) {
         throw new ConflictException(error.message);
       }
+      this.throwIfClosedMeanwhile(joinCode);
       throw error;
     }
     this.gameGateway.notifySessionClosed(joinCode);
+  }
+
+  /** A write queued behind another session's close fails with the store's unknown-session error — that is a 404, not a 500. */
+  private throwIfClosedMeanwhile(joinCode: string): void {
+    if (!this.gameState.hasSession(joinCode)) {
+      throw new NotFoundException(`Unknown session "${joinCode}"`);
+    }
   }
 
   private async summarize(
