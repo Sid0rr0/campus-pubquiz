@@ -13,6 +13,7 @@ import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
 import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
+import { FinalFeedbackForm } from '@/app/play/final-feedback-form';
 import { RoundRatingCard } from '@/app/play/round-rating-card';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
@@ -379,6 +380,14 @@ function PlayPageContent() {
           myTeamId={myTeamId}
           onSubmitShowdownGuess={submitShowdownGuess}
         />
+        {feedback?.kind === 'final_form' && (
+          <FinalFeedbackForm
+            key={roundRatingsEpoch}
+            rounds={feedback.rounds}
+            savedRatings={myRoundRatings}
+            onRate={rateRound}
+          />
+        )}
       </div>
       <div className="order-3 md:order-4 flex flex-col items-center gap-6 lg:flex-row lg:items-start">
         {showBlockBrowser && selectedQuestion && (

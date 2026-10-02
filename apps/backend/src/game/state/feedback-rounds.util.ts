@@ -12,8 +12,11 @@ import { getGameContext, type SessionState } from '@/game/state/session-state';
  */
 export function getFeedbackField(session: SessionState): FeedbackField {
   const { progress, seededGame } = session;
+  const { activeShowdownRound } = session;
   return describeFeedback({
     progress,
+    isShowdownBeingPlayed:
+      activeShowdownRound !== null && !activeShowdownRound.resolved,
     blockRounds: () => {
       const blockStart = getBlockStartPosition(
         progress.roundIndex,
@@ -24,5 +27,6 @@ export function getFeedbackField(session: SessionState): FeedbackField {
         .slice(blockStart.roundIndex, progress.roundIndex + 1)
         .map(({ id, title }) => ({ id, title }));
     },
+    allRounds: () => seededGame.rounds.map(({ id, title }) => ({ id, title })),
   });
 }

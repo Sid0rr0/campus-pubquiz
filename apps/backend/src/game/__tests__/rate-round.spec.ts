@@ -8,6 +8,7 @@ import {
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
   type JoinedTeam,
   type QuizRoundSpec,
   type RealStoreGateway,
@@ -251,6 +252,146 @@ describe('GameGateway — rating the rounds in the break', () => {
       expect(theirs.roundRatings).toEqual([
         { roundId: game.rounds[1].id, stars: 1 },
       ]);
+    });
+  });
+
+  describe('the final form at ended', () => {
+    const SHOWDOWN_PAYLOAD = {
+      question: 'How many?',
+      answer: '100',
+      points: 5,
+    };
+
+    function roundTitles(game: RealStoreGateway): string[] {
+      return (playersView(game).feedback?.rounds ?? []).map((r) => r.title);
+    }
+
+    it('is the feedback field at ended and lists every round, kahoot rounds included', async () => {
+      const game = await harness.createGateway({
+        teamNames: ['The Quizzards'],
+        rounds: [
+          THREE_ROUNDS[0],
+          THREE_ROUNDS[1],
+          { ...THREE_ROUNDS[2], kahootMode: true },
+        ],
+      });
+      await game.act('START_QUIZ');
+
+      await advanceUntilStatus(game, 'ended');
+
+      expect(playersView(game).feedback).toEqual({
+        kind: 'final_form',
+        rounds: [
+          { id: game.rounds[0].id, title: 'Music' },
+          { id: game.rounds[1].id, title: 'Film' },
+          { id: game.rounds[2].id, title: 'Science' },
+        ],
+      });
+    });
+
+    it('never lists a kahoot round on a break card, and lists it at ended', async () => {
+      const game = await harness.createGateway({
+        teamNames: ['The Quizzards'],
+        rounds: [
+          THREE_ROUNDS[0],
+          { ...THREE_ROUNDS[1], breakAfter: false, kahootMode: true },
+        ],
+      });
+      await game.act('START_QUIZ');
+      const kahootId = game.rounds[1].id;
+
+      let snapshot = await game.snapshot();
+      for (let i = 0; i < MAX_ADVANCES; i += 1) {
+        const field = playersView(game).feedback;
+        if (snapshot.progress.status === 'ended') break;
+        expect(
+          field?.kind === 'break_card' ? field.rounds : [],
+        ).not.toContainEqual(expect.objectContaining({ id: kahootId }));
+        snapshot = await game.act('ADVANCE');
+      }
+
+      expect(roundTitles(game)).toEqual(['Music', 'Film']);
+    });
+
+    it('stays empty while a showdown is being played, and refuses a rating', async () => {
+      const game = await harness.createGateway({
+        teamNames: ['Team A', 'Team B', 'Team C'],
+      });
+      await tieOnFirstQuestion(game, game.teams.slice(0, 2));
+      const admin = await game.connectAdmin();
+      await game.gateway.handleCreateShowdownRound(
+        asSocket(admin),
+        SHOWDOWN_PAYLOAD,
+      );
+      await game.act('END_QUIZ');
+
+      expect(playersView(game).feedback).toBeNull();
+      const ack = await rate(game, game.teams[0], {
+        roundId: game.rounds[0].id,
+        stars: 4,
+      });
+      expect(ack).toEqual({
+        success: false,
+        error: "This round can't be rated right now",
+      });
+    });
+
+    it('lists every round and accepts a rating once the showdown is decided', async () => {
+      const game = await harness.createGateway({
+        teamNames: ['Team A', 'Team B', 'Team C'],
+      });
+      await tieOnFirstQuestion(game, game.teams.slice(0, 2));
+      const admin = await game.connectAdmin();
+      await game.gateway.handleCreateShowdownRound(
+        asSocket(admin),
+        SHOWDOWN_PAYLOAD,
+      );
+      const { activeShowdown } = await game.snapshot();
+      for (const [team, value] of [
+        [game.teams[0], '10'],
+        [game.teams[1], '20'],
+      ] as const) {
+        await game.gateway.handleSubmitShowdownGuess(asSocket(team.socket), {
+          showdownRoundId: activeShowdown!.id,
+          teamId: team.teamId,
+          value,
+        });
+      }
+      await game.act('END_QUIZ');
+      let snapshot = await game.snapshot();
+      for (let i = 0; i < MAX_ADVANCES; i += 1) {
+        if (snapshot.activeShowdown?.winnerTeamId !== undefined) break;
+        snapshot = await game.act('ADVANCE');
+      }
+
+      expect(playersView(game).feedback?.kind).toBe('final_form');
+      const ack = await rate(game, game.teams[0], {
+        roundId: game.rounds[0].id,
+        stars: 4,
+      });
+      expect(ack).toEqual({ success: true });
+    });
+
+    it('empties on Previous out of ended and lists the rounds again on Advance, with ratings kept', async () => {
+      const game = await harness.createGateway({
+        teamNames: ['The Quizzards'],
+        rounds: THREE_ROUNDS,
+      });
+      const team = game.teams[0];
+      await game.act('START_QUIZ');
+      await advanceUntilStatus(game, 'ended');
+      const roundId = game.rounds[1].id;
+      await rate(game, team, { roundId, stars: 3 });
+
+      // The natural end raises the leaderboard, and Previous is blocked under it.
+      await game.act('TOGGLE_LEADERBOARD');
+      await game.act('PREVIOUS');
+      expect(playersView(game).feedback).toBeNull();
+      await game.act('ADVANCE');
+
+      expect(roundTitles(game)).toEqual(['Music', 'Film', 'Science']);
+      const accepted = await rejoin(game, team, 'The Quizzards');
+      expect(accepted.roundRatings).toEqual([{ roundId, stars: 3 }]);
     });
   });
 });

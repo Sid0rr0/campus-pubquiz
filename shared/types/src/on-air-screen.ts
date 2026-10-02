@@ -389,26 +389,37 @@ export interface RatableRound {
 
 /**
  * What the players room is offered to rate right now, shared by every phone:
- * the break card with the rounds of the block that just locked. Null when
- * nothing is open for rating. The phone draws from this and never decides
- * for itself.
+ * the break card with the rounds of the block that just locked, or the final
+ * form with every round of the quiz. Null when nothing is open for rating.
+ * The phone draws from this and never decides for itself.
  */
 export type FeedbackField = {
-  kind: 'break_card';
+  kind: 'break_card' | 'final_form';
   rounds: RatableRound[];
 } | null;
 
 /**
  * The one rule for which rounds are open for rating: the current block's
- * rounds while the session is in a break status, nothing otherwise. The
- * players view's feedback field is this, and the server accepts a rating
- * only for a round it lists, so the two cannot disagree.
+ * rounds while the session is in a break status, every round at `ended`
+ * unless a showdown is still being played, nothing otherwise. The players
+ * view's feedback field is this, and the server accepts a rating only for a
+ * round it lists, so the two cannot disagree.
  */
 export function describeFeedback(input: {
   progress: Pick<GameProgress, 'status'>;
+  /** Whether a showdown round has been created and not yet decided. */
+  isShowdownBeingPlayed: boolean;
   /** The rounds of the block the session is on, in quiz order; only read in a break status. */
   blockRounds: () => readonly RatableRound[];
+  /** Every round of the quiz in order, kahoot rounds included; only read at `ended`. */
+  allRounds: () => readonly RatableRound[];
 }): FeedbackField {
-  if (!isBreakStatus(input.progress.status)) return null;
-  return { kind: 'break_card', rounds: [...input.blockRounds()] };
+  const { status } = input.progress;
+  if (isBreakStatus(status)) {
+    return { kind: 'break_card', rounds: [...input.blockRounds()] };
+  }
+  if (status === 'ended' && !input.isShowdownBeingPlayed) {
+    return { kind: 'final_form', rounds: [...input.allRounds()] };
+  }
+  return null;
 }
