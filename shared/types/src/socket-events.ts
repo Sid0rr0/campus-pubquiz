@@ -143,6 +143,11 @@ export type BlockRevealQuestionView = RevealQuestionView &
   QuestionPosition &
   QuestionRoundTitle;
 
+/** A closest_guess question the big screen is revealing step by step, before its correct-answer step (3) is on air: no `answer`, and `closestGuess` carries only the stats shown so far. Only the players view sends one. */
+export type PendingClosestGuessRevealView = BlockQuestionView & {
+  closestGuess: ClosestGuessRevealData;
+};
+
 /** A not-yet-open question's position and its round's title — enough for a disabled picker slot labeled with the round it belongs to. */
 export type UpcomingQuestionPosition = QuestionPosition & QuestionRoundTitle;
 
@@ -354,7 +359,9 @@ export interface AdminStatePayload
 }
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export interface PlayersStatePayload
-  extends StateSnapshotPayload, PlayersScreenFields {
+  extends Omit<StateSnapshotPayload, 'revealQuestions'>, PlayersScreenFields {
+  /** The reveal walk so far: questions the big screen has shown, plus the closest_guess question mid-walk without its not-yet-shown fields. */
+  revealQuestions: (BlockRevealQuestionView | PendingClosestGuessRevealView)[];
   /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
   isAnswerable: boolean;
 }

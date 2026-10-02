@@ -8,13 +8,13 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                                                                                 | Blocked by |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| 03  | [A closest-guess reveal reaches phones one step at a time](players-reveal-redaction/issues/03-closest-guess-reveal-reaches-phones-step-by-step.md)                     | 01         |
 | 04  | [The final block's answers survive a reconnect after the quiz ends](players-reveal-redaction/issues/04-final-block-answers-survive-a-reconnect-after-the-quiz-ends.md) | 01         |
 
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| players-reveal-redaction    | 03  | [A closest-guess reveal reaches phones one step at a time](players-reveal-redaction/issues/03-closest-guess-reveal-reaches-phones-step-by-step.md)                     | —         |
 | players-reveal-redaction    | 02  | [Phones draw the phone screen the server names](players-reveal-redaction/issues/02-phones-draw-the-phone-screen-the-server-names.md)                                   | —         |
 | players-reveal-redaction    | 01  | [The players view carries only the reveal walk so far](players-reveal-redaction/issues/01-players-view-carries-only-the-reveal-walk-so-far.md)                         | —         |
 | commit-a-move               | 06  | [The presenter preview is a dry-run commit](commit-a-move/issues/06-preview-is-dry-run-commit.md)                                                                      | —         |

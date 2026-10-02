@@ -534,4 +534,66 @@ describe('PlayPage — answered questions history', () => {
       screen.queryByRole('button', { name: /answer history/i }),
     ).not.toBeInTheDocument();
   });
+
+  describe('mid closest-guess reveal', () => {
+    const closestGuessQuestion = {
+      id: 7,
+      type: 'closest_guess' as const,
+      prompt: 'How tall is the tower?',
+      points: 5,
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      roundTitle: 'Round 1',
+    };
+    const stats = {
+      hasSubmissions: true,
+      minGuess: '10',
+      maxGuess: '90',
+      closestGuesses: [],
+    };
+
+    function renderRevealAt(
+      step: number,
+      revealed: Record<string, unknown>,
+    ): void {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      const revealQuestion = { ...closestGuessQuestion, ...revealed };
+      mockUsePlayerGame.mockReturnValue(
+        socketResult({
+          snapshot: {
+            progress: progress({ status: 'reveal', revealIndex: 0 }),
+            currentQuestion: null,
+            blockQuestions: [closestGuessQuestion],
+            revealQuestions: [revealQuestion],
+            closestGuessRevealStep: step,
+          },
+          team: {
+            teamId: 1,
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+          myAnswers: { 7: '40' },
+          myAnswerGrades: { 7: { pointsAwarded: 0, verdict: 'wrong' } },
+          seenQuestions: { 7: revealQuestion },
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+    }
+
+    it('shows no correct answer or points in the history before the answer step, while the reveal shows the stats so far', () => {
+      renderRevealAt(2, { closestGuess: stats });
+
+      expect(screen.queryByText(/Correct:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/ANSWER/)).not.toBeInTheDocument();
+      expect(screen.getByText('10')).toBeInTheDocument();
+      expect(screen.getByText('90')).toBeInTheDocument();
+    });
+
+    it('shows the correct answer in the history and the reveal from the answer step', () => {
+      renderRevealAt(3, { closestGuess: stats, answer: '55' });
+
+      expect(screen.getByText(/Correct:/)).toBeInTheDocument();
+      expect(screen.getByText(/ANSWER/)).toBeInTheDocument();
+    });
+  });
 });

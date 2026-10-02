@@ -1,7 +1,10 @@
 import {
   SOCKET_ROOMS,
   type BlockRevealQuestionView,
+  type BlockQuestionView,
+  type ClosestGuessRevealData,
   type GameProgress,
+  type PendingClosestGuessRevealView,
   describeAdminIndicators,
   describeOnAirScreen,
   describePlayersScreen,
@@ -24,18 +27,66 @@ import {
   isBlockAnswerable,
 } from '@/game/state/session-snapshot.util';
 
+// Closest-guess reveal steps (see closest-guess-reveal.util): each one adds a
+// line to the big screen, and the phone is sent each only once it is on air.
+const HIGHEST_GUESS_STEP = 2;
+const ANSWER_STEP = 3;
+const CLOSEST_TEAMS_STEP = 4;
+
+function trimClosestGuessStats(
+  stats: ClosestGuessRevealData,
+  step: number,
+): ClosestGuessRevealData {
+  const { minGuess, maxGuess, closestGuesses } = stats;
+  return {
+    hasSubmissions: true,
+    ...(step >= 1 && minGuess !== undefined ? { minGuess } : {}),
+    ...(step >= HIGHEST_GUESS_STEP && maxGuess !== undefined
+      ? { maxGuess }
+      : {}),
+    closestGuesses: step >= CLOSEST_TEAMS_STEP ? closestGuesses : [],
+  };
+}
+
+/** The on-air closest_guess question as the big screen has shown it at `step`; any other question, and one nobody guessed for (a single-step reveal), is returned whole. */
+function trimToClosestGuessStep(
+  question: BlockRevealQuestionView,
+  step: number,
+): BlockRevealQuestionView | PendingClosestGuessRevealView {
+  const { closestGuess } = question;
+  if (!closestGuess?.hasSubmissions || step >= CLOSEST_TEAMS_STEP) {
+    return question;
+  }
+  const trimmedStats = trimClosestGuessStats(closestGuess, step);
+  if (step >= ANSWER_STEP) return { ...question, closestGuess: trimmedStats };
+  const unshownFields = new Set(['answer', 'answerMediaUrl']);
+  const shown = Object.fromEntries(
+    Object.entries(question).filter(([field]) => !unshownFields.has(field)),
+  ) as BlockQuestionView;
+  return { ...shown, closestGuess: trimmedStats };
+}
+
 /**
  * The reveal questions the big screen has shown so far: everything before
  * revealIndex, plus the one at revealIndex once its own 'reveal' step is on
- * air (not during the round's 'reveal_intro' title card). A removal, not a
- * mask — the leaderboard flag doesn't change what has been shown underneath.
+ * air (not during the round's 'reveal_intro' title card), shown only as far
+ * as its closest-guess step has got. A removal, not a mask — the leaderboard
+ * flag doesn't change what has been shown underneath.
  */
 function trimToRevealWalk(
   revealQuestions: readonly BlockRevealQuestionView[],
   { status, revealIndex }: GameProgress,
-): BlockRevealQuestionView[] {
-  const shownCount = status === 'reveal' ? revealIndex + 1 : revealIndex;
-  return revealQuestions.slice(0, shownCount);
+  closestGuessRevealStep: number,
+): (BlockRevealQuestionView | PendingClosestGuessRevealView)[] {
+  const isOnAirRevealShown = status === 'reveal';
+  const shownCount = isOnAirRevealShown ? revealIndex + 1 : revealIndex;
+  return revealQuestions
+    .slice(0, shownCount)
+    .map((question, index) =>
+      isOnAirRevealShown && index === revealIndex
+        ? trimToClosestGuessStep(question, closestGuessRevealStep)
+        : question,
+    );
 }
 
 /**
@@ -91,6 +142,7 @@ export function projectScreen(
         revealQuestions: trimToRevealWalk(
           snapshot.revealQuestions,
           snapshot.progress,
+          snapshot.closestGuessRevealStep,
         ),
       };
       return isQuestionHiddenBehindKahootLeaderboard(session)

@@ -352,8 +352,12 @@ grading behavior:
   `ADVANCE`/`PREVIOUS` step through smallest guess → highest guess → correct
   answer → closest team(s), each step adding a line without replacing what's
   already shown (`ClosestGuessRevealScreen`, shared by `/display` and
-  `/play`). A question with zero submissions collapses back to the normal
-  single-shot reveal, since there's nothing to walk through.
+  `/play`). Phones receive each step's data only once it is on air: the
+  players view carries the lowest guess from step 1, the highest from step 2,
+  the answer (and answer media) from step 3 and the closest teams from step 4,
+  and `PREVIOUS` takes the later fields away again. A question with zero
+  submissions collapses back to the normal single-shot reveal, since there's
+  nothing to walk through, and carries its answer straight away.
 
 `multiple_choice`/`sort`/`match` are auto-graded the instant a team submits,
 and the admin can still override any of them per answer;

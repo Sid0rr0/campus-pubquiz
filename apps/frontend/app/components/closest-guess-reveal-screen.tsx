@@ -5,7 +5,8 @@ interface ClosestGuessRevealScreenProps {
   prompt: string;
   /** 0-4, ignored when !closestGuess.hasSubmissions (always shows the question + correct answer together). */
   step: number;
-  correctAnswer: string;
+  /** Absent on a phone until the answer step is on air. */
+  correctAnswer?: string;
   answerMediaUrl?: string;
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;

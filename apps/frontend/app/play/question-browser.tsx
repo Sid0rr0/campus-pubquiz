@@ -2,6 +2,7 @@ import { isBatchGradedType, isBreakStatus } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
+  PendingClosestGuessRevealView,
   GameProgress,
   JoinAcceptedPayload,
   QuestionView,
@@ -28,8 +29,8 @@ interface QuestionBrowserProps {
   pickerRounds: PickerRound[];
   totalPickerSlots: number;
   selectedQuestion: QuestionView | BlockQuestionView;
-  /** selectedQuestion with its correct answer attached — set only while reveal is showing this question. */
-  revealQuestion?: BlockRevealQuestionView;
+  /** selectedQuestion as the reveal has shown it so far — set only while reveal is showing this question; a closest_guess question has no answer until its answer step. */
+  revealQuestion?: BlockRevealQuestionView | PendingClosestGuessRevealView;
   /** closest_guess only — which reveal sub-step to show, 0 for every other type. */
   closestGuessRevealStep: number;
   /** Active round's Kahoot-style speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
@@ -107,8 +108,14 @@ export function QuestionBrowser({
             <ClosestGuessRevealScreen
               prompt={revealQuestion.prompt}
               step={closestGuessRevealStep}
-              correctAnswer={revealQuestion.answer}
-              answerMediaUrl={revealQuestion.answerMediaUrl}
+              correctAnswer={
+                'answer' in revealQuestion ? revealQuestion.answer : undefined
+              }
+              answerMediaUrl={
+                'answerMediaUrl' in revealQuestion
+                  ? revealQuestion.answerMediaUrl
+                  : undefined
+              }
               closestGuess={revealQuestion.closestGuess}
               mediaTestIdPrefix="play-reveal"
             />
