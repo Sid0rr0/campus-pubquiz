@@ -61,6 +61,9 @@ import {
 import { ShowdownService } from '@/showdown/showdown.service';
 import type { TeamRosterEntry } from '@/team/team.service';
 
+/** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
+export type RosterLoader = () => Promise<TeamRosterEntry[]>;
+
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 
@@ -317,27 +320,25 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A team's socket joined: records its connection and the session's roster
-   * (which now includes the team) together, so the next snapshot shows the
-   * team as connected — and on the leaderboard from the moment it joins,
-   * at zero points until it scores.
+   * A team's socket joined: a session write that records its connection and
+   * the session's roster (read inside the write, so it includes the team and
+   * any removal that ran before it) together, so the next snapshot shows the
+   * team as connected — and on the leaderboard from the moment it joins, at
+   * zero points until it scores.
    */
-  async teamConnected(
+  teamConnected(
     joinCode: string,
     teamId: number,
     socketId: string,
-    roster: TeamRosterEntry[],
+    loadRoster: RosterLoader,
   ): Promise<SessionOutcome> {
-    const leaderboard = await this.standingsService.leaderboard(
-      this.getGameSessionId(joinCode),
-    );
-    this.update(joinCode, (session) =>
-      withLeaderboard(
-        withTeams(withTeamConnected(session, teamId, socketId), roster),
-        leaderboard,
+    return this.writeSession(joinCode, async (session) => ({
+      session: withTeams(
+        withTeamConnected(session, teamId, socketId),
+        await loadRoster(),
       ),
-    );
-    return BROADCAST_STATE_OUTCOME;
+      outcome: BROADCAST_STATE_OUTCOME,
+    }));
   }
 
   /** A socket dropped: frees its team, if it held one. Null when the socket wasn't a team's — nothing to push. */
@@ -515,33 +516,38 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A team left the session (kicked or left on its own) and `roster` is the
-   * session's roster after its removal: drops the team's connection and
-   * refreshes roster and leaderboard together, so the next snapshot never
-   * has one without the other. A kick also carries TEAM_KICKED for the
-   * team's socket, if it still has one.
+   * A team left the session (kicked or left on its own): a session write that
+   * drops the team's connection and swaps in the roster after its removal
+   * (read inside the write), so the next snapshot never has one without the
+   * other. A kick also carries TEAM_KICKED for the socket the team held when
+   * the write ran, if it still has one.
    */
-  async teamRemoved(
+  teamRemoved(
     joinCode: string,
     teamId: number,
-    roster: TeamRosterEntry[],
+    loadRoster: RosterLoader,
     reason: 'kicked' | 'left',
   ): Promise<SessionOutcome> {
-    const socketId = this.getConnectedSocketId(joinCode, teamId);
-    const leaderboard = await this.standingsService.leaderboard(
-      this.getGameSessionId(joinCode),
-    );
-    this.update(joinCode, (session) =>
-      withLeaderboard(
-        withTeams(withoutTeamConnection(session, teamId), roster),
-        leaderboard,
-      ),
-    );
-    const notices =
-      reason === 'kicked' && socketId
-        ? [{ socketId, event: SOCKET_EVENTS.TEAM_KICKED, payload: undefined }]
-        : [];
-    return { ...BROADCAST_STATE_OUTCOME, notices };
+    return this.writeSession(joinCode, async (session) => {
+      const socketId = session.connectedTeamSockets[teamId];
+      const notices =
+        reason === 'kicked' && socketId
+          ? [
+              {
+                socketId,
+                event: SOCKET_EVENTS.TEAM_KICKED,
+                payload: undefined,
+              },
+            ]
+          : [];
+      return {
+        session: withTeams(
+          withoutTeamConnection(session, teamId),
+          await loadRoster(),
+        ),
+        outcome: { ...BROADCAST_STATE_OUTCOME, notices },
+      };
+    });
   }
 
   /**

@@ -253,3 +253,114 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     expect(lastAdminSnapshot().ungradedQuestionIds).toEqual([]);
   });
 });
+
+describe('GameGateway — session write: roster changes', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+  let admin: MockSocket;
+  let kicked: JoinedTeam;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({ teamNames: ['Kicked Team'] });
+    admin = await game.connectAdmin();
+    [kicked] = game.teams;
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
+  });
+
+  function lastAdminSnapshot(): StateSnapshotPayload {
+    const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
+    const snapshots = game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(adminRoom) &&
+          emit.event === SOCKET_EVENTS.STATE_UPDATED,
+      )
+      .map((emit) => emit.payload as StateSnapshotPayload);
+    return snapshots[snapshots.length - 1];
+  }
+
+  function kick(teamId: number) {
+    return game.gateway.handleKickTeam(asSocket(admin), { teamId });
+  }
+
+  async function startJoin(teamName: string): Promise<{
+    joined: Promise<unknown>;
+    socket: MockSocket;
+  }> {
+    const socket = await game.connectPlayer();
+    const joined = game.gateway.handleJoinPlayers(asSocket(socket), {
+      teamName,
+      joinCode: game.joinCode,
+    });
+    return { joined, socket };
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  it('ends with the joined team connected and the kicked team gone when the kick’s standings read finishes last', async () => {
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const kicking = kick(kicked.teamId);
+    await held.started;
+
+    const { joined } = await startJoin('Newcomers');
+    await settle();
+    held.release();
+    await Promise.all([kicking, joined]);
+
+    const snapshot = lastAdminSnapshot();
+    const newcomer = snapshot.teams.find(
+      (team) => team.teamName === 'Newcomers',
+    );
+    expect(newcomer?.isConnected).toBe(true);
+    expect(
+      snapshot.leaderboard.find((entry) => entry.teamId === newcomer?.teamId)
+        ?.totalPoints,
+    ).toBe(0);
+    expect(snapshot.teams.map((team) => team.teamId)).not.toContain(
+      kicked.teamId,
+    );
+    expect(snapshot.leaderboard.map((entry) => entry.teamId)).not.toContain(
+      kicked.teamId,
+    );
+  });
+
+  it('shows a team that joins while a bonus write is held as connected once both finish', async () => {
+    const held = holdNextCall(game.standingsService, 'leaderboard');
+    const awarding = game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: kicked.teamId,
+      category: 'shot',
+      points: 1,
+    });
+    await held.started;
+
+    const { joined } = await startJoin('Latecomers');
+    await settle();
+    held.release();
+    await Promise.all([awarding, joined]);
+
+    const snapshot = lastAdminSnapshot();
+    expect(
+      snapshot.teams.find((team) => team.teamName === 'Latecomers')
+        ?.isConnected,
+    ).toBe(true);
+    expect(
+      snapshot.leaderboard.find((entry) => entry.teamId === kicked.teamId)
+        ?.bonusPoints,
+    ).toBe(1);
+  });
+
+  it('sends TEAM_KICKED exactly once to a kicked team that still had a socket', async () => {
+    await kick(kicked.teamId);
+
+    const kickedNotices = game
+      .roomEmits()
+      .filter(
+        (emit) =>
+          emit.rooms.includes(kicked.socket.id) &&
+          emit.event === SOCKET_EVENTS.TEAM_KICKED,
+      );
+    expect(kickedNotices).toHaveLength(1);
+  });
+});

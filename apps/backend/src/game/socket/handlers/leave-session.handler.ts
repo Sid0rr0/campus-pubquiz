@@ -28,12 +28,11 @@ export async function leaveSessionAsTeam(
 
   const gameSessionId = deps.gameState.getGameSessionId(joinCode);
   await deps.teamService.removeFromRoster(gameSessionId, payload.teamId);
-  const roster = await deps.teamService.listForSession(gameSessionId);
 
   return await deps.gameState.teamRemoved(
     joinCode,
     payload.teamId,
-    roster,
+    () => deps.teamService.listForSession(gameSessionId),
     'left',
   );
 }

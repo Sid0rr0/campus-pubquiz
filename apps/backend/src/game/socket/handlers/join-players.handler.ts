@@ -41,14 +41,14 @@ export async function joinPlayerTeam(
       }
       existingSocket.disconnect(true);
     }
-    const teams = await deps.teamService.listForSession(
-      deps.gameState.getGameSessionId(joinCode),
-    );
     const outcome = await deps.gameState.teamConnected(
       joinCode,
       team.id,
       client.id,
-      teams,
+      () =>
+        deps.teamService.listForSession(
+          deps.gameState.getGameSessionId(joinCode),
+        ),
     );
 
     const savedAnswers = await deps.answerService.listForTeam(
