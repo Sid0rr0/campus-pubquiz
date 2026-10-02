@@ -37,6 +37,7 @@ import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-te
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
+import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import type { SessionWriteQueue } from '@/game/state/session-write-queue';
@@ -164,6 +165,15 @@ export interface JoinedTeam {
   teamCode: string;
 }
 
+/** One of a session's phase timers (the question lock, or the kahoot question deadline), under test control. */
+export interface PhaseTimerControl {
+  isArmed: () => boolean;
+  /** Epoch-ms the timer is due, or null when none is armed. */
+  dueAt: () => number | null;
+  /** Runs the expiry the real timer would run, then waits for the session to settle. Throws when nothing is armed. */
+  fireNow: () => Promise<void>;
+}
+
 export interface RealStoreGateway extends PlayableQuiz {
   gateway: GameGateway;
   server: MockServer;
@@ -220,6 +230,16 @@ export interface RealStoreGateway extends PlayableQuiz {
    * covers one write, in the order writes reach the queue (any join code).
    */
   nextWriteWaiting: () => Promise<void>;
+  /**
+   * The auto-lock timer and the kahoot question timer of the seeded session
+   * (or another by `joinCode`). Nothing waits in real time: read `isArmed` /
+   * `dueAt`, or `fireNow` to expire one. Armed timers are cleared when the
+   * test ends.
+   */
+  timers: (joinCode?: string) => {
+    lock: PhaseTimerControl;
+    kahoot: PhaseTimerControl;
+  };
   /** Sends an admin action through the gateway (connecting an admin on first use) and returns the snapshot the admin room received for it. Throws whatever the gateway rejects with. */
   act: (action: GameAction) => Promise<StateSnapshotPayload>;
   /** The snapshot a freshly connecting client is handed — what a reconnect sees — for the seeded session, or another by `joinCode`. */
@@ -489,6 +509,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     await gameState.onModuleInit();
     const nextWriteWaiting = watchNextWrite(gameState);
     const sessionService = createFakeSessionService();
+    const lockScheduler = new ManualTimerScheduler();
+    const kahootScheduler = new ManualTimerScheduler();
     const gateway = new GameGateway(
       gameState,
       services.teamService,
@@ -497,6 +519,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       asSessionService(sessionService),
       db.orm,
       services.showdownService,
+      { lock: lockScheduler, kahoot: kahootScheduler },
     );
     gateways.push(gateway);
     // Nest runs this after every module's onModuleInit — i.e. after the
@@ -603,6 +626,23 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       return sync[1];
     };
 
+    const settled = async () => {
+      await gameState.whenSessionWritesIdle(quiz.joinCode);
+      // A macrotask turn: every microtask queued by the last write has run.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    };
+    const controlTimer = (
+      scheduler: ManualTimerScheduler,
+      joinCode: string,
+    ): PhaseTimerControl => ({
+      isArmed: () => scheduler.isArmed(joinCode),
+      dueAt: () => scheduler.dueAt(joinCode),
+      fireNow: async () => {
+        await scheduler.fire(joinCode);
+        await settled();
+      },
+    });
+
     return {
       ...quiz,
       ...services,
@@ -624,11 +664,11 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       },
       inRequestContext: (work) => RequestContext.create(db.orm.em, work),
       nextWriteWaiting,
-      settled: async () => {
-        await gameState.whenSessionWritesIdle(quiz.joinCode);
-        // A macrotask turn: every microtask queued by the last write has run.
-        await new Promise<void>((resolve) => setImmediate(resolve));
-      },
+      settled,
+      timers: (joinCode = quiz.joinCode) => ({
+        lock: controlTimer(lockScheduler, joinCode),
+        kahoot: controlTimer(kahootScheduler, joinCode),
+      }),
       connectAdmin,
       connectPlayer,
       joinTeam,

@@ -1,5 +1,7 @@
 import {
+  Inject,
   Logger,
+  Optional,
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
@@ -51,7 +53,10 @@ import {
   type EventResult,
 } from '@/game/socket/guarded-dispatch.util';
 import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import { QuestionLockTimerRegistry } from '@/game/socket/question-lock-timer.registry';
+import {
+  QuestionLockTimerRegistry,
+  type TimerScheduler,
+} from '@/game/socket/question-lock-timer.registry';
 import {
   SOCKET_EVENT_DECLARATIONS,
   type SocketEventDeclaration,
@@ -61,6 +66,14 @@ import {
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import { ShowdownService } from '@/showdown/showdown.service';
+
+/** Injection token for swapping the phase timers' schedulers; nothing provides it in production, so both timers use real timers. */
+export const PHASE_TIMER_SCHEDULERS = Symbol('PHASE_TIMER_SCHEDULERS');
+
+export interface PhaseTimerSchedulers {
+  lock: TimerScheduler;
+  kahoot: TimerScheduler;
+}
 
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
@@ -76,8 +89,8 @@ export class GameGateway
   server!: Server;
 
   private readonly logger = new Logger(GameGateway.name);
-  private readonly lockTimers = new QuestionLockTimerRegistry();
-  private readonly kahootQuestionTimers = new QuestionLockTimerRegistry();
+  private readonly lockTimers: QuestionLockTimerRegistry;
+  private readonly kahootQuestionTimers: QuestionLockTimerRegistry;
 
   constructor(
     private readonly gameState: GameStateService,
@@ -87,7 +100,15 @@ export class GameGateway
     private readonly sessions: SessionService,
     private readonly orm: MikroORM,
     private readonly showdownService: ShowdownService,
-  ) {}
+    @Optional()
+    @Inject(PHASE_TIMER_SCHEDULERS)
+    timerSchedulers?: PhaseTimerSchedulers,
+  ) {
+    this.lockTimers = new QuestionLockTimerRegistry(timerSchedulers?.lock);
+    this.kahootQuestionTimers = new QuestionLockTimerRegistry(
+      timerSchedulers?.kahoot,
+    );
+  }
 
   /**
    * Runs once every module's onModuleInit has loaded the session store, so a
@@ -351,12 +372,12 @@ export class GameGateway
     this.lockTimers.rearm(
       joinCode,
       this.gameState.getQuestionLockAt(joinCode),
-      () => void this.handleQuestionLockTimerExpired(joinCode),
+      () => this.handleQuestionLockTimerExpired(joinCode),
     );
     this.kahootQuestionTimers.rearm(
       joinCode,
       this.gameState.getKahootQuestionEndsAt(joinCode),
-      () => void this.handleKahootQuestionTimerExpired(joinCode),
+      () => this.handleKahootQuestionTimerExpired(joinCode),
     );
   }
 

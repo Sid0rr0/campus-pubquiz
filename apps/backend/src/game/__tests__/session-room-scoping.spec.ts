@@ -10,16 +10,6 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-// Long enough that no armed timer can fire while the test runs.
-const LOCK_GRACE_SECONDS = 30;
-
-// Reads the gateway's armed lock timers directly (one per session), so the
-// test checks they were cleared instead of waiting out the grace period to see
-// whether one fires.
-function armedLockTimerCount(gateway: RealStoreGateway['gateway']): number {
-  return gateway['lockTimers']['timers'].size;
-}
-
 describe('GameGateway — session room scoping', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
@@ -118,13 +108,8 @@ describe('GameGateway — session room scoping', () => {
   it('clears every armed question-lock timer for every session on module destroy', async () => {
     // The quiz's round has breakAfter: true, so its last question arms a lock
     // timer once it locks.
-    const quick = {
-      ...DEFAULT_SESSION_SETTINGS,
-      lockGraceSeconds: LOCK_GRACE_SECONDS,
-    };
     const armed = await harness.createGateway({
       joinCode: 'ARMED1',
-      settings: quick,
       rounds: [
         {
           title: 'Round A',
@@ -134,7 +119,7 @@ describe('GameGateway — session room scoping', () => {
       ],
     });
     const { joinCode: joinCodeB } = await armed.inRequestContext(() =>
-      armed.gameState.createSession(armed.quizId, quick),
+      armed.gameState.createSession(armed.quizId, DEFAULT_SESSION_SETTINGS),
     );
 
     for (const joinCode of [armed.joinCode, joinCodeB]) {
@@ -149,10 +134,17 @@ describe('GameGateway — session room scoping', () => {
       }
       expect((await armed.snapshot(joinCode)).progress.status).toBe('locking');
     }
-    expect(armedLockTimerCount(armed.gateway)).toBe(2);
+    const joinCodes = [armed.joinCode, joinCodeB];
+    expect(joinCodes.map((code) => armed.timers(code).lock.isArmed())).toEqual([
+      true,
+      true,
+    ]);
 
     armed.gateway.onModuleDestroy();
 
-    expect(armedLockTimerCount(armed.gateway)).toBe(0);
+    expect(joinCodes.map((code) => armed.timers(code).lock.isArmed())).toEqual([
+      false,
+      false,
+    ]);
   });
 });

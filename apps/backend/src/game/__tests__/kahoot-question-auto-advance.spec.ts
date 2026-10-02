@@ -10,15 +10,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const KAHOOT_TIMER_SECONDS = 1;
-const TIMER_WAIT_MS = 10_000;
-const QUIET_PERIOD_MS = 2_500;
-const POLL_INTERVAL_MS = 25;
-const RESTART_AFTER_MS = 1_200;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const KAHOOT_TIMER_SECONDS = 20;
 
 describe('GameGateway — kahoot question auto-advance timer', () => {
   const harness = setupRealStoreGatewayTest();
@@ -44,39 +36,21 @@ describe('GameGateway — kahoot question auto-advance timer', () => {
       .map((snapshot) => snapshot.progress.status);
   }
 
-  async function waitForDisplayStatus(
-    game: RealStoreGateway,
-    status: GameStatus,
-  ): Promise<void> {
-    const deadline = Date.now() + TIMER_WAIT_MS;
-    while (!displayStatuses(game).includes(status)) {
-      if (Date.now() > deadline) {
-        throw new Error(`Display never received a "${status}" snapshot`);
-      }
-      await delay(POLL_INTERVAL_MS);
-    }
-  }
+  it('auto-advances question_open to locking with no admin action once the timer elapses', async () => {
+    const game = await openKahootQuestion({
+      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    });
 
-  it(
-    'auto-advances question_open to locking with no admin action once the timer elapses',
-    async () => {
-      const game = await openKahootQuestion({
-        kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
-      });
+    await game.timers().kahoot.fireNow();
 
-      await waitForDisplayStatus(game, 'locking');
-
-      expect(displayStatuses(game)).toEqual(['locking']);
-    },
-    2 * TIMER_WAIT_MS,
-  );
+    expect(displayStatuses(game)).toEqual(['locking']);
+  });
 
   it('does not arm a timer when kahootQuestionTimerSeconds is null', async () => {
     const game = await openKahootQuestion({ kahootQuestionTimerSeconds: null });
 
-    await delay(QUIET_PERIOD_MS);
-
-    expect(game.roomEmits()).toEqual([]);
+    expect(game.timers().kahoot.isArmed()).toBe(false);
+    expect(game.timers().kahoot.dueAt()).toBeNull();
   });
 
   it('cancels the pending auto-advance when the admin acts manually before it fires', async () => {
@@ -85,43 +59,34 @@ describe('GameGateway — kahoot question auto-advance timer', () => {
     });
 
     await game.act('ADVANCE'); // manual advance -> locking
-    game.clearEmits();
-    await delay(QUIET_PERIOD_MS);
 
-    expect(game.roomEmits()).toEqual([]);
+    expect(game.timers().kahoot.isArmed()).toBe(false);
   });
 
-  it(
-    'arms the existing lock timer normally after auto-advancing into locking',
-    async () => {
-      const game = await openKahootQuestion({
-        kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
-        lockGraceSeconds: KAHOOT_TIMER_SECONDS,
-      });
+  it('arms the existing lock timer normally after auto-advancing into locking', async () => {
+    const game = await openKahootQuestion({
+      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    });
 
-      await waitForDisplayStatus(game, 'locking'); // auto-advance -> locking
-      await waitForDisplayStatus(game, 'reveal'); // lock timer -> reveal
+    await game.timers().kahoot.fireNow(); // auto-advance -> locking
+    expect(game.timers().lock.isArmed()).toBe(true);
+    await game.timers().lock.fireNow(); // lock timer -> reveal
 
-      expect(displayStatuses(game)).toEqual(['locking', 'reveal']);
-    },
-    2 * TIMER_WAIT_MS,
-  );
+    expect(displayStatuses(game)).toEqual(['locking', 'reveal']);
+  });
 
-  it(
-    'still auto-locks on the original deadline after a restart mid-question',
-    async () => {
-      const game = await openKahootQuestion({ kahootQuestionTimerSeconds: 2 });
-      const deadline = (await game.snapshot()).kahootQuestionEndsAt as number;
-      await delay(RESTART_AFTER_MS);
+  it('still auto-locks on the original deadline after a restart mid-question', async () => {
+    const game = await openKahootQuestion({
+      kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
+    });
+    const deadline = (await game.snapshot()).kahootQuestionEndsAt as number;
 
-      const restarted = await game.restart();
-      restarted.clearEmits();
+    const restarted = await game.restart();
+    restarted.clearEmits();
 
-      expect((await restarted.snapshot()).kahootQuestionEndsAt).toBe(deadline);
-      await waitForDisplayStatus(restarted, 'locking');
-      // A deadline re-armed fresh from the restart would land RESTART_AFTER_MS later.
-      expect(Date.now()).toBeLessThan(deadline + RESTART_AFTER_MS / 2);
-    },
-    2 * TIMER_WAIT_MS,
-  );
+    expect((await restarted.snapshot()).kahootQuestionEndsAt).toBe(deadline);
+    expect(restarted.timers().kahoot.dueAt()).toBe(deadline);
+    await restarted.timers().kahoot.fireNow();
+    expect(displayStatuses(restarted)).toEqual(['locking']);
+  });
 });

@@ -12,11 +12,21 @@ Parent spec: `.scratch/backend-test-speed/spec.md`
 
 **Blocked by:** 03 (Gateway specs wait for a settled session instead of sleeping), because fire-now waits for `settled()`.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first: with a manual scheduler, re-arming a session's timer replaces the earlier one; clearing leaves nothing armed; firing runs the expiry callback exactly once; another session's timer is untouched.
-- [ ] The real scheduler path stays covered by the existing phase timer and lock-timer specs, which pass unchanged.
-- [ ] The four timer specs use armed-state, due-time and fire-now calls, with no real-time polling, quiet periods or sleeps left.
-- [ ] Each of the four specs takes under 3s on its own.
-- [ ] No timer fires after its test has ended (an armed timer at test end is cleared, proven by a test).
-- [ ] The backend test count is the same as before.
+- [x] Written first: with a manual scheduler, re-arming a session's timer replaces the earlier one; clearing leaves nothing armed; firing runs the expiry callback exactly once; another session's timer is untouched.
+- [x] The real scheduler path stays covered by the existing phase timer and lock-timer specs, which pass unchanged.
+- [x] The four timer specs use armed-state, due-time and fire-now calls, with no real-time polling, quiet periods or sleeps left.
+- [x] Each of the four specs takes under 3s on its own.
+- [x] No timer fires after its test has ended (an armed timer at test end is cleared, proven by a test).
+- [x] The backend test count is the same as before. (No existing test was removed or merged; 10 new tests were added — 7 for the registry on both schedulers, 3 for the harness timer controls and end-of-test cleanup.)
+
+## Comments
+
+Implemented in the commit titled `test(backend): gateway specs fire phase timers on demand` (see git history for the hash).
+
+- `TimerScheduler` (`arm(key, dueAt, onExpire)` / `clear(key)`) is injected into `QuestionLockTimerRegistry`; default is the real-timer scheduler. The gateway takes an optional `PHASE_TIMER_SCHEDULERS` token that only the harness provides.
+- Harness: `game.timers(joinCode?)` returns `{ lock, kahoot }`, each with `isArmed()`, `dueAt()` and `fireNow()` (awaits the expiry handler, then `settled()`).
+- `session-write.spec.ts` and `session-room-scoping.spec.ts` also relied on the real lock timer (a 1s grace and a private-field read) and moved to the same calls.
+- After a restart the lock deadline is recomputed from the stored phase start, so its due time matches the original only to within a few ms; the spec asserts that, not exact equality. The kahoot deadline is exact.
+- Each of the four specs runs in about 1s on its own.

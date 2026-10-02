@@ -11,23 +11,14 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const LOCK_GRACE_SECONDS = 1;
-const PAST_LOCK_GRACE_MS = 1_800;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 describe('GameGateway — concurrent sessions: question-lock timer isolation', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
   beforeEach(async () => {
     // One single-question breakAfter round, so a session reaches the locking
-    // countdown with one ADVANCE from its open question; the short grace
-    // stands in for the 60s default so the timer fires within the test.
+    // countdown with one ADVANCE from its open question.
     game = await harness.createGateway({
-      settings: { lockGraceSeconds: LOCK_GRACE_SECONDS },
       rounds: [
         {
           title: 'Round Alpha',
@@ -42,10 +33,7 @@ describe('GameGateway — concurrent sessions: question-lock timer isolation', (
     const adminA = await game.connectAdmin();
     await game.openFirstQuestion(adminA);
     const { joinCode: joinCodeB } = await game.inRequestContext(() =>
-      game.gameState.createSession(game.quizId, {
-        ...DEFAULT_SESSION_SETTINGS,
-        lockGraceSeconds: LOCK_GRACE_SECONDS,
-      }),
+      game.gameState.createSession(game.quizId, DEFAULT_SESSION_SETTINGS),
     );
     const adminB = await game.connectAdmin(joinCodeB);
     await game.openFirstQuestion(adminB);
@@ -61,7 +49,8 @@ describe('GameGateway — concurrent sessions: question-lock timer isolation', (
     }); // cancels B's timer only
     game.clearEmits();
 
-    await delay(PAST_LOCK_GRACE_MS);
+    expect(game.timers(joinCodeB).lock.isArmed()).toBe(false);
+    await game.timers().lock.fireNow();
 
     expect((await game.snapshot()).progress.status).toBe('break_intro');
     expect((await game.snapshot(joinCodeB)).progress.status).toBe(

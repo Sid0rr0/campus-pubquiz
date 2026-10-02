@@ -2,6 +2,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type GameAction,
+  type SocketRoomName,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import {
@@ -9,24 +10,15 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const LOCK_GRACE_SECONDS = 1;
-const PAST_LOCK_GRACE_MS = 1_800;
-const AUTO_ADVANCE_WAIT_MS = 10_000;
-const POLL_INTERVAL_MS = 25;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const RESTART_DEADLINE_TOLERANCE_MS = 1_000;
 
 describe('GameGateway — question lock auto-advance timer', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
   beforeEach(async () => {
-    // One breakAfter round of two questions; the short grace stands in for
-    // the 60s default so the timer can fire within a test.
+    // One breakAfter round of two questions.
     game = await harness.createGateway({
-      settings: { lockGraceSeconds: LOCK_GRACE_SECONDS },
       rounds: [
         {
           title: 'Round A',
@@ -64,79 +56,66 @@ describe('GameGateway — question lock auto-advance timer', () => {
     game.clearEmits();
   }
 
-  async function expectNothingHappensPastTheGrace(): Promise<void> {
-    await delay(PAST_LOCK_GRACE_MS);
-    expect(game.roomEmits()).toEqual([]);
-  }
-
-  async function waitForBreakIntro(
+  function expectBreakIntroDelivered(
     target: RealStoreGateway = game,
-  ): Promise<void> {
-    const deadline = Date.now() + AUTO_ADVANCE_WAIT_MS;
-    const hasBreakIntro = () =>
-      target
-        .payloadsTo<StateSnapshotPayload>(
-          SOCKET_ROOMS.DISPLAY,
-          SOCKET_EVENTS.STATE_UPDATED,
-        )
-        .some(({ progress }) => progress.status === 'break_intro');
-    while (!hasBreakIntro()) {
-      if (Date.now() > deadline) {
-        throw new Error('The lock timer never advanced the game to break');
-      }
-      await delay(POLL_INTERVAL_MS);
+    rooms: SocketRoomName[] = [SOCKET_ROOMS.DISPLAY],
+  ): void {
+    for (const room of rooms) {
+      expect(
+        target
+          .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
+          .map(({ progress }) => progress.status),
+      ).toContain('break_intro');
     }
   }
 
   it('does not arm a lock merely from opening the last question of a breakAfter round', async () => {
     await openLastQuestion();
 
-    await expectNothingHappensPastTheGrace();
+    expect(game.timers().lock.isArmed()).toBe(false);
   });
 
   it('auto-advances to break once the grace passes after the admin starts the locking countdown, without further admin action', async () => {
     await enterLockingCountdown();
 
-    await waitForBreakIntro();
+    await game.timers().lock.fireNow();
 
-    for (const room of [
+    expectBreakIntroDelivered(game, [
       SOCKET_ROOMS.DISPLAY,
       SOCKET_ROOMS.ADMIN,
       SOCKET_ROOMS.PLAYERS,
-    ]) {
-      expect(
-        game
-          .payloadsTo<StateSnapshotPayload>(room, SOCKET_EVENTS.STATE_UPDATED)
-          .map(({ progress }) => progress.status),
-      ).toContain('break_intro');
-    }
+    ]);
   });
 
   it('still auto-advances to break after a backend restart mid-countdown', async () => {
     await enterLockingCountdown();
+    const dueAt = game.timers().lock.dueAt();
 
     const restarted = await game.restart();
     restarted.clearEmits();
 
-    await waitForBreakIntro(restarted);
+    // Restored from the stored phase start, so equal to the original to within the stored precision — never a fresh grace period from the restart.
+    expect(
+      Math.abs((restarted.timers().lock.dueAt() ?? 0) - (dueAt ?? 0)),
+    ).toBeLessThan(RESTART_DEADLINE_TOLERANCE_MS);
+    await restarted.timers().lock.fireNow();
+    expectBreakIntroDelivered(restarted);
   });
 
   it('cancels the pending auto-lock when the admin advances manually before it fires', async () => {
     await enterLockingCountdown();
 
     await game.act('ADVANCE'); // manual advance -> break
-    game.clearEmits();
 
-    await expectNothingHappensPastTheGrace();
+    expect(game.timers().lock.isArmed()).toBe(false);
   });
 
   it('cancels the pending auto-lock when the admin steps back from locking to the question', async () => {
     await enterLockingCountdown();
 
     await game.act('PREVIOUS'); // manual step back -> question_open
-    game.clearEmits();
 
-    await expectNothingHappensPastTheGrace();
+    expect(game.timers().lock.isArmed()).toBe(false);
   });
 
   it('does not arm a lock on a question that is not the last of a breakAfter round', async () => {
@@ -145,8 +124,7 @@ describe('GameGateway — question lock auto-advance timer', () => {
       'ADVANCE', // -> round_intro(0)
       'ADVANCE', // -> qA1 (first of two, not last)
     ]);
-    game.clearEmits();
 
-    await expectNothingHappensPastTheGrace();
+    expect(game.timers().lock.isArmed()).toBe(false);
   });
 });

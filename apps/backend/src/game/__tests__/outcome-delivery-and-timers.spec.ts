@@ -9,10 +9,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-const TIMER_SECONDS = 1;
-const LONG_SECONDS = 60;
-const TIMER_WAIT_MS = 10_000;
-const POLL_INTERVAL_MS = 25;
+const TIMER_SECONDS = 60;
 
 type Trigger = 'manual' | 'timer';
 
@@ -28,10 +25,6 @@ const SCENARIOS: Scenario[] = [
   { name: 'lock timer, kahoot round', kahootMode: true, timer: 'lock' },
   { name: 'kahoot question timer', kahootMode: true, timer: 'kahootQuestion' },
 ];
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /** Room emits reduced to what a client can observe, independent of the session's join code and row ids. */
 function summarizeEmits(game: RealStoreGateway): string[] {
@@ -59,19 +52,6 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
     return `TIMER${gameCount++}`;
   }
 
-  async function waitFor(
-    isDone: () => boolean,
-    failure: string,
-  ): Promise<void> {
-    const deadline = Date.now() + TIMER_WAIT_MS;
-    while (!isDone()) {
-      if (Date.now() > deadline) {
-        throw new Error(failure);
-      }
-      await delay(POLL_INTERVAL_MS);
-    }
-  }
-
   async function advanceToLocking(
     game: RealStoreGateway,
     admin: MockSocket,
@@ -91,23 +71,16 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
   /**
    * Plays a question up to the point right before the next automatic
    * transition, then produces that transition either by the admin pressing
-   * ADVANCE or by waiting for the timer. Returns every emit it produced.
+   * ADVANCE or by firing the timer. Returns every emit it produced.
    */
   async function runTransition(
     scenario: Scenario,
     trigger: Trigger,
-    expectedEmitCount = 1,
   ): Promise<string[]> {
-    const isTimerRun = trigger === 'timer';
     const settings: Partial<SessionSettings> = {
-      lockGraceSeconds:
-        isTimerRun && scenario.timer === 'lock' ? TIMER_SECONDS : LONG_SECONDS,
+      lockGraceSeconds: TIMER_SECONDS,
       kahootQuestionTimerSeconds:
-        scenario.timer === 'kahootQuestion'
-          ? isTimerRun
-            ? TIMER_SECONDS * 2
-            : LONG_SECONDS
-          : null,
+        scenario.timer === 'kahootQuestion' ? TIMER_SECONDS : null,
     };
     const game = await harness.createGateway({
       teamNames: [`Quizzards ${gameCount}`],
@@ -133,71 +106,58 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
         action: 'ADVANCE',
       });
     } else {
-      await waitFor(
-        () => game.roomEmits().length >= expectedEmitCount,
-        `Timed out waiting for ${expectedEmitCount} emits; got ${game.roomEmits().length}`,
-      );
+      const timer = game.timers();
+      await (scenario.timer === 'lock' ? timer.lock : timer.kahoot).fireNow();
     }
-    const emits = summarizeEmits(game);
-    game.gateway.onModuleDestroy();
-    return emits;
+    return summarizeEmits(game);
   }
 
   it.each(SCENARIOS)(
     'delivers the same emits for a timer expiry as for a manual ADVANCE ($name)',
     async (scenario) => {
       const manual = await runTransition(scenario, 'manual');
-      const timed = await runTransition(scenario, 'timer', manual.length);
+      const timed = await runTransition(scenario, 'timer');
 
       expect(timed).toEqual(manual);
     },
-    3 * TIMER_WAIT_MS,
   );
 
-  it(
-    'delivers presenter context, then the state snapshot, then the team sync when a kahoot lock enters reveal',
-    async () => {
-      const emits = await runTransition(
-        { name: 'kahoot lock', kahootMode: true, timer: 'lock' },
-        'timer',
-        5,
-      );
+  it('delivers presenter context, then the state snapshot, then the team sync when a kahoot lock enters reveal', async () => {
+    const emits = await runTransition(
+      { name: 'kahoot lock', kahootMode: true, timer: 'lock' },
+      'timer',
+    );
 
-      expect(emits).toEqual([
-        `admin ${SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED}`,
-        `display ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
-        `admin ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
-        `players ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
-        `player-0 ${SOCKET_EVENTS.TEAM_ANSWERS_SYNCED} x1`,
-      ]);
-    },
-    2 * TIMER_WAIT_MS,
-  );
+    expect(emits).toEqual([
+      `admin ${SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED}`,
+      `display ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
+      `admin ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
+      `players ${SOCKET_EVENTS.STATE_UPDATED} reveal`,
+      `player-0 ${SOCKET_EVENTS.TEAM_ANSWERS_SYNCED} x1`,
+    ]);
+  });
 
-  it(
-    're-arms the lock timer after a kahoot question timer expiry',
-    async () => {
-      const game = await harness.createGateway({
-        teamNames: [`Quizzards ${gameCount}`],
-        joinCode: nextJoinCode(),
-        kahootMode: true,
-        settings: {
-          kahootQuestionTimerSeconds: TIMER_SECONDS,
-          lockGraceSeconds: TIMER_SECONDS,
-        },
-      });
-      const admin = await game.connectAdmin();
-      await game.openFirstQuestion(admin);
+  it('re-arms the lock timer after a kahoot question timer expiry', async () => {
+    const game = await harness.createGateway({
+      teamNames: [`Quizzards ${gameCount}`],
+      joinCode: nextJoinCode(),
+      kahootMode: true,
+      settings: {
+        kahootQuestionTimerSeconds: TIMER_SECONDS,
+        lockGraceSeconds: TIMER_SECONDS,
+      },
+    });
+    const admin = await game.connectAdmin();
+    await game.openFirstQuestion(admin);
 
-      await waitFor(
-        () =>
-          summarizeEmits(game).some((emit) =>
-            emit.endsWith(`${SOCKET_EVENTS.STATE_UPDATED} reveal`),
-          ),
-        'Kahoot question never reached reveal by timers alone',
-      );
-      game.gateway.onModuleDestroy();
-    },
-    2 * TIMER_WAIT_MS,
-  );
+    await game.timers().kahoot.fireNow();
+    expect(game.timers().lock.isArmed()).toBe(true);
+    await game.timers().lock.fireNow();
+
+    expect(
+      summarizeEmits(game).some((emit) =>
+        emit.endsWith(`${SOCKET_EVENTS.STATE_UPDATED} reveal`),
+      ),
+    ).toBe(true);
+  });
 });

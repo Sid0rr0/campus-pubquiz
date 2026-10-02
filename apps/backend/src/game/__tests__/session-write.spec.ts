@@ -543,7 +543,6 @@ describe('GameGateway — session write: a timer expiry', () => {
   it('keeps a bonus awarded while the lock timer’s expiry waits on its save', async () => {
     const game = await harness.createGateway({
       teamNames: ['Timed Team'],
-      settings: { lockGraceSeconds: 1 },
       rounds: [
         {
           title: 'Round A',
@@ -559,6 +558,7 @@ describe('GameGateway — session write: a timer expiry', () => {
     }
     await game.act('ADVANCE'); // -> locking, lock armed
     const held = holdNextCall(game.progressRepository, 'save');
+    const expiring = game.timers().lock.fireNow();
     await held.started;
 
     const waiting = game.nextWriteWaiting();
@@ -570,7 +570,7 @@ describe('GameGateway — session write: a timer expiry', () => {
     await waiting;
     held.release();
     await awarding;
-    await game.settled();
+    await expiring;
 
     const snapshot = await game.snapshot();
     expect(snapshot.progress.status).toBe('break_intro');
