@@ -21,13 +21,13 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                      | Blocked by |
 | --- | ----------------------------------------------------------------------------------------------------------- | ---------- |
-| 06  | [Round ratings on the session stats page](feedback/issues/06-round-ratings-on-session-stats.md)             | 01         |
 | 07  | [Comments and topics on the session stats page](feedback/issues/07-comments-and-topics-on-session-stats.md) | 03, 04, 06 |
 
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| feedback                    | 06  | [Round ratings on the session stats page](feedback/issues/06-round-ratings-on-session-stats.md)                                                                        | —         |
 | feedback                    | 05  | [Big-screen feedback prompts](feedback/issues/05-big-screen-feedback-prompts.md)                                                                                       | —         |
 | feedback                    | 04  | ["Collect feedback" session setting](feedback/issues/04-collect-feedback-session-setting.md)                                                                           | —         |
 | feedback                    | 03  | ["Anything else" and topic suggestions](feedback/issues/03-anything-else-and-topic-suggestions.md)                                                                     | —         |
