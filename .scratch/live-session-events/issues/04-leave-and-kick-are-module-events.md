@@ -11,9 +11,17 @@ Parent spec: `.scratch/live-session-events/spec.md`
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Leaving from a socket that doesn't own the seat is refused with "Can only leave the session as your own team".
-- [ ] A team that leaves or is kicked disappears from the roster and leaderboard in the next view.
-- [ ] A kicked team gets the kicked notice, then its socket closes.
-- [ ] Kicking a disconnected team still removes it, with no notice and nothing to close.
+- [x] Leaving from a socket that doesn't own the seat is refused with "Can only leave the session as your own team".
+- [x] A team that leaves or is kicked disappears from the roster and leaderboard in the next view.
+- [x] A kicked team gets the kicked notice, then its socket closes.
+- [x] Kicking a disconnected team still removes it, with no notice and nothing to close.
+
+## Comments
+
+Implemented in the commit `refactor(backend): leave and kick are Live session module events` (find it in git history; no hash recorded here).
+
+- `GameStateService.teamLeft(joinCode, teamId, socketId)` refuses a socket that doesn't own the seat ("Can only leave the session as your own team"); `kickTeam(joinCode, teamId)` has no ownership check. Both go through a private `teamRemoved` that removes the roster row, then lists the roster inside the session write. `GameStateService` now takes `TeamService` as a constructor dependency. `leave-session.handler.ts` and `kick-team.handler.ts` are one-line adapters.
+- Already pinned by `team-removed.spec.ts`, `session-write.spec.ts` and `outcome-delivery-order.spec.ts`; added the missing "no kicked notice for a disconnected team" assertion first.
+- `getConnectedSocketId` is still used by the join handler, so it stays until tickets 05 and 08.

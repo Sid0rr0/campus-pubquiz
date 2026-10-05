@@ -1,4 +1,3 @@
-import { WsException } from '@nestjs/websockets';
 import type { LeaveSessionPayload } from '@campus-pubquiz/types';
 import type { EventServices } from '@/game/socket/handlers/event-services';
 import type {
@@ -14,25 +13,9 @@ import type {
  * (the only way to "rename" a team today) leaves its old identity behind as
  * a stale entry in /control that the admin has to kick by hand.
  */
-export async function leaveSessionAsTeam(
+export function leaveSessionAsTeam(
   deps: EventServices,
   { joinCode, payload, client }: EventContext<LeaveSessionPayload>,
 ): Promise<EventResult> {
-  const connectedSocketId = deps.gameState.getConnectedSocketId(
-    joinCode,
-    payload.teamId,
-  );
-  if (connectedSocketId !== client.id) {
-    throw new WsException('Can only leave the session as your own team');
-  }
-
-  const gameSessionId = deps.gameState.getGameSessionId(joinCode);
-  await deps.teamService.removeFromRoster(gameSessionId, payload.teamId);
-
-  return await deps.gameState.teamRemoved(
-    joinCode,
-    payload.teamId,
-    () => deps.teamService.listForSession(gameSessionId),
-    'left',
-  );
+  return deps.gameState.teamLeft(joinCode, payload.teamId, client.id);
 }

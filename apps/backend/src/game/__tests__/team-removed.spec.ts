@@ -145,6 +145,11 @@ describe('GameGateway — team removed (kick / leave)', () => {
 
     expectTeamGoneFromEveryRoom(scorer.teamId);
     expect(scorer.socket.disconnect).not.toHaveBeenCalled();
+    expect(
+      game
+        .roomEmits()
+        .filter((emit) => emit.event === SOCKET_EVENTS.TEAM_KICKED),
+    ).toEqual([]);
   });
 
   it('rejects leaving as another team with today’s message', async () => {

@@ -71,7 +71,7 @@ import {
   InvalidShowdownError,
   ShowdownService,
 } from '@/showdown/showdown.service';
-import type { TeamRosterEntry } from '@/team/team.service';
+import { TeamService, type TeamRosterEntry } from '@/team/team.service';
 
 /** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
 export type RosterLoader = () => Promise<TeamRosterEntry[]>;
@@ -111,6 +111,7 @@ export class GameStateService implements OnModuleInit {
     private readonly answerService: AnswerService,
     private readonly standingsService: StandingsService,
     private readonly showdownService: ShowdownService,
+    private readonly teamService: TeamService,
   ) {
     this.grading = new BlockGradingService(this.answerService);
     this.moveCommitter = new MoveCommitter(
@@ -736,18 +737,46 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A team left the session (kicked or left on its own): a session write that
-   * drops the team's connection and swaps in the roster after its removal
-   * (read inside the write), so the next snapshot never has one without the
-   * other. A kick also carries TEAM_KICKED for the socket the team held when
-   * the write ran, if it still has one, then closes that socket.
+   * A team leaves the session from `socketId`. Refuses unless that socket owns
+   * the team's seat; otherwise removes the team from the roster and refreshes
+   * the roster and leaderboard in every room.
    */
-  teamRemoved(
+  async teamLeft(
     joinCode: string,
     teamId: number,
-    loadRoster: RosterLoader,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    if (
+      this.sessionStore.get(joinCode).connectedTeamSockets[teamId] !== socketId
+    ) {
+      throw new SessionRefusal('Can only leave the session as your own team');
+    }
+    return await this.teamRemoved(joinCode, teamId, 'left');
+  }
+
+  /**
+   * The admin kicks a team: removes it from the roster even when it has no
+   * socket. The outcome carries TEAM_KICKED for the socket the team holds, if
+   * any, and closes that socket after the notice.
+   */
+  kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
+    return this.teamRemoved(joinCode, teamId, 'kicked');
+  }
+
+  /**
+   * Removes the team from the roster, then a session write that drops its
+   * connection and swaps in the roster after its removal (read inside the
+   * write), so the next snapshot never has one without the other. A kick also
+   * carries TEAM_KICKED for the socket the team held when the write ran, if it
+   * still has one, then closes that socket.
+   */
+  private async teamRemoved(
+    joinCode: string,
+    teamId: number,
     reason: 'kicked' | 'left',
   ): Promise<SessionOutcome> {
+    const gameSessionId = this.getGameSessionId(joinCode);
+    await this.teamService.removeFromRoster(gameSessionId, teamId);
     return this.writeSession(joinCode, async (session) => {
       const socketId = session.connectedTeamSockets[teamId];
       const notices =
@@ -763,7 +792,7 @@ export class GameStateService implements OnModuleInit {
       return {
         session: withTeams(
           withoutTeamConnection(session, teamId),
-          await loadRoster(),
+          await this.teamService.listForSession(gameSessionId),
         ),
         outcome: {
           ...BROADCAST_STATE_OUTCOME,

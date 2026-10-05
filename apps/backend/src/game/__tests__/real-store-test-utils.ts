@@ -516,6 +516,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.answerService,
       services.standingsService,
       services.showdownService,
+      services.teamService,
     );
     await gameState.onModuleInit();
     const nextWriteWaiting = watchNextWrite(gameState);

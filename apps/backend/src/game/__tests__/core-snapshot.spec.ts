@@ -22,6 +22,7 @@ describe('GameStateService — core snapshot', () => {
       game.answerService,
       game.standingsService,
       game.showdownService,
+      game.teamService,
     );
 
     await expect(
