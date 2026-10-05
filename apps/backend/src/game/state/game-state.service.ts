@@ -352,6 +352,11 @@ export class GameStateService implements OnModuleInit {
     return findTeamIdBySocketId(this.sessionStore.get(joinCode), socketId);
   }
 
+  /** Whether this session asks teams for feedback — its `collectFeedback` setting. */
+  isFeedbackCollected(joinCode: string): boolean {
+    return this.sessionStore.get(joinCode).seededGame.settings.collectFeedback;
+  }
+
   /** Whether `roundId` is open for rating right now — the players view's feedback field is the same rule. */
   isRoundOpenForRating(joinCode: string, roundId: number): boolean {
     const feedback = getFeedbackField(this.sessionStore.get(joinCode));

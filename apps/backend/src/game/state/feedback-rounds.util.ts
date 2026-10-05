@@ -15,6 +15,7 @@ export function getFeedbackField(session: SessionState): FeedbackField {
   const { activeShowdownRound } = session;
   return describeFeedback({
     progress,
+    isFeedbackCollected: seededGame.settings.collectFeedback,
     isShowdownBeingPlayed:
       activeShowdownRound !== null && !activeShowdownRound.resolved,
     blockRounds: () => {

@@ -1,5 +1,6 @@
 import { WsException } from '@nestjs/websockets';
 import type { RateRoundPayload } from '@campus-pubquiz/types';
+import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
 import type { EventServices } from '@/game/socket/handlers/event-services';
 import type {
   EventContext,
@@ -18,6 +19,9 @@ export async function rateRoundAsTeam(
   const teamId = deps.gameState.getTeamIdForSocket(joinCode, client.id);
   if (teamId === null) {
     throw new WsException('Join a team before rating a round');
+  }
+  if (!deps.gameState.isFeedbackCollected(joinCode)) {
+    throw new WsException(FEEDBACK_OFF_REASON);
   }
   if (!deps.gameState.isRoundOpenForRating(joinCode, payload.roundId)) {
     throw new WsException("This round can't be rated right now");

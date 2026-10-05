@@ -222,6 +222,25 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('toggles collectFeedback off, and it starts on', async () => {
+    const onChange = vi.fn();
+    render(
+      <SessionSettingsForm
+        value={DEFAULT_SESSION_SETTINGS}
+        onChange={onChange}
+      />,
+    );
+    const toggle = screen.getByLabelText(/collect feedback/i);
+    expect(toggle).toBeChecked();
+
+    await userEvent.click(toggle);
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      collectFeedback: false,
+    });
+  });
+
   it('adds a new blank rule line', async () => {
     const onChange = vi.fn();
     render(

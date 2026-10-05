@@ -41,6 +41,23 @@ describe('SessionSettingsPanel', () => {
     });
   });
 
+  it('saves the "Collect feedback" switch turned off', async () => {
+    renderWithQuery(
+      <SessionSettingsPanel
+        joinCode="ABCDEF"
+        settings={DEFAULT_SESSION_SETTINGS}
+      />,
+    );
+
+    await userEvent.click(screen.getByLabelText(/collect feedback/i));
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(mockUpdateSessionSettings).toHaveBeenCalledWith('ABCDEF', {
+      ...DEFAULT_SESSION_SETTINGS,
+      collectFeedback: false,
+    });
+  });
+
   it('re-syncs local edits when the settings prop changes (e.g. saved from another admin tab)', () => {
     const { rerender } = renderWithQuery(
       <SessionSettingsPanel

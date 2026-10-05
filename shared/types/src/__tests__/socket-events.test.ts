@@ -283,6 +283,7 @@ describe('SessionSettings defaults', () => {
       maxPlayersPerTeam: 6,
       extraPlayerPenaltyPoints: 2,
       kahootQuestionTimerSeconds: null,
+      collectFeedback: true,
       rules: [
         'No cheating.',
         'Please write your answers in English.',

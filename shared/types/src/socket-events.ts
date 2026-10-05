@@ -677,6 +677,8 @@ export interface SessionSettings {
   extraPlayerPenaltyPoints: number;
   /** Seconds a kahootMode round's question stays open before auto-locking, or null for unlimited (no timer armed). */
   kahootQuestionTimerSeconds: number | null;
+  /** Whether teams are asked for feedback — the break card and the final form on phones. Off means the server also refuses ratings and Send. */
+  collectFeedback: boolean;
 }
 
 /** Default prefill for kahootQuestionTimerSeconds when the frontend detects the quiz being started contains a kahootMode round — see session-picker-panel.tsx. */
@@ -706,6 +708,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   maxPlayersPerTeam: 6,
   extraPlayerPenaltyPoints: 2,
   kahootQuestionTimerSeconds: null,
+  collectFeedback: true,
   rules: Object.freeze([
     'No cheating.',
     'Please write your answers in English.',

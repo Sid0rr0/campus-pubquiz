@@ -47,6 +47,15 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(false);
   });
 
+  it('accepts collectFeedback as a boolean and rejects anything else', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ collectFeedback: false }).data,
+    ).toEqual({ collectFeedback: false });
+    expect(
+      sessionSettingsPartialSchema.safeParse({ collectFeedback: 'no' }).success,
+    ).toBe(false);
+  });
+
   it('rejects an empty enabledBonusCategories array', () => {
     expect(
       sessionSettingsPartialSchema.safeParse({ enabledBonusCategories: [] })

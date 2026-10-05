@@ -228,6 +228,12 @@ is offered to rate right now, shared by every team's phone. It is
   field and the form disappears; the ratings stay, and reaching `ended` again
   lists the rounds filled in from the team's saved ratings.
 
+The field is `null` throughout when the session's **`collectFeedback`** setting is off
+(a boolean on the session settings, default `true`, validated by the partial-settings
+Zod schema, editable in the lobby only like every other setting; a stored settings JSON
+without the field reads as on, so sessions created before it have feedback on). The
+`/control` lobby settings panel shows it as the "Collect feedback" switch.
+
 The rule lives in one place (`getFeedbackField`, `game/state/feedback-rounds.util.ts`, on the
 shared `describeFeedback`) and is used both to build the field and to accept a
 rating, so the two can't disagree; the phone draws from it and never decides for
@@ -263,7 +269,8 @@ close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
 
 `RATE_ROUND` — `{ roundId, stars }`, `stars` an integer 1–5 (Zod-validated) —
 saves a team's **round rating** for one round of the break card or the final form. The ack is the
-result: `{ success: true }` once saved, or an error with a reason — "This round
+result: `{ success: true }` once saved, or an error with a reason — "Feedback is off
+for this session" when `collectFeedback` is off, "This round
 can't be rated right now" when the round isn't in the feedback field's list (a
 round outside the current block, a status that is neither a break nor `ended`, or a showdown still being played), or a
 validation error for stars outside 1–5. The team is the one whose socket sent
@@ -277,6 +284,7 @@ and **topic suggestions** from the final form. `comment` is a string of at most
 each. Topics are trimmed and empty or whitespace-only ones dropped _before_ the limits
 are checked, then saved; anything over a limit is refused by Zod validation. The
 ack is the result: `{ success: true }` once saved, or an error with a reason —
+"Feedback is off for this session" when `collectFeedback` is off,
 "Feedback can't be sent right now" unless the session is `ended` with the final form
 open (so before `ended`, in a break, and while a showdown is still being played are
 all refused). One row is kept per (session, team) in `session_feedback` (`comment`

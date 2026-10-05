@@ -192,6 +192,17 @@ export function SessionSettingsForm({
         Show round overview after rules
       </label>
 
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.collectFeedback}
+          onChange={(event) =>
+            onChange({ ...value, collectFeedback: event.target.checked })
+          }
+        />
+        Collect feedback
+      </label>
+
       <div className="flex flex-wrap gap-4">
         <label className="flex flex-col gap-1 text-sm font-extrabold">
           Max players per team

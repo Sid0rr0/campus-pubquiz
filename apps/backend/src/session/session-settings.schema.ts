@@ -36,6 +36,7 @@ export const sessionSettingsPartialSchema = z
     maxPlayersPerTeam: z.number().int().positive(),
     extraPlayerPenaltyPoints: z.number().int().nonnegative(),
     kahootQuestionTimerSeconds: z.number().int().positive().nullable(),
+    collectFeedback: z.boolean(),
   })
   .partial();
 

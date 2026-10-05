@@ -29,6 +29,15 @@ function renderGuideText(): string {
 }
 
 describe('GuideContent', () => {
+  it('explains the Collect feedback switch and where teams and the moderator see feedback', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Collect feedback');
+    expect(text).toContain('Rate these rounds');
+    expect(text).toContain('Quiz complete!');
+    expect(text).toContain('session stats');
+  });
+
   it('describes every question type from the registry', () => {
     const text = renderGuideText();
 

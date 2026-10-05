@@ -143,7 +143,11 @@ export class SeedService {
       gameSessionId,
       joinCode,
       rounds,
-      settings: gameSessionRow.settings,
+      // Sessions stored before the "Collect feedback" setting have no such field: they count as on.
+      settings: {
+        ...gameSessionRow.settings,
+        collectFeedback: gameSessionRow.settings.collectFeedback ?? true,
+      },
     };
   }
 

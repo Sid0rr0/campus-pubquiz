@@ -1,5 +1,6 @@
 import { WsException } from '@nestjs/websockets';
 import type { SendFeedbackPayload } from '@campus-pubquiz/types';
+import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
 import type { EventServices } from '@/game/socket/handlers/event-services';
 import type {
   EventContext,
@@ -19,6 +20,9 @@ export async function sendFeedbackAsTeam(
   const teamId = deps.gameState.getTeamIdForSocket(joinCode, client.id);
   if (teamId === null) {
     throw new WsException('Join a team before sending feedback');
+  }
+  if (!deps.gameState.isFeedbackCollected(joinCode)) {
+    throw new WsException(FEEDBACK_OFF_REASON);
   }
   if (!deps.gameState.isFinalFormOpen(joinCode)) {
     throw new WsException("Feedback can't be sent right now");

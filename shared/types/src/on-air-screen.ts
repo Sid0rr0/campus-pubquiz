@@ -399,7 +399,8 @@ export type FeedbackField = {
 } | null;
 
 /**
- * The one rule for which rounds are open for rating: the current block's
+ * The one rule for which rounds are open for rating: nothing when the
+ * session doesn't collect feedback, otherwise the current block's
  * rounds while the session is in a break status, every round at `ended`
  * unless a showdown is still being played, nothing otherwise. The players
  * view's feedback field is this, and the server accepts a rating only for a
@@ -407,6 +408,8 @@ export type FeedbackField = {
  */
 export function describeFeedback(input: {
   progress: Pick<GameProgress, 'status'>;
+  /** The session's `collectFeedback` setting; when off, nothing is open for rating. */
+  isFeedbackCollected: boolean;
   /** Whether a showdown round has been created and not yet decided. */
   isShowdownBeingPlayed: boolean;
   /** The rounds of the block the session is on, in quiz order; only read in a break status. */
@@ -415,6 +418,7 @@ export function describeFeedback(input: {
   allRounds: () => readonly RatableRound[];
 }): FeedbackField {
   const { status } = input.progress;
+  if (!input.isFeedbackCollected) return null;
   if (isBreakStatus(status)) {
     return { kind: 'break_card', rounds: [...input.blockRounds()] };
   }
