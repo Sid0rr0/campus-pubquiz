@@ -83,9 +83,9 @@ export function isOverridableType(type: QuestionType): boolean {
   return OVERRIDABLE_TYPES.includes(type);
 }
 
-/** Half of `points`, rounded — match all_or_nothing's one-wrong-pair credit. */
+/** Exactly half of `points`, unrounded — the Half grade and match all_or_nothing's one-wrong-pair credit. */
 export function halfPoints(points: number): number {
-  return Math.round(points / 2);
+  return points / 2;
 }
 
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };

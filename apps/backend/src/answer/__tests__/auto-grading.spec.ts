@@ -298,7 +298,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     expect(answer.pointsAwarded).toBe(4);
   });
 
-  it('all_or_nothing match scoring: awards half points (rounded) when exactly one pair is wrong', async () => {
+  it('all_or_nothing match scoring: awards exactly half points when exactly one pair is wrong', async () => {
     const matchQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -327,7 +327,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       state.session.id,
       matchQuestion.id,
     );
-    expect(answer.pointsAwarded).toBe(3); // round(5 / 2)
+    expect(answer.pointsAwarded).toBe(2.5);
   });
 
   it('all_or_nothing match scoring: awards zero points when two or more pairs are wrong', async () => {

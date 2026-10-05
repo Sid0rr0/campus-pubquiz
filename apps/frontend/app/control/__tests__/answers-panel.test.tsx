@@ -307,9 +307,10 @@ describe('AnswersPanel', () => {
   });
 
   it.each([
-    [3, 'Half (2)', 2],
+    [1, 'Half (0.5)', 0.5],
+    [3, 'Half (1.5)', 1.5],
     [2, 'Half (1)', 1],
-    [5, 'Half (3)', 3],
+    [5, 'Half (2.5)', 2.5],
   ])(
     'uses the shared half-points rule for a %i-point question',
     (points, label, awarded) => {
@@ -335,6 +336,35 @@ describe('AnswersPanel', () => {
       expect(onGrade).toHaveBeenCalledWith(41, awarded);
     },
   );
+
+  it('checks only Half, not Full, once a 1-point question is graded 0.5', () => {
+    const base = liveAnswers();
+    render(
+      <AnswersPanel
+        liveAnswers={{
+          ...base,
+          question: { ...base.question, points: 1 },
+          answers: [
+            {
+              ...base.answers[0],
+              pointsAwarded: 0.5,
+              gradedAt: '2026-01-01T00:00:00.000Z',
+              verdict: 'partial',
+            },
+          ],
+        }}
+        teams={[TEAMS[0]]}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /grade the quizzards half points/i }),
+    ).toHaveTextContent('✓ Half (0.5)');
+    expect(
+      screen.getByRole('button', { name: /grade the quizzards full points/i }),
+    ).toHaveTextContent(/^Full \(1\)$/);
+  });
 
   describe('custom points', () => {
     const CUSTOM_BUTTON = /grade the quizzards custom points/i;

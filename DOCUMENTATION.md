@@ -315,7 +315,8 @@ itself — the display and other players just see counts.
    list; everyone gets a fresh snapshot whose `answeredTeamIds` drives the
    admin's per-team ✓ marks and the display's "X of Y teams answered" counter.
 4. **Grade** — the admin can grade an answer as soon as it arrives (0 / half
-   / full points), and must finish any remaining grading in the `break`:
+   / full points, where half is exactly half the question's points: 0.5 on a
+   1-point question), and must finish any remaining grading in the `break`:
    leaving it is refused while an answer in the block is ungraded. If a team
    changes a hand-graded (`audio`/`youtube`) answer, its grade is cleared,
    since it belonged to the old value. Grades are written to the answer row;
@@ -414,7 +415,7 @@ grading behavior:
   `kahootMode` — never from CSV; unset behaves as `partial`): `partial`
   splits the question's points evenly across pairs and rounds (4 points,
   4 pairs, 1 correct → 1 point); `all_or_nothing` gives full points when every
-  pair is correct, half (rounded) when exactly one is wrong, and zero
+  pair is correct, exactly half the question's points when exactly one is wrong, and zero
   otherwise.
 - **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
   a number); players type a guess in a `type="number"` input. It is

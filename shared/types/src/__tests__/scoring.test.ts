@@ -123,19 +123,25 @@ describe('scoreSubmission — match', () => {
     });
   });
 
-  it('rounds half points in all_or_nothing', () => {
-    expect(
-      scoreSubmission(
-        {
-          type: 'match',
-          answer: 'a|b',
-          points: 3,
-          matchScoringMode: 'all_or_nothing',
-        },
-        'a|x',
-      ),
-    ).toEqual({ points: 2, verdict: 'partial' });
-  });
+  it.each([
+    [1, 0.5],
+    [3, 1.5],
+  ])(
+    'awards exactly half of a %i-point question for one wrong pair in all_or_nothing',
+    (points, awarded) => {
+      expect(
+        scoreSubmission(
+          {
+            type: 'match',
+            answer: 'a|b',
+            points,
+            matchScoringMode: 'all_or_nothing',
+          },
+          'a|x',
+        ),
+      ).toEqual({ points: awarded, verdict: 'partial' });
+    },
+  );
 
   it('ignores surrounding whitespace and empty items', () => {
     expect(scoreSubmission(partial(), ' a | b |c|d|').verdict).toBe('correct');
@@ -251,15 +257,19 @@ describe('verdictForManualGrade', () => {
   ] as const)('%i of 10 points is %s', (points, verdict) => {
     expect(verdictForManualGrade({ points: 10 }, points)).toBe(verdict);
   });
+
+  it('is partial for a grade of 0.5 on a 1-point question', () => {
+    expect(verdictForManualGrade({ points: 1 }, 0.5)).toBe('partial');
+  });
 });
 
 describe('halfPoints', () => {
   it.each([
     [4, 2],
-    [3, 2],
-    [1, 1],
+    [3, 1.5],
+    [1, 0.5],
     [0, 0],
-  ])('half of %i is %i', (points, half) => {
+  ])('half of %i is %d', (points, half) => {
     expect(halfPoints(points)).toBe(half);
   });
 });
