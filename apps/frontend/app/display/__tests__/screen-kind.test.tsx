@@ -83,7 +83,7 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
 
   it('shows the break intro for a break with no reviewable question', () => {
     mockScreen(
-      { kind: 'break_intro', roundIndex: 1 },
+      { kind: 'break_intro', roundIndex: 1, isFeedbackPromptShown: false },
       {
         progress: progress({ status: 'break', roundIndex: 1 }),
         blockQuestions: [],
@@ -112,13 +112,65 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
 
   it('shows quiz complete for an ended game with no active showdown', () => {
     mockScreen(
-      { kind: 'ended' },
+      { kind: 'ended', isFeedbackPromptShown: false },
       { progress: progress({ status: 'ended' }), activeShowdown: null },
     );
     render(<DisplayPage />);
 
     expect(screen.getByText(/quiz complete/i)).toBeInTheDocument();
     expect(screen.queryByText('SHOWDOWN TIEBREAKER')).not.toBeInTheDocument();
+  });
+
+  describe('the feedback prompt', () => {
+    const breakIntroState = {
+      progress: progress({ status: 'break_intro', roundIndex: 1 }),
+      blockQuestions: [],
+      quizStructure: breakAfterRoundTwo,
+    };
+
+    it('shows "Rate the rounds on your phone" on the break card when the flag is true', () => {
+      mockScreen(
+        { kind: 'break_intro', roundIndex: 1, isFeedbackPromptShown: true },
+        breakIntroState,
+      );
+      render(<DisplayPage />);
+
+      expect(
+        screen.getByText('Rate the rounds on your phone ★'),
+      ).toBeInTheDocument();
+    });
+
+    it('draws no prompt on the break card when the flag is false', () => {
+      mockScreen(
+        { kind: 'break_intro', roundIndex: 1, isFeedbackPromptShown: false },
+        breakIntroState,
+      );
+      render(<DisplayPage />);
+
+      expect(screen.queryByText(/on your phone/i)).not.toBeInTheDocument();
+    });
+
+    it('shows "Tell us what you thought" on the final screen when the flag is true', () => {
+      mockScreen(
+        { kind: 'ended', isFeedbackPromptShown: true },
+        { progress: progress({ status: 'ended' }), activeShowdown: null },
+      );
+      render(<DisplayPage />);
+
+      expect(
+        screen.getByText('Tell us what you thought — on your phone'),
+      ).toBeInTheDocument();
+    });
+
+    it('draws no prompt on the final screen when the flag is false', () => {
+      mockScreen(
+        { kind: 'ended', isFeedbackPromptShown: false },
+        { progress: progress({ status: 'ended' }), activeShowdown: null },
+      );
+      render(<DisplayPage />);
+
+      expect(screen.queryByText(/on your phone/i)).not.toBeInTheDocument();
+    });
   });
 
   it('draws nothing for a question screen with no current question yet', () => {

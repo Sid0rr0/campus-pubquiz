@@ -16,6 +16,8 @@ interface BreakIntroScreenProps {
   quizStructure: QuizStructureSummary;
   /** False on the quiz's last break — bonuses have already closed by then, so there's nothing left to show as available. */
   showBonusList: boolean;
+  /** The server's say-so that teams are being asked for feedback — draws the "Rate the rounds" line, nothing when false. */
+  isFeedbackPromptShown: boolean;
 }
 
 /** "Back at 9:45 PM" — local time, no seconds. */
@@ -34,6 +36,7 @@ export function BreakIntroScreen({
   breakEndsAt,
   quizStructure,
   showBonusList,
+  isFeedbackPromptShown,
 }: BreakIntroScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-10 text-center">
@@ -46,6 +49,11 @@ export function BreakIntroScreen({
       {breakEndsAt != null && (
         <p className="font-display text-display-2xl">
           Back at {formatBreakEndTime(breakEndsAt)}
+        </p>
+      )}
+      {isFeedbackPromptShown && (
+        <p className="font-display text-display-2xl text-magenta">
+          Rate the rounds on your phone ★
         </p>
       )}
       {showBonusList && (

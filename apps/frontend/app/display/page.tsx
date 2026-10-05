@@ -270,6 +270,7 @@ function DisplayPageContent() {
             breakEndsAt={breakEndsAt}
             quizStructure={quizStructure}
             showBonusList={showBonusList}
+            isFeedbackPromptShown={screen.isFeedbackPromptShown}
           />
         );
       case 'break_review':
@@ -324,7 +325,14 @@ function DisplayPageContent() {
       case 'ended':
         return (
           <div className="flex flex-1 items-center justify-center px-16 text-center">
-            <h1 className="font-display text-display-4xl">Quiz complete!</h1>
+            <div className="flex flex-col items-center gap-6">
+              <h1 className="font-display text-display-4xl">Quiz complete!</h1>
+              {screen.isFeedbackPromptShown && (
+                <p className="font-display text-display-2xl text-magenta">
+                  Tell us what you thought — on your phone
+                </p>
+              )}
+            </div>
           </div>
         );
       case 'showdown':

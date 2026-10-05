@@ -104,7 +104,11 @@ describe('Screen projection — the named on-air screen', () => {
           questionIndex: 4,
           questionId: ids[4],
         },
-        { kind: 'break_intro', roundIndex: 0 },
+        {
+          kind: 'break_intro',
+          roundIndex: 0,
+          isFeedbackPromptShown: true,
+        },
         { kind: 'reveal_intro', roundIndex: 0, questionId: ids[0] },
         { kind: 'reveal', roundIndex: 0, questionId: ids[0] },
         { kind: 'reveal', roundIndex: 0, questionId: ids[1] },
@@ -432,7 +436,10 @@ describe('Screen projection — the named on-air screen', () => {
     });
 
     it('names the ended screen until a showdown round exists', () => {
-      expect(displayView().onAirScreen).toEqual({ kind: 'ended' });
+      expect(displayView().onAirScreen).toEqual({
+        kind: 'ended',
+        isFeedbackPromptShown: true,
+      });
       expect(displayView().screenKey).toBe('ended');
     });
 

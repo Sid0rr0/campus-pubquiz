@@ -5,6 +5,7 @@ import type {
   BlockQuestionView,
   BlockRevealQuestionView,
   QuestionView,
+  SessionSettings,
 } from './socket-events';
 
 /**
@@ -30,7 +31,7 @@ export type OnAirScreen =
       questionIndex: number;
       questionId: number | null;
     }
-  | { kind: 'break_intro'; roundIndex: number }
+  | { kind: 'break_intro'; roundIndex: number; isFeedbackPromptShown: boolean }
   | { kind: 'break_review'; questionId: number }
   | {
       kind: 'break_round_title';
@@ -44,7 +45,7 @@ export type OnAirScreen =
     }
   | { kind: 'reveal'; roundIndex: number | null; questionId: number | null }
   | { kind: 'leaderboard' }
-  | { kind: 'ended' }
+  | { kind: 'ended'; isFeedbackPromptShown: boolean }
   | { kind: 'showdown'; showdownId: number };
 
 /** The header bar's content — any part may be absent, in which case that part isn't drawn. */
@@ -72,6 +73,8 @@ export interface OnAirInput {
   closestGuessRevealStep?: number;
   activeShowdown?: Pick<ActiveShowdownView, 'id'> | null;
   showdownRevealStep?: number;
+  /** Read for the big screen's feedback prompt; absent reads as feedback off. */
+  settings?: Pick<SessionSettings, 'collectFeedback'>;
 }
 
 type RoundPosition = Pick<
@@ -121,6 +124,7 @@ function getScreen(
   if (progress.isLeaderboardVisible) return { kind: 'leaderboard' };
 
   const questionId = input.currentQuestion?.id ?? null;
+  const isFeedbackPromptShown = input.settings?.collectFeedback ?? false;
   const revealRoundIndex = revealQuestion
     ? revealQuestion.roundNumber - 1
     : null;
@@ -146,11 +150,19 @@ function getScreen(
         questionId,
       };
     case 'break_intro':
-      return { kind: 'break_intro', roundIndex: progress.roundIndex };
+      return {
+        kind: 'break_intro',
+        roundIndex: progress.roundIndex,
+        isFeedbackPromptShown,
+      };
     case 'break':
       return breakQuestion
         ? { kind: 'break_review', questionId: breakQuestion.id }
-        : { kind: 'break_intro', roundIndex: progress.roundIndex };
+        : {
+            kind: 'break_intro',
+            roundIndex: progress.roundIndex,
+            isFeedbackPromptShown,
+          };
     case 'break_round_intro':
       return {
         kind: 'break_round_title',
@@ -172,7 +184,7 @@ function getScreen(
     case 'ended':
       return input.activeShowdown
         ? { kind: 'showdown', showdownId: input.activeShowdown.id }
-        : { kind: 'ended' };
+        : { kind: 'ended', isFeedbackPromptShown };
   }
 }
 
