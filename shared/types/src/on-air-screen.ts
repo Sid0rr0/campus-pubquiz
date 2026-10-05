@@ -313,6 +313,25 @@ export type PhoneScreen =
   | { kind: 'showdown_guessing' }
   | { kind: 'showdown_reveal' };
 
+/**
+ * The one rule for "the showdown accepts guesses": the round is the one named,
+ * it is not resolved, and the reveal has not started (step 0). The phone's
+ * showdown_guessing screen and the server's guard both follow it, so a phone
+ * never shows the guess form for a guess the server refuses.
+ */
+export function isShowdownAcceptingGuesses(
+  activeRound: { id: number; resolved: boolean } | null,
+  roundId: number,
+  revealStep: number,
+): boolean {
+  return (
+    activeRound !== null &&
+    activeRound.id === roundId &&
+    !activeRound.resolved &&
+    revealStep === 0
+  );
+}
+
 /** What a team's phone is told about its screen. */
 export interface PlayersScreenFields {
   phoneScreen: PhoneScreen;
@@ -322,6 +341,8 @@ export interface PlayersScreenFields {
 export interface PlayersScreenInput extends OnAirInput {
   /** Whether the current block can be answered right now (false for a kahoot question hidden behind the board). */
   isAnswerable: boolean;
+  /** Whether the active showdown round has been decided (false when there is none). */
+  isShowdownResolved: boolean;
 }
 
 function roundTitleOf(
@@ -383,10 +404,13 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
       return { kind: 'ended' };
     case 'showdown':
       return {
-        kind:
-          (input.showdownRevealStep ?? 0) > 0
-            ? 'showdown_reveal'
-            : 'showdown_guessing',
+        kind: isShowdownAcceptingGuesses(
+          { id: screen.showdownId, resolved: input.isShowdownResolved },
+          screen.showdownId,
+          input.showdownRevealStep ?? 0,
+        )
+          ? 'showdown_guessing'
+          : 'showdown_reveal',
       };
     default:
       return { kind: 'block', onScreenQuestionId: null };

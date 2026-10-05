@@ -889,18 +889,35 @@ describe('GameGateway — session write: showdown', () => {
 
     expect(hasGuessed(await game.snapshot())).toBe(true);
   });
+});
+
+describe('GameGateway — session write: new showdown round', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('does not read standings for a new showdown round or a guess', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A', 'Team B'],
+    });
+    await tieOnFirstQuestion(game, game.teams);
+    const admin = await game.connectAdmin();
     const before = await game.snapshot();
     const leaderboard = jest.spyOn(game.standingsService, 'leaderboard');
 
-    await guess();
-    await game.inRequestContext(() =>
-      game.gameState.showdownRoundCreated(
-        game.joinCode,
-        game.gameState.getActiveShowdownRound(game.joinCode)!,
-      ),
-    );
+    await game.gateway.handleCreateShowdownRound(asSocket(admin), {
+      question: 'How many?',
+      answer: '100',
+      points: 5,
+    });
+    const [first] = game.teams;
+    await game.gateway.handleSubmitShowdownGuess(asSocket(first.socket), {
+      showdownRoundId: (await game.snapshot()).activeShowdown!.id,
+      teamId: first.teamId,
+      value: '95',
+    });
 
     expect(leaderboard).not.toHaveBeenCalled();
     expect((await game.snapshot()).leaderboard).toEqual(before.leaderboard);

@@ -1,6 +1,7 @@
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
+  type GameAction,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
@@ -9,6 +10,9 @@ import {
   tieOnFirstQuestion,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
+
+const NO_LONGER_ACCEPTING =
+  'This showdown round is no longer accepting guesses';
 
 const SHOWDOWN_PAYLOAD = {
   question: 'How many?',
@@ -43,7 +47,10 @@ describe('GameGateway — showdown', () => {
           asSocket(admin),
           SHOWDOWN_PAYLOAD,
         ),
-      ).resolves.toMatchObject({ success: false });
+      ).resolves.toEqual({
+        success: false,
+        error: 'No tie for first place to break',
+      });
 
       expect(game.roomEmits()).toEqual([]);
       expect((await game.snapshot()).activeShowdown).toBeNull();
@@ -181,7 +188,10 @@ describe('GameGateway — showdown', () => {
           teamId: outsider.teamId,
           value: '95',
         }),
-      ).resolves.toMatchObject({ success: false });
+      ).resolves.toEqual({
+        success: false,
+        error: 'Your team is not part of this showdown round',
+      });
 
       await expectNoGuessRecorded();
     });
@@ -213,11 +223,91 @@ describe('GameGateway — showdown', () => {
           teamId: teamA.teamId,
           value: '95',
         }),
-      ).resolves.toMatchObject({ success: false });
+      ).resolves.toEqual({ success: false, error: NO_LONGER_ACCEPTING });
 
       expect(game.roomEmits()).toEqual([]);
       const { activeShowdown } = await game.snapshot();
       expect(activeShowdown?.participants[0].guess).toBe('10');
+    });
+
+    it('rejects a guess naming a stale round id', async () => {
+      const showdownRoundId = await seedActiveRound();
+      const [teamA] = game.teams;
+
+      await expect(
+        game.gateway.handleSubmitShowdownGuess(asSocket(teamA.socket), {
+          showdownRoundId: showdownRoundId + 1000,
+          teamId: teamA.teamId,
+          value: '95',
+        }),
+      ).resolves.toEqual({ success: false, error: NO_LONGER_ACCEPTING });
+
+      await expectNoGuessRecorded();
+    });
+
+    it('checks that guesses are accepted before it checks the seat', async () => {
+      const showdownRoundId = await seedActiveRound();
+      const attacker = await game.connectPlayer();
+
+      await expect(
+        game.gateway.handleSubmitShowdownGuess(asSocket(attacker), {
+          showdownRoundId: showdownRoundId + 1000,
+          teamId: game.teams[0].teamId,
+          value: '95',
+        }),
+      ).resolves.toEqual({ success: false, error: NO_LONGER_ACCEPTING });
+    });
+
+    it('shows the guess form on the phone exactly while a guess is accepted, at every reveal step, resolved or not', async () => {
+      const showdownRoundId = await seedActiveRound();
+      const [teamA, teamB] = game.teams;
+      for (const team of [teamA, teamB]) {
+        await game.gateway.handleSubmitShowdownGuess(asSocket(team.socket), {
+          showdownRoundId,
+          teamId: team.teamId,
+          value: '10',
+        });
+      }
+      const ended = await game.act('END_QUIZ');
+      // A phone shows the board over everything while the final standings
+      // are up; hide them so it shows the showdown.
+      if (ended.progress.isLeaderboardVisible) {
+        await game.act('TOGGLE_LEADERBOARD');
+      }
+
+      async function isGuessAccepted(): Promise<boolean> {
+        const result = await game.gateway.handleSubmitShowdownGuess(
+          asSocket(teamA.socket),
+          { showdownRoundId, teamId: teamA.teamId, value: '11' },
+        );
+        return result.success;
+      }
+      function phoneKind(): string {
+        return game.gameState.getView(game.joinCode, SOCKET_ROOMS.PLAYERS)
+          .phoneScreen.kind;
+      }
+
+      // Forward past the final step (resolving the round), then all the way
+      // back to step 0: a resolved round at step 0 accepts no guesses.
+      const walk = [
+        ...Array<GameAction>(3).fill('ADVANCE'),
+        ...Array<GameAction>(4).fill('PREVIOUS'),
+      ];
+      const observed: [string, boolean][] = [
+        [phoneKind(), await isGuessAccepted()],
+      ];
+      for (const action of walk) {
+        await game.act(action);
+        observed.push([phoneKind(), await isGuessAccepted()]);
+      }
+
+      for (const [kind, isAccepted] of observed) {
+        expect(kind === 'showdown_guessing').toBe(isAccepted);
+      }
+      // The walk covers both outcomes, so the check above isn't vacuous.
+      expect(observed.some(([, isAccepted]) => isAccepted)).toBe(true);
+      expect(observed.some(([, isAccepted]) => !isAccepted)).toBe(true);
+      expect(observed.at(-1)).toEqual(['showdown_reveal', false]);
     });
 
     it('rejects SUBMIT_SHOWDOWN_GUESS from a non-player client', async () => {

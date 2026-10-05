@@ -45,7 +45,11 @@ export function playersView<T extends PlayersFixture>(
       status === 'round_intro') &&
     hasOpenQuestions;
   return {
-    ...describePlayersScreen({ ...snapshot, isAnswerable }),
+    ...describePlayersScreen({
+      ...snapshot,
+      isAnswerable,
+      isShowdownResolved: false,
+    }),
     isAnswerable,
     feedback: null,
     ...snapshot,

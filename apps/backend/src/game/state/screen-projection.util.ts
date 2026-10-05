@@ -164,7 +164,11 @@ export function projectScreen(
       const isAnswerable = isBlockAnswerable(session);
       const view = {
         ...snapshot,
-        ...describePlayersScreen({ ...snapshot, isAnswerable }),
+        ...describePlayersScreen({
+          ...snapshot,
+          isAnswerable,
+          isShowdownResolved: session.activeShowdownRound?.resolved ?? false,
+        }),
         isAnswerable,
         feedback: getFeedbackField(session),
         revealQuestions:

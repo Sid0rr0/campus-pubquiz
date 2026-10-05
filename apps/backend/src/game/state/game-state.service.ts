@@ -3,7 +3,10 @@ import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
   DEFAULT_SESSION_SETTINGS,
   SOCKET_EVENTS,
+  getTiedForFirst,
+  isShowdownAcceptingGuesses,
   type ActiveSessionSummary,
+  type CreateShowdownRoundPayload,
   type AdminQuestionContext,
   type GameAction,
   type LeaderboardEntry,
@@ -14,6 +17,7 @@ import {
   type StateSnapshotPayload,
   type StateViewByRoom,
   type SubmitAnswerPayload,
+  type SubmitShowdownGuessPayload,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
@@ -63,7 +67,10 @@ import {
   connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import { ShowdownService } from '@/showdown/showdown.service';
+import {
+  InvalidShowdownError,
+  ShowdownService,
+} from '@/showdown/showdown.service';
 import type { TeamRosterEntry } from '@/team/team.service';
 
 /** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
@@ -74,6 +81,18 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 
 /** The option for a session write whose event doesn't change scores: skips the standings read. */
 const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
+
+/** Runs a showdown service call, turning its domain error into the refusal a team or the admin sees. */
+async function refusingInvalidShowdown<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (error instanceof InvalidShowdownError) {
+      throw new SessionRefusal(error.message);
+    }
+    throw error;
+  }
+}
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -498,33 +517,82 @@ export class GameStateService implements OnModuleInit {
     return this.sessionStore.get(joinCode).showdownRevealStep;
   }
 
-  /** A showdown round was created (or sudden death started a fresh one): caches it and resets the reveal step. */
-  showdownRoundCreated(
+  /**
+   * A showdown guess from `socketId`: checks the showdown still accepts
+   * guesses, then that the socket owns the seat, then that the team takes
+   * part, stores the guess and records it on the session. The latest guess
+   * replaces any earlier one.
+   */
+  async submitShowdownGuess(
     joinCode: string,
-    round: ActiveShowdownRoundState,
+    { showdownRoundId, teamId, value }: SubmitShowdownGuessPayload,
+    socketId: string,
   ): Promise<SessionOutcome> {
+    const session = this.sessionStore.get(joinCode);
+    const round = session.activeShowdownRound;
+    if (
+      !isShowdownAcceptingGuesses(
+        round,
+        showdownRoundId,
+        session.showdownRevealStep,
+      )
+    ) {
+      throw new SessionRefusal(
+        'This showdown round is no longer accepting guesses',
+      );
+    }
+    if (session.connectedTeamSockets[teamId] !== socketId) {
+      throw new SessionRefusal('You may only submit guesses for your own team');
+    }
+    if (!round?.participants.some((entry) => entry.teamId === teamId)) {
+      throw new SessionRefusal('Your team is not part of this showdown round');
+    }
+
+    await refusingInvalidShowdown(() =>
+      this.showdownService.submitGuess(showdownRoundId, teamId, value),
+    );
     return this.writeSession(
       joinCode,
-      (session) =>
+      (current) =>
         Promise.resolve({
-          session: withActiveShowdownRound(session, round),
+          session: withShowdownGuess(current, teamId, value),
           outcome: BROADCAST_STATE_OUTCOME,
         }),
       NOT_TOUCHING_SCORES,
     );
   }
 
-  /** A team's showdown guess was stored: the latest guess replaces any earlier one. */
-  showdownGuessSubmitted(
+  /**
+   * Starts a showdown round for the teams tied for first, re-derived here
+   * rather than trusted from the client, in leaderboard (seat) order. Leaves
+   * isLeaderboardVisible alone: the admin's own Hide Leaderboard press clears
+   * it before the reveal starts, and forcing it here would yank the final
+   * standings off the display the moment the tiebreaker question is saved.
+   */
+  async createShowdownRound(
     joinCode: string,
-    teamId: number,
-    value: string,
+    { question, answer, points }: CreateShowdownRoundPayload,
   ): Promise<SessionOutcome> {
+    const session = this.sessionStore.get(joinCode);
+    const tied = getTiedForFirst(session.leaderboard);
+    if (tied.length < 2) {
+      throw new SessionRefusal('No tie for first place to break');
+    }
+
+    const round = await refusingInvalidShowdown(() =>
+      this.showdownService.createRound(
+        session.seededGame.gameSessionId,
+        tied.map(({ teamId, teamName }) => ({ teamId, teamName })),
+        question,
+        answer,
+        points,
+      ),
+    );
     return this.writeSession(
       joinCode,
-      (session) =>
+      (current) =>
         Promise.resolve({
-          session: withShowdownGuess(session, teamId, value),
+          session: withActiveShowdownRound(current, round),
           outcome: BROADCAST_STATE_OUTCOME,
         }),
       NOT_TOUCHING_SCORES,
