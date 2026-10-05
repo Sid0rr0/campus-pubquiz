@@ -19,10 +19,11 @@ import {
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
+  type AwardBonusPayload,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-import { BonusService } from '@/bonus/bonus.service';
+import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
@@ -803,9 +804,63 @@ export class GameStateService implements OnModuleInit {
     };
   }
 
-  /** An admin graded an answer to `questionId`: same refresh as submitAnswer. */
-  answerGraded(joinCode: string, questionId: number): Promise<SessionOutcome> {
-    return this.refreshAfterAnswerChange(joinCode, questionId);
+  /**
+   * An admin grades an answer by hand. Refuses what the answer service
+   * refuses (an unknown answer, a closest_guess answer); otherwise runs the
+   * same refresh as submitAnswer for the answer's question.
+   */
+  async gradeAnswer(
+    joinCode: string,
+    answerId: number,
+    pointsAwarded: number,
+  ): Promise<SessionOutcome> {
+    let questionId: number;
+    try {
+      ({ questionId } = await this.answerService.grade(
+        this.getGameSessionId(joinCode),
+        answerId,
+        pointsAwarded,
+      ));
+    } catch (error) {
+      throw new SessionRefusal(
+        error instanceof Error ? error.message : 'Unable to grade answer',
+      );
+    }
+    return await this.refreshAfterAnswerChange(joinCode, questionId);
+  }
+
+  /**
+   * An admin awards a bonus. The session's own enabled categories and
+   * per-category limit decide whether it is allowed (a refusal carries the
+   * bonus service's message); the awarded team's socket, if connected, gets
+   * the BONUS_AWARDED notice.
+   */
+  async awardBonus(
+    joinCode: string,
+    { teamId, category, points, reason }: AwardBonusPayload,
+  ): Promise<SessionOutcome> {
+    const { enabledBonusCategories, maxBonusAwardsPerCategory } =
+      this.getSessionSettings(joinCode);
+    try {
+      await this.bonusService.award(
+        this.getGameSessionId(joinCode),
+        teamId,
+        category,
+        points,
+        reason,
+        enabledBonusCategories,
+        maxBonusAwardsPerCategory,
+      );
+    } catch (error) {
+      if (error instanceof InvalidBonusAwardError) {
+        throw new SessionRefusal(error.message);
+      }
+      throw error;
+    }
+    return await this.bonusChanged(joinCode, {
+      teamId,
+      notice: { category, points, reason },
+    });
   }
 
   /**

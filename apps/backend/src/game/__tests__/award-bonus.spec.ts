@@ -130,4 +130,47 @@ describe('GameGateway — award bonus', () => {
 
     expect(await storedBonuses()).toEqual([]);
   });
+
+  it('refuses a bonus in a category the session has disabled, with today’s message', async () => {
+    await game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(game.joinCode, {
+        enabledBonusCategories: ['shot'],
+      }),
+    );
+
+    await expect(
+      game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId: team.teamId,
+        category: 'selfie',
+        points: 1,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: expect.stringContaining(
+        '"selfie" is not enabled for this session',
+      ) as string,
+    });
+  });
+
+  it('refuses a bonus over the per-category limit, with today’s message', async () => {
+    await game.inRequestContext(() =>
+      game.gameState.updateSessionSettings(game.joinCode, {
+        maxBonusAwardsPerCategory: { shot: 1 },
+      }),
+    );
+    const award = () =>
+      game.gateway.handleAwardBonus(asSocket(admin), {
+        teamId: team.teamId,
+        category: 'shot',
+        points: 1,
+      });
+    await award();
+
+    await expect(award()).resolves.toEqual({
+      success: false,
+      error: expect.stringContaining(
+        'This team has already been awarded the "shot" bonus the maximum 1 time(s)',
+      ) as string,
+    });
+  });
 });

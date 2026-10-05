@@ -246,7 +246,7 @@ export class BlockGradingService {
   /**
    * Bulk-refreshes the block through the grading refresh (the ungraded set
    * from the DB) whenever the block just entered (or is still within) a break status — the authoritative
-   * baseline the grading refresh in GameStateService.submitAnswer/answerGraded
+   * baseline the grading refresh in GameStateService.submitAnswer/gradeAnswer
    * build on between these recomputes. A no-op outside the break statuses,
    * since nothing there can be graded and the cached value can't go stale.
    */

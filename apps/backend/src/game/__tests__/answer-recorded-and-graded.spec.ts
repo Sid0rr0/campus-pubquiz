@@ -230,4 +230,16 @@ describe('GameGateway — answer recorded / answer graded', () => {
       ) as string,
     });
   });
+
+  it('refuses grading an answer that does not exist with today’s message', async () => {
+    await expect(
+      game.gateway.handleGradeAnswer(asSocket(admin), {
+        answerId: 999_999,
+        pointsAwarded: 1,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: expect.any(String) as string,
+    });
+  });
 });
