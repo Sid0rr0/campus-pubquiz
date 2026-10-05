@@ -8,6 +8,7 @@ import {
   gradeAtSubmit,
   gradeClosestGuessBatch,
   halfPoints,
+  nearestHalfPoint,
   scoreSubmission,
   verdictForManualGrade,
   type ScoredQuestion,
@@ -150,11 +151,25 @@ describe('scoreSubmission — match', () => {
   it('keeps a wrong-pair match partial even when rounding gives zero points', () => {
     expect(
       scoreSubmission(
-        { type: 'match', answer: 'a|b|c|d', points: 1 },
-        'a|x|x|x',
+        { type: 'match', answer: 'a|b|c|d|e|f|g|h', points: 1 },
+        'a|x|x|x|x|x|x|x',
       ),
     ).toEqual({ points: 0, verdict: 'partial' });
   });
+
+  it.each([
+    [1, 'a|b', 'a|x', 0.5, 'partial'],
+    [4, 'a|b|c', 'a|b|x', 2.5, 'partial'], // 4 * 2/3 = 2.67 -> 2.5
+    [1, 'a|b', 'a|b', 1, 'correct'],
+    [1, 'a|b', 'x|x', 0, 'incorrect'],
+  ] as const)(
+    'per-pair, %i points, answer %s, submitted %s -> %d, %s',
+    (points, answer, value, awarded, verdict) => {
+      expect(scoreSubmission({ type: 'match', answer, points }, value)).toEqual(
+        { points: awarded, verdict },
+      );
+    },
+  );
 });
 
 describe('scoreSubmission — kahoot speed', () => {
@@ -163,11 +178,11 @@ describe('scoreSubmission — kahoot speed', () => {
 
   it.each([
     [0, 10],
-    [5_000, 8], // 10 * 0.75 = 7.5 rounds up
+    [5_000, 7.5], // 10 * 0.75 is already a half point
     [10_000, 5],
     [25_000, 5],
     [-500, 10],
-  ])('response at %ims keeps %i of 10 points', (responseMs, points) => {
+  ])('response at %ims keeps %d of 10 points', (responseMs, points) => {
     expect(scoreSubmission(mc, 'Paris', speed(responseMs))).toEqual({
       points,
       verdict: 'correct',
@@ -201,7 +216,22 @@ describe('scoreSubmission — kahoot speed', () => {
         'a|x',
         speed(10_000),
       ),
-    ).toEqual({ points: 3, verdict: 'partial' }); // base 5 * 0.5 = 2.5 -> 3
+    ).toEqual({ points: 2.5, verdict: 'partial' }); // base 5 * 0.5 = 2.5
+  });
+
+  it('keeps a half-credit match on a half point, never full points, at any speed', () => {
+    const question: ScoredQuestion = {
+      type: 'match',
+      answer: 'a|b',
+      points: 1,
+      matchScoringMode: 'all_or_nothing',
+    };
+    for (const responseMs of [0, 3_333, 7_777, 10_000]) {
+      const result = scoreSubmission(question, 'a|x', speed(responseMs));
+      expect(result.points % 0.5).toBe(0);
+      expect(result.points).toBeLessThan(1);
+      expect(result.verdict).toBe('partial');
+    }
   });
 });
 
@@ -271,6 +301,19 @@ describe('halfPoints', () => {
     [0, 0],
   ])('half of %i is %d', (points, half) => {
     expect(halfPoints(points)).toBe(half);
+  });
+});
+
+describe('nearestHalfPoint', () => {
+  it.each([
+    [0, 0],
+    [0.24, 0],
+    [0.25, 0.5],
+    [2.67, 2.5],
+    [2.75, 3],
+    [7.5, 7.5],
+  ])('rounds %d to %d', (amount, expected) => {
+    expect(nearestHalfPoint(amount)).toBe(expected);
   });
 });
 

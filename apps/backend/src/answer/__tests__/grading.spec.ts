@@ -817,7 +817,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         state.session.id,
         question.id,
       );
-      expect(answer.pointsAwarded).toBe(8);
+      expect(answer.pointsAwarded).toBe(7.5);
       expect(answer.gradedAt).not.toBeNull();
     });
 
@@ -1050,7 +1050,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         ),
       );
 
-      expect(withoutRestart).toEqual({ [fast.id]: 10, [slow.id]: 7 });
+      expect(withoutRestart).toEqual({ [fast.id]: 10, [slow.id]: 6.5 });
       expect(afterRestart).toEqual(withoutRestart);
     });
 

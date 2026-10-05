@@ -4,11 +4,15 @@
 
 **Blocked by:** 01 (Half points are exactly half)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Scoring module has a "nearest half point" rule (rounds to the nearest multiple of 0.5), used by per-pair match scoring and kahoot speed scoring in place of whole-point rounding
-- [ ] Per-pair match: 1 point with 1 of 2 right → 0.5; 4 points with 2 of 3 right → 2.5; all right → full points (correct); none right → 0 (incorrect) (scoring tests)
-- [ ] Kahoot speed: a half-credit 1-point match ("all or nothing", one wrong pair) scores a multiple of 0.5 and never full points at any speed, verdict still partial (scoring test)
-- [ ] Existing kahoot speed and match scoring tests still pass, or are updated only where whole-point rounding changes to half-point rounding
-- [ ] `DOCUMENTATION.md` states the nearest-half-point rule for per-pair match and kahoot speed scoring
-- [ ] Typecheck, lint and the shared-types, backend and frontend test suites pass
+- [x] The Scoring module has a "nearest half point" rule (rounds to the nearest multiple of 0.5), used by per-pair match scoring and kahoot speed scoring in place of whole-point rounding
+- [x] Per-pair match: 1 point with 1 of 2 right → 0.5; 4 points with 2 of 3 right → 2.5; all right → full points (correct); none right → 0 (incorrect) (scoring tests)
+- [x] Kahoot speed: a half-credit 1-point match ("all or nothing", one wrong pair) scores a multiple of 0.5 and never full points at any speed, verdict still partial (scoring test)
+- [x] Existing kahoot speed and match scoring tests still pass, or are updated only where whole-point rounding changes to half-point rounding
+- [x] `DOCUMENTATION.md` states the nearest-half-point rule for per-pair match and kahoot speed scoring
+- [x] Typecheck, lint and the shared-types, backend and frontend test suites pass
+
+## Comments
+
+Implemented in `feat(shared-types,backend): automatic scores land on the nearest half point`. Added `nearestHalfPoint` to the Scoring module, used by per-pair match and kahoot speed scoring. Three backend specs (kahoot speed 8 → 7.5, 7 → 6.5) were updated for half-point rounding. Status set to `done`. `.scratch/overview.md` has no rows for this feature, so it is unchanged.

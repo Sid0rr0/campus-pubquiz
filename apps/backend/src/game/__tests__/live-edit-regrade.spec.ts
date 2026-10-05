@@ -215,7 +215,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     await submit(game, team, questionId, 'Paris');
     await game.act('ADVANCE'); // -> locking
     await game.act('ADVANCE'); // -> reveal (speed-scored)
-    expect(await storedPoints(game, questionId)).toEqual({ Speedy: 8 });
+    expect(await storedPoints(game, questionId)).toEqual({ Speedy: 7.5 });
     await correctAnswerKey(game, questionId, { points: 20 });
 
     await editQuiz(game, [questionId]);

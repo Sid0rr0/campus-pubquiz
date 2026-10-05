@@ -413,8 +413,9 @@ grading behavior:
   position-by-position. How that count becomes points depends on the
   question's `matchScoringMode` (set in the manual editor only, like
   `kahootMode` — never from CSV; unset behaves as `partial`): `partial`
-  splits the question's points evenly across pairs and rounds (4 points,
-  4 pairs, 1 correct → 1 point); `all_or_nothing` gives full points when every
+  splits the question's points evenly across pairs and rounds to the nearest
+  half point (4 points, 3 pairs, 2 correct → 2.5; 1 point, 2 pairs, 1 correct
+  → 0.5); `all_or_nothing` gives full points when every
   pair is correct, exactly half the question's points when exactly one is wrong, and zero
   otherwise.
 - **`closest_guess`** — a numeric-guess question (CSV `answer` must parse as
@@ -490,7 +491,8 @@ If a shown question's `answer` or `points` changed, its existing answers are
 re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
 (`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
-speed scaling from the response time stored on each answer at submit (so it
+speed scaling (kept to the nearest half point, so a half-credit match never
+rounds back up to full points) from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
 speed-scaled like any other); an already-graded `closest_guess` re-runs its batch;
 `match-or-human` types (`free_text`/`audio`/`youtube`) grade answers that

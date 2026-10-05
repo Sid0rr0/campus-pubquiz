@@ -88,6 +88,11 @@ export function halfPoints(points: number): number {
   return points / 2;
 }
 
+/** `points` rounded to the nearest multiple of 0.5 — every automatic score is a whole or half point, so sums stay exact. */
+export function nearestHalfPoint(points: number): number {
+  return Math.round(points * 2) / 2;
+}
+
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
 
 function normalizeFreeText(value: string): string {
@@ -115,7 +120,7 @@ function scoreMatch(question: ScoredQuestion, value: string): ScoreResult {
       : INCORRECT;
   }
   return {
-    points: Math.round(
+    points: nearestHalfPoint(
       (question.points * correctPairCount) / answerPairs.length,
     ),
     verdict: correctPairCount === 0 ? 'incorrect' : 'partial',
@@ -165,7 +170,7 @@ export function scoreSubmission(
   const base = scoreBase(question, value);
   if (speed === undefined) return base;
   return {
-    points: Math.round(base.points * speedMultiplier(speed)),
+    points: nearestHalfPoint(base.points * speedMultiplier(speed)),
     verdict: base.verdict,
   };
 }
