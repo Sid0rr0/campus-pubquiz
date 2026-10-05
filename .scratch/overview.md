@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                               | Blocked by             |
 | --- | -------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 02  | [Submit answer is one module event](live-session-events/issues/02-submit-answer-is-one-module-event.md)              | 01                     |
 | 03  | [One "accepting guesses" rule for the showdown](live-session-events/issues/03-one-accepting-guesses-rule.md)         | 01                     |
 | 04  | [Leave and kick are module events](live-session-events/issues/04-leave-and-kick-are-module-events.md)                | 01                     |
 | 05  | [Join is a module event](live-session-events/issues/05-join-is-a-module-event.md)                                    | 01                     |
@@ -20,6 +19,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| live-session-events         | 02  | [Submit answer is one module event](live-session-events/issues/02-submit-answer-is-one-module-event.md)                                                                | —         |
 | live-session-events         | 01  | [The Session outcome carries replies, resolved team syncs and sockets to close](live-session-events/issues/01-outcome-carries-replies-syncs-and-closes.md)             | —         |
 | feedback                    | 07  | [Comments and topics on the session stats page](feedback/issues/07-comments-and-topics-on-session-stats.md)                                                            | —         |
 | feedback                    | 06  | [Round ratings on the session stats page](feedback/issues/06-round-ratings-on-session-stats.md)                                                                        | —         |

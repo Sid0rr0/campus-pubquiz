@@ -106,8 +106,9 @@ describe('GameGateway — submit answer', () => {
 
   it('rejects SUBMIT_ANSWER while the question is not open for answering', async () => {
     // Still in the lobby - no question has been revealed yet.
-    await expect(submit(team.socket, team.teamId)).resolves.toMatchObject({
+    await expect(submit(team.socket, team.teamId)).resolves.toEqual({
       success: false,
+      error: 'Answers are locked for this question',
     });
 
     expect(await storedAnswers()).toEqual([]);
@@ -117,11 +118,23 @@ describe('GameGateway — submit answer', () => {
     await game.openFirstQuestion(admin);
     const attacker = await game.connectPlayer();
 
-    await expect(
-      submit(attacker, team.teamId, 'Hijacked'),
-    ).resolves.toMatchObject({ success: false });
+    await expect(submit(attacker, team.teamId, 'Hijacked')).resolves.toEqual({
+      success: false,
+      error: 'You may only submit answers for your own team',
+    });
 
     expect(await storedAnswers()).toEqual([]);
+  });
+
+  it('rejects a late answer before it checks whose seat it is', async () => {
+    const attacker = await game.connectPlayer();
+
+    await expect(
+      submit(attacker, team.teamId, 'Hijacked'),
+    ).resolves.toMatchObject({
+      success: false,
+      error: 'Answers are locked for this question',
+    });
   });
 
   it('rejects SUBMIT_ANSWER from a non-players client', async () => {

@@ -13,6 +13,7 @@ import {
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
+  type SubmitAnswerPayload,
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
@@ -609,16 +610,59 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A team's answer to `questionId` was just recorded (and, for auto-graded
-   * types, graded): refreshes the leaderboard, the question's answered-team
-   * ids and its ungraded flag, and says the admin needs that question's
-   * answer list afresh.
+   * A team's answer arrived from `socketId`. Refuses it when the question is
+   * no longer open or the socket doesn't own the team's seat; otherwise
+   * measures the kahoot response time from the phase start that speed scoring
+   * anchors to, stores the answer, refreshes the leaderboard, the question's
+   * answered-team ids and its ungraded flag, and replies "answer received" to
+   * the sender (graded points included for auto-graded types).
    */
-  recordAnswer(joinCode: string, questionId: number): Promise<SessionOutcome> {
-    return this.refreshAfterAnswerChange(joinCode, questionId);
+  async submitAnswer(
+    joinCode: string,
+    { teamId, questionId, value }: SubmitAnswerPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    const session = this.sessionStore.get(joinCode);
+    if (!isQuestionOpenForAnswering(session, questionId)) {
+      throw new SessionRefusal('Answers are locked for this question');
+    }
+    if (session.connectedTeamSockets[teamId] !== socketId) {
+      throw new SessionRefusal('You may only submit answers for your own team');
+    }
+
+    const responseMs =
+      session.phaseStartedAt === null
+        ? null
+        : Date.now() - session.phaseStartedAt;
+    const submitted = await this.answerService.submit(
+      session.seededGame.gameSessionId,
+      questionId,
+      teamId,
+      value,
+      responseMs,
+    );
+
+    const outcome = await this.refreshAfterAnswerChange(joinCode, questionId);
+    return {
+      ...outcome,
+      replies: [
+        {
+          event: SOCKET_EVENTS.ANSWER_RECEIVED,
+          payload: {
+            questionId,
+            teamId: submitted.teamId,
+            teamName: submitted.teamName,
+            value: submitted.value,
+            pointsAwarded: submitted.pointsAwarded,
+            gradedAt: submitted.gradedAt,
+            verdict: submitted.verdict,
+          },
+        },
+      ],
+    };
   }
 
-  /** An admin graded an answer to `questionId`: same refresh as recordAnswer. */
+  /** An admin graded an answer to `questionId`: same refresh as submitAnswer. */
   answerGraded(joinCode: string, questionId: number): Promise<SessionOutcome> {
     return this.refreshAfterAnswerChange(joinCode, questionId);
   }
