@@ -8,6 +8,7 @@ import { acknowledge } from '@/game/socket/acknowledge.util';
 import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import type { SocketEventDeclaration } from '@/game/socket/socket-event-declarations';
 import { parseSocketPayload } from '@/game/socket/socket-payload.schemas';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 
@@ -20,9 +21,8 @@ export interface EventContext<P> {
 
 /**
  * What an event body hands back for delivery. `afterDelivery` is for
- * socket-level work that must follow the emits (closing a kicked team's
- * socket, re-arming timers); it runs even if delivery fails, since the
- * event was already applied by then.
+ * socket-level work that must follow the emits (re-arming timers); it runs
+ * even if delivery fails, since the event was already applied by then.
  */
 export type EventResult =
   | SessionOutcome
@@ -66,6 +66,7 @@ function logAccepted<S extends z.ZodType>(
  * The template every client-to-server event shares, in one fixed order so
  * rejection precedence never varies: validate the payload, find the
  * session, check the sender's room, log, run the body, deliver its outcome.
+ * The module's refusals become socket errors here, and only here.
  * A plain function rather than a Nest guard/pipe so specs calling the
  * gateway's handler methods directly exercise the same checks as production.
  */
@@ -84,13 +85,20 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
     }
     logAccepted(deps.logger, client, declaration, payload);
 
-    const result = await body({ joinCode, payload, client });
+    const result = await body({ joinCode, payload, client }).catch(
+      (error: unknown) => {
+        if (error instanceof SessionRefusal) {
+          throw new WsException(error.message);
+        }
+        throw error;
+      },
+    );
     if (!result) return;
     const { outcome, afterDelivery } = isAfterDelivery(result)
       ? result
       : { outcome: result, afterDelivery: undefined };
     try {
-      await deliverOutcome(deps, joinCode, outcome);
+      await deliverOutcome(deps, joinCode, outcome, client);
     } finally {
       afterDelivery?.();
     }

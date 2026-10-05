@@ -1,4 +1,4 @@
-import type { Server } from 'socket.io';
+import type { Server, Socket } from 'socket.io';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -12,8 +12,11 @@ import type { SessionOutcome } from '@/game/state/session-outcome';
 
 /**
  * The one place a SessionOutcome becomes emits, always in the same order:
- * presenter context to admin, the state snapshot to all three rooms, admin
- * answer lists, per-team answer syncs, then per-socket notices.
+ * replies to the sender, presenter context to admin, the state snapshot to
+ * all three rooms, admin answer lists, per-team answer syncs, per-socket
+ * notices, then the sockets to close. The closes run even if an earlier step
+ * fails, since the event was already applied by then. `sender` is
+ * absent for events no socket sent (timer expiries), which have no replies.
  */
 export async function deliverOutcome(
   deps: {
@@ -23,8 +26,32 @@ export async function deliverOutcome(
   },
   joinCode: string,
   outcome: SessionOutcome,
+  sender?: Pick<Socket, 'emit'>,
+): Promise<void> {
+  const { server } = deps;
+  try {
+    await deliverEmits(deps, joinCode, outcome, sender);
+  } finally {
+    for (const socketId of outcome.socketsToClose) {
+      server.sockets.sockets.get(socketId)?.disconnect(true);
+    }
+  }
+}
+
+async function deliverEmits(
+  deps: {
+    gameState: GameStateService;
+    answerService: AnswerService;
+    server: Server;
+  },
+  joinCode: string,
+  outcome: SessionOutcome,
+  sender: Pick<Socket, 'emit'> | undefined,
 ): Promise<void> {
   const { gameState, answerService, server } = deps;
+  for (const reply of outcome.replies) {
+    sender?.emit(reply.event, reply.payload);
+  }
   if (outcome.shouldBroadcastState) {
     broadcastGameState(server, joinCode, gameState);
   }
@@ -42,9 +69,7 @@ export async function deliverOutcome(
       );
   }
 
-  for (const teamId of outcome.teamSyncTeamIds) {
-    const socketId = gameState.getConnectedSocketId(joinCode, teamId);
-    if (!socketId) continue;
+  for (const { teamId, socketId } of outcome.teamSyncs) {
     const answers = await answerService.listForTeam(
       gameState.getGameSessionId(joinCode),
       teamId,

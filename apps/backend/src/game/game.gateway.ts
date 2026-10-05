@@ -35,10 +35,7 @@ import {
   acceptConnection,
   disconnectClient,
 } from '@/game/socket/connection.util';
-import {
-  applyAdminAction,
-  runAdminAction,
-} from '@/game/socket/handlers/admin-action.handler';
+import { runAdminAction } from '@/game/socket/handlers/admin-action.handler';
 import { awardTeamBonus } from '@/game/socket/handlers/award-bonus.handler';
 import { createShowdownRound } from '@/game/socket/handlers/create-showdown-round.handler';
 import type { EventServices } from '@/game/socket/handlers/event-services';
@@ -167,8 +164,7 @@ export class GameGateway
         const rearm = () => this.rearmTimers(joinCode);
         let outcome: SessionOutcome;
         try {
-          outcome = await applyAdminAction(
-            this.gameState,
+          outcome = await this.gameState.applyAdminAction(
             joinCode,
             payload.action,
           );

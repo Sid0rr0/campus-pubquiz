@@ -12,10 +12,19 @@ Parent spec: `.scratch/live-session-events/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Real-store gateway tests pin today's delivery order before anything moves: reply to sender, presenter context and state to rooms, admin answer lists, team syncs, notices, then socket closes.
-- [ ] Outcome delivery no longer reads any team's socket from the Live session module.
-- [ ] Kicking a team sends the kicked notice, then closes its socket, through the outcome alone.
-- [ ] A module refusal reaches the sender as a socket error with its message unchanged; handlers no longer wrap errors themselves.
-- [ ] Re-scored answers after a live key fix still sync to each connected team that answered.
+- [x] Real-store gateway tests pin today's delivery order before anything moves: reply to sender, presenter context and state to rooms, admin answer lists, team syncs, notices, then socket closes.
+- [x] Outcome delivery no longer reads any team's socket from the Live session module.
+- [x] Kicking a team sends the kicked notice, then closes its socket, through the outcome alone.
+- [x] A module refusal reaches the sender as a socket error with its message unchanged; handlers no longer wrap errors themselves.
+- [x] Re-scored answers after a live key fix still sync to each connected team that answered.
+
+## Comments
+
+Implemented in the commit `refactor(backend): Session outcome carries replies, team syncs and sockets to close` (find it in git history; no hash recorded here).
+
+- `SessionOutcome` gained `replies` (sender emits, delivered first), `teamSyncs` (`{ teamId, socketId }`, resolved where the outcome is built) and `socketsToClose` (closed last, in a `finally` so a failed earlier step still closes them, as `afterDelivery` did).
+- `outcome-delivery-order.spec.ts` pins reply-before-room-push for answers and joins, the kick notice-then-close order, and a refused press arriving as a socket error with the message unchanged. It passed against the old code before anything moved.
+- `SessionRefusal` is thrown by the module's `applyAdminAction` and turned into a `WsException` in `dispatchSocketEvent`. The admin-action handler no longer wraps errors. The other handlers (submit, join, leave, grade, bonus, showdown) still wrap errors from the services they call; those move into the module in tickets 02-06.
+- Known edge: `ANSWER_RECEIVED` and `JOIN_ACCEPTED` now go out with the outcome, after the refresh write, instead of just before it. A refresh failure after a saved answer therefore now surfaces as an error ack with no reply.

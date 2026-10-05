@@ -13,6 +13,7 @@ import {
 } from '@/game/state/move-plan.util';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamSyncs,
   isRevealEntry,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
@@ -165,8 +166,11 @@ export class MoveCommitter {
       session: committed,
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
-        teamSyncTeamIds: isRevealEntry(session.progress.status, progress.status)
-          ? getConnectedTeamIds(committed)
+        teamSyncs: isRevealEntry(session.progress.status, progress.status)
+          ? connectedTeamSyncs(
+              committed,
+              committed.teams.map((team) => team.teamId),
+            )
           : [],
       },
     };
@@ -264,10 +268,4 @@ function toPersistedProgress(session: SessionState): PersistedGameProgress {
     phaseStartedAt: session.phaseStartedAt,
     phaseElapsedByKey: session.phaseElapsedByKey,
   };
-}
-
-function getConnectedTeamIds(session: SessionState): number[] {
-  return session.teams
-    .filter((team) => Boolean(session.connectedTeamSockets[team.teamId]))
-    .map((team) => team.teamId);
 }

@@ -56,8 +56,10 @@ import {
   withTeams,
   withoutTeamConnection,
 } from '@/game/state/session-updates.util';
+import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
+  connectedTeamSyncs,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import { ShowdownService } from '@/showdown/showdown.service';
@@ -316,17 +318,18 @@ export class GameStateService implements OnModuleInit {
       const answeredTeamIds = new Set(
         answerLists.flat().map((answer) => answer.teamId),
       );
-      const teamSyncTeamIds = buildSnapshot(session)
-        .teams.filter(
-          (team) => team.isConnected && answeredTeamIds.has(team.teamId),
-        )
-        .map((team) => team.teamId);
+      const teamSyncs = connectedTeamSyncs(
+        session,
+        session.teams
+          .filter((team) => answeredTeamIds.has(team.teamId))
+          .map((team) => team.teamId),
+      );
       return {
         session,
         outcome: {
           ...BROADCAST_STATE_OUTCOME,
           answerListQuestionIds: regradedQuestionIds,
-          teamSyncTeamIds,
+          teamSyncs,
         },
       };
     });
@@ -579,8 +582,9 @@ export class GameStateService implements OnModuleInit {
    * no other session write (answers, grades, bonuses, roster changes, other
    * presses) that landed while the press waited on the database is lost. The
    * session is stored only once its progress is saved,
-   * so a refused press leaves it where it was. Throws whatever the commit
-   * throws (illegal transition, ungraded answers, a failed save).
+   * so a refused press leaves it where it was. Refuses with the commit's own
+   * message (illegal transition, ungraded answers); a failed save is refused
+   * the same way.
    */
   applyAdminAction(
     joinCode: string,
@@ -588,7 +592,11 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.writeSession(joinCode, (session) =>
       this.moveCommitter.commit(session, action),
-    );
+    ).catch((error: unknown) => {
+      throw new SessionRefusal(
+        error instanceof Error ? error.message : 'Invalid game action',
+      );
+    });
   }
 
   /** The same press as applyAdminAction, answering with the snapshot it leaves behind. */
@@ -620,7 +628,7 @@ export class GameStateService implements OnModuleInit {
    * drops the team's connection and swaps in the roster after its removal
    * (read inside the write), so the next snapshot never has one without the
    * other. A kick also carries TEAM_KICKED for the socket the team held when
-   * the write ran, if it still has one.
+   * the write ran, if it still has one, then closes that socket.
    */
   teamRemoved(
     joinCode: string,
@@ -645,7 +653,11 @@ export class GameStateService implements OnModuleInit {
           withoutTeamConnection(session, teamId),
           await loadRoster(),
         ),
-        outcome: { ...BROADCAST_STATE_OUTCOME, notices },
+        outcome: {
+          ...BROADCAST_STATE_OUTCOME,
+          notices,
+          socketsToClose: notices.map((notice) => notice.socketId),
+        },
       };
     });
   }

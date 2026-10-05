@@ -68,18 +68,24 @@ export async function joinPlayerTeam(
       deps.gameState.getGameSessionId(joinCode),
       team.id,
     );
-    client.emit(SOCKET_EVENTS.JOIN_ACCEPTED, {
-      teamId: team.id,
-      teamName: team.name,
-      teamToken: team.token,
-      teamCode: team.code,
-      answers: savedAnswers,
-      bonusAwards: savedBonusAwards,
-      roundRatings: savedRoundRatings,
-      feedback: savedFeedback,
-    });
-
-    return outcome;
+    return {
+      ...outcome,
+      replies: [
+        {
+          event: SOCKET_EVENTS.JOIN_ACCEPTED,
+          payload: {
+            teamId: team.id,
+            teamName: team.name,
+            teamToken: team.token,
+            teamCode: team.code,
+            answers: savedAnswers,
+            bonusAwards: savedBonusAwards,
+            roundRatings: savedRoundRatings,
+            feedback: savedFeedback,
+          },
+        },
+      ],
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to join';
     throw new WsException(message);

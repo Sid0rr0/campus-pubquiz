@@ -34,15 +34,25 @@ export async function submitTeamAnswer(
     responseMs,
   );
 
-  client.emit(SOCKET_EVENTS.ANSWER_RECEIVED, {
-    questionId: payload.questionId,
-    teamId: submitted.teamId,
-    teamName: submitted.teamName,
-    value: submitted.value,
-    pointsAwarded: submitted.pointsAwarded,
-    gradedAt: submitted.gradedAt,
-    verdict: submitted.verdict,
-  });
-
-  return await deps.gameState.recordAnswer(joinCode, payload.questionId);
+  const outcome = await deps.gameState.recordAnswer(
+    joinCode,
+    payload.questionId,
+  );
+  return {
+    ...outcome,
+    replies: [
+      {
+        event: SOCKET_EVENTS.ANSWER_RECEIVED,
+        payload: {
+          questionId: payload.questionId,
+          teamId: submitted.teamId,
+          teamName: submitted.teamName,
+          value: submitted.value,
+          pointsAwarded: submitted.pointsAwarded,
+          gradedAt: submitted.gradedAt,
+          verdict: submitted.verdict,
+        },
+      },
+    ],
+  };
 }

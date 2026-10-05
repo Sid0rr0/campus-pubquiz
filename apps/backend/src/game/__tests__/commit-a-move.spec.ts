@@ -109,7 +109,7 @@ describe('GameStateService — committing a move', () => {
   describe('the outcome of a press', () => {
     it('names every connected team for a re-sync when the reveal starts', async () => {
       // Arrange
-      const [{ teamId }] = game.teams;
+      const [{ teamId, socket }] = game.teams;
       await game.act('ADVANCE'); // -> round_intro
       await game.act('ADVANCE'); // -> question_open
       await game.act('ADVANCE'); // -> locking
@@ -121,7 +121,7 @@ describe('GameStateService — committing a move', () => {
       );
 
       // Assert
-      expect(outcome.teamSyncTeamIds).toEqual([teamId]);
+      expect(outcome.teamSyncs).toEqual([{ teamId, socketId: socket.id }]);
     });
 
     it('names nobody for a press that does not enter the reveal', async () => {
@@ -131,7 +131,7 @@ describe('GameStateService — committing a move', () => {
       );
 
       // Assert
-      expect(outcome.teamSyncTeamIds).toEqual([]);
+      expect(outcome.teamSyncs).toEqual([]);
     });
   });
 
