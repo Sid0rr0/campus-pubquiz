@@ -74,6 +74,8 @@ function buildInput({
     standings: standings ?? standingsFor(teams, answers, bonusAwards),
     rounds: [],
     roundRatings: [],
+    isFeedbackCollected: true,
+    feedback: [],
     questions: [],
     answers,
     bonusAwards,

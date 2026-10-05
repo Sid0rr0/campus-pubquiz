@@ -69,6 +69,28 @@ export interface SessionDetailRoundRating {
   count: number;
 }
 
+/** One "Anything else" comment — text and when it was sent, never the team. */
+export interface SessionDetailFeedbackComment {
+  text: string;
+  submittedAt: string; // ISO
+}
+
+/** Topic suggestions that match regardless of capitals and spaces, shown in their most common spelling. */
+export interface SessionDetailFeedbackTopic {
+  topic: string;
+  count: number;
+}
+
+/** What teams said about a session, anonymously. */
+export interface SessionDetailFeedback {
+  /** The session's "Collect feedback" setting; when false the lists are empty and the page says feedback was off. */
+  collected: boolean;
+  /** Newest first, empty comments skipped. */
+  comments: SessionDetailFeedbackComment[];
+  /** Sorted by count, then alphabetically. */
+  topics: SessionDetailFeedbackTopic[];
+}
+
 export interface SessionDetailRoundRow {
   roundId: number;
   title: string;
@@ -143,6 +165,7 @@ export interface SessionDetailStats {
   };
   standings: SessionDetailStandingRow[];
   rounds: SessionDetailRoundRow[];
+  feedback: SessionDetailFeedback;
   questions: SessionDetailQuestionRow[];
   highlights: SessionDetailHighlights;
 }

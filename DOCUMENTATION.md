@@ -674,6 +674,22 @@ team rated the round. It is aggregated in SQL from the round ratings of that one
 session (`avg(stars)`, `count(*)` per round), so the response never carries a
 team id or name for any rating — ratings are anonymous on this page and in the API.
 
+The session detail also carries a `feedback` section, shown on the page as
+**Comments** and **Topic suggestions**:
+`{ collected, comments: [{ text, submittedAt }], topics: [{ topic, count }] }`.
+
+- `collected` is the session's `collectFeedback` setting (a session stored without
+  it reads as `true`). When it is `false` the lists are empty and the page shows
+  "Feedback was off for this session" instead of the two sections.
+- `comments` are the teams' "Anything else" texts, newest first, with empty and
+  whitespace-only ones skipped.
+- `topics` group suggestions that match after trimming, collapsing inner
+  whitespace and ignoring case. A group shows its most common spelling (on a tie,
+  the first submitted) and the list is sorted by count, then alphabetically
+  ("Geography ×4").
+- The team is never selected: no team id or name reaches the response or the page.
+  Comment and topic order uses when the team last sent its feedback.
+
 ## Deploy and CI
 
 - **Backend** deploys to Render (`render.yaml`) on the Docker runtime

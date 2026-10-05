@@ -8,6 +8,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { HighlightTiles } from '@/app/stats/[id]/highlight-tiles';
 import { StandingsTable } from '@/app/stats/[id]/standings-table';
 import { RoundsTable } from '@/app/stats/[id]/rounds-table';
+import { FeedbackSection } from '@/app/stats/[id]/feedback-section';
 import { QuestionsTable } from '@/app/stats/[id]/questions-table';
 
 interface SessionDetailPanelProps {
@@ -76,6 +77,8 @@ export function SessionDetailPanel({ gameSessionId }: SessionDetailPanelProps) {
           hardestRoundId={data.highlights.hardestRoundId}
         />
       </section>
+
+      <FeedbackSection feedback={data.feedback} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-lg">Questions</h2>

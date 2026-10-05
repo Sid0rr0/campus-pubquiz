@@ -78,7 +78,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'The "Collect feedback" switch in the Session Settings panel is on by default and can only be changed in the lobby, like every other setting. While it is on, teams can rate the rounds from their phones, and it is always optional.',
       'In each break, a "Rate these rounds" card sits above the block browser on the phone, with 1–5 stars for each round of the block that just ended. When the quiz ends, and any showdown is decided, the phone shows "Quiz complete!" followed by a final form: every round with its stars (kahoot rounds are only rated here), an "Anything else?" box and topic suggestions for future rounds.',
-      'With the switch off, phones show no rating card and no final form — the end screen is just "Quiz complete!" — and ratings and comments are refused. Results are anonymous and appear only on the session stats page, never on Control.',
+      'With the switch off, phones show no rating card and no final form — the end screen is just "Quiz complete!" — and ratings and comments are refused. Results are anonymous and appear only on the session stats page, never on Control: each round\'s average rating in the rounds table, then a Comments section (newest first) and a Topic suggestions section (grouped and sorted by how many teams gave them). A session run with the switch off shows "Feedback was off for this session" there instead.',
     ],
   },
   {

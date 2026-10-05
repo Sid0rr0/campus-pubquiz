@@ -8,10 +8,10 @@ Parent spec: `.scratch/feedback/spec.md`
 
 **Blocked by:** 03, 04, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: the stats service returns comments newest first, skipping empty ones, with no team id or name anywhere in the response.
-- [ ] "Geography", " geography " and "GEOGRAPHY" count as one topic shown in its most common spelling; groups are sorted by count, then alphabetically.
-- [ ] A session with the setting off reports `collected: false`.
-- [ ] Stats page: the Comments and Topic suggestions sections render, and the "Feedback was off for this session" note replaces them when `collected` is false.
-- [ ] Docs: `DOCUMENTATION.md`'s stats section covers comments and topics; the `/guide` page says where feedback results appear.
+- [x] Written first, failing against today's code: the stats service returns comments newest first, skipping empty ones, with no team id or name anywhere in the response.
+- [x] "Geography", " geography " and "GEOGRAPHY" count as one topic shown in its most common spelling; groups are sorted by count, then alphabetically.
+- [x] A session with the setting off reports `collected: false`.
+- [x] Stats page: the Comments and Topic suggestions sections render, and the "Feedback was off for this session" note replaces them when `collected` is false.
+- [x] Docs: `DOCUMENTATION.md`'s stats section covers comments and topics; the `/guide` page says where feedback results appear.

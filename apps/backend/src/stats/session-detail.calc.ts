@@ -16,6 +16,7 @@ import type {
   DepartedTeam,
   SessionStandings,
 } from '@/standings/standings.service';
+import { computeSessionFeedback } from '@/stats/session-feedback.calc';
 
 export interface SessionDetailSessionRow {
   gameSessionId: number;
@@ -36,6 +37,13 @@ export interface SessionDetailRoundRatingInputRow {
   roundId: number;
   average: number;
   count: number;
+}
+
+/** One team's session feedback, already stripped of the team. Rows arrive oldest first. */
+export interface SessionDetailFeedbackInputRow {
+  comment: string;
+  topics: string[];
+  submittedAt: string | Date;
 }
 
 export interface SessionDetailQuestionInputRow {
@@ -70,6 +78,9 @@ export interface SessionDetailInput {
   rounds: SessionDetailRoundInputRow[];
   /** One row per round at least one team rated; an unrated round has none. */
   roundRatings: SessionDetailRoundRatingInputRow[];
+  /** The session's "Collect feedback" setting. */
+  isFeedbackCollected: boolean;
+  feedback: SessionDetailFeedbackInputRow[];
   questions: SessionDetailQuestionInputRow[];
   answers: SessionDetailAnswerInputRow[];
   bonusAwards: SessionDetailBonusInputRow[];
@@ -192,6 +203,8 @@ export function computeSessionDetail(
     standings: sessionStandings,
     rounds,
     roundRatings,
+    isFeedbackCollected,
+    feedback,
     questions,
     answers,
     bonusAwards,
@@ -337,6 +350,7 @@ export function computeSessionDetail(
     },
     standings,
     rounds: roundRows,
+    feedback: computeSessionFeedback(isFeedbackCollected, feedback),
     questions: questionRows,
     highlights: {
       hardestQuestionId:

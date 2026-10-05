@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 import { SessionDetailPanel } from '@/app/stats/[id]/session-detail-panel';
@@ -60,6 +60,20 @@ const DETAIL: SessionDetailStats = {
       pointsPercent: 40,
     },
   ],
+  feedback: {
+    collected: true,
+    comments: [
+      { text: 'Too loud at the back', submittedAt: '2026-01-05T21:10:00.000Z' },
+      {
+        text: 'Loved the music round',
+        submittedAt: '2026-01-05T21:00:00.000Z',
+      },
+    ],
+    topics: [
+      { topic: 'Geography', count: 4 },
+      { topic: 'Film', count: 1 },
+    ],
+  },
   questions: [
     {
       questionId: 10,
@@ -147,5 +161,54 @@ describe('SessionDetailPanel', () => {
         'Could not load session detail',
       ),
     );
+  });
+
+  it('lists the comments and the topic suggestions with their counts', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Comments' }),
+    ).toBeInTheDocument();
+    const comments = within(
+      screen.getByRole('list', { name: 'Comments' }),
+    ).getAllByRole('listitem');
+    expect(comments.map((c) => c.textContent)).toEqual([
+      expect.stringContaining('Too loud at the back'),
+      expect.stringContaining('Loved the music round'),
+    ]);
+    expect(
+      screen.getByRole('heading', { name: 'Topic suggestions' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Geography ×4')).toBeInTheDocument();
+    expect(screen.getByText('Film ×1')).toBeInTheDocument();
+  });
+
+  it('says there are no comments or topics when teams sent none', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: { collected: true, comments: [], topics: [] },
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    expect(await screen.findByText('No comments yet.')).toBeInTheDocument();
+    expect(screen.getByText('No topic suggestions yet.')).toBeInTheDocument();
+  });
+
+  it('replaces the feedback sections with a note when feedback was off', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      feedback: { collected: false, comments: [], topics: [] },
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    expect(
+      await screen.findByText('Feedback was off for this session'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Comments' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Topic suggestions' }),
+    ).not.toBeInTheDocument();
   });
 });

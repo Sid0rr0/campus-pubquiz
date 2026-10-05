@@ -1,5 +1,8 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
-import type { GameStatus } from '@campus-pubquiz/types';
+import {
+  DEFAULT_SESSION_SETTINGS,
+  type GameStatus,
+} from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -8,6 +11,7 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
+import { SessionFeedback } from '@/db/entities/session-feedback.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -515,6 +519,137 @@ describe('StatsService (Postgres integration)', () => {
         'average',
         'count',
       ]);
+    });
+  });
+
+  describe('getSessionDetail feedback', () => {
+    async function send(
+      session: GameSession,
+      team: Team,
+      comment: string,
+      topics: string[],
+      sentAt: string,
+    ): Promise<void> {
+      em.create(SessionFeedback, {
+        gameSession: session,
+        team,
+        comment,
+        topics,
+        createdAt: new Date(sentAt),
+        updatedAt: new Date(sentAt),
+      });
+      await em.flush();
+    }
+
+    async function endedSession(joinCode: string): Promise<GameSession> {
+      const { quiz } = await createQuiz('Quiz', [[1]]);
+      return createSession(quiz, joinCode, 'ended');
+    }
+
+    it('lists comments newest first, skipping empty ones, with no team id or name', async () => {
+      const session = await endedSession('FB1');
+      const alpha = await joinTeam(session, 'SecretSquad');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      await send(session, alpha, 'Loved it', [], '2026-10-01T20:00:00Z');
+      await send(session, beta, '   ', ['Film'], '2026-10-01T20:05:00Z');
+      await send(session, gamma, 'Too loud', [], '2026-10-01T20:10:00Z');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.comments).toEqual([
+        { text: 'Too loud', submittedAt: '2026-10-01T20:10:00.000Z' },
+        { text: 'Loved it', submittedAt: '2026-10-01T20:00:00.000Z' },
+      ]);
+      const json = JSON.stringify(result.feedback);
+      expect(json).not.toContain('SecretSquad');
+      expect(json).not.toMatch(/team/i);
+    });
+
+    it('counts differently capitalised and spaced topics as one, in the most common spelling', async () => {
+      const session = await endedSession('FB2');
+      const alpha = await joinTeam(session, 'Alpha');
+      const beta = await joinTeam(session, 'Beta');
+      const gamma = await joinTeam(session, 'Gamma');
+      const delta = await joinTeam(session, 'Delta');
+      await send(session, alpha, '', ['Geography'], '2026-10-01T20:00:00Z');
+      await send(session, beta, '', [' geography '], '2026-10-01T20:01:00Z');
+      await send(session, gamma, '', ['GEOGRAPHY'], '2026-10-01T20:02:00Z');
+      await send(session, delta, '', ['Geography'], '2026-10-01T20:03:00Z');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.topics).toEqual([
+        { topic: 'Geography', count: 4 },
+      ]);
+    });
+
+    it('sorts topic groups by count, then alphabetically', async () => {
+      const session = await endedSession('FB3');
+      const alpha = await joinTeam(session, 'Alpha');
+      const beta = await joinTeam(session, 'Beta');
+      await send(
+        session,
+        alpha,
+        '',
+        ['Music', 'Art', 'Film'],
+        '2026-10-01T20:00:00Z',
+      );
+      await send(session, beta, '', ['film'], '2026-10-01T20:01:00Z');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.topics).toEqual([
+        { topic: 'Film', count: 2 },
+        { topic: 'Art', count: 1 },
+        { topic: 'Music', count: 1 },
+      ]);
+    });
+
+    it('reports collected: true by default and for a session stored without the setting', async () => {
+      const session = await endedSession('FB4');
+      const legacy = await endedSession('FB5');
+      const withoutSetting: Partial<typeof DEFAULT_SESSION_SETTINGS> = {
+        ...DEFAULT_SESSION_SETTINGS,
+      };
+      delete withoutSetting.collectFeedback;
+      legacy.settings = withoutSetting as typeof legacy.settings;
+      await em.flush();
+
+      const result = await statsService.getSessionDetail(session.id);
+      const legacyResult = await statsService.getSessionDetail(legacy.id);
+
+      expect(result.feedback.collected).toBe(true);
+      expect(legacyResult.feedback.collected).toBe(true);
+    });
+
+    it('reports collected: false for a session with the setting off', async () => {
+      const session = await endedSession('FB6');
+      session.settings = {
+        ...DEFAULT_SESSION_SETTINGS,
+        collectFeedback: false,
+      };
+      await em.flush();
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback).toEqual({
+        collected: false,
+        comments: [],
+        topics: [],
+      });
+    });
+
+    it('ignores feedback from another session', async () => {
+      const session = await endedSession('FB7');
+      const other = await endedSession('FB8');
+      const team = await joinTeam(other, 'Alpha');
+      await send(other, team, 'Hello', ['Film'], '2026-10-01T20:00:00Z');
+
+      const result = await statsService.getSessionDetail(session.id);
+
+      expect(result.feedback.comments).toEqual([]);
+      expect(result.feedback.topics).toEqual([]);
     });
   });
 

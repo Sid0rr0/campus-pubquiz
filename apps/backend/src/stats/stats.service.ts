@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import { z } from 'zod';
 import type {
   BonusCategory,
   PlayedSessionsListedPayload,
   QuestionType,
   SessionDetailStats,
+  SessionSettings,
   Verdict,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -29,7 +31,16 @@ interface SessionHeaderRow {
   quizTitle: string;
   name: string | null;
   playedAt: string | Date;
+  settings: Partial<SessionSettings>;
 }
+
+interface SessionFeedbackRow {
+  comment: string;
+  topics: unknown;
+  submittedAt: string | Date;
+}
+
+const storedTopicsSchema = z.array(z.string());
 
 interface SessionRoundRow {
   roundId: number;
@@ -222,6 +233,7 @@ export class StatsService {
         'qz.title as quizTitle',
         'gs.name as name',
         'gs.created_at as playedAt',
+        'gs.settings as settings',
       )
       .first()) as SessionHeaderRow | undefined;
     if (!header) {
@@ -248,6 +260,19 @@ export class StatsService {
       .select('round_id as roundId')
       .select(knex.raw('avg(stars) as average'))
       .select(knex.raw('count(*) as count'))) as SessionRoundRatingRow[];
+
+    // Team columns are deliberately not selected: feedback stays anonymous.
+    const feedback = (await knex('session_feedback')
+      .where('game_session_id', gameSessionId)
+      .orderBy([
+        { column: 'updated_at', order: 'asc' },
+        { column: 'id', order: 'asc' },
+      ])
+      .select(
+        'comment',
+        'topics',
+        'updated_at as submittedAt',
+      )) as SessionFeedbackRow[];
 
     const questions = (await knex('questions as q')
       .join('rounds as r', 'r.id', 'q.round_id')
@@ -297,6 +322,13 @@ export class StatsService {
         roundId: r.roundId,
         average: Number(r.average),
         count: Number(r.count),
+      })),
+      // Sessions stored before the "Collect feedback" setting count as on.
+      isFeedbackCollected: header.settings.collectFeedback ?? true,
+      feedback: feedback.map((f) => ({
+        comment: f.comment,
+        topics: storedTopicsSchema.parse(f.topics),
+        submittedAt: f.submittedAt,
       })),
       questions: questions.map((q) => ({
         questionId: q.questionId,
