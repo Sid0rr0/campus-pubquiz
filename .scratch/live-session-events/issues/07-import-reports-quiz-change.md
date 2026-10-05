@@ -6,10 +6,14 @@ Parent spec: `.scratch/live-session-events/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Importing into the active quiz in the lobby pushes a fresh view to all three rooms.
-- [ ] Importing into a quiz that isn't active pushes nothing.
-- [ ] A live answer-key fix behaves exactly as today: reload, re-grade, answer lists and team syncs.
-- [ ] `reloadActiveQuiz` and `regradeQuestions` are private.
-- [ ] `DOCUMENTATION.md` says an import into the active quiz is broadcast.
+- [x] Importing into the active quiz in the lobby pushes a fresh view to all three rooms.
+- [x] Importing into a quiz that isn't active pushes nothing.
+- [x] A live answer-key fix behaves exactly as today: reload, re-grade, answer lists and team syncs.
+- [x] `reloadActiveQuiz` and `regradeQuestions` are private.
+- [x] `DOCUMENTATION.md` says an import into the active quiz is broadcast.
+
+## Comments
+
+Already implemented before this ticket was picked up, by `fix(backend): re-importing the active quiz rebroadcasts like an editor save` (`fc09bdb`). `ImportService.confirmCsv` calls `notifyQuizEdited(joinCode)` only when the imported quiz is the session's active quiz, and `reloadActiveQuiz` is gone from the public interface (the reload is the private `withReloadedQuiz` step of `quizEdited`; `regradeQuestions` lives on `BlockGradingService`, not the module). `DOCUMENTATION.md` already says the reload and rebroadcast happen through the same path as an editor save. Covered by `quiz-reimported.spec.ts` (gateway broadcast, admin and display rooms) and `import.service.spec.ts` (active vs inactive quiz). No code change; this commit only records the ticket as done.
