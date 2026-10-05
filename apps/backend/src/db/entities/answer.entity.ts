@@ -55,7 +55,7 @@ export class Answer extends BaseEntity {
   verdict: Verdict | null = null;
 
   // Final (last-write-wins) submission time minus the question's open time
-  // (GameStateService.getPhaseStartedAt) — null for answers submitted before
+  // (the session's phase start) — null for answers submitted before
   // this column existed, or when the question had no tracked open time.
   @Property({ type: 'integer', nullable: true })
   responseMs: number | null = null;

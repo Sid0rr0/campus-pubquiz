@@ -28,7 +28,7 @@ describe('GameStateService — core snapshot', () => {
     );
 
     await expect(
-      uninitialized.applyAction(game.joinCode, 'START_QUIZ'),
+      uninitialized.applyAdminAction(game.joinCode, 'START_QUIZ'),
     ).rejects.toThrow(/before initialization/i);
   });
 

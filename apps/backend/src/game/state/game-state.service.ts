@@ -49,7 +49,6 @@ import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 import {
   LOBBY_PROGRESS,
   freshSessionState,
-  type ActiveShowdownRoundState,
   type SessionState,
 } from '@/game/state/session-state';
 import {
@@ -515,13 +514,6 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  isQuestionOpenForAnswering(joinCode: string, questionId: number): boolean {
-    return isQuestionOpenForAnswering(
-      this.sessionStore.get(joinCode),
-      questionId,
-    );
-  }
-
   getSnapshot(joinCode: string): StateSnapshotPayload {
     return buildSnapshot(this.sessionStore.get(joinCode));
   }
@@ -537,11 +529,6 @@ export class GameStateService implements OnModuleInit {
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   getQuestionLockAt(joinCode: string): number | null {
     return this.sessionStore.get(joinCode).questionLockAt;
-  }
-
-  /** Epoch-ms the currently-live timed phase started — the same value ensureKahootSpeedScored anchors its response-time math to. Null when the current phase (e.g. a non-question status) isn't timed. */
-  getPhaseStartedAt(joinCode: string): number | null {
-    return this.sessionStore.get(joinCode).phaseStartedAt;
   }
 
   /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed. */
@@ -579,16 +566,6 @@ export class GameStateService implements OnModuleInit {
         }),
       NOT_TOUCHING_SCORES,
     );
-  }
-
-  /** The in-progress/just-resolved showdown round, or null between rounds. */
-  getActiveShowdownRound(joinCode: string): ActiveShowdownRoundState | null {
-    return this.sessionStore.get(joinCode).activeShowdownRound;
-  }
-
-  /** Current showdown reveal sub-step — meaningless while getActiveShowdownRound is null. */
-  getShowdownRevealStep(joinCode: string): number {
-    return this.sessionStore.get(joinCode).showdownRevealStep;
   }
 
   /**
@@ -673,11 +650,6 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /** This session's current settings — used by the gateway to filter enabled bonus categories. */
-  getSessionSettings(joinCode: string): SessionSettings {
-    return this.sessionStore.get(joinCode).seededGame.settings;
-  }
-
   /**
    * Merges `partial` over the session's current settings, lobby-only — the
    * admin can keep adjusting settings freely up until START_QUIZ, at which
@@ -740,15 +712,6 @@ export class GameStateService implements OnModuleInit {
         error instanceof Error ? error.message : 'Invalid game action',
       );
     });
-  }
-
-  /** The same press as applyAdminAction, answering with the snapshot it leaves behind. */
-  async applyAction(
-    joinCode: string,
-    action: GameAction,
-  ): Promise<StateSnapshotPayload> {
-    await this.applyAdminAction(joinCode, action);
-    return this.getSnapshot(joinCode);
   }
 
   /**
@@ -840,7 +803,7 @@ export class GameStateService implements OnModuleInit {
     { teamId, category, points, reason }: AwardBonusPayload,
   ): Promise<SessionOutcome> {
     const { enabledBonusCategories, maxBonusAwardsPerCategory } =
-      this.getSessionSettings(joinCode);
+      this.sessionStore.get(joinCode).seededGame.settings;
     try {
       await this.bonusService.award(
         this.getGameSessionId(joinCode),

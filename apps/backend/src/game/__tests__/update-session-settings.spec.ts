@@ -23,7 +23,7 @@ describe('GameStateService — updateSessionSettings', () => {
   }
 
   function settings() {
-    return game.gameState.getSessionSettings(game.joinCode);
+    return game.gameState.getSnapshot(game.joinCode).settings;
   }
 
   it('exposes the default settings before any update', () => {
@@ -44,7 +44,7 @@ describe('GameStateService — updateSessionSettings', () => {
 
     const restarted = await game.restart();
 
-    expect(restarted.gameState.getSessionSettings(game.joinCode)).toEqual({
+    expect(restarted.gameState.getSnapshot(game.joinCode).settings).toEqual({
       ...DEFAULT_SESSION_SETTINGS,
       autoplayMedia: false,
     });
@@ -79,7 +79,7 @@ describe('GameStateService — updateSessionSettings', () => {
     });
     const restarted = await game.restart();
     expect(
-      restarted.gameState.getSessionSettings(game.joinCode)
+      restarted.gameState.getSnapshot(game.joinCode).settings
         .kahootQuestionTimerSeconds,
     ).toBe(45);
   });
@@ -91,7 +91,7 @@ describe('GameStateService — updateSessionSettings', () => {
     expect(settings().kahootQuestionTimerSeconds).toBe(null);
     const restarted = await game.restart();
     expect(
-      restarted.gameState.getSessionSettings(game.joinCode)
+      restarted.gameState.getSnapshot(game.joinCode).settings
         .kahootQuestionTimerSeconds,
     ).toBe(null);
   });

@@ -3,6 +3,7 @@ import {
   type GameAction,
   type PhoneScreen,
 } from '@campus-pubquiz/types';
+import { asSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
   setupRealStoreGatewayTest,
@@ -91,29 +92,38 @@ describe('Screen projection — the players view', () => {
 
   describe('a kahoot round', () => {
     beforeEach(async () => {
-      game = await harness.createGateway({ kahootMode: true });
+      game = await harness.createGateway({
+        kahootMode: true,
+        teamNames: ['The Quizzards'],
+      });
       await game.act('START_QUIZ');
       await game.act('ADVANCE'); // round_intro
       await game.act('ADVANCE'); // q1
     });
 
     it('agrees with the answer-submission gate while a question is open, hidden behind the leaderboard, and shown', async () => {
-      const gateAccepts = (questionId: number) =>
-        game.gameState.isQuestionOpenForAnswering(game.joinCode, questionId);
+      const [team] = game.teams;
+      const gateAccepts = async (questionId: number) => {
+        const result = await game.gateway.handleSubmitAnswer(
+          asSocket(team.socket),
+          { questionId, teamId: team.teamId, value: 'Paris' },
+        );
+        return result.success;
+      };
       const { multipleChoice, freeText } = game.questionIds;
 
       expect(playersView().isAnswerable).toBe(true);
-      expect(gateAccepts(multipleChoice)).toBe(true);
+      expect(await gateAccepts(multipleChoice)).toBe(true);
 
       await game.act('ADVANCE'); // locking
       await game.act('ADVANCE'); // reveal
       await game.act('ADVANCE'); // q2, opened behind the leaderboard
       expect(playersView().isAnswerable).toBe(false);
-      expect(gateAccepts(freeText)).toBe(false);
+      expect(await gateAccepts(freeText)).toBe(false);
 
       await game.act('TOGGLE_LEADERBOARD');
       expect(playersView().isAnswerable).toBe(true);
-      expect(gateAccepts(freeText)).toBe(true);
+      expect(await gateAccepts(freeText)).toBe(true);
     });
 
     it('follows the big screen to the revealed kahoot question', async () => {

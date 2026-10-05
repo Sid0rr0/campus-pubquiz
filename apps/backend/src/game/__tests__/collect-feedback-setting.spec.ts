@@ -117,7 +117,7 @@ describe('GameGateway — the "Collect feedback" session setting', () => {
     it('is on for a new session', async () => {
       const game = await harness.createGateway();
 
-      expect(game.gameState.getSessionSettings(game.joinCode)).toEqual(
+      expect(game.gameState.getSnapshot(game.joinCode).settings).toEqual(
         expect.objectContaining({ collectFeedback: true }),
       );
       expect(DEFAULT_SESSION_SETTINGS.collectFeedback).toBe(true);
@@ -151,7 +151,7 @@ describe('GameGateway — the "Collect feedback" session setting', () => {
     const restarted = await game.restart();
 
     expect(
-      restarted.gameState.getSessionSettings(restarted.joinCode)
+      restarted.gameState.getSnapshot(restarted.joinCode).settings
         .collectFeedback,
     ).toBe(true);
   });
@@ -179,7 +179,7 @@ describe('GameGateway — the "Collect feedback" session setting', () => {
     );
 
     expect(
-      game.gameState.getSessionSettings(game.joinCode).collectFeedback,
+      game.gameState.getSnapshot(game.joinCode).settings.collectFeedback,
     ).toBe(false);
   });
 });

@@ -2,18 +2,11 @@
 
 All features under `.scratch/`. A ticket is unblocked once every ticket in its "Blocked by" column is under **Done** (numbers refer to tickets in the same feature unless a feature is named). Each feature has a `spec.md` and an `issues/` folder.
 
-## Not implemented
-
-### live-session-events ([spec](live-session-events/spec.md))
-
-| #   | Ticket                                                                                                         | Blocked by             |
-| --- | -------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 08  | [The getters go](live-session-events/issues/08-the-getters-go.md)                                              | 02, 03, 04, 05, 06, 07 |
-
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| live-session-events         | 08  | [The getters go](live-session-events/issues/08-the-getters-go.md)                                                                                                      | —         |
 | live-session-events         | 07  | [Import reports a quiz change through quizEdited](live-session-events/issues/07-import-reports-quiz-change.md)                                                         | —         |
 | live-session-events         | 06  | [Grade answer and award bonus are module events](live-session-events/issues/06-grade-and-bonus-are-module-events.md)                                                   | —         |
 | live-session-events         | 05  | [Join is a module event](live-session-events/issues/05-join-is-a-module-event.md)                                                                                      | —         |

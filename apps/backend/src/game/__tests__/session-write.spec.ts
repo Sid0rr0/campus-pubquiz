@@ -954,7 +954,7 @@ describe('GameGateway — session write: lobby settings', () => {
 
   function expectSettingsAndTeam(snapshot: StateSnapshotPayload): void {
     expect(
-      game.gameState.getSessionSettings(game.joinCode).lockGraceSeconds,
+      game.gameState.getSnapshot(game.joinCode).settings.lockGraceSeconds,
     ).toBe(17);
     const joined = snapshot.teams.find(
       (team) => team.teamName === 'Latecomers',

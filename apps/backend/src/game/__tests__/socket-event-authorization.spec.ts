@@ -14,6 +14,7 @@ import {
 } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
@@ -229,4 +230,76 @@ describe('GameGateway — socket event authorization', () => {
       expectNothingDelivered();
     },
   );
+
+  describe('team-owned events', () => {
+    let intruder: MockSocket;
+
+    beforeEach(async () => {
+      intruder = await game.connectPlayer();
+      game.clearEmits();
+    });
+
+    it('refuses submitAnswer from a socket that does not own the seat', async () => {
+      const result = await game.gateway.handleSubmitAnswer(asSocket(intruder), {
+        questionId: ids.questionId,
+        teamId: ids.teamId,
+        value: 'Paris',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'You may only submit answers for your own team',
+      });
+      expectNothingDelivered();
+    });
+
+    it('refuses leaveSession from a socket that does not own the seat', async () => {
+      const result = await game.gateway.handleLeaveSession(asSocket(intruder), {
+        teamId: ids.teamId,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: expect.stringContaining(
+          'Can only leave the session as your own team',
+        ) as string,
+      });
+      expectNothingDelivered();
+    });
+  });
+});
+
+describe('GameGateway — showdown guess seat ownership', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('refuses submitShowdownGuess from a socket that does not own the seat', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A', 'Team B'],
+    });
+    await tieOnFirstQuestion(game, game.teams);
+    const admin = await game.connectAdmin();
+    await game.gateway.handleCreateShowdownRound(asSocket(admin), {
+      question: 'How many?',
+      answer: '100',
+      points: 5,
+    });
+    const { activeShowdown } = await game.snapshot();
+    const intruder = await game.connectPlayer();
+    game.clearEmits();
+
+    const result = await game.gateway.handleSubmitShowdownGuess(
+      asSocket(intruder),
+      {
+        showdownRoundId: activeShowdown!.id,
+        teamId: game.teams[0].teamId,
+        value: '95',
+      },
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'You may only submit guesses for your own team',
+    });
+    expect(game.roomEmits()).toEqual([]);
+  });
 });
