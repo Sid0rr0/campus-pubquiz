@@ -38,6 +38,26 @@ describe('GameGateway — join players', () => {
     );
   });
 
+  it('sends the join reply to the joining socket before any room-wide update', async () => {
+    const player = await game.connectPlayer();
+    game.clearEmits();
+    let roomEmitsWhenReplied: number | null = null;
+    player.emit.mockImplementation((event: string) => {
+      if (event === SOCKET_EVENTS.JOIN_ACCEPTED) {
+        roomEmitsWhenReplied = game.roomEmits().length;
+      }
+      return true;
+    });
+
+    await game.gateway.handleJoinPlayers(asSocket(player), {
+      teamName: 'The Quizzards',
+      joinCode: game.joinCode,
+    });
+
+    expect(roomEmitsWhenReplied).toBe(0);
+    expect(game.roomEmits().length).toBeGreaterThan(0);
+  });
+
   it('hands a rejoining device the team’s existing answers and bonus awards', async () => {
     const admin = await game.connectAdmin();
     const first = await game.joinTeam('The Quizzards');

@@ -7,6 +7,7 @@ import {
   isShowdownAcceptingGuesses,
   type ActiveSessionSummary,
   type CreateShowdownRoundPayload,
+  type JoinPlayersPayload,
   type AdminQuestionContext,
   type GameAction,
   type LeaderboardEntry,
@@ -21,6 +22,8 @@ import {
   type TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
+import { BonusService } from '@/bonus/bonus.service';
+import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
 import {
@@ -112,6 +115,8 @@ export class GameStateService implements OnModuleInit {
     private readonly standingsService: StandingsService,
     private readonly showdownService: ShowdownService,
     private readonly teamService: TeamService,
+    private readonly bonusService: BonusService,
+    private readonly feedbackService: FeedbackService,
   ) {
     this.grading = new BlockGradingService(this.answerService);
     this.moveCommitter = new MoveCommitter(
@@ -393,31 +398,98 @@ export class GameStateService implements OnModuleInit {
     return feedback?.kind === 'final_form';
   }
 
-  /** The socket currently connected for `teamId`, if any. */
-  getConnectedSocketId(joinCode: string, teamId: number): string | undefined {
-    return this.sessionStore.get(joinCode).connectedTeamSockets[teamId];
-  }
-
   /**
-   * A team's socket joined: a session write that records its connection and
-   * the session's roster (read inside the write, so it includes the team and
-   * any removal that ran before it) together, so the next snapshot shows the
-   * team as connected — and on the leaderboard from the moment it joins, at
-   * zero points until it scores.
+   * A team joins (or rejoins) from `socketId`. The team service resolves the
+   * team; then the seat takeover rule applies: a live socket already holding
+   * the seat refuses the join, unless the request names that socket as its
+   * previous one — then it is listed to close. Records the connection and the
+   * roster in one session write, so the team is on the leaderboard from the
+   * moment it joins, at zero points until it scores. The join reply (saved
+   * answers, bonus awards, ratings and feedback) goes to the sender before
+   * any room push. `isSocketLive` comes from the socket layer, the only place
+   * that knows whether a socket is still connected.
    */
-  teamConnected(
+  async teamJoined(
     joinCode: string,
-    teamId: number,
+    request: JoinPlayersPayload,
     socketId: string,
-    loadRoster: RosterLoader,
+    isSocketLive: (socketId: string) => boolean,
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (session) => ({
-      session: withTeams(
-        withTeamConnected(session, teamId, socketId),
-        await loadRoster(),
-      ),
-      outcome: BROADCAST_STATE_OUTCOME,
-    }));
+    const gameSessionId = this.getGameSessionId(joinCode);
+    try {
+      const team = await this.teamService.join(
+        gameSessionId,
+        request.teamName,
+        {
+          teamToken: request.teamToken,
+          teamCode: request.teamCode,
+          joinCode: request.joinCode,
+        },
+      );
+
+      const joined = await this.writeSession(joinCode, async (session) => {
+        const heldBy = session.connectedTeamSockets[team.id];
+        const takenOver =
+          heldBy && heldBy !== socketId && isSocketLive(heldBy) ? heldBy : null;
+        // A takeover is the same device auto-reconnecting on a fresh socket
+        // before our ping timeout noticed its old one died (network switch,
+        // phone waking up). Socket ids are random and never shared with other
+        // clients, so only the device that held that socket can name it here.
+        // Decided inside the write, so two joins racing for one seat can't
+        // both pass.
+        if (takenOver && request.previousSocketId !== takenOver) {
+          throw new SessionRefusal(
+            `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
+          );
+        }
+        return {
+          session: withTeams(
+            withTeamConnected(session, team.id, socketId),
+            await this.teamService.listForSession(gameSessionId),
+          ),
+          outcome: {
+            ...BROADCAST_STATE_OUTCOME,
+            socketsToClose: takenOver ? [takenOver] : [],
+          },
+        };
+      });
+
+      return {
+        ...joined,
+        replies: [
+          {
+            event: SOCKET_EVENTS.JOIN_ACCEPTED,
+            payload: {
+              teamId: team.id,
+              teamName: team.name,
+              teamToken: team.token,
+              teamCode: team.code,
+              answers: await this.answerService.listForTeam(
+                gameSessionId,
+                team.id,
+              ),
+              bonusAwards: await this.bonusService.listForTeam(
+                gameSessionId,
+                team.id,
+              ),
+              roundRatings: await this.feedbackService.listRoundRatingsForTeam(
+                gameSessionId,
+                team.id,
+              ),
+              feedback: await this.feedbackService.getFeedbackForTeam(
+                gameSessionId,
+                team.id,
+              ),
+            },
+          },
+        ],
+      };
+    } catch (error) {
+      if (error instanceof SessionRefusal) throw error;
+      throw new SessionRefusal(
+        error instanceof Error ? error.message : 'Unable to join',
+      );
+    }
   }
 
   /** A socket dropped: a session write (no standings read) that frees its team, if it held one. Null when the socket wasn't a team's — nothing to push. */

@@ -8,7 +8,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | #   | Ticket                                                                                                               | Blocked by             |
 | --- | -------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 05  | [Join is a module event](live-session-events/issues/05-join-is-a-module-event.md)                                    | 01                     |
 | 06  | [Grade answer and award bonus are module events](live-session-events/issues/06-grade-and-bonus-are-module-events.md) | 01                     |
 | 07  | [Import reports a quiz change through quizEdited](live-session-events/issues/07-import-reports-quiz-change.md)       | —                      |
 | 08  | [The getters go](live-session-events/issues/08-the-getters-go.md)                                                    | 02, 03, 04, 05, 06, 07 |
@@ -17,7 +16,8 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| live-session-events         | 04  | [Leave and kick are module events](live-session-events/issues/04-leave-and-kick-are-module-events.md)                                                                 | —         |
+| live-session-events         | 05  | [Join is a module event](live-session-events/issues/05-join-is-a-module-event.md)                                                                                      | —         |
+| live-session-events         | 04  | [Leave and kick are module events](live-session-events/issues/04-leave-and-kick-are-module-events.md)                                                                  | —         |
 | live-session-events         | 03  | [One "accepting guesses" rule for the showdown](live-session-events/issues/03-one-accepting-guesses-rule.md)                                                           | —         |
 | live-session-events         | 02  | [Submit answer is one module event](live-session-events/issues/02-submit-answer-is-one-module-event.md)                                                                | —         |
 | live-session-events         | 01  | [The Session outcome carries replies, resolved team syncs and sockets to close](live-session-events/issues/01-outcome-carries-replies-syncs-and-closes.md)             | —         |

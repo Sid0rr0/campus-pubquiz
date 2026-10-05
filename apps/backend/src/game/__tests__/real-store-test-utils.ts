@@ -186,6 +186,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   standingsService: StandingsService;
   teamService: TeamService;
   bonusService: BonusService;
+  feedbackService: FeedbackService;
   showdownService: ShowdownService;
   seedService: SeedService;
   progressRepository: GameProgressRepository;
@@ -517,6 +518,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.standingsService,
       services.showdownService,
       services.teamService,
+      services.bonusService,
+      services.feedbackService,
     );
     await gameState.onModuleInit();
     const nextWriteWaiting = watchNextWrite(gameState);
