@@ -70,3 +70,11 @@ export function getOpenedPrefixLength(
     ) + 1
   );
 }
+
+/** A round the live sessions have reached (the current round or an earlier one): it keeps its place, break-after and kahoot setting, and can't be deleted. The rounds after it can be added, deleted and reordered, and those settings can change. */
+export function isRoundReached(
+  frontier: LiveEditFrontier,
+  roundIndex: number,
+): boolean {
+  return roundIndex <= frontier.currentRoundIndex;
+}

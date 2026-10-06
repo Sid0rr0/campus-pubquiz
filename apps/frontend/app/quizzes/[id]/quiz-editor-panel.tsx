@@ -14,6 +14,7 @@ import {
 } from '@radix-ui/react-icons';
 import {
   getRoundStructureEditing,
+  isRoundReached,
   type ImportPreview,
   type LiveEditFrontier,
   type QuizDraftIssue,
@@ -601,12 +602,13 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       {isLive && (
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
           A session is live on this quiz — questions can still be edited, but
-          opened ones keep their type and choices, and rounds can&apos;t be
-          added, removed, or reordered. Questions can be added, deleted,
-          reordered and moved after the current round&apos;s last opened
-          question (until its block starts locking) and in the rounds after it.
-          Correcting an opened question&apos;s answer or points re-scores its
-          auto-graded answers.
+          opened ones keep their type and choices. The current round and the
+          rounds before it keep their place, break-after and kahoot setting; the
+          rounds after it can be added, deleted, reordered and changed.
+          Questions can be added, deleted, reordered and moved after the current
+          round&apos;s last opened question (until its block starts locking) and
+          in the rounds after it. Correcting an opened question&apos;s answer or
+          points re-scores its auto-graded answers.
         </p>
       )}
 
@@ -614,6 +616,12 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {rounds.map((round, index) => {
             const isLast = index === rounds.length - 1;
+            const isReached =
+              liveEditState !== undefined &&
+              isRoundReached(liveEditState, index);
+            const isPreviousReached =
+              liveEditState !== undefined &&
+              isRoundReached(liveEditState, index - 1);
             const isStructureFrozen =
               liveEditState !== undefined &&
               getRoundStructureEditing(liveEditState, index) === 'frozen';
@@ -629,7 +637,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   index={index}
                   isFirst={index === 0}
                   isLast={isLast}
-                  isLive={isLive}
+                  isReached={isReached}
+                  isPreviousReached={isPreviousReached}
                   isStructureFrozen={isStructureFrozen}
                   pinnedQuestionCount={pinnedQuestionCount}
                   structureNote={
@@ -673,7 +682,6 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           <Button
             type="button"
             onClick={addRound}
-            disabled={isLive}
             className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background disabled:opacity-50"
           >
             <PlusIcon aria-hidden="true" />

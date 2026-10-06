@@ -239,7 +239,7 @@ describe('QuizOutline', () => {
     ).toBeDisabled();
   });
 
-  it('keeps question drag handles enabled in rounds after the live current round', () => {
+  it('keeps question and round drag handles enabled in rounds after the live current round, and disabled ones in the reached rounds', () => {
     const rounds = [
       roundWithQuestions('round-1', 'Round 1', ['Question 1']),
       roundWithQuestions('round-2', 'Round 2', ['Question 2'], 2),
@@ -267,6 +267,11 @@ describe('QuizOutline', () => {
     expect(
       screen.getByRole('button', {
         name: 'Drag to reorder round 2, Round 2',
+      }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Drag to reorder round 1, Round 1',
       }),
     ).toBeDisabled();
   });

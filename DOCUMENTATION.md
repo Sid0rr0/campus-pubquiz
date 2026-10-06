@@ -472,7 +472,7 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Export the quiz's questions with **Export CSV** in the header bar.
 
 **Editing a live quiz**: a quiz can be edited at any time, including while a
-session on it is running (any status other than `lobby`/`ended`). Four rules
+session on it is running (any status other than `lobby`/`ended`). Five rules
 apply while live, enforced by `findLiveEditViolations`
 (`apps/backend/src/quiz/live-edit-guard.ts`) as a `409` and mirrored in the
 editor's disabled controls:
@@ -488,9 +488,10 @@ editor's disabled controls:
   status `locking`, or a break or reveal status). Both the guard and the
   editor read it through `getRoundStructureEditing` (`frozen`,
   `after-opened` or `free` per round), and `GET /quizzes/:id` returns it as
-  `liveEdit`. Rounds can't be added or removed and a round's
-  `breakAfter`/`kahootMode` can't change; a round before the current round
-  keeps exactly its questions in their order.
+  `liveEdit`. The current round and every earlier round keep their place,
+  `breakAfter` and `kahootMode` (`isRoundReached`) and can't be deleted, even
+  while only the current round's title card is on screen; a round before the
+  current round keeps exactly its questions in their order.
 - **The current round keeps its opened questions, nothing else.** Until its
   block starts locking, the questions after the last opened one can be
   added, deleted, reordered and moved to a later round (or in from one);
@@ -506,6 +507,19 @@ editor's disabled controls:
   (the usual empty-round validation). If Previous steps back before the
   furthest opened round, that round stays frozen — its block may already have
   locked.
+- **After the current round, rounds are free.** Whole rounds after the
+  current round of every live session can be added, deleted and reordered,
+  and their `breakAfter` and `kahootMode` can change (the usual rules still
+  apply: kahoot-allowed question types, the last round always breaks). Turning
+  on `breakAfter` for a later round moves where the current block ends, which
+  only moves the line across questions nobody has opened. Deleting every round
+  after the current one ends the quiz there. Rounds are saved by position, so
+  moving a round rewrites rows by position — harmless, since only unopened
+  rounds move and they have no answers or round ratings yet; ratings of played
+  rounds are untouched. After the save the sessions' breaks follow the edited
+  rounds (the structure is data). Removing, moving or changing the break or
+  kahoot setting of a round at or before the current one is refused with a
+  `409`, and the editor disables those controls.
 - **After the current round, questions are free.** In any round after the
   current round of every live session, questions can be added, deleted,
   reordered and moved to another such round (the editor's "Move to…" select),

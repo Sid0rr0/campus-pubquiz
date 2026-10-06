@@ -40,8 +40,10 @@ interface QuizRoundEditorProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  /** A session is live on this quiz — round add/delete/reorder controls are disabled entirely. */
-  isLive: boolean;
+  /** A live session has reached this round (it is the current round or an earlier one) — it keeps its place, break-after and kahoot setting, and can't be deleted. */
+  isReached: boolean;
+  /** The round above is reached, so this one can't move up past it. */
+  isPreviousReached: boolean;
   /** A live session's block in this round is locking, or it is past it — nothing can be added to the round. */
   isStructureFrozen: boolean;
   /** How many questions at the start of the round a live session pins in place — opened ones, or all of them once frozen. */
@@ -91,7 +93,8 @@ export function QuizRoundEditor({
   index,
   isFirst,
   isLast,
-  isLive,
+  isReached,
+  isPreviousReached,
   isStructureFrozen,
   pinnedQuestionCount,
   structureNote,
@@ -189,7 +192,7 @@ export function QuizRoundEditor({
           <input
             type="checkbox"
             checked={isLast || round.breakAfter}
-            disabled={isLast}
+            disabled={isLast || isReached}
             onChange={(event) => onChange({ breakAfter: event.target.checked })}
             className="h-4 w-4"
           />
@@ -203,7 +206,7 @@ export function QuizRoundEditor({
             type="checkbox"
             checked={round.kahootMode}
             onChange={(event) => onChange({ kahootMode: event.target.checked })}
-            disabled={isKahootBlocked}
+            disabled={isKahootBlocked || isReached}
             className="h-4 w-4"
             aria-describedby={
               isKahootBlocked
@@ -230,7 +233,7 @@ export function QuizRoundEditor({
         <Button
           type="button"
           onClick={onMoveUp}
-          disabled={isFirst || isLive}
+          disabled={isFirst || isReached || isPreviousReached}
           variant="icon"
           size="icon-md"
           aria-label="Move round up"
@@ -240,7 +243,7 @@ export function QuizRoundEditor({
         <Button
           type="button"
           onClick={onMoveDown}
-          disabled={isLast || isLive}
+          disabled={isLast || isReached}
           variant="icon"
           size="icon-md"
           aria-label="Move round down"
@@ -250,7 +253,7 @@ export function QuizRoundEditor({
         <Button
           type="button"
           onClick={onDelete}
-          disabled={isLive}
+          disabled={isReached}
           variant="icon-danger"
           size="icon-md"
           aria-label="Delete round"

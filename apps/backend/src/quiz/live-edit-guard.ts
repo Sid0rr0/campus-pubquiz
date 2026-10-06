@@ -143,15 +143,16 @@ function findRoundQuestionViolations(
 /**
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Game progress is positional,
- * so nothing at or before the frontier may shift: rounds can't be added or
- * removed, a round's breakAfter/kahootMode can't change, a round before the
- * frontier's current round keeps exactly its questions in their order, and
+ * so nothing at or before the frontier may shift: the current round and every
+ * earlier round stay in place with their breakAfter/kahootMode, a round before
+ * the frontier's current round keeps exactly its questions in their order, and
  * so does the current round once its block has started locking (see
  * getRoundStructureEditing). Before that, the current round keeps its opened
  * questions at its start in order, and the questions after them can be
- * added, deleted, reordered and moved. Rounds after it can have questions
- * added, deleted, reordered and moved between them — that's why a save made
- * after a session reached an edited round is refused here too.
+ * added, deleted, reordered and moved. Rounds after the current round are
+ * free: they can be added, deleted and reordered, their breakAfter/kahootMode
+ * can change, and their questions can move between them — that's why a save
+ * made after a session reached an edited round is refused here too.
  * A question in the frontier's `openedQuestionIds` (opened) can still have
  * its prompt/answer/points/notes/media fixed, but not its type or choices
  * (see OPENED_QUESTION_FIELDS); an upcoming question can be edited freely.
@@ -167,46 +168,37 @@ export function findLiveEditViolations(
   const issues: QuizDraftIssue[] = [];
   const openedIds = new Set(frontier.openedQuestionIds);
 
-  if (currentRounds.length !== incomingRounds.length) {
+  const reachedRoundCount = Math.min(
+    frontier.currentRoundIndex + 1,
+    currentRounds.length,
+  );
+  if (incomingRounds.length < reachedRoundCount) {
     issues.push({
       roundIndex: -1,
       questionIndex: null,
       field: 'rounds',
       message:
-        'Cannot add or remove rounds while a session is live on this quiz',
+        'Cannot remove a round a live session has reached — only later rounds can be removed',
     });
   }
 
-  const roundCount = Math.min(currentRounds.length, incomingRounds.length);
+  // Rounds after the current round have no progress to preserve: they can be
+  // added, deleted and reordered, and their breakAfter/kahootMode can change.
+  const roundCount = Math.min(reachedRoundCount, incomingRounds.length);
   for (let roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
     const currentRound = currentRounds[roundIndex];
     const incomingRound = incomingRounds[roundIndex];
 
-    // Game progress is positional over blocks, which breakAfter and kahootMode
-    // both shape — changing either shifts what saved positions point at.
-    const hasBlockShapeChanged = {
-      // With a different round count the last round isn't the same one, and
-      // the count mismatch above is already the issue to report.
-      breakAfter:
-        currentRounds.length === incomingRounds.length &&
-        effectiveBreakAfter(currentRound, roundIndex, currentRounds.length) !==
-          effectiveBreakAfter(incomingRound, roundIndex, incomingRounds.length),
-      kahootMode:
-        (currentRound.kahootMode ?? false) !==
-        (incomingRound.kahootMode ?? false),
-    };
-    for (const [field, hasChanged] of Object.entries(hasBlockShapeChanged)) {
-      if (!hasChanged) continue;
-      issues.push({
+    issues.push(
+      ...findBlockShapeViolations(
         roundIndex,
-        questionIndex: null,
-        field,
-        message: `Cannot change a round's ${field} while a session is live on this quiz`,
-      });
-    }
+        currentRound,
+        incomingRound,
+        currentRounds.length,
+        incomingRounds.length,
+      ),
+    );
 
-    // Rounds after the frontier are free to restructure; the opened-question
-    // checks below only matter where opened questions can be.
     const editing = getRoundStructureEditing(frontier, roundIndex);
     if (editing === 'free') continue;
 
@@ -223,6 +215,40 @@ export function findLiveEditViolations(
   }
 
   return issues;
+}
+
+/**
+ * Game progress is positional over blocks, which breakAfter and kahootMode
+ * both shape — changing either on a round a session has reached shifts what
+ * saved positions point at.
+ */
+function findBlockShapeViolations(
+  roundIndex: number,
+  currentRound: ImportRoundPreview,
+  incomingRound: ImportRoundPreview,
+  currentRoundCount: number,
+  incomingRoundCount: number,
+): QuizDraftIssue[] {
+  // A round that becomes the last one (its later rounds were deleted) is
+  // forced to break at save, which is the quiz ending there, not an edit.
+  const isIncomingLast = roundIndex === incomingRoundCount - 1;
+  const hasBlockShapeChanged = {
+    breakAfter:
+      !isIncomingLast &&
+      effectiveBreakAfter(currentRound, roundIndex, currentRoundCount) !==
+        incomingRound.breakAfter,
+    kahootMode:
+      (currentRound.kahootMode ?? false) !==
+      (incomingRound.kahootMode ?? false),
+  };
+  return Object.entries(hasBlockShapeChanged)
+    .filter(([, hasChanged]) => hasChanged)
+    .map(([field]) => ({
+      roundIndex,
+      questionIndex: null,
+      field,
+      message: `Cannot change the ${field} of a round a live session has reached`,
+    }));
 }
 
 /**

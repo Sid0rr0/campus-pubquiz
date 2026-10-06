@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getOpenedPrefixLength,
   getRoundStructureEditing,
+  isRoundReached,
   isRoundStructureFrozen,
   mergeLiveEditFrontiers,
   type LiveEditFrontier,
@@ -114,5 +115,30 @@ describe('getOpenedPrefixLength', () => {
 
   it('ignores questions without an id yet', () => {
     expect(getOpenedPrefixLength([undefined, 1], opened)).toBe(2);
+  });
+});
+
+describe('isRoundReached', () => {
+  it('counts the current round and every earlier round as reached', () => {
+    const frontier = frontierOf(2);
+
+    expect([0, 1, 2].map((index) => isRoundReached(frontier, index))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it('leaves the rounds after the current round unreached', () => {
+    const frontier = frontierOf(2);
+
+    expect([3, 4].map((index) => isRoundReached(frontier, index))).toEqual([
+      false,
+      false,
+    ]);
+  });
+
+  it('keeps the current round reached while only its title card is showing', () => {
+    expect(isRoundReached(frontierOf(1, false, []), 1)).toBe(true);
   });
 });

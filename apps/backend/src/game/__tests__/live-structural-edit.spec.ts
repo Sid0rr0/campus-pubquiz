@@ -1,5 +1,6 @@
 import { RequestContext } from '@mikro-orm/postgresql';
 import { Question } from '@/db/entities/question.entity';
+import { Round } from '@/db/entities/round.entity';
 import {
   REAL_STORE_JOIN_CODE,
   setupRealStoreGatewayTest,
@@ -103,5 +104,49 @@ describe('GameGateway — editing the unopened questions of the current round', 
       currentRoundIndex: 0,
       hasCurrentBlockStartedLocking: false,
     });
+  });
+});
+
+describe('GameGateway — editing the rounds after the current round', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    game = await harness.createGateway({
+      rounds: [
+        { title: 'Round A', breakAfter: false, questions: [freeText('Q1')] },
+        { title: 'Round B', breakAfter: false, questions: [freeText('Q2')] },
+        { title: 'Round C', breakAfter: true, questions: [freeText('Q3')] },
+      ],
+    });
+    for (const action of ['START_QUIZ', 'ADVANCE', 'ADVANCE'] as const) {
+      await game.act(action); // -> rules -> round_intro(A) -> Q1 open
+    }
+  });
+
+  /** What QuizService.update does when a later round's break-after is turned on. */
+  async function turnOnBreakAfterRound(roundId: number): Promise<void> {
+    await game.inRequestContext(async () => {
+      const em = RequestContext.getEntityManager()!;
+      const round = await em.findOneOrFail(Round, { id: roundId });
+      round.breakAfter = true;
+      await em.flush();
+      await game.gateway.notifyQuizEdited(REAL_STORE_JOIN_CODE, []);
+    });
+  }
+
+  it("moves where the current block ends when a later round's break-after is turned on", async () => {
+    await turnOnBreakAfterRound(game.rounds[1].id);
+
+    let progress = (await game.snapshot()).progress;
+    for (
+      let press = 0;
+      press < 10 && progress.status !== 'locking';
+      press += 1
+    ) {
+      progress = (await game.act('ADVANCE')).progress;
+    }
+
+    expect(progress).toMatchObject({ status: 'locking', roundIndex: 1 });
   });
 });

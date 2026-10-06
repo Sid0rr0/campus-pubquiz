@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
-import type { LiveEditFrontier } from '@campus-pubquiz/types';
+import { isRoundReached, type LiveEditFrontier } from '@campus-pubquiz/types';
 import { reorderById } from '@/app/lib/reorder-list';
 import {
   getPinnedQuestionCount,
@@ -108,8 +108,8 @@ interface OutlineRoundRowProps {
   index: number;
   /** The state machine has no way to reveal answers otherwise, so the last round always breaks regardless of its own breakAfter — see quiz-draft-state.ts's toSaveRequest and QuizRoundEditor, which show the same forced state. */
   isLast: boolean;
-  /** A session is live — the round itself can't be dragged. */
-  isLive: boolean;
+  /** A live session has reached this round — it can't be dragged. */
+  isReached: boolean;
   /** How many questions at the start of the round a live session pins in place — they can't be dragged, and nothing can be dropped among them. */
   pinnedQuestionCount: number;
   onReorderQuestions: (roundId: string, questions: EditorQuestion[]) => void;
@@ -119,12 +119,12 @@ function OutlineRoundRow({
   round,
   index,
   isLast,
-  isLive,
+  isReached,
   pinnedQuestionCount,
   onReorderQuestions,
 }: OutlineRoundRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: round.id, disabled: isLive });
+    useSortable({ id: round.id, disabled: isReached });
   const sensors = useOutlineSensors();
 
   function handleQuestionDragEnd(event: DragEndEvent): void {
@@ -162,7 +162,7 @@ function OutlineRoundRow({
           type="button"
           aria-label={`Drag to reorder round ${index + 1}, ${round.title.trim() || 'Untitled round'}`}
           className="flex h-6 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/30 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
-          disabled={isLive}
+          disabled={isReached}
           {...attributes}
           {...listeners}
         >
@@ -229,6 +229,15 @@ export function QuizOutline({
   function handleRoundDragEnd(event: DragEndEvent): void {
     const { active, over } = event;
     if (!over) return;
+    const isDroppedOnReachedRound =
+      liveEdit !== undefined &&
+      [active.id, over.id].some((id) =>
+        isRoundReached(
+          liveEdit,
+          rounds.findIndex((round) => round.id === id),
+        ),
+      );
+    if (isDroppedOnReachedRound) return;
     const reordered = reorderById(rounds, String(active.id), String(over.id));
     if (!reordered) return;
     onReorderRounds(reordered);
@@ -258,7 +267,9 @@ export function QuizOutline({
                   round={round}
                   index={index}
                   isLast={index === rounds.length - 1}
-                  isLive={liveEdit !== undefined}
+                  isReached={
+                    liveEdit !== undefined && isRoundReached(liveEdit, index)
+                  }
                   pinnedQuestionCount={getPinnedQuestionCount(
                     round,
                     index,

@@ -745,7 +745,7 @@ describe('QuizEditorPanel', () => {
     }
     expect(screen.getByRole('button', { name: /add option/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /free text/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /add round/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /add round/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /add question/i })).toBeEnabled();
     expect(
       screen.getByRole('button', { name: /delete question/i }),
@@ -912,6 +912,117 @@ describe('QuizEditorPanel', () => {
           .getAllByRole('option')
           .map((option) => option.textContent),
       ).toEqual(['Move to…', '2. Two']);
+    });
+
+    describe('round controls', () => {
+      // Multiple choice, so the rounds are allowed to turn kahoot mode on.
+      const multipleChoice = (questionId: number) => ({
+        ...freeText(questionId),
+        type: 'multiple_choice' as const,
+        options: ['A', 'B'],
+      });
+      const roundsDraft = (currentRoundIndex: number) => ({
+        ...liveDraft(currentRoundIndex),
+        rounds: liveDraft(currentRoundIndex).rounds.map((round, index) => ({
+          ...round,
+          questions: [multipleChoice(index + 1)],
+        })),
+      });
+      const roundControls = (name: RegExp) =>
+        screen.getAllByRole('button', { name });
+      const checkboxStates = (label: RegExp) =>
+        screen
+          .getAllByRole('checkbox', { name: label })
+          .map((checkbox) => checkbox.hasAttribute('disabled'));
+
+      it('disables move, delete, break-after and kahoot on the current round and earlier ones, and frees the rounds after it', async () => {
+        mockFetchQuizDraft.mockResolvedValue(roundsDraft(1));
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        expect(disabledStates(roundControls(/move round up/i))).toEqual([
+          true,
+          true,
+          true,
+        ]);
+        expect(disabledStates(roundControls(/move round down/i))).toEqual([
+          true,
+          true,
+          true,
+        ]);
+        expect(disabledStates(roundControls(/delete round/i))).toEqual([
+          true,
+          true,
+          false,
+        ]);
+        expect(checkboxStates(/break after/i)).toEqual([true, true, true]);
+        expect(checkboxStates(/kahoot mode/i)).toEqual([true, true, false]);
+      });
+
+      it('lets a later round move up and down, change break-after and kahoot, and be deleted', async () => {
+        mockFetchQuizDraft.mockResolvedValue(roundsDraft(0));
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        expect(disabledStates(roundControls(/move round up/i))).toEqual([
+          true,
+          true,
+          false,
+        ]);
+        expect(disabledStates(roundControls(/move round down/i))).toEqual([
+          true,
+          false,
+          true,
+        ]);
+        expect(disabledStates(roundControls(/delete round/i))).toEqual([
+          true,
+          false,
+          false,
+        ]);
+        expect(checkboxStates(/break after/i)).toEqual([true, false, true]);
+        expect(checkboxStates(/kahoot mode/i)).toEqual([true, false, false]);
+      });
+
+      it("saves a later round's break-after, which moves where the current block ends", async () => {
+        const user = userEvent.setup();
+        mockFetchQuizDraft.mockResolvedValue(roundsDraft(0));
+        mockUpdateQuiz.mockResolvedValue({
+          quizId: 5,
+          roundCount: 3,
+          questionCount: 3,
+        });
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        await user.click(
+          screen.getAllByRole('checkbox', { name: /break after/i })[1],
+        );
+        await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+        await waitFor(() => expect(mockUpdateQuiz).toHaveBeenCalled());
+        expect(
+          mockUpdateQuiz.mock.calls[0][1].rounds.map(
+            (round: { breakAfter: boolean }) => round.breakAfter,
+          ),
+        ).toEqual([false, true, true]);
+      });
+
+      it('adds a round at the end and reorders and deletes later rounds', async () => {
+        const user = userEvent.setup();
+        mockFetchQuizDraft.mockResolvedValue(roundsDraft(0));
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        await user.click(screen.getByRole('button', { name: /add round/i }));
+        await user.click(roundControls(/move round up/i)[2]);
+        await user.click(roundControls(/delete round/i)[3]);
+
+        expect(
+          screen
+            .getAllByPlaceholderText(/round title/i)
+            .map((input) => (input as HTMLInputElement).value),
+        ).toEqual(['One', 'Three', 'Two']);
+      });
     });
 
     describe('in a current round with several questions', () => {
