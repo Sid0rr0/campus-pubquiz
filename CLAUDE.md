@@ -6,7 +6,7 @@ This file holds only the commands, constraints and conventions future work must 
 
 | Question                                                                   | Where it's answered                                              |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| What does a domain term mean (block, break, break review, question type…)? | [`CONTEXT.md`](CONTEXT.md)                                       |
+| What does a domain term mean (block, break, break review, question type…)? | [`GLOSSARY.md`](GLOSSARY.md)                                     |
 | How does it work: statuses, protocol, question types, CSV, auth, deploy?   | [`DOCUMENTATION.md`](DOCUMENTATION.md)                           |
 | Why was a hard-to-reverse decision made?                                   | [`docs/adr/`](docs/adr/)                                         |
 | How does a moderator run a quiz night?                                     | The in-app `/guide` page (`apps/frontend/app/guide/`)            |
@@ -48,7 +48,7 @@ pnpm workspace, run from repo root unless noted:
 
 A change updates the doc that owns what it changed, in the same commit:
 
-- a new or changed domain term → `CONTEXT.md`
+- a new or changed domain term → `GLOSSARY.md`
 - changed behaviour (statuses, protocol, question types, CSV, auth, deploy) → `DOCUMENTATION.md`
 - a change to what the moderator sees or does on `/control` → the `/guide` page
 
@@ -79,4 +79,4 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 ### Domain docs
 
-Single-context: one root `CONTEXT.md` plus `docs/adr/`, created lazily. See `docs/agents/domain.md`.
+Single-context: one root `GLOSSARY.md` plus `docs/adr/`, created lazily. See `docs/agents/domain.md`.

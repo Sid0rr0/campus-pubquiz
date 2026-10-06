@@ -113,7 +113,7 @@ cd apps/backend && pnpm test:cov   # coverage (Testcontainers needs Docker)
 
 Each file has one job; link to it rather than repeating it elsewhere.
 
-- [CONTEXT.md](CONTEXT.md) — the glossary: what each domain term (block,
+- [GLOSSARY.md](GLOSSARY.md) — the glossary: what each domain term (block,
   break, break review, question type…) means
 - [DOCUMENTATION.md](DOCUMENTATION.md) — how the app works: statuses,
   real-time protocol, question types, CSV import, auth, persistence, deploy

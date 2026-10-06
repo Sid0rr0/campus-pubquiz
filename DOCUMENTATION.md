@@ -89,7 +89,7 @@ lobby → rules → round_overview (optional)
 ```
 
 Meanings of these terms (block, break, break review, round title card,
-status groups) live in [`CONTEXT.md`](CONTEXT.md); this table is the
+status groups) live in [`GLOSSARY.md`](GLOSSARY.md); this table is the
 behaviour of each status.
 
 | Status              | Big screen                                                                                                                        | Phones                                                                                                                                                                 | Reached by                                                                                                                         | `ADVANCE` goes to                                                                                                      |
