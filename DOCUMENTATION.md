@@ -330,6 +330,10 @@ itself — the display and other players just see counts.
    and, for `custom`, the reason; about 8 seconds, success-styled for a bonus,
    plain for a penalty) — not for edits, deletions or awards restored on
    rejoin, which only appear in the bonus drawer.
+   The quiz master gets a success toast on `/control` once the server accepts
+   the award (e.g. "+1 Selfie → The Quizzly Bears"), whether or not the team's
+   phone is connected; a refused award shows only the error toast and the
+   dialog stays open.
 6. **Leaderboard** — recomputed from graded points plus bonus awards after
    every change and broadcast to all rooms; shown whenever the admin toggles
    it.

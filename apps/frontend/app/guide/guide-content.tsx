@@ -97,6 +97,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Teams',
     paragraphs: [
       'The Teams panel shows which teams are connected and, while a question is open, which of them have answered yet. Kick a team here if it needs to be removed from the session. A phone that drops its connection picks up exactly where the quiz is when it reconnects.',
+      'To give a team bonus points, open its actions menu in the Teams panel and choose Award bonus. Pick a category, check the points (a negative number is a penalty; a custom award needs a reason) and press Award. When the server accepts it, a green toast confirms the signed points, the category and the team — for example "+1 Selfie → The Quizzly Bears" — even if that team\'s phone is offline. If the award is refused, you get an error toast instead and the dialog stays open with what you typed, so you can fix it and press Award again.',
     ],
   },
   {

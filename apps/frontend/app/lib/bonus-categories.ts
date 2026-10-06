@@ -26,6 +26,15 @@ export function formatBonusAwardToast(award: TeamBonusAwardView): string {
   return `${formatSignedPoints(award.points)} ${unit} — ${category}`;
 }
 
+/** The quiz master's confirmation of an accepted award, e.g. "+1 Selfie → The Quizzly Bears". */
+export function formatBonusAwardConfirmation(
+  category: BonusCategory,
+  points: number,
+  teamName: string,
+): string {
+  return `${formatSignedPoints(points)} ${BONUS_CATEGORY_LABELS[category]} → ${teamName}`;
+}
+
 /**
  * Player-facing explanation of what earns each predefined bonus category,
  * shown on /play's bonus drawer. "custom" has no fixed explanation here —

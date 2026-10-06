@@ -2,17 +2,12 @@
 
 All features under `.scratch/`. A ticket is unblocked once every ticket in its "Blocked by" column is under **Done** (numbers refer to tickets in the same feature unless a feature is named). Each feature has a `spec.md` and an `issues/` folder.
 
-## Open
-
-| Feature           | #   | Ticket                                                                                                                         | Blocked by |
-| ----------------- | --- | ------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| bonus-award-toast | 03  | [The quiz master gets a confirmation when an award is accepted](bonus-award-toast/issues/03-quiz-master-award-confirmation.md) | 01         |
-
 ## Done
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| bonus-award-toast           | 02  | [The team's phone toasts a new bonus award](bonus-award-toast/issues/02-team-toast-on-bonus-award.md)                                                                 | —         |
+| bonus-award-toast           | 03  | [The quiz master gets a confirmation when an award is accepted](bonus-award-toast/issues/03-quiz-master-award-confirmation.md)                                         | —         |
+| bonus-award-toast           | 02  | [The team's phone toasts a new bonus award](bonus-award-toast/issues/02-team-toast-on-bonus-award.md)                                                                  | —         |
 | bonus-award-toast           | 01  | [Signed bonus points everywhere](bonus-award-toast/issues/01-signed-bonus-points.md)                                                                                   | —         |
 | live-structural-edits       | 05  | [Add, delete and reorder unopened rounds, and change their break-after and kahoot](live-structural-edits/issues/05-unopened-round-edits.md)                            | —         |
 | live-structural-edits       | 04  | [Change unopened questions in the current round](live-structural-edits/issues/04-unopened-questions-in-current-round.md)                                               | —         |

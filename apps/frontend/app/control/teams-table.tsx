@@ -5,6 +5,7 @@ import {
   useTable,
 } from '@tanstack/react-table';
 import { Dialog, DropdownMenu } from 'radix-ui';
+import { toast } from 'sonner';
 import {
   DotsVerticalIcon,
   EyeOpenIcon,
@@ -20,6 +21,7 @@ import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
 import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { Button } from '@/app/components/button';
+import { formatBonusAwardConfirmation } from '@/app/lib/bonus-categories';
 import { formatRankLabel } from '@/app/lib/rank-label';
 
 interface TeamsTableProps {
@@ -218,8 +220,18 @@ export function TeamsTable({
                       points,
                       reason,
                     );
-                    // A rejection keeps the dialog open with what was typed.
-                    if (result.success) setAwardingTeamId(null);
+                    // A rejection keeps the dialog open with what was typed;
+                    // its error toast comes from the admin hook.
+                    if (result.success) {
+                      toast.success(
+                        formatBonusAwardConfirmation(
+                          category,
+                          points,
+                          awardingTeam.teamName,
+                        ),
+                      );
+                      setAwardingTeamId(null);
+                    }
                   } finally {
                     isAwardInFlightRef.current = false;
                   }
