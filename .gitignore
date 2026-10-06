@@ -38,3 +38,8 @@ yarn-error.log*
 
 # Local dev-script state
 scripts/.simulated-teams.json
+
+# mattpocock/skills project install (managed by `npx skills`)
+.agents/
+.claude/skills/*
+!.claude/skills/ecc/
