@@ -104,6 +104,40 @@ describe('GameGateway — opened questions', () => {
     ).toBe(1);
   });
 
+  describe('hasCurrentBlockStartedLocking in the live-edit frontier', () => {
+    const hasStartedLocking = (): boolean =>
+      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
+        .hasCurrentBlockStartedLocking;
+
+    it.each([
+      ['question_open', 2, false],
+      ['locking', 3, true],
+      ['break_intro', 4, true],
+      ['reveal_intro', 5, true],
+      ['reveal', 6, true],
+      ['round_intro of the next block', 7, false],
+    ] as const)(
+      'at %s (after %i presses), hasStartedLocking is %s',
+      async (_label, pressesAfterStart, expected) => {
+        await game.act('START_QUIZ');
+        for (let press = 0; press < pressesAfterStart; press += 1) {
+          await game.act('ADVANCE');
+        }
+
+        expect(hasStartedLocking()).toBe(expected);
+      },
+    );
+
+    it('stays locked when Previous steps back before the opened question', async () => {
+      await openBlockTwoFirstQuestion();
+      await game.act('PREVIOUS'); // -> round_intro(B)
+      await game.act('PREVIOUS'); // -> round_intro(B), first screen
+      await game.act('PREVIOUS'); // -> block 1's reveal
+
+      expect(hasStartedLocking()).toBe(true);
+    });
+  });
+
   it('has the same opened questions after a backend restart', async () => {
     await openBlockTwoFirstQuestion();
     await game.act('PREVIOUS');

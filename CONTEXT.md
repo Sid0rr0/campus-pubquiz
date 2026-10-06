@@ -26,7 +26,7 @@ A question the big screen has shown in a session, remembered for the rest of tha
 _Avoid_: shown question, locked question (locked means no longer accepting answers)
 
 **Live-edit frontier**:
-Where the live sessions on a quiz have got to — their opened questions and the current round of the furthest-on one. Nothing at or before it can change structurally; questions in rounds after it can be added, reordered, moved between those rounds and deleted.
+Where the live sessions on a quiz have got to — their opened questions, the current round of the furthest-on one, and whether that round's block has started locking. Questions in rounds after the current round can be added, reordered, moved between those rounds and deleted. In the current round the questions after the last opened one can too, until its block starts locking; from then on its rounds are frozen. Rounds before it are always frozen.
 
 **Question type**:
 What a question asks teams to do (free text, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.

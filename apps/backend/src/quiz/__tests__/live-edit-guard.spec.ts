@@ -37,8 +37,21 @@ function round(
 function frontier(
   openedQuestionIds: number[] = [],
   currentRoundIndex = 0,
+  hasCurrentBlockStartedLocking = false,
 ): LiveEditFrontier {
-  return { openedQuestionIds, currentRoundIndex };
+  return {
+    openedQuestionIds,
+    currentRoundIndex,
+    hasCurrentBlockStartedLocking,
+  };
+}
+
+/** The current round's block has started locking, so the round is frozen whole. */
+function lockingFrontier(
+  openedQuestionIds: number[] = [],
+  currentRoundIndex = 0,
+): LiveEditFrontier {
+  return frontier(openedQuestionIds, currentRoundIndex, true);
 }
 
 function question(
@@ -143,7 +156,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, frontier());
+    const issues = findLiveEditViolations(current, incoming, lockingFrontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -177,7 +190,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, frontier());
+    const issues = findLiveEditViolations(current, incoming, lockingFrontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -210,7 +223,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, frontier());
+    const issues = findLiveEditViolations(current, incoming, lockingFrontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -361,6 +374,10 @@ describe('findLiveEditViolations — questions in rounds after the current round
   type Case = {
     name: string;
     currentRoundIndex: number;
+    /** The current round's block has started locking. */
+    isLocking?: boolean;
+    /** Opened question ids; defaults to the questions of the rounds before the current one. */
+    openedQuestionIds?: number[];
     incoming: ImportRoundPreview[];
     violatingRounds: number[];
   };
@@ -407,8 +424,19 @@ describe('findLiveEditViolations — questions in rounds after the current round
       violatingRounds: [],
     },
     {
-      name: 'adds a question to the current round',
+      name: 'adds a question to the current round before any of its questions opened',
       currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4), question(undefined)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'adds a question to the current round once its block has started locking',
+      currentRoundIndex: 1,
+      isLocking: true,
       incoming: [
         roundOf('R0', [question(1), question(2)]),
         roundOf('R1', [question(3), question(4), question(undefined)]),
@@ -427,8 +455,19 @@ describe('findLiveEditViolations — questions in rounds after the current round
       violatingRounds: [0],
     },
     {
-      name: 'reorders questions in the current round',
+      name: 'reorders questions in the current round before any of its questions opened',
       currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(4), question(3)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'reorders questions in the current round once its block has started locking',
+      currentRoundIndex: 1,
+      isLocking: true,
       incoming: [
         roundOf('R0', [question(1), question(2)]),
         roundOf('R1', [question(4), question(3)]),
@@ -437,8 +476,19 @@ describe('findLiveEditViolations — questions in rounds after the current round
       violatingRounds: [1],
     },
     {
-      name: 'moves a question from a later round into the current round',
+      name: 'moves a question from a later round into the current round before any of its questions opened',
       currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4), question(5)]),
+        roundOf('R2', [question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'moves a question from a later round into the current round once its block has started locking',
+      currentRoundIndex: 1,
+      isLocking: true,
       incoming: [
         roundOf('R0', [question(1), question(2)]),
         roundOf('R1', [question(3), question(4), question(5)]),
@@ -447,8 +497,19 @@ describe('findLiveEditViolations — questions in rounds after the current round
       violatingRounds: [1],
     },
     {
-      name: 'moves a question out of the current round into a later one',
+      name: 'moves a question out of the current round before any of its questions opened',
       currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3)]),
+        roundOf('R2', [question(4), question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'moves a question out of the current round once its block has started locking',
+      currentRoundIndex: 1,
+      isLocking: true,
       incoming: [
         roundOf('R0', [question(1), question(2)]),
         roundOf('R1', [question(3)]),
@@ -457,8 +518,9 @@ describe('findLiveEditViolations — questions in rounds after the current round
       violatingRounds: [1],
     },
     {
-      name: 'edits a round another session has already reached since the editor loaded',
+      name: 'reorders a round another session has since opened a question in',
       currentRoundIndex: 2,
+      openedQuestionIds: [1, 2, 5],
       incoming: [
         roundOf('R0', [question(1), question(2)]),
         roundOf('R1', [question(3), question(4)]),
@@ -470,11 +532,17 @@ describe('findLiveEditViolations — questions in rounds after the current round
 
   it.each(cases)(
     '$name',
-    ({ currentRoundIndex, incoming, violatingRounds }) => {
+    ({
+      currentRoundIndex,
+      isLocking = false,
+      openedQuestionIds = [1, 2],
+      incoming,
+      violatingRounds,
+    }) => {
       const issues = findLiveEditViolations(
         current(),
         incoming,
-        frontier([1, 2], currentRoundIndex),
+        frontier(openedQuestionIds, currentRoundIndex, isLocking),
       );
 
       expect([...new Set(issues.map((issue) => issue.roundIndex))]).toEqual(
@@ -487,14 +555,28 @@ describe('findLiveEditViolations — questions in rounds after the current round
     const issues = findLiveEditViolations(
       current(),
       [
-        roundOf('R0', [question(1), question(2)]),
+        roundOf('R0', [question(1)]),
         roundOf('R1', [question(3), question(4)]),
-        roundOf('R2', [question(5)]),
+        roundOf('R2', [question(5), question(6)]),
       ],
       frontier([1, 2], 2),
     );
 
     expect(issues[0].message).toMatch(/reached/i);
+  });
+
+  it('tells the quiz master to use a later round once the current block has started locking', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4)]),
+        roundOf('R2', [question(5), question(6), question(undefined)]),
+      ],
+      lockingFrontier([1, 2, 5], 2),
+    );
+
+    expect(issues[0].message).toMatch(/locking.*later round/i);
   });
 
   it('lets an opened question keep being fixed in place beside a later-round edit', () => {
@@ -507,6 +589,316 @@ describe('findLiveEditViolations — questions in rounds after the current round
     expect(
       findLiveEditViolations(current(), incoming, frontier([1, 2], 0)),
     ).toEqual([]);
+  });
+});
+
+describe('findLiveEditViolations — the current round after its opened questions', () => {
+  const current = () => [
+    roundOf('R0', [question(1), question(2)]),
+    roundOf('R1', [question(3), question(4), question(5), question(6)]),
+    roundOf('R2', [question(7), question(8)]),
+  ];
+  const openedQuestionIds = [1, 2, 3, 4];
+
+  type Case = {
+    name: string;
+    isLocking?: boolean;
+    incoming: ImportRoundPreview[];
+    violatingRounds: number[];
+  };
+
+  const r0 = roundOf('R0', [question(1), question(2)]);
+  const cases: Case[] = [
+    {
+      name: 'adds a question after the last opened one',
+      incoming: [
+        r0,
+        roundOf('R1', [
+          question(3),
+          question(4),
+          question(5),
+          question(6),
+          question(undefined),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'inserts a question right after the last opened one',
+      incoming: [
+        r0,
+        roundOf('R1', [
+          question(3),
+          question(4),
+          question(undefined),
+          question(5),
+          question(6),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'reorders the unopened questions',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(6), question(5)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'deletes an unopened question',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(5)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'moves an unopened question to a later round',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(5)]),
+        roundOf('R2', [question(7), question(8), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'moves a question from a later round in after the opened ones',
+      incoming: [
+        r0,
+        roundOf('R1', [
+          question(3),
+          question(4),
+          question(5),
+          question(6),
+          question(7),
+        ]),
+        roundOf('R2', [question(8)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'inserts a question before the opened ones',
+      incoming: [
+        r0,
+        roundOf('R1', [
+          question(undefined),
+          question(3),
+          question(4),
+          question(5),
+          question(6),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'inserts a question between opened ones',
+      incoming: [
+        r0,
+        roundOf('R1', [
+          question(3),
+          question(undefined),
+          question(4),
+          question(5),
+          question(6),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'reorders opened questions',
+      incoming: [
+        r0,
+        roundOf('R1', [question(4), question(3), question(5), question(6)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'swaps an opened question with an unopened one',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(5), question(4), question(6)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'deletes an opened question',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(5), question(6)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'deletes the last opened question',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'moves an opened question to a later round',
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(5), question(6)]),
+        roundOf('R2', [question(7), question(8), question(4)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'adds a question after the opened ones once the block has started locking',
+      isLocking: true,
+      incoming: [
+        r0,
+        roundOf('R1', [
+          question(3),
+          question(4),
+          question(5),
+          question(6),
+          question(undefined),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'deletes an unopened question once the block has started locking',
+      isLocking: true,
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(5)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'reorders unopened questions once the block has started locking',
+      isLocking: true,
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(6), question(5)]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'moves an unopened question to a later round once the block has started locking',
+      isLocking: true,
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(5)]),
+        roundOf('R2', [question(7), question(8), question(6)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'adds a question to a later round once the block has started locking',
+      isLocking: true,
+      incoming: [
+        r0,
+        roundOf('R1', [question(3), question(4), question(5), question(6)]),
+        roundOf('R2', [question(7), question(8), question(undefined)]),
+      ],
+      violatingRounds: [],
+    },
+  ];
+
+  it.each(cases)(
+    '$name',
+    ({ isLocking = false, incoming, violatingRounds }) => {
+      const issues = findLiveEditViolations(
+        current(),
+        incoming,
+        frontier(openedQuestionIds, 1, isLocking),
+      );
+
+      expect([...new Set(issues.map((issue) => issue.roundIndex))]).toEqual(
+        violatingRounds,
+      );
+    },
+  );
+
+  it('says to add after the last opened question when one is inserted before it', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        r0,
+        roundOf('R1', [
+          question(undefined),
+          question(3),
+          question(4),
+          question(5),
+          question(6),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      frontier(openedQuestionIds, 1),
+    );
+
+    expect(issues[0].message).toMatch(/after the last opened/i);
+  });
+
+  it('keeps an opened question in the round fixable in place beside an unopened-question edit', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        r0,
+        roundOf('R1', [
+          question(3, { prompt: 'Fixed' }),
+          question(4),
+          question(6),
+          question(5),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      frontier(openedQuestionIds, 1),
+    );
+
+    expect(issues).toEqual([]);
+  });
+
+  it('still refuses changing the type of an opened question in the round', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        r0,
+        roundOf('R1', [
+          question(3, { type: 'multiple_choice', options: ['a', 'b'] }),
+          question(4),
+          question(5),
+          question(6),
+        ]),
+        roundOf('R2', [question(7), question(8)]),
+      ],
+      frontier(openedQuestionIds, 1),
+    );
+
+    expect(issues.map((issue) => issue.field)).toContain('type');
+  });
+
+  it('allows any change in a current round with no opened questions yet', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        r0,
+        roundOf('R1', [question(6), question(undefined), question(3)]),
+        roundOf('R2', [question(7), question(8), question(4), question(5)]),
+      ],
+      frontier([1, 2], 1),
+    );
+
+    expect(issues).toEqual([]);
   });
 });
 

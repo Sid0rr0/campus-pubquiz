@@ -6,17 +6,32 @@ import { makeQuestion, makeRound } from '@/app/quizzes/[id]/quiz-draft-state';
 import { questionAnchorId } from '@/app/quizzes/[id]/quiz-question-editor';
 import { roundAnchorId } from '@/app/quizzes/[id]/quiz-round-editor';
 
+/** Questions get `dbId`s counting up from `firstDbId`, as saved questions have. */
 function roundWithQuestions(
   id: string,
   title: string,
   prompts: string[],
+  firstDbId = 1,
 ): ReturnType<typeof makeRound> {
   return {
     ...makeRound(id, title),
-    questions: prompts.map((prompt) => ({
+    questions: prompts.map((prompt, index) => ({
       ...makeQuestion(`${id}-${prompt}`),
+      dbId: firstDbId + index,
       prompt,
     })),
+  };
+}
+
+function liveEdit(
+  currentRoundIndex: number,
+  openedQuestionIds: number[] = [],
+  hasCurrentBlockStartedLocking = false,
+) {
+  return {
+    openedQuestionIds,
+    currentRoundIndex,
+    hasCurrentBlockStartedLocking,
   };
 }
 
@@ -200,13 +215,13 @@ describe('QuizOutline', () => {
     target.remove();
   });
 
-  it('disables every drag handle while a session is live', () => {
+  it('disables round drag handles and the questions of a locking round while a session is live', () => {
     const rounds = [roundWithQuestions('round-1', 'Round 1', ['Question 1'])];
 
     render(
       <QuizOutline
         rounds={rounds}
-        liveEdit={{ openedQuestionIds: [], currentRoundIndex: 0 }}
+        liveEdit={liveEdit(0, [1], true)}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -227,13 +242,13 @@ describe('QuizOutline', () => {
   it('keeps question drag handles enabled in rounds after the live current round', () => {
     const rounds = [
       roundWithQuestions('round-1', 'Round 1', ['Question 1']),
-      roundWithQuestions('round-2', 'Round 2', ['Question 2']),
+      roundWithQuestions('round-2', 'Round 2', ['Question 2'], 2),
     ];
 
     render(
       <QuizOutline
         rounds={rounds}
-        liveEdit={{ openedQuestionIds: [], currentRoundIndex: 0 }}
+        liveEdit={liveEdit(0, [1], true)}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -254,5 +269,32 @@ describe('QuizOutline', () => {
         name: 'Drag to reorder round 2, Round 2',
       }),
     ).toBeDisabled();
+  });
+
+  it('disables only the opened questions’ drag handles in the current round before its block locks', () => {
+    const rounds = [
+      roundWithQuestions('round-1', 'Round 1', ['Opened', 'Next', 'Later']),
+    ];
+
+    render(
+      <QuizOutline
+        rounds={rounds}
+        liveEdit={liveEdit(0, [1])}
+        onReorderRounds={vi.fn()}
+        onReorderQuestions={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Drag to reorder question 1, Opened',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Drag to reorder question 2, Next' }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Drag to reorder question 3, Later' }),
+    ).toBeEnabled();
   });
 });

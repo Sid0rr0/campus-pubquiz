@@ -34,10 +34,11 @@ export function questionAnchorId(questionId: string): string {
 interface QuizQuestionEditorProps {
   question: EditorQuestion;
   index: number;
-  isFirst: boolean;
+  /** Nothing movable sits above this question — the first one, or the one right after the opened questions a live session pins at the round's start. */
+  isFirstMovable: boolean;
   isLast: boolean;
-  /** The question's round can't change structurally (a live session has reached it) — reordering, deleting and moving it are disabled. */
-  isStructureFrozen: boolean;
+  /** A live session pins this question where it is (it is opened, or its block is locking) — moving, deleting and sending it to another round are disabled. */
+  isPinned: boolean;
   /** Rounds this question could move to, already narrowed to those it may enter — the mover is hidden when empty. */
   moveTargets: MoveTarget[];
   /** This specific question is opened in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
@@ -101,9 +102,9 @@ function pickerTypes(
 export function QuizQuestionEditor({
   question,
   index,
-  isFirst,
+  isFirstMovable,
   isLast,
-  isStructureFrozen,
+  isPinned,
   moveTargets,
   isOpened,
   isKahootRound,
@@ -261,7 +262,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onMoveUp}
-          disabled={isFirst || isStructureFrozen}
+          disabled={isFirstMovable || isPinned}
           variant="icon"
           size="icon-sm"
           aria-label="Move question up"
@@ -272,7 +273,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onMoveDown}
-          disabled={isLast || isStructureFrozen}
+          disabled={isLast || isPinned}
           variant="icon"
           size="icon-sm"
           aria-label="Move question down"
@@ -284,7 +285,7 @@ export function QuizQuestionEditor({
           <select
             value=""
             onChange={(event) => onMoveToRound(event.target.value)}
-            disabled={isStructureFrozen}
+            disabled={isPinned}
             aria-label="Move question to round"
             className="mt-1 h-8 max-w-32 rounded-lg border-2 border-foreground/15 px-2 text-xs font-bold text-foreground disabled:opacity-50"
           >
@@ -301,7 +302,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onDelete}
-          disabled={isStructureFrozen}
+          disabled={isPinned}
           variant="icon-danger"
           size="icon-sm"
           aria-label="Delete question"

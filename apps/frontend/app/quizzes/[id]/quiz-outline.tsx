@@ -16,21 +16,19 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
-import {
-  isRoundStructureFrozen,
-  type LiveEditFrontier,
-} from '@campus-pubquiz/types';
+import type { LiveEditFrontier } from '@campus-pubquiz/types';
 import { reorderById } from '@/app/lib/reorder-list';
-import type {
-  EditorQuestion,
-  EditorRound,
+import {
+  getPinnedQuestionCount,
+  type EditorQuestion,
+  type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 import { questionAnchorId } from '@/app/quizzes/[id]/quiz-question-editor';
 import { roundAnchorId } from '@/app/quizzes/[id]/quiz-round-editor';
 
 interface QuizOutlineProps {
   rounds: EditorRound[];
-  /** Present while a session is live on this quiz — round dragging is disabled, and so is question dragging in rounds it has reached, matching the round/question editors. */
+  /** Present while a session is live on this quiz — round dragging is disabled, and so is dragging the questions it pins in place, matching the round/question editors. */
   liveEdit?: LiveEditFrontier;
   onReorderRounds: (rounds: EditorRound[]) => void;
   onReorderQuestions: (roundId: string, questions: EditorQuestion[]) => void;
@@ -58,16 +56,17 @@ function useOutlineSensors() {
 interface OutlineQuestionRowProps {
   question: EditorQuestion;
   index: number;
-  isFrozen: boolean;
+  /** A live session pins this question where it is — it can't be dragged. */
+  isPinned: boolean;
 }
 
 function OutlineQuestionRow({
   question,
   index,
-  isFrozen,
+  isPinned,
 }: OutlineQuestionRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: question.id, disabled: isFrozen });
+    useSortable({ id: question.id, disabled: isPinned });
 
   function handleJumpToQuestion(): void {
     document
@@ -85,7 +84,7 @@ function OutlineQuestionRow({
         type="button"
         aria-label={`Drag to reorder question ${index + 1}, ${questionPreview(question.prompt)}`}
         className="flex h-5 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/30 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
-        disabled={isFrozen}
+        disabled={isPinned}
         {...attributes}
         {...listeners}
       >
@@ -111,8 +110,8 @@ interface OutlineRoundRowProps {
   isLast: boolean;
   /** A session is live — the round itself can't be dragged. */
   isLive: boolean;
-  /** A live session has reached this round — its questions can't be dragged. */
-  isQuestionOrderFrozen: boolean;
+  /** How many questions at the start of the round a live session pins in place — they can't be dragged, and nothing can be dropped among them. */
+  pinnedQuestionCount: number;
   onReorderQuestions: (roundId: string, questions: EditorQuestion[]) => void;
 }
 
@@ -121,7 +120,7 @@ function OutlineRoundRow({
   index,
   isLast,
   isLive,
-  isQuestionOrderFrozen,
+  pinnedQuestionCount,
   onReorderQuestions,
 }: OutlineRoundRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -131,6 +130,12 @@ function OutlineRoundRow({
   function handleQuestionDragEnd(event: DragEndEvent): void {
     const { active, over } = event;
     if (!over) return;
+    const isDroppedAmongPinned = [active.id, over.id].some(
+      (id) =>
+        round.questions.findIndex((question) => question.id === id) <
+        pinnedQuestionCount,
+    );
+    if (isDroppedAmongPinned) return;
     const reordered = reorderById(
       round.questions,
       String(active.id),
@@ -188,7 +193,7 @@ function OutlineRoundRow({
                   key={question.id}
                   question={question}
                   index={questionIndex}
-                  isFrozen={isQuestionOrderFrozen}
+                  isPinned={questionIndex < pinnedQuestionCount}
                 />
               ))}
             </ol>
@@ -254,10 +259,11 @@ export function QuizOutline({
                   index={index}
                   isLast={index === rounds.length - 1}
                   isLive={liveEdit !== undefined}
-                  isQuestionOrderFrozen={
-                    liveEdit !== undefined &&
-                    isRoundStructureFrozen(liveEdit, index)
-                  }
+                  pinnedQuestionCount={getPinnedQuestionCount(
+                    round,
+                    index,
+                    liveEdit,
+                  )}
                   onReorderQuestions={onReorderQuestions}
                 />
               ))}

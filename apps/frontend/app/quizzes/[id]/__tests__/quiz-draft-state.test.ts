@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type {
   ImportQuestionPreview,
   ImportRoundPreview,
+  LiveEditFrontier,
 } from '@campus-pubquiz/types';
 import {
+  getPinnedQuestionCount,
   makeMatchPair,
   makeOption,
   makeQuestion,
@@ -687,5 +689,57 @@ describe('moveQuestionToRound', () => {
     expect(moveQuestionToRound(rounds, 'nope', 'r2')).toBe(rounds);
     expect(moveQuestionToRound(rounds, 'q1', 'nope')).toBe(rounds);
     expect(moveQuestionToRound(rounds, 'q1', 'r1')).toBe(rounds);
+  });
+});
+
+describe('getPinnedQuestionCount', () => {
+  const round = {
+    ...makeRound('r', 'Round'),
+    questions: [
+      { ...makeQuestion('q1'), dbId: 11 },
+      { ...makeQuestion('q2'), dbId: 12 },
+      { ...makeQuestion('q3'), dbId: 13 },
+      makeQuestion('q4'),
+    ],
+  };
+  const frontier = (
+    overrides: Partial<LiveEditFrontier> = {},
+  ): LiveEditFrontier => ({
+    openedQuestionIds: [11, 12],
+    currentRoundIndex: 1,
+    hasCurrentBlockStartedLocking: false,
+    ...overrides,
+  });
+
+  it('pins nothing when no session is live', () => {
+    expect(getPinnedQuestionCount(round, 1, undefined)).toBe(0);
+  });
+
+  it('pins nothing in a round after the current one', () => {
+    expect(getPinnedQuestionCount(round, 2, frontier())).toBe(0);
+  });
+
+  it('pins every question in a round before the current one', () => {
+    expect(getPinnedQuestionCount(round, 0, frontier())).toBe(4);
+  });
+
+  it('pins the opened questions at the start of the current round', () => {
+    expect(getPinnedQuestionCount(round, 1, frontier())).toBe(2);
+  });
+
+  it('pins nothing in a current round where nothing has opened', () => {
+    expect(
+      getPinnedQuestionCount(round, 1, frontier({ openedQuestionIds: [] })),
+    ).toBe(0);
+  });
+
+  it('pins every question in the current round once its block has started locking', () => {
+    expect(
+      getPinnedQuestionCount(
+        round,
+        1,
+        frontier({ hasCurrentBlockStartedLocking: true }),
+      ),
+    ).toBe(4);
   });
 });

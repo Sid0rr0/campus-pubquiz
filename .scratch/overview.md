@@ -6,7 +6,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature               | #   | Ticket                                                                                                                                      | Blocked by |
 | --------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| live-structural-edits | 04  | [Change unopened questions in the current round](live-structural-edits/issues/04-unopened-questions-in-current-round.md)                    | 03         |
 | live-structural-edits | 05  | [Add, delete and reorder unopened rounds, and change their break-after and kahoot](live-structural-edits/issues/05-unopened-round-edits.md) | 03         |
 | bonus-award-toast     | 01  | [Signed bonus points everywhere](bonus-award-toast/issues/01-signed-bonus-points.md)                                                        | —          |
 | bonus-award-toast     | 02  | [The team's phone toasts a new bonus award](bonus-award-toast/issues/02-team-toast-on-bonus-award.md)                                       | 01         |
@@ -16,6 +15,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| live-structural-edits       | 04  | [Change unopened questions in the current round](live-structural-edits/issues/04-unopened-questions-in-current-round.md)                                               | —         |
 | live-structural-edits       | 03  | [Add, reorder and delete questions in rounds after the current round](live-structural-edits/issues/03-question-edits-in-later-rounds.md)                               | —         |
 | live-structural-edits       | 02  | [Opened questions stay opened through Previous and restarts](live-structural-edits/issues/02-opened-survives-previous-and-restart.md)                                  | —         |
 | live-structural-edits       | 01  | [Rename "locked" to "opened" in the live-edit path](live-structural-edits/issues/01-rename-locked-to-opened.md)                                                        | —         |

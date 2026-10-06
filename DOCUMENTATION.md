@@ -472,29 +472,48 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Export the quiz's questions with **Export CSV** in the header bar.
 
 **Editing a live quiz**: a quiz can be edited at any time, including while a
-session on it is running (any status other than `lobby`/`ended`). Three rules
+session on it is running (any status other than `lobby`/`ended`). Four rules
 apply while live, enforced by `findLiveEditViolations`
 (`apps/backend/src/quiz/live-edit-guard.ts`) as a `409` and mirrored in the
 editor's disabled controls:
 
-- **Nothing at or before the live-edit line moves.** Game progress is
+- **Nothing the sessions have reached moves.** Game progress is
   positional (`roundIndex`/`questionIndex`), so a shift would move the game
   onto a different question, and deleting a question cascades to its teams'
   answers. The line is the **live-edit frontier** (`LiveEditFrontier`,
-  `shared/types/src/live-edit-frontier.ts`): the opened questions and the
+  `shared/types/src/live-edit-frontier.ts`): the opened questions, the
   current round of the live sessions on the quiz, merged — with two sessions
-  at different points the line is the further-on one's current round. Both the
-  guard and the editor read it through `isRoundStructureFrozen`, and
-  `GET /quizzes/:id` returns it as `liveEdit`. Rounds can't be added or
-  removed and a round's `breakAfter`/`kahootMode` can't change; a round up to
-  and including the current round keeps exactly its questions in their order.
-- **After the line, questions are free.** In any round after the current
-  round of every live session, questions can be added, deleted, reordered and
-  moved to another such round (the editor's "Move to…" select), and the
-  sessions play them in their new places when they reach them. The frontier
-  is checked against the sessions' state at save time, so a save made after a
-  session moved into an edited round is refused with a `409` naming that
-  round, and the quiz master reloads (the "Refresh lock state" button).
+  at different points the line is the further-on one's current round — and
+  whether the current block has started locking (`hasCurrentBlockStartedLocking`:
+  status `locking`, or a break or reveal status). Both the guard and the
+  editor read it through `getRoundStructureEditing` (`frozen`,
+  `after-opened` or `free` per round), and `GET /quizzes/:id` returns it as
+  `liveEdit`. Rounds can't be added or removed and a round's
+  `breakAfter`/`kahootMode` can't change; a round before the current round
+  keeps exactly its questions in their order.
+- **The current round keeps its opened questions, nothing else.** Until its
+  block starts locking, the questions after the last opened one can be
+  added, deleted, reordered and moved to a later round (or in from one);
+  the opened questions stay at the start of the round, in order — inserting
+  before or between them, or moving one, is refused with a `409`. Teams'
+  phones only get questions up to the furthest opened one, so nobody sees the
+  change until a question opens, and the next press opens whatever now sits
+  after the opened question. Once the block starts locking, and through its
+  break and reveal, the round is frozen like an earlier one: adding a
+  question then would put the locking countdown on a question that's no
+  longer last, or add an unanswerable question to a locked block. The editor
+  says so and suggests a later round. A round must keep at least one question
+  (the usual empty-round validation). If Previous steps back before the
+  furthest opened round, that round stays frozen — its block may already have
+  locked.
+- **After the current round, questions are free.** In any round after the
+  current round of every live session, questions can be added, deleted,
+  reordered and moved to another such round (the editor's "Move to…" select),
+  and the sessions play them in their new places when they reach them. The
+  frontier is checked against the sessions' state at save time, so a save
+  made after a session opened a question in, or started locking, an edited
+  round is refused with a `409` naming that round, and the quiz master
+  reloads (the "Refresh lock state" button).
 - **Opened questions keep their type and choices** (`type`, `options`,
   `matchTargets`) — that's what teams answered against, and auto-grading is
   exact-match, so e.g. fixing an option's spelling would zero every team that

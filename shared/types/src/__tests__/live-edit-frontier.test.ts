@@ -1,14 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getOpenedPrefixLength,
+  getRoundStructureEditing,
   isRoundStructureFrozen,
   mergeLiveEditFrontiers,
+  type LiveEditFrontier,
 } from '../live-edit-frontier';
+
+function frontierOf(
+  currentRoundIndex: number,
+  hasCurrentBlockStartedLocking = false,
+  openedQuestionIds: number[] = [],
+): LiveEditFrontier {
+  return {
+    openedQuestionIds,
+    currentRoundIndex,
+    hasCurrentBlockStartedLocking,
+  };
+}
 
 describe('mergeLiveEditFrontiers', () => {
   it('takes the further-on session’s current round as the line', () => {
     const merged = mergeLiveEditFrontiers([
-      { openedQuestionIds: [1, 2], currentRoundIndex: 0 },
-      { openedQuestionIds: [1, 2, 3, 4], currentRoundIndex: 2 },
+      frontierOf(0, false, [1, 2]),
+      frontierOf(2, false, [1, 2, 3, 4]),
     ]);
 
     expect(merged.currentRoundIndex).toBe(2);
@@ -16,23 +31,88 @@ describe('mergeLiveEditFrontiers', () => {
 
   it('unions the opened question ids without duplicates', () => {
     const merged = mergeLiveEditFrontiers([
-      { openedQuestionIds: [1, 2], currentRoundIndex: 0 },
-      { openedQuestionIds: [2, 3], currentRoundIndex: 1 },
+      frontierOf(0, false, [1, 2]),
+      frontierOf(1, false, [2, 3]),
     ]);
 
     expect(merged.openedQuestionIds).toEqual([1, 2, 3]);
   });
+
+  it('is locking when the furthest-on session’s current block is locking', () => {
+    const merged = mergeLiveEditFrontiers([
+      frontierOf(2, true),
+      frontierOf(0, false),
+    ]);
+
+    expect(merged.hasCurrentBlockStartedLocking).toBe(true);
+  });
+
+  it('ignores a locking block in a session behind the line', () => {
+    const merged = mergeLiveEditFrontiers([
+      frontierOf(2, false),
+      frontierOf(0, true),
+    ]);
+
+    expect(merged.hasCurrentBlockStartedLocking).toBe(false);
+  });
+
+  it('is locking when any session on the line is locking', () => {
+    const merged = mergeLiveEditFrontiers([
+      frontierOf(1, false),
+      frontierOf(1, true),
+    ]);
+
+    expect(merged.hasCurrentBlockStartedLocking).toBe(true);
+  });
+});
+
+describe('getRoundStructureEditing', () => {
+  it.each([
+    [0, false, 'frozen'],
+    [1, false, 'after-opened'],
+    [2, false, 'free'],
+    [5, false, 'free'],
+    [0, true, 'frozen'],
+    [1, true, 'frozen'],
+    [2, true, 'free'],
+  ] as const)(
+    'round %i with locking %s is %s',
+    (roundIndex, isLocking, expected) => {
+      expect(
+        getRoundStructureEditing(frontierOf(1, isLocking), roundIndex),
+      ).toBe(expected);
+    },
+  );
 });
 
 describe('isRoundStructureFrozen', () => {
-  const frontier = { openedQuestionIds: [], currentRoundIndex: 1 };
+  it('is true only for a frozen round', () => {
+    const frontier = frontierOf(1);
+
+    expect(isRoundStructureFrozen(frontier, 0)).toBe(true);
+    expect(isRoundStructureFrozen(frontier, 1)).toBe(false);
+    expect(isRoundStructureFrozen(frontier, 2)).toBe(false);
+  });
+});
+
+describe('getOpenedPrefixLength', () => {
+  const opened = new Set([1, 2]);
 
   it.each([
-    [0, true],
-    [1, true],
-    [2, false],
-    [5, false],
-  ])('round %i frozen: %s', (roundIndex, expected) => {
-    expect(isRoundStructureFrozen(frontier, roundIndex)).toBe(expected);
+    [[], 0],
+    [[7, 8], 0],
+    [[1, 7, 8], 1],
+    [[1, 2, 7], 2],
+    [[1, 2], 2],
+  ])('questions %j have %i opened at the start', (ids, expected) => {
+    expect(getOpenedPrefixLength(ids, opened)).toBe(expected);
+  });
+
+  it('counts up to the last opened question, wherever it sits', () => {
+    expect(getOpenedPrefixLength([7, 2, 8], opened)).toBe(2);
+  });
+
+  it('ignores questions without an id yet', () => {
+    expect(getOpenedPrefixLength([undefined, 1], opened)).toBe(2);
   });
 });

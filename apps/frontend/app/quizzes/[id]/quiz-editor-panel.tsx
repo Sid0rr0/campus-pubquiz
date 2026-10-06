@@ -13,7 +13,7 @@ import {
   UploadIcon,
 } from '@radix-ui/react-icons';
 import {
-  isRoundStructureFrozen,
+  getRoundStructureEditing,
   type ImportPreview,
   type LiveEditFrontier,
   type QuizDraftIssue,
@@ -36,6 +36,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
+  getPinnedQuestionCount,
   makeRound,
   mergeRoundsFromPreview,
   moveQuestionToRound,
@@ -88,7 +89,8 @@ function moveTargetRounds(
   liveEdit: LiveEditFrontier | undefined,
 ): MoveTargetRound[] {
   return rounds.flatMap((round, index) =>
-    index === fromIndex || (liveEdit && isRoundStructureFrozen(liveEdit, index))
+    index === fromIndex ||
+    (liveEdit && getRoundStructureEditing(liveEdit, index) === 'frozen')
       ? []
       : [
           {
@@ -98,6 +100,26 @@ function moveTargetRounds(
           },
         ],
   );
+}
+
+/** Tells the editor why a round's questions are restricted while a session is live — and what to do instead — or nothing when they aren't. */
+function structureNoteFor(
+  liveEdit: LiveEditFrontier,
+  roundIndex: number,
+  pinnedQuestionCount: number,
+): string | undefined {
+  switch (getRoundStructureEditing(liveEdit, roundIndex)) {
+    case 'free':
+      return undefined;
+    case 'after-opened':
+      return pinnedQuestionCount > 0
+        ? 'The opened questions stay at the start of this round. The questions after them can still be added, reordered, deleted or moved to a later round.'
+        : undefined;
+    case 'frozen':
+      return roundIndex === liveEdit.currentRoundIndex
+        ? "This round's block has started locking, so its questions can't be added, removed or reordered until the quiz moves on. Add new questions to a later round instead."
+        : "A live session has already reached this round, so its questions can't be added, removed or reordered.";
+  }
 }
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
@@ -579,11 +601,12 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       {isLive && (
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
           A session is live on this quiz — questions can still be edited, but
-          opened ones keep their type and choices, and rounds/questions
-          can&apos;t be added, removed, or reordered. Questions can be added,
-          deleted, reordered and moved between rounds after the current round
-          only. Correcting an opened question&apos;s answer or points re-scores
-          its auto-graded answers.
+          opened ones keep their type and choices, and rounds can&apos;t be
+          added, removed, or reordered. Questions can be added, deleted,
+          reordered and moved after the current round&apos;s last opened
+          question (until its block starts locking) and in the rounds after it.
+          Correcting an opened question&apos;s answer or points re-scores its
+          auto-graded answers.
         </p>
       )}
 
@@ -593,7 +616,12 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             const isLast = index === rounds.length - 1;
             const isStructureFrozen =
               liveEditState !== undefined &&
-              isRoundStructureFrozen(liveEditState, index);
+              getRoundStructureEditing(liveEditState, index) === 'frozen';
+            const pinnedQuestionCount = getPinnedQuestionCount(
+              round,
+              index,
+              liveEditState,
+            );
             return (
               <div key={round.id} className="flex flex-col gap-4">
                 <QuizRoundEditor
@@ -603,6 +631,11 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   isLast={isLast}
                   isLive={isLive}
                   isStructureFrozen={isStructureFrozen}
+                  pinnedQuestionCount={pinnedQuestionCount}
+                  structureNote={
+                    liveEditState &&
+                    structureNoteFor(liveEditState, index, pinnedQuestionCount)
+                  }
                   moveTargetRounds={moveTargetRounds(
                     rounds,
                     index,

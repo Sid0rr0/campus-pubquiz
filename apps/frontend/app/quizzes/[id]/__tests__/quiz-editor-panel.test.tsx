@@ -702,7 +702,7 @@ describe('QuizEditorPanel', () => {
     expect(promptErrors.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('keeps an opened question fixable while locking its type, choices and the quiz structure', async () => {
+  it('keeps an opened question fixable while locking its type, choices, place and the round structure', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
@@ -722,7 +722,11 @@ describe('QuizEditorPanel', () => {
           ],
         },
       ],
-      liveEdit: { openedQuestionIds: [1], currentRoundIndex: 0 },
+      liveEdit: {
+        openedQuestionIds: [1],
+        currentRoundIndex: 0,
+        hasCurrentBlockStartedLocking: false,
+      },
     });
 
     renderWithQuery(<QuizEditorPanel quizId="5" />);
@@ -742,9 +746,7 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByRole('button', { name: /add option/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /free text/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /add round/i })).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: /add question/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /add question/i })).toBeEnabled();
     expect(
       screen.getByRole('button', { name: /delete question/i }),
     ).toBeDisabled();
@@ -758,7 +760,7 @@ describe('QuizEditorPanel', () => {
       answer: 'A',
       points: 1,
     });
-    const liveDraft = (currentRoundIndex: number) => ({
+    const liveDraft = (currentRoundIndex: number, isLocking = false) => ({
       id: 5,
       title: 'Trivia Night',
       rounds: [
@@ -766,36 +768,89 @@ describe('QuizEditorPanel', () => {
         { title: 'Two', breakAfter: false, questions: [freeText(2)] },
         { title: 'Three', breakAfter: true, questions: [freeText(3)] },
       ],
-      liveEdit: { openedQuestionIds: [1], currentRoundIndex },
+      liveEdit: {
+        openedQuestionIds: [1],
+        currentRoundIndex,
+        hasCurrentBlockStartedLocking: isLocking,
+      },
+    });
+    const disabledStates = (buttons: HTMLElement[]) =>
+      buttons.map((button) => button.hasAttribute('disabled'));
+
+    it('keeps add, delete, reorder and move disabled in the current round once its block is locking', async () => {
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(0, true));
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(
+        disabledStates(
+          screen.getAllByRole('button', { name: /add question/i }),
+        ),
+      ).toEqual([true, false, false]);
+      expect(
+        disabledStates(
+          screen.getAllByRole('button', { name: /delete question/i }),
+        ),
+      ).toEqual([true, false, false]);
+      expect(
+        disabledStates(
+          screen.getAllByRole('combobox', { name: /move question to round/i }),
+        ),
+      ).toEqual([true, false, false]);
     });
 
-    it('keeps add, delete, reorder and move disabled in the current round only', async () => {
+    it('explains a locking round and suggests a later round', async () => {
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(0, true));
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(
+        screen.getByText(
+          /started locking.*add new questions to a later round/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('lets the current round gain questions before its block locks, keeping its opened question in place', async () => {
       mockFetchQuizDraft.mockResolvedValue(liveDraft(0));
       renderWithQuery(<QuizEditorPanel quizId="5" />);
       await screen.findByDisplayValue('Trivia Night');
 
-      const addButtons = screen.getAllByRole('button', {
-        name: /add question/i,
-      });
       expect(
-        addButtons.map((button) => button.hasAttribute('disabled')),
+        disabledStates(
+          screen.getAllByRole('button', { name: /add question/i }),
+        ),
+      ).toEqual([false, false, false]);
+      expect(
+        disabledStates(
+          screen.getAllByRole('button', { name: /delete question/i }),
+        ),
       ).toEqual([true, false, false]);
-      const deleteButtons = screen.getAllByRole('button', {
-        name: /delete question/i,
-      });
       expect(
-        deleteButtons.map((button) => button.hasAttribute('disabled')),
-      ).toEqual([true, false, false]);
-      const moveSelects = screen.getAllByRole('combobox', {
-        name: /move question to round/i,
-      });
-      expect(
-        moveSelects.map((select) => select.hasAttribute('disabled')),
+        disabledStates(
+          screen.getAllByRole('combobox', { name: /move question to round/i }),
+        ),
       ).toEqual([true, false, false]);
     });
 
-    it('offers only rounds after the current round as move targets', async () => {
+    it('offers the current round and later rounds as move targets before it locks', async () => {
       mockFetchQuizDraft.mockResolvedValue(liveDraft(0));
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      const [, secondQuestionMove] = screen.getAllByRole('combobox', {
+        name: /move question to round/i,
+      });
+
+      expect(
+        within(secondQuestionMove)
+          .getAllByRole('option')
+          .map((option) => option.textContent),
+      ).toEqual(['Move to…', '1. One', '3. Three']);
+    });
+
+    it('offers only later rounds as move targets once the current round is locking', async () => {
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(0, true));
       renderWithQuery(<QuizEditorPanel quizId="5" />);
       await screen.findByDisplayValue('Trivia Night');
 
@@ -837,23 +892,112 @@ describe('QuizEditorPanel', () => {
       expect(saved.rounds[2].questions[1].questionId).toBe(2);
     });
 
-    it('freezes every round up to a further-on session’s current round', async () => {
+    it('freezes every round before the further-on session’s current round', async () => {
       mockFetchQuizDraft.mockResolvedValue(liveDraft(1));
       renderWithQuery(<QuizEditorPanel quizId="5" />);
       await screen.findByDisplayValue('Trivia Night');
 
-      const addButtons = screen.getAllByRole('button', {
-        name: /add question/i,
-      });
       expect(
-        addButtons.map((button) => button.hasAttribute('disabled')),
-      ).toEqual([true, true, false]);
-      // Round three has no later round to move into, so its question has no mover.
+        disabledStates(
+          screen.getAllByRole('button', { name: /add question/i }),
+        ),
+      ).toEqual([true, false, false]);
+      // Round one is out of reach, so only rounds two and three are targets.
       const moveSelects = screen.getAllByRole('combobox', {
         name: /move question to round/i,
       });
-      expect(moveSelects).toHaveLength(2);
-      for (const select of moveSelects) expect(select).toBeDisabled();
+      expect(disabledStates(moveSelects)).toEqual([true, false, false]);
+      expect(
+        within(moveSelects[2])
+          .getAllByRole('option')
+          .map((option) => option.textContent),
+      ).toEqual(['Move to…', '2. Two']);
+    });
+
+    describe('in a current round with several questions', () => {
+      const roundDraft = (isLocking = false) => ({
+        id: 5,
+        title: 'Trivia Night',
+        rounds: [
+          {
+            title: 'One',
+            breakAfter: true,
+            questions: [freeText(1), freeText(2), freeText(3), freeText(4)],
+          },
+        ],
+        liveEdit: {
+          openedQuestionIds: [1, 2],
+          currentRoundIndex: 0,
+          hasCurrentBlockStartedLocking: isLocking,
+        },
+      });
+
+      it('pins the opened questions at the start and frees the ones after them', async () => {
+        mockFetchQuizDraft.mockResolvedValue(roundDraft());
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        expect(
+          disabledStates(
+            screen.getAllByRole('button', { name: /move question up/i }),
+          ),
+        ).toEqual([true, true, true, false]);
+        expect(
+          disabledStates(
+            screen.getAllByRole('button', { name: /move question down/i }),
+          ),
+        ).toEqual([true, true, false, true]);
+        expect(
+          disabledStates(
+            screen.getAllByRole('button', { name: /delete question/i }),
+          ),
+        ).toEqual([true, true, false, false]);
+        expect(
+          screen.getByText(/opened questions stay at the start of this round/i),
+        ).toBeInTheDocument();
+      });
+
+      it('saves the unopened questions in their new order after the opened ones', async () => {
+        const user = userEvent.setup();
+        mockFetchQuizDraft.mockResolvedValue(roundDraft());
+        mockUpdateQuiz.mockResolvedValue({
+          quizId: 5,
+          roundCount: 1,
+          questionCount: 4,
+        });
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        await user.click(
+          screen.getAllByRole('button', { name: /move question up/i })[3],
+        );
+        await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+        await waitFor(() => expect(mockUpdateQuiz).toHaveBeenCalled());
+        const saved = mockUpdateQuiz.mock.calls[0][1];
+        expect(
+          saved.rounds[0].questions.map(
+            (question: { questionId: number }) => question.questionId,
+          ),
+        ).toEqual([1, 2, 4, 3]);
+      });
+
+      it('pins every question once the block is locking', async () => {
+        mockFetchQuizDraft.mockResolvedValue(roundDraft(true));
+        renderWithQuery(<QuizEditorPanel quizId="5" />);
+        await screen.findByDisplayValue('Trivia Night');
+
+        for (const name of [
+          /move question up/i,
+          /move question down/i,
+          /delete question/i,
+          /add question/i,
+        ]) {
+          for (const button of screen.getAllByRole('button', { name })) {
+            expect(button).toBeDisabled();
+          }
+        }
+      });
     });
   });
 
@@ -863,7 +1007,11 @@ describe('QuizEditorPanel', () => {
       id: 5,
       title: 'Trivia Night',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
-      liveEdit: { openedQuestionIds: [], currentRoundIndex: 0 },
+      liveEdit: {
+        openedQuestionIds: [],
+        currentRoundIndex: 0,
+        hasCurrentBlockStartedLocking: false,
+      },
     });
     mockUpdateQuiz.mockRejectedValue(
       new QuizDraftApiError('Cannot save — 1 change(s) conflict', 409, [
@@ -890,7 +1038,11 @@ describe('QuizEditorPanel', () => {
       id: 5,
       title: 'Trivia Night',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
-      liveEdit: { openedQuestionIds: [42], currentRoundIndex: 0 },
+      liveEdit: {
+        openedQuestionIds: [42],
+        currentRoundIndex: 0,
+        hasCurrentBlockStartedLocking: false,
+      },
     });
     await user.click(
       screen.getByRole('button', { name: /refresh lock state/i }),

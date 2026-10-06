@@ -1,5 +1,7 @@
 import {
-  isRoundStructureFrozen,
+  getOpenedPrefixLength,
+  getRoundStructureEditing,
+  type RoundStructureEditing,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
@@ -50,15 +52,106 @@ function diffQuestionFields(
   );
 }
 
+/** Why a frozen round can't change, for the editor's issue list — the current round only freezes once its block starts locking. */
+function frozenReason(frontier: LiveEditFrontier, roundIndex: number): string {
+  return roundIndex === frontier.currentRoundIndex
+    ? 'its block has started locking — add the question to a later round instead'
+    : 'a live session has already reached it';
+}
+
+/**
+ * Question-structure issues in one round a session has reached. The questions
+ * that must stay put keep their ids and positions: all of them in a `frozen`
+ * round, the opened ones at the start in an `after-opened` round (the
+ * questions after them can change freely there). Opened questions among them
+ * also keep their type and choices.
+ */
+function findRoundQuestionViolations(
+  roundIndex: number,
+  currentRound: ImportRoundPreview,
+  incomingRound: ImportRoundPreview,
+  editing: Exclude<RoundStructureEditing, 'free'>,
+  openedIds: ReadonlySet<number>,
+  frontier: LiveEditFrontier,
+): QuizDraftIssue[] {
+  const issues: QuizDraftIssue[] = [];
+  const isFrozen = editing === 'frozen';
+  const pinnedCount = isFrozen
+    ? currentRound.questions.length
+    : getOpenedPrefixLength(
+        currentRound.questions.map((question) => question.questionId),
+        openedIds,
+      );
+  const hasLostPinned = isFrozen
+    ? incomingRound.questions.length !== pinnedCount
+    : incomingRound.questions.length < pinnedCount;
+  if (hasLostPinned) {
+    issues.push({
+      roundIndex,
+      questionIndex: null,
+      field: 'questions',
+      message: isFrozen
+        ? `Cannot add or remove questions in this round — ${frozenReason(frontier, roundIndex)}`
+        : 'Cannot remove or move opened questions out of this round',
+    });
+  }
+
+  const checkedCount = Math.min(pinnedCount, incomingRound.questions.length);
+  for (
+    let questionIndex = 0;
+    questionIndex < checkedCount;
+    questionIndex += 1
+  ) {
+    const currentQuestion = currentRound.questions[questionIndex];
+    const incomingQuestion = incomingRound.questions[questionIndex];
+
+    if (currentQuestion.questionId !== incomingQuestion.questionId) {
+      issues.push({
+        roundIndex,
+        questionIndex,
+        field: 'questionId',
+        message: isFrozen
+          ? `Cannot reorder or replace questions in this round — ${frozenReason(frontier, roundIndex)}`
+          : 'Cannot insert a question before, or reorder, opened questions — add it after the last opened one',
+      });
+      continue;
+    }
+
+    if (
+      currentQuestion.questionId === undefined ||
+      !openedIds.has(currentQuestion.questionId)
+    ) {
+      continue;
+    }
+    for (const field of diffQuestionFields(
+      currentQuestion,
+      incomingQuestion,
+      OPENED_QUESTION_FIELDS,
+    )) {
+      issues.push({
+        roundIndex,
+        questionIndex,
+        field,
+        message:
+          "Cannot change this question's type or choices — it is an opened question that teams may have answered",
+      });
+    }
+  }
+  return issues;
+}
+
 /**
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Game progress is positional,
  * so nothing at or before the frontier may shift: rounds can't be added or
- * removed, a round's breakAfter/kahootMode can't change, and a round up to
- * the frontier's current round keeps exactly its questions in their order
- * (see isRoundStructureFrozen). Rounds after it can have questions added,
- * deleted, reordered and moved between them — that's why a save made after
- * a session reached an edited round is refused here too, naming the round.
+ * removed, a round's breakAfter/kahootMode can't change, a round before the
+ * frontier's current round keeps exactly its questions in their order, and
+ * so does the current round once its block has started locking (see
+ * getRoundStructureEditing). Before that, the current round keeps its opened
+ * questions at its start in order, and the questions after them can be
+ * added, deleted, reordered and moved. Rounds after it can have questions
+ * added, deleted, reordered and moved between them — that's why a save made
+ * after a session reached an edited round is refused here too.
  * A question in the frontier's `openedQuestionIds` (opened) can still have
  * its prompt/answer/points/notes/media fixed, but not its type or choices
  * (see OPENED_QUESTION_FIELDS); an upcoming question can be edited freely.
@@ -114,60 +207,19 @@ export function findLiveEditViolations(
 
     // Rounds after the frontier are free to restructure; the opened-question
     // checks below only matter where opened questions can be.
-    if (!isRoundStructureFrozen(frontier, roundIndex)) continue;
+    const editing = getRoundStructureEditing(frontier, roundIndex);
+    if (editing === 'free') continue;
 
-    if (currentRound.questions.length !== incomingRound.questions.length) {
-      issues.push({
+    issues.push(
+      ...findRoundQuestionViolations(
         roundIndex,
-        questionIndex: null,
-        field: 'questions',
-        message:
-          'Cannot add or remove questions in this round — a live session has already reached it',
-      });
-    }
-
-    const questionCount = Math.min(
-      currentRound.questions.length,
-      incomingRound.questions.length,
+        currentRound,
+        incomingRound,
+        editing,
+        openedIds,
+        frontier,
+      ),
     );
-    for (
-      let questionIndex = 0;
-      questionIndex < questionCount;
-      questionIndex += 1
-    ) {
-      const currentQuestion = currentRound.questions[questionIndex];
-      const incomingQuestion = incomingRound.questions[questionIndex];
-
-      if (currentQuestion.questionId !== incomingQuestion.questionId) {
-        issues.push({
-          roundIndex,
-          questionIndex,
-          field: 'questionId',
-          message:
-            'Cannot reorder or replace questions in this round — a live session has already reached it',
-        });
-        continue;
-      }
-
-      if (
-        currentQuestion.questionId !== undefined &&
-        openedIds.has(currentQuestion.questionId)
-      ) {
-        for (const field of diffQuestionFields(
-          currentQuestion,
-          incomingQuestion,
-          OPENED_QUESTION_FIELDS,
-        )) {
-          issues.push({
-            roundIndex,
-            questionIndex,
-            field,
-            message:
-              "Cannot change this question's type or choices — it is an opened question that teams may have answered",
-          });
-        }
-      }
-    }
   }
 
   return issues;

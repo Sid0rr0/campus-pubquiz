@@ -26,9 +26,11 @@ function makeController() {
   const gameState = {
     getActiveQuizId: jest.fn().mockReturnValue(1),
     listSessions: jest.fn().mockReturnValue([]),
-    getLiveEditFrontier: jest
-      .fn()
-      .mockReturnValue({ openedQuestionIds: [], currentRoundIndex: 0 }),
+    getLiveEditFrontier: jest.fn().mockReturnValue({
+      openedQuestionIds: [],
+      currentRoundIndex: 0,
+      hasCurrentBlockStartedLocking: false,
+    }),
   };
   const gameGateway = {
     notifyQuizEdited: jest.fn().mockResolvedValue(undefined),
@@ -127,11 +129,16 @@ describe('QuizController', () => {
       gameState.getLiveEditFrontier.mockReturnValue({
         openedQuestionIds: [5, 6],
         currentRoundIndex: 1,
+        hasCurrentBlockStartedLocking: false,
       });
 
       await expect(controller.findById(1)).resolves.toEqual({
         ...draft,
-        liveEdit: { openedQuestionIds: [5, 6], currentRoundIndex: 1 },
+        liveEdit: {
+          openedQuestionIds: [5, 6],
+          currentRoundIndex: 1,
+          hasCurrentBlockStartedLocking: false,
+        },
       });
     });
 
@@ -155,13 +162,25 @@ describe('QuizController', () => {
       ]);
       gameState.getLiveEditFrontier.mockImplementation((joinCode: string) =>
         joinCode === 'AAAAAA'
-          ? { openedQuestionIds: [1], currentRoundIndex: 0 }
-          : { openedQuestionIds: [1, 2, 3], currentRoundIndex: 2 },
+          ? {
+              openedQuestionIds: [1],
+              currentRoundIndex: 0,
+              hasCurrentBlockStartedLocking: true,
+            }
+          : {
+              openedQuestionIds: [1, 2, 3],
+              currentRoundIndex: 2,
+              hasCurrentBlockStartedLocking: false,
+            },
       );
 
       await expect(controller.findById(1)).resolves.toEqual({
         ...draft,
-        liveEdit: { openedQuestionIds: [1, 2, 3], currentRoundIndex: 2 },
+        liveEdit: {
+          openedQuestionIds: [1, 2, 3],
+          currentRoundIndex: 2,
+          hasCurrentBlockStartedLocking: false,
+        },
       });
     });
 
@@ -259,6 +278,7 @@ describe('QuizController', () => {
       gameState.getLiveEditFrontier.mockReturnValue({
         openedQuestionIds: [10],
         currentRoundIndex: 0,
+        hasCurrentBlockStartedLocking: false,
       });
       quizService.findDraftById.mockResolvedValue({
         id: 1,
@@ -329,6 +349,7 @@ describe('QuizController', () => {
       gameState.getLiveEditFrontier.mockReturnValue({
         openedQuestionIds: [10],
         currentRoundIndex: 0,
+        hasCurrentBlockStartedLocking: false,
       });
       const currentDraft: QuizDraft = {
         id: 1,
@@ -404,6 +425,7 @@ describe('QuizController', () => {
       gameState.getLiveEditFrontier.mockReturnValue({
         openedQuestionIds: [10],
         currentRoundIndex: 0,
+        hasCurrentBlockStartedLocking: false,
       });
       const openedQuestion = {
         questionId: 10,
@@ -459,6 +481,7 @@ describe('QuizController', () => {
       gameState.getLiveEditFrontier.mockImplementation((joinCode: string) => ({
         openedQuestionIds: [],
         currentRoundIndex: joinCode === 'AAAAAA' ? 0 : 1,
+        hasCurrentBlockStartedLocking: joinCode !== 'AAAAAA',
       }));
       const free = (questionId?: number) => ({
         ...(questionId === undefined ? {} : { questionId }),

@@ -42,8 +42,12 @@ interface QuizRoundEditorProps {
   isLast: boolean;
   /** A session is live on this quiz — round add/delete/reorder controls are disabled entirely. */
   isLive: boolean;
-  /** A live session has reached this round — its questions can't be added, deleted, reordered or moved. */
+  /** A live session's block in this round is locking, or it is past it — nothing can be added to the round. */
   isStructureFrozen: boolean;
+  /** How many questions at the start of the round a live session pins in place — opened ones, or all of them once frozen. */
+  pinnedQuestionCount: number;
+  /** Why the round's questions are restricted while a session is live, or undefined when they aren't. */
+  structureNote?: string;
   /** The other rounds a question here could move to — a kahoot round is dropped per question when the type doesn't fit. */
   moveTargetRounds: MoveTargetRound[];
   /** `dbId`s of questions opened in a live session. */
@@ -89,6 +93,8 @@ export function QuizRoundEditor({
   isLast,
   isLive,
   isStructureFrozen,
+  pinnedQuestionCount,
+  structureNote,
   moveTargetRounds,
   openedQuestionIds,
   issues,
@@ -281,6 +287,11 @@ export function QuizRoundEditor({
         </div>
       </div>
 
+      {structureNote && (
+        <p className="rounded-lg bg-cyan/20 px-3 py-2 text-xs font-extrabold text-foreground">
+          {structureNote}
+        </p>
+      )}
       <FieldErrors issues={fieldIssues(roundLevelIssues, 'questions')} />
 
       <div className="flex flex-col gap-3">
@@ -289,9 +300,9 @@ export function QuizRoundEditor({
             key={question.id}
             question={question}
             index={index}
-            isFirst={index === 0}
+            isFirstMovable={index <= pinnedQuestionCount}
             isLast={index === round.questions.length - 1}
-            isStructureFrozen={isStructureFrozen}
+            isPinned={index < pinnedQuestionCount}
             moveTargets={moveTargetsFor(question, moveTargetRounds)}
             isKahootRound={round.kahootMode}
             isOpened={

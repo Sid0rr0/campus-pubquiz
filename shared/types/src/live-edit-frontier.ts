@@ -9,26 +9,64 @@ export interface LiveEditFrontier {
   openedQuestionIds: number[];
   /** Index of the current round of the furthest-on live session. */
   currentRoundIndex: number;
+  /** The current block has started locking (or is past it, in its break or reveal) in the furthest-on live session — its rounds can't gain, lose or reorder questions any more. */
+  hasCurrentBlockStartedLocking: boolean;
 }
 
-/** Combines per-session frontiers: every opened question counts, and the line is the furthest-on session's current round. */
+/** Combines per-session frontiers: every opened question counts, and the line is the furthest-on session's current round — locking only counts for a session standing on that round, since earlier rounds are frozen anyway. */
 export function mergeLiveEditFrontiers(
   frontiers: readonly LiveEditFrontier[],
 ): LiveEditFrontier {
+  const currentRoundIndex = Math.max(
+    ...frontiers.map((frontier) => frontier.currentRoundIndex),
+  );
   return {
     openedQuestionIds: [
       ...new Set(frontiers.flatMap((frontier) => frontier.openedQuestionIds)),
     ],
-    currentRoundIndex: Math.max(
-      ...frontiers.map((frontier) => frontier.currentRoundIndex),
+    currentRoundIndex,
+    hasCurrentBlockStartedLocking: frontiers.some(
+      (frontier) =>
+        frontier.currentRoundIndex === currentRoundIndex &&
+        frontier.hasCurrentBlockStartedLocking,
     ),
   };
 }
 
-/** A round at or before the frontier's current round can't change structurally — its questions can't be added, removed, reordered or moved in or out. Rounds after it can. */
+/**
+ * How far a round's questions can be restructured:
+ * - `frozen`: no question can be added, removed, reordered or moved in or out
+ * - `after-opened`: the round's opened questions stay at its start, in order;
+ *   the questions after them can change freely
+ * - `free`: any change
+ */
+export type RoundStructureEditing = 'frozen' | 'after-opened' | 'free';
+
+export function getRoundStructureEditing(
+  frontier: LiveEditFrontier,
+  roundIndex: number,
+): RoundStructureEditing {
+  if (roundIndex < frontier.currentRoundIndex) return 'frozen';
+  if (roundIndex > frontier.currentRoundIndex) return 'free';
+  return frontier.hasCurrentBlockStartedLocking ? 'frozen' : 'after-opened';
+}
+
+/** A round whose questions can't be added, removed, reordered or moved in or out. */
 export function isRoundStructureFrozen(
   frontier: LiveEditFrontier,
   roundIndex: number,
 ): boolean {
-  return roundIndex <= frontier.currentRoundIndex;
+  return getRoundStructureEditing(frontier, roundIndex) === 'frozen';
+}
+
+/** How many questions at the start of a round are pinned in place: everything up to the last opened one (questions open in order, so those are the opened ones). Questions not yet saved have no id and are never opened. */
+export function getOpenedPrefixLength(
+  questionIds: readonly (number | undefined)[],
+  openedQuestionIds: ReadonlySet<number>,
+): number {
+  return (
+    questionIds.findLastIndex(
+      (id) => id !== undefined && openedQuestionIds.has(id),
+    ) + 1
+  );
 }
