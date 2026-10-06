@@ -8,6 +8,7 @@ import {
   BONUS_CATEGORY_EXPLANATIONS,
   BONUS_CATEGORY_LABELS,
   DEFAULT_BONUS_POINTS,
+  formatSignedPoints,
   getBonusEarnDeadlineText,
 } from '@/app/lib/bonus-categories';
 
@@ -100,7 +101,7 @@ export function BonusProgressList({
               <p className="flex items-baseline justify-between gap-2">
                 <span className="text-[15px] font-bold">Bonus</span>
                 <span className="shrink-0 text-xs font-extrabold text-foreground/45">
-                  +{award.points} pt
+                  {formatSignedPoints(award.points)} pt
                 </span>
               </p>
               <p className="mt-1 text-sm text-foreground/70">{award.reason}</p>

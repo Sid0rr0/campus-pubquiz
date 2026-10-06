@@ -4,8 +4,12 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Bonus drawer: a penalty of −1 displays as "−1 pt", not "+-1 pt" (bonus-progress page test, tested first)
-- [ ] Bonus drawer: a positive award still displays as "+1 pt", and a half-point award as "+0.5 pt"
-- [ ] One shared formatter is exported for reuse by the toasts; it is covered through the drawer test, with no separate unit test
+- [x] Bonus drawer: a penalty of −1 displays as "−1 pt", not "+-1 pt" (bonus-progress page test, tested first)
+- [x] Bonus drawer: a positive award still displays as "+1 pt", and a half-point award as "+0.5 pt"
+- [x] One shared formatter is exported for reuse by the toasts; it is covered through the drawer test, with no separate unit test
+
+## Comments
+
+Implemented: `formatSignedPoints` is exported from `apps/frontend/app/lib/bonus-categories.ts` and used by the custom-award rows in the `/play` bonus drawer. The drawer test is parameterised over +1, +0.5 and −1 (red first for −1, which rendered "+-1 pt"). Commit: see git history for this ticket's `feat(frontend)` commit.

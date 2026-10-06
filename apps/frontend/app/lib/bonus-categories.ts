@@ -10,6 +10,13 @@ export const BONUS_CATEGORY_LABELS: Record<BonusCategory, string> = {
   custom: 'Custom',
 };
 
+const MINUS_SIGN = '−';
+
+/** Bonus points with an explicit sign — "+1", "−1" (a real minus sign), "+0.5". Used wherever a bonus award is shown, so the drawer and the toasts never disagree. */
+export function formatSignedPoints(points: number): string {
+  return points < 0 ? `${MINUS_SIGN}${Math.abs(points)}` : `+${points}`;
+}
+
 /**
  * Player-facing explanation of what earns each predefined bonus category,
  * shown on /play's bonus drawer. "custom" has no fixed explanation here —

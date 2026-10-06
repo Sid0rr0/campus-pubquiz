@@ -98,6 +98,39 @@ describe('PlayPage — bonus points panel', () => {
     expect(screen.getByText('+3 pt')).toBeInTheDocument();
   });
 
+  it.each([
+    { points: 1, expected: '+1 pt' },
+    { points: 0.5, expected: '+0.5 pt' },
+    { points: -1, expected: '−1 pt' },
+  ])(
+    'shows a custom award of $points points as "$expected"',
+    ({ points, expected }) => {
+      joinAsTeam();
+      mockUsePlayerGame.mockReturnValue(
+        socketResult({
+          snapshot: {
+            progress: progress({ status: 'lobby' }),
+            currentQuestion: null,
+            settings: {
+              rules: [],
+              enabledBonusCategories: ['custom'],
+              maxBonusAwardsPerCategory: {},
+            },
+          },
+          team: {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            teamToken: 'team-token-1',
+          },
+          myBonusAwards: [{ category: 'custom', points, reason: 'Phone use' }],
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      expect(screen.getByText(expected)).toBeInTheDocument();
+    },
+  );
+
   it('does not show any custom-award content when the team has not received one', () => {
     joinAsTeam();
     mockUsePlayerGame.mockReturnValue(
