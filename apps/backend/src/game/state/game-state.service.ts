@@ -27,10 +27,6 @@ import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
-import {
-  getBlockSeededQuestions,
-  getPastRevealedQuestions,
-} from '@/game/state/block-questions.util';
 import { getFeedbackField } from '@/game/state/feedback-rounds.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
@@ -362,18 +358,13 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Ids of the opened questions in this session — every past block's
-   * questions plus the current block's furthest-opened position, the exact
-   * boundary `BlockGradingService` already relies on. Used to protect those
-   * questions against live editing (`QuizController.update`); everything
-   * strictly ahead stays editable.
+   * Ids of the questions that have opened in this session, for good — Previous
+   * stepping back never takes one away. Used to protect those questions
+   * against live editing (`QuizController.update`); everything else stays
+   * editable.
    */
   getOpenedQuestionIds(joinCode: string): number[] {
-    const session = this.sessionStore.get(joinCode);
-    return [
-      ...getPastRevealedQuestions(session),
-      ...getBlockSeededQuestions(session),
-    ].map((question) => question.id);
+    return this.sessionStore.get(joinCode).openedQuestionIds;
   }
 
   /** The team whose phone is on `socketId`, or null when that socket isn't a team's. */

@@ -36,6 +36,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: null,
       phaseStartedAt: null,
       phaseElapsedByKey: {},
+      openedQuestionIds: null,
     });
   });
 
@@ -52,6 +53,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: null,
       phaseStartedAt: null,
       phaseElapsedByKey: {},
+      openedQuestionIds: null,
     });
 
     const reloaded = await repository.load(sessionId);
@@ -79,6 +81,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: null,
       phaseStartedAt: null,
       phaseElapsedByKey: {},
+      openedQuestionIds: null,
     });
 
     const reloaded = await repository.load(sessionId);
@@ -115,6 +118,26 @@ describe('GameProgressRepository (Postgres integration)', () => {
     });
   });
 
+  it('persists and reloads the opened questions', async () => {
+    await repository.save(sessionId, {
+      progress: {
+        status: 'round_intro',
+        roundIndex: 1,
+        questionIndex: 0,
+        isLeaderboardVisible: false,
+        revealIndex: 0,
+        furthestOpenIndex: 0,
+      },
+      livePhaseKey: null,
+      phaseStartedAt: null,
+      phaseElapsedByKey: {},
+      openedQuestionIds: [4, 5, 9],
+    });
+
+    const reloaded = await repository.load(sessionId);
+    expect(reloaded?.openedQuestionIds).toEqual([4, 5, 9]);
+  });
+
   it('returns null for a session that does not exist', async () => {
     const saved = await repository.load(999_999_999);
     expect(saved).toBeNull();
@@ -134,6 +157,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: 'q:0:1',
       phaseStartedAt: startedAt,
       phaseElapsedByKey: { 'q:0:0': 12_345 },
+      openedQuestionIds: null,
     });
 
     const reloaded = await repository.load(sessionId);
@@ -156,6 +180,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: 'q:0:0',
       phaseStartedAt: Date.now(),
       phaseElapsedByKey: {},
+      openedQuestionIds: null,
     });
 
     // A later save with no live frontier (e.g. the quiz moved to an untimed
@@ -173,6 +198,7 @@ describe('GameProgressRepository (Postgres integration)', () => {
       livePhaseKey: 'q:0:0',
       phaseStartedAt: null,
       phaseElapsedByKey: {},
+      openedQuestionIds: null,
     });
 
     const reloaded = await repository.load(sessionId);

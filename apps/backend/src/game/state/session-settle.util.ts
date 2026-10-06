@@ -6,6 +6,10 @@ import {
 } from '@campus-pubquiz/types';
 import { computeInitialRevealStep } from '@/game/state/closest-guess-reveal.util';
 import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
+import {
+  getPastRevealedQuestions,
+  getBlockSeededQuestions,
+} from '@/game/state/block-questions.util';
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
 import { getGameContext, type SessionState } from '@/game/state/session-state';
 
@@ -75,6 +79,7 @@ export function settleSession({
   return {
     ...session,
     progress,
+    openedQuestionIds: withOpenedAt(session, progress),
     livePhaseKey,
     phaseStartedAt,
     phaseElapsedByKey,
@@ -156,4 +161,19 @@ function computeBreakEndsAt(
     session.breakEndsAt !== null &&
     session.breakEndsAt <= now;
   return isStale ? null : session.breakEndsAt;
+}
+
+/**
+ * The session's opened questions plus everything `progress` has opened: every
+ * past block's questions and the current block up to its furthest-opened
+ * position. Only ever grows, so Previous stepping back leaves earlier ones
+ * opened.
+ */
+function withOpenedAt(session: SessionState, progress: GameProgress): number[] {
+  const moved = { ...session, progress };
+  const opened = [
+    ...getPastRevealedQuestions(moved),
+    ...getBlockSeededQuestions(moved),
+  ].map((question) => question.id);
+  return [...new Set([...session.openedQuestionIds, ...opened])];
 }

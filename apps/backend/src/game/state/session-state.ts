@@ -47,6 +47,13 @@ export interface SessionState {
    * breakEndsAt — resets on restart. See computePhaseTimerFields.
    */
   phaseElapsedByKey: Record<string, number>;
+  /**
+   * Ids of every question that has opened in this session, for good: Previous
+   * stepping back never removes one. Added to in settleSession, the step every
+   * press, create and restore passes through; persisted with the progress.
+   * Live editing protects these questions — see live-edit-guard.
+   */
+  openedQuestionIds: number[];
   leaderboard: LeaderboardEntry[];
   /**
    * How many teams (counting up from last place) are currently revealed on
@@ -115,6 +122,7 @@ export function freshSessionState(
     livePhaseKey: null,
     phaseStartedAt: null,
     phaseElapsedByKey: {},
+    openedQuestionIds: [],
     leaderboard: [],
     leaderboardRevealCount: 0,
     teams: [],

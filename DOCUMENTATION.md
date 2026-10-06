@@ -486,6 +486,13 @@ editor's disabled controls:
   exact-match, so e.g. fixing an option's spelling would zero every team that
   picked it. Their prompt, answer, points, notes, and media stay editable.
 
+A question counts as opened from the moment it first opens in a session and
+stays opened for the rest of it, even if Previous steps back before it. Each
+session stores its opened question ids (`game_sessions.opened_question_ids`),
+added to whenever a press settles, so they survive a backend restart. A
+session saved before this existed has none stored and derives them from its
+position on restore.
+
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If an opened question's `answer` or `points` changed, its existing answers are
 re-graded (`BlockGradingService.regradeQuestions`): auto-graded types

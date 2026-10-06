@@ -6,7 +6,6 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature               | #   | Ticket                                                                                                                                      | Blocked by |
 | --------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| live-structural-edits | 02  | [Opened questions stay opened through Previous and restarts](live-structural-edits/issues/02-opened-survives-previous-and-restart.md)       | 01         |
 | live-structural-edits | 03  | [Add, reorder and delete questions in rounds after the current round](live-structural-edits/issues/03-question-edits-in-later-rounds.md)    | 01         |
 | live-structural-edits | 04  | [Change unopened questions in the current round](live-structural-edits/issues/04-unopened-questions-in-current-round.md)                    | 03         |
 | live-structural-edits | 05  | [Add, delete and reorder unopened rounds, and change their break-after and kahoot](live-structural-edits/issues/05-unopened-round-edits.md) | 03         |
@@ -18,6 +17,7 @@ All features under `.scratch/`. A ticket is unblocked once every ticket in its "
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| live-structural-edits | 02  | [Opened questions stay opened through Previous and restarts](live-structural-edits/issues/02-opened-survives-previous-and-restart.md) | — |
 | live-structural-edits | 01  | [Rename "locked" to "opened" in the live-edit path](live-structural-edits/issues/01-rename-locked-to-opened.md) | — |
 | live-session-events         | 08  | [The getters go](live-session-events/issues/08-the-getters-go.md)                                                                                                      | —         |
 | live-session-events         | 07  | [Import reports a quiz change through quizEdited](live-session-events/issues/07-import-reports-quiz-change.md)                                                         | —         |

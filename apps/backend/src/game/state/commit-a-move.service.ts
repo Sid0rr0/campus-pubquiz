@@ -29,6 +29,11 @@ import { withLeaderboard } from '@/game/state/session-updates.util';
 import type { StandingsService } from '@/standings/standings.service';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
+/** What a restart restores besides the progress: the phase timer and the opened questions (null for a session saved before they were tracked). */
+export type SavedPlacement = SavedPhaseTimer & {
+  openedQuestionIds: number[] | null;
+};
+
 /** A press carried out: the session as it now stands, and what must be pushed because of it. */
 export interface CommittedMove {
   session: SessionState;
@@ -109,7 +114,7 @@ export class MoveCommitter {
   async place(
     session: SessionState,
     progress: GameProgress,
-    savedPhaseTimer?: SavedPhaseTimer,
+    saved?: SavedPlacement,
   ): Promise<SessionState> {
     // The ungraded cache lives in memory only; inside the break it must be
     // rebuilt so /control and showdown eligibility are right straight away.
@@ -121,12 +126,17 @@ export class MoveCommitter {
     // deadline's deliberate re-arm-fresh) — its epoch-ms start time is real
     // and persisted, so the elapsed time it shows after a restart is still
     // accurate, downtime included.
+    // A session saved before opened questions were tracked has none stored;
+    // settle then derives them from the position it is restored to.
     const placed = settleSession({
-      session: refreshed,
+      session: {
+        ...refreshed,
+        openedQuestionIds: saved?.openedQuestionIds ?? [],
+      },
       progress,
       step: { kind: 'place' },
       now: Date.now(),
-      savedPhaseTimer,
+      savedPhaseTimer: saved,
     });
     const leaderboard = await this.standingsService.leaderboard(
       placed.seededGame.gameSessionId,
@@ -267,5 +277,6 @@ function toPersistedProgress(session: SessionState): PersistedGameProgress {
     livePhaseKey: session.livePhaseKey,
     phaseStartedAt: session.phaseStartedAt,
     phaseElapsedByKey: session.phaseElapsedByKey,
+    openedQuestionIds: session.openedQuestionIds,
   };
 }

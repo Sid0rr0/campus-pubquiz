@@ -22,7 +22,7 @@ The final countdown on a block's last question; teams can still answer until it 
 _Avoid_: closing, last call
 
 **Opened question**:
-A question the big screen has shown in a session. It keeps its place in the quiz, its type and its choices. Unopened questions can still be added, moved and deleted while the quiz is running, as long as their block hasn't started locking.
+A question the big screen has shown in a session, remembered for the rest of that session even if Previous steps back before it. It keeps its place in the quiz, its type and its choices. Unopened questions can still be added, moved and deleted while the quiz is running, as long as their block hasn't started locking.
 _Avoid_: shown question, locked question (locked means no longer accepting answers)
 
 **Question type**:

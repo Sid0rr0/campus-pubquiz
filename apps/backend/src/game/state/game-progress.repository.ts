@@ -10,6 +10,8 @@ export interface PersistedGameProgress {
   livePhaseKey: string | null;
   phaseStartedAt: number | null;
   phaseElapsedByKey: Record<string, number>;
+  /** Null for a session saved before opened questions were tracked. */
+  openedQuestionIds: number[] | null;
 }
 
 @Injectable()
@@ -35,6 +37,7 @@ export class GameProgressRepository {
     session.phaseStartedAt =
       data.phaseStartedAt !== null ? new Date(data.phaseStartedAt) : null;
     session.phaseElapsedByKey = data.phaseElapsedByKey;
+    session.openedQuestionIds = data.openedQuestionIds;
     await this.gameSessions.getEntityManager().flush();
   }
 
@@ -66,6 +69,7 @@ export class GameProgressRepository {
           ? session.phaseStartedAt.getTime()
           : null,
       phaseElapsedByKey: session.phaseElapsedByKey,
+      openedQuestionIds: session.openedQuestionIds,
     };
   }
 }

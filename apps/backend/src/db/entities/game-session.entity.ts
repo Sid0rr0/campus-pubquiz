@@ -24,7 +24,8 @@ export class GameSession extends BaseEntity {
     | 'name'
     | 'livePhaseKey'
     | 'phaseStartedAt'
-    | 'phaseElapsedByKey';
+    | 'phaseElapsedByKey'
+    | 'openedQuestionIds';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
   quiz!: Quiz;
@@ -71,4 +72,8 @@ export class GameSession extends BaseEntity {
   /** Final elapsed-ms for every superseded timed phase key — see SessionState.phaseElapsedByKey. */
   @Property({ type: 'json', default: '{}' })
   phaseElapsedByKey: Record<string, number> = {};
+
+  /** Ids of every question that has opened in this session — see SessionState.openedQuestionIds. Null for a session saved before this was tracked. */
+  @Property({ type: 'json', nullable: true })
+  openedQuestionIds: number[] | null = null;
 }
