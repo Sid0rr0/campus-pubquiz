@@ -9,6 +9,7 @@ import {
   makeQuestion,
   makeRound,
   mergeRoundsFromPreview,
+  moveQuestionToRound,
   questionFromPreview,
   questionToPreview,
   roundFromPreview,
@@ -656,5 +657,35 @@ describe('withSyncedQuestionIds', () => {
     const synced = withSyncedQuestionIds(rounds, []);
 
     expect(synced).toEqual(rounds);
+  });
+});
+
+describe('moveQuestionToRound', () => {
+  const q1 = makeQuestion('q1');
+  const q2 = makeQuestion('q2');
+  const q3 = makeQuestion('q3');
+  const rounds = [
+    { ...makeRound('r1', 'One'), questions: [q1, q2] },
+    { ...makeRound('r2', 'Two'), questions: [q3] },
+  ];
+
+  it('takes the question out of its round and appends it to the target round', () => {
+    const moved = moveQuestionToRound(rounds, 'q1', 'r2');
+
+    expect(moved[0].questions).toEqual([q2]);
+    expect(moved[1].questions).toEqual([q3, q1]);
+  });
+
+  it('leaves the original rounds untouched', () => {
+    moveQuestionToRound(rounds, 'q1', 'r2');
+
+    expect(rounds[0].questions).toEqual([q1, q2]);
+    expect(rounds[1].questions).toEqual([q3]);
+  });
+
+  it('is a no-op for an unknown question or target round, or the same round', () => {
+    expect(moveQuestionToRound(rounds, 'nope', 'r2')).toBe(rounds);
+    expect(moveQuestionToRound(rounds, 'q1', 'nope')).toBe(rounds);
+    expect(moveQuestionToRound(rounds, 'q1', 'r1')).toBe(rounds);
   });
 });

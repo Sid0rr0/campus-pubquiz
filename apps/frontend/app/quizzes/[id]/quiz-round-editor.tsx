@@ -18,11 +18,21 @@ import {
   type EditorQuestion,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
-import { QuizQuestionEditor } from '@/app/quizzes/[id]/quiz-question-editor';
+import {
+  QuizQuestionEditor,
+  type MoveTarget,
+} from '@/app/quizzes/[id]/quiz-question-editor';
 
 /** DOM id for the round's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-round button. */
 export function roundAnchorId(roundId: string): string {
   return `round-${roundId}`;
+}
+
+/** A round another round's question may move to, numbered by its place in the quiz. */
+export interface MoveTargetRound {
+  id: string;
+  label: string;
+  kahootMode: boolean;
 }
 
 interface QuizRoundEditorProps {
@@ -30,8 +40,12 @@ interface QuizRoundEditorProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  /** A session is live on this quiz — round/question add/delete/reorder controls are disabled entirely. */
+  /** A session is live on this quiz — round add/delete/reorder controls are disabled entirely. */
   isLive: boolean;
+  /** A live session has reached this round — its questions can't be added, deleted, reordered or moved. */
+  isStructureFrozen: boolean;
+  /** The other rounds a question here could move to — a kahoot round is dropped per question when the type doesn't fit. */
+  moveTargetRounds: MoveTargetRound[];
   /** `dbId`s of questions opened in a live session. */
   openedQuestionIds: ReadonlySet<number>;
   /** Validation issues from the last rejected save that apply to this round (round-level and per-question). */
@@ -40,12 +54,25 @@ interface QuizRoundEditorProps {
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onMoveQuestionToRound: (questionId: string, roundId: string) => void;
 }
 
 /** 1-based positions, within the round, of the questions whose type a kahoot round can't hold. */
 function kahootBlockingPositions(round: EditorRound): number[] {
   return round.questions.flatMap((question, index) =>
     isKahootAllowedType(question.type) ? [] : [index + 1],
+  );
+}
+
+/** Where `question` may move: every candidate round except a kahoot round whose type list excludes it. Rounds are numbered by their position in the quiz. */
+function moveTargetsFor(
+  question: EditorQuestion,
+  candidates: MoveTargetRound[],
+): MoveTarget[] {
+  return candidates.flatMap((round) =>
+    round.kahootMode && !isKahootAllowedType(question.type)
+      ? []
+      : [{ roundId: round.id, label: round.label }],
   );
 }
 
@@ -61,12 +88,15 @@ export function QuizRoundEditor({
   isFirst,
   isLast,
   isLive,
+  isStructureFrozen,
+  moveTargetRounds,
   openedQuestionIds,
   issues,
   onChange,
   onDelete,
   onMoveUp,
   onMoveDown,
+  onMoveQuestionToRound,
 }: QuizRoundEditorProps) {
   const roundLevelIssues = issues.filter(
     (issue) => issue.questionIndex === null,
@@ -261,7 +291,8 @@ export function QuizRoundEditor({
             index={index}
             isFirst={index === 0}
             isLast={index === round.questions.length - 1}
-            isLive={isLive}
+            isStructureFrozen={isStructureFrozen}
+            moveTargets={moveTargetsFor(question, moveTargetRounds)}
             isKahootRound={round.kahootMode}
             isOpened={
               question.dbId !== undefined &&
@@ -272,6 +303,9 @@ export function QuizRoundEditor({
             onDelete={() => deleteQuestion(question.id)}
             onMoveUp={() => moveQuestion(question.id, -1)}
             onMoveDown={() => moveQuestion(question.id, 1)}
+            onMoveToRound={(roundId) =>
+              onMoveQuestionToRound(question.id, roundId)
+            }
           />
         ))}
       </div>
@@ -279,7 +313,7 @@ export function QuizRoundEditor({
       <Button
         type="button"
         onClick={addQuestion}
-        disabled={isLive}
+        disabled={isStructureFrozen}
         variant="outline-dashed"
         size="xs"
         className="self-start"

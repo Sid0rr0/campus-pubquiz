@@ -25,7 +25,6 @@ describe('QuizOutline', () => {
     const { container } = render(
       <QuizOutline
         rounds={[]}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -44,7 +43,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -74,7 +72,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -90,7 +87,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -113,7 +109,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -131,7 +126,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -153,7 +147,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -188,7 +181,6 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={false}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -214,7 +206,7 @@ describe('QuizOutline', () => {
     render(
       <QuizOutline
         rounds={rounds}
-        isLive={true}
+        liveEdit={{ openedQuestionIds: [], currentRoundIndex: 0 }}
         onReorderRounds={vi.fn()}
         onReorderQuestions={vi.fn()}
       />,
@@ -228,6 +220,38 @@ describe('QuizOutline', () => {
     expect(
       screen.getByRole('button', {
         name: 'Drag to reorder question 1, Question 1',
+      }),
+    ).toBeDisabled();
+  });
+
+  it('keeps question drag handles enabled in rounds after the live current round', () => {
+    const rounds = [
+      roundWithQuestions('round-1', 'Round 1', ['Question 1']),
+      roundWithQuestions('round-2', 'Round 2', ['Question 2']),
+    ];
+
+    render(
+      <QuizOutline
+        rounds={rounds}
+        liveEdit={{ openedQuestionIds: [], currentRoundIndex: 0 }}
+        onReorderRounds={vi.fn()}
+        onReorderQuestions={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Drag to reorder question 1, Question 1',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Drag to reorder question 1, Question 2',
+      }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Drag to reorder round 2, Round 2',
       }),
     ).toBeDisabled();
   });

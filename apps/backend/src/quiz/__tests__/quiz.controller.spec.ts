@@ -26,7 +26,9 @@ function makeController() {
   const gameState = {
     getActiveQuizId: jest.fn().mockReturnValue(1),
     listSessions: jest.fn().mockReturnValue([]),
-    getOpenedQuestionIds: jest.fn().mockReturnValue([]),
+    getLiveEditFrontier: jest
+      .fn()
+      .mockReturnValue({ openedQuestionIds: [], currentRoundIndex: 0 }),
   };
   const gameGateway = {
     notifyQuizEdited: jest.fn().mockResolvedValue(undefined),
@@ -110,7 +112,7 @@ describe('QuizController', () => {
       await expect(controller.findById(999)).rejects.toThrow(NotFoundException);
     });
 
-    it('attaches openedQuestionIds when a session is live on this quiz', async () => {
+    it('attaches the live-edit frontier when a session is live on this quiz', async () => {
       const { controller, quizService, gameState } = makeController();
       const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
       quizService.findDraftById.mockResolvedValue(draft);
@@ -122,11 +124,44 @@ describe('QuizController', () => {
           teamCount: 2,
         },
       ]);
-      gameState.getOpenedQuestionIds.mockReturnValue([5, 6]);
+      gameState.getLiveEditFrontier.mockReturnValue({
+        openedQuestionIds: [5, 6],
+        currentRoundIndex: 1,
+      });
 
       await expect(controller.findById(1)).resolves.toEqual({
         ...draft,
-        liveEdit: { openedQuestionIds: [5, 6] },
+        liveEdit: { openedQuestionIds: [5, 6], currentRoundIndex: 1 },
+      });
+    });
+
+    it('puts the line at the further-on session when two sessions are live at different points', async () => {
+      const { controller, quizService, gameState } = makeController();
+      const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
+      quizService.findDraftById.mockResolvedValue(draft);
+      gameState.listSessions.mockReturnValue([
+        {
+          joinCode: 'AAAAAA',
+          quizId: 1,
+          status: 'question_open',
+          teamCount: 2,
+        },
+        {
+          joinCode: 'BBBBBB',
+          quizId: 1,
+          status: 'question_open',
+          teamCount: 2,
+        },
+      ]);
+      gameState.getLiveEditFrontier.mockImplementation((joinCode: string) =>
+        joinCode === 'AAAAAA'
+          ? { openedQuestionIds: [1], currentRoundIndex: 0 }
+          : { openedQuestionIds: [1, 2, 3], currentRoundIndex: 2 },
+      );
+
+      await expect(controller.findById(1)).resolves.toEqual({
+        ...draft,
+        liveEdit: { openedQuestionIds: [1, 2, 3], currentRoundIndex: 2 },
       });
     });
 
@@ -221,7 +256,10 @@ describe('QuizController', () => {
           teamCount: 2,
         },
       ]);
-      gameState.getOpenedQuestionIds.mockReturnValue([10]);
+      gameState.getLiveEditFrontier.mockReturnValue({
+        openedQuestionIds: [10],
+        currentRoundIndex: 0,
+      });
       quizService.findDraftById.mockResolvedValue({
         id: 1,
         title: 'Trivia Night',
@@ -288,7 +326,10 @@ describe('QuizController', () => {
           teamCount: 2,
         },
       ]);
-      gameState.getOpenedQuestionIds.mockReturnValue([10]);
+      gameState.getLiveEditFrontier.mockReturnValue({
+        openedQuestionIds: [10],
+        currentRoundIndex: 0,
+      });
       const currentDraft: QuizDraft = {
         id: 1,
         title: 'Trivia Night',
@@ -360,7 +401,10 @@ describe('QuizController', () => {
         { joinCode: 'ABCDEF', quizId: 1, status: 'break', teamCount: 2 },
         { joinCode: 'GHIJKL', quizId: 1, status: 'reveal', teamCount: 3 },
       ]);
-      gameState.getOpenedQuestionIds.mockReturnValue([10]);
+      gameState.getLiveEditFrontier.mockReturnValue({
+        openedQuestionIds: [10],
+        currentRoundIndex: 0,
+      });
       const openedQuestion = {
         questionId: 10,
         type: 'multiple_choice' as const,
@@ -394,6 +438,75 @@ describe('QuizController', () => {
 
       expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF', [10]);
       expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('GHIJKL', [10]);
+    });
+
+    it('refuses a save that edits a round the further-on session has reached, accepting one past it', async () => {
+      const { controller, quizService, gameState } = makeController();
+      gameState.listSessions.mockReturnValue([
+        {
+          joinCode: 'AAAAAA',
+          quizId: 1,
+          status: 'question_open',
+          teamCount: 2,
+        },
+        {
+          joinCode: 'BBBBBB',
+          quizId: 1,
+          status: 'question_open',
+          teamCount: 2,
+        },
+      ]);
+      gameState.getLiveEditFrontier.mockImplementation((joinCode: string) => ({
+        openedQuestionIds: [],
+        currentRoundIndex: joinCode === 'AAAAAA' ? 0 : 1,
+      }));
+      const free = (questionId?: number) => ({
+        ...(questionId === undefined ? {} : { questionId }),
+        type: 'free_text' as const,
+        prompt: 'Q',
+        answer: 'A',
+        points: 1,
+      });
+      const roundWith = (title: string, ids: (number | undefined)[]) => ({
+        title,
+        breakAfter: false,
+        questions: ids.map(free),
+      });
+      quizService.findDraftById.mockResolvedValue({
+        id: 1,
+        title: 'Trivia Night',
+        rounds: [
+          roundWith('R0', [1]),
+          roundWith('R1', [2]),
+          roundWith('R2', [3]),
+        ],
+      });
+      quizService.update.mockResolvedValue({
+        quizId: 1,
+        roundCount: 3,
+        questionCount: 4,
+      });
+
+      await expect(
+        controller.update(1, {
+          title: 'Trivia Night',
+          rounds: [
+            roundWith('R0', [1]),
+            roundWith('R1', [2, undefined]),
+            roundWith('R2', [3]),
+          ],
+        }),
+      ).rejects.toThrow(ConflictException);
+      await expect(
+        controller.update(1, {
+          title: 'Trivia Night',
+          rounds: [
+            roundWith('R0', [1]),
+            roundWith('R1', [2]),
+            roundWith('R2', [undefined, 3]),
+          ],
+        }),
+      ).resolves.toBeDefined();
     });
   });
 

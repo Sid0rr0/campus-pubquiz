@@ -722,7 +722,7 @@ describe('QuizEditorPanel', () => {
           ],
         },
       ],
-      liveEdit: { openedQuestionIds: [1] },
+      liveEdit: { openedQuestionIds: [1], currentRoundIndex: 0 },
     });
 
     renderWithQuery(<QuizEditorPanel quizId="5" />);
@@ -750,13 +750,120 @@ describe('QuizEditorPanel', () => {
     ).toBeDisabled();
   });
 
+  describe('while a session is live and has reached the first round', () => {
+    const freeText = (questionId: number) => ({
+      questionId,
+      type: 'free_text' as const,
+      prompt: `Question ${questionId}`,
+      answer: 'A',
+      points: 1,
+    });
+    const liveDraft = (currentRoundIndex: number) => ({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        { title: 'One', breakAfter: false, questions: [freeText(1)] },
+        { title: 'Two', breakAfter: false, questions: [freeText(2)] },
+        { title: 'Three', breakAfter: true, questions: [freeText(3)] },
+      ],
+      liveEdit: { openedQuestionIds: [1], currentRoundIndex },
+    });
+
+    it('keeps add, delete, reorder and move disabled in the current round only', async () => {
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(0));
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      const addButtons = screen.getAllByRole('button', {
+        name: /add question/i,
+      });
+      expect(
+        addButtons.map((button) => button.hasAttribute('disabled')),
+      ).toEqual([true, false, false]);
+      const deleteButtons = screen.getAllByRole('button', {
+        name: /delete question/i,
+      });
+      expect(
+        deleteButtons.map((button) => button.hasAttribute('disabled')),
+      ).toEqual([true, false, false]);
+      const moveSelects = screen.getAllByRole('combobox', {
+        name: /move question to round/i,
+      });
+      expect(
+        moveSelects.map((select) => select.hasAttribute('disabled')),
+      ).toEqual([true, false, false]);
+    });
+
+    it('offers only rounds after the current round as move targets', async () => {
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(0));
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      const [, secondQuestionMove] = screen.getAllByRole('combobox', {
+        name: /move question to round/i,
+      });
+
+      expect(
+        within(secondQuestionMove)
+          .getAllByRole('option')
+          .map((option) => option.textContent),
+      ).toEqual(['Move to…', '3. Three']);
+    });
+
+    it('moves a question to another later round and saves it there', async () => {
+      const user = userEvent.setup();
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(0));
+      mockUpdateQuiz.mockResolvedValue({
+        quizId: 5,
+        roundCount: 3,
+        questionCount: 3,
+      });
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      const [, secondQuestionMove] = screen.getAllByRole('combobox', {
+        name: /move question to round/i,
+      });
+      await user.selectOptions(secondQuestionMove, '3. Three');
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      await waitFor(() => expect(mockUpdateQuiz).toHaveBeenCalled());
+      const saved = mockUpdateQuiz.mock.calls[0][1];
+      expect(
+        saved.rounds.map(
+          (round: { questions: unknown[] }) => round.questions.length,
+        ),
+      ).toEqual([1, 0, 2]);
+      expect(saved.rounds[2].questions[1].questionId).toBe(2);
+    });
+
+    it('freezes every round up to a further-on session’s current round', async () => {
+      mockFetchQuizDraft.mockResolvedValue(liveDraft(1));
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+      await screen.findByDisplayValue('Trivia Night');
+
+      const addButtons = screen.getAllByRole('button', {
+        name: /add question/i,
+      });
+      expect(
+        addButtons.map((button) => button.hasAttribute('disabled')),
+      ).toEqual([true, true, false]);
+      // Round three has no later round to move into, so its question has no mover.
+      const moveSelects = screen.getAllByRole('combobox', {
+        name: /move question to round/i,
+      });
+      expect(moveSelects).toHaveLength(2);
+      for (const select of moveSelects) expect(select).toBeDisabled();
+    });
+  });
+
   it('shows a distinct message and a refresh action for a 409 live-edit conflict', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValueOnce({
       id: 5,
       title: 'Trivia Night',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
-      liveEdit: { openedQuestionIds: [] },
+      liveEdit: { openedQuestionIds: [], currentRoundIndex: 0 },
     });
     mockUpdateQuiz.mockRejectedValue(
       new QuizDraftApiError('Cannot save — 1 change(s) conflict', 409, [
@@ -783,7 +890,7 @@ describe('QuizEditorPanel', () => {
       id: 5,
       title: 'Trivia Night',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
-      liveEdit: { openedQuestionIds: [42] },
+      liveEdit: { openedQuestionIds: [42], currentRoundIndex: 0 },
     });
     await user.click(
       screen.getByRole('button', { name: /refresh lock state/i }),

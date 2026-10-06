@@ -11,6 +11,7 @@ import {
   type AdminQuestionContext,
   type GameAction,
   type LeaderboardEntry,
+  type LiveEditFrontier,
   type PresenterContextPayload,
   type ScoredQuestion,
   type SessionSettings,
@@ -358,13 +359,27 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Ids of the questions that have opened in this session, for good — Previous
-   * stepping back never takes one away. Used to protect those questions
-   * against live editing (`QuizController.update`); everything else stays
-   * editable.
+   * Where this session has got to, for protecting it against live editing
+   * (`QuizController`): the questions that have opened, for good — Previous
+   * stepping back never takes one away — and the current round, which is the
+   * round of the furthest opened question if Previous stepped back before it.
+   * Everything after that stays editable.
    */
-  getOpenedQuestionIds(joinCode: string): number[] {
-    return this.sessionStore.get(joinCode).openedQuestionIds;
+  getLiveEditFrontier(joinCode: string): LiveEditFrontier {
+    const session = this.sessionStore.get(joinCode);
+    const openedIds = new Set(session.openedQuestionIds);
+    // Previous can step back before opened questions, but they keep their
+    // place for good — so the line never falls behind the furthest opened one.
+    const furthestOpenedRoundIndex = session.seededGame.rounds.findLastIndex(
+      (round) => round.questions.some((question) => openedIds.has(question.id)),
+    );
+    return {
+      openedQuestionIds: session.openedQuestionIds,
+      currentRoundIndex: Math.max(
+        session.progress.roundIndex,
+        furthestOpenedRoundIndex,
+      ),
+    };
   }
 
   /** The team whose phone is on `socketId`, or null when that socket isn't a team's. */

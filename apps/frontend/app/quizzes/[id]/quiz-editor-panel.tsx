@@ -12,10 +12,11 @@ import {
   PlusIcon,
   UploadIcon,
 } from '@radix-ui/react-icons';
-import type {
-  ImportPreview,
-  QuizDraftIssue,
-  QuizLiveEditState,
+import {
+  isRoundStructureFrozen,
+  type ImportPreview,
+  type LiveEditFrontier,
+  type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import {
@@ -37,13 +38,17 @@ import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   makeRound,
   mergeRoundsFromPreview,
+  moveQuestionToRound,
   roundFromPreview,
   toSaveRequest,
   withSyncedQuestionIds,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 import { QuizOutline } from '@/app/quizzes/[id]/quiz-outline';
-import { QuizRoundEditor } from '@/app/quizzes/[id]/quiz-round-editor';
+import {
+  QuizRoundEditor,
+  type MoveTargetRound,
+} from '@/app/quizzes/[id]/quiz-round-editor';
 
 interface QuizEditorPanelProps {
   quizId: string;
@@ -74,6 +79,25 @@ function issueLabel(issue: QuizDraftIssue): string {
   const questionLabel =
     issue.questionIndex !== null ? `, Q${issue.questionIndex + 1}` : '';
   return `Round ${issue.roundIndex + 1}${questionLabel} (${issue.field}): ${issue.message}`;
+}
+
+/** The rounds a question in round `fromIndex` may move to: every other round, minus those a live session has reached. */
+function moveTargetRounds(
+  rounds: EditorRound[],
+  fromIndex: number,
+  liveEdit: LiveEditFrontier | undefined,
+): MoveTargetRound[] {
+  return rounds.flatMap((round, index) =>
+    index === fromIndex || (liveEdit && isRoundStructureFrozen(liveEdit, index))
+      ? []
+      : [
+          {
+            id: round.id,
+            label: `${index + 1}. ${round.title.trim() || 'Untitled round'}`,
+            kahootMode: round.kahootMode,
+          },
+        ],
+  );
 }
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
@@ -113,7 +137,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [sheetUrlInput, setSheetUrlInput] = useState('');
   const [appendImport, setAppendImport] = useState(false);
   const [liveEditState, setLiveEditState] = useState<
-    QuizLiveEditState | undefined
+    LiveEditFrontier | undefined
   >(undefined);
 
   // Copies the draft into editable local state exactly once per quizId —
@@ -272,6 +296,15 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       [copy[index], copy[targetIndex]] = [copy[targetIndex], copy[index]];
       return copy;
     });
+  }
+
+  function moveQuestionBetweenRounds(
+    questionId: string,
+    targetRoundId: string,
+  ): void {
+    setRounds((current) =>
+      moveQuestionToRound(current, questionId, targetRoundId),
+    );
   }
 
   function addRound(): void {
@@ -547,8 +580,10 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
           A session is live on this quiz — questions can still be edited, but
           opened ones keep their type and choices, and rounds/questions
-          can&apos;t be added, removed, or reordered. Correcting an opened
-          question&apos;s answer or points re-scores its auto-graded answers.
+          can&apos;t be added, removed, or reordered. Questions can be added,
+          deleted, reordered and moved between rounds after the current round
+          only. Correcting an opened question&apos;s answer or points re-scores
+          its auto-graded answers.
         </p>
       )}
 
@@ -556,6 +591,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {rounds.map((round, index) => {
             const isLast = index === rounds.length - 1;
+            const isStructureFrozen =
+              liveEditState !== undefined &&
+              isRoundStructureFrozen(liveEditState, index);
             return (
               <div key={round.id} className="flex flex-col gap-4">
                 <QuizRoundEditor
@@ -564,6 +602,12 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   isFirst={index === 0}
                   isLast={isLast}
                   isLive={isLive}
+                  isStructureFrozen={isStructureFrozen}
+                  moveTargetRounds={moveTargetRounds(
+                    rounds,
+                    index,
+                    liveEditState,
+                  )}
                   openedQuestionIds={openedQuestionIds}
                   issues={saveIssues.filter(
                     (issue) => issue.roundIndex === index,
@@ -572,6 +616,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   onDelete={() => deleteRound(round.id)}
                   onMoveUp={() => moveRound(round.id, -1)}
                   onMoveDown={() => moveRound(round.id, 1)}
+                  onMoveQuestionToRound={moveQuestionBetweenRounds}
                 />
                 {!isLast &&
                   (round.breakAfter ? (
@@ -604,7 +649,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         </div>
         <QuizOutline
           rounds={rounds}
-          isLive={isLive}
+          liveEdit={liveEditState}
           onReorderRounds={setRounds}
           onReorderQuestions={(roundId, questions) =>
             updateRound(roundId, { questions })

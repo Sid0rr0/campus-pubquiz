@@ -1,4 +1,5 @@
 import type { ImportRoundPreview } from './import';
+import type { LiveEditFrontier } from './live-edit-frontier';
 
 /**
  * Full editable quiz — same round/question shape as `ImportRoundPreview`
@@ -10,13 +11,8 @@ export interface QuizDraft {
   id: number;
   title: string;
   rounds: ImportRoundPreview[];
-  /** Present only when a session is currently live on this quiz — the editor uses it to lock opened questions against editing. Absent when no session is live, matching today's behavior exactly. */
-  liveEdit?: QuizLiveEditState;
-}
-
-export interface QuizLiveEditState {
-  /** `Question.id`s that are opened in a live session — safe to keep editing anything not in this list. */
-  openedQuestionIds: number[];
+  /** Present only when a session is currently live on this quiz — the editor uses it to lock opened questions and the rounds up to the current one against structural edits. Absent when no session is live, matching today's behavior exactly. */
+  liveEdit?: LiveEditFrontier;
 }
 
 /** One validation problem found in a `QuizDraftSaveRequest`. `questionIndex` is null for round-level issues (e.g. a blank round title). */

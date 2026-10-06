@@ -36,8 +36,10 @@ interface QuizQuestionEditorProps {
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  /** A session is live on this quiz — reordering/deleting any question is disabled regardless of lock state. */
-  isLive: boolean;
+  /** The question's round can't change structurally (a live session has reached it) — reordering, deleting and moving it are disabled. */
+  isStructureFrozen: boolean;
+  /** Rounds this question could move to, already narrowed to those it may enter — the mover is hidden when empty. */
+  moveTargets: MoveTarget[];
   /** This specific question is opened in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
   isOpened: boolean;
   /** The question's round is in kahoot mode, so the type picker offers only the kahoot-allowed types (Scoring's list). */
@@ -48,6 +50,12 @@ interface QuizQuestionEditorProps {
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onMoveToRound: (roundId: string) => void;
+}
+
+export interface MoveTarget {
+  roundId: string;
+  label: string;
 }
 
 /** Fields rendered with their own inline `FieldErrors` below — anything else lands in the catch-all at the bottom of the card so an issue never goes unseen. */
@@ -95,7 +103,8 @@ export function QuizQuestionEditor({
   index,
   isFirst,
   isLast,
-  isLive,
+  isStructureFrozen,
+  moveTargets,
   isOpened,
   isKahootRound,
   issues,
@@ -103,6 +112,7 @@ export function QuizQuestionEditor({
   onDelete,
   onMoveUp,
   onMoveDown,
+  onMoveToRound,
 }: QuizQuestionEditorProps) {
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
@@ -251,7 +261,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onMoveUp}
-          disabled={isFirst || isLive}
+          disabled={isFirst || isStructureFrozen}
           variant="icon"
           size="icon-sm"
           aria-label="Move question up"
@@ -262,7 +272,7 @@ export function QuizQuestionEditor({
         <Button
           type="button"
           onClick={onMoveDown}
-          disabled={isLast || isLive}
+          disabled={isLast || isStructureFrozen}
           variant="icon"
           size="icon-sm"
           aria-label="Move question down"
@@ -270,10 +280,28 @@ export function QuizQuestionEditor({
         >
           <ArrowDownIcon aria-hidden="true" />
         </Button>
+        {moveTargets.length > 0 && (
+          <select
+            value=""
+            onChange={(event) => onMoveToRound(event.target.value)}
+            disabled={isStructureFrozen}
+            aria-label="Move question to round"
+            className="mt-1 h-8 max-w-32 rounded-lg border-2 border-foreground/15 px-2 text-xs font-bold text-foreground disabled:opacity-50"
+          >
+            <option value="" disabled>
+              Move to…
+            </option>
+            {moveTargets.map((target) => (
+              <option key={target.roundId} value={target.roundId}>
+                {target.label}
+              </option>
+            ))}
+          </select>
+        )}
         <Button
           type="button"
           onClick={onDelete}
-          disabled={isLive}
+          disabled={isStructureFrozen}
           variant="icon-danger"
           size="icon-sm"
           aria-label="Delete question"

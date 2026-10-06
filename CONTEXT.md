@@ -25,6 +25,9 @@ _Avoid_: closing, last call
 A question the big screen has shown in a session, remembered for the rest of that session even if Previous steps back before it. It keeps its place in the quiz, its type and its choices. Unopened questions can still be added, moved and deleted while the quiz is running, as long as their block hasn't started locking.
 _Avoid_: shown question, locked question (locked means no longer accepting answers)
 
+**Live-edit frontier**:
+Where the live sessions on a quiz have got to — their opened questions and the current round of the furthest-on one. Nothing at or before it can change structurally; questions in rounds after it can be added, reordered, moved between those rounds and deleted.
+
 **Question type**:
 What a question asks teams to do (free text, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
 _Avoid_: question kind, question format

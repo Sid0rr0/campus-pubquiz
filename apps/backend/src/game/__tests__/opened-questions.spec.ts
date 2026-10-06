@@ -34,9 +34,10 @@ describe('GameGateway — opened questions', () => {
   });
 
   const openedIds = (target: RealStoreGateway = game): number[] =>
-    [...target.gameState.getOpenedQuestionIds(REAL_STORE_JOIN_CODE)].sort(
-      (a, b) => a - b,
-    );
+    [
+      ...target.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
+        .openedQuestionIds,
+    ].sort((a, b) => a - b);
 
   async function openBlockTwoFirstQuestion(): Promise<void> {
     for (const action of [
@@ -80,6 +81,27 @@ describe('GameGateway — opened questions', () => {
     expect(reveal.progress.status).toBe('reveal_intro');
 
     expect(openedIds()).toEqual([idA, idB]);
+  });
+
+  it("reports the session's current round in its live-edit frontier", async () => {
+    await openBlockTwoFirstQuestion();
+
+    expect(
+      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
+        .currentRoundIndex,
+    ).toBe(1);
+  });
+
+  it('keeps the frontier at the furthest opened round after Previous steps back', async () => {
+    await openBlockTwoFirstQuestion();
+    await game.act('PREVIOUS'); // -> round_intro(B)
+    await game.act('PREVIOUS'); // -> round_intro(B), first screen
+    await game.act('PREVIOUS'); // -> block 1's reveal
+
+    expect(
+      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
+        .currentRoundIndex,
+    ).toBe(1);
   });
 
   it('has the same opened questions after a backend restart', async () => {

@@ -1,4 +1,8 @@
-import type { ImportRoundPreview } from '@campus-pubquiz/types';
+import type {
+  ImportQuestionPreview,
+  ImportRoundPreview,
+  LiveEditFrontier,
+} from '@campus-pubquiz/types';
 import {
   findLiveEditViolations,
   findRegradeQuestionIds,
@@ -30,17 +34,45 @@ function round(
   };
 }
 
+function frontier(
+  openedQuestionIds: number[] = [],
+  currentRoundIndex = 0,
+): LiveEditFrontier {
+  return { openedQuestionIds, currentRoundIndex };
+}
+
+function question(
+  questionId: number | undefined,
+  overrides: Partial<ImportQuestionPreview> = {},
+): ImportQuestionPreview {
+  return {
+    ...(questionId === undefined ? {} : { questionId }),
+    type: 'free_text',
+    prompt: `Q${questionId ?? 'new'}`,
+    answer: 'A',
+    points: 1,
+    ...overrides,
+  };
+}
+
+function roundOf(
+  title: string,
+  questions: ImportQuestionPreview[],
+): ImportRoundPreview {
+  return { title, breakAfter: false, questions };
+}
+
 describe('findLiveEditViolations', () => {
   it('returns no issues when nothing changed', () => {
     const rounds = [round()];
-    expect(findLiveEditViolations(rounds, rounds, [])).toEqual([]);
+    expect(findLiveEditViolations(rounds, rounds, frontier())).toEqual([]);
   });
 
   it('rejects adding or removing a round', () => {
     const current = [round()];
     const incoming = [round(), round({ title: 'Round 2' })];
 
-    const issues = findLiveEditViolations(current, incoming, []);
+    const issues = findLiveEditViolations(current, incoming, frontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -55,7 +87,7 @@ describe('findLiveEditViolations', () => {
     const current = [round(), round({ title: 'Round 2' })];
     const incoming = [round({ breakAfter: true }), round({ title: 'Round 2' })];
 
-    const issues = findLiveEditViolations(current, incoming, []);
+    const issues = findLiveEditViolations(current, incoming, frontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -70,14 +102,14 @@ describe('findLiveEditViolations', () => {
     const current = [round({ breakAfter: true })];
     const incoming = [round({ breakAfter: false })];
 
-    expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
+    expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
   });
 
   it("rejects changing a round's kahootMode", () => {
     const current = [round()];
     const incoming = [round({ kahootMode: true })];
 
-    const issues = findLiveEditViolations(current, incoming, []);
+    const issues = findLiveEditViolations(current, incoming, frontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -92,7 +124,7 @@ describe('findLiveEditViolations', () => {
     const current = [round({ kahootMode: false })];
     const incoming = [round({ kahootMode: undefined })];
 
-    expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
+    expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
   });
 
   it('rejects adding or removing a question within a round', () => {
@@ -111,7 +143,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, []);
+    const issues = findLiveEditViolations(current, incoming, frontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -145,7 +177,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, []);
+    const issues = findLiveEditViolations(current, incoming, frontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -178,7 +210,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, []);
+    const issues = findLiveEditViolations(current, incoming, frontier());
 
     expect(issues).toEqual([
       expect.objectContaining({
@@ -212,7 +244,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
+    expect(findLiveEditViolations(current, incoming, frontier())).toEqual([]);
   });
 
   it('allows fixing the prompt, answer, points, notes and media of an opened question', () => {
@@ -241,7 +273,9 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    expect(findLiveEditViolations(current, incoming, [1])).toEqual([]);
+    expect(findLiveEditViolations(current, incoming, frontier([1]))).toEqual(
+      [],
+    );
   });
 
   it('rejects changing the type or choices of an opened question', () => {
@@ -276,7 +310,7 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    const issues = findLiveEditViolations(current, incoming, [1]);
+    const issues = findLiveEditViolations(current, incoming, frontier([1]));
 
     expect(issues.map((issue) => issue.field)).toEqual([
       'type',
@@ -311,7 +345,168 @@ describe('findLiveEditViolations', () => {
       }),
     ];
 
-    expect(findLiveEditViolations(current, incoming, [1])).toEqual([]);
+    expect(findLiveEditViolations(current, incoming, frontier([1]))).toEqual(
+      [],
+    );
+  });
+});
+
+describe('findLiveEditViolations — questions in rounds after the current round', () => {
+  const current = () => [
+    roundOf('R0', [question(1), question(2)]),
+    roundOf('R1', [question(3), question(4)]),
+    roundOf('R2', [question(5), question(6)]),
+  ];
+
+  type Case = {
+    name: string;
+    currentRoundIndex: number;
+    incoming: ImportRoundPreview[];
+    violatingRounds: number[];
+  };
+
+  const cases: Case[] = [
+    {
+      name: 'adds a question to a later round',
+      currentRoundIndex: 0,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4), question(undefined)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'reorders questions in a later round',
+      currentRoundIndex: 0,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(4), question(3)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'deletes a question from a later round',
+      currentRoundIndex: 0,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'moves a question between two later rounds',
+      currentRoundIndex: 0,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3)]),
+        roundOf('R2', [question(4), question(5), question(6)]),
+      ],
+      violatingRounds: [],
+    },
+    {
+      name: 'adds a question to the current round',
+      currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4), question(undefined)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'deletes a question from an earlier round',
+      currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1)]),
+        roundOf('R1', [question(3), question(4)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [0],
+    },
+    {
+      name: 'reorders questions in the current round',
+      currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(4), question(3)]),
+        roundOf('R2', [question(5), question(6)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'moves a question from a later round into the current round',
+      currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4), question(5)]),
+        roundOf('R2', [question(6)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'moves a question out of the current round into a later one',
+      currentRoundIndex: 1,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3)]),
+        roundOf('R2', [question(4), question(5), question(6)]),
+      ],
+      violatingRounds: [1],
+    },
+    {
+      name: 'edits a round another session has already reached since the editor loaded',
+      currentRoundIndex: 2,
+      incoming: [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4)]),
+        roundOf('R2', [question(6), question(5)]),
+      ],
+      violatingRounds: [2],
+    },
+  ];
+
+  it.each(cases)(
+    '$name',
+    ({ currentRoundIndex, incoming, violatingRounds }) => {
+      const issues = findLiveEditViolations(
+        current(),
+        incoming,
+        frontier([1, 2], currentRoundIndex),
+      );
+
+      expect([...new Set(issues.map((issue) => issue.roundIndex))]).toEqual(
+        violatingRounds,
+      );
+    },
+  );
+
+  it('names the conflict when a round was reached since the editor loaded', () => {
+    const issues = findLiveEditViolations(
+      current(),
+      [
+        roundOf('R0', [question(1), question(2)]),
+        roundOf('R1', [question(3), question(4)]),
+        roundOf('R2', [question(5)]),
+      ],
+      frontier([1, 2], 2),
+    );
+
+    expect(issues[0].message).toMatch(/reached/i);
+  });
+
+  it('lets an opened question keep being fixed in place beside a later-round edit', () => {
+    const incoming = [
+      roundOf('R0', [question(1, { prompt: 'Fixed' }), question(2)]),
+      roundOf('R1', [question(4), question(3)]),
+      roundOf('R2', [question(5), question(6)]),
+    ];
+
+    expect(
+      findLiveEditViolations(current(), incoming, frontier([1, 2], 0)),
+    ).toEqual([]);
   });
 });
 

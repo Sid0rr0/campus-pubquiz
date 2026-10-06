@@ -294,6 +294,33 @@ export function questionToPreview(
   };
 }
 
+/** Moves a question to the end of another round — the draft's way of changing which round a question plays in. Returns `rounds` itself when there is nothing to move. */
+export function moveQuestionToRound(
+  rounds: EditorRound[],
+  questionId: string,
+  targetRoundId: string,
+): EditorRound[] {
+  const source = rounds.find((round) =>
+    round.questions.some((question) => question.id === questionId),
+  );
+  const target = rounds.find((round) => round.id === targetRoundId);
+  if (!source || !target || source.id === target.id) return rounds;
+
+  const question = source.questions.find((q) => q.id === questionId)!;
+  return rounds.map((round) => {
+    if (round.id === source.id) {
+      return {
+        ...round,
+        questions: round.questions.filter((q) => q.id !== questionId),
+      };
+    }
+    if (round.id === target.id) {
+      return { ...round, questions: [...round.questions, question] };
+    }
+    return round;
+  });
+}
+
 /**
  * Backfills server-assigned `dbId`s onto whichever questions were brand-new
  * as of the last save, matching `freshRounds` (the draft as reloaded right

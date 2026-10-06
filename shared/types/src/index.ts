@@ -6,6 +6,7 @@ export * from './import';
 export * from './auth';
 export * from './team';
 export * from './quiz-draft';
+export * from './live-edit-frontier';
 export * from './youtube';
 export * from './sort-match';
 export * from './media';

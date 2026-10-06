@@ -16,6 +16,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
+import {
+  isRoundStructureFrozen,
+  type LiveEditFrontier,
+} from '@campus-pubquiz/types';
 import { reorderById } from '@/app/lib/reorder-list';
 import type {
   EditorQuestion,
@@ -26,8 +30,8 @@ import { roundAnchorId } from '@/app/quizzes/[id]/quiz-round-editor';
 
 interface QuizOutlineProps {
   rounds: EditorRound[];
-  /** A session is live on this quiz — dragging is disabled, matching the round/question editors above. */
-  isLive: boolean;
+  /** Present while a session is live on this quiz — round dragging is disabled, and so is question dragging in rounds it has reached, matching the round/question editors. */
+  liveEdit?: LiveEditFrontier;
   onReorderRounds: (rounds: EditorRound[]) => void;
   onReorderQuestions: (roundId: string, questions: EditorQuestion[]) => void;
 }
@@ -54,16 +58,16 @@ function useOutlineSensors() {
 interface OutlineQuestionRowProps {
   question: EditorQuestion;
   index: number;
-  isLive: boolean;
+  isFrozen: boolean;
 }
 
 function OutlineQuestionRow({
   question,
   index,
-  isLive,
+  isFrozen,
 }: OutlineQuestionRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: question.id, disabled: isLive });
+    useSortable({ id: question.id, disabled: isFrozen });
 
   function handleJumpToQuestion(): void {
     document
@@ -81,7 +85,7 @@ function OutlineQuestionRow({
         type="button"
         aria-label={`Drag to reorder question ${index + 1}, ${questionPreview(question.prompt)}`}
         className="flex h-5 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/30 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
-        disabled={isLive}
+        disabled={isFrozen}
         {...attributes}
         {...listeners}
       >
@@ -105,7 +109,10 @@ interface OutlineRoundRowProps {
   index: number;
   /** The state machine has no way to reveal answers otherwise, so the last round always breaks regardless of its own breakAfter — see quiz-draft-state.ts's toSaveRequest and QuizRoundEditor, which show the same forced state. */
   isLast: boolean;
+  /** A session is live — the round itself can't be dragged. */
   isLive: boolean;
+  /** A live session has reached this round — its questions can't be dragged. */
+  isQuestionOrderFrozen: boolean;
   onReorderQuestions: (roundId: string, questions: EditorQuestion[]) => void;
 }
 
@@ -114,6 +121,7 @@ function OutlineRoundRow({
   index,
   isLast,
   isLive,
+  isQuestionOrderFrozen,
   onReorderQuestions,
 }: OutlineRoundRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -180,7 +188,7 @@ function OutlineRoundRow({
                   key={question.id}
                   question={question}
                   index={questionIndex}
-                  isLive={isLive}
+                  isFrozen={isQuestionOrderFrozen}
                 />
               ))}
             </ol>
@@ -207,7 +215,7 @@ function OutlineRoundRow({
  */
 export function QuizOutline({
   rounds,
-  isLive,
+  liveEdit,
   onReorderRounds,
   onReorderQuestions,
 }: QuizOutlineProps) {
@@ -245,7 +253,11 @@ export function QuizOutline({
                   round={round}
                   index={index}
                   isLast={index === rounds.length - 1}
-                  isLive={isLive}
+                  isLive={liveEdit !== undefined}
+                  isQuestionOrderFrozen={
+                    liveEdit !== undefined &&
+                    isRoundStructureFrozen(liveEdit, index)
+                  }
                   onReorderQuestions={onReorderQuestions}
                 />
               ))}

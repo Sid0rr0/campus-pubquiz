@@ -14,12 +14,14 @@ import {
   UnprocessableEntityException,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  GameStatus,
-  QuizDraft,
-  QuizDraftSaveRequest,
-  QuizDraftSaveResult,
-  QuizzesListedPayload,
+import {
+  mergeLiveEditFrontiers,
+  type GameStatus,
+  type LiveEditFrontier,
+  type QuizDraft,
+  type QuizDraftSaveRequest,
+  type QuizDraftSaveResult,
+  type QuizzesListedPayload,
 } from '@campus-pubquiz/types';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
@@ -70,7 +72,7 @@ export class QuizController {
     if (liveJoinCodes.length === 0) return draft;
     return {
       ...draft,
-      liveEdit: { openedQuestionIds: this.getOpenedQuestionIds(liveJoinCodes) },
+      liveEdit: this.getLiveEditFrontier(liveJoinCodes),
     };
   }
 
@@ -140,11 +142,11 @@ export class QuizController {
     const currentDraft = await this.quizService.findDraftById(quizId);
     if (!currentDraft) return []; // quizService.update below reports the 404
 
-    const openedQuestionIds = this.getOpenedQuestionIds(liveJoinCodes);
+    const frontier = this.getLiveEditFrontier(liveJoinCodes);
     const issues = findLiveEditViolations(
       currentDraft.rounds,
       body.rounds,
-      openedQuestionIds,
+      frontier,
     );
     if (issues.length > 0) {
       throw new QuizLiveEditBlockedError(issues);
@@ -152,7 +154,7 @@ export class QuizController {
     return findRegradeQuestionIds(
       currentDraft.rounds,
       body.rounds,
-      openedQuestionIds,
+      frontier.openedQuestionIds,
     );
   }
 
@@ -168,15 +170,13 @@ export class QuizController {
       .map((session) => session.joinCode);
   }
 
-  /** Union of opened question ids across every live session on the quiz — a question opened in any one of them stays opened in the shared draft. */
-  private getOpenedQuestionIds(liveJoinCodes: string[]): number[] {
-    const ids = new Set<number>();
-    for (const joinCode of liveJoinCodes) {
-      for (const id of this.gameState.getOpenedQuestionIds(joinCode)) {
-        ids.add(id);
-      }
-    }
-    return [...ids];
+  /** The live sessions' frontiers merged — a question opened in any one stays opened in the shared draft, and the line is the furthest-on session's current round. */
+  private getLiveEditFrontier(liveJoinCodes: string[]): LiveEditFrontier {
+    return mergeLiveEditFrontiers(
+      liveJoinCodes.map((joinCode) =>
+        this.gameState.getLiveEditFrontier(joinCode),
+      ),
+    );
   }
 
   private toHttpError(error: unknown): Error {

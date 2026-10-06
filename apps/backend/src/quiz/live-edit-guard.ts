@@ -1,7 +1,9 @@
-import type {
-  ImportQuestionPreview,
-  ImportRoundPreview,
-  QuizDraftIssue,
+import {
+  isRoundStructureFrozen,
+  type ImportQuestionPreview,
+  type ImportRoundPreview,
+  type LiveEditFrontier,
+  type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 
 /** Thrown by `QuizController.update` when a save would violate `findLiveEditViolations` — mapped to 409 Conflict, distinct from `QuizDraftInvalidError`'s 422 for malformed payloads. */
@@ -50,23 +52,27 @@ function diffQuestionFields(
 
 /**
  * Diffs a quiz draft about to be saved against its currently-persisted
- * rounds while a session is live on this quiz. Fix-in-place only: any
- * structural change (adding/removing/reordering rounds or questions, or changing a round's breakAfter/kahootMode) is
- * rejected outright, regardless of opened state — game progress is positional,
- * so a shift would move the game onto a different question. A question in
- * `openedQuestionIds` (opened) can still have its
- * prompt/answer/points/notes/media fixed, but not its type or choices (see
- * OPENED_QUESTION_FIELDS); an upcoming question can be edited freely. Returns the existing `QuizDraftIssue[]` shape so the editor's
- * existing issue-rendering UI needs no changes; empty when the incoming
- * draft is safe to save as-is.
+ * rounds while a session is live on this quiz. Game progress is positional,
+ * so nothing at or before the frontier may shift: rounds can't be added or
+ * removed, a round's breakAfter/kahootMode can't change, and a round up to
+ * the frontier's current round keeps exactly its questions in their order
+ * (see isRoundStructureFrozen). Rounds after it can have questions added,
+ * deleted, reordered and moved between them — that's why a save made after
+ * a session reached an edited round is refused here too, naming the round.
+ * A question in the frontier's `openedQuestionIds` (opened) can still have
+ * its prompt/answer/points/notes/media fixed, but not its type or choices
+ * (see OPENED_QUESTION_FIELDS); an upcoming question can be edited freely.
+ * Returns the existing `QuizDraftIssue[]` shape so the editor's existing
+ * issue-rendering UI needs no changes; empty when the incoming draft is safe
+ * to save as-is.
  */
 export function findLiveEditViolations(
   currentRounds: ImportRoundPreview[],
   incomingRounds: ImportRoundPreview[],
-  openedQuestionIds: readonly number[],
+  frontier: LiveEditFrontier,
 ): QuizDraftIssue[] {
   const issues: QuizDraftIssue[] = [];
-  const openedIds = new Set(openedQuestionIds);
+  const openedIds = new Set(frontier.openedQuestionIds);
 
   if (currentRounds.length !== incomingRounds.length) {
     issues.push({
@@ -106,13 +112,17 @@ export function findLiveEditViolations(
       });
     }
 
+    // Rounds after the frontier are free to restructure; the opened-question
+    // checks below only matter where opened questions can be.
+    if (!isRoundStructureFrozen(frontier, roundIndex)) continue;
+
     if (currentRound.questions.length !== incomingRound.questions.length) {
       issues.push({
         roundIndex,
         questionIndex: null,
         field: 'questions',
         message:
-          'Cannot add or remove questions in this round while a session is live',
+          'Cannot add or remove questions in this round — a live session has already reached it',
       });
     }
 
@@ -134,7 +144,7 @@ export function findLiveEditViolations(
           questionIndex,
           field: 'questionId',
           message:
-            'Cannot reorder or replace questions while a session is live',
+            'Cannot reorder or replace questions in this round — a live session has already reached it',
         });
         continue;
       }
