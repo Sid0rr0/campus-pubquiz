@@ -9,6 +9,7 @@ import {
   type RevealQuestionView,
   type UpcomingQuestionPosition,
   isAnsweringStatus,
+  isBatchGradedType,
   isBlockStartedStatus,
   isQuestionOnAirStatus,
   isRevealingStatus,
@@ -33,7 +34,7 @@ function toRevealQuestionViews(
 ): BlockRevealQuestionView[] {
   return entries.map(({ question, questionIndexInRound }) => ({
     ...question,
-    ...(question.type === 'closest_guess'
+    ...(isBatchGradedType(question.type)
       ? {
           closestGuess: session.closestGuessSummaries[question.id] ?? {
             hasSubmissions: false,

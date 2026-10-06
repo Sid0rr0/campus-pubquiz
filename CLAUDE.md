@@ -8,6 +8,7 @@ This file holds only the commands, constraints and conventions future work must 
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | What does a domain term mean (block, break, break review, question type…)? | [`GLOSSARY.md`](GLOSSARY.md)                                     |
 | How does it work: statuses, protocol, question types, CSV, auth, deploy?   | [`DOCUMENTATION.md`](DOCUMENTATION.md)                           |
+| What rules must code follow?                                               | [`CODING_STANDARDS.md`](CODING_STANDARDS.md)                     |
 | Why was a hard-to-reverse decision made?                                   | [`docs/adr/`](docs/adr/)                                         |
 | How does a moderator run a quiz night?                                     | The in-app `/guide` page (`apps/frontend/app/guide/`)            |
 | How do I set the repo up?                                                  | [`README.md`](README.md)                                         |
@@ -18,20 +19,14 @@ This file holds only the commands, constraints and conventions future work must 
 pnpm workspace, run from repo root unless noted:
 
 - `pnpm dev` — all workspaces in parallel; `pnpm dev:backend` / `pnpm dev:frontend` for just one
-- `pnpm build` / `pnpm lint` / `pnpm test` — run across all workspaces
+- `pnpm build` / `pnpm lint` / `pnpm typecheck` / `pnpm test` — run across all workspaces; the pre-commit hook and CI both run `typecheck`
 - Backend (`apps/backend`) uses **Jest**: `pnpm --filter backend test <path>` to run a single spec, not the whole suite
 - Frontend (`apps/frontend`) uses **Vitest**: `pnpm --filter frontend test <path>` to run a single spec
 - `pnpm --filter backend db:migrate` applies pending MikroORM migrations locally (Postgres must be running — see `docker-compose.yml`); `db:migrate:create` generates one after an entity change
 
 ## Constraints
 
-- **The backend owns game state.** Only admin actions (`ADVANCE`, `PREVIOUS`, …) move it. Clients render what they're sent and never work out game logic themselves — each room (`display`, `admin`, `players`) gets its own server-built view, and anything teams mustn't see yet is removed server-side, never filtered by the client.
-- **Reconnection is a core feature.** Any client that reconnects receives the full current view for its role. Phones sleep and venue networks drop; build and test the resync path with every change that touches state.
-- **Quiz structure is data.** Breaks come from each round's `breakAfter`, and the rules screen's structure sentence is computed from the quiz's rounds — never hardcode a loop or a sentence.
-- **The leaderboard is a flag, not a status** (`isLeaderboardVisible`), so hiding it resumes exactly where the quiz was.
-- **Question types are defined once**, in the question type registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`). Grading mode, overridability and kahoot eligibility come from there; don't compare against type literals elsewhere.
-- **Validate everything at the boundary.** Imported rows and saved drafts go through the per-type Zod schema; stored JSON payloads are parsed, never cast. A bad row must fail at import, not live on stage.
-- **Never trust uploads.** Media type is sniffed from magic bytes and storage keys are server-generated UUIDs. Media providers sit behind the `MediaStorage` interface.
+- **Code follows [`CODING_STANDARDS.md`](CODING_STANDARDS.md).** Read it before writing or reviewing code: server-owned game state, the reconnect path, the question type registry, boundary validation.
 - **Hosting:** both apps deploy together with Postgres. **Do not deploy the backend to Vercel** — serverless and Socket.IO are incompatible. One backend instance only: no horizontal scaling, no Redis adapter; at pub-quiz scale that's intentional.
 
 ## Known Tradeoffs (Accepted)

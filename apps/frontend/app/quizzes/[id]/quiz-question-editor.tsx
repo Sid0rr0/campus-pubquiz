@@ -127,9 +127,9 @@ export function QuizQuestionEditor({
   const isTypedAnswer = !isMc || !hasEditorChoices(question);
   const isSort = inputKind === 'sort';
   const isMatch = inputKind === 'match';
+  const hasClipNotes = 'clipNotes' in QUESTION_KINDS[question.type];
   const isYoutubeMedia =
-    question.type === 'youtube' ||
-    extractYoutubeVideoId(question.mediaUrl) !== undefined;
+    hasClipNotes || extractYoutubeVideoId(question.mediaUrl) !== undefined;
   const { freeNotes, clipStart, clipEnd } = isYoutubeMedia
     ? clipNotes.read(question.notes)
     : { freeNotes: question.notes, clipStart: '', clipEnd: '' };
@@ -567,9 +567,7 @@ export function QuizQuestionEditor({
             isRequired={needsMediaUrl}
             value={question.mediaUrl}
             onChange={(mediaUrl) => onChange({ mediaUrl })}
-            placeholder={
-              question.type === 'youtube' ? 'https://youtu.be/…' : 'https://…'
-            }
+            placeholder={hasClipNotes ? 'https://youtu.be/…' : 'https://…'}
           />
           <FieldErrors issues={fieldIssues(issues, 'mediaUrl')} />
         </div>

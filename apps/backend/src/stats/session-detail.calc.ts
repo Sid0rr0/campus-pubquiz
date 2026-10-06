@@ -1,4 +1,5 @@
 import {
+  answerInputKind,
   BONUS_CATEGORIES,
   type BonusCategory,
   type QuestionType,
@@ -315,7 +316,7 @@ export function computeSessionDetail(
         answeredCount: questionAnswers.length,
         correctCount: questionAnswers.filter(isCorrect).length,
         correctRate:
-          question.type === 'match'
+          answerInputKind(question.type) === 'match'
             ? achievableQuestionPoints > 0
               ? questionAnswers.reduce((sum, a) => sum + a.pointsAwarded, 0) /
                 achievableQuestionPoints

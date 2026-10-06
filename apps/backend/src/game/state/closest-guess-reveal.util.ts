@@ -1,6 +1,7 @@
 import {
   getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
+  isBatchGradedType,
   type AnswerView,
   type ClosestGuessRevealData,
   type GameAction,
@@ -57,7 +58,7 @@ function getRevealStepCount(
   question: RevealQuestionView | undefined,
   session: SessionState,
 ): number {
-  if (!question || question.type !== 'closest_guess') return 1;
+  if (!question || !isBatchGradedType(question.type)) return 1;
   const summary = session.closestGuessSummaries[question.id];
   return summary?.hasSubmissions ? 5 : 1;
 }
