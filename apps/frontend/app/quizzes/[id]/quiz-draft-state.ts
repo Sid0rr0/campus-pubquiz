@@ -42,7 +42,7 @@ export interface EditorQuestion {
   correctText: string;
   mediaUrl: string;
   answerMediaUrl: string;
-  /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an already-shown question). */
+  /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an opened question). */
   savedDisplayOrder?: string[];
 }
 

@@ -481,13 +481,13 @@ editor's disabled controls:
   reordered. Game progress is positional (`roundIndex`/`questionIndex`), so a
   shift would move the game onto a different question, and deleting a
   question cascades to its teams' answers.
-- **Already-shown questions keep their type and choices** (`type`, `options`,
+- **Opened questions keep their type and choices** (`type`, `options`,
   `matchTargets`) — that's what teams answered against, and auto-grading is
   exact-match, so e.g. fixing an option's spelling would zero every team that
   picked it. Their prompt, answer, points, notes, and media stay editable.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
-If a shown question's `answer` or `points` changed, its existing answers are
+If an opened question's `answer` or `points` changed, its existing answers are
 re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
 (`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot

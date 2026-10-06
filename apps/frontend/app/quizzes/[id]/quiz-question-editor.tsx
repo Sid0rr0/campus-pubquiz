@@ -38,8 +38,8 @@ interface QuizQuestionEditorProps {
   isLast: boolean;
   /** A session is live on this quiz — reordering/deleting any question is disabled regardless of lock state. */
   isLive: boolean;
-  /** This specific question is already shown/in progress in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
-  isLocked: boolean;
+  /** This specific question is opened in a live session — its type and choices (what teams answered against) are disabled; prompt/answer/points/media/notes stay editable (see live-edit-guard.ts). */
+  isOpened: boolean;
   /** The question's round is in kahoot mode, so the type picker offers only the kahoot-allowed types (Scoring's list). */
   isKahootRound: boolean;
   /** Validation issues from the last rejected save that apply to this question, shown next to the field each one names. */
@@ -96,7 +96,7 @@ export function QuizQuestionEditor({
   isFirst,
   isLast,
   isLive,
-  isLocked,
+  isOpened,
   isKahootRound,
   issues,
   onChange,
@@ -284,10 +284,10 @@ export function QuizQuestionEditor({
       </div>
       <FieldErrors issues={fieldIssues(issues, 'prompt')} />
 
-      {isLocked && (
+      {isOpened && (
         <p className="text-xs font-extrabold text-magenta">
-          Already shown — its type and choices are fixed; changing the answer or
-          points re-scores auto-graded answers
+          Opened — its type and choices are fixed; changing the answer or points
+          re-scores auto-graded answers
         </p>
       )}
 
@@ -298,7 +298,7 @@ export function QuizQuestionEditor({
               key={option.value}
               type="button"
               onClick={() => onChange({ type: option.value })}
-              disabled={isLocked}
+              disabled={isOpened}
               className={typeButtonClass(question.type === option.value)}
             >
               {option.label}
@@ -346,7 +346,7 @@ export function QuizQuestionEditor({
                     onChange={(event) =>
                       updateOption(optionIndex, event.target.value)
                     }
-                    disabled={isLocked}
+                    disabled={isOpened}
                     placeholder="Option text"
                     aria-invalid={isDuplicate}
                     className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50 ${
@@ -356,7 +356,7 @@ export function QuizQuestionEditor({
                   <Button
                     type="button"
                     onClick={() => removeOption(optionIndex)}
-                    disabled={isLocked || question.options.length <= 2}
+                    disabled={isOpened || question.options.length <= 2}
                     variant="icon-danger"
                     size="icon-sm"
                     aria-label={`Remove option ${optionIndex + 1}`}
@@ -376,7 +376,7 @@ export function QuizQuestionEditor({
             <Button
               type="button"
               onClick={addOption}
-              disabled={isLocked}
+              disabled={isOpened}
               variant="outline-dashed"
               size="xs"
               className="self-start"
@@ -401,7 +401,7 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateSortItem(itemIndex, event.target.value)
                 }
-                disabled={isLocked}
+                disabled={isOpened}
                 placeholder="Item text"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
@@ -428,7 +428,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => removeSortItem(itemIndex)}
-                disabled={isLocked || question.sortItems.length <= 2}
+                disabled={isOpened || question.sortItems.length <= 2}
                 variant="icon-danger"
                 size="icon-sm"
                 aria-label={`Remove item ${itemIndex + 1}`}
@@ -442,7 +442,7 @@ export function QuizQuestionEditor({
           <Button
             type="button"
             onClick={addSortItem}
-            disabled={isLocked}
+            disabled={isOpened}
             variant="outline-dashed"
             size="xs"
             className="self-start"
@@ -463,7 +463,7 @@ export function QuizQuestionEditor({
                 onChange={(event) =>
                   updateMatchPair(pairIndex, 'left', event.target.value)
                 }
-                disabled={isLocked}
+                disabled={isOpened}
                 placeholder="Left item"
                 className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
               />
@@ -481,7 +481,7 @@ export function QuizQuestionEditor({
               <Button
                 type="button"
                 onClick={() => removeMatchPair(pairIndex)}
-                disabled={isLocked || question.matchPairs.length <= 2}
+                disabled={isOpened || question.matchPairs.length <= 2}
                 variant="icon-danger"
                 size="icon-sm"
                 aria-label={`Remove pair ${pairIndex + 1}`}
@@ -493,7 +493,7 @@ export function QuizQuestionEditor({
           <Button
             type="button"
             onClick={addMatchPair}
-            disabled={isLocked}
+            disabled={isOpened}
             variant="outline-dashed"
             size="xs"
             className="self-start"
@@ -510,7 +510,7 @@ export function QuizQuestionEditor({
                   matchScoringMode: event.target.value as MatchScoringMode,
                 })
               }
-              disabled={isLocked}
+              disabled={isOpened}
               className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             >
               <option value="partial">

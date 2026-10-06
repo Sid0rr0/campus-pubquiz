@@ -702,7 +702,7 @@ describe('QuizEditorPanel', () => {
     expect(promptErrors.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('keeps an already-shown question fixable while locking its type, choices and the quiz structure', async () => {
+  it('keeps an opened question fixable while locking its type, choices and the quiz structure', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
@@ -722,7 +722,7 @@ describe('QuizEditorPanel', () => {
           ],
         },
       ],
-      liveEdit: { lockedQuestionIds: [1] },
+      liveEdit: { openedQuestionIds: [1] },
     });
 
     renderWithQuery(<QuizEditorPanel quizId="5" />);
@@ -730,7 +730,7 @@ describe('QuizEditorPanel', () => {
     expect(
       await screen.findByText(/a session is live on this quiz/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/already shown/i)).toBeInTheDocument();
+    expect(screen.getByText(/^opened — its type/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/question prompt/i)).toBeEnabled();
     expect(screen.getByLabelText(/points/i)).toBeEnabled();
     expect(
@@ -756,7 +756,7 @@ describe('QuizEditorPanel', () => {
       id: 5,
       title: 'Trivia Night',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
-      liveEdit: { lockedQuestionIds: [] },
+      liveEdit: { openedQuestionIds: [] },
     });
     mockUpdateQuiz.mockRejectedValue(
       new QuizDraftApiError('Cannot save — 1 change(s) conflict', 409, [
@@ -764,7 +764,7 @@ describe('QuizEditorPanel', () => {
           roundIndex: 0,
           questionIndex: 0,
           field: 'prompt',
-          message: 'Cannot edit this question — it has already been shown',
+          message: 'Cannot edit this question — it has been opened',
         },
       ]),
     );
@@ -783,7 +783,7 @@ describe('QuizEditorPanel', () => {
       id: 5,
       title: 'Trivia Night',
       rounds: [{ title: 'History', breakAfter: true, questions: [] }],
-      liveEdit: { lockedQuestionIds: [42] },
+      liveEdit: { openedQuestionIds: [42] },
     });
     await user.click(
       screen.getByRole('button', { name: /refresh lock state/i }),

@@ -189,7 +189,7 @@ describe('findLiveEditViolations', () => {
     ]);
   });
 
-  it('allows editing an unlocked question freely', () => {
+  it('allows editing an unopened question freely', () => {
     const current = [round()];
     const incoming = [
       round({
@@ -215,7 +215,7 @@ describe('findLiveEditViolations', () => {
     expect(findLiveEditViolations(current, incoming, [])).toEqual([]);
   });
 
-  it('allows fixing the prompt, answer, points, notes and media of a locked question', () => {
+  it('allows fixing the prompt, answer, points, notes and media of an opened question', () => {
     const current = [round()];
     const incoming = [
       round({
@@ -244,7 +244,7 @@ describe('findLiveEditViolations', () => {
     expect(findLiveEditViolations(current, incoming, [1])).toEqual([]);
   });
 
-  it('rejects changing the type or choices of a locked question', () => {
+  it('rejects changing the type or choices of an opened question', () => {
     const current = [
       round({
         questions: [
@@ -288,7 +288,7 @@ describe('findLiveEditViolations', () => {
     );
   });
 
-  it('allows editing a question that is unlocked here even if it would be locked elsewhere', () => {
+  it('allows editing a question that is unopened here even if it would be opened elsewhere', () => {
     const current = [round()];
     const incoming = [
       round({
@@ -328,7 +328,7 @@ describe('findRegradeQuestionIds', () => {
     ];
   }
 
-  it('returns a locked question whose answer changed', () => {
+  it('returns an opened question whose answer changed', () => {
     expect(
       findRegradeQuestionIds(
         [round()],
@@ -338,13 +338,13 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([1]);
   });
 
-  it('returns a locked question whose points changed', () => {
+  it('returns an opened question whose points changed', () => {
     expect(
       findRegradeQuestionIds([round()], withFirstQuestion({ points: 3 }), [1]),
     ).toEqual([1]);
   });
 
-  it('returns a locked question whose matchScoringMode changed', () => {
+  it('returns an opened question whose matchScoringMode changed', () => {
     expect(
       findRegradeQuestionIds(
         [round()],
@@ -354,7 +354,7 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([1]);
   });
 
-  it('ignores a locked question whose grading inputs are unchanged', () => {
+  it('ignores an opened question whose grading inputs are unchanged', () => {
     expect(
       findRegradeQuestionIds(
         [round()],
@@ -364,7 +364,7 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([]);
   });
 
-  it('ignores an unlocked question even if its answer changed', () => {
+  it('ignores an unopened question even if its answer changed', () => {
     expect(
       findRegradeQuestionIds([round()], withFirstQuestion({ answer: 'B' }), []),
     ).toEqual([]);

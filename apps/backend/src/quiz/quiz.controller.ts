@@ -70,7 +70,7 @@ export class QuizController {
     if (liveJoinCodes.length === 0) return draft;
     return {
       ...draft,
-      liveEdit: { lockedQuestionIds: this.getLockedQuestionIds(liveJoinCodes) },
+      liveEdit: { openedQuestionIds: this.getOpenedQuestionIds(liveJoinCodes) },
     };
   }
 
@@ -128,7 +128,7 @@ export class QuizController {
 
   /**
    * Rejects a save that would break a live session (see
-   * findLiveEditViolations), otherwise returns the already-shown questions
+   * findLiveEditViolations), otherwise returns the opened questions
    * whose answer/points changed — each live session re-grades those after
    * the save lands.
    */
@@ -140,11 +140,11 @@ export class QuizController {
     const currentDraft = await this.quizService.findDraftById(quizId);
     if (!currentDraft) return []; // quizService.update below reports the 404
 
-    const lockedQuestionIds = this.getLockedQuestionIds(liveJoinCodes);
+    const openedQuestionIds = this.getOpenedQuestionIds(liveJoinCodes);
     const issues = findLiveEditViolations(
       currentDraft.rounds,
       body.rounds,
-      lockedQuestionIds,
+      openedQuestionIds,
     );
     if (issues.length > 0) {
       throw new QuizLiveEditBlockedError(issues);
@@ -152,7 +152,7 @@ export class QuizController {
     return findRegradeQuestionIds(
       currentDraft.rounds,
       body.rounds,
-      lockedQuestionIds,
+      openedQuestionIds,
     );
   }
 
@@ -168,13 +168,11 @@ export class QuizController {
       .map((session) => session.joinCode);
   }
 
-  /** Union of already-shown/in-progress question ids across every live session on the quiz — a question locked in any one of them stays locked in the shared draft. */
-  private getLockedQuestionIds(liveJoinCodes: string[]): number[] {
+  /** Union of opened question ids across every live session on the quiz — a question opened in any one of them stays opened in the shared draft. */
+  private getOpenedQuestionIds(liveJoinCodes: string[]): number[] {
     const ids = new Set<number>();
     for (const joinCode of liveJoinCodes) {
-      for (const id of this.gameState.getShownOrInProgressQuestionIds(
-        joinCode,
-      )) {
+      for (const id of this.gameState.getOpenedQuestionIds(joinCode)) {
         ids.add(id);
       }
     }

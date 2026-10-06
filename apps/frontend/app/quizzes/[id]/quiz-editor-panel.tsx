@@ -52,7 +52,7 @@ interface QuizEditorPanelProps {
 type Phase = 'empty' | 'editor';
 
 const EMPTY_ISSUES: QuizDraftIssue[] = [];
-const EMPTY_LOCKED_QUESTION_IDS: ReadonlySet<number> = new Set();
+const EMPTY_OPENED_QUESTION_IDS: ReadonlySet<number> = new Set();
 const SAVED_FLASH_MS = 1600;
 const CSV_MIME_TYPE = 'text/csv;charset=utf-8';
 const LIVE_EDIT_CONFLICT_MESSAGE =
@@ -151,9 +151,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   }
 
   const isLive = liveEditState !== undefined;
-  const lockedQuestionIds = liveEditState
-    ? new Set(liveEditState.lockedQuestionIds)
-    : EMPTY_LOCKED_QUESTION_IDS;
+  const openedQuestionIds = liveEditState
+    ? new Set(liveEditState.openedQuestionIds)
+    : EMPTY_OPENED_QUESTION_IDS;
 
   const refreshLockStateMutation = useMutation({
     mutationFn: () => fetchQuizDraft(numericQuizId as number),
@@ -546,8 +546,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
       {isLive && (
         <p className="bg-cyan/20 px-5 py-3 text-xs font-extrabold text-foreground">
           A session is live on this quiz — questions can still be edited, but
-          already-shown ones keep their type and choices, and rounds/questions
-          can&apos;t be added, removed, or reordered. Correcting a shown
+          opened ones keep their type and choices, and rounds/questions
+          can&apos;t be added, removed, or reordered. Correcting an opened
           question&apos;s answer or points re-scores its auto-graded answers.
         </p>
       )}
@@ -564,7 +564,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   isFirst={index === 0}
                   isLast={isLast}
                   isLive={isLive}
-                  lockedQuestionIds={lockedQuestionIds}
+                  openedQuestionIds={openedQuestionIds}
                   issues={saveIssues.filter(
                     (issue) => issue.roundIndex === index,
                   )}

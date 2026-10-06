@@ -362,13 +362,13 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Question ids already shown or currently in progress in this session —
-   * every past block's questions plus the current block's furthest-opened
-   * position, the exact "already shown" boundary `BlockGradingService`
-   * already relies on. Used to lock those questions against live editing
-   * (`QuizController.update`); everything strictly ahead stays editable.
+   * Ids of the opened questions in this session — every past block's
+   * questions plus the current block's furthest-opened position, the exact
+   * boundary `BlockGradingService` already relies on. Used to protect those
+   * questions against live editing (`QuizController.update`); everything
+   * strictly ahead stays editable.
    */
-  getShownOrInProgressQuestionIds(joinCode: string): number[] {
+  getOpenedQuestionIds(joinCode: string): number[] {
     const session = this.sessionStore.get(joinCode);
     return [
       ...getPastRevealedQuestions(session),

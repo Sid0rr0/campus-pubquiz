@@ -224,7 +224,7 @@ export class AnswerService {
   /**
    * Re-scores every existing answer to an auto-graded question (see
    * Scoring's AUTO_GRADED_TYPES) against the corrected `question` — used
-   * after a live edit to an already-shown question. Deliberately overwrites
+   * after a live edit to an opened question. Deliberately overwrites
    * any manual override (e.g. adjusted match partial credit): the key it was
    * judged against just changed, and the admin can override again in break.
    * `kahootTimerSeconds` is the session's configured kahoot question timer
@@ -262,7 +262,7 @@ export class AnswerService {
   /**
    * Re-grades every existing answer to a match-or-human question (see
    * Scoring's MATCH_OR_HUMAN_TYPES) against the corrected `question`, after a
-   * live edit to an already-shown question. An answer matching the corrected
+   * live edit to an opened question. An answer matching the corrected
    * key is graded correct. A non-matching one keeps the moderator's grade,
    * and goes back to ungraded only if it was graded automatically — told
    * apart by re-running the submit-time grade against `previous`, the

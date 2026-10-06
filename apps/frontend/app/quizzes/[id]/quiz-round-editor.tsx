@@ -32,8 +32,8 @@ interface QuizRoundEditorProps {
   isLast: boolean;
   /** A session is live on this quiz — round/question add/delete/reorder controls are disabled entirely. */
   isLive: boolean;
-  /** `dbId`s of questions already shown/in progress in a live session. */
-  lockedQuestionIds: ReadonlySet<number>;
+  /** `dbId`s of questions opened in a live session. */
+  openedQuestionIds: ReadonlySet<number>;
   /** Validation issues from the last rejected save that apply to this round (round-level and per-question). */
   issues: QuizDraftIssue[];
   onChange: (patch: Partial<EditorRound>) => void;
@@ -61,7 +61,7 @@ export function QuizRoundEditor({
   isFirst,
   isLast,
   isLive,
-  lockedQuestionIds,
+  openedQuestionIds,
   issues,
   onChange,
   onDelete,
@@ -263,9 +263,9 @@ export function QuizRoundEditor({
             isLast={index === round.questions.length - 1}
             isLive={isLive}
             isKahootRound={round.kahootMode}
-            isLocked={
+            isOpened={
               question.dbId !== undefined &&
-              lockedQuestionIds.has(question.dbId)
+              openedQuestionIds.has(question.dbId)
             }
             issues={issues.filter((issue) => issue.questionIndex === index)}
             onChange={(patch) => updateQuestion(question.id, patch)}

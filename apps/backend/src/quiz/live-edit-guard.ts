@@ -14,14 +14,14 @@ export class QuizLiveEditBlockedError extends Error {
   }
 }
 
-/** What teams already answered against — changing any of these on a shown question would make existing submissions meaningless (e.g. an MC option typo fix would zero every team that picked it, since grading is exact-match). */
-const LOCKED_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
+/** What teams already answered against — changing any of these on an opened question would make existing submissions meaningless (e.g. an MC option typo fix would zero every team that picked it, since grading is exact-match). */
+const OPENED_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'type',
   'options',
   'matchTargets',
 ];
 
-/** Inputs to auto-grading — a change on a shown question means existing answers need re-scoring. */
+/** Inputs to auto-grading — a change on an opened question means existing answers need re-scoring. */
 const GRADING_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'answer',
   'points',
@@ -52,21 +52,21 @@ function diffQuestionFields(
  * Diffs a quiz draft about to be saved against its currently-persisted
  * rounds while a session is live on this quiz. Fix-in-place only: any
  * structural change (adding/removing/reordering rounds or questions, or changing a round's breakAfter/kahootMode) is
- * rejected outright, regardless of lock state — game progress is positional,
+ * rejected outright, regardless of opened state — game progress is positional,
  * so a shift would move the game onto a different question. A question in
- * `lockedQuestionIds` (already shown or in progress) can still have its
+ * `openedQuestionIds` (opened) can still have its
  * prompt/answer/points/notes/media fixed, but not its type or choices (see
- * LOCKED_QUESTION_FIELDS); an upcoming question can be edited freely. Returns the existing `QuizDraftIssue[]` shape so the editor's
+ * OPENED_QUESTION_FIELDS); an upcoming question can be edited freely. Returns the existing `QuizDraftIssue[]` shape so the editor's
  * existing issue-rendering UI needs no changes; empty when the incoming
  * draft is safe to save as-is.
  */
 export function findLiveEditViolations(
   currentRounds: ImportRoundPreview[],
   incomingRounds: ImportRoundPreview[],
-  lockedQuestionIds: readonly number[],
+  openedQuestionIds: readonly number[],
 ): QuizDraftIssue[] {
   const issues: QuizDraftIssue[] = [];
-  const lockedIds = new Set(lockedQuestionIds);
+  const openedIds = new Set(openedQuestionIds);
 
   if (currentRounds.length !== incomingRounds.length) {
     issues.push({
@@ -141,19 +141,19 @@ export function findLiveEditViolations(
 
       if (
         currentQuestion.questionId !== undefined &&
-        lockedIds.has(currentQuestion.questionId)
+        openedIds.has(currentQuestion.questionId)
       ) {
         for (const field of diffQuestionFields(
           currentQuestion,
           incomingQuestion,
-          LOCKED_QUESTION_FIELDS,
+          OPENED_QUESTION_FIELDS,
         )) {
           issues.push({
             roundIndex,
             questionIndex,
             field,
             message:
-              "Cannot change this question's type or choices — teams have already answered it",
+              "Cannot change this question's type or choices — it is an opened question that teams may have answered",
           });
         }
       }
@@ -164,7 +164,7 @@ export function findLiveEditViolations(
 }
 
 /**
- * Ids of locked (already shown/in-progress) questions whose answer or points
+ * Ids of opened questions whose answer or points
  * differ between the persisted and incoming drafts — their existing answers
  * need re-grading once the save lands. Pairs questions by position, which is
  * only meaningful once findLiveEditViolations has confirmed the structure is
@@ -173,9 +173,9 @@ export function findLiveEditViolations(
 export function findRegradeQuestionIds(
   currentRounds: ImportRoundPreview[],
   incomingRounds: ImportRoundPreview[],
-  lockedQuestionIds: readonly number[],
+  openedQuestionIds: readonly number[],
 ): number[] {
-  const lockedIds = new Set(lockedQuestionIds);
+  const openedIds = new Set(openedQuestionIds);
   return currentRounds.flatMap((currentRound, roundIndex) =>
     currentRound.questions.flatMap((currentQuestion, questionIndex) => {
       const incomingQuestion =
@@ -183,7 +183,7 @@ export function findRegradeQuestionIds(
       const { questionId } = currentQuestion;
       const needsRegrade =
         questionId !== undefined &&
-        lockedIds.has(questionId) &&
+        openedIds.has(questionId) &&
         incomingQuestion?.questionId === questionId &&
         diffQuestionFields(
           currentQuestion,

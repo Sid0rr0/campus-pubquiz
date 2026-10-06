@@ -4,10 +4,14 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The live-edit state the editor receives names the field `openedQuestionIds`, and no `lockedQuestionIds` is left in backend, frontend or shared types.
-- [ ] The game state service's query for a session's already-shown questions is named for opened questions.
-- [ ] Guard messages and editor hints say "opened", not "locked" or "shown".
-- [ ] The live-edit guard spec, quiz controller spec and quiz editor panel tests pass unchanged apart from the renames.
-- [ ] DOCUMENTATION.md's "Editing a live quiz" section uses "opened question".
+- [x] The live-edit state the editor receives names the field `openedQuestionIds`, and no `lockedQuestionIds` is left in backend, frontend or shared types.
+- [x] The game state service's query for a session's already-shown questions is named for opened questions.
+- [x] Guard messages and editor hints say "opened", not "locked" or "shown".
+- [x] The live-edit guard spec, quiz controller spec and quiz editor panel tests pass unchanged apart from the renames.
+- [x] DOCUMENTATION.md's "Editing a live quiz" section uses "opened question".
+
+## Comments
+
+Done in the commit `refactor(backend,frontend,shared-types): rename locked to opened in the live-edit path` (hash in git history).

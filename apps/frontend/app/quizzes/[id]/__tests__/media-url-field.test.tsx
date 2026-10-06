@@ -128,7 +128,7 @@ describe('MediaUrlField', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('disables typing and uploading while the question is locked', () => {
+  it('disables typing and uploading while the question is opened in a live session', () => {
     renderField({ disabled: true });
 
     expect(screen.getByLabelText('Media URL')).toBeDisabled();

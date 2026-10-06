@@ -26,7 +26,7 @@ function makeController() {
   const gameState = {
     getActiveQuizId: jest.fn().mockReturnValue(1),
     listSessions: jest.fn().mockReturnValue([]),
-    getShownOrInProgressQuestionIds: jest.fn().mockReturnValue([]),
+    getOpenedQuestionIds: jest.fn().mockReturnValue([]),
   };
   const gameGateway = {
     notifyQuizEdited: jest.fn().mockResolvedValue(undefined),
@@ -110,7 +110,7 @@ describe('QuizController', () => {
       await expect(controller.findById(999)).rejects.toThrow(NotFoundException);
     });
 
-    it('attaches lockedQuestionIds when a session is live on this quiz', async () => {
+    it('attaches openedQuestionIds when a session is live on this quiz', async () => {
       const { controller, quizService, gameState } = makeController();
       const draft: QuizDraft = { id: 1, title: 'Trivia Night', rounds: [] };
       quizService.findDraftById.mockResolvedValue(draft);
@@ -122,11 +122,11 @@ describe('QuizController', () => {
           teamCount: 2,
         },
       ]);
-      gameState.getShownOrInProgressQuestionIds.mockReturnValue([5, 6]);
+      gameState.getOpenedQuestionIds.mockReturnValue([5, 6]);
 
       await expect(controller.findById(1)).resolves.toEqual({
         ...draft,
-        liveEdit: { lockedQuestionIds: [5, 6] },
+        liveEdit: { openedQuestionIds: [5, 6] },
       });
     });
 
@@ -210,7 +210,7 @@ describe('QuizController', () => {
       expect(gameGateway.notifyQuizEdited).not.toHaveBeenCalled();
     });
 
-    it("rejects a save that changes a locked question's type with 409, without persisting", async () => {
+    it("rejects a save that changes an opened question's type with 409, without persisting", async () => {
       const { controller, quizService, gameState, gameGateway } =
         makeController();
       gameState.listSessions.mockReturnValue([
@@ -221,7 +221,7 @@ describe('QuizController', () => {
           teamCount: 2,
         },
       ]);
-      gameState.getShownOrInProgressQuestionIds.mockReturnValue([10]);
+      gameState.getOpenedQuestionIds.mockReturnValue([10]);
       quizService.findDraftById.mockResolvedValue({
         id: 1,
         title: 'Trivia Night',
@@ -277,7 +277,7 @@ describe('QuizController', () => {
       expect(gameGateway.notifyQuizEdited).not.toHaveBeenCalled();
     });
 
-    it('saves and notifies every live session when editing an unlocked question', async () => {
+    it('saves and notifies every live session when editing an unopened question', async () => {
       const { controller, quizService, gameState, gameGateway } =
         makeController();
       gameState.listSessions.mockReturnValue([
@@ -288,7 +288,7 @@ describe('QuizController', () => {
           teamCount: 2,
         },
       ]);
-      gameState.getShownOrInProgressQuestionIds.mockReturnValue([10]);
+      gameState.getOpenedQuestionIds.mockReturnValue([10]);
       const currentDraft: QuizDraft = {
         id: 1,
         title: 'Trivia Night',
@@ -353,15 +353,15 @@ describe('QuizController', () => {
       expect(gameGateway.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF', []);
     });
 
-    it('saves a corrected answer on a locked question and asks each live session to regrade it', async () => {
+    it('saves a corrected answer on an opened question and asks each live session to regrade it', async () => {
       const { controller, quizService, gameState, gameGateway } =
         makeController();
       gameState.listSessions.mockReturnValue([
         { joinCode: 'ABCDEF', quizId: 1, status: 'break', teamCount: 2 },
         { joinCode: 'GHIJKL', quizId: 1, status: 'reveal', teamCount: 3 },
       ]);
-      gameState.getShownOrInProgressQuestionIds.mockReturnValue([10]);
-      const lockedQuestion = {
+      gameState.getOpenedQuestionIds.mockReturnValue([10]);
+      const openedQuestion = {
         questionId: 10,
         type: 'multiple_choice' as const,
         prompt: 'Capital of France?',
@@ -373,7 +373,7 @@ describe('QuizController', () => {
         id: 1,
         title: 'Trivia Night',
         rounds: [
-          { title: 'Round 1', breakAfter: true, questions: [lockedQuestion] },
+          { title: 'Round 1', breakAfter: true, questions: [openedQuestion] },
         ],
       });
       const result = { quizId: 1, roundCount: 1, questionCount: 1 };
@@ -386,7 +386,7 @@ describe('QuizController', () => {
             {
               title: 'Round 1',
               breakAfter: true,
-              questions: [{ ...lockedQuestion, answer: 'Paris' }],
+              questions: [{ ...openedQuestion, answer: 'Paris' }],
             },
           ],
         }),
