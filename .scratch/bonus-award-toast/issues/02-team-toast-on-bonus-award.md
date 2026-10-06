@@ -4,14 +4,20 @@
 
 **Blocked by:** 01 (Signed bonus points everywhere)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A live award notice with positive points raises one success toast naming the category and signed points (player hook test with the fake socket, tested first)
-- [ ] A custom award's toast includes the reason
-- [ ] A penalty raises a plain (not success) toast showing negative points
-- [ ] "point"/"points" is pluralised by value
-- [ ] Award toasts use an ~8-second duration
-- [ ] Awards restored on join or rejoin raise no toast
-- [ ] The award still lands in the bonus drawer as before
-- [ ] Checked in the browser (frontend :8888) that the toast doesn't cover `/play`'s bottom actions bar; adjusted only if it does
-- [ ] `DOCUMENTATION.md`: the bonus points step says the awarded team's phone shows a toast for a new award (not for edits, deletions or awards restored on rejoin)
+- [x] A live award notice with positive points raises one success toast naming the category and signed points (player hook test with the fake socket, tested first)
+- [x] A custom award's toast includes the reason
+- [x] A penalty raises a plain (not success) toast showing negative points
+- [x] "point"/"points" is pluralised by value
+- [x] Award toasts use an ~8-second duration
+- [x] Awards restored on join or rejoin raise no toast
+- [x] The award still lands in the bonus drawer as before
+- [x] Checked in the browser (frontend :8888) that the toast doesn't cover `/play`'s bottom actions bar; adjusted only if it does
+- [x] `DOCUMENTATION.md`: the bonus points step says the awarded team's phone shows a toast for a new award (not for edits, deletions or awards restored on rejoin)
+
+## Comments
+
+Implemented in the commit "feat(frontend): toast a team's phone when it gets a bonus award". The award toast is built by `formatBonusAwardToast` (next to `formatSignedPoints`) and raised in the `BONUS_AWARDED` handler of `usePlayerGame`. Positive awards get `toast.success` with a 🎉 prefix, penalties a plain `toast`, both 8 seconds.
+
+Browser check: I couldn't reach an in-game `/play` (no running session or team to join), so I checked the geometry instead. Sonner's phone offset is 16px from the bottom with a very high z-index, and the mobile actions bar is about 70px tall, so a toast would have covered it. The global Toaster now sets `mobileOffset={{ bottom: '5.5rem' }}`. I did not see the toast in a live browser, so it's worth a look on a real session.

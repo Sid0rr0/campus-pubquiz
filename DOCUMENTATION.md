@@ -325,7 +325,11 @@ itself — the display and other players just see counts.
    [Question Types](#question-types).
 5. **Bonus points** — separately from per-question grading, the admin can
    award ad-hoc bonus points (`AWARD_BONUS`; categories like `shot`, `selfie`,
-   `custom`) to a team at any time, also folded into the leaderboard.
+   `custom`) to a team at any time, also folded into the leaderboard. The
+   awarded team's phone shows a toast for a new award (category, signed points
+   and, for `custom`, the reason; about 8 seconds, success-styled for a bonus,
+   plain for a penalty) — not for edits, deletions or awards restored on
+   rejoin, which only appear in the bonus drawer.
 6. **Leaderboard** — recomputed from graded points plus bonus awards after
    every change and broadcast to all rooms; shown whenever the admin toggles
    it.

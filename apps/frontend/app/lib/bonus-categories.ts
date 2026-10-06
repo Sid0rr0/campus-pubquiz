@@ -1,6 +1,7 @@
 import type {
   BonusCategory,
   QuizStructureSummary,
+  TeamBonusAwardView,
 } from '@campus-pubquiz/types';
 
 /** Display label per bonus category — shared by the admin award form, session settings, and the /play bonus drawer. */
@@ -15,6 +16,14 @@ const MINUS_SIGN = '−';
 /** Bonus points with an explicit sign — "+1", "−1" (a real minus sign), "+0.5". Used wherever a bonus award is shown, so the drawer and the toasts never disagree. */
 export function formatSignedPoints(points: number): string {
   return points < 0 ? `${MINUS_SIGN}${Math.abs(points)}` : `+${points}`;
+}
+
+/** The team-facing toast line for a freshly given award, e.g. "+1 point — Selfie" or "−1 point — Custom: phone use". "point" is singular only for exactly ±1. */
+export function formatBonusAwardToast(award: TeamBonusAwardView): string {
+  const unit = Math.abs(award.points) === 1 ? 'point' : 'points';
+  const label = BONUS_CATEGORY_LABELS[award.category];
+  const category = award.reason ? `${label}: ${award.reason}` : label;
+  return `${formatSignedPoints(award.points)} ${unit} — ${category}`;
 }
 
 /**

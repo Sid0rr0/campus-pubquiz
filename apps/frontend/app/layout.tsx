@@ -46,6 +46,8 @@ export default function RootLayout({
         </Providers>
         <Toaster
           position="bottom-right"
+          // Phones: sit above /play's fixed bottom actions bar (~70px tall) instead of covering it.
+          mobileOffset={{ bottom: '5.5rem' }}
           richColors
           toastOptions={{ classNames: { toast: 'font-bold' } }}
           style={

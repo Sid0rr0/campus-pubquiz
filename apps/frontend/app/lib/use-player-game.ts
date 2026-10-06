@@ -27,10 +27,14 @@ import {
   type TeamBonusAwardView,
   type Verdict,
 } from '@campus-pubquiz/types';
+import { formatBonusAwardToast } from '@/app/lib/bonus-categories';
 import {
   NOT_CONNECTED_MESSAGE,
   useGameConnection,
 } from '@/app/lib/use-game-connection';
+
+/** Award toasts outlast the default so a team passing the phone around still sees them. */
+const BONUS_AWARD_TOAST_DURATION_MS = 8000;
 
 /** How long a submitted answer may go unacknowledged before the socket is treated as silently dead — e.g. a network switch or a phone waking from sleep, where socket.io can still believe it's connected until its ~45s ping timeout. */
 export const SUBMIT_CONFIRM_TIMEOUT_MS = 5000;
@@ -295,6 +299,11 @@ export function usePlayerGame(
 
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload: BonusAwardedPayload) => {
         setMyBonusAwards((current) => [...current, payload]);
+        // Only a live award notice toasts; awards restored on join never come through here.
+        const message = formatBonusAwardToast(payload);
+        const options = { duration: BONUS_AWARD_TOAST_DURATION_MS };
+        if (payload.points > 0) toast.success(`🎉 ${message}`, options);
+        else toast(message, options);
       });
 
       socket.on(

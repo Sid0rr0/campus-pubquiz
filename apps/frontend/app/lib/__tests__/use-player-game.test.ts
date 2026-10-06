@@ -14,13 +14,22 @@ import {
   type FakeSocket,
 } from '@/app/lib/__tests__/fake-socket';
 
-const { mockIo, mockToastError } = vi.hoisted(() => ({
-  mockIo: vi.fn(),
-  mockToastError: vi.fn(),
-}));
+const { mockIo, mockToastError, mockToastSuccess, mockToast } = vi.hoisted(
+  () => ({
+    mockIo: vi.fn(),
+    mockToastError: vi.fn(),
+    mockToastSuccess: vi.fn(),
+    mockToast: vi.fn(),
+  }),
+);
 
 vi.mock('socket.io-client', () => ({ io: mockIo }));
-vi.mock('sonner', () => ({ toast: { error: mockToastError } }));
+vi.mock('sonner', () => ({
+  toast: Object.assign(mockToast, {
+    error: mockToastError,
+    success: mockToastSuccess,
+  }),
+}));
 
 function latestSocket(): FakeSocket {
   return mockIo.mock.results[mockIo.mock.results.length - 1]?.value;
@@ -76,6 +85,8 @@ describe('usePlayerGame', () => {
     mockIo.mockReset();
     mockIo.mockImplementation(() => createFakeSocket());
     mockToastError.mockReset();
+    mockToastSuccess.mockReset();
+    mockToast.mockReset();
   });
 
   afterEach(() => {
@@ -275,6 +286,97 @@ describe('usePlayerGame', () => {
       expect(hook.result.current.team).toBeNull();
       expect(hook.result.current.myAnswers).toEqual({});
       expect(hook.result.current.isTeamLinked).toBe(false);
+    });
+  });
+
+  describe('bonus award toasts', () => {
+    const AWARD_TOAST_DURATION_MS = 8000;
+
+    function award(
+      socket: FakeSocket,
+      payload: { category: string; points: number; reason?: string },
+    ) {
+      act(() =>
+        socket.trigger(SOCKET_EVENTS.BONUS_AWARDED, { id: 9, ...payload }),
+      );
+    }
+
+    it('raises one success toast naming the category and signed points for a live award', () => {
+      const { socket } = renderLinkedPlayer();
+
+      award(socket, { category: 'selfie', points: 1 });
+
+      expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        '🎉 +1 point — Selfie',
+        expect.objectContaining({ duration: AWARD_TOAST_DURATION_MS }),
+      );
+      expect(mockToast).not.toHaveBeenCalled();
+    });
+
+    it('includes the reason on a custom award and pluralises points by value', () => {
+      const { socket } = renderLinkedPlayer();
+
+      award(socket, {
+        category: 'custom',
+        points: 2,
+        reason: 'Best team name',
+      });
+
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        '🎉 +2 points — Custom: Best team name',
+        expect.anything(),
+      );
+    });
+
+    it('shows a half-point award as "+0.5 points"', () => {
+      const { socket } = renderLinkedPlayer();
+
+      award(socket, { category: 'shot', points: 0.5 });
+
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        '🎉 +0.5 points — Shot',
+        expect.anything(),
+      );
+    });
+
+    it('raises a plain, non-success toast for a penalty', () => {
+      const { socket } = renderLinkedPlayer();
+
+      award(socket, { category: 'custom', points: -1, reason: 'phone use' });
+
+      expect(mockToast).toHaveBeenCalledWith(
+        '−1 point — Custom: phone use',
+        expect.objectContaining({ duration: AWARD_TOAST_DURATION_MS }),
+      );
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it('toasts each of two awards that arrive together', () => {
+      const { socket } = renderLinkedPlayer();
+
+      award(socket, { category: 'shot', points: 1 });
+      award(socket, { category: 'selfie', points: 1 });
+
+      expect(mockToastSuccess).toHaveBeenCalledTimes(2);
+    });
+
+    it('raises no toast for awards restored on join, yet keeps them for the drawer', () => {
+      const { result } = renderLinkedPlayer();
+
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+      expect(mockToast).not.toHaveBeenCalled();
+      expect(result.current.myBonusAwards).toEqual(
+        JOIN_ACCEPTED_PAYLOAD.bonusAwards,
+      );
+    });
+
+    it('still lands a live award in the bonus drawer list', () => {
+      const { result, socket } = renderLinkedPlayer();
+
+      award(socket, { category: 'selfie', points: 1 });
+
+      expect(result.current.myBonusAwards).toHaveLength(2);
     });
   });
 
