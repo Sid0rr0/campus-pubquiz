@@ -57,6 +57,15 @@ A screen showing a round's name before its content: the round intro before its q
 **Phone screen**:
 The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries the question the big screen is revealing. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
 
+## Bonuses
+
+**Bonus award**:
+Points the quiz master gives a team outside question grading, under one bonus category. The points can be negative, as a penalty. "Bonus points" means the points a bonus award carries.
+_Avoid_: bonus (on its own), extra points
+
+**Bonus category**:
+What a bonus award was given for: shot, selfie, or custom. A custom award carries a reason the quiz master writes.
+
 ## Feedback
 
 **Feedback**:
