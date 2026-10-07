@@ -12,7 +12,7 @@ The rules every change to this repo follows. Implementers write to them; `/code-
 ## Quiz data
 
 - **Quiz structure is data.** Breaks come from each round's `breakAfter`, and the rules screen's structure sentence is computed from the quiz's rounds. Both are derived at runtime from the quiz.
-- **Question types are defined once**, in the question type registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`). Grading mode, overridability, kahoot eligibility, input kind and the rest are read from the entry or a `scoring.ts` helper (`isBatchGradedType`, `answerInputKind`, …). When behaviour differs by type and no field covers it, add a field to `QuestionKind`. **(lint)** bans `.type === '<literal>'` and `case '<literal>':` on `.type` outside tests.
+- **Question types are defined once**, in the question type registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`). Grading mode, overridability, kahoot eligibility, input kind and the rest are read from the entry or a `scoring.ts` helper (`isBatchGradedType`, `answerInputKind`, …). When behaviour differs by type and no field covers it, add a field to `QuestionKind`. **(lint)** bans `.type === '<literal>'` and `case '<literal>':` on `.type` outside tests. Behaviour that differs by how a question is answered goes in the answer format (`ANSWER_FORMATS`, `shared/types/src/answer-kind.ts`) or a surface's answer-kind map, never in a branch on sort, match or choices; get the kind from `resolveAnswerKind`.
 
 ## Boundaries
 

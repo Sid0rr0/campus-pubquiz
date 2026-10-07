@@ -31,3 +31,4 @@ export * from './question-csv-codec';
 export * from './question-preview-schema';
 export * from './question-kind';
 export * from './question-payload-schema';
+export * from './answer-kind';

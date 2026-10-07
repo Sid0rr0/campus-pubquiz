@@ -503,7 +503,19 @@ alone. `closest_guess` is auto-graded
 but deferred to a single batch pass once the block locks, and is the one type
 that can't be overridden. Which list each type is in (auto-graded,
 overridable, kahoot-allowed) is defined once per type in the question type
-registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`). Any type can
+registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`).
+
+Every question also has one **answer kind** — `text`, `number`, `choice`,
+`sort` or `match` — resolved by `resolveAnswerKind`
+(`shared/types/src/answer-kind.ts`). A type whose choices are `required`
+(`multiple_choice`) is always `choice`. A type whose choices are `optional`
+(`audio`, `youtube`) is `choice` once the question carries at least one choice
+with text, and otherwise its registry input kind (`text`); a question whose
+choices are all blank is `text`. Every other type takes its registry input
+kind. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
+encodes, formats and scores a stored answer, and Scoring takes its base score
+from it; `closest_guess` (`number`) has no per-answer score and is graded in
+one batch. Any type can
 carry `media_url`/`answer_media_url` — image vs. audio vs. YouTube is inferred
 from the URL, so there is deliberately no dedicated `picture` type.
 

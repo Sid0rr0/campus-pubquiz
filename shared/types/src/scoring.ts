@@ -1,7 +1,17 @@
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
+import {
+  ANSWER_FORMATS,
+  matchesKey,
+  resolveAnswerKind,
+  type ScoreResult,
+  type Verdict,
+} from './answer-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import type { MatchScoringMode } from './question-views';
-import { splitPipeList } from './sort-match';
+import { halfPoints, nearestHalfPoint } from './score-math';
+
+export { halfPoints, nearestHalfPoint };
+export type { ScoreResult, Verdict };
 
 /**
  * The Scoring module: every question type's scoring rule, pure (no I/O) so
@@ -10,8 +20,6 @@ import { splitPipeList } from './sort-match';
  * scoring option only touches this file and the question's own schema.
  */
 
-export type Verdict = 'correct' | 'partial' | 'incorrect';
-
 /** The slice of a question scoring needs — RevealQuestionView satisfies it. */
 export interface ScoredQuestion {
   type: QuestionType;
@@ -19,11 +27,6 @@ export interface ScoredQuestion {
   points: number;
   /** Match only: undefined behaves as 'partial'. */
   matchScoringMode?: MatchScoringMode;
-}
-
-export interface ScoreResult {
-  points: number;
-  verdict: Verdict;
 }
 
 /** Kahoot speed inputs: how long the team took and the configured timer. Either null means no scaling. */
@@ -83,75 +86,17 @@ export function isOverridableType(type: QuestionType): boolean {
   return OVERRIDABLE_TYPES.includes(type);
 }
 
-/** Exactly half of `points`, unrounded — the Half grade and match all_or_nothing's one-wrong-pair credit. */
-export function halfPoints(points: number): number {
-  return points / 2;
-}
-
-/** `points` rounded to the nearest multiple of 0.5 — every automatic score is a whole or half point, so sums stay exact. */
-export function nearestHalfPoint(points: number): number {
-  return Math.round(points * 2) / 2;
-}
-
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
 
-function normalizeFreeText(value: string): string {
-  return value.trim().toLowerCase();
-}
-
 /**
- * `value` and `question.answer` are pipe-joined right-hand items in the
- * question's `options` (left-hand) order, so comparing them positionally
- * counts correctly matched pairs.
+ * The base score comes from the answer format of the question's answer kind.
+ * A kind with no per-answer score (the number kind: closest_guess is graded
+ * in one batch) scores nothing here. Resolved from the type alone, so an
+ * audio/youtube question with choices is still compared as typed text.
  */
-function scoreMatch(question: ScoredQuestion, value: string): ScoreResult {
-  const answerPairs = splitPipeList(question.answer);
-  const submittedPairs = splitPipeList(value);
-  const correctPairCount = answerPairs.filter(
-    (rightItem, index) => rightItem === submittedPairs[index],
-  ).length;
-  const wrongPairCount = answerPairs.length - correctPairCount;
-  if (wrongPairCount === 0) {
-    return { points: question.points, verdict: 'correct' };
-  }
-  if (question.matchScoringMode === 'all_or_nothing') {
-    return wrongPairCount === 1
-      ? { points: halfPoints(question.points), verdict: 'partial' }
-      : INCORRECT;
-  }
-  return {
-    points: nearestHalfPoint(
-      (question.points * correctPairCount) / answerPairs.length,
-    ),
-    verdict: correctPairCount === 0 ? 'incorrect' : 'partial',
-  };
-}
-
-/** Whether a typed (or option-picked) value equals the key: trimmed and case-insensitive. */
-function matchesKey(question: ScoredQuestion, value: string): boolean {
-  return normalizeFreeText(value) === normalizeFreeText(question.answer);
-}
-
 function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
-  const correct: ScoreResult = { points: question.points, verdict: 'correct' };
-  if (isMatchOrHumanType(question.type)) {
-    return matchesKey(question, value) ? correct : INCORRECT;
-  }
-  switch (question.type) {
-    case 'match':
-      return scoreMatch(question, value);
-    case 'sort':
-      // Same tolerance as match: stray whitespace and empty items don't cost
-      // a team the question.
-      return splitPipeList(value).join('|') ===
-        splitPipeList(question.answer).join('|')
-        ? correct
-        : INCORRECT;
-    case 'multiple_choice':
-      return value === question.answer ? correct : INCORRECT;
-    default:
-      return INCORRECT;
-  }
+  const { score } = ANSWER_FORMATS[resolveAnswerKind(question)];
+  return score === null ? INCORRECT : score(question, value);
 }
 
 /** Kahoot's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */

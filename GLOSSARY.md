@@ -32,6 +32,10 @@ Where the live sessions on a quiz have got to — their opened questions, the cu
 What a question asks teams to do (free text, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
 _Avoid_: question kind, question format
 
+**Answer kind**:
+How a question is answered: typed text, a number, picking a choice, putting items in order, or pairing items up. Question type says what a question asks teams to do; answer kind says how they enter the answer, and it is worked out from the type and whether the question carries choices. Branch on this, not on the type, when behaviour differs by how a question is answered.
+_Avoid_: input kind (the registry field that is its default)
+
 **Showdown**:
 A tiebreak played between teams tied on the leaderboard, with the teams taking turns in a fixed seat order.
 _Avoid_: tiebreaker round, sudden death

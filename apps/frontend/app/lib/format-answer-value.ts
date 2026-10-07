@@ -1,9 +1,4 @@
-import {
-  IDK_ANSWER_VALUE,
-  answerInputKind,
-  splitPipeList,
-  type QuestionType,
-} from '@campus-pubquiz/types';
+import { formatAnswer, type QuestionType } from '@campus-pubquiz/types';
 
 /**
  * sort/match answers are stored/submitted as a `|`-joined string.
@@ -21,17 +16,5 @@ export function formatAnswerValue(
   type: QuestionType,
   leftItems?: string[],
 ): string {
-  if (value === IDK_ANSWER_VALUE) return "🤷 I don't know";
-  const inputKind = answerInputKind(type);
-  if (inputKind === 'sort') return splitPipeList(value).join(' → ');
-  if (inputKind === 'match') {
-    const rightItems = splitPipeList(value);
-    if (leftItems && leftItems.length === rightItems.length) {
-      return leftItems
-        .map((left, index) => `${left} → ${rightItems[index]}`)
-        .join(', ');
-    }
-    return rightItems.join(' → ');
-  }
-  return value;
+  return formatAnswer(value, { type, options: leftItems });
 }
