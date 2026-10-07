@@ -5,7 +5,7 @@ import { ShowdownRound } from '@/db/entities/showdown-round.entity';
 import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
 import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
 import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
-import type { ActiveShowdownRoundState } from '@/game/state/session-state';
+import type { ActiveShowdownRoundState } from '@campus-pubquiz/types';
 
 export class InvalidShowdownError extends Error {
   constructor(message: string) {

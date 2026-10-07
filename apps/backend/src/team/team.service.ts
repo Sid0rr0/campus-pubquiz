@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { UniqueConstraintViolationException } from '@mikro-orm/core';
-import type { TeamCodeView, TeamsListedPayload } from '@campus-pubquiz/types';
+import type {
+  TeamCodeView,
+  TeamRosterEntry,
+  TeamsListedPayload,
+} from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -54,12 +58,6 @@ export interface JoinOptions {
   teamToken?: string;
   teamCode?: string;
   joinCode?: string;
-}
-
-/** DB-only roster shape — live connection state is layered on by GameStateService. */
-export interface TeamRosterEntry {
-  teamId: number;
-  teamName: string;
 }
 
 @Injectable()

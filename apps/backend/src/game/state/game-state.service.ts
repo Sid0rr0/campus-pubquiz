@@ -1,30 +1,39 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
 import {
+  type ActiveSessionSummary,
+  type AdminQuestionContext,
+  type AwardBonusPayload,
+  buildAdminQuestionContext,
+  buildSnapshot,
+  type CreateShowdownRoundPayload,
   DEFAULT_SESSION_SETTINGS,
-  SOCKET_EVENTS,
+  type FeedbackField,
+  freshSessionState,
+  type GameAction,
+  getFeedbackField,
   getTiedForFirst,
   isGradedStatus,
+  isQuestionOpenForAnswering,
   isShowdownAcceptingGuesses,
-  type ActiveSessionSummary,
-  type CreateShowdownRoundPayload,
   type JoinPlayersPayload,
-  type AdminQuestionContext,
-  type GameAction,
   type LeaderboardEntry,
   type LiveEditFrontier,
-  type FeedbackField,
+  LOBBY_PROGRESS,
   type PresenterContextPayload,
+  projectScreen,
   type RateRoundPayload,
   type SendFeedbackPayload,
   type SessionSettings,
+  type SessionState,
+  SOCKET_EVENTS,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
-  type AwardBonusPayload,
   type TeamBonusAwardView,
+  type TeamRosterEntry,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
@@ -32,26 +41,14 @@ import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
-import { getFeedbackField } from '@/game/state/feedback-rounds.util';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameSessionStore } from '@/game/state/game-session.store';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
-import { projectScreen } from '@/game/state/screen-projection.util';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
-import {
-  buildAdminQuestionContext,
-  buildSnapshot,
-  isQuestionOpenForAnswering,
-} from '@/game/state/session-snapshot.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
-import {
-  LOBBY_PROGRESS,
-  freshSessionState,
-  type SessionState,
-} from '@/game/state/session-state';
 import {
   findTeamIdBySocketId,
   withActiveShowdownRound,
@@ -74,7 +71,7 @@ import {
   InvalidShowdownError,
   ShowdownService,
 } from '@/showdown/showdown.service';
-import { TeamService, type TeamRosterEntry } from '@/team/team.service';
+import { TeamService } from '@/team/team.service';
 
 /** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
 /** What a hold on a quiz's sessions lets its task do to them: apply a quiz edit to one held session, returning the outcome to deliver once the hold is released. */

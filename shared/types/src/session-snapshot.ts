@@ -1,16 +1,4 @@
 import {
-  getQuizStructureSummary,
-  getTimedPhaseKey,
-  type AdminQuestionContext,
-  type AdminStatePayload,
-  type DisplayStatePayload,
-  type PlayersStatePayload,
-  type StateSnapshotPayload,
-  type TeamView,
-  isAnsweringStatus,
-} from '@campus-pubquiz/types';
-import type { SeededRound } from '@/db/seed.types';
-import {
   getAnsweredTeamIds,
   getBlockQuestions,
   getCurrentQuestion,
@@ -18,10 +6,25 @@ import {
   getPastRevealedQuestions,
   getRevealQuestions,
   getUpcomingQuestionPositions,
-} from '@/game/state/block-questions.util';
-import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
-import { buildActiveShowdownView } from '@/game/state/showdown-reveal.util';
+} from './block-questions';
+import { isAnsweringStatus } from './game-state-groups';
+import { getQuizStructureSummary } from './game-state-structure';
+import { getTimedPhaseKey } from './game-state-timed-phase';
+import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import type {
+  AdminQuestionContext,
+  AdminStatePayload,
+  DisplayStatePayload,
+  PlayersStatePayload,
+  StateSnapshotPayload,
+  TeamView,
+} from './room-views';
+import {
+  getGameContext,
+  type SeededRound,
+  type SessionState,
+} from './session-state';
+import { buildActiveShowdownView } from './showdown-reveal';
 
 /**
  * The phaseStartedAt/phaseElapsedMs pair for whatever timed phase is

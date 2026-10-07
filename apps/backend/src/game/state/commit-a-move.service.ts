@@ -1,16 +1,19 @@
-import type { GameAction, GameProgress } from '@campus-pubquiz/types';
+import {
+  type ActiveShowdownRoundState,
+  effectiveActionOf,
+  type GameAction,
+  type GameProgress,
+  type MoveStep,
+  planMove,
+  type SessionState,
+  ShowdownGuessesPendingError,
+} from '@campus-pubquiz/types';
 import { BlockGradingService } from '@/game/state/block-grading.service';
-import { ShowdownGuessesPendingError } from '@/game/state/errors/showdown-guesses-pending.error';
 import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import type {
   GameProgressRepository,
   PersistedGameProgress,
 } from '@/game/state/game-progress.repository';
-import {
-  effectiveActionOf,
-  planMove,
-  type MoveStep,
-} from '@/game/state/move-plan.util';
 import {
   BROADCAST_STATE_OUTCOME,
   connectedTeamSyncs,
@@ -21,10 +24,6 @@ import {
   settleSession,
   type SavedPhaseTimer,
 } from '@/game/state/session-settle.util';
-import type {
-  ActiveShowdownRoundState,
-  SessionState,
-} from '@/game/state/session-state';
 import { withLeaderboard } from '@/game/state/session-updates.util';
 import type { StandingsService } from '@/standings/standings.service';
 import type { ShowdownService } from '@/showdown/showdown.service';

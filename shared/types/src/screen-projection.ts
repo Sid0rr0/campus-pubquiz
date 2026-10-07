@@ -1,39 +1,37 @@
 import {
-  SOCKET_ROOMS,
-  type BlockRevealQuestionView,
-  type BlockQuestionView,
-  type ClosestGuessRevealData,
-  type GameProgress,
-  type PendingClosestGuessRevealView,
-  describeAdminIndicators,
-  describeOnAirScreen,
-  describePlayersScreen,
-  isRevealingStatus,
-  type SocketRoomName,
-  type StateViewByRoom,
-} from '@campus-pubquiz/types';
-import {
   getActiveBlockStartIndex,
   isLastQuestionBeforeBreak,
   isShowdownEligible,
-} from '@/game/state/admin-view-flags.util';
+} from './admin-view-flags';
+import { getBlockSeededQuestions } from './block-questions';
+import { getFeedbackField } from './feedback-rounds';
+import type { GameProgress } from './game-state-types';
+import { isRevealingStatus } from './game-state-groups';
+import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
-  describeAdvanceStep,
-  describePreviousState,
-} from '@/game/state/move-plan.util';
-import { getFeedbackField } from '@/game/state/feedback-rounds.util';
-import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
-import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
-import type { SessionState } from '@/game/state/session-state';
+  describeAdminIndicators,
+  describeOnAirScreen,
+  describePlayersScreen,
+} from './on-air-screen';
+import type {
+  BlockQuestionView,
+  BlockRevealQuestionView,
+  ClosestGuessRevealData,
+  PendingClosestGuessRevealView,
+} from './question-views';
+import type { StateViewByRoom } from './room-views';
+import type { SessionState } from './session-state';
 import {
   buildAdminFields,
   buildDisplayFields,
   buildPlayersFields,
   buildSnapshot,
   isBlockAnswerable,
-} from '@/game/state/session-snapshot.util';
+} from './session-snapshot';
+import { SOCKET_ROOMS, type SocketRoomName } from './socket-events';
 
-// Closest-guess reveal steps (see closest-guess-reveal.util): each one adds a
+// Closest-guess reveal steps (see closest-guess-reveal): each one adds a
 // line to the big screen, and the phone is sent each only once it is on air.
 const HIGHEST_GUESS_STEP = 2;
 const ANSWER_STEP = 3;

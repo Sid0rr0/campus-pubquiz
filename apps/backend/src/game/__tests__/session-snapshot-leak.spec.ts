@@ -11,7 +11,7 @@ import {
 } from '@/game/__tests__/real-store-test-utils';
 
 // Regression test for the leak this feature's design doc explicitly calls
-// out: toRevealQuestionViews (block-questions.util.ts) builds
+// out: toRevealQuestionViews (shared/types block-questions.ts) builds
 // revealQuestions/pastRevealedQuestions via a blind `{...question}` spread,
 // not a field whitelist. If a question's host-only note or the presenter's
 // next-question preview were ever stored *on* a question object (instead of

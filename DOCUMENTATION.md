@@ -207,7 +207,7 @@ clients must hear about it): the failure is logged, the session keeps its
 earlier leaderboard, and the next write catches it up.
 
 Each room gets **its own view**, built by the screen projection
-(`projectScreen`, `apps/backend/src/game/state/screen-projection.util.ts`):
+(`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
 the display view names the screen on air; the admin view adds what `/control`
 marks as on air plus server-decided Advance/Previous availability; the
 players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state), and drops anything teams haven't been shown
@@ -245,7 +245,7 @@ Zod schema, editable in the lobby only like every other setting; a stored settin
 without the field reads as on, so sessions created before it have feedback on). The
 `/control` lobby settings panel shows it as the "Collect feedback" switch.
 
-The rule lives in one place (`getFeedbackField`, `game/state/feedback-rounds.util.ts`, on the
+The rule lives in one place (`getFeedbackField`, `shared/types/src/feedback-rounds.ts`, on the
 shared `describeFeedback`) and is used both to build the field and to accept a
 rating, so the two can't disagree; the phone draws from it and never decides for
 itself.
