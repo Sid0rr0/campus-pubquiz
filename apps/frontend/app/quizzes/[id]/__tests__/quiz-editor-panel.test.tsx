@@ -1549,4 +1549,70 @@ describe('QuizEditorPanel', () => {
       );
     });
   });
+  describe('audio question answer section', () => {
+    const audio = {
+      type: 'audio',
+      prompt: 'Which song?',
+      answer: 'B',
+      points: 1,
+      mediaUrl: 'https://example.com/clip.mp3',
+    };
+
+    function loadAudio(question: Record<string, unknown>) {
+      mockFetchQuizDraft.mockResolvedValue({
+        id: 5,
+        title: 'Trivia Night',
+        rounds: [{ title: 'Music', breakAfter: false, questions: [question] }],
+      });
+      mockUpdateQuiz.mockResolvedValue({
+        quizId: 5,
+        roundCount: 1,
+        questionCount: 1,
+      });
+      return renderWithQuery(<QuizEditorPanel quizId="5" />);
+    }
+
+    it('offers the choices with the correct one marked when the question has choices', async () => {
+      loadAudio({ ...audio, options: ['A', 'B'] });
+      await screen.findByDisplayValue('Music');
+
+      expect(screen.getByLabelText('Mark option 2 as correct')).toBeChecked();
+    });
+
+    it('offers a correct-answer text when the question has no choices', async () => {
+      loadAudio(audio);
+      await screen.findByDisplayValue('Music');
+
+      expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue('B');
+    });
+
+    it('saves a typed-answer question once every choice text is cleared', async () => {
+      const user = userEvent.setup();
+      loadAudio({ ...audio, options: ['A', 'B'] });
+      await screen.findByDisplayValue('Music');
+
+      for (const input of screen.getAllByPlaceholderText(/option text/i)) {
+        await user.clear(input);
+      }
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), 'B');
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuiz).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({
+            rounds: [
+              expect.objectContaining({
+                questions: [
+                  expect.objectContaining({ type: 'audio', answer: 'B' }),
+                ],
+              }),
+            ],
+          }),
+        ),
+      );
+      const saved = mockUpdateQuiz.mock.calls[0][1].rounds[0].questions[0];
+      expect(saved).not.toHaveProperty('options');
+    });
+  });
 });
