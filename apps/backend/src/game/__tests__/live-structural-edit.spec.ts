@@ -1,8 +1,4 @@
-import { RequestContext } from '@mikro-orm/postgresql';
-import { Question } from '@/db/entities/question.entity';
-import { Round } from '@/db/entities/round.entity';
 import {
-  REAL_STORE_JOIN_CODE,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -33,25 +29,28 @@ describe('GameGateway — editing the unopened questions of the current round', 
     }
   });
 
-  /** What QuizService.update does to the round: Q2 moves to the end and a new question follows it, so Q1 stays first. */
+  /** Q2 moves to the end and a new question follows it, so Q1 stays first. */
   async function moveQ2ToTheEndAndAppendNewQuestion(): Promise<void> {
-    const q2 = game.rounds[0].questionIds[1];
-    await game.inRequestContext(async () => {
-      const em = RequestContext.getEntityManager()!;
-      const question = await em.findOneOrFail(Question, { id: q2 });
-      question.orderIndex = 10;
-      em.persist(
-        em.create(Question, {
-          round: question.round,
-          orderIndex: 11,
-          type: 'free_text',
-          prompt: 'Q-new',
-          answer: 'Answer to Q-new',
-        }),
-      );
-      await em.flush();
-      await game.gateway.notifyQuizEdited(REAL_STORE_JOIN_CODE, []);
-    });
+    await game.saveQuizEdit((rounds) =>
+      rounds.map((round, index) => {
+        if (index !== 0) return round;
+        const [q1, q2, q3] = round.questions;
+        return {
+          ...round,
+          questions: [
+            q1,
+            q3,
+            q2,
+            {
+              type: 'free_text',
+              prompt: 'Q-new',
+              answer: 'Answer to Q-new',
+              points: 1,
+            },
+          ],
+        };
+      }),
+    );
   }
 
   const currentPrompt = async (): Promise<string | undefined> =>
@@ -97,9 +96,7 @@ describe('GameGateway — editing the unopened questions of the current round', 
   it('keeps the opened question opened and reports an unlocked frontier', async () => {
     await moveQ2ToTheEndAndAppendNewQuestion();
 
-    expect(
-      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE),
-    ).toMatchObject({
+    expect(game.liveEdit.getFrontier(game.quizId)).toMatchObject({
       openedQuestionIds: [game.rounds[0].questionIds[0]],
       currentRoundIndex: 0,
       hasCurrentBlockStartedLocking: false,
@@ -124,19 +121,16 @@ describe('GameGateway — editing the rounds after the current round', () => {
     }
   });
 
-  /** What QuizService.update does when a later round's break-after is turned on. */
-  async function turnOnBreakAfterRound(roundId: number): Promise<void> {
-    await game.inRequestContext(async () => {
-      const em = RequestContext.getEntityManager()!;
-      const round = await em.findOneOrFail(Round, { id: roundId });
-      round.breakAfter = true;
-      await em.flush();
-      await game.gateway.notifyQuizEdited(REAL_STORE_JOIN_CODE, []);
-    });
+  async function turnOnBreakAfterRound(roundIndex: number): Promise<void> {
+    await game.saveQuizEdit((rounds) =>
+      rounds.map((round, index) =>
+        index === roundIndex ? { ...round, breakAfter: true } : round,
+      ),
+    );
   }
 
   it("moves where the current block ends when a later round's break-after is turned on", async () => {
-    await turnOnBreakAfterRound(game.rounds[1].id);
+    await turnOnBreakAfterRound(1);
 
     let progress = (await game.snapshot()).progress;
     for (

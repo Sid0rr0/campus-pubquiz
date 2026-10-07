@@ -446,8 +446,8 @@ export class GameGateway
   }
 
   /**
-   * Called by QuizController.update after persisting an in-place edit to a
-   * quiz with a live session on it — reloads that session's in-memory
+   * Called by the re-import after persisting an in-place edit to a
+   * quiz (an editor save goes through the Live edit module instead) — reloads that session's in-memory
    * question snapshot from the DB, re-grades `regradeQuestionIds` (already-
    * shown questions whose answer/points were corrected) against it, and
    * rebroadcasts the full state, so /display, /control, and /play pick up
@@ -463,6 +463,14 @@ export class GameGateway
       joinCode,
       await this.gameState.quizEdited(joinCode, regradeQuestionIds),
     );
+  }
+
+  /** Delivers an outcome a session write returned outside the gateway (the Live edit module's save), after its queues were released. */
+  async deliverSessionOutcome(
+    joinCode: string,
+    outcome: SessionOutcome,
+  ): Promise<void> {
+    await deliverOutcome(this.outcomeDeps, joinCode, outcome);
   }
 
   /**
