@@ -498,7 +498,7 @@ export class GameStateService implements OnModuleInit {
         // Resolved inside the write, so a leave or kick for the same team
         // lands either wholly before or wholly after this join.
         const team = await this.teamService.join(
-          gameSessionId,
+          session.seededGame.gameSessionId,
           request.teamName,
           {
             teamToken: request.teamToken,
@@ -524,7 +524,9 @@ export class GameStateService implements OnModuleInit {
         return {
           session: withTeams(
             withTeamConnected(session, team.id, socketId),
-            await this.teamService.listForSession(gameSessionId),
+            await this.teamService.listForSession(
+              session.seededGame.gameSessionId,
+            ),
           ),
           outcome: {
             ...BROADCAST_STATE_OUTCOME,
@@ -941,7 +943,7 @@ export class GameStateService implements OnModuleInit {
       if (session.connectedTeamSockets[teamId] !== socketId) {
         throw new SessionRefusal('Can only leave the session as your own team');
       }
-      return await this.teamRemovedChange(joinCode, session, teamId, 'left');
+      return await this.teamRemovedChange(session, teamId, 'left');
     });
   }
 
@@ -952,7 +954,7 @@ export class GameStateService implements OnModuleInit {
    */
   kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
     return this.writeSession(joinCode, (session) =>
-      this.teamRemovedChange(joinCode, session, teamId, 'kicked'),
+      this.teamRemovedChange(session, teamId, 'kicked'),
     );
   }
 
@@ -964,12 +966,11 @@ export class GameStateService implements OnModuleInit {
    * held when the write ran, if it still has one, then closes that socket.
    */
   private async teamRemovedChange(
-    joinCode: string,
     session: SessionState,
     teamId: number,
     reason: 'kicked' | 'left',
   ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const gameSessionId = this.getGameSessionId(joinCode);
+    const { gameSessionId } = session.seededGame;
     await this.teamService.removeFromRoster(gameSessionId, teamId);
     const socketId = session.connectedTeamSockets[teamId];
     const notices =
@@ -997,8 +998,8 @@ export class GameStateService implements OnModuleInit {
 
   /**
    * A bonus award was added, edited or deleted: refreshes the leaderboard the
-   * same way grading does. `awarded` (a fresh award only) carries its
-   * BONUS_AWARDED notice for that team's socket, if it is connected.
+   * same way grading does. Carries no BONUS_AWARDED notice: callers that
+   * award a bonus run `bonusChange` inside their own write instead.
    */
   bonusChanged(joinCode: string): Promise<SessionOutcome> {
     return this.writeSession(joinCode, (session) =>
