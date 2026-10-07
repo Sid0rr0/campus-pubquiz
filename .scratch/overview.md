@@ -8,7 +8,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
 | question-answer-kinds | [One answer kind per question, defined once for every surface](question-answer-kinds/spec.md)                               | 4       | —                      |
 | live-edit-save        | [A live quiz save is checked and applied inside the live sessions' writes](live-edit-save/spec.md)                          | 4       | —                      |
-| socket-protocol       | [A typed socket protocol module, and socket-events split by concept](socket-protocol/spec.md)                               | 4       | —                      |
 | grading-policy        | [Grading policy in one module — key-fix regrades and the Grading refresh behind a narrow interface](grading-policy/spec.md) | 3       | —                      |
 | room-view-projection  | [One room-view projection shared by the server and the frontend fixtures](room-view-projection/spec.md)                     | 6       | socket-protocol 01, 04 |
 | outcome-deadlines     | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md)         | 3       | —                      |
