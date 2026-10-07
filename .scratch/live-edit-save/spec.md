@@ -1,6 +1,6 @@
 # Spec: A live quiz save is checked and applied inside the live sessions' writes
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows live-structural-edits and session-write, both done)
 
