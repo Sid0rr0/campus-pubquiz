@@ -9,7 +9,10 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
-import type { LiveEditService } from '@/game/live-edit/live-edit.service';
+import type {
+  LiveEditSaveOptions,
+  LiveEditService,
+} from '@/game/live-edit/live-edit.service';
 import type { GameStateService } from '@/game/state/game-state.service';
 import {
   ImportBlockedError,
@@ -84,8 +87,15 @@ describe('ImportService (Postgres integration)', () => {
     // The Live edit module's checks are covered against real sessions in
     // quiz-reimported.spec.ts; here it just saves.
     const liveEdit = {
-      save: jest.fn((quizId: number, { title, rounds }: QuizDraftSaveRequest) =>
-        quizService.update(quizId, title, rounds),
+      save: jest.fn(
+        (
+          quizId: number,
+          { title, rounds }: QuizDraftSaveRequest,
+          options?: LiveEditSaveOptions,
+        ) =>
+          options?.strategy
+            ? options.strategy.persist(rounds)
+            : quizService.update(quizId, title, rounds),
       ),
     };
     const importService = new ImportService(
@@ -296,7 +306,7 @@ describe('ImportService (Postgres integration)', () => {
       expect(liveEdit.save).toHaveBeenCalledWith(
         result.quizId,
         expect.objectContaining({ title: 'Trivia Night' }),
-        { reloadJoinCode: 'ABCDEF', identifyQuestionsBySlot: true },
+        expect.objectContaining({ reloadJoinCode: 'ABCDEF' }),
       );
     });
 

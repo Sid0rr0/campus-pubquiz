@@ -79,6 +79,14 @@ import {
 import { TeamService, type TeamRosterEntry } from '@/team/team.service';
 
 /** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
+/** What a hold on a quiz's sessions lets its task do to them: apply a quiz edit to one held session, returning the outcome to deliver once the hold is released. */
+export interface HeldQuizSessions {
+  applyQuizEdit(
+    joinCode: string,
+    regradeQuestionIds: readonly number[],
+  ): Promise<SessionOutcome>;
+}
+
 export type RosterLoader = () => Promise<TeamRosterEntry[]>;
 
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
@@ -331,9 +339,10 @@ export class GameStateService implements OnModuleInit {
    * `regradeQuestionIds`, taking and returning a session value. It stores
    * nothing and never queues, so it runs inside quizEdited's session write —
    * or, for a save that holds the quiz's sessions (the Live edit module),
-   * inside applyQuizEdit.
+   * inside applyQuizEdit. Private: the only way to reach it unqueued is the
+   * hold's callback.
    */
-  async quizEditedStep(
+  private async quizEditedStep(
     started: SessionState,
     regradeQuestionIds: readonly number[],
   ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
@@ -384,12 +393,12 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Runs the quiz edit on one session whose queue the caller already holds
-   * (see holdQuizSessions): the step, then the standings read, then the
-   * store. Not queued, so only call it inside the hold; the outcome is
-   * delivered after the hold is released.
+   * Runs the quiz edit on one session whose queue is held (see
+   * holdQuizSessions, the only caller): the step, then the standings read,
+   * then the store. Not queued; the outcome is delivered after the hold is
+   * released.
    */
-  async applyQuizEdit(
+  private async applyQuizEdit(
     joinCode: string,
     regradeQuestionIds: readonly number[],
   ): Promise<SessionOutcome> {
@@ -405,9 +414,13 @@ export class GameStateService implements OnModuleInit {
    * Runs `task` while holding the session writes of every unfinished session
    * on `quizId` (the Live edit module's save). Lobby sessions are held too,
    * so one that starts while the save waits is seen when the task looks at
-   * which sessions are live.
+   * which sessions are live. The task gets the held quiz's way to apply a
+   * quiz edit to a session — usable only while the hold lasts.
    */
-  holdQuizSessions<T>(quizId: number, task: () => Promise<T>): Promise<T> {
+  holdQuizSessions<T>(
+    quizId: number,
+    task: (held: HeldQuizSessions) => Promise<T>,
+  ): Promise<T> {
     return this.sessionWrites.hold(
       this.sessionStore
         .values()
@@ -417,7 +430,11 @@ export class GameStateService implements OnModuleInit {
             session.progress.status !== 'ended',
         )
         .map((session) => session.seededGame.joinCode),
-      task,
+      () =>
+        task({
+          applyQuizEdit: (joinCode, regradeQuestionIds) =>
+            this.applyQuizEdit(joinCode, regradeQuestionIds),
+        }),
     );
   }
 
