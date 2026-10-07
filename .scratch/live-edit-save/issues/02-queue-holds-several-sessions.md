@@ -8,11 +8,11 @@ Parent spec: `.scratch/live-edit-save/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A hold on two join codes waits for a write already running on either.
-- [ ] A write queued on either join code during the hold runs only after the hold's work finishes.
-- [ ] Two holds on the same join codes, started in opposite argument orders, both complete (no deadlock).
-- [ ] A write on a join code outside the set isn't held up.
-- [ ] Work that throws releases every held queue, and the error reaches the caller.
-- [ ] The existing queue spec passes unchanged.
+- [x] A hold on two join codes waits for a write already running on either.
+- [x] A write queued on either join code during the hold runs only after the hold's work finishes.
+- [x] Two holds on the same join codes, started in opposite argument orders, both complete (no deadlock).
+- [x] A write on a join code outside the set isn't held up.
+- [x] Work that throws releases every held queue, and the error reaches the caller.
+- [x] The existing queue spec passes unchanged.
