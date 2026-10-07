@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, question, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -57,9 +58,8 @@ describe('DisplayPage — lobby', () => {
 
   it('shows a waiting message in the lobby', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -70,10 +70,8 @@ describe('DisplayPage — lobby', () => {
 
   it('shows a join QR code and the join code in the lobby', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-        joinCode: 'ABCDEF',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -89,10 +87,8 @@ describe('DisplayPage — lobby', () => {
 
   it('shows the max team size, one-device-per-team note, and extra-player penalty in the lobby', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-        joinCode: 'ABCDEF',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -109,10 +105,8 @@ describe('DisplayPage — lobby', () => {
   it('prefers the join code from the ?code= query parameter over the snapshot', () => {
     searchParamsRef.current = new URLSearchParams('code=GHIJKL');
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-        joinCode: 'ABCDEF',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -128,13 +122,11 @@ describe('DisplayPage — lobby', () => {
 
   it('shows the connected team names at the bottom of the lobby screen with a join count', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-        joinCode: 'ABCDEF',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
         teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards' },
-          { teamId: 'team-2', teamName: 'Beer Necessities' },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
       }),
       connectionError: null,
@@ -155,13 +147,11 @@ describe('DisplayPage — lobby', () => {
       .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
       .mockReturnValue(1000);
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-        joinCode: 'ABCDEF',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
         teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards' },
-          { teamId: 'team-2', teamName: 'Beer Necessities' },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
       }),
       connectionError: null,
@@ -180,11 +170,9 @@ describe('DisplayPage — lobby', () => {
 
   it('uses the singular "TEAM" when exactly one team has joined', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-        joinCode: 'ABCDEF',
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -196,11 +184,9 @@ describe('DisplayPage — lobby', () => {
 
   it('does not show the connected team names outside the lobby', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
-        joinCode: 'ABCDEF',
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'question_open' },
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -212,10 +198,8 @@ describe('DisplayPage — lobby', () => {
 
   it('does not show the join QR code outside the lobby', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
-        joinCode: 'ABCDEF',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
