@@ -590,83 +590,91 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A showdown guess from `socketId`: checks the showdown still accepts
-   * guesses, then that the socket owns the seat, then that the team takes
-   * part, stores the guess and records it on the session. The latest guess
-   * replaces any earlier one.
+   * A showdown guess from `socketId`. A session write: inside it, checks the
+   * showdown still accepts guesses, then that the socket owns the seat, then
+   * that the team takes part, stores the guess and records it on the session.
+   * Checked against the session the write holds, so a guess sent as the
+   * reveal starts is either counted by the resolve or refused. The latest
+   * guess replaces any earlier one.
    */
-  async submitShowdownGuess(
+  submitShowdownGuess(
     joinCode: string,
     { showdownRoundId, teamId, value }: SubmitShowdownGuessPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    const session = this.sessionStore.get(joinCode);
-    const round = session.activeShowdownRound;
-    if (
-      !isShowdownAcceptingGuesses(
-        round,
-        showdownRoundId,
-        session.showdownRevealStep,
-      )
-    ) {
-      throw new SessionRefusal(
-        'This showdown round is no longer accepting guesses',
-      );
-    }
-    if (session.connectedTeamSockets[teamId] !== socketId) {
-      throw new SessionRefusal('You may only submit guesses for your own team');
-    }
-    if (!round?.participants.some((entry) => entry.teamId === teamId)) {
-      throw new SessionRefusal('Your team is not part of this showdown round');
-    }
-
-    await refusingInvalidShowdown(() =>
-      this.showdownService.submitGuess(showdownRoundId, teamId, value),
-    );
     return this.writeSession(
       joinCode,
-      (current) =>
-        Promise.resolve({
-          session: withShowdownGuess(current, teamId, value),
+      async (session) => {
+        const round = session.activeShowdownRound;
+        if (
+          !isShowdownAcceptingGuesses(
+            round,
+            showdownRoundId,
+            session.showdownRevealStep,
+          )
+        ) {
+          throw new SessionRefusal(
+            'This showdown round is no longer accepting guesses',
+          );
+        }
+        if (session.connectedTeamSockets[teamId] !== socketId) {
+          throw new SessionRefusal(
+            'You may only submit guesses for your own team',
+          );
+        }
+        if (!round?.participants.some((entry) => entry.teamId === teamId)) {
+          throw new SessionRefusal(
+            'Your team is not part of this showdown round',
+          );
+        }
+
+        await refusingInvalidShowdown(() =>
+          this.showdownService.submitGuess(showdownRoundId, teamId, value),
+        );
+        return {
+          session: withShowdownGuess(session, teamId, value),
           outcome: BROADCAST_STATE_OUTCOME,
-        }),
+        };
+      },
       NOT_TOUCHING_SCORES,
     );
   }
 
   /**
-   * Starts a showdown round for the teams tied for first, re-derived here
-   * rather than trusted from the client, in leaderboard (seat) order. Leaves
+   * Starts a showdown round for the teams tied for first, in leaderboard
+   * (seat) order. A session write: the tie is read from the leaderboard of
+   * the session the write holds, so a round is only created for teams still
+   * tied. Leaves
    * isLeaderboardVisible alone: the admin's own Hide Leaderboard press clears
    * it before the reveal starts, and forcing it here would yank the final
    * standings off the display the moment the tiebreaker question is saved.
    */
-  async createShowdownRound(
+  createShowdownRound(
     joinCode: string,
     { question, answer, points }: CreateShowdownRoundPayload,
   ): Promise<SessionOutcome> {
-    const session = this.sessionStore.get(joinCode);
-    const tied = getTiedForFirst(session.leaderboard);
-    if (tied.length < 2) {
-      throw new SessionRefusal('No tie for first place to break');
-    }
-
-    const round = await refusingInvalidShowdown(() =>
-      this.showdownService.createRound(
-        session.seededGame.gameSessionId,
-        tied.map(({ teamId, teamName }) => ({ teamId, teamName })),
-        question,
-        answer,
-        points,
-      ),
-    );
     return this.writeSession(
       joinCode,
-      (current) =>
-        Promise.resolve({
-          session: withActiveShowdownRound(current, round),
+      async (session) => {
+        const tied = getTiedForFirst(session.leaderboard);
+        if (tied.length < 2) {
+          throw new SessionRefusal('No tie for first place to break');
+        }
+
+        const round = await refusingInvalidShowdown(() =>
+          this.showdownService.createRound(
+            session.seededGame.gameSessionId,
+            tied.map(({ teamId, teamName }) => ({ teamId, teamName })),
+            question,
+            answer,
+            points,
+          ),
+        );
+        return {
+          session: withActiveShowdownRound(session, round),
           outcome: BROADCAST_STATE_OUTCOME,
-        }),
+        };
+      },
       NOT_TOUCHING_SCORES,
     );
   }
