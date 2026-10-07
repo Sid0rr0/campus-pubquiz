@@ -43,3 +43,4 @@ scripts/.simulated-teams.json
 .agents/
 .claude/skills/*
 !.claude/skills/ecc/
+!.claude/skills/regen-architecture-docs/
