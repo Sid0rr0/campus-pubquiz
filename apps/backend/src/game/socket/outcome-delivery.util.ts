@@ -95,6 +95,8 @@ function emitReply(sender: Pick<GameSocket, 'emit'>, reply: SocketReply): void {
     case SOCKET_EVENTS.JOIN_ACCEPTED:
       sender.emit(reply.event, reply.payload);
       return;
+    default:
+      return reply satisfies never;
   }
 }
 
@@ -110,5 +112,7 @@ function emitNotice(
     case SOCKET_EVENTS.BONUS_AWARDED:
       target.emit(notice.event, notice.payload);
       return;
+    default:
+      return notice satisfies never;
   }
 }
