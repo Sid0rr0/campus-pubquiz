@@ -91,7 +91,7 @@ export interface RoundEditingDescription {
   pinnedQuestionCount: number;
   /** A question moved from another round may be added to it. */
   canTakeMovedQuestion: boolean;
-  /** Why its structure is frozen, or null when it isn't. */
+  /** Why it is locked: `reached` for any round a live session has reached, `block-locking` for the current round once its block has started locking; null for an unreached round. */
   lockReason: RoundLockReason | null;
 }
 
@@ -142,8 +142,8 @@ function lockReasonFor(
   roundIndex: number,
   editing: RoundStructureEditing,
 ): RoundLockReason | null {
-  if (editing !== 'frozen') return null;
-  return roundIndex === frontier.currentRoundIndex
+  if (!isRoundReached(frontier, roundIndex)) return null;
+  return editing === 'frozen' && roundIndex === frontier.currentRoundIndex
     ? 'block-locking'
     : 'reached';
 }

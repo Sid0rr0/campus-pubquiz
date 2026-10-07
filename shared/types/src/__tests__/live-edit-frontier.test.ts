@@ -163,7 +163,7 @@ describe('describeLiveEditRounds', () => {
         structureEditing: 'after-opened',
         pinnedQuestionCount: 0,
         canTakeMovedQuestion: true,
-        lockReason: null,
+        lockReason: 'reached',
       },
       {
         isReached: false,
@@ -204,7 +204,7 @@ describe('describeLiveEditRounds', () => {
       structureEditing: 'after-opened',
       pinnedQuestionCount: 2,
       canTakeMovedQuestion: true,
-      lockReason: null,
+      lockReason: 'reached',
     });
     expect(next.isReached).toBe(false);
     expect(next.pinnedQuestionCount).toBe(0);
@@ -255,7 +255,7 @@ describe('describeLiveEditRounds', () => {
     expect(described.map((round) => round.lockReason)).toEqual([
       'reached',
       'reached',
-      null,
+      'reached',
       null,
     ]);
   });
