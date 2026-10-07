@@ -6,11 +6,6 @@ Open tickets for every feature under `.scratch/`. A ticket is unblocked once eve
 
 | Feature               | #   | Ticket                                                                                                                                           | Blocked by |
 | --------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| team-event-gates      | 01  | [A last-second answer either counts or is refused](team-event-gates/issues/01-last-second-answer-counts-or-is-refused.md)                        | —          |
-| team-event-gates      | 02  | [Showdown guesses and new showdown rounds are checked inside the write](team-event-gates/issues/02-showdown-guesses-checked-inside-the-write.md) | —          |
-| team-event-gates      | 03  | [Grades and bonus awards land inside the write](team-event-gates/issues/03-grades-and-bonus-awards-inside-the-write.md)                          | 01         |
-| team-event-gates      | 04  | [Join, leave and kick land in one order](team-event-gates/issues/04-join-leave-kick-in-one-order.md)                                             | —          |
-| team-event-gates      | 05  | [Round ratings and the final form become Live session module events](team-event-gates/issues/05-ratings-and-final-form-are-module-events.md)     | —          |
 | question-answer-kinds | 01  | [Answer kinds and answer formats, with scoring going through them](question-answer-kinds/issues/01-answer-kinds-and-formats.md)                  | —          |
 | question-answer-kinds | 02  | [The phone and the answers list answer by answer kind](question-answer-kinds/issues/02-phone-and-answers-list-by-answer-kind.md)                 | 01         |
 | question-answer-kinds | 03  | [The big screen asks and reveals by answer kind](question-answer-kinds/issues/03-big-screen-by-answer-kind.md)                                   | 01         |

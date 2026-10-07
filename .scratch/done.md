@@ -4,6 +4,11 @@ Finished tickets, newest first. Open work lives in [`overview.md`](overview.md).
 
 | Feature                     | #   | Ticket                                                                                                                                                                 | Commit    |
 | --------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| team-event-gates      | 05  | [Round ratings and the final form become Live session module events](team-event-gates/issues/05-ratings-and-final-form-are-module-events.md)     | —         |
+| team-event-gates      | 04  | [Join, leave and kick land in one order](team-event-gates/issues/04-join-leave-kick-in-one-order.md)                                             | —         |
+| team-event-gates      | 03  | [Grades and bonus awards land inside the write](team-event-gates/issues/03-grades-and-bonus-awards-inside-the-write.md)                          | —         |
+| team-event-gates      | 02  | [Showdown guesses and new showdown rounds are checked inside the write](team-event-gates/issues/02-showdown-guesses-checked-inside-the-write.md) | —         |
+| team-event-gates      | 01  | [A last-second answer either counts or is refused](team-event-gates/issues/01-last-second-answer-counts-or-is-refused.md)                        | —         |
 | bonus-award-toast           | 03  | [The quiz master gets a confirmation when an award is accepted](bonus-award-toast/issues/03-quiz-master-award-confirmation.md)                                         | —         |
 | bonus-award-toast           | 02  | [The team's phone toasts a new bonus award](bonus-award-toast/issues/02-team-toast-on-bonus-award.md)                                                                  | —         |
 | bonus-award-toast           | 01  | [Signed bonus points everywhere](bonus-award-toast/issues/01-signed-bonus-points.md)                                                                                   | —         |

@@ -8,9 +8,9 @@ Parent spec: `.scratch/team-event-gates/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A round rating sent while the press out of the break is held is refused with "This round can't be rated right now", and nothing is stored.
-- [ ] A rating sent first, held on its store while the press goes ahead, is saved and shows on the session stats.
-- [ ] Final feedback sent outside the final form is refused, checked inside the write.
-- [ ] `rate-round.spec.ts`, `send-feedback.spec.ts` and `collect-feedback-setting.spec.ts` pass unchanged.
+- [x] A round rating sent while the press out of the break is held is refused with "This round can't be rated right now", and nothing is stored.
+- [x] A rating sent first, held on its store while the press goes ahead, is saved and shows on the session stats.
+- [x] Final feedback sent outside the final form is refused, checked inside the write.
+- [x] `rate-round.spec.ts`, `send-feedback.spec.ts` and `collect-feedback-setting.spec.ts` pass unchanged.

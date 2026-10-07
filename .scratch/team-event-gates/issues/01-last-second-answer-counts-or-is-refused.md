@@ -10,12 +10,12 @@ Parent spec: `.scratch/team-event-gates/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: a closest_guess answer on the last question of a block, sent while the Advance into the break is held on its progress save, is refused with "Answers are locked for this question", and the admin answer list for that question doesn't contain it.
-- [ ] The same answer, sent first and held on its store while the Advance is pressed, is stored and graded by the break's batch; the admin answer list shows it graded.
-- [ ] The same pair of orders with the locking timer's expiry instead of a press.
-- [ ] A kahoot answer sent while the lock's press is held is refused; sent first, it's speed-scored like the other answers.
-- [ ] An answer store that fails once doesn't hold up the next press.
-- [ ] `session-write.spec.ts`, `submit-answer.spec.ts`, `answer-recorded-and-graded.spec.ts` and the closest_guess and kahoot specs pass unchanged.
-- [ ] GLOSSARY, CODING_STANDARDS and DOCUMENTATION are updated in the same commit.
+- [x] Written first, failing against today's code: a closest_guess answer on the last question of a block, sent while the Advance into the break is held on its progress save, is refused with "Answers are locked for this question", and the admin answer list for that question doesn't contain it.
+- [x] The same answer, sent first and held on its store while the Advance is pressed, is stored and graded by the break's batch; the admin answer list shows it graded.
+- [x] The same pair of orders with the locking timer's expiry instead of a press.
+- [x] A kahoot answer sent while the lock's press is held is refused; sent first, it's speed-scored like the other answers.
+- [x] An answer store that fails once doesn't hold up the next press.
+- [x] `session-write.spec.ts`, `submit-answer.spec.ts`, `answer-recorded-and-graded.spec.ts` and the closest_guess and kahoot specs pass unchanged.
+- [x] GLOSSARY, CODING_STANDARDS and DOCUMENTATION are updated in the same commit.

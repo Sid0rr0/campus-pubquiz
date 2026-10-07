@@ -8,9 +8,9 @@ Parent spec: `.scratch/team-event-gates/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A team rejoins on a new socket (takeover), and a leave from its old socket is held behind it: the leave is refused, and the team stays on the roster and connected.
-- [ ] A kick and a rejoin of the same team, overlapping in both orders, leave the roster, the connection and the leaderboard agreeing with each other.
-- [ ] A refused leave stores nothing.
-- [ ] `join-players.spec.ts`, `team-removed.spec.ts`, `team-presence.spec.ts` and the session-write kick case pass unchanged.
+- [x] A team rejoins on a new socket (takeover), and a leave from its old socket is held behind it: the leave is refused, and the team stays on the roster and connected.
+- [x] A kick and a rejoin of the same team, overlapping in both orders, leave the roster, the connection and the leaderboard agreeing with each other.
+- [x] A refused leave stores nothing.
+- [x] `join-players.spec.ts`, `team-removed.spec.ts`, `team-presence.spec.ts` and the session-write kick case pass unchanged.

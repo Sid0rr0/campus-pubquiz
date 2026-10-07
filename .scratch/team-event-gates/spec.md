@@ -1,6 +1,6 @@
 # Spec: Team events check whether they're allowed inside their session write
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows session-write and live-session-events, both done)
 
