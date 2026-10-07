@@ -10,10 +10,20 @@ Parent spec: `.scratch/room-view-projection/spec.md`
 
 **Blocked by:** 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] No per-role view helper or copied server rule is left in the frontend's test support.
-- [ ] The role pages carry no fallback default for a field their view type always has.
-- [ ] Nothing a page renders changes. The frontend suite passes, apart from tests that assert on a fallback state the server never sends; those are removed or corrected, and noted in the ticket's comments.
-- [ ] `CODING_STANDARDS.md` has both rules.
-- [ ] `pnpm typecheck`, `pnpm lint` and every workspace's suite pass.
+- [x] No per-role view helper or copied server rule is left in the frontend's test support.
+- [x] The role pages carry no fallback default for a field their view type always has.
+- [x] Nothing a page renders changes. The frontend suite passes, apart from tests that assert on a fallback state the server never sends; those are removed or corrected, and noted in the ticket's comments.
+- [x] `CODING_STANDARDS.md` has both rules.
+- [x] `pnpm typecheck`, `pnpm lint` and every workspace's suite pass.
+
+## Comments
+
+Deleted `app/display/__tests__/test-utils.tsx` (`displayView`, `progress`, `question`: nothing imported them) and, from `app/control/__tests__/test-utils.tsx`, `adminView`, `progress`, the Advance/Previous status lists and their default-availability rule. The hook-result helpers (`adminGameResult`, `authenticatedAuthResult`, `getDesktopButton`, `socketResult`, `seenQuestionsOf`) stay.
+
+Defaults removed: `/display` 22 (all destructuring defaults, including `quizStructure`, `settings`, `displayTextScale`), `/play` 11 (`quizStructure`, `blockQuestions`, `upcomingQuestions`, `revealQuestions`, `isCurrentRoundKahoot`, `closestGuessRevealStep`, `settings`, `activeShowdown`, `showdownRevealStep`, `isAnswerable`, `feedback`), `/control` 7 (destructuring defaults plus the `activeBlockStartIndex` fallback).
+
+Kept: `/play` hook-result defaults (`myAnswers`, `myAnswerGrades`, `myBonusAwards`, `myRoundRatings`, `roundRatingsEpoch`, `myFeedback`, `seenQuestions`). On `/control`, `snapshot?.advanceStep ?? 'none'` and `snapshot?.previousState ?? 'unavailable'` stay: `useAdminKeyboardShortcuts` runs before the page's null-snapshot early return, so these cover "no view yet", not a missing view field. Likewise `?? false` on `isLeaderboardVisible` and the `snapshot?.` fallbacks for settings in the lock-countdown hook calls.
+
+No test asserted on a fallback state the server never sends, so none was removed or changed; the frontend suite passes unchanged.
