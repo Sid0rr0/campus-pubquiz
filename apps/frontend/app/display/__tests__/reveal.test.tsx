@@ -227,6 +227,63 @@ describe('DisplayPage — reveal', () => {
     );
   });
 
+  it('highlights the correct choice of an audio question that has choices', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: displayView({
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r2q1',
+            type: 'audio',
+            prompt: 'Which song is this?',
+            mediaUrl: 'https://example.com/song.mp3',
+            options: ['Yesterday', 'Help!'],
+            points: 1,
+            answer: 'Help!',
+          },
+        ],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Yesterday')).toBeInTheDocument();
+    const correctItem = screen
+      .getByText('Help!', {
+        selector: 'li span',
+      })
+      .closest('li');
+    expect(correctItem).toHaveClass('border-green');
+  });
+
+  it('shows only the answer line for an audio question whose choices are all blank', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: displayView({
+        progress: progress({ status: 'reveal', revealIndex: 0 }),
+        currentQuestion: null,
+        revealQuestions: [
+          {
+            id: 'r2q1',
+            type: 'audio',
+            prompt: 'Which song is this?',
+            mediaUrl: 'https://example.com/song.mp3',
+            options: [' '],
+            points: 1,
+            answer: 'Help!',
+          },
+        ],
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('Help!')).toBeInTheDocument();
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+
   it('places the answer text above the picture on reveal', () => {
     mockUseGame.mockReturnValue({
       snapshot: displayView({
