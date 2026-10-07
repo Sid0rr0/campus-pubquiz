@@ -16,10 +16,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
-import { isRoundReached, type LiveEditFrontier } from '@campus-pubquiz/types';
+import { type LiveEditFrontier } from '@campus-pubquiz/types';
 import { reorderById } from '@/app/lib/reorder-list';
 import {
-  getPinnedQuestionCount,
+  describeEditorRounds,
   type EditorQuestion,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
@@ -225,17 +225,16 @@ export function QuizOutline({
   onReorderQuestions,
 }: QuizOutlineProps) {
   const sensors = useOutlineSensors();
+  const described = describeEditorRounds(rounds, liveEdit);
 
   function handleRoundDragEnd(event: DragEndEvent): void {
     const { active, over } = event;
     if (!over) return;
     const isDroppedOnReachedRound =
-      liveEdit !== undefined &&
-      [active.id, over.id].some((id) =>
-        isRoundReached(
-          liveEdit,
-          rounds.findIndex((round) => round.id === id),
-        ),
+      described !== undefined &&
+      [active.id, over.id].some(
+        (id) =>
+          described[rounds.findIndex((round) => round.id === id)]?.isReached,
       );
     if (isDroppedOnReachedRound) return;
     const reordered = reorderById(rounds, String(active.id), String(over.id));
@@ -267,14 +266,10 @@ export function QuizOutline({
                   round={round}
                   index={index}
                   isLast={index === rounds.length - 1}
-                  isReached={
-                    liveEdit !== undefined && isRoundReached(liveEdit, index)
+                  isReached={described?.[index].isReached ?? false}
+                  pinnedQuestionCount={
+                    described?.[index].pinnedQuestionCount ?? 0
                   }
-                  pinnedQuestionCount={getPinnedQuestionCount(
-                    round,
-                    index,
-                    liveEdit,
-                  )}
                   onReorderQuestions={onReorderQuestions}
                 />
               ))}
