@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'motion/react';
 import { DragHandleDots2Icon } from '@radix-ui/react-icons';
-import { splitPipeList } from '@campus-pubquiz/types';
+import { ANSWER_FORMATS } from '@campus-pubquiz/types';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
 import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
 
@@ -90,12 +90,16 @@ export function MatchAnswer({
   initialValue,
   onSubmit,
 }: MatchAnswerProps) {
-  const restored = initialValue ? splitPipeList(initialValue) : [];
+  const restored = initialValue
+    ? ANSWER_FORMATS.match.decode(initialValue)
+    : [];
   const [order, setOrder] = useState<string[]>(
     restored.length === rightItems.length ? restored : rightItems,
   );
   const [isDragging, setIsDragging] = useState(false);
-  const isSubmitted = Boolean(initialValue) && order.join('|') === initialValue;
+  const isSubmitted =
+    Boolean(initialValue) &&
+    ANSWER_FORMATS.match.encode(order) === initialValue;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, {
@@ -150,7 +154,7 @@ export function MatchAnswer({
       </div>
       <SubmitAnswerButton
         isSubmitted={isSubmitted}
-        onClick={() => onSubmit(order.join('|'))}
+        onClick={() => onSubmit(ANSWER_FORMATS.match.encode(order))}
       />
     </div>
   );

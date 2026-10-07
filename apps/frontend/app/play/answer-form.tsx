@@ -1,18 +1,13 @@
 'use client';
 
-import { useState, type SubmitEvent } from 'react';
 import { CheckIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import {
   IDK_ANSWER_VALUE,
-  answerInputKind,
-  QUESTION_KINDS,
+  resolveAnswerKind,
   type QuestionView,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import { getOptionLetter } from '@/app/lib/option-letters';
-import { MatchAnswer } from '@/app/play/match-answer';
-import { SortAnswer } from '@/app/play/sort-answer';
-import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
+import { ANSWER_INPUTS } from '@/app/play/answer-inputs';
 
 interface AnswerFormProps {
   question: QuestionView;
@@ -54,128 +49,21 @@ export function AnswerForm({
   isKahootMode = false,
   onSubmit,
 }: AnswerFormProps) {
-  const [value, setValue] = useState(initialValue);
-  const [hasAnswered, setHasAnswered] = useState(initialValue !== '');
-  const inputKind = answerInputKind(question.type);
+  const AnswerInput = ANSWER_INPUTS[resolveAnswerKind(question)];
   const isIdk = initialValue === IDK_ANSWER_VALUE;
-  const idkButton = (
-    <IdkButton
-      isChosen={isIdk}
-      onClick={() => onSubmit(isIdk ? '' : IDK_ANSWER_VALUE)}
-    />
-  );
-
-  if (inputKind === 'sort' && question.options) {
-    return (
-      <div className="flex flex-col gap-3">
-        <SortAnswer
-          options={question.options}
-          initialValue={initialValue}
-          onSubmit={onSubmit}
-        />
-        {idkButton}
-      </div>
-    );
-  }
-
-  if (inputKind === 'match' && question.options && question.matchTargets) {
-    return (
-      <div className="flex flex-col gap-3">
-        <MatchAnswer
-          leftItems={question.options}
-          rightItems={question.matchTargets}
-          initialValue={initialValue}
-          onSubmit={onSubmit}
-        />
-        {idkButton}
-      </div>
-    );
-  }
-
-  // Audio/youtube questions pick from choices only when they carry some.
-  if (
-    QUESTION_KINDS[question.type].choices !== 'none' &&
-    question.options?.length
-  ) {
-    const isSubmitted = value !== '' && value === initialValue;
-    function handleOptionClick(option: string) {
-      if (isKahootMode) {
-        if (hasAnswered) return;
-        setHasAnswered(true);
-        setValue(option);
-        onSubmit(option);
-        return;
-      }
-      setValue(option);
-    }
-    return (
-      <div className="flex flex-col gap-2.5">
-        {question.options.map((option, index) => {
-          const isChosen = option === value;
-          return (
-            <Button
-              key={index}
-              type="button"
-              aria-pressed={isChosen}
-              disabled={isKahootMode && hasAnswered}
-              onClick={() => handleOptionClick(option)}
-              className={
-                isChosen
-                  ? 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-dark-blue bg-white px-4 text-lg font-bold'
-                  : 'flex min-h-14 items-center gap-3 rounded-2xl border-2 min-w-2xs border-foreground/30 bg-white px-4 text-lg font-bold'
-              }
-            >
-              <span aria-hidden="true" className="font-display text-cyan">
-                {getOptionLetter(index)}
-              </span>
-              {option}
-              {isChosen && (
-                <CheckIcon
-                  aria-hidden="true"
-                  className="ml-auto text-magenta"
-                />
-              )}
-            </Button>
-          );
-        })}
-        {!isKahootMode && (
-          <SubmitAnswerButton
-            isSubmitted={isSubmitted}
-            disabled={value === ''}
-            onClick={() => onSubmit(value)}
-          />
-        )}
-        {!isKahootMode && idkButton}
-      </div>
-    );
-  }
-
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!value.trim()) return;
-    onSubmit(value.trim());
-  }
-
-  const isSubmitted = value.trim() !== '' && value.trim() === initialValue;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <label
-        htmlFor="answer-value"
-        className="text-xs font-extrabold tracking-wide text-foreground/55"
-      >
-        Your answer
-      </label>
-      <input
-        id="answer-value"
-        type={inputKind === 'number' ? 'number' : 'text'}
-        inputMode={inputKind === 'number' ? 'decimal' : undefined}
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        className="min-h-14 rounded-2xl border-2 border-foreground/35 bg-white px-4 text-lg font-bold"
-      />
-      <SubmitAnswerButton type="submit" isSubmitted={isSubmitted} />
-      {idkButton}
-    </form>
+    <AnswerInput
+      question={question}
+      initialValue={initialValue}
+      isKahootMode={isKahootMode}
+      onSubmit={onSubmit}
+      idkButton={
+        <IdkButton
+          isChosen={isIdk}
+          onClick={() => onSubmit(isIdk ? '' : IDK_ANSWER_VALUE)}
+        />
+      }
+    />
   );
 }

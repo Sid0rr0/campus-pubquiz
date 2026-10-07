@@ -8,11 +8,11 @@ Parent spec: `.scratch/question-answer-kinds/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] An audio question with choices shows them as choices on the phone, and an audio question whose choices are all blank shows a text box, both by the answer kind resolver.
-- [ ] A sort and a match answer submit the same stored string as today and restore after a reconnect in the order the team left them.
-- [ ] The kahoot one-tap choice behaviour and "I don't know" are unchanged.
-- [ ] `/control`'s answers list and the team's own answer list show match answers as "left → right" pairs and sort answers as an arrow chain, through the answer formats.
-- [ ] Nothing on the phone or in the answer formatter branches on sort, match or choices outside the answer-kind map.
-- [ ] The phone's free-text-and-multiple-choice, sort-and-match and break-and-reveal tests, and the answer formatter tests, pass, with added audio cases with and without choices.
+- [x] An audio question with choices shows them as choices on the phone, and an audio question whose choices are all blank shows a text box, both by the answer kind resolver.
+- [x] A sort and a match answer submit the same stored string as today and restore after a reconnect in the order the team left them.
+- [x] The kahoot one-tap choice behaviour and "I don't know" are unchanged.
+- [x] `/control`'s answers list and the team's own answer list show match answers as "left → right" pairs and sort answers as an arrow chain, through the answer formats.
+- [x] Nothing on the phone or in the answer formatter branches on sort, match or choices outside the answer-kind map.
+- [x] The phone's free-text-and-multiple-choice, sort-and-match and break-and-reveal tests, and the answer formatter tests, pass, with added audio cases with and without choices.
