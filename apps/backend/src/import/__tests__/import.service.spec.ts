@@ -1,4 +1,5 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
+import type { QuizDraftSaveRequest } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
@@ -8,7 +9,7 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
 import { RoundRepository } from '@/db/repositories/round.repository';
-import type { GameGateway } from '@/game/game.gateway';
+import type { LiveEditService } from '@/game/live-edit/live-edit.service';
 import type { GameStateService } from '@/game/state/game-state.service';
 import {
   ImportBlockedError,
@@ -51,29 +52,17 @@ const BROKEN_CSV = [HEADER, 'History,karaoke,Sing it!,,,,,,,0'].join('\n');
 
 interface GameStateStub {
   status: string;
-  activeQuizId: number;
-  notifyQuizEdited: jest.Mock;
 }
 
 function makeGameStateStub(overrides: Partial<GameStateStub> = {}): {
   stub: GameStateStub;
   asService: GameStateService;
-  asGateway: GameGateway;
 } {
-  const stub: GameStateStub = {
-    status: 'lobby',
-    activeQuizId: -1,
-    notifyQuizEdited: jest.fn().mockResolvedValue(undefined),
-    ...overrides,
-  };
+  const stub: GameStateStub = { status: 'lobby', ...overrides };
   const asService = {
     getSnapshot: () => ({ progress: { status: stub.status } }),
-    getActiveQuizId: () => stub.activeQuizId,
   } as unknown as GameStateService;
-  const asGateway = {
-    notifyQuizEdited: stub.notifyQuizEdited,
-  } as unknown as GameGateway;
-  return { stub, asService, asGateway };
+  return { stub, asService };
 }
 
 describe('ImportService (Postgres integration)', () => {
@@ -86,19 +75,26 @@ describe('ImportService (Postgres integration)', () => {
   });
 
   function makeService(overrides: Partial<GameStateStub> = {}) {
-    const { stub, asService, asGateway } = makeGameStateStub(overrides);
+    const { stub, asService } = makeGameStateStub(overrides);
     const quizService = new QuizService(
       em.getRepository<Quiz, QuizRepository>(Quiz),
       em.getRepository<Round, RoundRepository>(Round),
       em.getRepository<Question, QuestionRepository>(Question),
     );
+    // The Live edit module's checks are covered against real sessions in
+    // quiz-reimported.spec.ts; here it just saves.
+    const liveEdit = {
+      save: jest.fn((quizId: number, { title, rounds }: QuizDraftSaveRequest) =>
+        quizService.update(quizId, title, rounds),
+      ),
+    };
     const importService = new ImportService(
       em.getRepository<Quiz, QuizRepository>(Quiz),
       asService,
       quizService,
-      asGateway,
+      liveEdit as unknown as LiveEditService,
     );
-    return { importService, stub };
+    return { importService, stub, liveEdit };
   }
 
   describe('preview', () => {
@@ -288,19 +284,20 @@ describe('ImportService (Postgres integration)', () => {
       expect(result.questionCount).toBe(3);
     });
 
-    it('notifies the live session as a quiz edit when the imported quiz is the active one', async () => {
-      const { importService, stub } = makeService();
-      const first = await importService.confirm(
+    it("saves through the Live edit module, reloading the importing session's screens", async () => {
+      const { importService, liveEdit } = makeService();
+
+      const result = await importService.confirm(
         VALID_CSV,
         'ABCDEF',
         'Trivia Night',
       );
-      expect(stub.notifyQuizEdited).not.toHaveBeenCalled();
 
-      stub.activeQuizId = first.quizId;
-      await importService.confirm(VALID_CSV, 'ABCDEF', 'Trivia Night');
-
-      expect(stub.notifyQuizEdited).toHaveBeenCalledWith('ABCDEF');
+      expect(liveEdit.save).toHaveBeenCalledWith(
+        result.quizId,
+        expect.objectContaining({ title: 'Trivia Night' }),
+        { reloadJoinCode: 'ABCDEF', identifyQuestionsBySlot: true },
+      );
     });
 
     it("carries each question's correct answer through the loaded game, alongside its safe payload fields", async () => {

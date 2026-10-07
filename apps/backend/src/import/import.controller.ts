@@ -20,6 +20,7 @@ import {
   ImportLockedError,
   ImportService,
 } from '@/import/import.service';
+import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import { SheetFetchError } from '@/import/sheet-url-fetcher';
 
 function requireCsvText(body: Partial<ImportRequest>): ImportRequest {
@@ -115,6 +116,12 @@ function mapConfirmError(error: unknown): unknown {
   }
   if (error instanceof ImportLockedError) {
     return new ConflictException(error.message);
+  }
+  if (error instanceof QuizLiveEditBlockedError) {
+    return new ConflictException({
+      message: error.message,
+      issues: error.issues,
+    });
   }
   return error;
 }

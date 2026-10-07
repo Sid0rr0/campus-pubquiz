@@ -10,10 +10,10 @@ Parent spec: `.scratch/live-edit-save/spec.md`
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: a re-import from a lobby session onto a quiz another session is playing, changing that session's opened part, is refused with the live-edit issues, and the playing session is unchanged.
-- [ ] A re-import that only changes the unopened part is allowed, and both sessions are broadcast the reloaded quiz.
-- [ ] A re-import onto a quiz with no live session behaves as today, including the importing session's broadcast.
-- [ ] The quiz-reimported and import specs pass; nothing calls the gateway's quiz-edited notification any more.
-- [ ] DOCUMENTATION is updated in the same commit.
+- [x] Written first, failing against today's code: a re-import from a lobby session onto a quiz another session is playing, changing that session's opened part, is refused with the live-edit issues, and the playing session is unchanged.
+- [x] A re-import that only changes the unopened part is allowed, and both sessions are broadcast the reloaded quiz.
+- [x] A re-import onto a quiz with no live session behaves as today, including the importing session's broadcast.
+- [x] The quiz-reimported and import specs pass; nothing calls the gateway's quiz-edited notification any more.
+- [x] DOCUMENTATION is updated in the same commit.
