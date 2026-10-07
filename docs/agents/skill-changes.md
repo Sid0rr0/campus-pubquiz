@@ -12,10 +12,9 @@ Skills under `.claude/skills/` are symlinks into `.agents/skills/`, which is git
   - write files with Write/Edit and run commands from the worktree root.
     _Why:_ the worktree sandbox refuses heredoc writes, python edit scripts and `cd` chains.
 - **Step 5**: the merger names any temporary branch it creates in its report.
-- **Step 8**: move the spec to done in `.scratch/overview.md` / `done.md` on `main` after the integration branch lands.
-  _Why:_ editing those tables on the integration branch conflicts with `main`.
-- **Step 9**: remove each worktree under `.claude/worktrees/` with `git worktree remove <path>` and delete its `worktree-<name>` branch with `git branch -d`; list any worktree `remove` refuses. Once the integration branch has merged into `main`, delete `ticket/*` and the mergers' temporary branches with `git branch -d`; before then, list them; hand any branch `-d` refuses to the user with its sha.
+- **Step 10** (was 9): remove each worktree under `.claude/worktrees/` with `git worktree remove <path>` and delete its `worktree-<name>` branch with `git branch -d`; list any worktree `remove` refuses. Once the integration branch has merged into `main`, delete `ticket/*` and the mergers' temporary branches with `git branch -d`; before then, list them; hand any branch `-d` refuses to the user with its sha.
   _Why:_ the gate blocks force-deletes, while every branch the run creates is fully merged after the PR lands. Subagent worktrees are not cleaned up automatically.
-- **Step 10 (new)**: push the integration branch, generate the PR body with the `pr` skill into a scratchpad file, open the PR with `gh pr create --body-file` (or `gh pr edit --body-file` on an existing draft PR), and report the URL.
+- **Step 11 (new)**: push the integration branch, generate the PR body with the `pr` skill into a scratchpad file, open the PR with `gh pr create --body-file` (or `gh pr edit --body-file` on an existing draft PR), and report the URL.
+- **Step 8 (new)**: on the integration branch, add the spec's row to the top of `.scratch/done.md`, remove it from `.scratch/overview.md`, and commit both as `docs(repo): move <spec> to done`, so the move ships in the PR. Later steps are renumbered 9–11.
 
 Worktree setup (`pnpm install`, building `@campus-pubquiz/types`) is not in the skill: the `WorktreeCreate` hook in `.claude/settings.json` (`scripts/worktree-create.sh`) does it for every worktree. Its input is `{name, cwd, …}`, not the `worktree_name`/`base_path` in the docs example.

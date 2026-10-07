@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                   | Title                                                                                                                       | Tickets | Blocked by             |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
-| grading-policy         | [Grading policy in one module — key-fix regrades and the Grading refresh behind a narrow interface](grading-policy/spec.md) | 3       | —                      |
 | room-view-projection   | [One room-view projection shared by the server and the frontend fixtures](room-view-projection/spec.md)                     | 6       | socket-protocol 01, 04 |
 | outcome-deadlines      | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md)         | 3       | —                      |
 | block-membership       | [Block membership is its own rule, and the reveal views are built on it](block-membership/spec.md)                          | 3       | —                      |
