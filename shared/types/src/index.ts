@@ -1,5 +1,6 @@
 export * from './game-state';
 export * from './socket-events';
+export * from './socket-protocol';
 export * from './question-views';
 export * from './room-views';
 export * from './answers';
