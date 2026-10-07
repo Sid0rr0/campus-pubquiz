@@ -19,8 +19,6 @@ import {
   RECONNECTING_MESSAGE,
 } from '@/app/lib/connection-messages';
 
-export { NOT_CONNECTED_MESSAGE, RECONNECTING_MESSAGE };
-
 /** How long an emit may go unacknowledged before it resolves to a failure. */
 export const ACK_TIMEOUT_MS = 10_000;
 
@@ -64,8 +62,8 @@ function getErrorMessage(payload: unknown): string {
 }
 
 /**
- * Internal core shared by the role hooks (pages other than the rules page never call it directly): the
- * socket lifecycle, the snapshot, the connection error, the reconnect
+ * The socket core every page's hook builds on (the rules page calls it
+ * directly): the socket lifecycle, the snapshot, the connection error, the reconnect
  * timestamp and an emit-with-acknowledgement helper. A role hook adds its own
  * listeners through `bindSocket`, which runs once for each new socket.
  */

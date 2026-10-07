@@ -117,16 +117,16 @@ describe('team link: joining', () => {
     expect(second.state).toBe(first.state);
   });
 
-  it('opens one connection and stores the name and game code on submit', () => {
-    const { commands } = run(typedPhone(), { type: 'joinSubmitted' });
+  it('opens one fresh connection and stores the name and game code on submit', () => {
+    const { commands, state } = run(typedPhone(), { type: 'joinSubmitted' });
 
     expect(commands).toEqual([
       {
         type: 'writeIdentity',
         identity: { teamName: 'The Quizzards', gameCode: 'ABCDEF' },
       },
-      { type: 'openConnection', gameCode: 'ABCDEF', attempt: 1 },
     ]);
+    expect(state).toMatchObject({ activeJoinCode: 'ABCDEF', attempt: 1 });
   });
 
   it('does nothing on submit without a name or game code', () => {
@@ -160,11 +160,7 @@ describe('team link: joining', () => {
     const retry = run(refused.state, { type: 'joinSubmitted' }, connected(2));
 
     expect(retry.state.joinError).toBeNull();
-    expect(retry.commands).toContainEqual({
-      type: 'openConnection',
-      gameCode: 'ABCDEF',
-      attempt: 2,
-    });
+    expect(retry.state).toMatchObject({ activeJoinCode: 'ABCDEF', attempt: 2 });
     expect(joinsIn(retry.commands)).toHaveLength(1);
   });
 
@@ -191,14 +187,14 @@ describe('team link: joining', () => {
   });
 
   it('lets the next submit through after the connection was refused', () => {
-    const { commands } = run(
+    const { state } = run(
       typedPhone(),
       { type: 'joinSubmitted' },
       { type: 'connectionRefused' },
       { type: 'joinSubmitted' },
     );
 
-    expect(commands.filter((c) => c.type === 'openConnection')).toHaveLength(2);
+    expect(state.attempt).toBe(2);
   });
 
   it('mirrors the assigned team code into the form and stores it with the token', () => {
@@ -316,6 +312,38 @@ describe('team link: session restart', () => {
   });
 });
 
+describe('team link: a reconnect and the first status', () => {
+  it("sends no extra join when a new connection's first status is the lobby after another status on the old one", () => {
+    const { commands } = run(
+      returningPhone(),
+      connected(1),
+      { type: 'joinAccepted', payload: ACCEPTED },
+      status('question_open'),
+      { type: 'disconnected' },
+      connected(2),
+      { type: 'joinAccepted', payload: ACCEPTED },
+      status('lobby'),
+    );
+
+    expect(joinsIn(commands)).toHaveLength(2);
+  });
+
+  it('still sends a join for a restart on the same connection after a reconnect', () => {
+    const { commands } = run(
+      returningPhone(),
+      connected(1),
+      status('question_open'),
+      { type: 'disconnected' },
+      connected(2),
+      { type: 'joinAccepted', payload: ACCEPTED },
+      status('question_open'),
+      status('lobby'),
+    );
+
+    expect(joinsIn(commands)).toHaveLength(3);
+  });
+});
+
 describe('team link: entry precedence', () => {
   it('lets the URL win over what the phone stored', () => {
     const state = returningPhone({
@@ -338,7 +366,50 @@ describe('team link: entry precedence', () => {
       codeInput: 'ABCDEF',
       teamCodeInput: 'QUICK-JADE-FOX',
       activeJoinCode: 'ABCDEF',
-      teamName: 'The Quizzards',
+      teamName: 'URL Team',
+    });
+  });
+
+  it("joins as the URL's name and team code, not the stored ones", () => {
+    const { commands } = run(
+      returningPhone({ url: { name: 'URL Team', teamCode: 'URL-CODE' } }),
+      connected(1),
+    );
+
+    expect(joinsIn(commands)[0]).toMatchObject({
+      payload: { teamName: 'URL Team', teamCode: 'URL-CODE' },
+    });
+  });
+
+  it.each([
+    ['team code', { teamCode: 'URL-CODE' }],
+    ['name', { name: 'URL Team' }],
+    ['game code', { gameCode: 'URLGAM' }],
+  ])(
+    'does not send the stored token when the URL gives a different %s',
+    (_, url) => {
+      const { commands } = run(returningPhone({ url }), connected(1));
+
+      expect(joinsIn(commands)[0]).toMatchObject({
+        payload: { teamToken: undefined },
+      });
+    },
+  );
+
+  it('keeps the stored token when the URL agrees with what is stored', () => {
+    const { commands } = run(
+      returningPhone({
+        url: {
+          name: 'The Quizzards',
+          teamCode: 'QUICK-JADE-FOX',
+          gameCode: 'ABCDEF',
+        },
+      }),
+      connected(1),
+    );
+
+    expect(joinsIn(commands)[0]).toMatchObject({
+      payload: { teamToken: 'token-1' },
     });
   });
 
@@ -369,16 +440,15 @@ function linkedPhone() {
 }
 
 function expectNextSubmitLetThrough(state: TeamLinkState) {
-  const { commands } = run(
+  const next = run(
     state,
     { type: 'nameTyped', value: 'Another Team' },
     { type: 'gameCodeTyped', value: 'zzzzzz' },
     { type: 'joinSubmitted' },
-  );
-  expect(commands).toContainEqual({
-    type: 'openConnection',
-    gameCode: 'ZZZZZZ',
-    attempt: expect.any(Number),
+  ).state;
+  expect(next).toMatchObject({
+    activeJoinCode: 'ZZZZZZ',
+    attempt: state.attempt + 1,
   });
 }
 

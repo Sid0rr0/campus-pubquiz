@@ -314,9 +314,8 @@ describe('team link: the pending answer', () => {
 
   it('keeps an answer that was never delivered pending without forcing a reconnect', () => {
     const { state, commands } = run(linkedPhone(), submit(), {
-      type: 'answerResult',
+      type: 'answerNotDelivered',
       attempt: 1,
-      result: { success: false, error: NOT_CONNECTED_MESSAGE },
     });
 
     expect(state.pendingAnswer).toMatchObject({ value: 'Banana' });
@@ -379,5 +378,56 @@ describe('team link: the pending answer', () => {
     const { state } = run(linkedPhone(), submit(), { type: 'identityChanged' });
 
     expect(state.pendingAnswer).toBeNull();
+  });
+});
+
+describe('team link: leaving a session drops the team data', () => {
+  it.each(['kicked', 'sessionClosed', 'logoutRequested'] as const)(
+    'on %s, forgets the team, the link and the pending answer, and stops the timer',
+    (type) => {
+      const { state, commands } = run(linkedPhone(), submit(), { type });
+
+      expect(state).toMatchObject({
+        team: null,
+        isLinked: false,
+        linkedSocketId: null,
+        lastStatus: null,
+        pendingAnswer: null,
+        myAnswers: {},
+        myAnswerGrades: {},
+        myBonusAwards: [],
+        myRoundRatings: {},
+      });
+      expect(commands).toContainEqual({ type: 'clearConfirmTimer' });
+    },
+  );
+
+  it("never resends the old team's answer when another team joins afterwards", () => {
+    const { commands } = run(
+      linkedPhone(),
+      submit(),
+      { type: 'kicked' },
+      { type: 'nameTyped', value: 'Other Team' },
+      { type: 'gameCodeTyped', value: 'zzzzzz' },
+      { type: 'joinSubmitted' },
+      connected(2),
+      accepted({ ...ACCEPTED, teamId: 77, teamName: 'Other Team' }),
+    );
+
+    expect(ofType(commands, 'sendAnswer')).toHaveLength(1);
+  });
+
+  it('never repeats a ratings epoch, so a clear and the next join always change it', () => {
+    const epochs = [linkedPhone()].flatMap((linked) => {
+      const left = run(linked, { type: 'identityChanged' }).state;
+      const rejoined = run(left, connected(2), accepted()).state;
+      return [
+        linked.roundRatingsEpoch,
+        left.roundRatingsEpoch,
+        rejoined.roundRatingsEpoch,
+      ];
+    });
+
+    expect(new Set(epochs).size).toBe(epochs.length);
   });
 });

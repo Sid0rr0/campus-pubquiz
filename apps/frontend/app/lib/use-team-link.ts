@@ -21,7 +21,10 @@ import {
   type TeamBonusAwardView,
   type TeamFeedbackView,
 } from '@campus-pubquiz/types';
-import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
+import {
+  NOT_CONNECTED_MESSAGE,
+  isNotDelivered,
+} from '@/app/lib/connection-messages';
 import {
   mergeSeenQuestions,
   type SeenQuestions,
@@ -203,7 +206,11 @@ export function useTeamLink(
             void sent.then((result) => {
               answerWaitersRef.current.delete(attempt);
               resolve(result);
-              dispatch({ type: 'answerResult', attempt, result });
+              dispatch(
+                isNotDelivered(result)
+                  ? { type: 'answerNotDelivered', attempt }
+                  : { type: 'answerResult', attempt, result },
+              );
             });
           });
           break;
@@ -242,9 +249,6 @@ export function useTeamLink(
         case 'goToJoinScreen':
           goToJoinScreenRef.current();
           break;
-        case 'openConnection':
-          // The connection core below opens it from `activeJoinCode` and `attempt`.
-          break;
         default: {
           const unhandled: never = command;
           throw new Error(`Unhandled team link command: ${String(unhandled)}`);
@@ -255,9 +259,12 @@ export function useTeamLink(
 
   const bindSocket = useCallback(
     (socket: RoomSocket<'players'>) => {
-      const onStateReceived = (
-        payload: Parameters<typeof mergeSeenQuestions>[1],
-      ) => setSeenQuestions((current) => mergeSeenQuestions(current, payload));
+      const onStateReceived = (payload: StateViewByRoom['players']) => {
+        setSeenQuestions((current) => mergeSeenQuestions(current, payload));
+        // From the socket, not the snapshot: a snapshot kept across a
+        // reconnect would show a stale status before the new connection's own.
+        dispatch({ type: 'statusSeen', status: payload.progress.status });
+      };
       socket.on(SOCKET_EVENTS.STATE_SYNC, onStateReceived);
       socket.on(SOCKET_EVENTS.STATE_UPDATED, onStateReceived);
       socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload) =>
@@ -352,11 +359,6 @@ export function useTeamLink(
     // join, so no join result will arrive to release the guard.
     if (socketConnectionError) dispatch({ type: 'connectionRefused' });
   }, [socketConnectionError, dispatch]);
-
-  const status = snapshot?.progress.status;
-  useEffect(() => {
-    if (status) dispatch({ type: 'statusSeen', status });
-  }, [status, dispatch]);
 
   const submitAnswer = useCallback(
     (questionId: number, teamId: number, value: string) => {

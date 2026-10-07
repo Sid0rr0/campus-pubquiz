@@ -104,6 +104,8 @@ export interface TeamLinkConnection {
 
 export interface TeamLinkState {
   urlGameCode: string;
+  urlTeamCode: string;
+  urlName: string;
   teamName: string | null;
   nameInput: string;
   codeInput: string;
@@ -166,6 +168,8 @@ export type TeamLinkInput =
   | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
   | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
   | { type: 'answerResult'; attempt: number; result: AckResult }
+  // The answer never left the socket (not connected, or no acknowledgement in time).
+  | { type: 'answerNotDelivered'; attempt: number }
   | { type: 'answerTimedOut'; attempt: number }
   | { type: 'ratingSaved'; roundId: number; stars: number }
   | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
@@ -183,7 +187,6 @@ export type TeamLinkInput =
     };
 
 export type TeamLinkCommand =
-  | { type: 'openConnection'; gameCode: string; attempt: number }
   | { type: 'sendJoin'; payload: JoinPlayersPayload; connectionId: number }
   | {
       type: 'writeIdentity';
@@ -211,6 +214,23 @@ export interface TeamLinkStep {
   commands: TeamLinkCommand[];
 }
 
+/** The stored token belongs to the stored team in the stored game: a URL naming another one can't use it. */
+function isStoredTokenForUrl(
+  state: TeamLinkState,
+  stored: StoredIdentity,
+): boolean {
+  const isSame = (url: string, storedValue: string | null | undefined) =>
+    !url || !storedValue || url === storedValue;
+  return (
+    isSame(state.urlName, stored.teamName) &&
+    isSame(state.urlTeamCode, stored.teamCode) &&
+    isSame(
+      normalizeJoinCode(state.urlGameCode),
+      stored.gameCode && normalizeJoinCode(stored.gameCode),
+    )
+  );
+}
+
 function withStoredIdentity(
   state: TeamLinkState,
   stored: StoredIdentity,
@@ -218,7 +238,9 @@ function withStoredIdentity(
   const base: TeamLinkState = {
     ...state,
     hasStoredIdentity: Boolean(stored.teamToken),
-    storedTeamToken: stored.teamToken,
+    storedTeamToken: isStoredTokenForUrl(state, stored)
+      ? stored.teamToken
+      : undefined,
     storedTeamCode: stored.teamCode,
   };
   if (!stored.teamName) return base;
@@ -226,7 +248,7 @@ function withStoredIdentity(
   // game or team beats whatever last played on this device.
   return {
     ...base,
-    teamName: stored.teamName,
+    teamName: state.urlName || stored.teamName,
     nameInput: state.nameInput || stored.teamName,
     codeInput: state.urlGameCode || stored.gameCode || state.codeInput,
     activeJoinCode: state.activeJoinCode ?? stored.gameCode ?? null,
@@ -243,14 +265,26 @@ const EMPTY_TEAM_DATA = {
   myBonusAwards: [],
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
-  roundRatingsEpoch: 0,
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
+
+/** Forgets the team's data. The epoch only ever counts up, so the clear itself changes it and a later join can't land back on a value already used. */
+function clearTeamData(state: TeamLinkState): TeamLinkState {
+  return {
+    ...state,
+    ...EMPTY_TEAM_DATA,
+    roundRatingsEpoch: state.roundRatingsEpoch + 1,
+    // A result or timeout for a send made before the clear says nothing now.
+    answerAttempt: state.answerAttempt + 1,
+  };
+}
 
 export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
   const urlGameCode = entry.url.gameCode ?? '';
   const base: TeamLinkState = {
     urlGameCode,
+    urlTeamCode: entry.url.teamCode ?? '',
+    urlName: entry.url.name ?? '',
     teamName: null,
     nameInput: entry.url.name ?? '',
     codeInput: urlGameCode,
@@ -269,6 +303,7 @@ export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
     confirmedTeamId: null,
     lastStatus: null,
     ...EMPTY_TEAM_DATA,
+    roundRatingsEpoch: 0,
     answerAttempt: 0,
   };
   return entry.stored ? withStoredIdentity(base, entry.stored) : base;
@@ -330,64 +365,64 @@ function submitJoin(state: TeamLinkState): TeamLinkStep {
       linkedSocketId: null,
       lastStatus: null,
     },
-    commands: [
-      { type: 'writeIdentity', identity: { teamName, gameCode } },
-      { type: 'openConnection', gameCode, attempt },
-    ],
+    commands: [{ type: 'writeIdentity', identity: { teamName, gameCode } }],
   };
 }
+
+/** The ways a team's link to its session ends. */
+type LeaveKind = 'kicked' | 'sessionClosed' | 'loggedOut';
+
+interface LeaveRule {
+  /** Kick clears the stored name and team code too; the others keep them so the form stays prefilled. */
+  clearAll: boolean;
+  kickNotice: string | null;
+  /** Logout stays on the page, whose URL already carries the game code to go back to. */
+  shouldNavigate: boolean;
+}
+
+const LEAVE_RULES: Record<LeaveKind, LeaveRule> = {
+  kicked: { clearAll: true, kickNotice: KICK_NOTICE, shouldNavigate: true },
+  sessionClosed: { clearAll: false, kickNotice: null, shouldNavigate: true },
+  loggedOut: { clearAll: false, kickNotice: null, shouldNavigate: false },
+};
 
 /**
- * The one rule for leaving a session. Kick clears everything stored and shows
- * the notice; session close and logout keep the name and team code so the form
- * stays prefilled. All three release the join guard and clear the join error.
+ * The one rule for leaving a session. All three kinds release the join guard,
+ * clear the join error and forget the team, its link and its pending answer.
  */
-function leaveSession(
-  state: TeamLinkState,
-  options: { clearAll: boolean; gameCode: string; kickNotice: string | null },
-): TeamLinkState {
-  const { clearAll, gameCode, kickNotice } = options;
-  return {
-    ...state,
-    teamName: null,
-    codeInput: gameCode,
-    activeJoinCode: gameCode || null,
-    hasStoredIdentity: false,
-    storedTeamToken: undefined,
-    storedTeamCode: clearAll ? undefined : state.storedTeamCode,
-    nameInput: clearAll ? '' : state.nameInput,
-    teamCodeInput: clearAll ? '' : state.teamCodeInput,
-    isJoinInFlight: false,
-    // An answer to a join sent before leaving says nothing about what follows.
-    joinSentFor: null,
-    joinError: null,
-    kickNotice,
-    confirmedTeamId: null,
-  };
-}
-
-function leaveSessionStep(
-  state: TeamLinkState,
-  options: {
-    clearAll: boolean;
-    gameCode: string;
-    kickNotice: string | null;
-    /** Logout stays on the page, whose URL already carries the game code to go back to. */
-    shouldNavigate: boolean;
-    leaveTeamId?: number | null;
-  },
-): TeamLinkStep {
+function leaveSession(state: TeamLinkState, kind: LeaveKind): TeamLinkStep {
+  const { clearAll, kickNotice, shouldNavigate } = LEAVE_RULES[kind];
+  const gameCode = kind === 'loggedOut' ? state.urlGameCode : '';
   const commands: TeamLinkCommand[] = [];
   // The leave goes first, while the socket is still connected.
-  if (options.leaveTeamId != null) {
-    commands.push({ type: 'sendLeave', teamId: options.leaveTeamId });
+  if (kind === 'loggedOut' && state.confirmedTeamId != null) {
+    commands.push({ type: 'sendLeave', teamId: state.confirmedTeamId });
   }
-  commands.push({
-    type: 'clearIdentity',
-    scope: options.clearAll ? 'all' : 'session',
-  });
-  if (options.shouldNavigate) commands.push({ type: 'goToJoinScreen' });
-  return { state: leaveSession(state, options), commands };
+  if (state.pendingAnswer) commands.push(CLEAR_TIMER);
+  commands.push({ type: 'clearIdentity', scope: clearAll ? 'all' : 'session' });
+  if (shouldNavigate) commands.push({ type: 'goToJoinScreen' });
+  return {
+    state: {
+      ...clearTeamData(state),
+      teamName: null,
+      codeInput: gameCode,
+      activeJoinCode: gameCode || null,
+      hasStoredIdentity: false,
+      storedTeamToken: undefined,
+      storedTeamCode: clearAll ? undefined : state.storedTeamCode,
+      nameInput: clearAll ? '' : state.nameInput,
+      teamCodeInput: clearAll ? '' : state.teamCodeInput,
+      isJoinInFlight: false,
+      // An answer to a join sent before leaving says nothing about what follows.
+      joinSentFor: null,
+      linkedSocketId: null,
+      lastStatus: null,
+      joinError: null,
+      kickNotice,
+      confirmedTeamId: null,
+    },
+    commands,
+  };
 }
 
 /** A status moving into the lobby from another one on the same connection is a session restart. */
@@ -401,7 +436,7 @@ function seeStatus(state: TeamLinkState, status: GameStatus): TeamLinkStep {
   return sendJoin(next);
 }
 
-function step(state: TeamLinkState): TeamLinkStep {
+function unchanged(state: TeamLinkState): TeamLinkStep {
   return { state, commands: [] };
 }
 
@@ -472,7 +507,7 @@ function acceptJoin(
   };
   const resend = accepted.pendingAnswer
     ? transmitAnswer(accepted, accepted.pendingAnswer)
-    : step(accepted);
+    : unchanged(accepted);
   return {
     state: resend.state,
     commands: [storeIdentity, ...resend.commands],
@@ -485,18 +520,22 @@ function receiveAnswerResult(
   result: AckResult,
 ): TeamLinkStep {
   // A superseded send says nothing about the answer now pending.
-  if (attempt !== state.answerAttempt) return step(state);
-  // An answer that never left the socket stays pending for the rejoin; there
-  // is no dead socket to force a reconnect on.
-  if (!result.success && result.error === NOT_CONNECTED_MESSAGE) {
-    return { state, commands: [CLEAR_TIMER] };
-  }
+  if (attempt !== state.answerAttempt) return unchanged(state);
   return {
     state: { ...state, pendingAnswer: null },
     commands: result.success
       ? [CLEAR_TIMER]
       : [CLEAR_TIMER, { type: 'toast', tone: 'error', message: result.error }],
   };
+}
+
+/** An answer that never left the socket stays pending for the rejoin; there is no dead socket to force a reconnect on. */
+function keepAnswerPending(
+  state: TeamLinkState,
+  attempt: number,
+): TeamLinkStep {
+  if (attempt !== state.answerAttempt) return unchanged(state);
+  return { state, commands: [CLEAR_TIMER] };
 }
 
 function receiveAnswer(
@@ -513,7 +552,7 @@ function receiveAnswer(
             gradedAt: payload.gradedAt,
           }),
         };
-  return step({
+  return unchanged({
     ...state,
     myAnswers: { ...state.myAnswers, [payload.questionId]: payload.value },
     myAnswerGrades,
@@ -552,13 +591,15 @@ export function teamLink(
   switch (input.type) {
     case 'storageRead':
       // A kick already cleared what this would restore.
-      if (state.kickNotice) return step(state);
+      if (state.kickNotice) return unchanged(state);
       return joinOncePerConnection(withStoredIdentity(state, input.stored));
     case 'connected': {
       const isNewConnection = state.connection?.id !== input.connectionId;
-      const unlinked = isNewConnection ? unlink(state) : step(state);
+      const unlinked = isNewConnection ? unlink(state) : unchanged(state);
       const join = joinOncePerConnection({
         ...unlinked.state,
+        // The first status on a new connection is a first status again.
+        lastStatus: isNewConnection ? null : unlinked.state.lastStatus,
         connection: { id: input.connectionId, socketId: input.socketId },
       });
       return {
@@ -567,21 +608,21 @@ export function teamLink(
       };
     }
     case 'disconnected':
-      return unlink({ ...state, connection: null });
+      return unlink({ ...state, connection: null, lastStatus: null });
     case 'connectionRefused':
-      return step({ ...state, isJoinInFlight: false });
+      return unchanged({ ...state, isJoinInFlight: false });
     case 'joinAccepted':
-      if (state.kickNotice) return step(state);
+      if (state.kickNotice) return unchanged(state);
       return acceptJoin(state, input.payload);
     case 'identityChanged':
       return {
-        state: { ...state, ...EMPTY_TEAM_DATA },
+        state: clearTeamData(state),
         commands: state.pendingAnswer ? [CLEAR_TIMER] : [],
       };
     case 'answerReceived':
       return receiveAnswer(state, input.payload);
     case 'teamAnswersSynced':
-      return step({
+      return unchanged({
         ...state,
         myAnswers: buildMyAnswers(input.answers),
         myAnswerGrades: buildMyAnswerGrades(input.answers),
@@ -590,14 +631,16 @@ export function teamLink(
       return awardBonus(state, input.payload);
     case 'answerResult':
       return receiveAnswerResult(state, input.attempt, input.result);
+    case 'answerNotDelivered':
+      return keepAnswerPending(state, input.attempt);
     case 'answerTimedOut':
-      if (input.attempt !== state.answerAttempt) return step(state);
+      if (input.attempt !== state.answerAttempt) return unchanged(state);
       return {
         state: { ...state, isLinked: false },
         commands: [{ type: 'forceReconnect' }],
       };
     case 'ratingSaved':
-      return step({
+      return unchanged({
         ...state,
         myRoundRatings: {
           ...state.myRoundRatings,
@@ -605,11 +648,11 @@ export function teamLink(
         },
       });
     case 'feedbackSaved':
-      return step({ ...state, myFeedback: input.feedback });
+      return unchanged({ ...state, myFeedback: input.feedback });
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
-      if (input.connectionId !== state.joinSentFor) return step(state);
-      return step({
+      if (input.connectionId !== state.joinSentFor) return unchanged(state);
+      return unchanged({
         ...state,
         isJoinInFlight: false,
         joinError: input.reason,
@@ -617,33 +660,17 @@ export function teamLink(
     case 'statusSeen':
       return seeStatus(state, input.status);
     case 'kicked':
-      return leaveSessionStep(state, {
-        clearAll: true,
-        gameCode: '',
-        kickNotice: KICK_NOTICE,
-        shouldNavigate: true,
-      });
+      return leaveSession(state, 'kicked');
     case 'sessionClosed':
-      return leaveSessionStep(state, {
-        clearAll: false,
-        gameCode: '',
-        kickNotice: null,
-        shouldNavigate: true,
-      });
+      return leaveSession(state, 'sessionClosed');
     case 'logoutRequested':
-      return leaveSessionStep(state, {
-        clearAll: false,
-        gameCode: state.urlGameCode,
-        kickNotice: null,
-        shouldNavigate: false,
-        leaveTeamId: state.confirmedTeamId,
-      });
+      return leaveSession(state, 'loggedOut');
     case 'nameTyped':
-      return step({ ...state, nameInput: input.value });
+      return unchanged({ ...state, nameInput: input.value });
     case 'gameCodeTyped':
-      return step({ ...state, codeInput: input.value });
+      return unchanged({ ...state, codeInput: input.value });
     case 'teamCodeTyped':
-      return step({ ...state, teamCodeInput: input.value });
+      return unchanged({ ...state, teamCodeInput: input.value });
     case 'joinSubmitted':
       return submitJoin(state);
     case 'answerSubmitted':
