@@ -73,6 +73,52 @@ describe('DisplayPage — question display', () => {
     expect(screen.getByText('Earth')).toBeInTheDocument();
   });
 
+  it.each(['audio', 'youtube'] as const)(
+    'shows the choices of a %s question that has some',
+    (type) => {
+      mockUseGame.mockReturnValue({
+        snapshot: displayView({
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: {
+            id: 'r1q1',
+            type,
+            prompt: 'Which song is this?',
+            mediaUrl: 'https://example.com/song.mp3',
+            options: ['Yesterday', 'Help!'],
+            points: 1,
+          },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+
+      expect(screen.getByText('Yesterday')).toBeInTheDocument();
+      expect(screen.getByText('Help!')).toBeInTheDocument();
+    },
+  );
+
+  it('shows no choices for an audio question whose choices are all blank', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: displayView({
+        progress: progress({ status: 'question_open' }),
+        currentQuestion: {
+          id: 'r1q1',
+          type: 'audio',
+          prompt: 'Which song is this?',
+          mediaUrl: 'https://example.com/song.mp3',
+          options: ['', '  '],
+          points: 1,
+        },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+
   it('shows both match lists before reveal', () => {
     mockUseGame.mockReturnValue({
       snapshot: displayView({

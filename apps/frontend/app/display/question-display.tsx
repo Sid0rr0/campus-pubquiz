@@ -1,15 +1,14 @@
 import { useState, type SyntheticEvent } from 'react';
 import {
-  answerInputKind,
   extractYoutubeVideoId,
-  splitPipeList,
+  resolveAnswerKind,
   type QuestionView,
   type RevealQuestionView,
 } from '@campus-pubquiz/types';
 import {
-  getLowerOptionLetter,
-  getOptionLetter,
-} from '@/app/lib/option-letters';
+  QUESTION_BODIES,
+  REVEAL_BODIES,
+} from '@/app/display/answer-kind-bodies';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 const HTTP_URL_PATTERN = /^https?:\/\//i;
@@ -26,44 +25,6 @@ function isAudioUrl(url: string): boolean {
 // data:/blob: payload that bloats or hangs the shared display. Exported so
 // callers (e.g. QuestionBrowser's "Look at the screen" hint) can detect
 // whether a question has display-worthy media without duplicating this check.
-interface MatchRevealRowProps {
-  isCorrect: boolean;
-  leftLabel: string;
-  left: string;
-  rightLabel: string;
-  right: string;
-}
-
-/** One matched pair on reveal. A fixed three-column grid keeps every arrow on the same vertical line regardless of text length. */
-function MatchRevealRow({
-  isCorrect,
-  leftLabel,
-  left,
-  rightLabel,
-  right,
-}: MatchRevealRowProps) {
-  const accentClass = isCorrect ? 'text-green' : 'text-magenta';
-  return (
-    <li
-      className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground ${
-        isCorrect ? 'border-green' : 'border-magenta'
-      }`}
-    >
-      <span className="flex items-baseline gap-3">
-        <span className={`font-display ${accentClass}`}>{leftLabel}</span>
-        <span>{left}</span>
-      </span>
-      <span aria-hidden="true" className={accentClass}>
-        {isCorrect ? '→' : '✗'}
-      </span>
-      <span className="flex items-baseline gap-3">
-        <span className={`font-display ${accentClass}`}>{rightLabel}</span>
-        <span>{right}</span>
-      </span>
-    </li>
-  );
-}
-
 export function isHttpUrl(url: string): boolean {
   return HTTP_URL_PATTERN.test(url);
 }
@@ -194,12 +155,9 @@ export function QuestionDisplay({
   mediaReplayToken = 0,
 }: QuestionDisplayProps) {
   const {
-    type,
     prompt,
     mediaStartSeconds,
     mediaEndSeconds,
-    options,
-    matchTargets,
     answer: correctAnswer,
   } = question;
   const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
@@ -210,39 +168,18 @@ export function QuestionDisplay({
   // together, question image smaller, answer image bigger, side by side — see
   // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
-  const isSort = answerInputKind(type) === 'sort';
-  const isMatch = answerInputKind(type) === 'match';
-  const sortCorrectOrder =
-    isSort && isRevealing && correctAnswer
-      ? splitPipeList(correctAnswer)
-      : undefined;
-  const matchCorrectRights =
-    isMatch && isRevealing && correctAnswer
-      ? splitPipeList(correctAnswer)
-      : undefined;
   // Presence of the prop (not its content) is what switches sort/match into
   // player-reveal mode — an empty string still means "don't show the answer
   // key", it just has nothing of the team's own to show either.
-  const isPlayerRevealMode = playerAnswer !== undefined;
-  const rawPlayerOrder = isPlayerRevealMode
-    ? splitPipeList(playerAnswer)
+  const answerKind = resolveAnswerKind(question);
+  const reveal = isRevealing
+    ? REVEAL_BODIES[answerKind]({
+        question,
+        correctAnswer,
+        playerAnswer,
+      })
     : undefined;
-  const playerSortOrder =
-    isSort &&
-    isRevealing &&
-    rawPlayerOrder &&
-    sortCorrectOrder &&
-    rawPlayerOrder.length === sortCorrectOrder.length
-      ? rawPlayerOrder
-      : undefined;
-  const playerMatchOrder =
-    isMatch &&
-    isRevealing &&
-    rawPlayerOrder &&
-    options &&
-    rawPlayerOrder.length === options.length
-      ? rawPlayerOrder
-      : undefined;
+  const QuestionBody = QUESTION_BODIES[answerKind];
   const isRevealingWithAnswerMedia =
     isRevealing && answerMediaUrl !== undefined;
   const rawQuestionMediaUrl =
@@ -328,12 +265,7 @@ export function QuestionDisplay({
           </div>
         )}
       </div>
-      {isRevealing && !isSort && !isMatch && (
-        <p className="font-extrabold text-display-3xl">
-          <span className="font-body text-foreground/55">Answer{': '}</span>
-          {correctAnswer}
-        </p>
-      )}
+      {reveal?.lead}
       {questionMediaUrl && questionYoutubeId && (
         <div
           className={
@@ -430,159 +362,7 @@ export function QuestionDisplay({
             autoPlay={autoplayMedia}
           />
         )}
-      {isSort && options && !isRevealing && (
-        <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
-          {options.map((item, index) => (
-            <li
-              key={index}
-              className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-display-xl font-bold"
-            >
-              <span className="font-display text-cyan">{index + 1}</span>
-              <span className="text-foreground">{item}</span>
-            </li>
-          ))}
-        </ol>
-      )}
-      {isSort && sortCorrectOrder && !isPlayerRevealMode && (
-        <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
-          {sortCorrectOrder.map((item, index) => (
-            <li
-              key={index}
-              className="flex items-center gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-display-xl font-bold"
-            >
-              <span className="font-display text-green">{index + 1}</span>
-              <span className="text-foreground">{item}</span>
-              <span aria-hidden="true" className="ml-auto text-green">
-                ✓
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-      {isSort && playerSortOrder && sortCorrectOrder && (
-        <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
-          {playerSortOrder.map((item, index) => {
-            const isCorrect = item === sortCorrectOrder[index];
-            return (
-              <li
-                key={index}
-                className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold ${
-                  isCorrect ? 'border-green' : 'border-magenta'
-                }`}
-              >
-                <span
-                  className={`font-display ${isCorrect ? 'text-green' : 'text-magenta'}`}
-                >
-                  {index + 1}
-                </span>
-                <span className="text-foreground">{item}</span>
-                <span
-                  aria-hidden="true"
-                  className={`ml-auto ${isCorrect ? 'text-green' : 'text-magenta'}`}
-                >
-                  {isCorrect ? '✓' : '✗'}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-      {isMatch && options && matchTargets && !isRevealing && (
-        <div className="grid w-full max-w-3xl grid-cols-2 gap-4 text-left">
-          <ul className="flex flex-col gap-3">
-            {options.map((item, index) => (
-              <li
-                key={index}
-                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-display-xl font-bold text-foreground"
-              >
-                <span className="font-display text-cyan">{index + 1}</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-          <ul className="flex flex-col gap-3">
-            {matchTargets.map((item, index) => (
-              <li
-                key={index}
-                className="flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-display-xl font-bold text-foreground"
-              >
-                <span className="font-display text-cyan">
-                  {getLowerOptionLetter(index)}
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {isMatch && options && matchCorrectRights && !isPlayerRevealMode && (
-        <ul className="flex w-full max-w-6xl flex-col gap-3 text-left">
-          {options.map((left, index) => {
-            const right = matchCorrectRights[index];
-            const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
-            return (
-              <MatchRevealRow
-                key={index}
-                isCorrect
-                leftLabel={String(index + 1)}
-                left={left}
-                rightLabel={getLowerOptionLetter(
-                  rightLetterIndex >= 0 ? rightLetterIndex : index,
-                )}
-                right={right}
-              />
-            );
-          })}
-        </ul>
-      )}
-      {isMatch && options && playerMatchOrder && matchCorrectRights && (
-        <ul className="flex w-full max-w-6xl flex-col gap-3 text-left">
-          {options.map((left, index) => {
-            const right = playerMatchOrder[index];
-            const rightLetterIndex = matchTargets?.indexOf(right) ?? index;
-            return (
-              <MatchRevealRow
-                key={index}
-                isCorrect={right === matchCorrectRights[index]}
-                leftLabel={String(index + 1)}
-                left={left}
-                rightLabel={getLowerOptionLetter(
-                  rightLetterIndex >= 0 ? rightLetterIndex : index,
-                )}
-                right={right}
-              />
-            );
-          })}
-        </ul>
-      )}
-      {!isSort && !isMatch && options && (
-        <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
-          {options.map((option, index) => {
-            const isCorrect =
-              correctAnswer !== undefined && option === correctAnswer;
-            return (
-              <li
-                key={index}
-                className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-display-xl font-bold ${
-                  isCorrect ? 'border-green' : 'border-foreground/30'
-                }`}
-              >
-                <span
-                  className={`font-display ${isCorrect ? 'text-green' : 'text-cyan'}`}
-                >
-                  {getOptionLetter(index)}
-                </span>
-                <span className="text-foreground">{option}</span>
-                {isCorrect && (
-                  <span aria-hidden="true" className="ml-auto text-green">
-                    ✓
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {reveal ? reveal.body : <QuestionBody question={question} />}
       {isRevealing && !showSideBySideReveal && answerMediaUrl && (
         <div className="flex w-full min-h-0 flex-1 items-center justify-center">
           <AnswerMedia
