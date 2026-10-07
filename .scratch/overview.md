@@ -1,22 +1,20 @@
-# Ticket overview
+# Spec overview
 
-Open tickets for every feature under `.scratch/`. A ticket is unblocked once every ticket in its "Blocked by" column appears in [`done.md`](done.md) (numbers refer to tickets in the same feature unless a feature is named). Each feature has a `spec.md` and an `issues/` folder.
+Specs that still have open tickets, one row per spec under `.scratch/`. A spec is unblocked once everything in its "Blocked by" column appears in [`done.md`](done.md). Each spec has a `spec.md` and an `issues/` folder holding its tickets.
 
 ## Not implemented
 
-| Feature               | #   | Ticket                                                                                                                                           | Blocked by |
-| --------------------- | --- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| question-answer-kinds | 01  | [Answer kinds and answer formats, with scoring going through them](question-answer-kinds/issues/01-answer-kinds-and-formats.md)                  | —          |
-| question-answer-kinds | 02  | [The phone and the answers list answer by answer kind](question-answer-kinds/issues/02-phone-and-answers-list-by-answer-kind.md)                 | 01         |
-| question-answer-kinds | 03  | [The big screen asks and reveals by answer kind](question-answer-kinds/issues/03-big-screen-by-answer-kind.md)                                   | 01         |
-| question-answer-kinds | 04  | [The quiz editor's answer section by answer kind](question-answer-kinds/issues/04-editor-answer-section-by-answer-kind.md)                       | 01         |
-| live-edit-save        | 01  | [The editor and the guard read one round-editing description](live-edit-save/issues/01-one-round-editing-description.md)                         | —          |
-| live-edit-save        | 02  | [The write queue can hold several sessions at once](live-edit-save/issues/02-queue-holds-several-sessions.md)                                    | —          |
-| live-edit-save        | 03  | [An editor save is checked and applied inside the live sessions' writes](live-edit-save/issues/03-editor-save-inside-live-sessions-writes.md)    | 02         |
-| live-edit-save        | 04  | [A re-import goes through the Live edit module](live-edit-save/issues/04-reimport-through-live-edit-module.md)                                   | 03         |
+| Spec                  | Title                                                                                                                       | Tickets | Blocked by             |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
+| question-answer-kinds | [One answer kind per question, defined once for every surface](question-answer-kinds/spec.md)                               | 4       | —                      |
+| live-edit-save        | [A live quiz save is checked and applied inside the live sessions' writes](live-edit-save/spec.md)                          | 4       | —                      |
+| socket-protocol       | [A typed socket protocol module, and socket-events split by concept](socket-protocol/spec.md)                               | 4       | —                      |
+| grading-policy        | [Grading policy in one module — key-fix regrades and the Grading refresh behind a narrow interface](grading-policy/spec.md) | 3       | —                      |
+| room-view-projection  | [One room-view projection shared by the server and the frontend fixtures](room-view-projection/spec.md)                     | 6       | socket-protocol 01, 04 |
+| outcome-deadlines     | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md)         | 3       | —                      |
+| block-membership      | [Block membership is its own rule, and the reveal views are built on it](block-membership/spec.md)                          | 3       | —                      |
+| team-link             | [A Team link module for the phone's join and rejoin lifecycle](team-link/spec.md)                                           | 3       | —                      |
 
 ## Won't do
 
-| Feature           | #   | Ticket                                                                                                            | Why                                                                       |
-| ----------------- | --- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| role-socket-hooks | 05  | [Control panel context replaces the 34-field sidebar props](role-socket-hooks/issues/05-control-panel-context.md) | Marked `wontfix`; props-refactor 03's single Control panel prop covers it |
+Not a whole spec: `role-socket-hooks` ticket 05 (control panel context) is marked `wontfix`, because `props-refactor` 03's single Control panel prop covers it.
