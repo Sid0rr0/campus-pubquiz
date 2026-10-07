@@ -75,7 +75,7 @@ export type ClientToServerPayload<E extends ClientToServerEvent> =
 export type ClientToServerAck<E extends ClientToServerEvent> =
   ClientToServerProtocol[E]['ack'];
 
-/** Payload of the `exception` message the connection sends when a handler throws. */
+/** Object form of the `exception` message (what Nest's websocket filter sends when a handler throws). The connection's own refusals (unknown session code, invalid session) send a bare message string instead. */
 export interface ExceptionPayload {
   status?: string;
   message: string;
@@ -91,7 +91,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.BONUS_AWARDED]: BonusAwardedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
-  exception: ExceptionPayload;
+  exception: ExceptionPayload | string;
 }
 
 /** The full server-to-client map for one room: the shared events plus that room's own state view on `STATE_SYNC` and `STATE_UPDATED`. */

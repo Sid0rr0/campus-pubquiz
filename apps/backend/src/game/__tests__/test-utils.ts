@@ -1,5 +1,5 @@
 import { MikroORM } from '@mikro-orm/core';
-import type { Server, Socket } from 'socket.io';
+import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
 import type { AuthUser } from '@campus-pubquiz/types';
 import { SESSION_COOKIE_NAME } from '@/auth/session-cookie';
 import type { SessionService } from '@/auth/session.service';
@@ -92,8 +92,8 @@ export function createMockSocket(
 
 export type MockSocket = ReturnType<typeof createMockSocket>;
 
-export function asSocket(mock: MockSocket): Socket {
-  return mock as unknown as Socket;
+export function asSocket(mock: MockSocket): GameSocket {
+  return mock as unknown as GameSocket;
 }
 
 export function createMockServer() {
@@ -110,6 +110,6 @@ export function createMockServer() {
 
 export type MockServer = ReturnType<typeof createMockServer>;
 
-export function asServer(mock: MockServer): Server {
-  return mock as unknown as Server;
+export function asServer(mock: MockServer): GameServer {
+  return mock as unknown as GameServer;
 }

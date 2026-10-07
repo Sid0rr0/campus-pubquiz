@@ -65,7 +65,12 @@ assertType<Equal<Parameters<TeamKickedListener>, []>>();
 
 // The connection's own `exception` message is on the wire too.
 type ExceptionListener = ServerToClientEvents<'players'>['exception'];
-assertType<Equal<Parameters<ExceptionListener>[0]['message'], string>>();
+assertType<
+  Equal<
+    Parameters<ExceptionListener>[0],
+    { status?: string; message: string } | string
+  >
+>();
 
 // A wrong payload for an event is a compile error.
 declare const emitFn: <E extends keyof ClientToServerProtocol>(

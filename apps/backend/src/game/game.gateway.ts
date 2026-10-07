@@ -15,7 +15,7 @@ import {
   type OnGatewayConnection,
   type OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
+import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
 import {
   type AckResult,
@@ -86,7 +86,7 @@ export class GameGateway
     OnModuleDestroy
 {
   @WebSocketServer()
-  server!: Server;
+  server!: GameServer;
 
   private readonly logger = new Logger(GameGateway.name);
   private readonly lockTimers: QuestionLockTimerRegistry;
@@ -128,7 +128,7 @@ export class GameGateway
   }
 
   @CreateRequestContext()
-  async handleConnection(client: Socket): Promise<void> {
+  async handleConnection(client: GameSocket): Promise<void> {
     await acceptConnection(
       {
         gameState: this.gameState,
@@ -139,7 +139,7 @@ export class GameGateway
     );
   }
 
-  async handleDisconnect(client: Socket): Promise<void> {
+  async handleDisconnect(client: GameSocket): Promise<void> {
     await disconnectClient(
       { ...this.outcomeDeps, logger: this.logger },
       client,
@@ -151,7 +151,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.adminAction.event)
   @CreateRequestContext()
   async handleAdminAction(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -180,7 +180,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.joinPlayers.event)
   @CreateRequestContext()
   async handleJoinPlayers(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -194,7 +194,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.submitAnswer.event)
   @CreateRequestContext()
   async handleSubmitAnswer(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -208,7 +208,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.rateRound.event)
   @CreateRequestContext()
   async handleRateRound(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -222,7 +222,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.sendFeedback.event)
   @CreateRequestContext()
   async handleSendFeedback(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -236,7 +236,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.gradeAnswer.event)
   @CreateRequestContext()
   async handleGradeAnswer(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -250,7 +250,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.kickTeam.event)
   @CreateRequestContext()
   async handleKickTeam(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -264,7 +264,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.leaveSession.event)
   @CreateRequestContext()
   async handleLeaveSession(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -278,7 +278,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setBreakEndTime.event)
   @CreateRequestContext()
   async handleSetBreakEndTime(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -293,7 +293,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setDisplayTextScale.event)
   @CreateRequestContext()
   async handleSetDisplayTextScale(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -308,7 +308,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.awardBonus.event)
   @CreateRequestContext()
   async handleAwardBonus(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -322,7 +322,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.createShowdownRound.event)
   @CreateRequestContext()
   async handleCreateShowdownRound(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -336,7 +336,7 @@ export class GameGateway
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.submitShowdownGuess.event)
   @CreateRequestContext()
   async handleSubmitShowdownGuess(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
   ): Promise<AckResult> {
     return this.dispatch(
@@ -496,7 +496,7 @@ export class GameGateway
   private dispatch<S extends z.ZodType>(
     declaration: SocketEventDeclaration<S>,
     rawPayload: unknown,
-    client: Socket,
+    client: GameSocket,
     body: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
   ): Promise<AckResult> {
     return dispatchSocketEvent(
