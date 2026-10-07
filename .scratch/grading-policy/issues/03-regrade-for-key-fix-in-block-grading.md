@@ -18,7 +18,7 @@ Parent spec: `.scratch/grading-policy/spec.md`
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The block grading module exposes *regrade for a key fix* as described. The Grading refresh's halves are no longer reachable from outside it.
 - [ ] The quiz edit makes one grading call and no longer merges closest_guess summaries, applies a refresh, or lists answers to find teams.
