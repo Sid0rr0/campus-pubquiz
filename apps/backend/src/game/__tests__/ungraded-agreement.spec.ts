@@ -3,7 +3,6 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type AdminStatePayload,
-  type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
@@ -101,8 +100,8 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
     );
   }
 
-  function latestAdminView(): StateSnapshotPayload {
-    const snapshots = game.payloadsTo<StateSnapshotPayload>(
+  function latestAdminView(): AdminStatePayload {
+    const snapshots = game.payloadsTo<AdminStatePayload>(
       SOCKET_ROOMS.ADMIN,
       SOCKET_EVENTS.STATE_UPDATED,
     );
@@ -307,7 +306,7 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
 
   // The one round is also the last block, so the break decides the showdown.
   function isShowdownEligible(): boolean {
-    return (latestAdminView() as AdminStatePayload).isShowdownEligible;
+    return latestAdminView().isShowdownEligible;
   }
 
   it('lists a typed question when a key fix stops its auto-matched answer matching, and withholds the showdown until it is graded', async () => {

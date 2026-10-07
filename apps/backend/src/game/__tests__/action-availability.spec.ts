@@ -50,8 +50,9 @@ describe('Screen projection — Advance/Previous availability', () => {
 
   /** Where the quiz is, including the leaderboard: a revealed rank or a hidden board counts as moving. */
   function positionWithBoard() {
-    const { leaderboardRevealCount, progress } = game.gameState.getSnapshot(
+    const { leaderboardRevealCount, progress } = game.gameState.getView(
       game.joinCode,
+      SOCKET_ROOMS.DISPLAY,
     );
     return JSON.stringify([
       position(),
@@ -284,6 +285,10 @@ describe('Screen projection — Advance/Previous availability', () => {
       return game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
     }
 
+    function displayView() {
+      return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+    }
+
     function announcedAdvanceSlot(): AdvanceSlotStep {
       return adminView().advanceStep;
     }
@@ -297,7 +302,7 @@ describe('Screen projection — Advance/Previous availability', () => {
       return {
         position: position(),
         isBoardUp: view.progress.isLeaderboardVisible,
-        revealCount: view.leaderboardRevealCount,
+        revealCount: displayView().leaderboardRevealCount,
       };
     }
 
@@ -339,7 +344,7 @@ describe('Screen projection — Advance/Previous availability', () => {
           slot,
           status: view.progress.status,
           isBoardUp: view.progress.isLeaderboardVisible,
-          revealCount: view.leaderboardRevealCount,
+          revealCount: displayView().leaderboardRevealCount,
           stepCount: getLeaderboardRevealStepCount(
             view.leaderboard,
             view.isCurrentRoundKahoot ?? false,

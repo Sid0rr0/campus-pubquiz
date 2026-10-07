@@ -42,7 +42,7 @@ describe('GameGateway — a freshly created session', () => {
       game.gameState.createSession(game.quizId),
     );
 
-    const snapshot = await game.snapshot(created.joinCode);
+    const snapshot = await game.resync('display', created.joinCode);
     expect(snapshot.progress.status).toBe('lobby');
     expect(snapshot.questionLockAt).toBeNull();
     expect(snapshot.kahootQuestionEndsAt).toBeNull();
@@ -58,13 +58,14 @@ describe('GameGateway — a freshly created session', () => {
       game.gameState.createSession(game.quizId),
     );
 
-    const snapshot = await game.snapshot(created.joinCode);
+    const snapshot = await game.resync('display', created.joinCode);
     expect(snapshot.progress.status).toBe('lobby');
     expect(snapshot.kahootQuestionEndsAt).toBeNull();
     expect(snapshot.breakEndsAt).toBeNull();
     expect(snapshot.leaderboardRevealCount).toBe(0);
     expect(snapshot.closestGuessRevealStep).toBe(0);
-    expect(snapshot.phaseStartedAt).toBeNull();
-    expect(snapshot.phaseElapsedMs).toBeNull();
+    const admin = await game.resync('admin', created.joinCode);
+    expect(admin.phaseStartedAt).toBeNull();
+    expect(admin.phaseElapsedMs).toBeNull();
   });
 });

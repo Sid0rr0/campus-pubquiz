@@ -1,4 +1,9 @@
 import {
+  SOCKET_ROOMS,
+  type GameAction,
+  type StateViewByRoom,
+} from '@campus-pubquiz/types';
+import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -9,6 +14,15 @@ import {
 describe('GameGateway — past-block revealed questions', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
+
+  /** Runs an admin action and returns the view the phones are then sent — the room that carries the upcoming and past-block questions. */
+  async function playersAfter(
+    action: GameAction,
+    from: RealStoreGateway = game,
+  ): Promise<StateViewByRoom['players']> {
+    await from.act(action);
+    return from.gameState.getView(from.joinCode, SOCKET_ROOMS.PLAYERS);
+  }
 
   beforeEach(async () => {
     game = await harness.createGateway({
@@ -38,11 +52,11 @@ describe('GameGateway — past-block revealed questions', () => {
   });
 
   it('exposes no past-block questions before any block has finished', async () => {
-    expect((await game.snapshot()).pastRevealedQuestions).toEqual([]);
+    expect((await game.resync('players')).pastRevealedQuestions).toEqual([]);
 
     await game.act('START_QUIZ');
     await game.act('ADVANCE'); // -> round_intro(0)
-    const opened = await game.act('ADVANCE'); // -> r1q1 (still block 1)
+    const opened = await playersAfter('ADVANCE'); // -> r1q1 (still block 1)
     expect(opened.pastRevealedQuestions).toEqual([]);
   });
 
@@ -65,7 +79,7 @@ describe('GameGateway — past-block revealed questions', () => {
     }
     // Advancing past the block's last reveal question crosses into block 2's
     // round_intro — nothing in round C has been opened yet.
-    const roundCIntro = await game.act('ADVANCE');
+    const roundCIntro = await playersAfter('ADVANCE');
 
     expect(roundCIntro.progress.status).toBe('round_intro');
     expect(roundCIntro.blockQuestions).toEqual([]);
@@ -87,7 +101,7 @@ describe('GameGateway — past-block revealed questions', () => {
     // Once round C's own question opens, it shows up in blockQuestions
     // (answer-free, still in progress) while the finished first block stays
     // fully visible in pastRevealedQuestions.
-    const roundCOpen = await game.act('ADVANCE'); // -> r3q1 (C1)
+    const roundCOpen = await playersAfter('ADVANCE'); // -> r3q1 (C1)
     expect(roundCOpen.blockQuestions.map((q) => q.id)).toEqual([idC]);
     expect(roundCOpen.blockQuestions[0]).not.toHaveProperty('answer');
     expect(roundCOpen.pastRevealedQuestions.map((q) => q.id)).toEqual([

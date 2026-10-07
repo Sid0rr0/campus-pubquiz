@@ -486,7 +486,7 @@ describe('GameStateService — getPresenterContext', () => {
             closestGuessRevealStep: step,
             progress,
             leaderboardRevealCount,
-          } = game.gameState.getSnapshot(game.joinCode);
+          } = game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
           if (status !== 'reveal') return;
           if (
             phase === 'before_board' &&

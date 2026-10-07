@@ -26,6 +26,9 @@ import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { isQuestionHiddenBehindKahootLeaderboard } from '@/game/state/kahoot-visibility.util';
 import type { SessionState } from '@/game/state/session-state';
 import {
+  buildAdminFields,
+  buildDisplayFields,
+  buildPlayersFields,
   buildSnapshot,
   isBlockAnswerable,
 } from '@/game/state/session-snapshot.util';
@@ -138,6 +141,7 @@ export function projectScreen(
     case SOCKET_ROOMS.DISPLAY:
       return {
         ...snapshot,
+        ...buildDisplayFields(session),
         onAirScreen: screen,
         screenKey,
         header,
@@ -149,6 +153,7 @@ export function projectScreen(
     case SOCKET_ROOMS.ADMIN:
       return {
         ...snapshot,
+        ...buildAdminFields(session),
         onAirScreen: screen,
         ...describeAdminIndicators(snapshot),
         advanceStep: describeAdvanceStep(session),
@@ -164,6 +169,7 @@ export function projectScreen(
       const isAnswerable = isBlockAnswerable(session);
       const view = {
         ...snapshot,
+        ...buildPlayersFields(session),
         ...describePlayersScreen({
           ...snapshot,
           isAnswerable,

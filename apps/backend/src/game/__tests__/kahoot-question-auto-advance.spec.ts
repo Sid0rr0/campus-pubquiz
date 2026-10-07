@@ -79,12 +79,15 @@ describe('GameGateway — kahoot question auto-advance timer', () => {
     const game = await openKahootQuestion({
       kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS,
     });
-    const deadline = (await game.snapshot()).kahootQuestionEndsAt as number;
+    const deadline = (await game.resync('display'))
+      .kahootQuestionEndsAt as number;
 
     const restarted = await game.restart();
     restarted.clearEmits();
 
-    expect((await restarted.snapshot()).kahootQuestionEndsAt).toBe(deadline);
+    expect((await restarted.resync('display')).kahootQuestionEndsAt).toBe(
+      deadline,
+    );
     expect(restarted.timers().kahoot.dueAt()).toBe(deadline);
     await restarted.timers().kahoot.fireNow();
     expect(displayStatuses(restarted)).toEqual(['locking']);

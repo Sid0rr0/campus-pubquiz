@@ -57,18 +57,10 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
-  /** Category/topic of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
-  roundCategory: string;
-  /** Author of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
-  roundAuthor: string;
   /** Whether the round at `progress.roundIndex` has kahootMode set — drives /display's top-5-only leaderboard while it's active. */
   isCurrentRoundKahoot: boolean;
   /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
   roundTitles: string[];
-  /** Category of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
-  roundCategories: string[];
-  /** Author of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
-  roundAuthors: string[];
   currentQuestion: QuestionView | null;
   /**
    * Questions open for (re-)answering: everything revealed so far in the
@@ -76,49 +68,15 @@ export interface StateSnapshotPayload {
    * during break/reveal (for grading). Empty otherwise.
    */
   blockQuestions: BlockQuestionView[];
-  /**
-   * Positions (and round titles) of the current block's remaining
-   * questions — not open yet, shown as disabled slots in the block picker
-   * so the whole block's shape is visible up front, spanning every round up
-   * to and including the one that ends the block (breakAfter). Empty
-   * unless a question is open/locking.
-   */
-  upcomingQuestions: UpcomingQuestionPosition[];
   /** The just-finished block's questions with correct answers, shown during reveal. Empty otherwise. The players view carries only the reveal walk so far (see the Screen projection). */
   revealQuestions: BlockRevealQuestionView[];
-  /**
-   * Every question from blocks that finished before the current one, with
-   * correct answers — a block can only be left behind once its own
-   * break+reveal has completed, so these are always safe to share. Lets a
-   * client that (re)connects mid-game (a phone that slept through a round,
-   * a page refresh) rebuild its full answer history across every round
-   * played so far, not just the current block.
-   */
-  pastRevealedQuestions: BlockRevealQuestionView[];
-  /**
-   * IDs of current-block questions (from `blockQuestions`) that still have
-   * at least one submitted answer with `gradedAt === null` — closest_guess
-   * excluded, since it grades itself automatically and never needs an admin
-   * to act. Drives the "not yet graded" dot in the admin question browser;
-   * ADVANCE out of the break/grading screens is rejected server-side while
-   * this is non-empty.
-   */
-  ungradedQuestionIds: number[];
   /** Teams that have answered the current question. Empty when none is open. */
   answeredTeamIds: number[];
   leaderboard: LeaderboardEntry[];
-  /**
-   * How many teams (counting up from last place) are currently revealed on
-   * the leaderboard, driven by ADVANCE while the board is
-   * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
-   */
-  leaderboardRevealCount: number;
   joinCode: string;
   teams: TeamView[];
   /** Epoch-ms deadline when the current (last-of-round) question auto-locks, or null if no lock is armed. */
   questionLockAt: number | null;
-  /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
-  kahootQuestionEndsAt: number | null;
   /**
    * closest_guess only — which reveal sub-step (0-indexed) is shown for the
    * question currently at revealIndex. Ephemeral, like leaderboardRevealCount:
@@ -140,26 +98,6 @@ export interface StateSnapshotPayload {
    * DEFAULT_DISPLAY_TEXT_SCALE.
    */
   displayTextScale: number;
-  /**
-   * Epoch-ms the currently-displayed question/grading block started, or
-   * null when it isn't live. There is at most one live timed phase per
-   * session (the "frontier" — the most recent genuinely-new question or
-   * block to open); Previous, and any detour through an untimed status,
-   * never stop it, so it keeps ticking in the background and shows its full
-   * elapsed time whenever it's displayed again — undiminished by wherever
-   * the admin wandered via Previous in between. Mutually exclusive with
-   * phaseElapsedMs: exactly one of the two is non-null whenever the current
-   * status is timed at all.
-   */
-  phaseStartedAt: number | null;
-  /**
-   * Final, immutable elapsed-ms for the currently-displayed question/
-   * grading block, once it's been superseded by a *different* genuinely new
-   * phase — null while it's still the live frontier (see phaseStartedAt) or
-   * the current status isn't timed at all. Set exactly once and never
-   * recomputed, even if displayed again later via Previous.
-   */
-  phaseElapsedMs: number | null;
   /** This session's configurable settings — see SessionSettings. */
   settings: SessionSettings;
   /**
@@ -195,6 +133,22 @@ export interface DisplayStatePayload extends StateSnapshotPayload {
   header: HeaderContent;
   /** True while the between-questions leaderboard covers a kahoot question that is already open underneath. */
   isBetweenKahootQuestions: boolean;
+  /** Category/topic of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
+  roundCategory: string;
+  /** Author of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
+  roundAuthor: string;
+  /** Category of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
+  roundCategories: string[];
+  /** Author of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
+  roundAuthors: string[];
+  /**
+   * How many teams (counting up from last place) are currently revealed on
+   * the leaderboard, driven by ADVANCE while the board is
+   * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
+   */
+  leaderboardRevealCount: number;
+  /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
+  kahootQuestionEndsAt: number | null;
 }
 /** What the admin's Advance slot does on its next press, decided by the server: reveal the next leaderboard rank, hide the leaderboard, advance the quiz (a transition, a showdown or closest_guess step), or nothing. */
 export type AdvanceSlotStep =
@@ -223,6 +177,35 @@ export interface AdminStatePayload
   isShowdownEligible: boolean;
   /** Whether a question is open or locking and it is a break point in the session's own round structure. */
   isLastQuestionBeforeBreak: boolean;
+  /**
+   * IDs of current-block questions (from `blockQuestions`) that still have
+   * at least one submitted answer with `gradedAt === null` — closest_guess
+   * excluded, since it grades itself automatically and never needs an admin
+   * to act. Drives the "not yet graded" dot in the admin question browser;
+   * ADVANCE out of the break/grading screens is rejected server-side while
+   * this is non-empty.
+   */
+  ungradedQuestionIds: number[];
+  /**
+   * Epoch-ms the currently-displayed question/grading block started, or
+   * null when it isn't live. There is at most one live timed phase per
+   * session (the "frontier" — the most recent genuinely-new question or
+   * block to open); Previous, and any detour through an untimed status,
+   * never stop it, so it keeps ticking in the background and shows its full
+   * elapsed time whenever it's displayed again — undiminished by wherever
+   * the admin wandered via Previous in between. Mutually exclusive with
+   * phaseElapsedMs: exactly one of the two is non-null whenever the current
+   * status is timed at all.
+   */
+  phaseStartedAt: number | null;
+  /**
+   * Final, immutable elapsed-ms for the currently-displayed question/
+   * grading block, once it's been superseded by a *different* genuinely new
+   * phase — null while it's still the live frontier (see phaseStartedAt) or
+   * the current status isn't timed at all. Set exactly once and never
+   * recomputed, even if displayed again later via Previous.
+   */
+  phaseElapsedMs: number | null;
 }
 /** A team phone's view — a kahoot question hidden behind the between-questions leaderboard is removed from `currentQuestion` and `blockQuestions` on the server. */
 export interface PlayersStatePayload
@@ -233,6 +216,23 @@ export interface PlayersStatePayload
   revealQuestions: (BlockRevealQuestionView | PendingClosestGuessRevealView)[];
   /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
   isAnswerable: boolean;
+  /**
+   * Positions (and round titles) of the current block's remaining
+   * questions — not open yet, shown as disabled slots in the block picker
+   * so the whole block's shape is visible up front, spanning every round up
+   * to and including the one that ends the block (breakAfter). Empty
+   * unless a question is open/locking.
+   */
+  upcomingQuestions: UpcomingQuestionPosition[];
+  /**
+   * Every question from blocks that finished before the current one, with
+   * correct answers — a block can only be left behind once its own
+   * break+reveal has completed, so these are always safe to share. Lets a
+   * client that (re)connects mid-game (a phone that slept through a round,
+   * a page refresh) rebuild its full answer history across every round
+   * played so far, not just the current block.
+   */
+  pastRevealedQuestions: BlockRevealQuestionView[];
 }
 
 /** The view type each socket room is sent. */

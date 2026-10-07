@@ -1,4 +1,4 @@
-import type { StateSnapshotPayload } from '@campus-pubquiz/types';
+import type { PlayersStatePayload } from '@campus-pubquiz/types';
 import { describe, expect, it } from 'vitest';
 import { mergeSeenQuestions } from '@/app/lib/use-player-game';
 
@@ -13,15 +13,13 @@ const hidden = {
 };
 const revealed = { ...hidden, answer: 'Banana' };
 
-function payload(
-  overrides: Partial<StateSnapshotPayload>,
-): StateSnapshotPayload {
+function payload(overrides: Partial<PlayersStatePayload>): PlayersStatePayload {
   return {
     blockQuestions: [],
     revealQuestions: [],
     pastRevealedQuestions: [],
     ...overrides,
-  } as StateSnapshotPayload;
+  } as PlayersStatePayload;
 }
 
 describe('mergeSeenQuestions', () => {
@@ -57,7 +55,7 @@ describe('mergeSeenQuestions', () => {
     const seen = mergeSeenQuestions(
       {},
       payload({
-        progress: { status: 'ended' } as StateSnapshotPayload['progress'],
+        progress: { status: 'ended' } as PlayersStatePayload['progress'],
         blockQuestions: [hidden],
         revealQuestions: [revealed],
       }),

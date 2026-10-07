@@ -18,12 +18,12 @@ Parent spec: `.scratch/socket-protocol/spec.md`
 
 **Blocked by:** 01 (Split the socket-events file by concept), 02 (The protocol map, and the frontend typed against it)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first: Screen projection and core snapshot specs assert that each moved field appears in its own room's view and is absent from the other two rooms' views.
-- [ ] `StateSnapshotPayload` no longer declares the moved fields; each is declared on its room's view type.
-- [ ] A reconnecting client's `STATE_SYNC` carries the same moved fields as a live `STATE_UPDATED` for its room (the resync path is covered alongside the live path).
-- [ ] Backend specs and frontend page fixtures that put a moved field on the wrong room's view are updated; no page gains a defensive default to paper over a missing field.
-- [ ] `/display`, `/control`, `/remote` and `/play` page tests pass.
-- [ ] `DOCUMENTATION.md`'s snapshot table is updated.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass across all workspaces.
+- [x] Written first: Screen projection and core snapshot specs assert that each moved field appears in its own room's view and is absent from the other two rooms' views.
+- [x] `StateSnapshotPayload` no longer declares the moved fields; each is declared on its room's view type.
+- [x] A reconnecting client's `STATE_SYNC` carries the same moved fields as a live `STATE_UPDATED` for its room (the resync path is covered alongside the live path).
+- [x] Backend specs and frontend page fixtures that put a moved field on the wrong room's view are updated; no page gains a defensive default to paper over a missing field.
+- [x] `/display`, `/control`, `/remote` and `/play` page tests pass.
+- [x] `DOCUMENTATION.md`'s snapshot table is updated.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass across all workspaces.

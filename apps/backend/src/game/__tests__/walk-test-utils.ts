@@ -143,8 +143,7 @@ export function createPreviewWalk(
       game.joinCode,
     );
     const view = game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
-    const snapshot = game.gameState.getSnapshot(game.joinCode);
-    const { progress } = snapshot;
+    const { progress } = view;
     return {
       currentHeading: currentScreen.heading,
       next: nextScreen,
@@ -156,10 +155,10 @@ export function createPreviewWalk(
         progress.roundIndex,
         progress.questionIndex,
         progress.revealIndex,
-        snapshot.closestGuessRevealStep,
-        snapshot.showdownRevealStep,
+        view.closestGuessRevealStep,
+        view.showdownRevealStep,
         progress.isLeaderboardVisible,
-        snapshot.leaderboardRevealCount,
+        view.leaderboardRevealCount,
       ]),
     };
   }

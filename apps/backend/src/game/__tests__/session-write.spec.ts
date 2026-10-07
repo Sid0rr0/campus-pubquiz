@@ -4,7 +4,7 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
   type LeaderboardEntry,
-  type StateSnapshotPayload,
+  type AdminStatePayload,
 } from '@campus-pubquiz/types';
 import { Round } from '@/db/entities/round.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
@@ -30,7 +30,7 @@ describe('GameGateway — session write: bonus changes', () => {
     game.clearEmits();
   });
 
-  function adminSnapshots(joinCode = game.joinCode): StateSnapshotPayload[] {
+  function adminSnapshots(joinCode = game.joinCode): AdminStatePayload[] {
     const adminRoom = sessionRoom(joinCode, SOCKET_ROOMS.ADMIN);
     return game
       .roomEmits()
@@ -39,10 +39,10 @@ describe('GameGateway — session write: bonus changes', () => {
           emit.rooms.includes(adminRoom) &&
           emit.event === SOCKET_EVENTS.STATE_UPDATED,
       )
-      .map((emit) => emit.payload as StateSnapshotPayload);
+      .map((emit) => emit.payload as AdminStatePayload);
   }
 
-  function bonusIn(snapshot: StateSnapshotPayload): number | undefined {
+  function bonusIn(snapshot: AdminStatePayload): number | undefined {
     return snapshot.leaderboard.find(
       (entry: LeaderboardEntry) => entry.teamId === teamId,
     )?.bonusPoints;
@@ -134,7 +134,7 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     game.clearEmits();
   });
 
-  function adminSnapshots(): StateSnapshotPayload[] {
+  function adminSnapshots(): AdminStatePayload[] {
     const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
     return game
       .roomEmits()
@@ -143,10 +143,10 @@ describe('GameGateway — session write: answers recorded and graded', () => {
           emit.rooms.includes(adminRoom) &&
           emit.event === SOCKET_EVENTS.STATE_UPDATED,
       )
-      .map((emit) => emit.payload as StateSnapshotPayload);
+      .map((emit) => emit.payload as AdminStatePayload);
   }
 
-  function lastAdminSnapshot(): StateSnapshotPayload {
+  function lastAdminSnapshot(): AdminStatePayload {
     const snapshots = adminSnapshots();
     return snapshots[snapshots.length - 1];
   }
@@ -181,7 +181,7 @@ describe('GameGateway — session write: answers recorded and graded', () => {
     return answers.map((answer) => answer.answerId);
   }
 
-  function totalPoints(snapshot: StateSnapshotPayload): number {
+  function totalPoints(snapshot: AdminStatePayload): number {
     return snapshot.leaderboard.reduce(
       (sum, entry) => sum + entry.totalPoints,
       0,
@@ -258,7 +258,7 @@ describe('GameGateway — session write: roster changes', () => {
     game.clearEmits();
   });
 
-  function lastAdminSnapshot(): StateSnapshotPayload {
+  function lastAdminSnapshot(): AdminStatePayload {
     const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
     const snapshots = game
       .roomEmits()
@@ -267,7 +267,7 @@ describe('GameGateway — session write: roster changes', () => {
           emit.rooms.includes(adminRoom) &&
           emit.event === SOCKET_EVENTS.STATE_UPDATED,
       )
-      .map((emit) => emit.payload as StateSnapshotPayload);
+      .map((emit) => emit.payload as AdminStatePayload);
     return snapshots[snapshots.length - 1];
   }
 
@@ -373,7 +373,7 @@ describe('GameGateway — session write: presses', () => {
     jest.restoreAllMocks();
   });
 
-  function lastAdminSnapshot(): StateSnapshotPayload {
+  function lastAdminSnapshot(): AdminStatePayload {
     const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
     const snapshots = game
       .roomEmits()
@@ -382,7 +382,7 @@ describe('GameGateway — session write: presses', () => {
           emit.rooms.includes(adminRoom) &&
           emit.event === SOCKET_EVENTS.STATE_UPDATED,
       )
-      .map((emit) => emit.payload as StateSnapshotPayload);
+      .map((emit) => emit.payload as AdminStatePayload);
     return snapshots[snapshots.length - 1];
   }
 
@@ -595,7 +595,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     game.clearEmits();
   });
 
-  function lastAdminSnapshot(): StateSnapshotPayload {
+  function lastAdminSnapshot(): AdminStatePayload {
     const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
     const snapshots = game
       .roomEmits()
@@ -604,7 +604,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
           emit.rooms.includes(adminRoom) &&
           emit.event === SOCKET_EVENTS.STATE_UPDATED,
       )
-      .map((emit) => emit.payload as StateSnapshotPayload);
+      .map((emit) => emit.payload as AdminStatePayload);
     return snapshots[snapshots.length - 1];
   }
 
@@ -715,7 +715,7 @@ describe('GameGateway — session write: events that do not touch scores', () =>
     jest.restoreAllMocks();
   });
 
-  function lastAdminSnapshot(): StateSnapshotPayload {
+  function lastAdminSnapshot(): AdminStatePayload {
     const adminRoom = sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN);
     const snapshots = game
       .roomEmits()
@@ -724,13 +724,11 @@ describe('GameGateway — session write: events that do not touch scores', () =>
           emit.rooms.includes(adminRoom) &&
           emit.event === SOCKET_EVENTS.STATE_UPDATED,
       )
-      .map((emit) => emit.payload as StateSnapshotPayload);
+      .map((emit) => emit.payload as AdminStatePayload);
     return snapshots[snapshots.length - 1];
   }
 
-  function isTeamConnected(
-    snapshot: StateSnapshotPayload,
-  ): boolean | undefined {
+  function isTeamConnected(snapshot: AdminStatePayload): boolean | undefined {
     return snapshot.teams.find((entry) => entry.teamId === team.teamId)
       ?.isConnected;
   }
@@ -842,7 +840,7 @@ describe('GameGateway — session write: showdown', () => {
     jest.restoreAllMocks();
   });
 
-  function hasGuessed(snapshot: StateSnapshotPayload): boolean | undefined {
+  function hasGuessed(snapshot: AdminStatePayload): boolean | undefined {
     return snapshot.activeShowdown?.participants.find(
       (participant) => participant.teamId === teamA.teamId,
     )?.hasGuessed;
@@ -952,7 +950,7 @@ describe('GameGateway — session write: lobby settings', () => {
     });
   }
 
-  function expectSettingsAndTeam(snapshot: StateSnapshotPayload): void {
+  function expectSettingsAndTeam(snapshot: AdminStatePayload): void {
     expect(
       game.gameState.getSnapshot(game.joinCode).settings.lockGraceSeconds,
     ).toBe(17);

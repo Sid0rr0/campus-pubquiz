@@ -254,7 +254,13 @@ screen is not on air while a showdown is being played, so the line never shows t
 
 ### The snapshot
 
-`StateSnapshotPayload` is the single source of truth every client renders:
+`StateSnapshotPayload` is the shared base every room's state view is built
+from; each room is sent the base plus the fields only it reads (the Screen
+projection adds them, the core snapshot never builds them for the others).
+`STATE_SYNC` (resync on connect) and `STATE_UPDATED` (live) carry the same
+view for a room.
+
+**Shared base** (every room):
 
 | Field             | Meaning                                                                                                                                |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -265,6 +271,20 @@ screen is not on air while a showdown is being played, so the line never shows t
 | `leaderboard`     | Graded totals, recomputed after every grade or bonus award                                                                             |
 | `joinCode`        | Six-character code for this game session                                                                                               |
 | `teams`           | Connected/registered teams                                                                                                             |
+
+The base also holds the other fields two or more rooms read (round titles,
+quiz structure, `questionLockAt`, `breakEndsAt`, `displayTextScale`, settings,
+showdown state, the closest_guess reveal step, `revealQuestions`).
+
+**Fields that belong to one room's view:**
+
+| View                            | Fields                                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `kahootQuestionEndsAt` |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                        |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                        |
+
+A field only one room reads is added to that room's view type, not the base.
 
 ### Events
 

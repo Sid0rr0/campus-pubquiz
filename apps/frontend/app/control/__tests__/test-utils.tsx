@@ -147,7 +147,6 @@ export function adminView<
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
     activeShowdown: null,
-    leaderboardRevealCount: 0,
     ...snapshot,
   };
 }

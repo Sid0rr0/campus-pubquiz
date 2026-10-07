@@ -9,7 +9,8 @@ import {
   type QuestionType,
   type SessionSettings,
   type SocketRoomName,
-  type StateSnapshotPayload,
+  type AdminStatePayload,
+  type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { StandingsService } from '@/standings/standings.service';
@@ -247,9 +248,14 @@ export interface RealStoreGateway extends PlayableQuiz {
     kahoot: PhaseTimerControl;
   };
   /** Sends an admin action through the gateway (connecting an admin on first use) and returns the snapshot the admin room received for it. Throws whatever the gateway rejects with. */
-  act: (action: GameAction) => Promise<StateSnapshotPayload>;
-  /** The snapshot a freshly connecting client is handed — what a reconnect sees — for the seeded session, or another by `joinCode`. */
-  snapshot: (joinCode?: string) => Promise<StateSnapshotPayload>;
+  act: (action: GameAction) => Promise<AdminStatePayload>;
+  /** The state view a freshly connecting client of `room` is handed as its STATE_SYNC — what a reconnect sees — for the seeded session, or another by `joinCode`. */
+  resync: <Room extends SocketRoomName>(
+    room: Room,
+    joinCode?: string,
+  ) => Promise<StateViewByRoom[Room]>;
+  /** The quiz master's resync view (see `resync`) — the same room `act` returns the view of. */
+  snapshot: (joinCode?: string) => Promise<AdminStatePayload>;
   /** Rebuilds the module and gateway over the same database, as a backend restart would: progress and timers come back from persistence, sockets and connected teams do not. */
   restart: () => Promise<RealStoreGateway>;
 }
@@ -604,7 +610,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     };
 
     let actingAdmin: MockSocket | undefined;
-    const act = async (action: GameAction): Promise<StateSnapshotPayload> => {
+    const act = async (action: GameAction): Promise<AdminStatePayload> => {
       actingAdmin ??= await connectAdmin();
       const emitsBefore = emits.length;
       const ack = await gateway.handleAdminAction(asSocket(actingAdmin), {
@@ -622,12 +628,16 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         );
       const latest = received[received.length - 1];
       if (!latest) throw new Error(`${action} pushed no state snapshot`);
-      return latest.payload as StateSnapshotPayload;
+      return latest.payload as AdminStatePayload;
     };
 
-    const snapshot = async (
-      joinCode = quiz.joinCode,
-    ): Promise<StateSnapshotPayload> => {
+    const connectToRoom = async (
+      room: SocketRoomName,
+      joinCode: string,
+    ): Promise<MockSocket> => {
+      if (room === SOCKET_ROOMS.ADMIN) return connectAdmin(joinCode);
+      if (room === SOCKET_ROOMS.PLAYERS)
+        return connectPlayer(undefined, joinCode);
       const display = createMockSocket(
         SOCKET_ROOMS.DISPLAY,
         {},
@@ -635,12 +645,21 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         joinCode,
       );
       await gateway.handleConnection(asSocket(display));
-      const sync = display.emit.mock.calls.find(
+      return display;
+    };
+    const resync = async <Room extends SocketRoomName>(
+      room: Room,
+      joinCode = quiz.joinCode,
+    ): Promise<StateViewByRoom[Room]> => {
+      const client = await connectToRoom(room, joinCode);
+      const sync = client.emit.mock.calls.find(
         ([event]) => event === SOCKET_EVENTS.STATE_SYNC,
-      ) as [string, StateSnapshotPayload] | undefined;
+      ) as [string, StateViewByRoom[Room]] | undefined;
       if (!sync) throw new Error('A connecting client received no snapshot');
       return sync[1];
     };
+    const snapshot = (joinCode = quiz.joinCode) =>
+      resync(SOCKET_ROOMS.ADMIN, joinCode);
 
     const settled = async () => {
       await gameState.whenSessionWritesIdle(quiz.joinCode);
@@ -693,6 +712,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       openFirstQuestion,
       teams: [],
       act,
+      resync,
       snapshot,
       restart: () => assemble(quiz),
     };
