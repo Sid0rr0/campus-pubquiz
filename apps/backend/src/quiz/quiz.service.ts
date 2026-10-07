@@ -81,6 +81,22 @@ function forceLastRoundBreak(
   }));
 }
 
+type IdKeyedQuestion = ImportQuestionPreview & { questionId: number };
+
+/** A question without a `questionId` is slot-keyed: matched to a stored row by its (round, position) slot instead. */
+function isIdKeyed(
+  question: ImportQuestionPreview,
+): question is IdKeyedQuestion {
+  return question.questionId !== undefined;
+}
+
+interface SyncContext {
+  quizId: number;
+  rounds: ImportRoundPreview[];
+  roundRepo: RoundRepository;
+  questionRepo: QuestionRepository;
+}
+
 @Injectable()
 export class QuizService {
   constructor(
@@ -204,18 +220,40 @@ export class QuizService {
    * `questionId` (an existing DB row, reordered/moved by the editor) are
    * upserted keyed by `id` instead, preserving that row's identity — see
    * `parkIdKeyedQuestions` for why they're moved out of the way first.
+   *
+   * Runs in one transaction: the up-front delete cascades to answers, so a
+   * later park/upsert failure must roll it back rather than lose the rows.
    */
   async syncRoundsAndQuestions(
     quizId: number,
     rounds: ImportRoundPreview[],
   ): Promise<void> {
-    await this.parkIdKeyedQuestions(rounds);
+    // The callback's EntityManager carries the transaction; the injected
+    // repositories may sit on an EntityManager that does not, so use its own.
+    await this.quizzes.getEntityManager().transactional(async (em) => {
+      await this.syncWithin({
+        quizId,
+        rounds,
+        roundRepo: em.getRepository<Round, RoundRepository>(Round),
+        questionRepo: em.getRepository<Question, QuestionRepository>(Question),
+      });
+    });
+  }
+
+  private async syncWithin({
+    quizId,
+    rounds,
+    roundRepo,
+    questionRepo,
+  }: SyncContext): Promise<void> {
+    await this.deleteDroppedQuestions(questionRepo, roundRepo, quizId, rounds);
+    await this.parkIdKeyedQuestions(questionRepo, rounds);
 
     for (const [roundIndex, round] of rounds.entries()) {
       // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set
       // timestamps explicitly (see TeamService.addToRoster for the same fix).
       const roundNow = new Date();
-      const roundRow = await this.rounds.upsert(
+      const roundRow = await roundRepo.upsert(
         {
           quiz: quizId,
           title: round.title,
@@ -279,8 +317,8 @@ export class QuizService {
           updatedAt: questionNow,
         };
 
-        if (question.questionId !== undefined) {
-          await this.questions.upsert(
+        if (isIdKeyed(question)) {
+          await questionRepo.upsert(
             { id: question.questionId, ...questionData },
             {
               onConflictFields: ['id'],
@@ -299,7 +337,7 @@ export class QuizService {
             },
           );
         } else {
-          await this.questions.upsert(questionData, {
+          await questionRepo.upsert(questionData, {
             onConflictFields: ['round', 'orderIndex'],
             onConflictAction: 'merge',
             onConflictMergeFields: [
@@ -315,16 +353,50 @@ export class QuizService {
         }
       }
 
-      await this.questions.nativeDelete({
+      await questionRepo.nativeDelete({
         round: roundRow.id,
         orderIndex: { $gte: round.questions.length },
       });
     }
 
-    await this.rounds.nativeDelete({
+    await roundRepo.nativeDelete({
       quiz: quizId,
       orderIndex: { $gte: rounds.length },
     });
+  }
+
+  /**
+   * Deletes the stored questions the draft drops, before survivors are
+   * upserted. A stored row survives only if the draft keeps it by id, or a
+   * slot-keyed (no `questionId`) draft question lands on its (round, position)
+   * slot and merges into it. Anything else would still hold its
+   * `(round, orderIndex)` slot when a survivor moves into it and trip the
+   * unique constraint (e.g. Q1, Q2, Q3 saved as Q1, Q3).
+   */
+  private async deleteDroppedQuestions(
+    questionRepo: QuestionRepository,
+    roundRepo: RoundRepository,
+    quizId: number,
+    rounds: ImportRoundPreview[],
+  ): Promise<void> {
+    const keptIds = rounds.flatMap((round) =>
+      round.questions.flatMap((question) =>
+        isIdKeyed(question) ? [question.questionId] : [],
+      ),
+    );
+    const storedRounds = await roundRepo.find({ quiz: quizId });
+
+    for (const storedRound of storedRounds) {
+      const draftRound = rounds[storedRound.orderIndex];
+      const slotKeyedPositions = (draftRound?.questions ?? []).flatMap(
+        (question, position) => (isIdKeyed(question) ? [] : [position]),
+      );
+      await questionRepo.nativeDelete({
+        round: storedRound.id,
+        id: { $nin: keptIds },
+        orderIndex: { $nin: slotKeyedPositions },
+      });
+    }
   }
 
   /**
@@ -337,13 +409,14 @@ export class QuizService {
    * the row already anchored to that exact grid cell.
    */
   private async parkIdKeyedQuestions(
+    questionRepo: QuestionRepository,
     rounds: ImportRoundPreview[],
   ): Promise<void> {
     let tempOrderIndex = -1;
     for (const round of rounds) {
       for (const question of round.questions) {
-        if (question.questionId === undefined) continue;
-        await this.questions.nativeUpdate(
+        if (!isIdKeyed(question)) continue;
+        await questionRepo.nativeUpdate(
           { id: question.questionId },
           { orderIndex: tempOrderIndex },
         );

@@ -77,6 +77,10 @@ describe('ImportService (Postgres integration)', () => {
     mockedFetchSheetCsv.mockReset();
   });
 
+  function findQuestionsInOrder(): Promise<Question[]> {
+    return em.find(Question, {}, { orderBy: { orderIndex: 'asc' } });
+  }
+
   function makeService(overrides: Partial<GameStateStub> = {}) {
     const { stub, asService } = makeGameStateStub(overrides);
     const quizService = new QuizService(
@@ -197,11 +201,7 @@ describe('ImportService (Postgres integration)', () => {
         'ABCDEF',
         'Trivia Night',
       );
-      const before = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const before = await findQuestionsInOrder();
 
       const second = await importService.confirm(
         VALID_CSV,
@@ -212,14 +212,39 @@ describe('ImportService (Postgres integration)', () => {
       expect(second.quizId).toBe(first.quizId);
       const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(1);
-      const after = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const after = await findQuestionsInOrder();
       expect(after.map((question) => question.id).sort()).toEqual(
         before.map((question) => question.id).sort(),
       );
+    });
+
+    it('matches a shrunk round by position, keeping the leading rows and dropping the trailing one', async () => {
+      const { importService } = makeService();
+      const threeQuestions = [
+        HEADER,
+        'History,free_text,Q1,,A1,1,,,,1',
+        'History,free_text,Q2,,A2,1,,,,1',
+        'History,free_text,Q3,,A3,1,,,,1',
+      ].join('\n');
+      const twoQuestions = [
+        HEADER,
+        'History,free_text,Q1 edited,,A1,1,,,,1',
+        'History,free_text,Q2,,A2,1,,,,1',
+      ].join('\n');
+      await importService.confirm(threeQuestions, 'ABCDEF', 'Trivia Night');
+      const before = await findQuestionsInOrder();
+
+      await importService.confirm(twoQuestions, 'ABCDEF', 'Trivia Night');
+
+      const after = await findQuestionsInOrder();
+      expect(after.map((question) => question.prompt)).toEqual([
+        'Q1 edited',
+        'Q2',
+      ]);
+      expect(after.map((question) => question.id)).toEqual([
+        before[0].id,
+        before[1].id,
+      ]);
     });
 
     it('updates edited questions and deletes rounds and questions removed from the sheet', async () => {
