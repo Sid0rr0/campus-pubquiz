@@ -1,15 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 import {
   SOCKET_EVENTS,
   type AckResult,
-  type AnswerReceivedPayload,
   type BlockQuestionView,
   type BlockRevealQuestionView,
-  type BonusAwardedPayload,
   type JoinAcceptedPayload,
   type JoinPlayersPayload,
   type LeaveSessionPayload,
@@ -17,13 +14,11 @@ import {
   type RoundRatingView,
   type SendFeedbackPayload,
   type TeamFeedbackView,
-  type SessionClosedPayload,
-  type StateSnapshotPayload,
+  type PlayersStatePayload,
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
   type TeamAnswerView,
-  type TeamAnswersSyncedPayload,
   type TeamBonusAwardView,
   type Verdict,
 } from '@campus-pubquiz/types';
@@ -31,6 +26,7 @@ import { formatBonusAwardToast } from '@/app/lib/bonus-categories';
 import {
   NOT_CONNECTED_MESSAGE,
   useGameConnection,
+  type RoomSocket,
 } from '@/app/lib/use-game-connection';
 
 /** Award toasts outlast the default so a team passing the phone around still sees them. */
@@ -52,6 +48,12 @@ export interface MyAnswerGrade {
   /** How the answer was judged — the same verdict the quiz master sees. */
   verdict: Verdict | null;
 }
+
+/** The fields of the players view the seen-questions merge reads. */
+export type SeenQuestionsSource = Pick<
+  PlayersStatePayload,
+  'blockQuestions' | 'revealQuestions' | 'pastRevealedQuestions'
+>;
 
 export type SeenQuestions = Record<
   number,
@@ -109,7 +111,7 @@ export interface UsePlayerGameResult {
 /** Folds a view's block/reveal questions into the running seen-questions map — later sightings of the same id (e.g. once it's revealed) overwrite earlier ones so the richer view wins. The players view never carries a question that hasn't been shown yet, so everything in it is taken as it arrives. */
 export function mergeSeenQuestions(
   current: SeenQuestions,
-  payload: StateSnapshotPayload,
+  payload: SeenQuestionsSource,
 ): SeenQuestions {
   const additions = [
     ...(payload.blockQuestions ?? []),
@@ -202,7 +204,7 @@ export function usePlayerGame(
   const [isTeamLinked, setIsTeamLinked] = useState(false);
   // Mirrors isTeamLinked for submitAnswer, which must check it synchronously.
   const isTeamLinkedRef = useRef(false);
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<RoomSocket<'players'> | null>(null);
   // The socket id the server last registered this team on — sent back as
   // `previousSocketId` on a rejoin so the server can hand the team over from
   // that stale socket instead of rejecting this device as a second one.
@@ -234,23 +236,20 @@ export function usePlayerGame(
   }, []);
 
   const bindSocket = useCallback(
-    (socket: Socket) => {
+    (socket: RoomSocket<'players'>) => {
       socketRef.current = socket;
       isTeamLinkedRef.current = false;
       linkedSocketIdRef.current = null;
       pendingSubmitRef.current = null;
 
-      socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateSnapshotPayload) => {
+      socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
         setSeenQuestions((current) => mergeSeenQuestions(current, payload));
       });
-      socket.on(
-        SOCKET_EVENTS.STATE_UPDATED,
-        (payload: StateSnapshotPayload) => {
-          setSeenQuestions((current) => mergeSeenQuestions(current, payload));
-        },
-      );
+      socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
+        setSeenQuestions((current) => mergeSeenQuestions(current, payload));
+      });
 
-      socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload: JoinAcceptedPayload) => {
+      socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload) => {
         setTeam(payload);
         setMyAnswers(buildMyAnswers(payload.answers ?? []));
         setMyAnswerGrades(buildMyAnswerGrades(payload.answers ?? []));
@@ -265,39 +264,33 @@ export function usePlayerGame(
 
       // The saved answer and any auto-graded points — the acknowledgement
       // only says the answer was accepted, this carries what was stored.
-      socket.on(
-        SOCKET_EVENTS.ANSWER_RECEIVED,
-        (payload: AnswerReceivedPayload) => {
-          setMyAnswers((current) => ({
+      socket.on(SOCKET_EVENTS.ANSWER_RECEIVED, (payload) => {
+        setMyAnswers((current) => ({
+          ...current,
+          [payload.questionId]: payload.value,
+        }));
+        if (payload.gradedAt !== null) {
+          setMyAnswerGrades((current) => ({
             ...current,
-            [payload.questionId]: payload.value,
+            [payload.questionId]: {
+              pointsAwarded: payload.pointsAwarded,
+              gradedAt: payload.gradedAt as string,
+              verdict: payload.verdict,
+            },
           }));
-          if (payload.gradedAt !== null) {
-            setMyAnswerGrades((current) => ({
-              ...current,
-              [payload.questionId]: {
-                pointsAwarded: payload.pointsAwarded,
-                gradedAt: payload.gradedAt as string,
-                verdict: payload.verdict,
-              },
-            }));
-          }
-        },
-      );
+        }
+      });
 
       // Pushed once the block a team answered reaches reveal_intro — carries
       // that team's complete, freshly-graded answer set (same shape as
       // JOIN_ACCEPTED.answers), so both maps are replaced wholesale rather
       // than merged, same as a reconnect would produce.
-      socket.on(
-        SOCKET_EVENTS.TEAM_ANSWERS_SYNCED,
-        (payload: TeamAnswersSyncedPayload) => {
-          setMyAnswers(buildMyAnswers(payload.answers));
-          setMyAnswerGrades(buildMyAnswerGrades(payload.answers));
-        },
-      );
+      socket.on(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, (payload) => {
+        setMyAnswers(buildMyAnswers(payload.answers));
+        setMyAnswerGrades(buildMyAnswerGrades(payload.answers));
+      });
 
-      socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload: BonusAwardedPayload) => {
+      socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) => {
         setMyBonusAwards((current) => [...current, payload]);
         // Only a live award notice toasts; awards restored on join never come through here.
         const message = formatBonusAwardToast(payload);
@@ -306,12 +299,9 @@ export function usePlayerGame(
         else toast(message, options);
       });
 
-      socket.on(
-        SOCKET_EVENTS.SESSION_CLOSED,
-        (payload: SessionClosedPayload) => {
-          setSessionClosed(payload.joinCode);
-        },
-      );
+      socket.on(SOCKET_EVENTS.SESSION_CLOSED, (payload) => {
+        setSessionClosed(payload.joinCode);
+      });
 
       socket.on(SOCKET_EVENTS.TEAM_KICKED, () => setKicked(true));
 
