@@ -57,6 +57,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it.each([
     ['with options', ['Jaws', 'Alien'], 'button'],
     ['without options', undefined, 'textbox'],
+    ['whose options are all blank', ['', '  '], 'textbox'],
   ] as const)(
     'shows the right input for an audio question %s',
     (_label, options, expectedRole) => {

@@ -1,30 +1,19 @@
 'use client';
 
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  Cross2Icon,
-  PlusIcon,
-  TrashIcon,
-} from '@radix-ui/react-icons';
+import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from '@radix-ui/react-icons';
 import {
   QUESTION_KINDS,
   QUESTION_TYPES,
   extractYoutubeVideoId,
   isKahootAllowedType,
-  type MatchScoringMode,
   type QuestionType,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import { MediaUrlField } from '@/app/quizzes/[id]/media-url-field';
-import {
-  makeMatchPair,
-  hasEditorChoices,
-  makeOption,
-  type EditorQuestion,
-} from '@/app/quizzes/[id]/quiz-draft-state';
+import { AnswerSection } from '@/app/quizzes/[id]/answer-kind-fields';
+import { type EditorQuestion } from '@/app/quizzes/[id]/quiz-draft-state';
 
 /** DOM id for the question's card, so the outline can scroll it into view — see quiz-outline.tsx's jump-to-question button. */
 export function questionAnchorId(questionId: string): string {
@@ -118,15 +107,7 @@ export function QuizQuestionEditor({
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
   );
-  const {
-    inputKind,
-    choices,
-    requiresMedia: needsMediaUrl,
-  } = QUESTION_KINDS[question.type];
-  const isMc = choices !== 'none';
-  const isTypedAnswer = !isMc || !hasEditorChoices(question);
-  const isSort = inputKind === 'sort';
-  const isMatch = inputKind === 'match';
+  const { requiresMedia: needsMediaUrl } = QUESTION_KINDS[question.type];
   const hasClipNotes = 'clipNotes' in QUESTION_KINDS[question.type];
   const isYoutubeMedia =
     hasClipNotes || extractYoutubeVideoId(question.mediaUrl) !== undefined;
@@ -137,111 +118,6 @@ export function QuizQuestionEditor({
   function updateClip(nextStart: string, nextEnd: string): void {
     onChange({ notes: clipNotes.write(freeNotes, nextStart, nextEnd) });
   }
-
-  function normalizedOptionText(text: string): string {
-    return text.trim();
-  }
-
-  function isDuplicateOption(optionIndex: number): boolean {
-    const normalized = normalizedOptionText(question.options[optionIndex].text);
-    if (normalized === '') return false;
-    return question.options.some(
-      (option, i) =>
-        i !== optionIndex && normalizedOptionText(option.text) === normalized,
-    );
-  }
-
-  function updateOption(optionIndex: number, text: string): void {
-    onChange({
-      options: question.options.map((option, i) =>
-        i === optionIndex ? { ...option, text } : option,
-      ),
-    });
-  }
-
-  function setCorrectOption(optionIndex: number): void {
-    onChange({
-      options: question.options.map((option, i) => ({
-        ...option,
-        isCorrect: i === optionIndex,
-      })),
-    });
-  }
-
-  function addOption(): void {
-    onChange({ options: [...question.options, makeOption()] });
-  }
-
-  function removeOption(optionIndex: number): void {
-    onChange({ options: question.options.filter((_, i) => i !== optionIndex) });
-  }
-
-  function updateSortItem(itemIndex: number, text: string): void {
-    onChange({
-      sortItems: question.sortItems.map((item, i) =>
-        i === itemIndex ? text : item,
-      ),
-    });
-  }
-
-  function addSortItem(): void {
-    onChange({ sortItems: [...question.sortItems, ''] });
-  }
-
-  function removeSortItem(itemIndex: number): void {
-    onChange({
-      sortItems: question.sortItems.filter((_, i) => i !== itemIndex),
-    });
-  }
-
-  function moveSortItem(itemIndex: number, direction: -1 | 1): void {
-    const targetIndex = itemIndex + direction;
-    if (targetIndex < 0 || targetIndex >= question.sortItems.length) return;
-    const items = [...question.sortItems];
-    [items[itemIndex], items[targetIndex]] = [
-      items[targetIndex],
-      items[itemIndex],
-    ];
-    onChange({ sortItems: items });
-  }
-
-  function updateMatchPair(
-    pairIndex: number,
-    side: 'left' | 'right',
-    text: string,
-  ): void {
-    onChange({
-      matchPairs: question.matchPairs.map((pair, i) =>
-        i === pairIndex ? { ...pair, [side]: text } : pair,
-      ),
-    });
-  }
-
-  function addMatchPair(): void {
-    onChange({ matchPairs: [...question.matchPairs, makeMatchPair()] });
-  }
-
-  function removeMatchPair(pairIndex: number): void {
-    onChange({
-      matchPairs: question.matchPairs.filter((_, i) => i !== pairIndex),
-    });
-  }
-
-  const typedAnswerField = (
-    <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
-      <span className="flex items-center gap-2">
-        Correct answer
-        <input
-          type={inputKind === 'number' ? 'number' : 'text'}
-          value={question.correctText}
-          onChange={(event) => onChange({ correctText: event.target.value })}
-          placeholder="Accepted answer"
-          className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-        />
-      </span>
-      <FieldErrors issues={fieldIssues(issues, 'answer')} />
-    </label>
-  );
 
   return (
     <div
@@ -349,216 +225,12 @@ export function QuizQuestionEditor({
       <FieldErrors issues={fieldIssues(issues, 'type')} />
       <FieldErrors issues={fieldIssues(issues, 'points')} />
 
-      {isMc ? (
-        <>
-          {choices === 'optional' && isTypedAnswer && typedAnswerField}
-          <div className="flex flex-col gap-2">
-            {choices === 'optional' && (
-              <p className="text-xs font-extrabold text-foreground/60">
-                Choices (optional) — fill in at least two to let teams pick
-                instead of typing
-              </p>
-            )}
-            {question.options.map((option, optionIndex) => {
-              const isDuplicate = isDuplicateOption(optionIndex);
-              return (
-                <div key={optionIndex} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={option.isCorrect}
-                    onChange={() => setCorrectOption(optionIndex)}
-                    aria-label={`Mark option ${optionIndex + 1} as correct`}
-                    className="h-4 w-4 accent-green"
-                  />
-                  <input
-                    value={option.text}
-                    onChange={(event) =>
-                      updateOption(optionIndex, event.target.value)
-                    }
-                    disabled={isOpened}
-                    placeholder="Option text"
-                    aria-invalid={isDuplicate}
-                    className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50 ${
-                      isDuplicate ? 'border-magenta' : 'border-foreground/20'
-                    }`}
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => removeOption(optionIndex)}
-                    disabled={isOpened || question.options.length <= 2}
-                    variant="icon-danger"
-                    size="icon-sm"
-                    aria-label={`Remove option ${optionIndex + 1}`}
-                  >
-                    <Cross2Icon aria-hidden="true" />
-                  </Button>
-                </div>
-              );
-            })}
-            {question.options.some((_, i) => isDuplicateOption(i)) && (
-              <p className="text-xs font-extrabold text-magenta">
-                Options must be unique
-              </p>
-            )}
-            <FieldErrors issues={fieldIssues(issues, 'options')} />
-            <FieldErrors issues={fieldIssues(issues, 'answer')} />
-            <Button
-              type="button"
-              onClick={addOption}
-              disabled={isOpened}
-              variant="outline-dashed"
-              size="xs"
-              className="self-start"
-            >
-              <PlusIcon aria-hidden="true" />
-              Add option
-            </Button>
-          </div>
-        </>
-      ) : isSort ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-extrabold text-foreground/60">
-            Items, in the correct order (players see them shuffled)
-          </p>
-          {question.sortItems.map((item, itemIndex) => (
-            <div key={itemIndex} className="flex items-center gap-2">
-              <span className="w-5 shrink-0 text-center font-display text-cyan">
-                {itemIndex + 1}
-              </span>
-              <input
-                value={item}
-                onChange={(event) =>
-                  updateSortItem(itemIndex, event.target.value)
-                }
-                disabled={isOpened}
-                placeholder="Item text"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-              />
-              <Button
-                type="button"
-                onClick={() => moveSortItem(itemIndex, -1)}
-                disabled={itemIndex === 0}
-                variant="icon"
-                size="icon-sm"
-                aria-label={`Move item ${itemIndex + 1} up`}
-              >
-                <ArrowUpIcon aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                onClick={() => moveSortItem(itemIndex, 1)}
-                disabled={itemIndex === question.sortItems.length - 1}
-                variant="icon"
-                size="icon-sm"
-                aria-label={`Move item ${itemIndex + 1} down`}
-              >
-                <ArrowDownIcon aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                onClick={() => removeSortItem(itemIndex)}
-                disabled={isOpened || question.sortItems.length <= 2}
-                variant="icon-danger"
-                size="icon-sm"
-                aria-label={`Remove item ${itemIndex + 1}`}
-              >
-                <Cross2Icon aria-hidden="true" />
-              </Button>
-            </div>
-          ))}
-          <FieldErrors issues={fieldIssues(issues, 'options')} />
-          <FieldErrors issues={fieldIssues(issues, 'answer')} />
-          <Button
-            type="button"
-            onClick={addSortItem}
-            disabled={isOpened}
-            variant="outline-dashed"
-            size="xs"
-            className="self-start"
-          >
-            <PlusIcon aria-hidden="true" />
-            Add item
-          </Button>
-        </div>
-      ) : isMatch ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-extrabold text-foreground/60">
-            Left ↔ right pairs (players see both lists shuffled)
-          </p>
-          {question.matchPairs.map((pair, pairIndex) => (
-            <div key={pairIndex} className="flex items-center gap-2">
-              <input
-                value={pair.left}
-                onChange={(event) =>
-                  updateMatchPair(pairIndex, 'left', event.target.value)
-                }
-                disabled={isOpened}
-                placeholder="Left item"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-              />
-              <span aria-hidden="true" className="font-display text-cyan">
-                →
-              </span>
-              <input
-                value={pair.right}
-                onChange={(event) =>
-                  updateMatchPair(pairIndex, 'right', event.target.value)
-                }
-                placeholder="Right item"
-                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-              />
-              <Button
-                type="button"
-                onClick={() => removeMatchPair(pairIndex)}
-                disabled={isOpened || question.matchPairs.length <= 2}
-                variant="icon-danger"
-                size="icon-sm"
-                aria-label={`Remove pair ${pairIndex + 1}`}
-              >
-                <Cross2Icon aria-hidden="true" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            onClick={addMatchPair}
-            disabled={isOpened}
-            variant="outline-dashed"
-            size="xs"
-            className="self-start"
-          >
-            <PlusIcon aria-hidden="true" />
-            Add pair
-          </Button>
-          <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
-            Scoring
-            <select
-              value={question.matchScoringMode}
-              onChange={(event) =>
-                onChange({
-                  matchScoringMode: event.target.value as MatchScoringMode,
-                })
-              }
-              disabled={isOpened}
-              className="w-full rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
-            >
-              <option value="partial">
-                Partial credit — points split evenly across correct pairs
-              </option>
-              <option value="all_or_nothing">
-                All or nothing — full points, or half if exactly one pair is
-                wrong, else zero
-              </option>
-            </select>
-            <FieldErrors issues={fieldIssues(issues, 'matchScoringMode')} />
-          </label>
-          <FieldErrors issues={fieldIssues(issues, 'options')} />
-          <FieldErrors issues={fieldIssues(issues, 'matchTargets')} />
-          <FieldErrors issues={fieldIssues(issues, 'answer')} />
-        </div>
-      ) : (
-        typedAnswerField
-      )}
+      <AnswerSection
+        question={question}
+        issues={issues}
+        isOpened={isOpened}
+        onChange={onChange}
+      />
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="flex flex-col gap-1">

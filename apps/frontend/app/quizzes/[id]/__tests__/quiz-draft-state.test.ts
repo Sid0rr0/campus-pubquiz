@@ -111,6 +111,42 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     },
   );
 
+  it('saves an audio question whose choices were all cleared as a typed answer', () => {
+    const editable = {
+      ...questionFromPreview('q1', {
+        type: 'audio',
+        prompt: 'Which one?',
+        answer: 'B',
+        points: 1,
+        mediaUrl: 'https://example.com/clip.mp3',
+        options: ['A', 'B'],
+      }),
+    };
+    const cleared = {
+      ...editable,
+      options: editable.options.map((option) => ({ ...option, text: '' })),
+      correctText: ' B ',
+    };
+
+    const preview = questionToPreview(cleared);
+
+    expect(preview.answer).toBe('B');
+    expect(preview).not.toHaveProperty('options');
+  });
+
+  it('loads an audio question whose choices are all blank as a typed answer', () => {
+    const editable = questionFromPreview('q1', {
+      type: 'audio',
+      prompt: 'Which one?',
+      answer: 'B',
+      points: 1,
+      mediaUrl: 'https://example.com/clip.mp3',
+      options: ['', ''],
+    });
+
+    expect(editable.correctText).toBe('B');
+  });
+
   it('carries notes and media urls through for a question with an image mediaUrl', () => {
     const preview: ImportQuestionPreview = {
       type: 'free_text',

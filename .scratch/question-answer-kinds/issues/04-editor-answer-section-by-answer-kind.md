@@ -8,10 +8,10 @@ Parent spec: `.scratch/question-answer-kinds/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] An audio question with choices loads with its choices and the correct one marked, and saves the same answer; one with no choices loads and saves its correct-answer text.
-- [ ] Clearing every choice's text on an audio question saves it as a typed-answer question, by the same rule the phone uses.
-- [ ] Saving and reopening keeps sort orders, match pairings and their saved display order.
-- [ ] Nothing in the editor's draft conversion or question editor branches on sort, match or choices outside the answer-kind map.
-- [ ] The quiz editor panel and draft state tests pass, with added audio cases with and without choices.
+- [x] An audio question with choices loads with its choices and the correct one marked, and saves the same answer; one with no choices loads and saves its correct-answer text.
+- [x] Clearing every choice's text on an audio question saves it as a typed-answer question, by the same rule the phone uses.
+- [x] Saving and reopening keeps sort orders, match pairings and their saved display order.
+- [x] Nothing in the editor's draft conversion or question editor branches on sort, match or choices outside the answer-kind map.
+- [x] The quiz editor panel and draft state tests pass, with added audio cases with and without choices.

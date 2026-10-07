@@ -41,4 +41,9 @@ describe('formatAnswerValue', () => {
       'excalibur → shield',
     );
   });
+
+  it('returns an audio answer unchanged, with and without choices', () => {
+    expect(formatAnswerValue('Jaws', 'audio')).toBe('Jaws');
+    expect(formatAnswerValue('Jaws', 'audio', ['Jaws', 'Alien'])).toBe('Jaws');
+  });
 });

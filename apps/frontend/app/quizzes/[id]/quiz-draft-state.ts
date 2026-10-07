@@ -1,8 +1,6 @@
 import {
-  QUESTION_KINDS,
   getOpenedPrefixLength,
   getRoundStructureEditing,
-  splitPipeList,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
@@ -10,6 +8,10 @@ import {
   type QuestionType,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
+import {
+  loadAnswerDraft,
+  saveAnswerDraft,
+} from '@/app/quizzes/[id]/answer-kind-drafts';
 
 interface EditorOption {
   text: string;
@@ -88,32 +90,6 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
   };
 }
 
-/** Fisher-Yates on a fresh copy — never mutates `items`. Gives sort/match a display order distinct from the correct order/pairing declared in the editor. */
-function shuffled<T>(items: T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function hasSameItems(a: readonly string[], b: readonly string[]): boolean {
-  if (a.length !== b.length) return false;
-  const sortedB = [...b].sort();
-  return [...a].sort().every((item, index) => item === sortedB[index]);
-}
-
-/** Keeps the last-saved display order while it still holds exactly `items`; otherwise picks a fresh shuffle. */
-function displayOrderFor(
-  items: string[],
-  savedDisplayOrder: string[] | undefined,
-): string[] {
-  return savedDisplayOrder && hasSameItems(items, savedDisplayOrder)
-    ? [...savedDisplayOrder]
-    : shuffled(items);
-}
-
 export function makeRound(id: string, title = ''): EditorRound {
   return {
     id,
@@ -126,35 +102,11 @@ export function makeRound(id: string, title = ''): EditorRound {
   };
 }
 
-/** Whether the question's answer is picked from its choices: always for a `required` kind, and for an `optional` kind once any choice has text. */
-export function hasEditorChoices(question: EditorQuestion): boolean {
-  const { choices } = QUESTION_KINDS[question.type];
-  if (choices === 'optional') {
-    return question.options.some((option) => option.text.trim() !== '');
-  }
-  return choices === 'required';
-}
-
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
   id: string,
   question: ImportQuestionPreview,
 ): EditorQuestion {
-  const { inputKind, choices } = QUESTION_KINDS[question.type];
-  const isMc =
-    choices === 'required' ||
-    (choices === 'optional' && (question.options?.length ?? 0) > 0);
-  const isSort = inputKind === 'sort';
-  const isMatch = inputKind === 'match';
-  // sortItems/matchPairs reconstruct from `answer` (the correct order/pairing),
-  // not `options`/`matchTargets` (the display order) — that display order is
-  // kept aside in savedDisplayOrder so re-saving doesn't reshuffle it.
-  const answerItems = isSort || isMatch ? splitPipeList(question.answer) : [];
-  const savedDisplayOrder = isSort
-    ? question.options
-    : isMatch
-      ? question.matchTargets
-      : undefined;
   return {
     id,
     ...(question.questionId !== undefined ? { dbId: question.questionId } : {}),
@@ -162,25 +114,14 @@ export function questionFromPreview(
     prompt: question.prompt,
     points: question.points,
     notes: question.notes ?? '',
-    options:
-      isMc && question.options
-        ? question.options.map((text) => ({
-            text,
-            isCorrect: text === question.answer,
-          }))
-        : [makeOption(), makeOption()],
-    sortItems: isSort && answerItems.length > 0 ? answerItems : ['', ''],
-    matchPairs:
-      isMatch && question.options && question.options.length > 0
-        ? question.options.map((left, index) =>
-            makeMatchPair(left, answerItems[index] ?? ''),
-          )
-        : [makeMatchPair(), makeMatchPair()],
-    matchScoringMode: question.matchScoringMode ?? 'partial',
-    correctText: isMc || isSort || isMatch ? '' : question.answer,
+    options: [makeOption(), makeOption()],
+    sortItems: ['', ''],
+    matchPairs: [makeMatchPair(), makeMatchPair()],
+    matchScoringMode: 'partial',
+    correctText: '',
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    ...(savedDisplayOrder ? { savedDisplayOrder: [...savedDisplayOrder] } : {}),
+    ...loadAnswerDraft(question),
   };
 }
 
@@ -244,23 +185,6 @@ export function mergeRoundsFromPreview(
 export function questionToPreview(
   question: EditorQuestion,
 ): ImportQuestionPreview {
-  const { inputKind } = QUESTION_KINDS[question.type];
-  const isMc = hasEditorChoices(question);
-  const isSort = inputKind === 'sort';
-  const isMatch = inputKind === 'match';
-  const sortItems = question.sortItems
-    .map((item) => item.trim())
-    .filter((item) => item !== '');
-  const matchPairs = question.matchPairs
-    .map((pair) => ({ left: pair.left.trim(), right: pair.right.trim() }))
-    .filter((pair) => pair.left !== '' && pair.right !== '');
-  const answer = isMc
-    ? (question.options.find((option) => option.isCorrect)?.text.trim() ?? '')
-    : isSort
-      ? sortItems.join('|')
-      : isMatch
-        ? matchPairs.map((pair) => pair.right).join('|')
-        : question.correctText.trim();
   const notes = question.notes.trim();
   const mediaUrl = question.mediaUrl.trim();
   const answerMediaUrl = question.answerMediaUrl.trim();
@@ -269,29 +193,9 @@ export function questionToPreview(
     ...(question.dbId !== undefined ? { questionId: question.dbId } : {}),
     type: question.type,
     prompt: question.prompt.trim(),
-    answer,
     points: question.points,
     ...(notes ? { notes } : {}),
-    ...(isMc
-      ? {
-          options: question.options
-            .map((option) => option.text.trim())
-            .filter((text) => text !== ''),
-        }
-      : {}),
-    ...(isSort
-      ? { options: displayOrderFor(sortItems, question.savedDisplayOrder) }
-      : {}),
-    ...(isMatch
-      ? {
-          options: matchPairs.map((pair) => pair.left),
-          matchTargets: displayOrderFor(
-            matchPairs.map((pair) => pair.right),
-            question.savedDisplayOrder,
-          ),
-          matchScoringMode: question.matchScoringMode,
-        }
-      : {}),
+    ...saveAnswerDraft(question),
     ...(mediaUrl ? { mediaUrl } : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
   };

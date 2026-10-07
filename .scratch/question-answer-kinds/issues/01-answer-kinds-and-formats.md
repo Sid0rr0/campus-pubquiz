@@ -20,12 +20,12 @@ Parent spec: `.scratch/question-answer-kinds/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, passing against today's code: table tests pinning base scores and verdicts for every question type, and the formatted answer text.
-- [ ] The answer kind resolver is tested over every question type, with and without choices, including an optional-choices question whose choices are all blank (not `choice`).
-- [ ] Each answer format's decode and encode round-trip, including stray whitespace and empty items.
-- [ ] A test walks every question type: a correct answer built through its format's encode scores "correct" through the Scoring module (closest_guess through its batch). Removing a format's score makes it fail.
-- [ ] The Scoring module no longer switches on question type for the base score; the pinned score tests pass unchanged.
-- [ ] The backend grading, submit-answer, kahoot speed and live-edit regrade specs pass unchanged.
-- [ ] GLOSSARY, CODING_STANDARDS and DOCUMENTATION are updated in the same commit.
+- [x] Written first, passing against today's code: table tests pinning base scores and verdicts for every question type, and the formatted answer text.
+- [x] The answer kind resolver is tested over every question type, with and without choices, including an optional-choices question whose choices are all blank (not `choice`).
+- [x] Each answer format's decode and encode round-trip, including stray whitespace and empty items.
+- [x] A test walks every question type: a correct answer built through its format's encode scores "correct" through the Scoring module (closest_guess through its batch). Removing a format's score makes it fail.
+- [x] The Scoring module no longer switches on question type for the base score; the pinned score tests pass unchanged.
+- [x] The backend grading, submit-answer, kahoot speed and live-edit regrade specs pass unchanged.
+- [x] GLOSSARY, CODING_STANDARDS and DOCUMENTATION are updated in the same commit.

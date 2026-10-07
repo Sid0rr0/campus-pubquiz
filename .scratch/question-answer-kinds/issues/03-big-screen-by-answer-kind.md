@@ -8,10 +8,10 @@ Parent spec: `.scratch/question-answer-kinds/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] While asking, the big screen shows the same choices, sort items and match columns as today for every question type.
-- [ ] At reveal, the correct sort order, match pairs and correct choice look the same as today, and a team's own sort or match answer is laid out like the correct one.
-- [ ] An audio question with choices shows them on the big screen, and one whose choices are all blank doesn't, matching the phone.
-- [ ] Nothing in the question display branches on sort, match or choices outside the answer-kind maps.
-- [ ] The big screen's question display, reveal and media rendering tests pass, with added audio cases with and without choices.
+- [x] While asking, the big screen shows the same choices, sort items and match columns as today for every question type.
+- [x] At reveal, the correct sort order, match pairs and correct choice look the same as today, and a team's own sort or match answer is laid out like the correct one.
+- [x] An audio question with choices shows them on the big screen, and one whose choices are all blank doesn't, matching the phone.
+- [x] Nothing in the question display branches on sort, match or choices outside the answer-kind maps.
+- [x] The big screen's question display, reveal and media rendering tests pass, with added audio cases with and without choices.
