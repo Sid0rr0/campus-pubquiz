@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -28,29 +29,24 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-const revealQuestions = [
-  {
-    id: 'r1q1',
-    type: 'multiple_choice' as const,
-    prompt: 'Capital of France?',
-    options: ['Paris', 'London'],
-    points: 2,
-    answer: 'Paris',
-    roundNumber: 1,
-    questionNumberInRound: 1,
-    roundTitle: 'General Knowledge',
-  },
-  {
-    id: 'r1q2',
-    type: 'free_text' as const,
-    prompt: 'Largest planet?',
-    points: 2,
-    answer: 'Jupiter',
-    roundNumber: 1,
-    questionNumberInRound: 2,
-    roundTitle: 'General Knowledge',
-  },
-];
+const generalKnowledge = {
+  title: 'General Knowledge',
+  questions: [
+    {
+      type: 'multiple_choice' as const,
+      prompt: 'Capital of France?',
+      options: ['Paris', 'London'],
+      points: 2,
+      answer: 'Paris',
+    },
+    {
+      type: 'free_text' as const,
+      prompt: 'Largest planet?',
+      points: 2,
+      answer: 'Jupiter',
+    },
+  ],
+};
 
 describe('DisplayPage — reveal', () => {
   beforeEach(() => {
@@ -59,10 +55,9 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the current reveal question with its correct answer, same layout as when it was asked', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [generalKnowledge],
+        progress: { status: 'reveal', questionIndex: 1, revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -78,22 +73,21 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the correct order for a sort question on reveal', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r1q3',
-            type: 'sort' as const,
-            prompt: 'Order these planets from the sun outward.',
-            options: ['Earth', 'Venus', 'Mercury'],
-            points: 3,
-            answer: 'Mercury|Venus|Earth',
-            roundNumber: 1,
-            questionNumberInRound: 1,
-            roundTitle: 'Space',
+            questions: [
+              {
+                type: 'sort',
+                prompt: 'Order these planets from the sun outward.',
+                options: ['Earth', 'Venus', 'Mercury'],
+                points: 3,
+                answer: 'Mercury|Venus|Earth',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -110,23 +104,22 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the correct pairs for a match question on reveal', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r1q4',
-            type: 'match' as const,
-            prompt: 'Match the hero to their weapon.',
-            options: ['arthur', 'captain america'],
-            matchTargets: ['shield', 'excalibur'],
-            points: 4,
-            answer: 'excalibur|shield',
-            roundNumber: 1,
-            questionNumberInRound: 1,
-            roundTitle: 'Heroes',
+            questions: [
+              {
+                type: 'match',
+                prompt: 'Match the hero to their weapon.',
+                options: ['arthur', 'captain america'],
+                matchTargets: ['shield', 'excalibur'],
+                points: 4,
+                answer: 'excalibur|shield',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -147,10 +140,9 @@ describe('DisplayPage — reveal', () => {
 
   it('shows the second reveal question when revealIndex advances', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 1 }),
-        currentQuestion: null,
-        revealQuestions,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [generalKnowledge],
+        progress: { status: 'reveal', questionIndex: 1, revealIndex: 1 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -168,26 +160,27 @@ describe('DisplayPage — reveal', () => {
 
   it("shows a round intro card with the question's own round title before revealing a new round's answers, even for a block spanning multiple rounds", () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
-          status: 'reveal_intro',
-          roundIndex: 1,
-          revealIndex: 2,
-        }),
-        currentQuestion: null,
-        revealQuestions: [
-          ...revealQuestions,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          { ...generalKnowledge, breakAfter: false },
           {
-            id: 'r2q1',
-            type: 'free_text' as const,
-            prompt: 'Tallest mountain?',
-            points: 2,
-            answer: 'Everest',
-            roundNumber: 2,
-            questionNumberInRound: 1,
-            roundTitle: 'Geography',
+            title: 'Geography',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Tallest mountain?',
+                points: 2,
+                answer: 'Everest',
+              },
+            ],
           },
         ],
+        progress: {
+          status: 'reveal_intro',
+          roundIndex: 1,
+          questionIndex: 0,
+          revealIndex: 2,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -202,19 +195,21 @@ describe('DisplayPage — reveal', () => {
 
   it('shows media for an image mediaUrl and audio reveal questions', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r2q1',
-            type: 'free_text',
-            prompt: 'Which landmark?',
-            mediaUrl: 'https://example.com/landmark.jpg',
-            points: 3,
-            answer: 'Eiffel Tower',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which landmark?',
+                mediaUrl: 'https://example.com/landmark.jpg',
+                points: 3,
+                answer: 'Eiffel Tower',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -229,20 +224,22 @@ describe('DisplayPage — reveal', () => {
 
   it('highlights the correct choice of an audio question that has choices', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r2q1',
-            type: 'audio',
-            prompt: 'Which song is this?',
-            mediaUrl: 'https://example.com/song.mp3',
-            options: ['Yesterday', 'Help!'],
-            points: 1,
-            answer: 'Help!',
+            questions: [
+              {
+                type: 'audio',
+                prompt: 'Which song is this?',
+                mediaUrl: 'https://example.com/song.mp3',
+                options: ['Yesterday', 'Help!'],
+                points: 1,
+                answer: 'Help!',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -260,20 +257,22 @@ describe('DisplayPage — reveal', () => {
 
   it('shows only the answer line for an audio question whose choices are all blank', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r2q1',
-            type: 'audio',
-            prompt: 'Which song is this?',
-            mediaUrl: 'https://example.com/song.mp3',
-            options: [' '],
-            points: 1,
-            answer: 'Help!',
+            questions: [
+              {
+                type: 'audio',
+                prompt: 'Which song is this?',
+                mediaUrl: 'https://example.com/song.mp3',
+                options: [' '],
+                points: 1,
+                answer: 'Help!',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -286,19 +285,21 @@ describe('DisplayPage — reveal', () => {
 
   it('places the answer text above the picture on reveal', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r2q1',
-            type: 'free_text',
-            prompt: 'Which landmark?',
-            mediaUrl: 'https://example.com/landmark.jpg',
-            points: 3,
-            answer: 'Eiffel Tower',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which landmark?',
+                mediaUrl: 'https://example.com/landmark.jpg',
+                points: 3,
+                answer: 'Eiffel Tower',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -314,20 +315,22 @@ describe('DisplayPage — reveal', () => {
 
   it('shows both media_url and answer_media_url side by side on reveal when the question media is an image', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r2q1',
-            type: 'free_text',
-            prompt: 'Which landmark?',
-            mediaUrl: 'https://example.com/landmark.jpg',
-            points: 3,
-            answer: 'Eiffel Tower',
-            answerMediaUrl: 'https://example.com/eiffel-plaque.jpg',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which landmark?',
+                mediaUrl: 'https://example.com/landmark.jpg',
+                points: 3,
+                answer: 'Eiffel Tower',
+                answerMediaUrl: 'https://example.com/eiffel-plaque.jpg',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -346,19 +349,21 @@ describe('DisplayPage — reveal', () => {
 
   it('shows an answer_media_url image on reveal for a free_text question, independent of type', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name this flag.',
-            points: 3,
-            answer: 'France',
-            answerMediaUrl: 'https://example.com/france-flag.jpg',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Name this flag.',
+                points: 3,
+                answer: 'France',
+                answerMediaUrl: 'https://example.com/france-flag.jpg',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -373,19 +378,21 @@ describe('DisplayPage — reveal', () => {
 
   it('renders an answer_media_url ending in an audio extension as audio, not an image', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-        revealQuestions: [
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
           {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name this flag.',
-            points: 3,
-            answer: 'France',
-            answerMediaUrl: 'https://example.com/anthem.mp3',
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Name this flag.',
+                points: 3,
+                answer: 'France',
+                answerMediaUrl: 'https://example.com/anthem.mp3',
+              },
+            ],
           },
         ],
+        progress: { status: 'reveal', revealIndex: 0 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -402,11 +409,12 @@ describe('DisplayPage — reveal', () => {
   it('draws the header exactly as the view provides it, not from its own derivation', () => {
     mockUseGame.mockReturnValue({
       snapshot: {
-        ...displayView({
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          revealQuestions,
+        ...roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [generalKnowledge],
+          progress: { status: 'reveal', questionIndex: 1, revealIndex: 0 },
         }),
+        // Overridden on purpose: the real header for this state reads
+        // differently, so the page showing this one proves it draws what it is sent.
         header: {
           label: 'ROUND 9',
           title: 'Served Title',

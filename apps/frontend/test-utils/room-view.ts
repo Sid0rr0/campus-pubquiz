@@ -16,6 +16,8 @@
  */
 import {
   freshSessionState,
+  getGameContext,
+  getTimedPhaseKey,
   LOBBY_PROGRESS,
   projectScreen,
   DEFAULT_SESSION_SETTINGS,
@@ -53,9 +55,20 @@ export type LeaderboardDescription = Pick<
   Partial<LeaderboardEntry>;
 
 export interface SessionDescription {
+  joinCode?: string;
+  displayTextScale?: number;
+  /** Ids of teams whose phone is connected (the roster's `isConnected`). */
+  connectedTeamIds?: number[];
   rounds?: RoundDescription[];
   progress?: Partial<GameProgress>;
   teams?: TeamRosterEntry[];
+  /**
+   * The timed phase on screen: live since `startedAt`, or finished after
+   * `elapsedMs`. Ignored when the status isn't timed.
+   */
+  phaseTimer?: { startedAt: number } | { elapsedMs: number };
+  /** Ids of block questions that still have an ungraded answer. */
+  ungradedQuestionIds?: number[];
   /** Team ids that have answered, keyed by question id. */
   answeredTeams?: Record<number, number[]>;
   /** Defaults the roster from its rows when `teams` is left out. */
@@ -152,6 +165,32 @@ function closestGuessSummariesOf(rounds: SeededRound[]) {
   );
 }
 
+function buildPhaseTimer(
+  state: SessionState,
+  phaseTimer: SessionDescription['phaseTimer'],
+): Pick<SessionState, 'livePhaseKey' | 'phaseStartedAt' | 'phaseElapsedByKey'> {
+  const key = getTimedPhaseKey(state.progress, getGameContext(state));
+  if (phaseTimer === undefined || key === null) {
+    return {
+      livePhaseKey: state.livePhaseKey,
+      phaseStartedAt: state.phaseStartedAt,
+      phaseElapsedByKey: state.phaseElapsedByKey,
+    };
+  }
+  if ('startedAt' in phaseTimer) {
+    return {
+      livePhaseKey: key,
+      phaseStartedAt: phaseTimer.startedAt,
+      phaseElapsedByKey: {},
+    };
+  }
+  return {
+    livePhaseKey: null,
+    phaseStartedAt: null,
+    phaseElapsedByKey: { [key]: phaseTimer.elapsedMs },
+  };
+}
+
 /** Full session state for a partial description. */
 export function buildSessionState(
   description: SessionDescription = {},
@@ -161,18 +200,25 @@ export function buildSessionState(
   const teams =
     description.teams ??
     leaderboard.map(({ teamId, teamName }) => ({ teamId, teamName }));
-  return {
+  const state: SessionState = {
     ...freshSessionState(
       {
         quizId: 1,
         gameSessionId: 1,
-        joinCode: 'ABCDEF',
+        joinCode: description.joinCode ?? 'ABCDEF',
         rounds,
         settings: { ...DEFAULT_SESSION_SETTINGS, ...description.settings },
       },
       buildProgress(description.progress),
     ),
     ...description.timers,
+    ...(description.displayTextScale === undefined
+      ? {}
+      : { displayTextScale: description.displayTextScale }),
+    connectedTeamSockets: Object.fromEntries(
+      (description.connectedTeamIds ?? []).map((id) => [id, `socket-${id}`]),
+    ),
+    ungradedQuestionIds: description.ungradedQuestionIds ?? [],
     teams,
     leaderboard,
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
@@ -182,6 +228,7 @@ export function buildSessionState(
     activeShowdownRound: description.showdown?.round ?? null,
     showdownRevealStep: description.showdown?.revealStep ?? 0,
   };
+  return { ...state, ...buildPhaseTimer(state, description.phaseTimer) };
 }
 
 /** The view `room` is sent for the described session — the shared projection, nothing hand-made. */

@@ -1,7 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GameProgress } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
@@ -44,30 +43,6 @@ function authenticatedAuthResult(
   };
 }
 
-function progress(overrides: Partial<GameProgress> = {}): GameProgress {
-  return {
-    status: 'question_open',
-    roundIndex: 0,
-    questionIndex: 0,
-    isLeaderboardVisible: false,
-    revealIndex: 0,
-    furthestOpenIndex: 0,
-    ...overrides,
-  };
-}
-
-function baseSnapshot(overrides: Record<string, unknown> = {}) {
-  return {
-    progress: progress(),
-    joinCode: 'ABCDEF',
-    quizStructure: { breakRoundNumbers: [] },
-    leaderboard: [],
-    activeShowdown: null,
-    showdownRevealStep: 0,
-    ...overrides,
-  };
-}
-
 describe('RemotePage — display text scale control (reused from /control)', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
@@ -80,7 +55,10 @@ describe('RemotePage — display text scale control (reused from /control)', () 
 
   it('shows the current /display text scale from the snapshot', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({ displayTextScale: 1.25 }),
+      session: {
+        progress: { status: 'question_open' },
+        displayTextScale: 1.25,
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -94,7 +72,7 @@ describe('RemotePage — display text scale control (reused from /control)', () 
   it('steps the shared /display text scale up via setDisplayTextScale', () => {
     const setDisplayTextScale = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({ displayTextScale: 1 }),
+      session: { progress: { status: 'question_open' }, displayTextScale: 1 },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -112,7 +90,7 @@ describe('RemotePage — display text scale control (reused from /control)', () 
   it('steps the shared /display text scale down via setDisplayTextScale', () => {
     const setDisplayTextScale = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({ displayTextScale: 1 }),
+      session: { progress: { status: 'question_open' }, displayTextScale: 1 },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,

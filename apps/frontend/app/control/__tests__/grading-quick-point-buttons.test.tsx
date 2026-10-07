@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress, adminView } from './test-utils';
+import { authenticatedAuthResult } from './test-utils';
 
 const {
   mockUseAdminGame,
@@ -61,20 +61,17 @@ describe('AdminPage — grading quick point buttons', () => {
   it('grades an ungraded answer with the full-points quick button', async () => {
     const gradeAnswer = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
-        ],
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      }),
+        progress: { status: 'break' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 2 }] }],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -88,7 +85,7 @@ describe('AdminPage — grading quick point buttons', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 0,
@@ -110,20 +107,17 @@ describe('AdminPage — grading quick point buttons', () => {
   it('grades an ungraded answer with the half-points quick button', async () => {
     const gradeAnswer = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
-        ],
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      }),
+        progress: { status: 'break' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 2 }] }],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -137,7 +131,7 @@ describe('AdminPage — grading quick point buttons', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 0,
@@ -158,20 +152,17 @@ describe('AdminPage — grading quick point buttons', () => {
 
   it('shows the awarded grade as a checked quick button that stays enabled for an already-graded answer', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
-        ],
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      }),
+        progress: { status: 'break' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 2 }] }],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -185,7 +176,7 @@ describe('AdminPage — grading quick point buttons', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 2,
@@ -214,20 +205,17 @@ describe('AdminPage — grading quick point buttons', () => {
     const user = userEvent.setup();
     const gradeAnswer = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
-        ],
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      }),
+        progress: { status: 'break' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 2 }] }],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -241,7 +229,7 @@ describe('AdminPage — grading quick point buttons', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 2,

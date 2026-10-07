@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -35,16 +36,13 @@ describe('DisplayPage — rules and round intro', () => {
 
   it('shows the rules screen after the lobby, before the first question opens', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'rules' }),
-        currentQuestion: null,
-        quizStructure: {
-          blockCount: 2,
-          topicsPerBlock: 3,
-          breakRoundNumbers: [3, 6],
-          minQuestionsPerTopic: 4,
-          maxQuestionsPerTopic: 4,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        // Six rounds of four questions, with a break after rounds 3 and 6.
+        rounds: Array.from({ length: 6 }, (_, index) => ({
+          breakAfter: index % 3 === 2,
+          questions: [{}, {}, {}, {}],
+        })),
+        progress: { status: 'rules' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -61,12 +59,13 @@ describe('DisplayPage — rules and round intro', () => {
 
   it('lists every round title, category, and author on the round overview screen, before round 0 opens', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'round_overview' }),
-        currentQuestion: null,
-        roundTitles: ['General Knowledge', 'Picture Round', 'Music Round'],
-        roundCategories: ['General knowledge', '', ''],
-        roundAuthors: ['', 'Sam', ''],
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          { title: 'General Knowledge', category: 'General knowledge' },
+          { title: 'Picture Round', author: 'Sam' },
+          { title: 'Music Round' },
+        ],
+        progress: { status: 'round_overview' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -82,12 +81,12 @@ describe('DisplayPage — rules and round intro', () => {
 
   it('shows the round name, category, and author on the round intro screen, before any question opens', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'round_intro', roundIndex: 1 }),
-        currentQuestion: null,
-        roundTitle: 'Picture Round',
-        roundCategory: 'Film & TV',
-        roundAuthor: 'Sam',
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          { title: 'General Knowledge' },
+          { title: 'Picture Round', category: 'Film & TV', author: 'Sam' },
+        ],
+        progress: { status: 'round_intro', roundIndex: 1 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
