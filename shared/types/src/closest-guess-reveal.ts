@@ -1,14 +1,15 @@
+import type { AnswerView } from './answers';
 import {
   getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
-  isBatchGradedType,
-  type AnswerView,
-  type ClosestGuessRevealData,
-  type GameAction,
-  type GameProgress,
-  type RevealQuestionView,
-} from '@campus-pubquiz/types';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
+} from './game-state-block-position';
+import type { GameAction, GameProgress } from './game-state-types';
+import type {
+  ClosestGuessRevealData,
+  RevealQuestionView,
+} from './question-views';
+import { isBatchGradedType } from './scoring';
+import { getGameContext, type SessionState } from './session-state';
 
 /** Summarizes a graded closest_guess question's answers into the display/play-facing reveal shape — pointsAwarded > 0 reliably identifies the tied-closest rows, since gradeClosestGuess awards full points to exactly those rows and 0 to everyone else. */
 export function summarizeClosestGuess(

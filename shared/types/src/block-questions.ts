@@ -3,22 +3,26 @@ import {
   getBlockPositionForQuestion,
   getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
-  type BlockQuestionView,
-  type BlockRevealQuestionView,
-  type QuestionView,
-  type RevealQuestionView,
-  type UpcomingQuestionPosition,
+} from './game-state-block-position';
+import {
   isAnsweringStatus,
-  isBatchGradedType,
   isBlockStartedStatus,
   isQuestionOnAirStatus,
   isRevealingStatus,
-} from '@campus-pubquiz/types';
+} from './game-state-groups';
 import {
   toBlockQuestionView,
   toQuestionView,
-} from '@/game/state/game-state-views';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
+} from './question-view-conversions';
+import type {
+  BlockQuestionView,
+  BlockRevealQuestionView,
+  QuestionView,
+  RevealQuestionView,
+  UpcomingQuestionPosition,
+} from './question-views';
+import { isBatchGradedType } from './scoring';
+import { getGameContext, type SessionState } from './session-state';
 
 interface RoundQuestionEntry {
   question: RevealQuestionView;

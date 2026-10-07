@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DEFAULT_SESSION_SETTINGS,
+  type SeededGame,
+  type SeededRound,
   type SessionSettings,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
@@ -15,11 +17,7 @@ import { RoundRepository } from '@/db/repositories/round.repository';
 import { readQuestionPayload } from '@/db/question-payload';
 import { generateJoinCode } from '@/db/join-code.util';
 import { HARDCODED_QUIZ } from '@/game/fixtures/hardcoded-quiz.fixture';
-import type {
-  CreatedGameSession,
-  SeededGame,
-  SeededRound,
-} from '@/db/seed.types';
+import type { CreatedGameSession } from '@/db/seed.types';
 
 @Injectable()
 export class SeedService {

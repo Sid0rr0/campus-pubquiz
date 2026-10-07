@@ -1,19 +1,17 @@
-import type {
-  GameProgress,
-  QuestionType,
-  ScoredQuestion,
-} from '@campus-pubquiz/types';
 import {
+  type GameProgress,
+  getBlockSeededQuestions,
   isAutoGradedType,
   isBatchGradedType,
+  isBreakStatus,
   isGradedStatus,
   isMatchOrHumanType,
-  isBreakStatus,
+  type QuestionType,
+  type ScoredQuestion,
+  type SessionState,
+  summarizeClosestGuess,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
-import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
-import type { SessionState } from '@/game/state/session-state';
 
 /**
  * The one rule for which questions can ever count as "ungraded": closest_guess

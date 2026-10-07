@@ -1,16 +1,14 @@
 import {
-  DEFAULT_SESSION_SETTINGS,
-  SOCKET_ROOMS,
   type ClosestGuessRevealData,
-  type GameProgress,
-  type RevealQuestionView,
-} from '@campus-pubquiz/types';
-import type { SeededRound } from '@/db/seed.types';
-import { projectScreen } from '@/game/state/screen-projection.util';
-import {
+  DEFAULT_SESSION_SETTINGS,
   freshSessionState,
+  type GameProgress,
+  projectScreen,
+  type RevealQuestionView,
+  type SeededRound,
   type SessionState,
-} from '@/game/state/session-state';
+  SOCKET_ROOMS,
+} from '@campus-pubquiz/types';
 
 function question(id: number): RevealQuestionView {
   return {

@@ -1,22 +1,21 @@
 import {
-  SOCKET_ROOMS,
+  getBlockSeededQuestions,
   getBreakNumber,
+  getCurrentQuestion,
+  getGameContext,
   getQuizStructureSummary,
+  nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
+  projectScreen,
   type ScreenPreview,
+  type SessionState,
+  SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
-import {
-  getBlockSeededQuestions,
-  getCurrentQuestion,
-} from '@/game/state/block-questions.util';
 import {
   previewMove,
   type PreviewedMove,
 } from '@/game/state/commit-a-move.service';
-import { nextPressAction } from '@/game/state/move-plan.util';
-import { projectScreen } from '@/game/state/screen-projection.util';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
 
 function describeBreakIntro(session: SessionState): ScreenPreview {
   const { progress } = session;

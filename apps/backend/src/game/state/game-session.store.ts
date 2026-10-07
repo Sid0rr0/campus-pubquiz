@@ -1,4 +1,4 @@
-import type { SessionState } from '@/game/state/session-state';
+import type { SessionState } from '@campus-pubquiz/types';
 
 /**
  * Owns the in-memory session registry keyed by joinCode — the single source

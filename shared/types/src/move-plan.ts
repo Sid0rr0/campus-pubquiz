@@ -1,16 +1,15 @@
+import { tryStepClosestGuessReveal } from './closest-guess-reveal';
+import { getNextGameState } from './game-state';
 import {
   IllegalGameTransitionError,
-  getLeaderboardRevealStepCount,
-  getNextGameState,
-  type AdvanceSlotStep,
   type GameAction,
   type GameProgress,
-  type PreviousState,
-} from '@campus-pubquiz/types';
-import { tryStepClosestGuessReveal } from '@/game/state/closest-guess-reveal.util';
-import { ShowdownGuessesPendingError } from '@/game/state/errors/showdown-guesses-pending.error';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
-import { tryStepShowdownReveal } from '@/game/state/showdown-reveal.util';
+} from './game-state-types';
+import { getLeaderboardRevealStepCount } from './leaderboard-tiebreak';
+import type { AdvanceSlotStep, PreviousState } from './room-views';
+import { getGameContext, type SessionState } from './session-state';
+import { ShowdownGuessesPendingError } from './showdown-guesses-pending-error';
+import { tryStepShowdownReveal } from './showdown-reveal';
 
 export type Movement = 'ADVANCE' | 'PREVIOUS';
 
