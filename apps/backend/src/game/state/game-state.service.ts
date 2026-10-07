@@ -60,7 +60,6 @@ import {
   withBreakEndTime,
   withDisplayTextScale,
   withLeaderboard,
-  withGradingRefresh,
   withShowdownGuess,
   withTeamConnected,
   withTeams,
@@ -295,12 +294,8 @@ export class GameStateService implements OnModuleInit {
       return { session, regradedQuestionIds };
     }
 
-    const refresh = await this.grading.gradingRefresh(
-      session,
-      regradedQuestionIds,
-    );
     return {
-      session: withGradingRefresh(
+      session: await this.grading.gradesChanged(
         {
           ...session,
           closestGuessSummaries: {
@@ -308,7 +303,7 @@ export class GameStateService implements OnModuleInit {
             ...closestGuessSummaries,
           },
         },
-        refresh,
+        regradedQuestionIds,
       ),
       regradedQuestionIds,
     };
@@ -1129,21 +1124,18 @@ export class GameStateService implements OnModuleInit {
     started: SessionState,
     questionId: number,
   ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const [answers, refresh] = await Promise.all([
+    const [answers, graded] = await Promise.all([
       this.answerService.listForQuestion(
         started.seededGame.gameSessionId,
         questionId,
       ),
-      this.grading.gradingRefresh(started, [questionId]),
+      this.grading.gradesChanged(started, [questionId]),
     ]);
     return {
-      session: withGradingRefresh(
-        withAnsweredTeamIds(
-          started,
-          questionId,
-          answers.map((answer) => answer.teamId),
-        ),
-        refresh,
+      session: withAnsweredTeamIds(
+        graded,
+        questionId,
+        answers.map((answer) => answer.teamId),
       ),
       outcome: {
         ...BROADCAST_STATE_OUTCOME,

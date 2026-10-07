@@ -14,7 +14,6 @@ import { AnswerService } from '@/answer/answer.service';
 import { getBlockSeededQuestions } from '@/game/state/block-questions.util';
 import { summarizeClosestGuess } from '@/game/state/closest-guess-reveal.util';
 import type { SessionState } from '@/game/state/session-state';
-import { withGradingRefresh } from '@/game/state/session-updates.util';
 
 /**
  * The one rule for which questions can ever count as "ungraded": closest_guess
@@ -31,9 +30,24 @@ export function canBeUngraded(question: { type: QuestionType }): boolean {
  * in one synchronous update: which of the questions whose grades just changed
  * are ungraded. Standings are not part of it — the session write reads them.
  */
-export interface GradingRefresh {
+interface GradingRefresh {
   questionIds: readonly number[];
   ungradedQuestionIds: readonly number[];
+}
+
+/** The apply half of the grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise). The only writer of the ungraded set. */
+function applyGradingRefresh(
+  session: SessionState,
+  refresh: GradingRefresh,
+): SessionState {
+  const refreshed = new Set(refresh.questionIds);
+  return {
+    ...session,
+    ungradedQuestionIds: [
+      ...session.ungradedQuestionIds.filter((id) => !refreshed.has(id)),
+      ...refresh.ungradedQuestionIds,
+    ],
+  };
 }
 
 /**
@@ -77,11 +91,11 @@ export class BlockGradingService {
 
     // The batch scored these questions; closest_guess can never be ungraded,
     // so the refresh has nothing to change in the ungraded set.
-    const refresh = await this.gradingRefresh(
+    const refresh = await this.readGradingRefresh(
       { ...session, progress: newProgress },
       ungraded.map((question) => question.id),
     );
-    return withGradingRefresh(
+    return applyGradingRefresh(
       { ...session, closestGuessSummaries: summaries },
       refresh,
     );
@@ -96,7 +110,7 @@ export class BlockGradingService {
    * time as stored at submit, so a redundant re-run (e.g. PREVIOUS from
    * 'reveal' back into 'locking' followed by another ADVANCE) recomputes the
    * same points — the status transition is the only guard needed. Recomputes
-   * the leaderboard afterward, same as ensureBlockGraded (both end through gradingRefresh).
+   * the leaderboard afterward, same as ensureBlockGraded (both end through the grading refresh).
    */
   async ensureKahootSpeedScored(
     session: SessionState,
@@ -118,8 +132,7 @@ export class BlockGradingService {
       session.seededGame.settings.kahootQuestionTimerSeconds,
     );
 
-    const refresh = await this.gradingRefresh(session, [question.id]);
-    return withGradingRefresh(session, refresh);
+    return this.gradesChanged(session, [question.id]);
   }
 
   /**
@@ -135,7 +148,7 @@ export class BlockGradingService {
    * the normal lock flow grades it with the new key). Only writes grades:
    * names the questions it re-scored and the closest_guess summaries it
    * recomputed, and leaves the session to the caller, which ends through
-   * gradingRefresh.
+   * gradesChanged.
    */
   async regradeQuestions(
     session: SessionState,
@@ -193,13 +206,29 @@ export class BlockGradingService {
   }
 
   /**
-   * The grading refresh: after grades changed for `questionIds`, reads which
-   * of the current block's questions among them are ungraded (through the one
-   * ungraded reader, so closest_guess is still dropped). Questions outside the
+   * Grades changed for `questionIds`: runs the grading refresh and returns the
+   * session with those questions' ungraded entries replaced. Only questions in
+   * the current block are refreshed. Reading and applying are one step; safe
+   * because every grade change runs inside the session write.
+   */
+  async gradesChanged(
+    session: SessionState,
+    questionIds: readonly number[],
+  ): Promise<SessionState> {
+    return applyGradingRefresh(
+      session,
+      await this.readGradingRefresh(session, questionIds),
+    );
+  }
+
+  /**
+   * The read half of the grading refresh: which of the current block's
+   * questions among `questionIds` are ungraded (through the one ungraded
+   * reader, so closest_guess is still dropped). Questions outside the
    * current block are left alone: the cached set only ever describes the
    * block in play.
    */
-  async gradingRefresh(
+  private async readGradingRefresh(
     session: SessionState,
     questionIds: readonly number[],
   ): Promise<GradingRefresh> {
@@ -256,14 +285,14 @@ export class BlockGradingService {
   ): Promise<SessionState> {
     if (!isBreakStatus(newProgress.status)) return session;
     const blockSession = { ...session, progress: newProgress };
-    const refresh = await this.gradingRefresh(
+    const refresh = await this.readGradingRefresh(
       blockSession,
       getBlockSeededQuestions(blockSession).map((question) => question.id),
     );
     // The refresh covers the whole block, so its set replaces the cached one
     // outright — nothing from an earlier block or a live edit survives.
     return {
-      ...withGradingRefresh(session, refresh),
+      ...session,
       ungradedQuestionIds: [...refresh.ungradedQuestionIds],
     };
   }
