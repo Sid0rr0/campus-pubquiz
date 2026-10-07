@@ -77,6 +77,10 @@ describe('ImportService (Postgres integration)', () => {
     mockedFetchSheetCsv.mockReset();
   });
 
+  function findQuestionsInOrder(): Promise<Question[]> {
+    return em.find(Question, {}, { orderBy: { orderIndex: 'asc' } });
+  }
+
   function makeService(overrides: Partial<GameStateStub> = {}) {
     const { stub, asService } = makeGameStateStub(overrides);
     const quizService = new QuizService(
@@ -197,11 +201,7 @@ describe('ImportService (Postgres integration)', () => {
         'ABCDEF',
         'Trivia Night',
       );
-      const before = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const before = await findQuestionsInOrder();
 
       const second = await importService.confirm(
         VALID_CSV,
@@ -212,11 +212,7 @@ describe('ImportService (Postgres integration)', () => {
       expect(second.quizId).toBe(first.quizId);
       const quizzes = await em.find(Quiz, {});
       expect(quizzes).toHaveLength(1);
-      const after = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const after = await findQuestionsInOrder();
       expect(after.map((question) => question.id).sort()).toEqual(
         before.map((question) => question.id).sort(),
       );
@@ -236,19 +232,11 @@ describe('ImportService (Postgres integration)', () => {
         'History,free_text,Q2,,A2,1,,,,1',
       ].join('\n');
       await importService.confirm(threeQuestions, 'ABCDEF', 'Trivia Night');
-      const before = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const before = await findQuestionsInOrder();
 
       await importService.confirm(twoQuestions, 'ABCDEF', 'Trivia Night');
 
-      const after = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const after = await findQuestionsInOrder();
       expect(after.map((question) => question.prompt)).toEqual([
         'Q1 edited',
         'Q2',

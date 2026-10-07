@@ -39,6 +39,10 @@ describe('QuizService (Postgres integration)', () => {
     restoreClock();
   });
 
+  function findQuestionsInOrder(): Promise<Question[]> {
+    return em.find(Question, {}, { orderBy: { orderIndex: 'asc' } });
+  }
+
   async function insertQuiz(title: string): Promise<Quiz> {
     const quiz = em.create(Quiz, { title });
     await em.flush();
@@ -451,11 +455,7 @@ describe('QuizService (Postgres integration)', () => {
         },
       ]);
 
-      const questions = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const questions = await findQuestionsInOrder();
       expect(questions).toHaveLength(2);
       expect(questions.map((question) => question.id).sort()).toEqual(
         [q1.questionId, q2.questionId].sort(),
@@ -502,11 +502,7 @@ describe('QuizService (Postgres integration)', () => {
         },
       ]);
 
-      const questions = await em.find(
-        Question,
-        {},
-        { orderBy: { orderIndex: 'asc' } },
-      );
+      const questions = await findQuestionsInOrder();
       expect(questions).toHaveLength(2);
       expect(questions[0].id).toBe(q1.questionId);
       expect(questions[1].prompt).toBe('Q2 (new)');
@@ -517,39 +513,120 @@ describe('QuizService (Postgres integration)', () => {
       ['first', 0, ['Q2', 'Q3']],
       ['middle', 1, ['Q1', 'Q3']],
       ['last', 2, ['Q1', 'Q2']],
-    ])('dropping the %s question of a round', (_label, dropIndex, expected) => {
-      it('saves, keeping the remaining questions, their ids and closing up their order', async () => {
-        const created = await quizService.create('Trivia Night', [
-          {
-            title: 'Round 1',
-            breakAfter: true,
-            questions: ['Q1', 'Q2', 'Q3'].map((prompt) => ({
-              type: 'free_text' as const,
-              prompt,
-              answer: `A ${prompt}`,
+    ])(
+      'dropping the %s question of a round',
+      (_label, dropIndex, remainingPrompts) => {
+        it('saves, keeping the remaining questions, their ids and closing up their order', async () => {
+          const created = await quizService.create('Trivia Night', [
+            {
+              title: 'Round 1',
+              breakAfter: true,
+              questions: ['Q1', 'Q2', 'Q3'].map((prompt) => ({
+                type: 'free_text' as const,
+                prompt,
+                answer: `A ${prompt}`,
+                points: 1,
+              })),
+            },
+          ]);
+          const draft = await quizService.findDraftById(created.quizId);
+          const [round] = draft!.rounds;
+          const survivors = round.questions.filter((_, i) => i !== dropIndex);
+
+          await quizService.update(created.quizId, 'Trivia Night', [
+            { ...round, questions: survivors },
+          ]);
+
+          const stored = await findQuestionsInOrder();
+          expect(stored.map((question) => question.prompt)).toEqual(
+            remainingPrompts,
+          );
+          expect(stored.map((question) => question.orderIndex)).toEqual([0, 1]);
+          expect(stored.map((question) => question.id)).toEqual(
+            survivors.map((question) => question.questionId),
+          );
+        });
+      },
+    );
+
+    it('keeps a slot-keyed question in its stored row while dropping the rest, mixed with an id-keyed move', async () => {
+      const created = await quizService.create('Trivia Night', [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: ['Q1', 'Q2', 'Q3'].map((prompt) => ({
+            type: 'free_text' as const,
+            prompt,
+            answer: `A ${prompt}`,
+            points: 1,
+          })),
+        },
+      ]);
+      const draft = await quizService.findDraftById(created.quizId);
+      const [round] = draft!.rounds;
+      const [, q2, q3] = round.questions;
+
+      // Q3 moves to the front by id; a slot-keyed (id-less) question takes
+      // slot 1 and must merge into Q2's stored row; Q1 is dropped.
+      await quizService.syncRoundsAndQuestions(created.quizId, [
+        {
+          ...round,
+          questions: [
+            q3,
+            {
+              type: 'free_text',
+              prompt: 'Slot 1 edited',
+              answer: 'A new',
               points: 1,
-            })),
-          },
-        ]);
-        const draft = await quizService.findDraftById(created.quizId);
-        const [round] = draft!.rounds;
-        const survivors = round.questions.filter((_, i) => i !== dropIndex);
+            },
+          ],
+        },
+      ]);
 
-        await quizService.update(created.quizId, 'Trivia Night', [
-          { ...round, questions: survivors },
-        ]);
+      const stored = await findQuestionsInOrder();
+      expect(stored.map((question) => question.prompt)).toEqual([
+        'Q3',
+        'Slot 1 edited',
+      ]);
+      expect(stored.map((question) => question.id)).toEqual([
+        q3.questionId,
+        q2.questionId,
+      ]);
+    });
 
-        const stored = await em.find(
-          Question,
-          {},
-          { orderBy: { orderIndex: 'asc' } },
-        );
-        expect(stored.map((question) => question.prompt)).toEqual(expected);
-        expect(stored.map((question) => question.orderIndex)).toEqual([0, 1]);
-        expect(stored.map((question) => question.id)).toEqual(
-          survivors.map((question) => question.questionId),
-        );
-      });
+    it('rolls back a failed save, leaving the dropped question stored', async () => {
+      const created = await quizService.create('Trivia Night', [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: ['Q1', 'Q2', 'Q3'].map((prompt) => ({
+            type: 'free_text' as const,
+            prompt,
+            answer: `A ${prompt}`,
+            points: 1,
+          })),
+        },
+      ]);
+      const draft = await quizService.findDraftById(created.quizId);
+      const [round] = draft!.rounds;
+      // A NUL byte is valid input to the draft schema but Postgres rejects it,
+      // so the upsert fails after the dropped question was already deleted.
+      const unstorable = { ...round.questions[2], prompt: 'Q3\u0000' };
+
+      await expect(
+        quizService.update(created.quizId, 'Trivia Night', [
+          { ...round, questions: [round.questions[0], unstorable] },
+        ]),
+      ).rejects.toThrow();
+
+      const stored = await db.orm.em
+        .fork()
+        .find(Question, {}, { orderBy: { orderIndex: 'asc' } });
+      expect(stored.map((question) => question.prompt)).toEqual([
+        'Q1',
+        'Q2',
+        'Q3',
+      ]);
     });
   });
 
