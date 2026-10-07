@@ -19,3 +19,4 @@ The rules every change to this repo follows. Implementers write to them; `/code-
 - **Validate everything at the boundary.** Imported rows and saved drafts go through the per-type Zod schema; a bad row fails at import, not live on stage.
 - **Stored JSON payloads are parsed** with `parseQuestionPayload`. **(lint)** bans `.payload as …` and `as QuestionPayload` in backend code outside tests.
 - **Uploads are untrusted.** Media type is sniffed from magic bytes, storage keys are server-generated UUIDs, and media providers sit behind the `MediaStorage` interface.
+- **A socket event is declared once, in the socket protocol map;** both ends emit and listen through sockets typed by it, never with a hand-written payload type. A field only one room reads goes in that room's view, not the shared snapshot.

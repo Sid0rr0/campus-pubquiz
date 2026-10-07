@@ -27,11 +27,11 @@ Parent spec: `.scratch/socket-protocol/spec.md`
 
 **Blocked by:** 01 (Split the socket-events file by concept)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Type-level assertions in shared types, compiled by the workspace typecheck and written first: a wrong payload for an event is an error (`@ts-expect-error`); an acknowledgement resolves to its event's type; the players room's `STATE_SYNC` is `PlayersStatePayload`, not the admin or display view; and `TEAM_KICKED` takes no payload.
-- [ ] The frontend emit helper has no `event: string, payload: unknown` signature left, and no role hook passes a type argument to it by hand.
-- [ ] No frontend listener for a protocol event declares its payload type by hand; the phone's state listeners receive the players view.
-- [ ] The role-hook tests on the fake socket (connection core, player game, admin game, display game, team join on a real `usePlayerGame`) pass, changed only in their typings.
-- [ ] `DOCUMENTATION.md` and `CODING_STANDARDS.md` are updated as above.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass across all workspaces.
+- [x] Type-level assertions in shared types, compiled by the workspace typecheck and written first: a wrong payload for an event is an error (`@ts-expect-error`); an acknowledgement resolves to its event's type; the players room's `STATE_SYNC` is `PlayersStatePayload`, not the admin or display view; and `TEAM_KICKED` takes no payload.
+- [x] The frontend emit helper has no `event: string, payload: unknown` signature left, and no role hook passes a type argument to it by hand.
+- [x] No frontend listener for a protocol event declares its payload type by hand; the phone's state listeners receive the players view.
+- [x] The role-hook tests on the fake socket (connection core, player game, admin game, display game, team join on a real `usePlayerGame`) pass, changed only in their typings.
+- [x] `DOCUMENTATION.md` and `CODING_STANDARDS.md` are updated as above.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass across all workspaces.

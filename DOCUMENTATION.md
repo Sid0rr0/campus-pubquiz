@@ -268,13 +268,26 @@ screen is not on air while a showdown is being played, so the line never shows t
 
 ### Events
 
-Server → client: `STATE_SYNC`, `STATE_UPDATED`, `JOIN_ACCEPTED`,
-`ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
-`SESSION_CLOSED`.
+Every event is declared once, in the **protocol map**
+(`shared/types/src/socket-protocol.ts`): its wire name (the `SOCKET_EVENTS`
+constants), its payload and, for client → server events, what its
+acknowledgement carries. The map is types only. The clients open sockets typed
+by it (`socket.io-client`'s generics), so a wrong payload, a wrong
+acknowledgement type or a listener typed against the wrong view is a compile
+error. `STATE_SYNC` and `STATE_UPDATED` are declared per room, so a socket
+connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
-Client → server: `ADMIN_ACTION`, `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `RATE_ROUND`,
-`SEND_FEEDBACK`, `GRADE_ANSWER`, `SELECT_QUIZ`, `KICK_TEAM`, `AWARD_BONUS` (all admin-only
-except `JOIN_PLAYERS`/`SUBMIT_ANSWER`/`RATE_ROUND`/`SEND_FEEDBACK`, which are players-only). Room
+Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
+`ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
+`PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview),
+`TEAM_ANSWERS_SYNCED`, `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
+payload), plus the connection's `exception` message.
+
+Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `AWARD_BONUS`,
+`SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE` and `CREATE_SHOWDOWN_ROUND`
+(admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
+`SEND_FEEDBACK` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
 close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
