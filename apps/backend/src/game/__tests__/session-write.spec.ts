@@ -608,12 +608,9 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     return snapshots[snapshots.length - 1];
   }
 
-  // The re-import ends in notifyQuizEdited,
-  // inside an HTTP request context.
+  // An editor save through the Live edit module, which reloads the session.
   function editQuiz() {
-    return game.inRequestContext(() =>
-      game.gateway.notifyQuizEdited(game.joinCode),
-    );
+    return game.saveQuizEdit();
   }
 
   function submit(questionId: number, value: string) {

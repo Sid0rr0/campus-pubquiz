@@ -1,6 +1,4 @@
-import { RequestContext } from '@mikro-orm/postgresql';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
-import { Question } from '@/db/entities/question.entity';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   HEADING_BY_SCREEN,
@@ -336,6 +334,7 @@ describe('GameStateService — getPresenterContext', () => {
               prompt: 'Name that tune',
               answer: 'Queen',
               points: 1,
+              payload: { mediaUrl: 'https://example.com/queen.mp3' },
             },
           ],
         },
@@ -365,16 +364,7 @@ describe('GameStateService — getPresenterContext', () => {
       }
 
       async function fixAnswerKey(answer: string) {
-        const questionId = game.rounds[0].questionIds[0];
-        await game.inRequestContext(async () => {
-          const em = RequestContext.getEntityManager()!;
-          const question = await em.findOneOrFail(Question, { id: questionId });
-          question.answer = answer;
-          await em.flush();
-        });
-        await game.inRequestContext(() =>
-          game.gateway.notifyQuizEdited(game.joinCode, [questionId]),
-        );
+        await game.saveAnswerKeyFix(game.rounds[0].questionIds[0], { answer });
       }
 
       /** Presses until the quiz sits in the break, submitting `value` once the question is open. */

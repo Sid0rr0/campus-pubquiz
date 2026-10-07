@@ -7,7 +7,7 @@ import {
 } from '@campus-pubquiz/types';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { GameGateway } from '@/game/game.gateway';
+import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { assembleImportPreview } from '@/import/question-row.schema';
 import { parseSheetCsv, SheetFormatError } from '@/import/sheet-csv.parser';
@@ -48,7 +48,7 @@ export class ImportService {
     @InjectRepository(Quiz) private readonly quizzes: QuizRepository,
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
-    private readonly gameGateway: GameGateway,
+    private readonly liveEdit: LiveEditService,
   ) {}
 
   /** Validates the uploaded CSV into a preview. Never writes, never throws. */
@@ -155,13 +155,15 @@ export class ImportService {
     }
 
     const quizId = await this.upsertQuiz(preview.quizTitle);
-    await this.quizService.syncRoundsAndQuestions(quizId, preview.rounds);
-
-    // Same path as an editor save, so the lobby/ended screens get the new
-    // rounds broadcast instead of keeping the old ones until the next press.
-    if (quizId === this.gameState.getActiveQuizId(joinCode)) {
-      await this.gameGateway.notifyQuizEdited(joinCode);
-    }
+    // Same path as an editor save: checked against any session playing the
+    // quiz and applied under their held writes. The importing session's
+    // lobby/ended screens get the new rounds broadcast too, instead of
+    // keeping the old ones until the next press.
+    await this.liveEdit.save(
+      quizId,
+      { title: preview.quizTitle, rounds: preview.rounds },
+      { reloadJoinCode: joinCode, identifyQuestionsBySlot: true },
+    );
 
     return {
       quizId,
