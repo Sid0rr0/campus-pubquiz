@@ -5,7 +5,7 @@ import type {
   LiveEditFrontier,
 } from '@campus-pubquiz/types';
 import {
-  getPinnedQuestionCount,
+  describeEditorRounds,
   makeMatchPair,
   makeOption,
   makeQuestion,
@@ -728,7 +728,7 @@ describe('moveQuestionToRound', () => {
   });
 });
 
-describe('getPinnedQuestionCount', () => {
+describe('describeEditorRounds', () => {
   const round = {
     ...makeRound('r', 'Round'),
     questions: [
@@ -738,6 +738,7 @@ describe('getPinnedQuestionCount', () => {
       makeQuestion('q4'),
     ],
   };
+  const rounds = [round, round, round];
   const frontier = (
     overrides: Partial<LiveEditFrontier> = {},
   ): LiveEditFrontier => ({
@@ -746,36 +747,28 @@ describe('getPinnedQuestionCount', () => {
     hasCurrentBlockStartedLocking: false,
     ...overrides,
   });
+  const pinnedCounts = (liveEdit: LiveEditFrontier | undefined) =>
+    describeEditorRounds(rounds, liveEdit)?.map(
+      (described) => described.pinnedQuestionCount,
+    );
 
-  it('pins nothing when no session is live', () => {
-    expect(getPinnedQuestionCount(round, 1, undefined)).toBe(0);
+  it('describes nothing when no session is live', () => {
+    expect(describeEditorRounds(rounds, undefined)).toBeUndefined();
   });
 
-  it('pins nothing in a round after the current one', () => {
-    expect(getPinnedQuestionCount(round, 2, frontier())).toBe(0);
-  });
-
-  it('pins every question in a round before the current one', () => {
-    expect(getPinnedQuestionCount(round, 0, frontier())).toBe(4);
-  });
-
-  it('pins the opened questions at the start of the current round', () => {
-    expect(getPinnedQuestionCount(round, 1, frontier())).toBe(2);
+  it('pins every question before the current round, the opened ones in it, and nothing after', () => {
+    expect(pinnedCounts(frontier())).toEqual([4, 2, 0]);
   });
 
   it('pins nothing in a current round where nothing has opened', () => {
-    expect(
-      getPinnedQuestionCount(round, 1, frontier({ openedQuestionIds: [] })),
-    ).toBe(0);
+    expect(pinnedCounts(frontier({ openedQuestionIds: [] }))).toEqual([
+      4, 0, 0,
+    ]);
   });
 
   it('pins every question in the current round once its block has started locking', () => {
     expect(
-      getPinnedQuestionCount(
-        round,
-        1,
-        frontier({ hasCurrentBlockStartedLocking: true }),
-      ),
-    ).toBe(4);
+      pinnedCounts(frontier({ hasCurrentBlockStartedLocking: true })),
+    ).toEqual([4, 4, 0]);
   });
 });
