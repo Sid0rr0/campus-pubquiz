@@ -1,6 +1,6 @@
 import type { PlayersStatePayload } from '@campus-pubquiz/types';
 import { describe, expect, it } from 'vitest';
-import { mergeSeenQuestions } from '@/app/lib/use-player-game';
+import { mergeSeenQuestions } from '@/app/lib/seen-questions';
 
 const hidden = {
   id: 1,

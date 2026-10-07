@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { usePlayerGame } from '@/app/lib/use-player-game';
+import { useGameConnection } from '@/app/lib/use-game-connection';
 import { RulesContent } from '@/app/components/rules-content';
 
 function RulesPageContent() {
@@ -13,7 +13,9 @@ function RulesPageContent() {
   // no round/topic/break sentence, rather than blocking forever on a socket
   // connection to a session that may not exist.
   const codeFromUrl = searchParams.get('code') ?? undefined;
-  const { snapshot, connectionError } = usePlayerGame(
+  // The rules page never joins a team, so it only needs the room's snapshot.
+  const { snapshot, connectionError } = useGameConnection(
+    'players',
     Boolean(codeFromUrl),
     codeFromUrl,
   );

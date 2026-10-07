@@ -4,7 +4,7 @@ import type {
   QuestionType,
   Verdict,
 } from '@campus-pubquiz/types';
-import type { MyAnswerGrade } from '@/app/lib/use-player-game';
+import type { MyAnswerGrade } from '@/app/lib/team-link';
 
 export interface OpenedQuestionEntry {
   id: number;

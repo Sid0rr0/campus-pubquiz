@@ -8,8 +8,8 @@ const { mockUseGame, searchParamsRef, routerRef } = vi.hoisted(() => ({
   routerRef: { push: vi.fn(), replace: vi.fn() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUseGame,
+vi.mock('@/app/lib/use-game-connection', () => ({
+  useGameConnection: mockUseGame,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -31,7 +31,7 @@ describe('RulesPage', () => {
   it('renders the static house rules with no ?code= in the URL, skipping the socket entirely', () => {
     render(<RulesPage />);
 
-    expect(mockUseGame).toHaveBeenLastCalledWith(false, undefined);
+    expect(mockUseGame).toHaveBeenLastCalledWith('players', false, undefined);
     expect(screen.getByText(/no cheating/i)).toBeInTheDocument();
     expect(
       screen.getByText(/organizers have the final word/i),
@@ -43,7 +43,7 @@ describe('RulesPage', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     render(<RulesPage />);
 
-    expect(mockUseGame).toHaveBeenLastCalledWith(true, 'ABCDEF');
+    expect(mockUseGame).toHaveBeenLastCalledWith('players', true, 'ABCDEF');
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 

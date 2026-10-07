@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -22,7 +22,7 @@ describe('PlayPage — leaderboard overlay', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('hides the block question picker during break when the leaderboard overlay is toggled on', () => {
@@ -35,7 +35,7 @@ describe('PlayPage — leaderboard overlay', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break', isLeaderboardVisible: true }),
@@ -57,7 +57,7 @@ describe('PlayPage — leaderboard overlay', () => {
 
   it('shows the leaderboard overlay whenever isLeaderboardVisible is true', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ isLeaderboardVisible: true }),
@@ -72,7 +72,7 @@ describe('PlayPage — leaderboard overlay', () => {
 
   it('still lets a team answer an open question while the leaderboard is toggled on for the big screen', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({
@@ -104,7 +104,7 @@ describe('PlayPage — leaderboard overlay', () => {
 
   it('hides a kahoot question opened behind the leaderboard until the big screen reveals it', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({
@@ -148,7 +148,7 @@ describe('PlayPage — leaderboard overlay', () => {
 
   it('still lets a team answer during the locking countdown while the leaderboard is toggled on', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'locking', isLeaderboardVisible: true }),
@@ -181,7 +181,7 @@ describe('PlayPage — leaderboard overlay', () => {
       roundNumber: 1,
       questionNumberInRound: 2,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({
@@ -199,7 +199,7 @@ describe('PlayPage — leaderboard overlay', () => {
 
     expect(screen.queryByText('Name a planet')).not.toBeInTheDocument();
 
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({

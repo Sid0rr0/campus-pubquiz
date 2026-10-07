@@ -6,19 +6,19 @@ import { renderWithQuery } from '@/test-utils/query';
 import { socketResult } from './test-utils';
 
 const {
-  mockUsePlayerGame,
+  mockUseTeamLink,
   mockRouterPush,
   mockFetchPublicSessions,
   searchParamsRef,
 } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+  mockUseTeamLink: vi.fn(),
   mockRouterPush: vi.fn(),
   mockFetchPublicSessions: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -64,7 +64,7 @@ describe('HomePage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
     mockRouterPush.mockClear();
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
@@ -121,8 +121,12 @@ describe('HomePage', () => {
   it('reveals the team code field prefilled when a team code is already stored (returning team)', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ connectionError: 'Session expired' }),
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        connectionError: 'Session expired',
+        nameInput: 'Returning Team',
+        teamCodeInput: 'QUICK-JADE-FOX',
+      }),
     );
 
     renderWithQuery(<HomePage />);
@@ -135,6 +139,7 @@ describe('HomePage', () => {
   it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseTeamLink.mockReturnValue(socketResult({ codeInput: 'ABCDEF' }));
     renderWithQuery(<HomePage />);
 
     // The combobox exists (with a placeholder) before the session list
@@ -147,77 +152,48 @@ describe('HomePage', () => {
     );
   });
 
-  it('shows a connecting state after submitting the join form', async () => {
+  it('shows a connecting state while the link has a name and game but no team yet', () => {
+    mockUseTeamLink.mockReturnValue(
+      socketResult({ teamName: 'The Quizzards', activeJoinCode: 'ABCDEF' }),
+    );
+    renderWithQuery(<HomePage />);
+
+    expect(screen.getByText(/connecting to the table/i)).toBeInTheDocument();
+  });
+
+  it('hands the typed name, the picked game and the submit to the Team link', async () => {
+    const setNameInput = vi.fn();
+    const setCodeInput = vi.fn();
+    const handleJoin = vi.fn((event) => event.preventDefault());
+    mockUseTeamLink.mockReturnValue(
+      socketResult({ setNameInput, setCodeInput, handleJoin }),
+    );
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     renderWithQuery(<HomePage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
+      'Q',
     );
     await pickLiveSession();
     await userEvent.click(
       screen.getByRole('button', { name: /join the quiz/i }),
     );
 
-    expect(screen.getByText(/connecting to the table/i)).toBeInTheDocument();
+    expect(setNameInput).toHaveBeenCalledWith('Q');
+    expect(setCodeInput).toHaveBeenCalledWith('ABCDEF');
+    expect(handleJoin).toHaveBeenCalledTimes(1);
   });
 
-  it('sends a join with the trimmed name, selected game code, and typed team code', async () => {
-    const sendJoin = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
-    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
+  it('redirects straight to /play once the team is accepted', () => {
+    mockUseTeamLink.mockReturnValue(socketResult());
     const { rerender } = renderWithQuery(<HomePage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      '  The Quizzards  ',
-    );
-    await pickLiveSession();
-    await userEvent.click(
-      screen.getByRole('button', { name: /played before/i }),
-    );
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team code/i }),
-      'quick-jade-fox',
-    );
-    await userEvent.click(
-      screen.getByRole('button', { name: /join the quiz/i }),
-    );
-
-    // Submitting opens a fresh connection; its connect lets the join go out.
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ sendJoin, socketConnection: { socketId: 'socket-2' } }),
-    );
-    rerender(<HomePage />);
-
-    expect(sendJoin).toHaveBeenCalledWith({
-      teamName: 'The Quizzards',
-      joinCode: 'ABCDEF',
-      teamCode: 'quick-jade-fox',
-    });
-  });
-
-  it('redirects straight to /play once the team is accepted', async () => {
-    const sendJoin = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
-    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = renderWithQuery(<HomePage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
-    );
-    await pickLiveSession();
-    await userEvent.click(
-      screen.getByRole('button', { name: /join the quiz/i }),
-    );
-
     expect(mockRouterPush).not.toHaveBeenCalled();
 
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
-        sendJoin,
+        teamName: 'The Quizzards',
+        activeJoinCode: 'ABCDEF',
         team: {
           teamId: 'team-1',
           teamName: 'The Quizzards',

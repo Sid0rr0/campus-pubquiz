@@ -5,20 +5,16 @@ import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
 import { progress, socketResult } from './test-utils';
 
-const {
-  mockUsePlayerGame,
-  mockFetchPublicSessions,
-  searchParamsRef,
-  routerRef,
-} = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
-  mockFetchPublicSessions: vi.fn(),
-  searchParamsRef: { current: new URLSearchParams() },
-  routerRef: { push: vi.fn(), replace: vi.fn() },
-}));
+const { mockUseTeamLink, mockFetchPublicSessions, searchParamsRef, routerRef } =
+  vi.hoisted(() => ({
+    mockUseTeamLink: vi.fn(),
+    mockFetchPublicSessions: vi.fn(),
+    searchParamsRef: { current: new URLSearchParams() },
+    routerRef: { push: vi.fn(), replace: vi.fn() },
+  }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -66,7 +62,7 @@ describe('PlayPage — join and reconnect', () => {
     searchParamsRef.current = new URLSearchParams();
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
   });
@@ -85,43 +81,31 @@ describe('PlayPage — join and reconnect', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('stores the team name and game code and switches to the game view after joining', async () => {
+  it('hands the typed name, the picked game and the submit to the Team link', async () => {
+    const setNameInput = vi.fn();
+    const setCodeInput = vi.fn();
+    const handleJoin = vi.fn((event) => event.preventDefault());
+    mockUseTeamLink.mockReturnValue(
+      socketResult({ setNameInput, setCodeInput, handleJoin }),
+    );
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
+      'Q',
     );
     await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
-      'The Quizzards',
-    );
-    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBe(
-      'ABCDEF',
-    );
-    expect(screen.getByText(/playing as the quizzards/i)).toBeInTheDocument();
+    expect(setNameInput).toHaveBeenCalledWith('Q');
+    expect(setCodeInput).toHaveBeenCalledWith('ABCDEF');
+    expect(handleJoin).toHaveBeenCalledTimes(1);
   });
 
-  it('does not join when the game code is empty', async () => {
-    const sendJoin = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
-    renderWithQuery(<PlayPage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
-    );
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-
-    expect(sendJoin).not.toHaveBeenCalled();
-  });
-
-  it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
+  it('prefills the game code from the Team link (QR scan)', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    mockUseTeamLink.mockReturnValue(socketResult({ codeInput: 'ABCDEF' }));
     renderWithQuery(<PlayPage />);
 
     // The combobox exists (with a placeholder) before the session list
@@ -134,52 +118,45 @@ describe('PlayPage — join and reconnect', () => {
     );
   });
 
-  it('passes the ?code= query parameter to the socket handshake', () => {
-    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    renderWithQuery(<PlayPage />);
-
-    expect(mockUsePlayerGame).toHaveBeenCalledWith(true, 'ABCDEF', 0);
-  });
-
-  it('does not connect the socket until a join code is known', () => {
-    renderWithQuery(<PlayPage />);
-
-    expect(mockUsePlayerGame).toHaveBeenCalledWith(false, undefined, 0);
-  });
-
-  it('connects the socket once a code is submitted through the join form', async () => {
-    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    renderWithQuery(<PlayPage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
+  it('passes the URL values to the Team link', () => {
+    searchParamsRef.current = new URLSearchParams(
+      'code=ABCDEF&teamCode=QUICK-JADE-FOX&name=Quizzards',
     );
-    await pickLiveSession();
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
+    renderWithQuery(<PlayPage />);
 
-    expect(mockUsePlayerGame).toHaveBeenLastCalledWith(true, 'ABCDEF', 1);
+    expect(mockUseTeamLink).toHaveBeenCalledWith(
+      'ABCDEF',
+      'QUICK-JADE-FOX',
+      'Quizzards',
+    );
   });
 
-  it('skips the join form when a team name and join code are already stored (reconnect)', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+  it('shows the connecting screen while the link has a name and game but no snapshot yet (reconnect)', () => {
+    mockUseTeamLink.mockReturnValue(
+      socketResult({ teamName: 'Returning Team', activeJoinCode: 'ABCDEF' }),
+    );
     renderWithQuery(<PlayPage />);
 
     expect(
       screen.queryByRole('textbox', { name: /team name/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/playing as returning team/i)).toBeInTheDocument();
+    expect(screen.getByText(/connecting…/i)).toBeInTheDocument();
   });
 
   it('shows the join form instead of hanging on "Connecting…" when a team name survives a closed session but its join code was cleared', () => {
-    // Reproduces a refresh right after the admin closes the session:
-    // clearStoredSession() deliberately keeps the team name (so the join
-    // form stays prefilled) but clears the join code. Without the
+    // A closed session deliberately keeps the team name (so the join form
+    // stays prefilled) but clears the join code. Without the
     // canReachSnapshot guard in page.tsx, the restored teamName alone would
     // skip straight past the join form to the "Connecting…" screen and hang
     // there forever, since there is no join code left to open a socket with.
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        teamName: 'Returning Team',
+        activeJoinCode: null,
+        nameInput: 'Returning Team',
+      }),
+    );
     renderWithQuery(<PlayPage />);
 
     expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue(
@@ -188,164 +165,54 @@ describe('PlayPage — join and reconnect', () => {
     expect(screen.queryByText(/connecting…/i)).not.toBeInTheDocument();
   });
 
-  it('sends a join with the stored name, token and join code on reconnect', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    const sendJoin = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
-
+  it('shows the kick notice on the join form, with the name and team code emptied', () => {
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        connectionError: 'You were removed from this team by the quiz master',
+        teamName: null,
+      }),
+    );
     renderWithQuery(<PlayPage />);
 
-    expect(sendJoin).toHaveBeenCalledWith({
-      teamName: 'Returning Team',
-      teamToken: 'stored-token',
-      joinCode: 'ABCDEF',
-    });
-  });
-
-  it('resends the join with a corrected team code when retrying with the same name and game code', async () => {
-    const sendJoin = vi
-      .fn()
-      .mockResolvedValueOnce({
-        success: false,
-        error: 'Team name taken — enter its team code',
-      })
-      .mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
-    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = renderWithQuery(<PlayPage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
-    );
-    await pickLiveSession();
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ sendJoin, socketConnection: { socketId: 'socket-2' } }),
-    );
-    rerender(<PlayPage />);
-
-    // The server rejects the name, and its reason lands on the join screen.
     expect(
-      await screen.findByText('Team name taken — enter its team code'),
+      screen.getByText(/removed from this team by the quiz master/i),
     ).toBeInTheDocument();
-    sendJoin.mockClear();
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team code/i }),
-      'quick-jade-fox',
-    );
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-
-    // Retrying forces a brand-new socket (see the Team link's attempt) — simulate its connect landing, same as the real hook would
-    // produce, with a fresh connection.
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ sendJoin, socketConnection: { socketId: 'socket-3' } }),
-    );
-    rerender(<PlayPage />);
-
-    expect(sendJoin).toHaveBeenCalledWith({
-      teamName: 'The Quizzards',
-      joinCode: 'ABCDEF',
-      teamCode: 'quick-jade-fox',
-    });
+    expect(screen.getByLabelText(/team name/i)).toHaveValue('');
+    expect(screen.getByLabelText(/team code/i)).toHaveValue('');
   });
 
-  it('clears the session token and redirects to /play when the admin closes the session', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ sessionClosed: 'ABCDEF' }),
-    );
-
-    renderWithQuery(<PlayPage />);
-
-    // Team name/code survive so the team can join another game without
-    // retyping — only this session's token and join code are cleared.
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
-      'Returning Team',
-    );
-    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe(
-      'QUICK-JADE-FOX',
-    );
-    expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
-    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
-    expect(routerRef.push).toHaveBeenCalledWith('/play');
-  });
-
-  it('does not re-append the closed session code to the URL after redirecting to /play', () => {
-    // Reproduces a real closed-session socket: use-player-game.ts only clears
-    // its `snapshot` state when the socket re-enables under a *new* identity
-    // (see the `if (enabled)` guard in its identity-key reset), so a live
-    // session-closed transition leaves `snapshot.joinCode` stale rather than
-    // null. Without the teamName guard on the ?code= sync effect, once the
-    // URL actually lands on a bare /play (searchParams update following
-    // routerRef.push('/play')), that stale snapshot would make the effect
-    // immediately re-append `?code=ABCDEF`. Three render phases, matching
-    // real timing: (1) steady-state connected with ?code= already in the URL
-    // — no sync needed; (2) the admin closes the session — push('/play')
-    // fires, but the URL hasn't actually changed yet in this render, so
-    // codeFromUrl still equals the stale snapshot's code and no mismatch is
-    // visible yet; (3) the URL catches up to the pushed /play (no code) —
-    // this is the render where the stale snapshot and the now-absent
-    // codeFromUrl disagree, and only the teamName guard (already nulled by
-    // phase 2's render-adjustment) stops the re-append.
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+  it('does not re-append a closed session code to the URL once the link dropped the team', () => {
+    // After a session closes the connection's snapshot (disabled, not torn
+    // down) still holds the old joinCode. With the URL now a bare /play,
+    // that stale snapshot must not make the ?code= sync re-append it: the
+    // sync is gated on the link still having a team name.
     const staleSnapshot = {
       joinCode: 'ABCDEF',
       progress: progress({ status: 'question_open' }),
       currentQuestion: null,
     };
-    searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ sessionClosed: null, snapshot: staleSnapshot }),
+    mockUseTeamLink.mockReturnValue(
+      socketResult({ teamName: null, snapshot: staleSnapshot }),
     );
-    const { rerender } = renderWithQuery(<PlayPage />);
-    expect(routerRef.replace).not.toHaveBeenCalled();
-
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ sessionClosed: 'ABCDEF', snapshot: staleSnapshot }),
-    );
-    rerender(<PlayPage />);
-    expect(routerRef.push).toHaveBeenCalledWith('/play');
-
     searchParamsRef.current = new URLSearchParams();
-    rerender(<PlayPage />);
+    renderWithQuery(<PlayPage />);
 
     expect(routerRef.replace).not.toHaveBeenCalled();
   });
 
-  it('clears the session token, shows a notice and redirects to /play when the admin kicks the team', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    mockUsePlayerGame.mockReturnValue(socketResult({ kicked: true }));
-
+  it('keeps ?code= in the address bar in sync with the session the team landed on', () => {
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        teamName: 'Returning Team',
+        snapshot: {
+          joinCode: 'ABCDEF',
+          progress: progress({ status: 'question_open' }),
+          currentQuestion: null,
+        },
+      }),
+    );
     renderWithQuery(<PlayPage />);
 
-    // Unlike a closed session, a kick deletes the roster row server-side —
-    // team name and team code are wiped too (not just the token/join code),
-    // so the team must fully rejoin through the form rather than silently
-    // reconnecting with a now-stale identity.
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBeNull();
-    expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBeNull();
-    expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
-    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
-    expect(routerRef.push).toHaveBeenCalledWith('/play');
-    expect(
-      screen.getByText(/removed from this team by the quiz master/i),
-    ).toBeInTheDocument();
-
-    const nameField = screen.getByLabelText(/team name/i);
-    const teamCodeField = screen.getByLabelText(/team code/i);
-    expect(nameField).toHaveValue('');
-    expect(teamCodeField).toHaveValue('');
+    expect(routerRef.replace).toHaveBeenCalledWith('/play?code=ABCDEF');
   });
 });

@@ -6,13 +6,13 @@ import type { FeedbackField, TeamFeedbackView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -53,11 +53,11 @@ function renderEnded(overrides: EndedOverrides = {}) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
   const sendFeedback =
     overrides.sendFeedback ?? vi.fn().mockResolvedValue({ success: true });
-  mockUsePlayerGame.mockReturnValue(endedHook({ ...overrides, sendFeedback }));
+  mockUseTeamLink.mockReturnValue(endedHook({ ...overrides, sendFeedback }));
   const { rerender } = renderWithQuery(<PlayPage />);
   /** A join payload arriving: a new epoch and a fresh saved-feedback object, as the hook produces. */
   function receiveJoinPayload(myFeedback: TeamFeedbackView, epoch: number) {
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       endedHook({
         ...overrides,
         sendFeedback,
@@ -79,7 +79,7 @@ describe('PlayPage — the comment and topic suggestions on the final form', () 
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('sends the comment and topics together and shows "Sent ✓" once acknowledged', async () => {

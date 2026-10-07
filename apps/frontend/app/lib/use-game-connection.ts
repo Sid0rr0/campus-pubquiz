@@ -14,12 +14,15 @@ import {
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import { getBackendUrl } from '@/app/lib/backend-url';
+import {
+  NOT_CONNECTED_MESSAGE,
+  RECONNECTING_MESSAGE,
+} from '@/app/lib/connection-messages';
+
+export { NOT_CONNECTED_MESSAGE, RECONNECTING_MESSAGE };
 
 /** How long an emit may go unacknowledged before it resolves to a failure. */
 export const ACK_TIMEOUT_MS = 10_000;
-export const RECONNECTING_MESSAGE = 'Connection lost — reconnecting…';
-export const NOT_CONNECTED_MESSAGE =
-  "You're not connected right now — hang on while we reconnect, then try again.";
 
 /** A socket typed by the protocol map for the room it connects as. */
 export type RoomSocket<Role extends SocketRoomName> = Socket<
@@ -61,7 +64,7 @@ function getErrorMessage(payload: unknown): string {
 }
 
 /**
- * Internal core shared by the role hooks (pages never call it directly): the
+ * Internal core shared by the role hooks (pages other than the rules page never call it directly): the
  * socket lifecycle, the snapshot, the connection error, the reconnect
  * timestamp and an emit-with-acknowledgement helper. A role hook adds its own
  * listeners through `bindSocket`, which runs once for each new socket.

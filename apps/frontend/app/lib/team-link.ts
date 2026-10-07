@@ -1,8 +1,18 @@
+import { formatBonusAwardToast } from '@/app/lib/bonus-categories';
+import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
 import { normalizeJoinCode } from '@/app/lib/team-storage';
 import type {
+  AckResult,
+  AnswerReceivedPayload,
   GameStatus,
   JoinAcceptedPayload,
   JoinPlayersPayload,
+  RoundRatingView,
+  SubmitAnswerPayload,
+  TeamAnswerView,
+  TeamBonusAwardView,
+  TeamFeedbackView,
+  Verdict,
 } from '@campus-pubquiz/types';
 
 /**
@@ -16,6 +26,61 @@ import type {
 
 /** The notice a kicked team sees on the join screen. */
 export const KICK_NOTICE = 'You were removed from this team by the quiz master';
+/** Award toasts outlast the default so a team passing the phone around still sees them. */
+export const BONUS_AWARD_TOAST_DURATION_MS = 8000;
+
+/** A team's own graded answer to one question — absent from the map entirely until grading happens (at submit when the answer is graded automatically, on admin grading otherwise). */
+export interface MyAnswerGrade {
+  pointsAwarded: number;
+  gradedAt: string;
+  /** How the answer was judged — the same verdict the quiz master sees. */
+  verdict: Verdict | null;
+}
+
+const EMPTY_FEEDBACK: TeamFeedbackView = { comment: '', topics: [] };
+
+function buildMyAnswers(answers: TeamAnswerView[]): Record<number, string> {
+  return Object.fromEntries(
+    answers.map((answer) => [answer.questionId, answer.value]),
+  );
+}
+
+function toGrade(answer: {
+  pointsAwarded: number;
+  gradedAt: string;
+  verdict: Verdict | null;
+}): MyAnswerGrade {
+  return {
+    pointsAwarded: answer.pointsAwarded,
+    gradedAt: answer.gradedAt,
+    verdict: answer.verdict,
+  };
+}
+
+function buildMyAnswerGrades(
+  answers: TeamAnswerView[],
+): Record<number, MyAnswerGrade> {
+  return Object.fromEntries(
+    answers.flatMap((answer) =>
+      answer.gradedAt === null
+        ? []
+        : [
+            [
+              answer.questionId,
+              toGrade({ ...answer, gradedAt: answer.gradedAt }),
+            ],
+          ],
+    ),
+  );
+}
+
+function buildMyRoundRatings(
+  ratings: RoundRatingView[],
+): Record<number, number> {
+  return Object.fromEntries(
+    ratings.map((rating) => [rating.roundId, rating.stars]),
+  );
+}
 
 /** What the phone remembered from an earlier visit (read from localStorage by the adapter). */
 export interface StoredIdentity {
@@ -64,6 +129,24 @@ export interface TeamLinkState {
   confirmedTeamId: number | null;
   /** The last status seen on this connection, or null before the first. */
   lastStatus: GameStatus | null;
+  /** What the server last said this team is (the last join accepted). */
+  team: JoinAcceptedPayload | null;
+  /** True while the server has this connection registered as the team's — false while disconnected or mid-rejoin, when answers can't be accepted. */
+  isLinked: boolean;
+  /** The team's own saved answers by question id. */
+  myAnswers: Record<number, string>;
+  myAnswerGrades: Record<number, MyAnswerGrade>;
+  /** Every bonus award this team has received so far this session, in award order. */
+  myBonusAwards: TeamBonusAwardView[];
+  /** What the join carried plus every rating the server acknowledged since. */
+  myRoundRatings: Record<number, number>;
+  myFeedback: TeamFeedbackView;
+  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
+  roundRatingsEpoch: number;
+  /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
+  pendingAnswer: SubmitAnswerPayload | null;
+  /** Identifies the latest send, so a result for a superseded send is ignored. */
+  answerAttempt: number;
 }
 
 export type TeamLinkInput =
@@ -77,12 +160,27 @@ export type TeamLinkInput =
   | { type: 'statusSeen'; status: GameStatus }
   | { type: 'kicked' }
   | { type: 'sessionClosed' }
+  // A new socket identity: the previous team's data and pending answer go.
+  | { type: 'identityChanged' }
+  | { type: 'answerReceived'; payload: AnswerReceivedPayload }
+  | { type: 'teamAnswersSynced'; answers: TeamAnswerView[] }
+  | { type: 'bonusAwarded'; payload: TeamBonusAwardView }
+  | { type: 'answerResult'; attempt: number; result: AckResult }
+  | { type: 'answerTimedOut'; attempt: number }
+  | { type: 'ratingSaved'; roundId: number; stars: number }
+  | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
   | { type: 'teamCodeTyped'; value: string }
   | { type: 'joinSubmitted' }
-  | { type: 'logoutRequested' };
+  | { type: 'logoutRequested' }
+  | {
+      type: 'answerSubmitted';
+      questionId: number;
+      teamId: number;
+      value: string;
+    };
 
 export type TeamLinkCommand =
   | { type: 'openConnection'; gameCode: string; attempt: number }
@@ -96,7 +194,17 @@ export type TeamLinkCommand =
     }
   | { type: 'clearIdentity'; scope: 'session' | 'all' }
   | { type: 'sendLeave'; teamId: number }
-  | { type: 'goToJoinScreen' };
+  | { type: 'goToJoinScreen' }
+  | { type: 'sendAnswer'; payload: SubmitAnswerPayload; attempt: number }
+  | { type: 'armConfirmTimer'; attempt: number }
+  | { type: 'clearConfirmTimer' }
+  | { type: 'forceReconnect' }
+  | {
+      type: 'toast';
+      tone: 'success' | 'neutral' | 'error';
+      message: string;
+      durationMs?: number;
+    };
 
 export interface TeamLinkStep {
   state: TeamLinkState;
@@ -126,6 +234,19 @@ function withStoredIdentity(
   };
 }
 
+/** What a phone knows about its team before any join answers. */
+const EMPTY_TEAM_DATA = {
+  team: null,
+  isLinked: false,
+  myAnswers: {},
+  myAnswerGrades: {},
+  myBonusAwards: [],
+  myRoundRatings: {},
+  myFeedback: EMPTY_FEEDBACK,
+  roundRatingsEpoch: 0,
+  pendingAnswer: null,
+} satisfies Partial<TeamLinkState>;
+
 export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
   const urlGameCode = entry.url.gameCode ?? '';
   const base: TeamLinkState = {
@@ -147,6 +268,8 @@ export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
     kickNotice: null,
     confirmedTeamId: null,
     lastStatus: null,
+    ...EMPTY_TEAM_DATA,
+    answerAttempt: 0,
   };
   return entry.stored ? withStoredIdentity(base, entry.stored) : base;
 }
@@ -282,6 +405,146 @@ function step(state: TeamLinkState): TeamLinkStep {
   return { state, commands: [] };
 }
 
+const CLEAR_TIMER: TeamLinkCommand = { type: 'clearConfirmTimer' };
+
+/** The connection went away: nothing is registered on it, and an unacknowledged answer waits for the rejoin. */
+function unlink(state: TeamLinkState): TeamLinkStep {
+  return {
+    state: { ...state, isLinked: false },
+    commands: state.pendingAnswer ? [CLEAR_TIMER] : [],
+  };
+}
+
+function transmitAnswer(
+  state: TeamLinkState,
+  payload: SubmitAnswerPayload,
+): TeamLinkStep {
+  const attempt = state.answerAttempt + 1;
+  return {
+    state: { ...state, pendingAnswer: payload, answerAttempt: attempt },
+    commands: [
+      CLEAR_TIMER,
+      { type: 'sendAnswer', payload, attempt },
+      { type: 'armConfirmTimer', attempt },
+    ],
+  };
+}
+
+function submitAnswer(
+  state: TeamLinkState,
+  payload: SubmitAnswerPayload,
+): TeamLinkStep {
+  if (state.isLinked) return transmitAnswer(state, payload);
+  return {
+    state,
+    commands: [
+      { type: 'toast', tone: 'error', message: NOT_CONNECTED_MESSAGE },
+    ],
+  };
+}
+
+function acceptJoin(
+  state: TeamLinkState,
+  payload: JoinAcceptedPayload,
+): TeamLinkStep {
+  const answers = payload.answers ?? [];
+  const accepted: TeamLinkState = {
+    ...state,
+    isJoinInFlight: false,
+    joinError: null,
+    confirmedTeamId: payload.teamId,
+    linkedSocketId: state.connection?.socketId ?? null,
+    storedTeamToken: payload.teamToken,
+    storedTeamCode: payload.teamCode,
+    teamCodeInput: payload.teamCode,
+    team: payload,
+    isLinked: true,
+    myAnswers: buildMyAnswers(answers),
+    myAnswerGrades: buildMyAnswerGrades(answers),
+    myBonusAwards: payload.bonusAwards ?? [],
+    myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
+    myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
+    roundRatingsEpoch: state.roundRatingsEpoch + 1,
+  };
+  const storeIdentity: TeamLinkCommand = {
+    type: 'writeIdentity',
+    identity: { teamToken: payload.teamToken, teamCode: payload.teamCode },
+  };
+  const resend = accepted.pendingAnswer
+    ? transmitAnswer(accepted, accepted.pendingAnswer)
+    : step(accepted);
+  return {
+    state: resend.state,
+    commands: [storeIdentity, ...resend.commands],
+  };
+}
+
+function receiveAnswerResult(
+  state: TeamLinkState,
+  attempt: number,
+  result: AckResult,
+): TeamLinkStep {
+  // A superseded send says nothing about the answer now pending.
+  if (attempt !== state.answerAttempt) return step(state);
+  // An answer that never left the socket stays pending for the rejoin; there
+  // is no dead socket to force a reconnect on.
+  if (!result.success && result.error === NOT_CONNECTED_MESSAGE) {
+    return { state, commands: [CLEAR_TIMER] };
+  }
+  return {
+    state: { ...state, pendingAnswer: null },
+    commands: result.success
+      ? [CLEAR_TIMER]
+      : [CLEAR_TIMER, { type: 'toast', tone: 'error', message: result.error }],
+  };
+}
+
+function receiveAnswer(
+  state: TeamLinkState,
+  payload: AnswerReceivedPayload,
+): TeamLinkStep {
+  const myAnswerGrades =
+    payload.gradedAt === null
+      ? state.myAnswerGrades
+      : {
+          ...state.myAnswerGrades,
+          [payload.questionId]: toGrade({
+            ...payload,
+            gradedAt: payload.gradedAt,
+          }),
+        };
+  return step({
+    ...state,
+    myAnswers: { ...state.myAnswers, [payload.questionId]: payload.value },
+    myAnswerGrades,
+  });
+}
+
+function awardBonus(
+  state: TeamLinkState,
+  award: TeamBonusAwardView,
+): TeamLinkStep {
+  const message = formatBonusAwardToast(award);
+  const toast: TeamLinkCommand =
+    award.points > 0
+      ? {
+          type: 'toast',
+          tone: 'success',
+          message: `🎉 ${message}`,
+          durationMs: BONUS_AWARD_TOAST_DURATION_MS,
+        }
+      : {
+          type: 'toast',
+          tone: 'neutral',
+          message,
+          durationMs: BONUS_AWARD_TOAST_DURATION_MS,
+        };
+  return {
+    state: { ...state, myBonusAwards: [...state.myBonusAwards, award] },
+    commands: [toast],
+  };
+}
+
 export function teamLink(
   state: TeamLinkState,
   input: TeamLinkInput,
@@ -291,38 +554,58 @@ export function teamLink(
       // A kick already cleared what this would restore.
       if (state.kickNotice) return step(state);
       return joinOncePerConnection(withStoredIdentity(state, input.stored));
-    case 'connected':
-      return joinOncePerConnection({
-        ...state,
+    case 'connected': {
+      const isNewConnection = state.connection?.id !== input.connectionId;
+      const unlinked = isNewConnection ? unlink(state) : step(state);
+      const join = joinOncePerConnection({
+        ...unlinked.state,
         connection: { id: input.connectionId, socketId: input.socketId },
       });
+      return {
+        state: join.state,
+        commands: [...unlinked.commands, ...join.commands],
+      };
+    }
     case 'disconnected':
-      return step({ ...state, connection: null });
+      return unlink({ ...state, connection: null });
     case 'connectionRefused':
       return step({ ...state, isJoinInFlight: false });
     case 'joinAccepted':
       if (state.kickNotice) return step(state);
+      return acceptJoin(state, input.payload);
+    case 'identityChanged':
       return {
-        state: {
-          ...state,
-          confirmedTeamId: input.payload.teamId,
-          isJoinInFlight: false,
-          joinError: null,
-          linkedSocketId: state.connection?.socketId ?? null,
-          storedTeamToken: input.payload.teamToken,
-          storedTeamCode: input.payload.teamCode,
-          teamCodeInput: input.payload.teamCode,
-        },
-        commands: [
-          {
-            type: 'writeIdentity',
-            identity: {
-              teamToken: input.payload.teamToken,
-              teamCode: input.payload.teamCode,
-            },
-          },
-        ],
+        state: { ...state, ...EMPTY_TEAM_DATA },
+        commands: state.pendingAnswer ? [CLEAR_TIMER] : [],
       };
+    case 'answerReceived':
+      return receiveAnswer(state, input.payload);
+    case 'teamAnswersSynced':
+      return step({
+        ...state,
+        myAnswers: buildMyAnswers(input.answers),
+        myAnswerGrades: buildMyAnswerGrades(input.answers),
+      });
+    case 'bonusAwarded':
+      return awardBonus(state, input.payload);
+    case 'answerResult':
+      return receiveAnswerResult(state, input.attempt, input.result);
+    case 'answerTimedOut':
+      if (input.attempt !== state.answerAttempt) return step(state);
+      return {
+        state: { ...state, isLinked: false },
+        commands: [{ type: 'forceReconnect' }],
+      };
+    case 'ratingSaved':
+      return step({
+        ...state,
+        myRoundRatings: {
+          ...state.myRoundRatings,
+          [input.roundId]: input.stars,
+        },
+      });
+    case 'feedbackSaved':
+      return step({ ...state, myFeedback: input.feedback });
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return step(state);
@@ -363,6 +646,12 @@ export function teamLink(
       return step({ ...state, teamCodeInput: input.value });
     case 'joinSubmitted':
       return submitJoin(state);
+    case 'answerSubmitted':
+      return submitAnswer(state, {
+        questionId: input.questionId,
+        teamId: input.teamId,
+        value: input.value,
+      });
     default: {
       const unhandled: never = input;
       throw new Error(
