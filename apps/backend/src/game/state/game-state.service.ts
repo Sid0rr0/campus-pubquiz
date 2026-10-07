@@ -17,7 +17,6 @@ import {
   type PresenterContextPayload,
   type RateRoundPayload,
   type SendFeedbackPayload,
-  type ScoredQuestion,
   type SessionSettings,
   type SocketRoomName,
   type StateSnapshotPayload,
@@ -60,7 +59,6 @@ import {
   withBreakEndTime,
   withDisplayTextScale,
   withLeaderboard,
-  withGradingRefresh,
   withShowdownGuess,
   withTeamConnected,
   withTeams,
@@ -269,52 +267,6 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Re-grades already-shown questions whose answer/points were corrected by
-   * a live edit — a step of quizEdited, run on the session after
-   * withReloadedQuiz so the corrected key is what gets graded against.
-   * `previousQuestions` are the edited questions as they were before the
-   * reload. Ends through the grading refresh. Returns the session with the
-   * re-scored questions refreshed, and the ids of the questions it actually
-   * re-scored. See BlockGradingService.regradeQuestions.
-   */
-  private async withRegradedQuestions(
-    session: SessionState,
-    questionIds: readonly number[],
-    previousQuestions: ReadonlyMap<number, ScoredQuestion>,
-  ): Promise<{
-    session: SessionState;
-    regradedQuestionIds: readonly number[];
-  }> {
-    const { regradedQuestionIds, closestGuessSummaries } =
-      await this.grading.regradeQuestions(
-        session,
-        questionIds,
-        previousQuestions,
-      );
-    if (regradedQuestionIds.length === 0) {
-      return { session, regradedQuestionIds };
-    }
-
-    const refresh = await this.grading.gradingRefresh(
-      session,
-      regradedQuestionIds,
-    );
-    return {
-      session: withGradingRefresh(
-        {
-          ...session,
-          closestGuessSummaries: {
-            ...session.closestGuessSummaries,
-            ...closestGuessSummaries,
-          },
-        },
-        refresh,
-      ),
-      regradedQuestionIds,
-    };
-  }
-
-  /**
    * The quiz behind a live session was edited in place (an editor save or a
    * re-import): a session write that reloads its questions and re-grades
    * `regradeQuestionIds` (already-shown questions whose answer/points were
@@ -346,40 +298,25 @@ export class GameStateService implements OnModuleInit {
     started: SessionState,
     regradeQuestionIds: readonly number[],
   ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const previousQuestions = new Map(
-      started.seededGame.rounds
-        .flatMap((round) => round.questions)
-        .map((question) => [question.id, question] as const),
-    );
     const reloaded = await this.withReloadedQuiz(started);
     if (regradeQuestionIds.length === 0) {
       return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
     }
 
-    const { session, regradedQuestionIds } = await this.withRegradedQuestions(
-      reloaded,
-      regradeQuestionIds,
-      previousQuestions,
-    );
+    const { session, regradedQuestionIds, answeringTeamIds } =
+      await this.grading.regradeForKeyFix(
+        reloaded,
+        started,
+        regradeQuestionIds,
+      );
     if (regradedQuestionIds.length === 0) {
       return { session, outcome: BROADCAST_STATE_OUTCOME };
     }
 
-    const answerLists = await Promise.all(
-      regradedQuestionIds.map((questionId) =>
-        this.answerService.listForQuestion(
-          session.seededGame.gameSessionId,
-          questionId,
-        ),
-      ),
-    );
-    const answeredTeamIds = new Set(
-      answerLists.flat().map((answer) => answer.teamId),
-    );
     const teamSyncs = connectedTeamSyncs(
       session,
       session.teams
-        .filter((team) => answeredTeamIds.has(team.teamId))
+        .filter((team) => answeringTeamIds.has(team.teamId))
         .map((team) => team.teamId),
     );
     return {
@@ -1129,21 +1066,18 @@ export class GameStateService implements OnModuleInit {
     started: SessionState,
     questionId: number,
   ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const [answers, refresh] = await Promise.all([
+    const [answers, graded] = await Promise.all([
       this.answerService.listForQuestion(
         started.seededGame.gameSessionId,
         questionId,
       ),
-      this.grading.gradingRefresh(started, [questionId]),
+      this.grading.gradesChanged(started, [questionId]),
     ]);
     return {
-      session: withGradingRefresh(
-        withAnsweredTeamIds(
-          started,
-          questionId,
-          answers.map((answer) => answer.teamId),
-        ),
-        refresh,
+      session: withAnsweredTeamIds(
+        graded,
+        questionId,
+        answers.map((answer) => answer.teamId),
       ),
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
