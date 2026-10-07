@@ -52,7 +52,7 @@ function DisplayPageContent() {
     useLockCountdownSound({
       lockAt: snapshot?.questionLockAt ?? null,
       enabled:
-        snapshot?.settings?.playLockCountdownSound ??
+        snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
 
