@@ -12,6 +12,27 @@
         ],
         "description": "Block Bash commands that would dump .env contents (ADMIN_PASSWORD, DATABASE_URL) into the transcript"
       }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/worktree-create.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/worktree-remove.sh"
+          }
+        ]
+      }
     ]
   },
   "env": {

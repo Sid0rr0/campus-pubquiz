@@ -2,9 +2,9 @@
 
 Skills under `.claude/skills/` are symlinks into `.agents/skills/`, which is gitignored and overwritten when the skills are reinstalled or updated upstream. This log is the record of every local edit, so it can be re-applied after an update. Add an entry whenever a skill is changed in this repo.
 
-Each entry: date, skill, what changed, and why (the session or incident that prompted it).
+One section per skill, headed with the skill name and the file that was edited. Each entry: date, what changed, and why (the session or incident that prompted it).
 
-## implement-spec
+## implement-spec (`.claude/skills/implement-spec/SKILL.md`)
 
 ### 2026-10-08: git and worktree mechanics (from the live-edit-save retro)
 
@@ -25,5 +25,17 @@ Each entry: date, skill, what changed, and why (the session or incident that pro
 
 ### 2026-10-08: open a PR at the end
 
-- **Step 10 (new)**: call the `pr` skill to write the PR body, then open the PR (or update the existing draft PR's body).
-  _Why:_ the run ended with a bare integration branch; the user wanted the PR created as part of the skill.
+- **Step 10 (new)**: push the integration branch, generate the PR body with the `pr` skill into a scratchpad file, then open the PR on GitHub with `gh pr create --body-file` (or `gh pr edit --body-file` on an existing draft PR) and report the URL.
+  _Why:_ the run ended with a bare integration branch; the user wanted the PR, with its `/pr`-generated text, opened on GitHub as part of the skill.
+
+### 2026-10-08: branch cleanup with the safe delete
+
+- **Step 9**: once the integration branch has merged into `main`, delete `ticket/*` and the mergers' temporary branches with `git branch -d`. Before then, list them in the report, and hand any branch `-d` refuses to the user with its sha. This replaces handing the user a force-delete command.
+  _Why:_ every branch the run creates is fully merged once the PR lands (merge commits), so the safe `-d` works and the gate never fires.
+
+### 2026-10-08: worktree setup moves into a `WorktreeCreate` hook
+
+- **Step 4 / 5**: dropped the "run `pnpm install` + types build" setup bullet and the merger's "same setup".
+  _Why:_ `.claude/settings.json` now has a `WorktreeCreate` hook (`scripts/worktree-create.sh`) that creates `.claude/worktrees/<name>` on `worktree-<name>`, installs dependencies, and builds `@campus-pubquiz/types` before the subagent starts (about 7s). The hook's input is `{name, cwd, …}`; there is no `base_path` field, despite the docs example.
+- **Step 9**: remove each worktree with `git worktree remove <path>` and delete its `worktree-<name>` branch with `git branch -d`; a worktree `remove` refuses is listed for the user.
+  _Why:_ worktrees created by the hook are not cleaned up when the subagent finishes, even when unchanged, and the `WorktreeRemove` hook did not fire (tested 2026-10-08). The hook is still wired in case Claude Code removes a worktree itself.
