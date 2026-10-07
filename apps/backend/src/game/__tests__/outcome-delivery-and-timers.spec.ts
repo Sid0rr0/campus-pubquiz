@@ -160,4 +160,56 @@ describe('GameGateway — outcome delivery and timer-driven advance', () => {
       ),
     ).toBe(true);
   });
+
+  describe('presses that do not go cleanly', () => {
+    async function openKahootQuestion() {
+      const game = await harness.createGateway({
+        teamNames: [`Quizzards ${gameCount}`],
+        joinCode: nextJoinCode(),
+        kahootMode: true,
+        settings: {
+          kahootQuestionTimerSeconds: TIMER_SECONDS,
+          lockGraceSeconds: TIMER_SECONDS,
+        },
+      });
+      const admin = await game.connectAdmin();
+      await game.openFirstQuestion(admin);
+      return { game, admin };
+    }
+
+    it('leaves the armed deadline armed when a press is refused, and firing it still advances the quiz', async () => {
+      const { game, admin } = await openKahootQuestion();
+      const dueAt = game.timers().kahoot.dueAt();
+      expect(dueAt).not.toBeNull();
+
+      const refused = await game.gateway.handleAdminAction(asSocket(admin), {
+        action: 'START_QUIZ',
+      });
+
+      expect(refused).toMatchObject({ success: false });
+      expect(game.timers().kahoot.dueAt()).toBe(dueAt);
+      await game.timers().kahoot.fireNow();
+      expect((await game.snapshot()).progress.status).toBe('locking');
+    });
+
+    it('leaves the timers matching the stored session when delivering a press throws', async () => {
+      const { game, admin } = await openKahootQuestion();
+      game.server.emit.mockImplementation(() => {
+        throw new Error('socket hiccup');
+      });
+
+      await game.gateway.handleAdminAction(asSocket(admin), {
+        action: 'ADVANCE',
+      });
+
+      // The press was stored: the question has locked, so only the lock
+      // deadline is armed and the kahoot question deadline is gone.
+      expect(game.timers().kahoot.isArmed()).toBe(false);
+      expect(game.timers().lock.isArmed()).toBe(true);
+      game.server.emit.mockReset();
+      expect((await game.snapshot()).progress.status).toBe('locking');
+      await game.timers().lock.fireNow();
+      expect((await game.snapshot()).progress.status).toBe('reveal');
+    });
+  });
 });
