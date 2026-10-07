@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
 import { AuthApiError } from '@/app/lib/auth-api';
 import { QueryAuthWrapper } from '@/test-utils/query';
-import { progress, adminView } from './test-utils';
 
 const {
   mockUseAdminGame,
@@ -145,7 +144,9 @@ describe('AdminPage — connection', () => {
     mockFetchMe.mockReset();
     mockFetchMe.mockResolvedValue({ user: AUTH_USER });
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({ progress: progress(), currentQuestion: null }),
+      session: {
+        progress: {},
+      },
       connectionError: 'Only admin clients may perform game actions',
       sendAction: vi.fn(),
     });

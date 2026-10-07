@@ -1,8 +1,10 @@
 import { screen } from '@testing-library/react';
+import type { SessionDescription } from '@/test-utils/room-view';
+import type { GameProgress } from '@campus-pubquiz/types';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress, adminView } from './test-utils';
+import { authenticatedAuthResult } from './test-utils';
 
 const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
@@ -46,22 +48,18 @@ describe('AdminPage — server-decided break and showdown controls', () => {
   });
 
   function renderWith(
-    status: 'question_open' | 'break',
-    flags: {
-      isLastQuestionBeforeBreak?: boolean;
-      isShowdownEligible?: boolean;
-    },
+    progress: Partial<GameProgress>,
+    description: Pick<SessionDescription, 'ungradedQuestionIds'> = {},
   ) {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status }),
-        currentQuestion: null,
+      session: {
+        progress,
         leaderboard: [
-          { teamId: 1, teamName: 'Team A', rank: 1, score: 5 },
-          { teamId: 2, teamName: 'Team B', rank: 1, score: 5 },
+          { teamId: 1, teamName: 'Team A', rank: 1, totalPoints: 5 },
+          { teamId: 2, teamName: 'Team B', rank: 1, totalPoints: 5 },
         ],
-        ...flags,
-      }),
+        ...description,
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -69,25 +67,27 @@ describe('AdminPage — server-decided break and showdown controls', () => {
   }
 
   it('offers the break end time before the break when the admin view says it is the last question before break', () => {
-    renderWith('question_open', { isLastQuestionBeforeBreak: true });
+    // The default round has two questions and a break after it.
+    renderWith({ status: 'question_open', questionIndex: 1 });
 
     expect(screen.getAllByLabelText(/break/i).length).toBeGreaterThan(0);
   });
 
   it('hides the break end time mid-block when the admin view says so', () => {
-    renderWith('question_open', { isLastQuestionBeforeBreak: false });
+    renderWith({ status: 'question_open', questionIndex: 0 });
 
     expect(screen.queryByLabelText(/break/i)).not.toBeInTheDocument();
   });
 
   it('offers the showdown when the admin view marks it eligible and teams are tied', () => {
-    renderWith('break', { isShowdownEligible: true });
+    renderWith({ status: 'break' });
 
     expect(screen.getAllByText(/tied for 1st/i).length).toBeGreaterThan(0);
   });
 
   it('hides the showdown when the admin view does not mark it eligible', () => {
-    renderWith('break', { isShowdownEligible: false });
+    // A question in the final round is still ungraded.
+    renderWith({ status: 'break' }, { ungradedQuestionIds: [1] });
 
     expect(screen.queryByText(/tied for 1st/i)).not.toBeInTheDocument();
   });

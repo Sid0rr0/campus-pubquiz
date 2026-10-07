@@ -1,4 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
+import { roomView } from '@/test-utils/room-view';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCKET_EVENTS } from '@campus-pubquiz/types';
@@ -9,10 +11,8 @@ import {
   type FakeSocket,
 } from '@/app/lib/__tests__/fake-socket';
 import {
-  adminView,
   authenticatedAuthResult,
   getDesktopButton,
-  progress,
 } from '@/app/control/__tests__/test-utils';
 
 // The real admin hook runs here; only the socket transport is faked, so each
@@ -47,11 +47,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => routerRef,
 }));
 
-const SNAPSHOT = adminView({
+const SNAPSHOT = roomView(SOCKET_ROOMS.ADMIN, {
   joinCode: 'TESTCODE',
-  progress: progress({ status: 'break' }),
-  currentQuestion: null,
-  teams: [{ teamId: 2, teamName: 'Beer Necessities', isConnected: false }],
+  progress: { status: 'break' },
+  teams: [{ teamId: 2, teamName: 'Beer Necessities' }],
 });
 
 function latestSocket(): FakeSocket {

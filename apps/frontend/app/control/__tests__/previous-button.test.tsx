@@ -3,12 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import {
-  authenticatedAuthResult,
-  getDesktopButton,
-  progress,
-  adminView,
-} from './test-utils';
+import { authenticatedAuthResult, getDesktopButton } from './test-utils';
 
 const {
   mockUseAdminGame,
@@ -70,18 +65,10 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS to step back to the round intro card from the very first question of the quiz', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-        ],
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
+      },
       connectionError: null,
       sendAction,
     });
@@ -95,11 +82,10 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS from the round intro card', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'round_intro' }),
-        currentQuestion: null,
-        roundTitle: 'Picture Round',
-      }),
+      session: {
+        progress: { status: 'round_intro' },
+        rounds: [{ title: 'Picture Round', questions: [{}, {}] }],
+      },
       connectionError: null,
       sendAction,
     });
@@ -113,24 +99,17 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS when the Previous button is clicked after the first question of the open block', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open', questionIndex: 1 }),
-        currentQuestion: {
-          id: 'r1q2',
-          type: 'free_text',
-          prompt: 'Name a vegetable',
-          points: 1,
-        },
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      session: {
+        progress: { status: 'question_open', questionIndex: 1 },
+        rounds: [
           {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name a vegetable',
-            points: 1,
+            questions: [
+              { prompt: 'Name a fruit' },
+              { prompt: 'Name a vegetable' },
+            ],
           },
         ],
-      }),
+      },
       connectionError: null,
       sendAction,
     });
@@ -144,16 +123,11 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS to step back from the locking countdown to the question', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'locking' }),
-        currentQuestion: {
-          id: 'r2q3',
-          type: 'free_text',
-          prompt: 'Name this song.',
-          points: 3,
-        },
-        questionLockAt: Date.now() + 60_000,
-      }),
+      session: {
+        progress: { status: 'locking' },
+        rounds: [{ questions: [{ prompt: 'Name this song.', points: 3 }] }],
+        timers: { questionLockAt: Date.now() + 60_000 },
+      },
       connectionError: null,
       sendAction,
     });
@@ -167,19 +141,17 @@ describe('AdminPage — previous button', () => {
   it("shows the Previous button on the first question of the first block, during a break — it pauses on that round's own title card", async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      session: {
+        progress: { status: 'break' },
+        rounds: [
           {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name a vegetable',
-            points: 1,
+            questions: [
+              { prompt: 'Name a fruit' },
+              { prompt: 'Name a vegetable' },
+            ],
           },
         ],
-      }),
+      },
       connectionError: null,
       sendAction,
     });
@@ -192,19 +164,17 @@ describe('AdminPage — previous button', () => {
 
   it('hides the Previous button on the first round title card during break review, with no earlier block', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break_round_intro' }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      session: {
+        progress: { status: 'break_round_intro' },
+        rounds: [
           {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name a vegetable',
-            points: 1,
+            questions: [
+              { prompt: 'Name a fruit' },
+              { prompt: 'Name a vegetable' },
+            ],
           },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -243,26 +213,18 @@ describe('AdminPage — previous button', () => {
     });
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        // The server allows stepping back from here because an earlier block
-        // exists; whether it does is decided (and tested) in the projection.
-        previousState: 'available',
-        progress: progress({
+      session: {
+        progress: {
           status: 'break_round_intro',
           roundIndex: 1,
           revealIndex: 0,
-        }),
-        currentQuestion: null,
-        blockQuestions: [
-          {
-            id: 'r2q1',
-            type: 'free_text',
-            prompt: 'Name this song.',
-            points: 1,
-          },
+        },
+        rounds: [
+          { questions: [{ prompt: 'Name a fruit' }] },
+          { questions: [{ prompt: 'Name this song.' }] },
         ],
         joinCode: 'TESTCODE',
-      }),
+      },
       connectionError: null,
       sendAction,
     });
@@ -278,19 +240,18 @@ describe('AdminPage — previous button', () => {
 
   it('shows the Previous button during a break once the admin has stepped back within the block', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break', roundIndex: 1, revealIndex: 1 }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r2q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
+      session: {
+        progress: { status: 'break', roundIndex: 1, revealIndex: 1 },
+        rounds: [
+          { questions: [{ prompt: 'Name a fruit' }] },
           {
-            id: 'r2q2',
-            type: 'free_text',
-            prompt: 'Name a vegetable',
-            points: 1,
+            questions: [
+              { prompt: 'Name a fruit' },
+              { prompt: 'Name a vegetable' },
+            ],
           },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -326,19 +287,14 @@ describe('AdminPage — previous button', () => {
       ],
     });
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
-        currentQuestion: null,
-        blockQuestions: [
-          {
-            id: 'r2q1',
-            type: 'free_text',
-            prompt: 'Name this song.',
-            points: 1,
-          },
+      session: {
+        progress: { status: 'break', roundIndex: 1, revealIndex: 0 },
+        rounds: [
+          { questions: [{ prompt: 'Name a fruit' }] },
+          { questions: [{ prompt: 'Name this song.' }] },
         ],
         joinCode: 'TESTCODE',
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -351,10 +307,9 @@ describe('AdminPage — previous button', () => {
 
   it('shows the Previous button on the first reveal question, since it can still step back to the round intro card', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'reveal', revealIndex: 0 },
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -366,10 +321,9 @@ describe('AdminPage — previous button', () => {
   it("shows the Previous button on the first reveal round intro card, even with no earlier block — it re-enters that block's own break review", async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'reveal_intro', revealIndex: 0 }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'reveal_intro', revealIndex: 0 },
+      },
       connectionError: null,
       sendAction,
     });
@@ -383,10 +337,9 @@ describe('AdminPage — previous button', () => {
   it('sends PREVIOUS from a later reveal question', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'reveal', revealIndex: 1 }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'reveal', revealIndex: 1 },
+      },
       connectionError: null,
       sendAction,
     });
@@ -399,14 +352,13 @@ describe('AdminPage — previous button', () => {
 
   it('shows a disabled Previous button once the quiz has ended naturally, until the leaderboard is closed', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({
+      session: {
+        progress: {
           status: 'ended',
           isLeaderboardVisible: true,
           previousStatus: 'reveal',
-        }),
-        currentQuestion: null,
-      }),
+        },
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -417,10 +369,9 @@ describe('AdminPage — previous button', () => {
 
   it('hides the Previous button on ended when no previousStatus was recorded (a legacy session)', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'ended', isLeaderboardVisible: false }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'ended', isLeaderboardVisible: false },
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });

@@ -1,4 +1,6 @@
 import { act, screen, within } from '@testing-library/react';
+import { roomView } from '@/test-utils/room-view';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCKET_EVENTS } from '@campus-pubquiz/types';
@@ -8,11 +10,7 @@ import {
   createFakeSocket,
   type FakeSocket,
 } from '@/app/lib/__tests__/fake-socket';
-import {
-  adminView,
-  authenticatedAuthResult,
-  progress,
-} from '@/app/control/__tests__/test-utils';
+import { authenticatedAuthResult } from '@/app/control/__tests__/test-utils';
 
 // The real admin hook runs here; only the socket transport is faked, so each
 // test plays the server exactly as the page would see it.
@@ -23,6 +21,7 @@ const {
   mockToastError,
   mockUseAuth,
   mockFetchQuizzes,
+  mockFetchAnswers,
 } = vi.hoisted(() => ({
   mockIo: vi.fn(),
   mockToast: vi.fn(),
@@ -30,6 +29,7 @@ const {
   mockToastError: vi.fn(),
   mockUseAuth: vi.fn(),
   mockFetchQuizzes: vi.fn(),
+  mockFetchAnswers: vi.fn(),
 }));
 
 vi.mock('socket.io-client', () => ({ io: mockIo }));
@@ -44,6 +44,11 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
   return { ...actual, fetchQuizzes: mockFetchQuizzes };
 });
+// A break now carries the block's questions, so the page loads their answers.
+vi.mock('@/app/lib/answer-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/answer-api')>();
+  return { ...actual, fetchAnswers: mockFetchAnswers };
+});
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams('code=TESTCODE'),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -51,12 +56,11 @@ vi.mock('next/navigation', () => ({
 
 const TEAM_NAME = 'The Quizzly Bears';
 
-const SNAPSHOT = adminView({
+const SNAPSHOT = roomView(SOCKET_ROOMS.ADMIN, {
   joinCode: 'TESTCODE',
-  progress: progress({ status: 'break' }),
-  currentQuestion: null,
+  progress: { status: 'break' },
   // The team's phone is offline: the confirmation must not depend on it.
-  teams: [{ teamId: 7, teamName: TEAM_NAME, isConnected: false }],
+  teams: [{ teamId: 7, teamName: TEAM_NAME }],
   leaderboard: [
     {
       teamId: 7,
@@ -102,6 +106,7 @@ describe('AdminPage — bonus award confirmation', () => {
     mockIo.mockImplementation(() => createFakeSocket());
     mockUseAuth.mockReturnValue(authenticatedAuthResult());
     mockFetchQuizzes.mockResolvedValue({ activeQuizId: null, quizzes: [] });
+    mockFetchAnswers.mockResolvedValue(null);
   });
 
   it('confirms an accepted bonus with the signed points, category and team', async () => {

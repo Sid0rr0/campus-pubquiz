@@ -50,4 +50,48 @@ describe('room view fixture builder', () => {
     );
     expect(new Set(ids).size).toBe(3);
   });
+
+  it('sends the admin the join code, text scale and connected teams it was described with', () => {
+    const view = roomView(SOCKET_ROOMS.ADMIN, {
+      joinCode: 'TESTCODE',
+      displayTextScale: 1.25,
+      teams: [
+        { teamId: 1, teamName: 'Red' },
+        { teamId: 2, teamName: 'Blue' },
+      ],
+      connectedTeamIds: [1],
+    });
+
+    expect(view.joinCode).toBe('TESTCODE');
+    expect(view.displayTextScale).toBe(1.25);
+    expect(view.teams.map((t) => t.isConnected)).toEqual([true, false]);
+  });
+
+  it('shows a live phase timer or a finished one on the admin view of an open question', () => {
+    const progress = { status: 'question_open' as const };
+
+    const live = roomView(SOCKET_ROOMS.ADMIN, {
+      progress,
+      phaseTimer: { startedAt: 1000 },
+    });
+    const finished = roomView(SOCKET_ROOMS.ADMIN, {
+      progress,
+      phaseTimer: { elapsedMs: 5000 },
+    });
+
+    expect([live.phaseStartedAt, live.phaseElapsedMs]).toEqual([1000, null]);
+    expect([finished.phaseStartedAt, finished.phaseElapsedMs]).toEqual([
+      null,
+      5000,
+    ]);
+  });
+
+  it('lists ungraded block questions on the admin view', () => {
+    const view = roomView(SOCKET_ROOMS.ADMIN, {
+      progress: { status: 'break' },
+      ungradedQuestionIds: [2],
+    });
+
+    expect(view.ungradedQuestionIds).toEqual([2]);
+  });
 });
