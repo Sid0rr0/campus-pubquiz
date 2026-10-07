@@ -872,21 +872,21 @@ export class GameStateService implements OnModuleInit {
     answerId: number,
     pointsAwarded: number,
   ): Promise<SessionOutcome> {
-    let questionId: number;
-    try {
-      ({ questionId } = await this.answerService.grade(
-        this.getGameSessionId(joinCode),
-        answerId,
-        pointsAwarded,
-      ));
-    } catch (error) {
-      throw new SessionRefusal(
-        error instanceof Error ? error.message : 'Unable to grade answer',
-      );
-    }
-    return this.writeSession(joinCode, (session) =>
-      this.answerChange(session, questionId),
-    );
+    return this.writeSession(joinCode, async (session) => {
+      let questionId: number;
+      try {
+        ({ questionId } = await this.answerService.grade(
+          session.seededGame.gameSessionId,
+          answerId,
+          pointsAwarded,
+        ));
+      } catch (error) {
+        throw new SessionRefusal(
+          error instanceof Error ? error.message : 'Unable to grade answer',
+        );
+      }
+      return await this.answerChange(session, questionId);
+    });
   }
 
   /**
@@ -899,27 +899,29 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     { teamId, category, points, reason }: AwardBonusPayload,
   ): Promise<SessionOutcome> {
-    const { enabledBonusCategories, maxBonusAwardsPerCategory } =
-      this.sessionStore.get(joinCode).seededGame.settings;
-    try {
-      await this.bonusService.award(
-        this.getGameSessionId(joinCode),
-        teamId,
-        category,
-        points,
-        reason,
-        enabledBonusCategories,
-        maxBonusAwardsPerCategory,
-      );
-    } catch (error) {
-      if (error instanceof InvalidBonusAwardError) {
-        throw new SessionRefusal(error.message);
+    return this.writeSession(joinCode, async (session) => {
+      const { enabledBonusCategories, maxBonusAwardsPerCategory } =
+        session.seededGame.settings;
+      try {
+        await this.bonusService.award(
+          session.seededGame.gameSessionId,
+          teamId,
+          category,
+          points,
+          reason,
+          enabledBonusCategories,
+          maxBonusAwardsPerCategory,
+        );
+      } catch (error) {
+        if (error instanceof InvalidBonusAwardError) {
+          throw new SessionRefusal(error.message);
+        }
+        throw error;
       }
-      throw error;
-    }
-    return await this.bonusChanged(joinCode, {
-      teamId,
-      notice: { category, points, reason },
+      return this.bonusChange(session, {
+        teamId,
+        notice: { category, points, reason },
+      });
     });
   }
 
@@ -998,29 +1000,39 @@ export class GameStateService implements OnModuleInit {
    * same way grading does. `awarded` (a fresh award only) carries its
    * BONUS_AWARDED notice for that team's socket, if it is connected.
    */
-  async bonusChanged(
-    joinCode: string,
+  bonusChanged(joinCode: string): Promise<SessionOutcome> {
+    return this.writeSession(joinCode, (session) =>
+      Promise.resolve(this.bonusChange(session)),
+    );
+  }
+
+  /**
+   * The change a bonus award makes, built from the session it is handed. Not
+   * a write of its own — callers run it inside theirs. `awarded` (a fresh
+   * award only) carries its BONUS_AWARDED notice for that team's socket, if
+   * it is connected.
+   */
+  private bonusChange(
+    session: SessionState,
     awarded?: { teamId: number; notice: TeamBonusAwardView },
-  ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, (session) => {
-      const socketId = awarded
-        ? session.connectedTeamSockets[awarded.teamId]
-        : undefined;
-      const notices =
-        awarded && socketId
-          ? [
-              {
-                socketId,
-                event: SOCKET_EVENTS.BONUS_AWARDED,
-                payload: awarded.notice,
-              },
-            ]
-          : [];
-      return Promise.resolve({
-        session,
-        outcome: { ...BROADCAST_STATE_OUTCOME, notices },
-      });
-    });
+  ): { session: SessionState; outcome: SessionOutcome } {
+    const socketId = awarded
+      ? session.connectedTeamSockets[awarded.teamId]
+      : undefined;
+    const notices =
+      awarded && socketId
+        ? [
+            {
+              socketId,
+              event: SOCKET_EVENTS.BONUS_AWARDED,
+              payload: awarded.notice,
+            },
+          ]
+        : [];
+    return {
+      session,
+      outcome: { ...BROADCAST_STATE_OUTCOME, notices },
+    };
   }
 
   /**
