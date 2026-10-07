@@ -1,6 +1,6 @@
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
-import type { MatchScoringMode } from './socket-events';
+import type { MatchScoringMode } from './question-views';
 import { splitPipeList } from './sort-match';
 
 /**

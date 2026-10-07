@@ -5,6 +5,11 @@ import { io, type Socket } from 'socket.io-client';
 import {
   SOCKET_EVENTS,
   type AckResult,
+  type ClientToServerAck,
+  type ClientToServerEvent,
+  type ClientToServerEvents,
+  type ClientToServerPayload,
+  type ServerToClientEvents,
   type SocketRoomName,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
@@ -16,10 +21,16 @@ export const RECONNECTING_MESSAGE = 'Connection lost — reconnecting…';
 export const NOT_CONNECTED_MESSAGE =
   "You're not connected right now — hang on while we reconnect, then try again.";
 
-export type EmitWithAck = <T = void>(
-  event: string,
-  payload: unknown,
-) => Promise<AckResult<T>>;
+/** A socket typed by the protocol map for the room it connects as. */
+export type RoomSocket<Role extends SocketRoomName> = Socket<
+  ServerToClientEvents<Role>,
+  ClientToServerEvents
+>;
+
+export type EmitWithAck = <E extends ClientToServerEvent>(
+  event: E,
+  payload: ClientToServerPayload<E>,
+) => Promise<AckResult<ClientToServerAck<E>>>;
 
 export interface UseGameConnectionResult<Role extends SocketRoomName> {
   snapshot: StateViewByRoom[Role] | null;
@@ -53,14 +64,14 @@ export function useGameConnection<Role extends SocketRoomName>(
   role: Role,
   enabled: boolean,
   joinCode: string | undefined,
-  bindSocket?: (socket: Socket) => void,
+  bindSocket?: (socket: RoomSocket<Role>) => void,
   // Bumped by callers to force a fresh socket when role/joinCode are unchanged.
   retryKey = 0,
 ): UseGameConnectionResult<Role> {
   const [snapshot, setSnapshot] = useState<StateViewByRoom[Role] | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<RoomSocket<Role> | null>(null);
   const bindSocketRef = useRef(bindSocket);
   useEffect(() => {
     bindSocketRef.current = bindSocket;
@@ -81,18 +92,18 @@ export function useGameConnection<Role extends SocketRoomName>(
   useEffect(() => {
     if (!enabled) return;
 
-    const socket = io(getBackendUrl(), {
+    const socket: RoomSocket<Role> = io(getBackendUrl(), {
       query: joinCode ? { role, code: joinCode } : { role },
       withCredentials: true,
     });
     socketRef.current = socket;
 
     socket.on('connect', () => setReconnectedAt(Date.now()));
-    socket.on(SOCKET_EVENTS.STATE_SYNC, (payload: StateViewByRoom[Role]) => {
+    socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
       setSnapshot(payload);
       setConnectionError(null);
     });
-    socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload: StateViewByRoom[Role]) => {
+    socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
       setSnapshot(payload);
     });
     socket.on('connect_error', (payload: unknown) => {
@@ -115,7 +126,10 @@ export function useGameConnection<Role extends SocketRoomName>(
   }, [enabled, role, joinCode, retryKey]);
 
   const emitWithAck = useCallback(
-    <T = void>(event: string, payload: unknown): Promise<AckResult<T>> => {
+    <E extends ClientToServerEvent>(
+      event: E,
+      payload: ClientToServerPayload<E>,
+    ): Promise<AckResult<ClientToServerAck<E>>> => {
       const socket = socketRef.current;
       if (!socket?.connected) {
         return Promise.resolve({
@@ -128,7 +142,15 @@ export function useGameConnection<Role extends SocketRoomName>(
           () => resolve({ success: false, error: NOT_CONNECTED_MESSAGE }),
           ACK_TIMEOUT_MS,
         );
-        socket.emit(event, payload, (result: AckResult<T>) => {
+        // socket.io's typed `emit` can't resolve a generic event against its
+        // listener map, so the call is typed by the same protocol signature
+        // this function's own parameters carry.
+        const emit = socket.emit.bind(socket) as (
+          event: E,
+          payload: ClientToServerPayload<E>,
+          ack: (result: AckResult<ClientToServerAck<E>>) => void,
+        ) => void;
+        emit(event, payload, (result) => {
           clearTimeout(timer);
           resolve(result);
         });

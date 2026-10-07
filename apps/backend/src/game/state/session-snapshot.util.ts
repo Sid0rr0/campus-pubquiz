@@ -2,6 +2,9 @@ import {
   getQuizStructureSummary,
   getTimedPhaseKey,
   type AdminQuestionContext,
+  type AdminStatePayload,
+  type DisplayStatePayload,
+  type PlayersStatePayload,
   type StateSnapshotPayload,
   type TeamView,
   isAnsweringStatus,
@@ -49,33 +52,68 @@ function resolveCurrentPhaseTimerView(session: SessionState): {
   };
 }
 
-/** Assembles the full broadcast payload for a session — the shape every display/admin/players client resyncs to on connect or after every applyAction. */
+/** The fields only /display reads — added to its view alone by the Screen projection. */
+export function buildDisplayFields(
+  session: SessionState,
+): Pick<
+  DisplayStatePayload,
+  | 'roundCategory'
+  | 'roundAuthor'
+  | 'roundCategories'
+  | 'roundAuthors'
+  | 'leaderboardRevealCount'
+  | 'kahootQuestionEndsAt'
+> {
+  const { rounds } = session.seededGame;
+  const currentRound = rounds[session.progress.roundIndex];
+  return {
+    roundCategory: currentRound?.category ?? '',
+    roundAuthor: currentRound?.author ?? '',
+    roundCategories: rounds.map((round) => round.category ?? ''),
+    roundAuthors: rounds.map((round) => round.author ?? ''),
+    leaderboardRevealCount: session.leaderboardRevealCount,
+    kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+  };
+}
+
+/** The fields only /control and /remote read — added to the admin view alone. */
+export function buildAdminFields(
+  session: SessionState,
+): Pick<
+  AdminStatePayload,
+  'ungradedQuestionIds' | 'phaseStartedAt' | 'phaseElapsedMs'
+> {
+  return {
+    ungradedQuestionIds: session.ungradedQuestionIds,
+    ...resolveCurrentPhaseTimerView(session),
+  };
+}
+
+/** The fields only /play reads — added to the players view alone. */
+export function buildPlayersFields(
+  session: SessionState,
+): Pick<PlayersStatePayload, 'upcomingQuestions' | 'pastRevealedQuestions'> {
+  return {
+    upcomingQuestions: getUpcomingQuestionPositions(session),
+    pastRevealedQuestions: getPastRevealedQuestions(session),
+  };
+}
+
+/** Assembles the shared base of every room's view for a session — the shape every display/admin/players client resyncs to on connect or after every applyAction. */
 export function buildSnapshot(session: SessionState): StateSnapshotPayload {
   return {
     progress: session.progress,
     quizStructure: getQuizStructureSummary(getGameContext(session)),
     roundTitle: getCurrentRoundTitle(session),
-    roundCategory:
-      session.seededGame.rounds[session.progress.roundIndex]?.category ?? '',
-    roundAuthor:
-      session.seededGame.rounds[session.progress.roundIndex]?.author ?? '',
     isCurrentRoundKahoot:
       session.seededGame.rounds[session.progress.roundIndex]?.kahootMode ??
       false,
     roundTitles: session.seededGame.rounds.map((round) => round.title),
-    roundCategories: session.seededGame.rounds.map(
-      (round) => round.category ?? '',
-    ),
-    roundAuthors: session.seededGame.rounds.map((round) => round.author ?? ''),
     currentQuestion: getCurrentQuestion(session),
     blockQuestions: getBlockQuestions(session),
-    upcomingQuestions: getUpcomingQuestionPositions(session),
     revealQuestions: getRevealQuestions(session),
-    pastRevealedQuestions: getPastRevealedQuestions(session),
-    ungradedQuestionIds: session.ungradedQuestionIds,
     answeredTeamIds: getAnsweredTeamIds(session),
     leaderboard: session.leaderboard,
-    leaderboardRevealCount: session.leaderboardRevealCount,
     joinCode: session.seededGame.joinCode,
     teams: session.teams.map(
       (team): TeamView => ({
@@ -84,11 +122,9 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
       }),
     ),
     questionLockAt: session.questionLockAt,
-    kahootQuestionEndsAt: session.kahootQuestionEndsAt,
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
     displayTextScale: session.displayTextScale,
-    ...resolveCurrentPhaseTimerView(session),
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,

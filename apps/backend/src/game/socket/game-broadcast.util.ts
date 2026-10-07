@@ -1,8 +1,9 @@
-import type { Server } from 'socket.io';
+import { roomEmitter, type GameServer } from '@/game/socket/game-socket.types';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   sessionRoom,
+  type SocketRoomName,
 } from '@campus-pubquiz/types';
 import type { GameStateService } from '@/game/state/game-state.service';
 
@@ -16,7 +17,7 @@ import type { GameStateService } from '@/game/state/game-state.service';
  * the most recent emit.
  */
 export function broadcastGameState(
-  server: Server,
+  server: GameServer,
   joinCode: string,
   gameState: GameStateService,
 ): void {
@@ -28,8 +29,19 @@ export function broadcastGameState(
     );
 
   for (const room of Object.values(SOCKET_ROOMS)) {
-    server
-      .to(sessionRoom(joinCode, room))
-      .emit(SOCKET_EVENTS.STATE_UPDATED, gameState.getView(joinCode, room));
+    sendStateUpdate(server, joinCode, gameState, room);
   }
+}
+
+/** One room's own view, sent to that room — typed so no room is sent another's. */
+function sendStateUpdate<R extends SocketRoomName>(
+  server: GameServer,
+  joinCode: string,
+  gameState: GameStateService,
+  room: R,
+): void {
+  roomEmitter(server, joinCode, room).emit(
+    SOCKET_EVENTS.STATE_UPDATED,
+    gameState.getView(joinCode, room),
+  );
 }

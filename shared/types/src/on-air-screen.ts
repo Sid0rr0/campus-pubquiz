@@ -1,12 +1,12 @@
 import { isBreakStatus } from './game-state-groups';
 import type { GameProgress } from './game-state-types';
 import type {
-  ActiveShowdownView,
   BlockQuestionView,
   BlockRevealQuestionView,
   QuestionView,
-  SessionSettings,
-} from './socket-events';
+} from './question-views';
+import type { SessionSettings } from './session-settings';
+import type { ActiveShowdownView } from './showdown';
 
 /**
  * The screen /display has on air, named once. The question or round a screen

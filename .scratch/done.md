@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| socket-protocol             | [A typed socket protocol module, and socket-events split by concept](socket-protocol/spec.md)                                                                       | 4       |
 | team-event-gates            | [Team events check whether they're allowed inside their session write](team-event-gates/spec.md)                                                                    | 5       |
 | bonus-award-toast           | [Toast when a bonus award is given](bonus-award-toast/spec.md)                                                                                                      | 3       |
 | half-points                 | [Half points are exactly half](half-points/spec.md)                                                                                                                 | 2       |

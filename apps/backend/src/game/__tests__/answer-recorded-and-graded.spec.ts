@@ -2,7 +2,7 @@ import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type SocketRoomName,
-  type StateSnapshotPayload,
+  type StateViewByRoom,
   sessionRoom,
 } from '@campus-pubquiz/types';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
@@ -39,8 +39,10 @@ describe('GameGateway — answer recorded / answer graded', () => {
       .map((emit) => emit.payload as T);
   }
 
-  function lastSnapshot(room: SocketRoomName): StateSnapshotPayload {
-    const snapshots = roomPayloads<StateSnapshotPayload>(
+  function lastSnapshot<Room extends SocketRoomName>(
+    room: Room,
+  ): StateViewByRoom[Room] {
+    const snapshots = roomPayloads<StateViewByRoom[Room]>(
       room,
       SOCKET_EVENTS.STATE_UPDATED,
     );

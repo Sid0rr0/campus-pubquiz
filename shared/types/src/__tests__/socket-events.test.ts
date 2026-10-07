@@ -13,7 +13,7 @@ import {
   type QuizzesListedPayload,
   type SessionSettings,
   type StateSnapshotPayload,
-} from '../socket-events';
+} from '../index';
 
 describe('SOCKET_EVENTS', () => {
   it('pins the exact event name strings shared across frontend and backend', () => {

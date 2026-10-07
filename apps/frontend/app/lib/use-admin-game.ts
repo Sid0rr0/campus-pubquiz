@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 import {
   SOCKET_EVENTS,
@@ -10,6 +9,9 @@ import {
   type AnswersUpdatedPayload,
   type AwardBonusPayload,
   type BonusCategory,
+  type ClientToServerAck,
+  type ClientToServerEvent,
+  type ClientToServerPayload,
   type CreateShowdownRoundPayload,
   type GameAction,
   type GradeAnswerPayload,
@@ -19,7 +21,10 @@ import {
   type SetDisplayTextScalePayload,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
-import { useGameConnection } from '@/app/lib/use-game-connection';
+import {
+  useGameConnection,
+  type RoomSocket,
+} from '@/app/lib/use-game-connection';
 
 export interface UseAdminGameResult {
   snapshot: StateViewByRoom['admin'] | null;
@@ -72,26 +77,22 @@ export function useAdminGame(
   // trigger the connect Effect.
   const focusedAnswersQuestionIdRef = useRef<number | null>(null);
 
-  const bindSocket = useCallback((socket: Socket) => {
+  const bindSocket = useCallback((socket: RoomSocket<'admin'>) => {
     focusedAnswersQuestionIdRef.current = null;
-    socket.on(
-      SOCKET_EVENTS.ANSWERS_UPDATED,
-      (payload: AnswersUpdatedPayload) => {
-        const focusedQuestionId = focusedAnswersQuestionIdRef.current;
-        // A late broadcast for a question the admin isn't grading would
-        // replace the panel's data with the wrong question's.
-        if (
-          focusedQuestionId !== null &&
-          payload.questionId !== focusedQuestionId
-        ) {
-          return;
-        }
-        setLiveAnswers(payload);
-      },
-    );
-    socket.on(
-      SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED,
-      (payload: PresenterContextPayload) => setPresenterContext(payload),
+    socket.on(SOCKET_EVENTS.ANSWERS_UPDATED, (payload) => {
+      const focusedQuestionId = focusedAnswersQuestionIdRef.current;
+      // A late broadcast for a question the admin isn't grading would
+      // replace the panel's data with the wrong question's.
+      if (
+        focusedQuestionId !== null &&
+        payload.questionId !== focusedQuestionId
+      ) {
+        return;
+      }
+      setLiveAnswers(payload);
+    });
+    socket.on(SOCKET_EVENTS.PRESENTER_CONTEXT_UPDATED, (payload) =>
+      setPresenterContext(payload),
     );
   }, []);
 
@@ -110,7 +111,10 @@ export function useAdminGame(
   // Toasts directly (not via state + an effect) so a repeat rejection with
   // the identical message still toasts each time.
   const emitAction = useCallback(
-    async (event: string, payload: unknown): Promise<AckResult> => {
+    async <E extends ClientToServerEvent>(
+      event: E,
+      payload: ClientToServerPayload<E>,
+    ): Promise<AckResult<ClientToServerAck<E>>> => {
       const result = await emitWithAck(event, payload);
       if (!result.success) toast.error(result.error);
       return result;

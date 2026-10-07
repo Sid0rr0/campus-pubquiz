@@ -23,7 +23,9 @@ describe('real-store harness — phase timer controls', () => {
     const { kahoot, lock } = game.timers();
     expect(kahoot.isArmed()).toBe(true);
     expect(lock.isArmed()).toBe(false);
-    expect(kahoot.dueAt()).toBe((await game.snapshot()).kahootQuestionEndsAt);
+    expect(kahoot.dueAt()).toBe(
+      (await game.resync('display')).kahootQuestionEndsAt,
+    );
 
     await kahoot.fireNow();
 

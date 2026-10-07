@@ -22,6 +22,10 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
     return game.gameState.getView(game.joinCode, SOCKET_ROOMS.ADMIN);
   }
 
+  function displayView() {
+    return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+  }
+
   function underneath() {
     const { status, roundIndex, questionIndex, revealIndex } =
       adminView().progress;
@@ -43,10 +47,8 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
       expect(adminView().advanceStep).toBe('reveal_next_rank');
 
       await game.act('ADVANCE');
-      expect(adminView()).toMatchObject({
-        leaderboardRevealCount: 1,
-        advanceStep: 'hide_leaderboard',
-      });
+      expect(displayView().leaderboardRevealCount).toBe(1);
+      expect(adminView().advanceStep).toBe('hide_leaderboard');
       expect(adminView().progress.isLeaderboardVisible).toBe(true);
       expect(underneath()).toEqual(before);
 
@@ -73,7 +75,7 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
 
     it('lets the Leaderboard toggle hide a board whose ranks are partly shown', async () => {
       await game.act('ADVANCE');
-      expect(adminView().leaderboardRevealCount).toBe(1);
+      expect(displayView().leaderboardRevealCount).toBe(1);
 
       await game.act('TOGGLE_LEADERBOARD');
       expect(adminView().progress.isLeaderboardVisible).toBe(false);
@@ -142,12 +144,12 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
 
     it('hides the board with ADVANCE and arms the question timer exactly as the toggle does', async () => {
       expect(adminView().advanceStep).toBe('hide_leaderboard');
-      expect(adminView().kahootQuestionEndsAt).toBeNull();
+      expect(displayView().kahootQuestionEndsAt).toBeNull();
 
       await game.act('ADVANCE');
 
       expect(adminView().progress.isLeaderboardVisible).toBe(false);
-      expect(adminView().kahootQuestionEndsAt).toBe(
+      expect(displayView().kahootQuestionEndsAt).toBe(
         Date.now() + KAHOOT_TIMER_SECONDS * 1000,
       );
     });
@@ -155,7 +157,7 @@ describe('GameGateway — ADVANCE and PREVIOUS while the leaderboard is up', () 
     it('arms the same deadline when the toggle hides the board', async () => {
       await game.act('TOGGLE_LEADERBOARD');
 
-      expect(adminView().kahootQuestionEndsAt).toBe(
+      expect(displayView().kahootQuestionEndsAt).toBe(
         Date.now() + KAHOOT_TIMER_SECONDS * 1000,
       );
     });

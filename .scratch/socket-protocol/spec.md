@@ -1,6 +1,6 @@
 # Spec: A typed socket protocol module, and socket-events split by concept
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

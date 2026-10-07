@@ -1,5 +1,9 @@
 import type { Logger } from '@nestjs/common';
-import type { Server, Socket } from 'socket.io';
+import {
+  socketOfRoom,
+  type GameServer,
+  type GameSocket,
+} from '@/game/socket/game-socket.types';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -36,7 +40,7 @@ export async function acceptConnection(
     sessions: SessionService;
     logger: Logger;
   },
-  client: Socket,
+  client: GameSocket,
 ): Promise<void> {
   const role = client.handshake.query.role;
 
@@ -83,10 +87,7 @@ export async function acceptConnection(
   deps.logger.log(
     `Client ${client.id} connected as ${role} (session ${joinCode})`,
   );
-  client.emit(
-    SOCKET_EVENTS.STATE_SYNC,
-    deps.gameState.getView(joinCode, role as SocketRoomName),
-  );
+  syncState(client, deps.gameState, joinCode, role as SocketRoomName);
   // Otherwise an admin socket that connects (or reconnects) mid-session —
   // e.g. /remote opened well after the last admin action — would show no
   // notes/next-question preview at all until the next action happens to
@@ -99,14 +100,27 @@ export async function acceptConnection(
   }
 }
 
+/** Sends the connecting socket its own room's view — the same one a live update would carry. */
+function syncState<R extends SocketRoomName>(
+  client: GameSocket,
+  gameState: GameStateService,
+  joinCode: string,
+  room: R,
+): void {
+  socketOfRoom<R>(client).emit(
+    SOCKET_EVENTS.STATE_SYNC,
+    gameState.getView(joinCode, room),
+  );
+}
+
 export async function disconnectClient(
   deps: {
     gameState: GameStateService;
     answerService: AnswerService;
-    server: Server;
+    server: GameServer;
     logger: Logger;
   },
-  client: Socket,
+  client: GameSocket,
 ): Promise<void> {
   const joinCode = (client.data as { joinCode?: string }).joinCode;
   // The session may have been closed (evicted from memory) while this

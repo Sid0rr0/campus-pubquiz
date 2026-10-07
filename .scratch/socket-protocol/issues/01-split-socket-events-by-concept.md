@@ -21,10 +21,10 @@ Parent spec: `.scratch/socket-protocol/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The socket-events file is gone (or holds only the socket protocol concept), and each concept above lives in its own module.
-- [ ] The package root re-exports every module; `git diff` shows no import changes in the backend or frontend.
-- [ ] No exported name is added, removed, renamed or reshaped (comparing the package's built type declarations before and after shows the same exported names).
-- [ ] No import cycles between the new modules.
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm build` and `pnpm test` pass across all workspaces.
+- [x] The socket-events file is gone (or holds only the socket protocol concept), and each concept above lives in its own module.
+- [x] The package root re-exports every module; `git diff` shows no import changes in the backend or frontend.
+- [x] No exported name is added, removed, renamed or reshaped (comparing the package's built type declarations before and after shows the same exported names).
+- [x] No import cycles between the new modules.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm build` and `pnpm test` pass across all workspaces.

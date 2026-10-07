@@ -1,5 +1,5 @@
 import type { QuestionType } from './question-types';
-import type { MatchScoringMode } from './socket-events';
+import type { MatchScoringMode } from './question-views';
 
 /**
  * One data row of the imported sheet, raw cell strings as exported by the

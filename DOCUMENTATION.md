@@ -189,6 +189,10 @@ revoked mid-event, only that one admin socket drops — live game state lives
 server-side independent of any admin connection, so `display`/`players`
 clients are unaffected; the admin just reconnects with a fresh token.
 
+Every event is declared once, in the protocol map in `shared/types`
+(`socket-protocol.ts`), and both the backend gateway and the frontend clients
+type their emits and listeners against that map.
+
 Events for one session are applied one at a time: each change to a live
 session (an answer, a grade, a bonus, a roster change, a press, a quiz edit)
 runs after the previous one for that session has finished, sees the session as
@@ -254,7 +258,13 @@ screen is not on air while a showdown is being played, so the line never shows t
 
 ### The snapshot
 
-`StateSnapshotPayload` is the single source of truth every client renders:
+`StateSnapshotPayload` is the shared base every room's state view is built
+from; each room is sent the base plus the fields only it reads (the Screen
+projection adds them, the core snapshot never builds them for the others).
+`STATE_SYNC` (resync on connect) and `STATE_UPDATED` (live) carry the same
+view for a room.
+
+**Shared base** (every room):
 
 | Field             | Meaning                                                                                                                                |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -266,15 +276,42 @@ screen is not on air while a showdown is being played, so the line never shows t
 | `joinCode`        | Six-character code for this game session                                                                                               |
 | `teams`           | Connected/registered teams                                                                                                             |
 
+The base also holds the other fields two or more rooms read (round titles,
+quiz structure, `questionLockAt`, `breakEndsAt`, `displayTextScale`, settings,
+showdown state, the closest_guess reveal step, `revealQuestions`).
+
+**Fields that belong to one room's view:**
+
+| View                            | Fields                                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `kahootQuestionEndsAt` |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                        |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                        |
+
+A field only one room reads is added to that room's view type, not the base.
+
 ### Events
 
-Server → client: `STATE_SYNC`, `STATE_UPDATED`, `JOIN_ACCEPTED`,
-`ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
-`SESSION_CLOSED`.
+Every event is declared once, in the **protocol map**
+(`shared/types/src/socket-protocol.ts`): its wire name (the `SOCKET_EVENTS`
+constants), its payload and, for client → server events, what its
+acknowledgement carries. The map is types only. The clients open sockets typed
+by it (`socket.io-client`'s generics), so a wrong payload, a wrong
+acknowledgement type or a listener typed against the wrong view is a compile
+error. `STATE_SYNC` and `STATE_UPDATED` are declared per room, so a socket
+connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
-Client → server: `ADMIN_ACTION`, `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `RATE_ROUND`,
-`SEND_FEEDBACK`, `GRADE_ANSWER`, `SELECT_QUIZ`, `KICK_TEAM`, `AWARD_BONUS` (all admin-only
-except `JOIN_PLAYERS`/`SUBMIT_ANSWER`/`RATE_ROUND`/`SEND_FEEDBACK`, which are players-only). Room
+Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
+`ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
+`PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview),
+`TEAM_ANSWERS_SYNCED`, `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
+payload), plus the connection's `exception` message.
+
+Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `AWARD_BONUS`,
+`SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE` and `CREATE_SHOWDOWN_ROUND`
+(admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
+`SEND_FEEDBACK` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
 close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see

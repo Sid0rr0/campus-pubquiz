@@ -1,4 +1,8 @@
-import type { GameAction } from '@campus-pubquiz/types';
+import {
+  SOCKET_ROOMS,
+  type GameAction,
+  type StateViewByRoom,
+} from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
@@ -28,10 +32,19 @@ describe('GameGateway — block questions and upcoming questions', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
+  /** Runs an admin action and returns the view the phones are then sent — the room that carries the upcoming and past-block questions. */
+  async function playersAfter(
+    action: GameAction,
+    from: RealStoreGateway = game,
+  ): Promise<StateViewByRoom['players']> {
+    await from.act(action);
+    return from.gameState.getView(from.joinCode, SOCKET_ROOMS.PLAYERS);
+  }
+
   async function actAll(actions: GameAction[], from = game) {
-    let snapshot = await from.snapshot();
+    let snapshot = await from.resync('players');
     for (const action of actions) {
-      snapshot = await from.act(action);
+      snapshot = await playersAfter(action, from);
     }
     return snapshot;
   }
@@ -48,7 +61,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
   });
 
   it('exposes no block questions in the lobby', async () => {
-    expect((await game.snapshot()).blockQuestions).toEqual([]);
+    expect((await game.resync('players')).blockQuestions).toEqual([]);
   });
 
   it('reveals block questions cumulatively as the admin advances', async () => {
@@ -69,7 +82,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
     );
 
     await game.act('PREVIOUS'); // -> round_intro(1)
-    const back = await game.act('PREVIOUS'); // -> r1q2 again, display steps backward
+    const back = await playersAfter('PREVIOUS'); // -> r1q2 again, display steps backward
 
     expect(back.progress.status).toBe('question_open');
     expect(back.currentQuestion?.id).toBe(ids([0, 1])[0]);
@@ -124,7 +137,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
     const { socket: team, teamId } = await game.joinTeam('The Quizzards');
     await actAll(TO_R2Q1); // furthest reached: r1q1, r1q2, r2q1
 
-    const backOnIntroCard = await game.act('PREVIOUS'); // -> round_intro(1), r2q1 already open
+    const backOnIntroCard = await playersAfter('PREVIOUS'); // -> round_intro(1), r2q1 already open
 
     expect(backOnIntroCard.progress.status).toBe('round_intro');
     expect(backOnIntroCard.currentQuestion).toBeNull();
@@ -216,7 +229,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
       },
     ]);
 
-    const r1q2 = await game.act('ADVANCE'); // -> r1q2
+    const r1q2 = await playersAfter('ADVANCE'); // -> r1q2
     expect(r1q2.upcomingQuestions).toEqual([
       {
         roundNumber: 2,
@@ -231,7 +244,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
     ]);
 
     await game.act('ADVANCE'); // -> round_intro(1)
-    const r2q1 = await game.act('ADVANCE'); // -> r2q1
+    const r2q1 = await playersAfter('ADVANCE'); // -> r2q1
     // Round 2 has a break, so the block ends here — nothing beyond it.
     expect(r2q1.upcomingQuestions).toEqual([
       {
@@ -241,7 +254,7 @@ describe('GameGateway — block questions and upcoming questions', () => {
       },
     ]);
 
-    const r2q2 = await game.act('ADVANCE'); // -> r2q2
+    const r2q2 = await playersAfter('ADVANCE'); // -> r2q2
     expect(r2q2.upcomingQuestions).toEqual([]);
   });
 
@@ -267,17 +280,17 @@ describe('GameGateway — block questions and upcoming questions', () => {
       { roundNumber: 1, questionNumberInRound: 3, roundTitle: 'Triple Round' },
     ]);
 
-    const q2 = await triple.act('ADVANCE'); // -> q2
+    const q2 = await playersAfter('ADVANCE', triple); // -> q2
     expect(q2.upcomingQuestions).toEqual([
       { roundNumber: 1, questionNumberInRound: 3, roundTitle: 'Triple Round' },
     ]);
 
-    const q3 = await triple.act('ADVANCE'); // -> q3
+    const q3 = await playersAfter('ADVANCE', triple); // -> q3
     expect(q3.upcomingQuestions).toEqual([]);
   });
 
   it('exposes no upcoming questions outside question_open/locking', async () => {
-    expect((await game.snapshot()).upcomingQuestions).toEqual([]);
+    expect((await game.resync('players')).upcomingQuestions).toEqual([]);
 
     const locking = await actAll([
       ...TO_R2Q1,
@@ -286,11 +299,11 @@ describe('GameGateway — block questions and upcoming questions', () => {
     ]);
     expect(locking.upcomingQuestions).toEqual([]);
 
-    const brk = await game.act('ADVANCE'); // -> break
+    const brk = await playersAfter('ADVANCE'); // -> break
     expect(brk.upcomingQuestions).toEqual([]);
 
     await game.act('ADVANCE'); // -> reveal_intro
-    const revealed = await game.act('ADVANCE'); // -> reveal
+    const revealed = await playersAfter('ADVANCE'); // -> reveal
     expect(revealed.upcomingQuestions).toEqual([]);
   });
 });

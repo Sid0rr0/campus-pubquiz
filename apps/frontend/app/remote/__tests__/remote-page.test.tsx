@@ -69,7 +69,6 @@ function baseSnapshot(overrides: Record<string, unknown> = {}) {
     joinCode: 'ABCDEF',
     quizStructure: { breakRoundNumbers: [] },
     leaderboard: [],
-    leaderboardRevealCount: 0,
     activeShowdown: null,
     showdownRevealStep: 0,
     ...overrides,
