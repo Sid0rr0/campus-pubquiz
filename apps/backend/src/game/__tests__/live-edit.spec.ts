@@ -116,19 +116,8 @@ describe('Live edit — saving a quiz while sessions play it', () => {
     expect(await storedPrompts()).toEqual(['Q1', 'Q2', 'Q3']);
   });
 
-  it('opens the question as the save left it when the save lands before the press', async () => {
-    const request = await draftEdited((rounds) =>
-      rounds.map((round, index) =>
-        index === 0
-          ? {
-              ...round,
-              questions: round.questions.map((question, i) =>
-                i === 1 ? { ...question, prompt: 'Q2 reworded' } : question,
-              ),
-            }
-          : round,
-      ),
-    );
+  it('opens the question that follows when the save deleting the next question lands before the press', async () => {
+    const request = await draftEdited(withoutQuestion(0, 1)); // drop Q2
     const held = holdNextCall(game.quizService, 'update');
     const saving = save(request);
     await held.started;
@@ -139,8 +128,8 @@ describe('Live edit — saving a quiz while sessions play it', () => {
     held.release();
     await Promise.all([saving, pressing]);
 
-    expect(await storedPrompts()).toEqual(['Q1', 'Q2 reworded', 'Q3']);
-    expect(await onAirPrompt()).toBe('Q2 reworded');
+    expect(await storedPrompts()).toEqual(['Q1', 'Q3']);
+    expect(await onAirPrompt()).toBe('Q3');
   });
 
   it('lands a save the frontier allows during a press, and the session carries on from the same opened question', async () => {

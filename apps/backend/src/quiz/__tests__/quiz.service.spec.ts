@@ -512,6 +512,45 @@ describe('QuizService (Postgres integration)', () => {
       expect(questions[1].prompt).toBe('Q2 (new)');
       expect(questions[1].id).not.toBe(q1.questionId);
     });
+
+    describe.each([
+      ['first', 0, ['Q2', 'Q3']],
+      ['middle', 1, ['Q1', 'Q3']],
+      ['last', 2, ['Q1', 'Q2']],
+    ])('dropping the %s question of a round', (_label, dropIndex, expected) => {
+      it('saves, keeping the remaining questions, their ids and closing up their order', async () => {
+        const created = await quizService.create('Trivia Night', [
+          {
+            title: 'Round 1',
+            breakAfter: true,
+            questions: ['Q1', 'Q2', 'Q3'].map((prompt) => ({
+              type: 'free_text' as const,
+              prompt,
+              answer: `A ${prompt}`,
+              points: 1,
+            })),
+          },
+        ]);
+        const draft = await quizService.findDraftById(created.quizId);
+        const [round] = draft!.rounds;
+        const survivors = round.questions.filter((_, i) => i !== dropIndex);
+
+        await quizService.update(created.quizId, 'Trivia Night', [
+          { ...round, questions: survivors },
+        ]);
+
+        const stored = await em.find(
+          Question,
+          {},
+          { orderBy: { orderIndex: 'asc' } },
+        );
+        expect(stored.map((question) => question.prompt)).toEqual(expected);
+        expect(stored.map((question) => question.orderIndex)).toEqual([0, 1]);
+        expect(stored.map((question) => question.id)).toEqual(
+          survivors.map((question) => question.questionId),
+        );
+      });
+    });
   });
 
   describe('remove', () => {

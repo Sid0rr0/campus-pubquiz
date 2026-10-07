@@ -222,6 +222,43 @@ describe('ImportService (Postgres integration)', () => {
       );
     });
 
+    it('matches a shrunk round by position, keeping the leading rows and dropping the trailing one', async () => {
+      const { importService } = makeService();
+      const threeQuestions = [
+        HEADER,
+        'History,free_text,Q1,,A1,1,,,,1',
+        'History,free_text,Q2,,A2,1,,,,1',
+        'History,free_text,Q3,,A3,1,,,,1',
+      ].join('\n');
+      const twoQuestions = [
+        HEADER,
+        'History,free_text,Q1 edited,,A1,1,,,,1',
+        'History,free_text,Q2,,A2,1,,,,1',
+      ].join('\n');
+      await importService.confirm(threeQuestions, 'ABCDEF', 'Trivia Night');
+      const before = await em.find(
+        Question,
+        {},
+        { orderBy: { orderIndex: 'asc' } },
+      );
+
+      await importService.confirm(twoQuestions, 'ABCDEF', 'Trivia Night');
+
+      const after = await em.find(
+        Question,
+        {},
+        { orderBy: { orderIndex: 'asc' } },
+      );
+      expect(after.map((question) => question.prompt)).toEqual([
+        'Q1 edited',
+        'Q2',
+      ]);
+      expect(after.map((question) => question.id)).toEqual([
+        before[0].id,
+        before[1].id,
+      ]);
+    });
+
     it('updates edited questions and deletes rounds and questions removed from the sheet', async () => {
       const { importService } = makeService();
       const first = await importService.confirm(

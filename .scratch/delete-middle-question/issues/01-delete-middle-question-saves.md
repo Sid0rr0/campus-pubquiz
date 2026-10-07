@@ -6,10 +6,10 @@ Parent spec: `.scratch/delete-middle-question/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Failing test first: saving a round with its middle question dropped throws today, and passes after the fix.
-- [ ] First, middle and last question drops all save; remaining questions keep their ids and close up their order.
-- [ ] A sheet re-import that shrinks a round (slot-keyed) still matches by round and position.
-- [ ] The reverse-order test in `live-edit.spec.ts` deletes the next question: the save lands first, then the Advance opens the question that follows.
-- [ ] Existing quiz, import and live-edit specs pass unchanged otherwise.
+- [x] Failing test first: saving a round with its middle question dropped throws today, and passes after the fix.
+- [x] First, middle and last question drops all save; remaining questions keep their ids and close up their order.
+- [x] A sheet re-import that shrinks a round (slot-keyed) still matches by round and position.
+- [x] The reverse-order test in `live-edit.spec.ts` deletes the next question: the save lands first, then the Advance opens the question that follows.
+- [x] Existing quiz, import and live-edit specs pass unchanged otherwise.

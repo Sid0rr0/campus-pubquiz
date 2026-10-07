@@ -209,6 +209,7 @@ export class QuizService {
     quizId: number,
     rounds: ImportRoundPreview[],
   ): Promise<void> {
+    await this.deleteDroppedQuestions(quizId, rounds);
     await this.parkIdKeyedQuestions(rounds);
 
     for (const [roundIndex, round] of rounds.entries()) {
@@ -325,6 +326,39 @@ export class QuizService {
       quiz: quizId,
       orderIndex: { $gte: rounds.length },
     });
+  }
+
+  /**
+   * Deletes the stored questions the draft drops, before survivors are
+   * upserted. A stored row survives only if the draft keeps it by id, or a
+   * slot-keyed (no `questionId`) draft question lands on its (round, position)
+   * slot and merges into it. Anything else would still hold its
+   * `(round, orderIndex)` slot when a survivor moves into it and trip the
+   * unique constraint (e.g. Q1, Q2, Q3 saved as Q1, Q3).
+   */
+  private async deleteDroppedQuestions(
+    quizId: number,
+    rounds: ImportRoundPreview[],
+  ): Promise<void> {
+    const keptIds = rounds.flatMap((round) =>
+      round.questions.flatMap((question) =>
+        question.questionId === undefined ? [] : [question.questionId],
+      ),
+    );
+    const storedRounds = await this.rounds.find({ quiz: quizId });
+
+    for (const storedRound of storedRounds) {
+      const draftRound = rounds[storedRound.orderIndex];
+      const slotKeyedPositions = (draftRound?.questions ?? []).flatMap(
+        (question, position) =>
+          question.questionId === undefined ? [position] : [],
+      );
+      await this.questions.nativeDelete({
+        round: storedRound.id,
+        id: { $nin: keptIds },
+        orderIndex: { $nin: slotKeyedPositions },
+      });
+    }
   }
 
   /**
