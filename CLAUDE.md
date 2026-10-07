@@ -76,3 +76,7 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 ### Domain docs
 
 Single-context: one root `GLOSSARY.md` plus `docs/adr/`, created lazily. See `docs/agents/domain.md`.
+
+### Skill edits
+
+Editing a skill under `.claude/skills/`: log the change in `docs/agents/skill-changes.md`, since skill files are gitignored and reinstalls overwrite them.
