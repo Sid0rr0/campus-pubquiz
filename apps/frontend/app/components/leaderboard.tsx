@@ -100,7 +100,7 @@ function RankTrendIcon({ trend }: { trend: RankTrend }) {
   return (
     <span
       aria-label={RANK_TREND_LABELS[trend]}
-      className={`text-display-xl ${RANK_TREND_COLOR_CLASSES[trend]}`}
+      className={`text-display-xl ${RANK_TREND_COLOR_CLASSES[trend]} w-[1em] text-center`}
     >
       {RANK_TREND_GLYPHS[trend]}
     </span>
@@ -164,7 +164,7 @@ function BonusStars({
   return (
     <span
       aria-label={`${bonusPoints} bonus points`}
-      className={`text-display-lg font-extrabold ${colorClass}`}
+      className={`text-display-2xl font-extrabold ${colorClass}`}
     >
       {bonusStarLabel(magnitude)}
     </span>
@@ -499,7 +499,7 @@ export function Leaderboard({
               />
             )}
             <span
-              className={`font-display w-[2.5em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+              className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
               {label}
             </span>
