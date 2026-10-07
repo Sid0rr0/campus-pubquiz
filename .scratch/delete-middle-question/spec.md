@@ -1,6 +1,6 @@
 # Spec: Deleting a middle question from a round saves
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows live-edit-save, done)
 
