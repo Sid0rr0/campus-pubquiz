@@ -493,49 +493,53 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     const gameSessionId = this.getGameSessionId(joinCode);
     try {
-      let resolved: Awaited<ReturnType<TeamService['join']>> | undefined;
-      const joined = await this.writeSession(joinCode, async (session) => {
-        // Resolved inside the write, so a leave or kick for the same team
-        // lands either wholly before or wholly after this join.
-        const team = await this.teamService.join(
-          session.seededGame.gameSessionId,
-          request.teamName,
-          {
-            teamToken: request.teamToken,
-            teamCode: request.teamCode,
-            joinCode: request.joinCode,
-          },
-        );
-        resolved = team;
-        const heldBy = session.connectedTeamSockets[team.id];
-        const takenOver =
-          heldBy && heldBy !== socketId && isSocketLive(heldBy) ? heldBy : null;
-        // A takeover is the same device auto-reconnecting on a fresh socket
-        // before our ping timeout noticed its old one died (network switch,
-        // phone waking up). Socket ids are random and never shared with other
-        // clients, so only the device that held that socket can name it here.
-        // Decided inside the write, so two joins racing for one seat can't
-        // both pass.
-        if (takenOver && request.previousSocketId !== takenOver) {
-          throw new SessionRefusal(
-            `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
+      const { team, joined } = await this.writeSession(
+        joinCode,
+        async (session) => {
+          // Resolved inside the write, so a leave or kick for the same team
+          // lands either wholly before or wholly after this join.
+          const team = await this.teamService.join(
+            session.seededGame.gameSessionId,
+            request.teamName,
+            {
+              teamToken: request.teamToken,
+              teamCode: request.teamCode,
+              joinCode: request.joinCode,
+            },
           );
-        }
-        return {
-          session: withTeams(
-            withTeamConnected(session, team.id, socketId),
-            await this.teamService.listForSession(
-              session.seededGame.gameSessionId,
+          const heldBy = session.connectedTeamSockets[team.id];
+          const takenOver =
+            heldBy && heldBy !== socketId && isSocketLive(heldBy)
+              ? heldBy
+              : null;
+          // A takeover is the same device auto-reconnecting on a fresh socket
+          // before our ping timeout noticed its old one died (network switch,
+          // phone waking up). Socket ids are random and never shared with other
+          // clients, so only the device that held that socket can name it here.
+          // Decided inside the write, so two joins racing for one seat can't
+          // both pass.
+          if (takenOver && request.previousSocketId !== takenOver) {
+            throw new SessionRefusal(
+              `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
+            );
+          }
+          return {
+            session: withTeams(
+              withTeamConnected(session, team.id, socketId),
+              await this.teamService.listForSession(
+                session.seededGame.gameSessionId,
+              ),
             ),
-          ),
-          outcome: {
-            ...BROADCAST_STATE_OUTCOME,
-            socketsToClose: takenOver ? [takenOver] : [],
-          },
-        };
-      });
-      if (!resolved) throw new Error('Unable to join');
-      const team = resolved;
+            outcome: {
+              team,
+              joined: {
+                ...BROADCAST_STATE_OUTCOME,
+                socketsToClose: takenOver ? [takenOver] : [],
+              },
+            },
+          };
+        },
+      );
 
       return {
         ...joined,
