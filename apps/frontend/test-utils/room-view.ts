@@ -112,15 +112,24 @@ function describeQuestions(
   });
 }
 
+/** Drops undefined entries so optional SeededRound fields stay absent rather than present-but-undefined. */
+function definedOnly<T extends object>(fields: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined),
+  ) as Partial<T>;
+}
+
 function buildRounds(descriptions: RoundDescription[]): SeededRound[] {
   const built = describeQuestions(descriptions);
   return descriptions.map((round, index) => ({
     id: index + 1,
     title: round.title ?? `Round ${index + 1}`,
     breakAfter: round.breakAfter ?? true,
-    ...(round.kahootMode === undefined ? {} : { kahootMode: round.kahootMode }),
-    ...(round.category === undefined ? {} : { category: round.category }),
-    ...(round.author === undefined ? {} : { author: round.author }),
+    ...definedOnly({
+      kahootMode: round.kahootMode,
+      category: round.category,
+      author: round.author,
+    }),
     questions: built[index].questions,
     questionNotesById: built[index].notes,
   }));

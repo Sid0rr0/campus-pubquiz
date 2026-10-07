@@ -1,16 +1,16 @@
 interface RoundOverviewScreenProps {
   roundTitles: string[];
   /** Parallel to roundTitles, '' where a round has no category set. */
-  roundCategories?: string[];
+  roundCategories: string[];
   /** Parallel to roundTitles, '' where a round has no author set. */
-  roundAuthors?: string[];
+  roundAuthors: string[];
 }
 
 /** Shown once, right after the admin dismisses 'rules' and before round 0's own 'round_intro' card — lists every round's title up front. */
 export function RoundOverviewScreen({
   roundTitles,
-  roundCategories = [],
-  roundAuthors = [],
+  roundCategories,
+  roundAuthors,
 }: RoundOverviewScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 text-center">

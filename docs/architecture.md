@@ -127,6 +127,7 @@ flowchart TD
   mover --> progress
   mover --> plan
   gss --> project
+  fixtures["frontend test fixtures<br/>test-utils/room-view.ts"] --> project
   gss -->|"answers · roster · bonuses<br/>showdown · standings"| domain
 
   domain --> repos
@@ -147,7 +148,8 @@ Key seams:
 - **`projectScreen`** builds each room's view, so nothing a room hasn't been
   shown ever leaves the server. It lives in `shared/types` with the Move plan
   and the other pure rules it reads; the backend calls it, and the frontend's
-  test fixtures will run the same projection.
+  test fixtures (`apps/frontend/test-utils/room-view.ts`) run the same
+  projection.
 
 ## Event flow: a team submits an answer
 

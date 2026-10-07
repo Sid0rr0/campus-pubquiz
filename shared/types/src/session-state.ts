@@ -15,8 +15,7 @@ export interface SeededRound {
   breakAfter: boolean;
   /**
    * See RoundConfig.kahootMode. Optional, like questionNotesById below, so
-   * the many existing SeededRound literals across the test suite don't all
-   * need updating; undefined behaves as false.
+   * callers building a SeededRound needn't set it; undefined behaves as false.
    */
   kahootMode?: boolean;
   /** Round topic/theme — see Round.category. Optional, like kahootMode above. */
@@ -24,15 +23,15 @@ export interface SeededRound {
   /** Who wrote this round's questions — see Round.author. Optional, like kahootMode above. */
   author?: string;
   // Carries the correct answer internally so reveal can show it; only
-  // GameStateService's answer-free QuestionView projections leave the process.
+  // answer-free QuestionView projections leave the server.
   questions: RevealQuestionView[];
   // Host-only notes, keyed by question id — deliberately a sibling of
   // `questions` rather than a field on each question object. Every
   // RevealQuestionView flows through toRevealQuestionViews' blind `{...question}`
   // spread into the broadcast snapshot; notes must never ride along. Optional
-  // (like GameProgress.isMediaFullscreen) so the many existing SeededRound
-  // literals across the test suite don't all need updating; undefined
-  // behaves as "no notes for any question in this round".
+  // (like GameProgress.isMediaFullscreen) so callers building a SeededRound
+  // needn't set it; undefined behaves as "no notes for any question in this
+  // round".
   questionNotesById?: Record<number, string | null>;
 }
 
@@ -44,7 +43,7 @@ export interface SeededGame {
   settings: SessionSettings;
 }
 
-/** DB-only roster shape — live connection state is layered on by GameStateService. */
+/** DB-only roster shape — live connection state is layered on by the backend. */
 export interface TeamRosterEntry {
   teamId: number;
   teamName: string;
@@ -59,7 +58,7 @@ export const LOBBY_PROGRESS: GameProgress = {
   furthestOpenIndex: -1,
 };
 
-/** Everything GameStateService tracks for one concurrently-running GameSession, keyed by its joinCode. */
+/** Everything the backend tracks for one concurrently-running GameSession, keyed by its joinCode. */
 export interface SessionState {
   seededGame: SeededGame;
   progress: GameProgress;

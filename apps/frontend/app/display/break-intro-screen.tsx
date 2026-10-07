@@ -9,7 +9,7 @@ interface BreakIntroScreenProps {
   /** 1-based ordinal of this break (1 for the quiz's first, 2 for its second, …) — shown as "BREAK N". */
   breakNumber: number;
   /** This session's enabled bonus categories — passed through to BreakBonusList to show what teams can still go earn while grading happens off-screen. */
-  enabledBonusCategories?: BonusCategory[];
+  enabledBonusCategories: BonusCategory[];
   /** Epoch-ms time the admin expects the break to end, or null/undefined when unset — shown as "Back at HH:MM" underneath BREAK. */
   breakEndsAt?: number | null;
   /** Passed through to BreakBonusList's "can be earned until the end of break X" caption. */
@@ -32,7 +32,7 @@ function formatBreakEndTime(breakEndsAt: number): string {
 export function BreakIntroScreen({
   roundNumber,
   breakNumber,
-  enabledBonusCategories = [],
+  enabledBonusCategories,
   breakEndsAt,
   quizStructure,
   showBonusList,
