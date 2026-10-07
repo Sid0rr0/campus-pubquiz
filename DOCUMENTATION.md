@@ -47,6 +47,9 @@ this is intentional, so there is no Redis adapter and no horizontal scaling.
 Everything important is written to Postgres as it happens; the in-memory state
 is a cache that can be rebuilt after a restart.
 
+Diagrams of the module structure, the main event flows, the status machine and
+the data model live in [`docs/architecture.md`](docs/architecture.md).
+
 ## The Three UIs
 
 | Route      | Who                  | What it does                                                                                                                                                                           |

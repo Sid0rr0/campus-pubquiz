@@ -8,6 +8,7 @@ This file holds only the commands, constraints and conventions future work must 
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | What does a domain term mean (block, break, break review, question type…)? | [`GLOSSARY.md`](GLOSSARY.md)                                     |
 | How does it work: statuses, protocol, question types, CSV, auth, deploy?   | [`DOCUMENTATION.md`](DOCUMENTATION.md)                           |
+| How is it put together (modules, flows, data model — as diagrams)?         | [`docs/architecture.md`](docs/architecture.md)                   |
 | What rules must code follow?                                               | [`CODING_STANDARDS.md`](CODING_STANDARDS.md)                     |
 | Why was a hard-to-reverse decision made?                                   | [`docs/adr/`](docs/adr/)                                         |
 | How does a moderator run a quiz night?                                     | The in-app `/guide` page (`apps/frontend/app/guide/`)            |
