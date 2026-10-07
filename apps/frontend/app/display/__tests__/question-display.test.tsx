@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, question, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -28,6 +29,13 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
+const capitalOfFrance = {
+  type: 'multiple_choice' as const,
+  prompt: 'Capital of France?',
+  options: ['Paris', 'London'],
+  points: 2,
+};
+
 describe('DisplayPage — question display', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
@@ -35,9 +43,9 @@ describe('DisplayPage — question display', () => {
 
   it('shows the current question and its options while open', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [capitalOfFrance] }],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -50,15 +58,20 @@ describe('DisplayPage — question display', () => {
 
   it('shows sort items numbered in display order', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'sort',
-          prompt: 'Order these planets from the sun outward.',
-          options: ['Venus', 'Mercury', 'Earth'],
-          points: 3,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'sort',
+                prompt: 'Order these planets from the sun outward.',
+                options: ['Venus', 'Mercury', 'Earth'],
+                points: 3,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -77,16 +90,21 @@ describe('DisplayPage — question display', () => {
     'shows the choices of a %s question that has some',
     (type) => {
       mockUseGame.mockReturnValue({
-        snapshot: displayView({
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type,
-            prompt: 'Which song is this?',
-            mediaUrl: 'https://example.com/song.mp3',
-            options: ['Yesterday', 'Help!'],
-            points: 1,
-          },
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [
+            {
+              questions: [
+                {
+                  type,
+                  prompt: 'Which song is this?',
+                  mediaUrl: 'https://example.com/song.mp3',
+                  options: ['Yesterday', 'Help!'],
+                  points: 1,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         }),
         connectionError: null,
         sendAction: vi.fn(),
@@ -100,16 +118,21 @@ describe('DisplayPage — question display', () => {
 
   it('shows no choices for an audio question whose choices are all blank', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'audio',
-          prompt: 'Which song is this?',
-          mediaUrl: 'https://example.com/song.mp3',
-          options: ['', '  '],
-          points: 1,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'audio',
+                prompt: 'Which song is this?',
+                mediaUrl: 'https://example.com/song.mp3',
+                options: ['', '  '],
+                points: 1,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -121,16 +144,21 @@ describe('DisplayPage — question display', () => {
 
   it('shows both match lists before reveal', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'match',
-          prompt: 'Match the hero to their weapon.',
-          options: ['arthur', 'captain america'],
-          matchTargets: ['shield', 'excalibur'],
-          points: 4,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'match',
+                prompt: 'Match the hero to their weapon.',
+                options: ['arthur', 'captain america'],
+                matchTargets: ['shield', 'excalibur'],
+                points: 4,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -149,12 +177,18 @@ describe('DisplayPage — question display', () => {
 
   it('shows the question image in a fullscreen overlay when media fullscreen is on', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              { ...capitalOfFrance, mediaUrl: 'https://example.com/x.png' },
+            ],
+          },
+        ],
+        progress: {
           status: 'question_open',
           isMediaFullscreen: true,
-        }),
-        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -168,12 +202,18 @@ describe('DisplayPage — question display', () => {
 
   it('does not show the image in a fullscreen overlay when media fullscreen is off', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              { ...capitalOfFrance, mediaUrl: 'https://example.com/x.png' },
+            ],
+          },
+        ],
+        progress: {
           status: 'question_open',
           isMediaFullscreen: false,
-        }),
-        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -187,12 +227,12 @@ describe('DisplayPage — question display', () => {
 
   it('does not show any media when the question has none, even with fullscreen on', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [capitalOfFrance] }],
+        progress: {
           status: 'question_open',
           isMediaFullscreen: true,
-        }),
-        currentQuestion: question,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -204,9 +244,15 @@ describe('DisplayPage — question display', () => {
 
   it('switches to a two-column layout once a portrait image loads', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              { ...capitalOfFrance, mediaUrl: 'https://example.com/x.png' },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -228,9 +274,15 @@ describe('DisplayPage — question display', () => {
 
   it('stays in the stacked layout once a landscape image loads', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              { ...capitalOfFrance, mediaUrl: 'https://example.com/x.png' },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -250,12 +302,18 @@ describe('DisplayPage — question display', () => {
 
   it('stays in the stacked layout for a portrait image while fullscreen', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              { ...capitalOfFrance, mediaUrl: 'https://example.com/x.png' },
+            ],
+          },
+        ],
+        progress: {
           status: 'question_open',
           isMediaFullscreen: true,
-        }),
-        currentQuestion: { ...question, mediaUrl: 'https://example.com/x.png' },
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -275,14 +333,14 @@ describe('DisplayPage — question display', () => {
 
   it('shows how many teams have answered the open question', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [capitalOfFrance] }],
+        progress: { status: 'question_open' },
         teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards' },
-          { teamId: 'team-2', teamName: 'Beer Necessities' },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
-        answeredTeamIds: ['team-1'],
+        answeredTeams: { 1: [1] },
       }),
       connectionError: null,
       sendAction: vi.fn(),

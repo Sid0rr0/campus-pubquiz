@@ -1,14 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import type {
-  ActiveShowdownView,
-  GameProgress,
-  OnAirScreen,
-  StateSnapshotPayload,
+import {
+  SOCKET_ROOMS,
+  type ActiveShowdownRoundState,
 } from '@campus-pubquiz/types';
 import DisplayPage from '@/app/display/page';
-import { progress, question, displayView } from './test-utils';
+import { roomView, type SessionDescription } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -32,31 +30,29 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-const SHOWDOWN: ActiveShowdownView = {
+const SHOWDOWN: ActiveShowdownRoundState = {
   id: 7,
   question: 'How tall is the Eiffel Tower?',
+  answer: '330',
   participants: [
-    { teamId: 1, teamName: 'The Quizzards', seatIndex: 0, hasGuessed: true },
-    { teamId: 2, teamName: 'Second Place', seatIndex: 1, hasGuessed: false },
+    { teamId: 1, teamName: 'The Quizzards', seatIndex: 0, guess: '300' },
+    { teamId: 2, teamName: 'Second Place', seatIndex: 1, guess: null },
   ],
+  winnerTeamId: null,
+  isTie: false,
+  resolved: false,
 };
 
-// roundIndex 1 (round "2") is this fixture's only break.
-const breakAfterRoundTwo = {
-  blockCount: 1,
-  topicsPerBlock: 2,
-  breakRoundNumbers: [2],
-  minQuestionsPerTopic: 1,
-  maxQuestionsPerTopic: 1,
-};
+// Round 2 is the quiz's only break: round 1 flows into it, so "BREAK 1" follows round 2.
+const breakAfterRoundTwoQuiz = [
+  { breakAfter: false, questions: [{}] },
+  { questions: [{}] },
+];
 
-/** A snapshot whose on-air screen is set explicitly, so the page is shown to follow the screen's kind rather than the status underneath. */
-function mockScreen(
-  onAirScreen: OnAirScreen,
-  snapshot: Partial<StateSnapshotPayload> & { progress: GameProgress },
-) {
+/** The display view for the described session, drawn by the page. */
+function showDisplay(description: SessionDescription) {
   mockUseGame.mockReturnValue({
-    snapshot: { ...displayView(snapshot), onAirScreen },
+    snapshot: roomView(SOCKET_ROOMS.DISPLAY, description),
     connectionError: null,
     sendAction: vi.fn(),
   });
@@ -68,13 +64,10 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
   });
 
   it('shows the leaderboard for a leaderboard screen whatever status is underneath', () => {
-    mockScreen(
-      { kind: 'leaderboard' },
-      {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
-      },
-    );
+    showDisplay({
+      rounds: [{ questions: [{ prompt: 'Capital of France?' }] }],
+      progress: { status: 'question_open', isLeaderboardVisible: true },
+    });
     render(<DisplayPage />);
 
     expect(screen.getByText(/leaderboard/i)).toBeInTheDocument();
@@ -82,28 +75,21 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
   });
 
   it('shows the break intro for a break with no reviewable question', () => {
-    mockScreen(
-      { kind: 'break_intro', roundIndex: 1, isFeedbackPromptShown: false },
-      {
-        progress: progress({ status: 'break', roundIndex: 1 }),
-        blockQuestions: [],
-        quizStructure: breakAfterRoundTwo,
-      },
-    );
+    showDisplay({
+      rounds: breakAfterRoundTwoQuiz,
+      // revealIndex 5 is past the block, so there is no question to review.
+      progress: { status: 'break', roundIndex: 1, revealIndex: 5 },
+    });
     render(<DisplayPage />);
 
     expect(screen.getByText('BREAK 1')).toBeInTheDocument();
   });
 
   it('shows the showdown for an ended game with an active showdown', () => {
-    mockScreen(
-      { kind: 'showdown', showdownId: SHOWDOWN.id },
-      {
-        progress: progress({ status: 'ended' }),
-        activeShowdown: SHOWDOWN,
-        showdownRevealStep: 0,
-      },
-    );
+    showDisplay({
+      progress: { status: 'ended' },
+      showdown: { round: SHOWDOWN, revealStep: 0 },
+    });
     render(<DisplayPage />);
 
     expect(screen.getByText('SHOWDOWN TIEBREAKER')).toBeInTheDocument();
@@ -111,10 +97,7 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
   });
 
   it('shows quiz complete for an ended game with no active showdown', () => {
-    mockScreen(
-      { kind: 'ended', isFeedbackPromptShown: false },
-      { progress: progress({ status: 'ended' }), activeShowdown: null },
-    );
+    showDisplay({ progress: { status: 'ended' } });
     render(<DisplayPage />);
 
     expect(screen.getByText(/quiz complete/i)).toBeInTheDocument();
@@ -122,17 +105,16 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
   });
 
   describe('the feedback prompt', () => {
-    const breakIntroState = {
-      progress: progress({ status: 'break_intro', roundIndex: 1 }),
-      blockQuestions: [],
-      quizStructure: breakAfterRoundTwo,
+    const breakIntroSession = {
+      rounds: breakAfterRoundTwoQuiz,
+      progress: { status: 'break_intro' as const, roundIndex: 1 },
     };
 
-    it('shows "Rate the rounds on your phone" on the break card when the flag is true', () => {
-      mockScreen(
-        { kind: 'break_intro', roundIndex: 1, isFeedbackPromptShown: true },
-        breakIntroState,
-      );
+    it('shows "Rate the rounds on your phone" on the break card when feedback is collected', () => {
+      showDisplay({
+        ...breakIntroSession,
+        settings: { collectFeedback: true },
+      });
       render(<DisplayPage />);
 
       expect(
@@ -140,21 +122,21 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
       ).toBeInTheDocument();
     });
 
-    it('draws no prompt on the break card when the flag is false', () => {
-      mockScreen(
-        { kind: 'break_intro', roundIndex: 1, isFeedbackPromptShown: false },
-        breakIntroState,
-      );
+    it('draws no prompt on the break card when feedback is not collected', () => {
+      showDisplay({
+        ...breakIntroSession,
+        settings: { collectFeedback: false },
+      });
       render(<DisplayPage />);
 
       expect(screen.queryByText(/on your phone/i)).not.toBeInTheDocument();
     });
 
-    it('shows "Tell us what you thought" on the final screen when the flag is true', () => {
-      mockScreen(
-        { kind: 'ended', isFeedbackPromptShown: true },
-        { progress: progress({ status: 'ended' }), activeShowdown: null },
-      );
+    it('shows "Tell us what you thought" on the final screen when feedback is collected', () => {
+      showDisplay({
+        progress: { status: 'ended' },
+        settings: { collectFeedback: true },
+      });
       render(<DisplayPage />);
 
       expect(
@@ -162,11 +144,11 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
       ).toBeInTheDocument();
     });
 
-    it('draws no prompt on the final screen when the flag is false', () => {
-      mockScreen(
-        { kind: 'ended', isFeedbackPromptShown: false },
-        { progress: progress({ status: 'ended' }), activeShowdown: null },
-      );
+    it('draws no prompt on the final screen when feedback is not collected', () => {
+      showDisplay({
+        progress: { status: 'ended' },
+        settings: { collectFeedback: false },
+      });
       render(<DisplayPage />);
 
       expect(screen.queryByText(/on your phone/i)).not.toBeInTheDocument();
@@ -174,27 +156,30 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
   });
 
   it('draws nothing for a question screen with no current question yet', () => {
-    mockScreen(
-      { kind: 'question', roundIndex: 0, questionIndex: 0, questionId: null },
-      {
-        progress: progress({ status: 'question_open' }),
+    mockUseGame.mockReturnValue({
+      snapshot: {
+        ...roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [{ questions: [{ prompt: 'Capital of France?' }] }],
+          progress: { status: 'question_open' },
+        }),
+        // A quiz round always has its question, so the real rules never send
+        // an open question screen without one; this pins the page's guard.
         currentQuestion: null,
       },
-    );
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
 
     expect(() => render(<DisplayPage />)).not.toThrow();
     expect(screen.queryByText('Capital of France?')).not.toBeInTheDocument();
   });
 
   it('draws nothing for a locking screen with no lock deadline yet', () => {
-    mockScreen(
-      { kind: 'locking', roundIndex: 0, questionIndex: 0, questionId: 1 },
-      {
-        progress: progress({ status: 'locking' }),
-        currentQuestion: question,
-        questionLockAt: null,
-      },
-    );
+    showDisplay({
+      rounds: [{ questions: [{ prompt: 'Capital of France?' }] }],
+      progress: { status: 'locking' },
+      timers: { questionLockAt: null },
+    });
 
     expect(() => render(<DisplayPage />)).not.toThrow();
     expect(screen.queryByText(/lock/i)).not.toBeInTheDocument();
