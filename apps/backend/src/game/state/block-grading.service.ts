@@ -35,7 +35,7 @@ interface GradingRefresh {
   ungradedQuestionIds: readonly number[];
 }
 
-/** The apply half of the grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise). The only writer of the ungraded set. */
+/** The apply half of the grading refresh: the refreshed questions' ungraded entries are replaced (added when ungraded, removed otherwise). The bulk refresh instead replaces the whole set outright. */
 function applyGradingRefresh(
   session: SessionState,
   refresh: GradingRefresh,
@@ -153,7 +153,7 @@ export class BlockGradingService {
   ): Promise<{
     session: SessionState;
     regradedQuestionIds: readonly number[];
-    answeredTeamIds: ReadonlySet<number>;
+    answeringTeamIds: ReadonlySet<number>;
   }> {
     const previousQuestions = new Map(
       before.seededGame.rounds
@@ -166,7 +166,7 @@ export class BlockGradingService {
       return {
         session: reloaded,
         regradedQuestionIds,
-        answeredTeamIds: new Set(),
+        answeringTeamIds: new Set(),
       };
     }
 
@@ -191,7 +191,7 @@ export class BlockGradingService {
     return {
       session,
       regradedQuestionIds,
-      answeredTeamIds: new Set(
+      answeringTeamIds: new Set(
         answerLists.flat().map((answer) => answer.teamId),
       ),
     };
@@ -210,7 +210,7 @@ export class BlockGradingService {
   private async regradeQuestions(
     session: SessionState,
     questionIds: readonly number[],
-    previousQuestions: ReadonlyMap<number, ScoredQuestion> = new Map(),
+    previousQuestions: ReadonlyMap<number, ScoredQuestion>,
   ): Promise<{
     regradedQuestionIds: readonly number[];
     closestGuessSummaries: SessionState['closestGuessSummaries'];

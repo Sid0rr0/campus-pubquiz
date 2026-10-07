@@ -303,7 +303,7 @@ export class GameStateService implements OnModuleInit {
       return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
     }
 
-    const { session, regradedQuestionIds, answeredTeamIds } =
+    const { session, regradedQuestionIds, answeringTeamIds } =
       await this.grading.regradeForKeyFix(
         reloaded,
         started,
@@ -316,7 +316,7 @@ export class GameStateService implements OnModuleInit {
     const teamSyncs = connectedTeamSyncs(
       session,
       session.teams
-        .filter((team) => answeredTeamIds.has(team.teamId))
+        .filter((team) => answeringTeamIds.has(team.teamId))
         .map((team) => team.teamId),
     );
     return {
