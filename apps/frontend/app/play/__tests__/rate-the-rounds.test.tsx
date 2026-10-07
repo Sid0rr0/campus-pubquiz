@@ -2,9 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FeedbackField } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -20,36 +19,33 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-const BREAK_CARD: FeedbackField = {
-  kind: 'break_card',
-  rounds: [
-    { id: 11, title: 'Music' },
-    { id: 12, title: 'Film' },
-  ],
-};
+// A two-round block in its break: the builder numbers the rounds 1 and 2.
+const MUSIC_ID = 1;
+const FILM_ID = 2;
 
-function breakSnapshot(feedback: FeedbackField | undefined) {
+function breakSession(isFeedbackCollected: boolean) {
   return {
-    progress: progress({ status: 'break' }),
-    currentQuestion: null,
-    feedback,
-    blockQuestions: [
+    rounds: [
       {
-        id: 1,
-        type: 'free_text',
-        prompt: 'Name a fruit',
-        points: 1,
-        roundNumber: 1,
-        questionNumberInRound: 1,
-        roundTitle: 'Music',
+        title: 'Music',
+        breakAfter: false,
+        questions: [{ prompt: 'Name a planet' }],
       },
+      { title: 'Film', questions: [{ prompt: 'Name a fruit' }] },
     ],
+    progress: {
+      status: 'break' as const,
+      roundIndex: 1,
+      questionIndex: 0,
+      furthestOpenIndex: 1,
+    },
+    settings: { collectFeedback: isFeedbackCollected },
   };
 }
 
 function renderBreak(
   overrides: {
-    feedback?: FeedbackField;
+    isFeedbackCollected?: boolean;
     rateRound?: ReturnType<typeof vi.fn>;
     myRoundRatings?: Record<number, number>;
   } = {},
@@ -59,9 +55,7 @@ function renderBreak(
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
   mockUseTeamLink.mockReturnValue(
     socketResult({
-      snapshot: breakSnapshot(
-        'feedback' in overrides ? overrides.feedback : BREAK_CARD,
-      ),
+      session: breakSession(overrides.isFeedbackCollected ?? true),
       team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
       rateRound,
       myRoundRatings: overrides.myRoundRatings ?? {},
@@ -102,7 +96,7 @@ describe('PlayPage — rating the rounds in the break', () => {
 
     await user.click(star('Film', 4));
 
-    expect(rateRound).toHaveBeenCalledWith(12, 4);
+    expect(rateRound).toHaveBeenCalledWith(FILM_ID, 4);
     expect(await screen.findByText('Saved ✓')).toBeInTheDocument();
   });
 
@@ -154,7 +148,7 @@ describe('PlayPage — rating the rounds in the break', () => {
   });
 
   it('starts collapsed when the join payload already holds a rating for every round', () => {
-    renderBreak({ myRoundRatings: { 11: 4, 12: 2 } });
+    renderBreak({ myRoundRatings: { [MUSIC_ID]: 4, [FILM_ID]: 2 } });
 
     expect(
       screen.getByRole('button', { name: /rated ✓ · edit/i }),
@@ -162,7 +156,7 @@ describe('PlayPage — rating the rounds in the break', () => {
   });
 
   it('shows a restored rating as saved and a round never rated as empty', () => {
-    renderBreak({ myRoundRatings: { 11: 4 } });
+    renderBreak({ myRoundRatings: { [MUSIC_ID]: 4 } });
 
     expect(star('Music', 4)).toHaveAttribute('aria-pressed', 'true');
     expect(star('Music', 5)).toHaveAttribute('aria-pressed', 'false');
@@ -186,7 +180,7 @@ describe('PlayPage — rating the rounds in the break', () => {
     // The phone rejoined: the join payload says the server never got the tap.
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: breakSnapshot(BREAK_CARD),
+        session: breakSession(true),
         team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
         rateRound,
         myRoundRatings: {},
@@ -202,8 +196,8 @@ describe('PlayPage — rating the rounds in the break', () => {
     expect(screen.queryByText('Saved ✓')).not.toBeInTheDocument();
   });
 
-  it('renders nothing about feedback when the feedback field is empty', () => {
-    renderBreak({ feedback: null });
+  it('renders nothing about feedback when the session does not collect it', () => {
+    renderBreak({ isFeedbackCollected: false });
 
     expect(screen.queryByText('Rate these rounds')).not.toBeInTheDocument();
     expect(screen.queryByText(/rated ✓/i)).not.toBeInTheDocument();
