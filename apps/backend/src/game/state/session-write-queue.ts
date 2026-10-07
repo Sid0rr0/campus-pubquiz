@@ -23,6 +23,38 @@ export class SessionWriteQueue {
   }
 
   /**
+   * Runs `task` while holding the queues of every join code in `joinCodes`:
+   * it waits for each one's earlier writes and blocks their later writes until
+   * `task` finishes. Codes are taken in sorted order so overlapping holds
+   * can't deadlock; other join codes are unaffected. A throwing task releases
+   * every queue and its error reaches the caller, as with `run`.
+   */
+  async hold<T>(
+    joinCodes: readonly string[],
+    task: () => Promise<T>,
+  ): Promise<T> {
+    const sorted = [...new Set(joinCodes)].sort();
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    // Every queue is claimed in this tick, so no write can slip in between.
+    const claims = sorted.map(
+      (joinCode) =>
+        new Promise<void>((arrived) => {
+          void this.run(joinCode, () => {
+            arrived();
+            return released;
+          });
+        }),
+    );
+    try {
+      await Promise.all(claims);
+      return await task();
+    } finally {
+      release();
+    }
+  }
+
+  /**
    * Resolves once every write queued for `joinCode` — and any write those
    * writes queue — has finished, whether it stored, was refused or threw.
    * Read-only: it only watches the tail and never changes the order.
