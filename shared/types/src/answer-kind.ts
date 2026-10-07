@@ -81,32 +81,37 @@ export function matchesKey(question: KeyedQuestion, value: string): boolean {
 
 const asIs = (stored: string): string => stored;
 
+/** The as-is codec: the stored string is the one part. */
+const asIsCodec = { decode: asIs, encode: asIs } as const;
+
+/** The pipe-list codec: the stored string is `|`-joined items. */
+const pipeListCodec = {
+  decode: splitPipeList,
+  encode: (items: string[]): string => items.join('|'),
+} as const;
+
 const textFormat: AnswerFormat<string> = {
-  decode: asIs,
-  encode: asIs,
+  ...asIsCodec,
   format: asIs,
   score: (question, value) =>
     matchesKey(question, value) ? correct(question) : INCORRECT,
 };
 
 const numberFormat: AnswerFormat<string> = {
-  decode: asIs,
-  encode: asIs,
+  ...asIsCodec,
   format: asIs,
   score: null,
 };
 
 const choiceFormat: AnswerFormat<string> = {
-  decode: asIs,
-  encode: asIs,
+  ...asIsCodec,
   format: asIs,
   score: (question, value) =>
     value === question.answer ? correct(question) : INCORRECT,
 };
 
 const sortFormat: AnswerFormat<string[]> = {
-  decode: splitPipeList,
-  encode: (items) => items.join('|'),
+  ...pipeListCodec,
   format: (stored) => splitPipeList(stored).join(' → '),
   // Stray whitespace and empty items don't cost a team the question.
   score: (question, value) =>
@@ -121,8 +126,7 @@ const sortFormat: AnswerFormat<string[]> = {
  * matched pairs.
  */
 const matchFormat: AnswerFormat<string[]> = {
-  decode: splitPipeList,
-  encode: (items) => items.join('|'),
+  ...pipeListCodec,
   format: (stored, leftItems) => {
     const rightItems = splitPipeList(stored);
     if (leftItems && leftItems.length === rightItems.length) {
