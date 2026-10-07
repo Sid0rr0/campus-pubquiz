@@ -13,7 +13,7 @@ Parent spec: `.scratch/grading-policy/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The block grading module exposes *grades changed* `(session, questionIds) → session`, which refreshes only the current block's questions, as today.
 - [ ] The answer change uses it. Nothing outside the block grading module calls the apply helper.
