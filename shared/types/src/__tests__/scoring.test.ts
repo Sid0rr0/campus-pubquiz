@@ -357,3 +357,22 @@ describe('category lists', () => {
     );
   });
 });
+
+describe('batch-graded types are never scored one answer at a time', () => {
+  it('has no type that is both auto-graded and batch-graded', () => {
+    expect(
+      BATCH_GRADED_TYPES.filter((type) => AUTO_GRADED_TYPES.includes(type)),
+    ).toEqual([]);
+  });
+
+  it('includes closest_guess, whose number format has no per-answer score', () => {
+    expect(BATCH_GRADED_TYPES).toContain('closest_guess');
+  });
+
+  it.each(BATCH_GRADED_TYPES)(
+    'gradeAtSubmit leaves %s ungraded, so no per-answer score is reached',
+    (type) => {
+      expect(gradeAtSubmit({ type, answer: '5', points: 10 }, '5')).toBeNull();
+    },
+  );
+});
