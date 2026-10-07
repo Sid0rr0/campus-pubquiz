@@ -3,10 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
-import {
-  DEFAULT_SESSION_SETTINGS,
-  isShowingLastBreak,
-} from '@campus-pubquiz/types';
+import { isShowingLastBreak } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
 import { JoinForm } from '@/app/components/join-form';
@@ -191,24 +188,18 @@ function PlayPageContent() {
   const {
     progress,
     currentQuestion,
-    blockQuestions = [],
-    upcomingQuestions = [],
-    revealQuestions = [],
-    quizStructure = {
-      blockCount: 0,
-      topicsPerBlock: null,
-      breakRoundNumbers: [],
-      minQuestionsPerTopic: 0,
-      maxQuestionsPerTopic: 0,
-    },
-    isCurrentRoundKahoot = false,
-    closestGuessRevealStep = 0,
-    settings = DEFAULT_SESSION_SETTINGS,
-    activeShowdown = null,
-    showdownRevealStep = 0,
-    isAnswerable = false,
+    blockQuestions,
+    upcomingQuestions,
+    revealQuestions,
+    quizStructure,
+    isCurrentRoundKahoot,
+    closestGuessRevealStep,
+    settings,
+    activeShowdown,
+    showdownRevealStep,
+    isAnswerable,
     phoneScreen,
-    feedback = null,
+    feedback,
   } = snapshot;
   const onScreenQuestionId =
     phoneScreen.kind === 'block' ? phoneScreen.onScreenQuestionId : null;

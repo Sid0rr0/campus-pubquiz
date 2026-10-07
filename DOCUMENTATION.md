@@ -223,6 +223,8 @@ its history): the whole block after advancing past the last reveal, the walk so
 far if End Quiz was pressed mid-reveal, nothing if it was pressed before the
 reveal started. Previous out of `ended` returns to the normal trim.
 
+The frontend never projects a view: pages render the view they are sent, with no fallback for a field the view always carries. Frontend tests get their views from the same projection through the fixture builder (`roomView`, `apps/frontend/test-utils/room-view.ts`), so a test fixture cannot disagree with what the server sends.
+
 The players view also carries a **feedback field** (`feedback`): what the phone
 is offered to rate right now, shared by every team's phone. It is
 `{ kind, rounds: [{ id, title }] }`, or `null` when nothing is open for rating:

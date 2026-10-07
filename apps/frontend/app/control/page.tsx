@@ -215,10 +215,8 @@ function AdminPageContent() {
   }
 
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  // Where the active block starts, and what the Advance slot and Previous do
-  // next, are decided by the server (the admin view) from the session's own
-  // rounds and the same plan the action handler applies.
-  const activeBlockStartIndex = snapshot?.activeBlockStartIndex ?? 0;
+  // What the Advance slot and Previous do next is decided by the server (the
+  // admin view); before the first view arrives there is nothing to act on.
 
   useAdminKeyboardShortcuts({
     advanceStep: snapshot?.advanceStep ?? 'none',
@@ -251,13 +249,14 @@ function AdminPageContent() {
   const {
     progress,
     currentQuestion,
-    blockQuestions = [],
-    leaderboard = [],
+    activeBlockStartIndex,
+    blockQuestions,
+    leaderboard,
     teams,
-    ungradedQuestionIds = [],
-    phaseStartedAt = null,
-    phaseElapsedMs = null,
-    settings = DEFAULT_SESSION_SETTINGS,
+    ungradedQuestionIds,
+    phaseStartedAt,
+    phaseElapsedMs,
+    settings,
   } = snapshot;
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]
