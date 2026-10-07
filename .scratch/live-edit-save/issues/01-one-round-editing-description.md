@@ -16,9 +16,9 @@ Parent spec: `.scratch/live-edit-save/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Table tests over frontiers (before any open, mid-round, current block locking, stepped back with Previous, two merged sessions) assert each round's reached, structure editing, pinned count, move-target eligibility and reason.
-- [ ] The editor panel, outline and draft state show the same locks, notes, pinned questions and move targets as today, read from the description.
-- [ ] The guard spec passes unchanged; the guard refuses exactly what it refused before.
-- [ ] The quiz editor panel, outline and draft state tests pass unchanged.
+- [x] Table tests over frontiers (before any open, mid-round, current block locking, stepped back with Previous, two merged sessions) assert each round's reached, structure editing, pinned count, move-target eligibility and reason.
+- [x] The editor panel, outline and draft state show the same locks, notes, pinned questions and move targets as today, read from the description.
+- [x] The guard spec passes unchanged; the guard refuses exactly what it refused before.
+- [x] The quiz editor panel, outline and draft state tests pass unchanged.
