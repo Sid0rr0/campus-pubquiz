@@ -3,12 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import {
-  authenticatedAuthResult,
-  getDesktopButton,
-  progress,
-  adminView,
-} from './test-utils';
+import { authenticatedAuthResult, getDesktopButton } from './test-utils';
 
 const {
   mockUseAdminGame,
@@ -70,10 +65,9 @@ describe('AdminPage — advance controls', () => {
   it('sends START_QUIZ when the Start Quiz button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'lobby' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -87,10 +81,9 @@ describe('AdminPage — advance controls', () => {
   it('sends ADVANCE when the Advance button is clicked', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'question_open' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -104,10 +97,9 @@ describe('AdminPage — advance controls', () => {
   it('shows a "Begin Quiz" button that sends ADVANCE while showing the rules screen', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'rules' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'rules' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -121,11 +113,10 @@ describe('AdminPage — advance controls', () => {
   it('shows a "Start Round" button that sends ADVANCE on the round intro card', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'round_intro' }),
-        currentQuestion: null,
-        roundTitle: 'Picture Round',
-      }),
+      session: {
+        progress: { status: 'round_intro' },
+        rounds: [{ title: 'Picture Round', questions: [{}, {}] }],
+      },
       connectionError: null,
       sendAction,
     });
@@ -139,16 +130,11 @@ describe('AdminPage — advance controls', () => {
   it('shows an Advance button that sends ADVANCE during the locking countdown, to skip it early', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'locking' }),
-        currentQuestion: {
-          id: 'r2q3',
-          type: 'free_text',
-          prompt: 'Name this song.',
-          points: 3,
-        },
-        questionLockAt: Date.now() + 60_000,
-      }),
+      session: {
+        progress: { status: 'locking' },
+        rounds: [{ questions: [{ prompt: 'Name this song.', points: 3 }] }],
+        timers: { questionLockAt: Date.now() + 60_000 },
+      },
       connectionError: null,
       sendAction,
     });
@@ -161,10 +147,9 @@ describe('AdminPage — advance controls', () => {
 
   it('does not offer a per-question lock control (locking is block-based)', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'question_open' },
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -178,10 +163,9 @@ describe('AdminPage — advance controls', () => {
   it('sends ADVANCE when the Advance button is clicked during a break', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'break' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -195,10 +179,9 @@ describe('AdminPage — advance controls', () => {
   it('sends ADVANCE to step through reveal questions', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'reveal', revealIndex: 0 }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'reveal', revealIndex: 0 },
+      },
       connectionError: null,
       sendAction,
     });

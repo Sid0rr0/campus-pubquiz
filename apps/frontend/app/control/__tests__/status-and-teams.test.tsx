@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress, adminView } from './test-utils';
+import { authenticatedAuthResult } from './test-utils';
 
 const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
@@ -46,19 +46,14 @@ describe('AdminPage — status and teams', () => {
 
   it('shows the current status and question once connected', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 1 }] }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -80,14 +75,13 @@ describe('AdminPage — status and teams', () => {
 
   it('lists the connected team names in the sidebar', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
+      session: {
+        progress: { status: 'lobby' },
         teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards' },
-          { teamId: 'team-2', teamName: 'Beer Necessities' },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -101,20 +95,15 @@ describe('AdminPage — status and teams', () => {
 
   it('marks the teams that have answered the current question in the sidebar', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 1 }] }],
         teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards' },
-          { teamId: 'team-2', teamName: 'Beer Necessities' },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
-        answeredTeamIds: ['team-1'],
-      }),
+        answeredTeams: { 1: [1] },
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });

@@ -1,7 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GameProgress } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
@@ -40,18 +39,6 @@ function authenticatedAuthResult(
     register: vi.fn(),
     logout: vi.fn(),
     clearError: vi.fn(),
-    ...overrides,
-  };
-}
-
-function progress(overrides: Partial<GameProgress> = {}): GameProgress {
-  return {
-    status: 'lobby',
-    roundIndex: 0,
-    questionIndex: 0,
-    isLeaderboardVisible: false,
-    revealIndex: 0,
-    furthestOpenIndex: 0,
     ...overrides,
   };
 }
@@ -122,14 +109,7 @@ describe('RemotePage — session routing', () => {
   it('syncs the URL when the snapshot reports a different session', async () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseAdminGame.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'lobby' }),
-        joinCode: 'GHIJKL',
-        quizStructure: { breakRoundNumbers: [] },
-        leaderboard: [],
-        activeShowdown: null,
-        showdownRevealStep: 0,
-      },
+      session: { progress: { status: 'lobby' }, joinCode: 'GHIJKL' },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -143,14 +123,7 @@ describe('RemotePage — session routing', () => {
   it('stays on the remote when an action is rejected on an otherwise-connected session', async () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseAdminGame.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'break' }),
-        joinCode: 'ABCDEF',
-        quizStructure: { breakRoundNumbers: [] },
-        leaderboard: [],
-        activeShowdown: null,
-        showdownRevealStep: 0,
-      },
+      session: { progress: { status: 'break' }, joinCode: 'ABCDEF' },
       connectionError: 'Connection lost',
     });
     renderWithQuery(<RemotePage />);
@@ -162,14 +135,7 @@ describe('RemotePage — session routing', () => {
   it('does not sync the URL when the snapshot already matches the session code', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseAdminGame.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'lobby' }),
-        joinCode: 'ABCDEF',
-        quizStructure: { breakRoundNumbers: [] },
-        leaderboard: [],
-        activeShowdown: null,
-        showdownRevealStep: 0,
-      },
+      session: { progress: { status: 'lobby' }, joinCode: 'ABCDEF' },
       connectionError: null,
     });
     renderWithQuery(<RemotePage />);
@@ -180,14 +146,7 @@ describe('RemotePage — session routing', () => {
   it('does not reconnect when the URL moves to the session it is already connected to', () => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
     mockUseAdminGame.mockReturnValue({
-      snapshot: {
-        progress: progress({ status: 'lobby' }),
-        joinCode: 'GHIJKL',
-        quizStructure: { breakRoundNumbers: [] },
-        leaderboard: [],
-        activeShowdown: null,
-        showdownRevealStep: 0,
-      },
+      session: { progress: { status: 'lobby' }, joinCode: 'GHIJKL' },
       connectionError: null,
     });
     const { rerender } = renderWithQuery(<RemotePage />);

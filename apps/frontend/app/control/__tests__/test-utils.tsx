@@ -6,11 +6,13 @@ import {
   describeOnAirScreen,
   type AdminIndicators,
   type OnAirInput,
+  SOCKET_ROOMS,
   type AdminStatePayload,
   type AuthUser,
   type GameProgress,
   type GameStatus,
 } from '@campus-pubquiz/types';
+import { roomView, type SessionDescription } from '@/test-utils/room-view';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import type { UseAdminGameResult } from '@/app/lib/use-admin-game';
 
@@ -157,11 +159,15 @@ export function adminView<
  * page can't crash on a member the test didn't think about.
  */
 export function adminGameResult(
-  overrides: Partial<UseAdminGameResult> = {},
+  overrides: Partial<UseAdminGameResult> & {
+    /** Describe the session; the snapshot is the view the admin room is sent for it. */
+    session?: SessionDescription;
+  } = {},
 ): UseAdminGameResult {
+  const { session, ...hookOverrides } = overrides;
   const ok = () => Promise.resolve({ success: true as const });
   return {
-    snapshot: null,
+    snapshot: session ? roomView(SOCKET_ROOMS.ADMIN, session) : null,
     connectionError: null,
     reconnectedAt: null,
     liveAnswers: null,
@@ -175,6 +181,6 @@ export function adminGameResult(
     setBreakEndTime: vi.fn(ok),
     setDisplayTextScale: vi.fn(ok),
     createShowdownRound: vi.fn(ok),
-    ...overrides,
+    ...hookOverrides,
   };
 }

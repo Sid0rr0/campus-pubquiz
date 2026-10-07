@@ -2,7 +2,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress, adminView } from './test-utils';
+import { authenticatedAuthResult } from './test-utils';
 
 const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
@@ -47,10 +47,9 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends ADVANCE when ArrowRight is pressed', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'question_open' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -64,18 +63,9 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends PREVIOUS when ArrowLeft is pressed', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-        ],
-      }),
+      session: {
+        progress: { status: 'question_open' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -89,7 +79,9 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_LEADERBOARD when ArrowUp is pressed and the leaderboard is hidden', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({ progress: progress(), currentQuestion: null }),
+      session: {
+        progress: {},
+      },
       connectionError: null,
       sendAction,
     });
@@ -103,10 +95,9 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_LEADERBOARD when ArrowDown is pressed and the leaderboard is visible', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { isLeaderboardVisible: true },
+      },
       connectionError: null,
       sendAction,
     });
@@ -120,10 +111,9 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('ignores ArrowUp when the leaderboard is already visible', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { isLeaderboardVisible: true },
+      },
       connectionError: null,
       sendAction,
     });
@@ -137,9 +127,8 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends ADVANCE on ArrowRight when the server announces a rank reveal', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      session: {
+        progress: { isLeaderboardVisible: true },
         leaderboard: [
           {
             teamId: 1,
@@ -154,8 +143,7 @@ describe('AdminPage — keyboard shortcuts', () => {
             bonusPoints: 0,
           },
         ],
-        advanceStep: 'reveal_next_rank',
-      }),
+      },
       connectionError: null,
       sendAction,
     });
@@ -170,12 +158,11 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends ADVANCE on ArrowRight when the server announces a hide', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({
+      session: {
+        progress: {
           status: 'question_open',
           isLeaderboardVisible: true,
-        }),
-        currentQuestion: null,
+        },
         leaderboard: [
           {
             teamId: 1,
@@ -184,8 +171,9 @@ describe('AdminPage — keyboard shortcuts', () => {
             bonusPoints: 0,
           },
         ],
-        advanceStep: 'hide_leaderboard',
-      }),
+        // Every team is already revealed, so the next press hides the board.
+        leaderboardRevealCount: 1,
+      },
       connectionError: null,
       sendAction,
     });
@@ -200,12 +188,13 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('ignores ArrowRight and ArrowLeft while the board is up, nothing is left to do and Previous is covered', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break', isLeaderboardVisible: true }),
-        currentQuestion: null,
-        advanceStep: 'none',
-        previousState: 'covered_by_leaderboard',
-      }),
+      session: {
+        progress: {
+          status: 'ended',
+          isLeaderboardVisible: true,
+          previousStatus: 'reveal',
+        },
+      },
       connectionError: null,
       sendAction,
     });
@@ -219,10 +208,9 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('sends TOGGLE_MEDIA_FULLSCREEN when Space is pressed', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { status: 'question_open' },
+      },
       connectionError: null,
       sendAction,
     });
@@ -236,11 +224,10 @@ describe('AdminPage — keyboard shortcuts', () => {
   it('does not trigger a shortcut while typing in a text field', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'lobby' }),
-        currentQuestion: null,
+      session: {
+        progress: { status: 'lobby' },
         joinCode: 'TESTCODE',
-      }),
+      },
       connectionError: null,
       sendAction,
     });

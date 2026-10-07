@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress, adminView } from './test-utils';
+import { authenticatedAuthResult } from './test-utils';
 
 const {
   mockUseAdminGame,
@@ -59,22 +59,17 @@ describe('AdminPage — grading live answers', () => {
 
   it('shows live answers for the current question with team name and value', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      }),
+        progress: { status: 'question_open' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 1 }] }],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -88,7 +83,7 @@ describe('AdminPage — grading live answers', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 0,
@@ -106,25 +101,20 @@ describe('AdminPage — grading live answers', () => {
 
   it('shows every team even if it has not answered yet, and the round, question number and correct answer', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
+        progress: { status: 'question_open' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 1 }] }],
         teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards' },
-          { teamId: 'team-2', teamName: 'Beer Necessities' },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -138,7 +128,7 @@ describe('AdminPage — grading live answers', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 0,

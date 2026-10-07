@@ -1,10 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  GameProgress,
-  PresenterContextPayload,
-} from '@campus-pubquiz/types';
+import type { PresenterContextPayload } from '@campus-pubquiz/types';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import RemotePage from '@/app/remote/page';
 
@@ -47,34 +44,6 @@ function authenticatedAuthResult(
   };
 }
 
-function progress(overrides: Partial<GameProgress> = {}): GameProgress {
-  return {
-    status: 'question_open',
-    roundIndex: 0,
-    questionIndex: 0,
-    isLeaderboardVisible: false,
-    revealIndex: 0,
-    furthestOpenIndex: 0,
-    ...overrides,
-  };
-}
-
-function baseSnapshot(overrides: Record<string, unknown> = {}) {
-  return {
-    // The server announces what the Advance slot and Previous do (admin
-    // view); these fixtures just say both work.
-    advanceStep: 'advance',
-    previousState: 'available',
-    progress: progress(),
-    joinCode: 'ABCDEF',
-    quizStructure: { breakRoundNumbers: [] },
-    leaderboard: [],
-    activeShowdown: null,
-    showdownRevealStep: 0,
-    ...overrides,
-  };
-}
-
 function presenterContext(
   overrides: Partial<PresenterContextPayload> = {},
 ): PresenterContextPayload {
@@ -99,7 +68,7 @@ describe('RemotePage — content', () => {
   it('wires the Advance button to sendAction', () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction,
       presenterContext: null,
@@ -112,18 +81,18 @@ describe('RemotePage — content', () => {
   });
 
   it.each([
-    ['reveal_next_rank', /show next team/i],
-    ['hide_leaderboard', /hide leaderboard/i],
+    ['reveal_next_rank', 0, /show next team/i],
+    ['hide_leaderboard', 1, /hide leaderboard/i],
   ] as const)(
     'labels the Advance slot from the announced %s step and sends ADVANCE',
-    (advanceStep, label) => {
+    (_step, leaderboardRevealCount, label) => {
       const sendAction = vi.fn();
       mockUseAdminGame.mockReturnValue({
-        snapshot: baseSnapshot({
-          advanceStep,
-          previousState: 'covered_by_leaderboard',
-          progress: progress({ isLeaderboardVisible: true }),
-        }),
+        session: {
+          progress: { status: 'question_open', isLeaderboardVisible: true },
+          leaderboard: [{ teamName: 'The Quizzards', totalPoints: 3 }],
+          leaderboardRevealCount,
+        },
         connectionError: null,
         sendAction,
         presenterContext: null,
@@ -139,7 +108,7 @@ describe('RemotePage — content', () => {
 
   it('hides the Advance slot when the announced step is none', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({ advanceStep: 'none' }),
+      session: { progress: { status: 'ended' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -153,10 +122,9 @@ describe('RemotePage — content', () => {
 
   it('greys Previous out while the leaderboard covers the screen and hides it when unavailable', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        previousState: 'covered_by_leaderboard',
-        progress: progress({ isLeaderboardVisible: true }),
-      }),
+      session: {
+        progress: { status: 'question_open', isLeaderboardVisible: true },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -166,7 +134,7 @@ describe('RemotePage — content', () => {
     unmount();
 
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({ previousState: 'unavailable' }),
+      session: { progress: { status: 'lobby' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -184,7 +152,7 @@ describe('RemotePage — content', () => {
       Promise.resolve({ success: false as const, error: 'Cannot advance' }),
     );
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction,
       presenterContext: null,
@@ -200,9 +168,9 @@ describe('RemotePage — content', () => {
   it('wires the Previous button to sendAction', () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-      }),
+      session: {
+        progress: { status: 'question_open' },
+      },
       connectionError: null,
       sendAction,
       presenterContext: null,
@@ -216,7 +184,7 @@ describe('RemotePage — content', () => {
 
   it('shows the current question notes when present', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: presenterContext({
@@ -232,7 +200,7 @@ describe('RemotePage — content', () => {
 
   it('shows an empty state when there are no notes', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: presenterContext(),
@@ -244,7 +212,7 @@ describe('RemotePage — content', () => {
 
   it('shows what the display is currently showing', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: presenterContext({
@@ -259,7 +227,7 @@ describe('RemotePage — content', () => {
 
   it('previews the next screen', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: presenterContext({
@@ -278,7 +246,7 @@ describe('RemotePage — content', () => {
 
   it('shows the full question preview when the next screen is a question', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: presenterContext({
@@ -305,7 +273,7 @@ describe('RemotePage — content', () => {
 
   it('shows an empty state when nothing is queued next', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: presenterContext(),
@@ -317,15 +285,15 @@ describe('RemotePage — content', () => {
 
   it('shows how many teams have answered while a question is open', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
+      session: {
+        progress: { status: 'question_open' },
         teams: [
-          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
-          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
-          { teamId: 3, teamName: 'Quiz Pistols', isConnected: true },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+          { teamId: 3, teamName: 'Quiz Pistols' },
         ],
-        answeredTeamIds: [1, 2],
-      }),
+        answeredTeams: { 1: [1, 2] },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -337,20 +305,26 @@ describe('RemotePage — content', () => {
 
   it('shows how many teams answered correctly once graded', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 55,
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          options: ['Paris', 'London'],
-        },
-        teams: [
-          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
-          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [
+          {
+            questions: [
+              {
+                id: 55,
+                type: 'multiple_choice',
+                prompt: 'Capital of France?',
+                options: ['Paris', 'London'],
+              },
+            ],
+          },
         ],
-        answeredTeamIds: [1, 2],
-      }),
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+        ],
+        answeredTeams: { 55: [1, 2] },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -395,20 +369,26 @@ describe('RemotePage — content', () => {
 
   it('counts a speed-scaled kahoot answer with fewer than full points as correct', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 55,
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          options: ['Paris', 'London'],
-        },
-        teams: [
-          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
-          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [
+          {
+            questions: [
+              {
+                id: 55,
+                type: 'multiple_choice',
+                prompt: 'Capital of France?',
+                options: ['Paris', 'London'],
+              },
+            ],
+          },
         ],
-        answeredTeamIds: [1, 2],
-      }),
+        teams: [
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+        ],
+        answeredTeams: { 55: [1, 2] },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -458,15 +438,13 @@ describe('RemotePage — content', () => {
     // must not be tied to showAnswerStatus the way the teams-answered line
     // is, or it disappears exactly when it becomes meaningful.
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
+      session: {
+        progress: { status: 'break' },
         teams: [
-          { teamId: 1, teamName: 'The Quizzards', isConnected: true },
-          { teamId: 2, teamName: 'Beer Necessities', isConnected: true },
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
         ],
-        answeredTeamIds: [],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -511,17 +489,22 @@ describe('RemotePage — content', () => {
 
   it('omits the correct count when nothing has been submitted or graded yet', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 55,
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          options: ['Paris', 'London'],
-        },
-        teams: [{ teamId: 1, teamName: 'The Quizzards', isConnected: true }],
-        answeredTeamIds: [],
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [
+          {
+            questions: [
+              {
+                id: 55,
+                type: 'multiple_choice',
+                prompt: 'Capital of France?',
+                options: ['Paris', 'London'],
+              },
+            ],
+          },
+        ],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -534,11 +517,11 @@ describe('RemotePage — content', () => {
 
   it('hides the answered count once the question is no longer open', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'break' }),
-        teams: [{ teamId: 1, teamName: 'The Quizzards', isConnected: true }],
-        answeredTeamIds: [1],
-      }),
+      session: {
+        progress: { status: 'break' },
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+        answeredTeams: { 1: [1] },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -550,11 +533,10 @@ describe('RemotePage — content', () => {
 
   it('shows the elapsed time while a question/break is live', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        phaseStartedAt: Date.now() - 5_000,
-        phaseElapsedMs: null,
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        phaseTimer: { startedAt: Date.now() - 5_000 },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -566,11 +548,10 @@ describe('RemotePage — content', () => {
 
   it('shows the final elapsed time once the phase is no longer live', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        phaseStartedAt: null,
-        phaseElapsedMs: 125_000,
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        phaseTimer: { elapsedMs: 125_000 },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -582,11 +563,9 @@ describe('RemotePage — content', () => {
 
   it('shows no elapsed time for an untimed status', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'reveal' }),
-        phaseStartedAt: null,
-        phaseElapsedMs: null,
-      }),
+      session: {
+        progress: { status: 'reveal' },
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -599,15 +578,21 @@ describe('RemotePage — content', () => {
   it('shows a Play Again button for an open YouTube question and dispatches REPLAY_MEDIA', () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 55,
-          type: 'free_text',
-          prompt: 'Name this music video.',
-          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
-        },
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [
+          {
+            questions: [
+              {
+                id: 55,
+                type: 'free_text',
+                prompt: 'Name this music video.',
+                mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              },
+            ],
+          },
+        ],
+      },
       connectionError: null,
       sendAction,
       presenterContext: null,
@@ -621,15 +606,21 @@ describe('RemotePage — content', () => {
 
   it('hides the Play Again button for a non-YouTube question', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 55,
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          options: ['Paris', 'London'],
-        },
-      }),
+      session: {
+        progress: { status: 'question_open' },
+        rounds: [
+          {
+            questions: [
+              {
+                id: 55,
+                type: 'multiple_choice',
+                prompt: 'Capital of France?',
+                options: ['Paris', 'London'],
+              },
+            ],
+          },
+        ],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
@@ -643,7 +634,7 @@ describe('RemotePage — content', () => {
 
   it('renders no grading, team, or leaderboard controls', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: baseSnapshot(),
+      session: { progress: { status: 'question_open' } },
       connectionError: null,
       sendAction: vi.fn(),
       presenterContext: null,
