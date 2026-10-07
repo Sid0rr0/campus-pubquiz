@@ -25,10 +25,7 @@ import {
   sessionRoom,
 } from '@campus-pubquiz/types';
 import { SessionService } from '@/auth/session.service';
-import { TeamService } from '@/team/team.service';
 import { AnswerService } from '@/answer/answer.service';
-import { BonusService } from '@/bonus/bonus.service';
-import { FeedbackService } from '@/feedback/feedback.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
 import {
@@ -36,17 +33,6 @@ import {
   disconnectClient,
 } from '@/game/socket/connection.util';
 import { runAdminAction } from '@/game/socket/handlers/admin-action.handler';
-import { awardTeamBonus } from '@/game/socket/handlers/award-bonus.handler';
-import { createShowdownRound } from '@/game/socket/handlers/create-showdown-round.handler';
-import type { EventServices } from '@/game/socket/handlers/event-services';
-import { gradeTeamAnswer } from '@/game/socket/handlers/grade-answer.handler';
-import { joinPlayerTeam } from '@/game/socket/handlers/join-players.handler';
-import { kickTeamFromSession } from '@/game/socket/handlers/kick-team.handler';
-import { leaveSessionAsTeam } from '@/game/socket/handlers/leave-session.handler';
-import { rateRoundAsTeam } from '@/game/socket/handlers/rate-round.handler';
-import { sendFeedbackAsTeam } from '@/game/socket/handlers/send-feedback.handler';
-import { submitShowdownGuess } from '@/game/socket/handlers/submit-showdown-guess.handler';
-import { submitTeamAnswer } from '@/game/socket/handlers/submit-answer.handler';
 import {
   dispatchSocketEvent,
   type EventContext,
@@ -65,7 +51,6 @@ import {
   BROADCAST_STATE_OUTCOME,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import { ShowdownService } from '@/showdown/showdown.service';
 
 /** Injection token for swapping the phase timers' schedulers; nothing provides it in production, so both timers use real timers. */
 export const PHASE_TIMER_SCHEDULERS = Symbol('PHASE_TIMER_SCHEDULERS');
@@ -94,13 +79,9 @@ export class GameGateway
 
   constructor(
     private readonly gameState: GameStateService,
-    private readonly teamService: TeamService,
     private readonly answerService: AnswerService,
-    private readonly bonusService: BonusService,
     private readonly sessions: SessionService,
     private readonly orm: MikroORM,
-    private readonly showdownService: ShowdownService,
-    private readonly feedbackService: FeedbackService,
     @Optional()
     @Inject(PHASE_TIMER_SCHEDULERS)
     timerSchedulers?: PhaseTimerSchedulers,
@@ -187,7 +168,14 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.joinPlayers,
       rawPayload,
       client,
-      (context) => joinPlayerTeam(this.services, context),
+      ({ joinCode, payload, client }) =>
+        this.gameState.teamJoined(
+          joinCode,
+          payload,
+          client.id,
+          (socketId) =>
+            this.server.sockets.sockets.get(socketId)?.connected ?? false,
+        ),
     );
   }
 
@@ -201,7 +189,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.submitAnswer,
       rawPayload,
       client,
-      (context) => submitTeamAnswer(this.services, context),
+      ({ joinCode, payload, client }) =>
+        this.gameState.submitAnswer(joinCode, payload, client.id),
     );
   }
 
@@ -215,7 +204,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.rateRound,
       rawPayload,
       client,
-      (context) => rateRoundAsTeam(this.services, context),
+      ({ joinCode, payload, client }) =>
+        this.gameState.roundRated(joinCode, payload, client.id),
     );
   }
 
@@ -229,7 +219,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.sendFeedback,
       rawPayload,
       client,
-      (context) => sendFeedbackAsTeam(this.services, context),
+      ({ joinCode, payload, client }) =>
+        this.gameState.feedbackSent(joinCode, payload, client.id),
     );
   }
 
@@ -243,7 +234,12 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.gradeAnswer,
       rawPayload,
       client,
-      (context) => gradeTeamAnswer(this.services, context),
+      ({ joinCode, payload }) =>
+        this.gameState.gradeAnswer(
+          joinCode,
+          payload.answerId,
+          payload.pointsAwarded,
+        ),
     );
   }
 
@@ -257,10 +253,19 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.kickTeam,
       rawPayload,
       client,
-      (context) => kickTeamFromSession(this.services, context),
+      ({ joinCode, payload }) =>
+        this.gameState.kickTeam(joinCode, payload.teamId),
     );
   }
 
+  /**
+   * A team's own explicit "log out" — unlike a transport disconnect (which
+   * only marks the team as not-currently-connected, so a phone that sleeps or
+   * loses signal can reconnect and resume), this removes the roster row
+   * outright. Without it, a team that logs out and rejoins under a new name
+   * (the only way to "rename" a team today) leaves its old identity behind as
+   * a stale entry in /control that the admin has to kick by hand.
+   */
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.leaveSession.event)
   @CreateRequestContext()
   async handleLeaveSession(
@@ -271,7 +276,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.leaveSession,
       rawPayload,
       client,
-      (context) => leaveSessionAsTeam(this.services, context),
+      ({ joinCode, payload, client }) =>
+        this.gameState.teamLeft(joinCode, payload.teamId, client.id),
     );
   }
 
@@ -315,7 +321,7 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.awardBonus,
       rawPayload,
       client,
-      (context) => awardTeamBonus(this.services, context),
+      ({ joinCode, payload }) => this.gameState.awardBonus(joinCode, payload),
     );
   }
 
@@ -329,7 +335,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.createShowdownRound,
       rawPayload,
       client,
-      (context) => createShowdownRound(this.services, context),
+      ({ joinCode, payload }) =>
+        this.gameState.createShowdownRound(joinCode, payload),
     );
   }
 
@@ -343,7 +350,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.submitShowdownGuess,
       rawPayload,
       client,
-      (context) => submitShowdownGuess(this.services, context),
+      ({ joinCode, payload, client }) =>
+        this.gameState.submitShowdownGuess(joinCode, payload, client.id),
     );
   }
 
@@ -467,18 +475,6 @@ export class GameGateway
       joinCode,
       await this.gameState.bonusChanged(joinCode),
     );
-  }
-
-  private get services(): EventServices {
-    return {
-      gameState: this.gameState,
-      teamService: this.teamService,
-      answerService: this.answerService,
-      bonusService: this.bonusService,
-      feedbackService: this.feedbackService,
-      showdownService: this.showdownService,
-      server: this.server,
-    };
   }
 
   private dispatch<S extends z.ZodType>(

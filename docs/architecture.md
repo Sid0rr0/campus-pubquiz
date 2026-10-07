@@ -78,8 +78,8 @@ flowchart TD
   end
 
   subgraph socket["game/socket — event plumbing"]
-    dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run handler → deliver"]
-    handlers["handlers/*<br/>submit-answer · grade-answer · admin-action<br/>join · leave · kick · award-bonus<br/>showdown · rate-round · feedback"]
+    dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run the event's one Live session call → deliver"]
+    handlers["handlers/admin-action<br/>runAdminAction (shared with the timers)"]
     deliver["deliverOutcome<br/>replies · broadcast · admin answer lists<br/>team syncs · socket closes"]
     broadcast["broadcastGameState<br/>one view per room"]
     timers["question-lock timer registry"]
