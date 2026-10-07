@@ -5,15 +5,15 @@ import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, mockFetchPublicSessions, searchParamsRef } =
+const { mockUseTeamLink, mockFetchPublicSessions, searchParamsRef } =
   vi.hoisted(() => ({
-    mockUsePlayerGame: vi.fn(),
+    mockUseTeamLink: vi.fn(),
     mockFetchPublicSessions: vi.fn(),
     searchParamsRef: { current: new URLSearchParams() },
   }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -27,26 +27,6 @@ vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
   return { ...actual, fetchPublicSessions: mockFetchPublicSessions };
 });
 
-const LIVE_SESSION = {
-  joinCode: 'ABCDEF',
-  quizId: 1,
-  quizTitle: 'Campus Pub Quiz Night',
-  name: 'Campus Pub Quiz Night',
-  status: 'lobby' as const,
-  teamCount: 0,
-};
-
-/** /play hides the raw game code input and offers only the live-session select — picking a game exercises the same codeInput state a typed value would. */
-async function pickLiveSession() {
-  const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole('combobox', { name: /pick the quiz/i }),
-  );
-  await user.click(
-    await screen.findByRole('option', { name: /campus pub quiz night/i }),
-  );
-}
-
 describe('PlayPage — logout and errors', () => {
   beforeAll(() => {
     // Radix Select needs these pointer-capture APIs stubbed under jsdom.
@@ -59,17 +39,20 @@ describe('PlayPage — logout and errors', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
   });
 
-  it('shows the join error directly on the join form, pre-filled, when a returning team reconnect fails', async () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'STALE1');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ connectionError: 'Invalid join code' }),
+  it('shows the join error directly on the join form, pre-filled, and offers log out, when a returning team reconnect fails', async () => {
+    const handleLogOut = vi.fn();
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        connectionError: 'Invalid join code',
+        nameInput: 'Returning Team',
+        hasStoredIdentity: true,
+        handleLogOut,
+      }),
     );
     renderWithQuery(<PlayPage />);
 
@@ -77,48 +60,33 @@ describe('PlayPage — logout and errors', () => {
     expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue(
       'Returning Team',
     );
-    expect(mockUsePlayerGame).toHaveBeenCalledWith(true, 'STALE1', 0);
 
     await userEvent.click(screen.getByRole('button', { name: /log out/i }));
 
-    // Team name survives logout — the form stays prefilled for playing as
-    // this team again — but the stale join code for this game is cleared.
-    expect(screen.getByRole('textbox', { name: /team name/i })).toHaveValue(
-      'Returning Team',
-    );
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
-      'Returning Team',
-    );
-    expect(window.localStorage.getItem('campus-pubquiz-join-code')).toBeNull();
+    expect(handleLogOut).toHaveBeenCalledTimes(1);
   });
 
-  it('does not offer a "Log out" button when a fresh join fails because the name collides with an existing team', async () => {
+  it('does not offer a "Log out" button when a fresh join fails because the name collides with an existing team', () => {
     const reason =
       'Team name "Taken Name" is already registered — enter its team code to play as this team, or choose a different name';
-    const joinTeam = vi
-      .fn()
-      .mockResolvedValue({ success: false, error: reason });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
-    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        connectionError: reason,
+        nameInput: 'Taken Name',
+        hasStoredIdentity: false,
+      }),
+    );
     renderWithQuery(<PlayPage />);
 
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      'Taken Name',
-    );
-    await pickLiveSession();
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-
-    expect(await screen.findByText(/already registered/i)).toBeInTheDocument();
+    expect(screen.getByText(/already registered/i)).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /log out/i }),
     ).not.toBeInTheDocument();
   });
 
-  it('lets a joined team log out from the game view, clearing storage and returning to the join form', async () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    mockUsePlayerGame.mockReturnValue(
+  it('lets a joined team log out from the game view', async () => {
+    const handleLogOut = vi.fn();
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -134,50 +102,26 @@ describe('PlayPage — logout and errors', () => {
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
+        teamName: 'Returning Team',
+        handleLogOut,
       }),
     );
     renderWithQuery(<PlayPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /change team/i }));
 
-    expect(
-      screen.getByRole('textbox', { name: /team name/i }),
-    ).toBeInTheDocument();
-    // The team's token (this specific game session's auth) is cleared, but
-    // its name is kept so the team can rejoin another game without retyping.
-    expect(window.localStorage.getItem('campus-pubquiz-team-name')).toBe(
-      'Returning Team',
-    );
-    expect(window.localStorage.getItem('campus-pubquiz-team-token')).toBeNull();
+    expect(handleLogOut).toHaveBeenCalledTimes(1);
   });
 
-  it('prefills the team code field after logging out following a fresh join (server-issued code)', async () => {
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
-    mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    const { rerender } = renderWithQuery(<PlayPage />);
-
-    await userEvent.type(
-      screen.getByRole('textbox', { name: /team name/i }),
-      'The Quizzards',
-    );
-    await pickLiveSession();
-    await userEvent.click(screen.getByRole('button', { name: /join/i }));
-
-    mockUsePlayerGame.mockReturnValue(
+  it('shows the team code the server issued in the join form after logging out', () => {
+    mockUseTeamLink.mockReturnValue(
       socketResult({
-        joinTeam,
-        team: {
-          teamId: 'team-1',
-          teamName: 'The Quizzards',
-          teamToken: 'token-1',
-          teamCode: 'QUICK-JADE-FOX',
-        },
+        nameInput: 'The Quizzards',
+        teamCodeInput: 'QUICK-JADE-FOX',
+        hasStoredIdentity: false,
       }),
     );
-    rerender(<PlayPage />);
-
-    await userEvent.click(screen.getByRole('button', { name: /log out/i }));
+    renderWithQuery(<PlayPage />);
 
     expect(screen.getByRole('textbox', { name: /team code/i })).toHaveValue(
       'QUICK-JADE-FOX',

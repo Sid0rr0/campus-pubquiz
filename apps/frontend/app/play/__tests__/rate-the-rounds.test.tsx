@@ -6,13 +6,13 @@ import type { FeedbackField } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -57,7 +57,7 @@ function renderBreak(
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
   const rateRound =
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
-  mockUsePlayerGame.mockReturnValue(
+  mockUseTeamLink.mockReturnValue(
     socketResult({
       snapshot: breakSnapshot(
         'feedback' in overrides ? overrides.feedback : BREAK_CARD,
@@ -81,7 +81,7 @@ describe('PlayPage — rating the rounds in the break', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('shows a row of five stars for each listed round, above the block browser', () => {
@@ -184,7 +184,7 @@ describe('PlayPage — rating the rounds in the break', () => {
     expect(star('Music', 5)).toHaveAttribute('aria-pressed', 'true');
 
     // The phone rejoined: the join payload says the server never got the tap.
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: breakSnapshot(BREAK_CARD),
         team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },

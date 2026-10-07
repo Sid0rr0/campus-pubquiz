@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -23,7 +23,7 @@ describe('PlayPage — answered questions history', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('lists every seen question with the team answer, and the correct answer once revealed', () => {
@@ -47,7 +47,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Mars',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -87,7 +87,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 2',
       answer: 'Neptune',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'ended' }),
@@ -123,7 +123,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Banana',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal' }),
@@ -185,7 +185,7 @@ describe('PlayPage — answered questions history', () => {
       roundTitle: 'Round 1',
       answer: 'Mars',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -313,14 +313,14 @@ describe('PlayPage — answered questions history', () => {
     });
 
     it('shows the correct answer and points only for the questions the walk has reached', () => {
-      mockUsePlayerGame.mockReturnValue(walkResult([q1]));
+      mockUseTeamLink.mockReturnValue(walkResult([q1]));
       const { rerender } = renderWithQuery(<PlayPage />);
 
       expect(screen.getAllByText(/^Correct:/)).toHaveLength(1);
       expect(screen.getByText('3 / 5')).toBeInTheDocument();
       expect(screen.queryByText('5 / 5')).not.toBeInTheDocument();
 
-      mockUsePlayerGame.mockReturnValue(walkResult([q1, q2]));
+      mockUseTeamLink.mockReturnValue(walkResult([q1, q2]));
       rerender(<PlayPage />);
 
       expect(screen.getAllByText(/^Correct:/)).toHaveLength(2);
@@ -329,11 +329,11 @@ describe('PlayPage — answered questions history', () => {
     });
 
     it('stops showing a question’s correct answer once the walk steps back past it', () => {
-      mockUsePlayerGame.mockReturnValue(walkResult([q1, q2]));
+      mockUseTeamLink.mockReturnValue(walkResult([q1, q2]));
       const { rerender } = renderWithQuery(<PlayPage />);
       expect(screen.getByText('5 / 5')).toBeInTheDocument();
 
-      mockUsePlayerGame.mockReturnValue(walkResult([q1]));
+      mockUseTeamLink.mockReturnValue(walkResult([q1]));
       rerender(<PlayPage />);
 
       expect(screen.getAllByText(/^Correct:/)).toHaveLength(1);
@@ -352,7 +352,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -395,7 +395,7 @@ describe('PlayPage — answered questions history', () => {
       matchTargets: ['shield', 'excalibur'],
       answer: 'excalibur|shield',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -432,7 +432,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -479,7 +479,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 2,
       roundTitle: 'Round 1',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open', questionIndex: 1 }),
@@ -521,7 +521,7 @@ describe('PlayPage — answered questions history', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -547,7 +547,7 @@ describe('PlayPage — answered questions history', () => {
 
   it('does not render the history panel when no questions have been opened yet', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'lobby' }),
@@ -594,7 +594,7 @@ describe('PlayPage — answered questions history', () => {
     ): void {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const revealQuestion = { ...closestGuessQuestion, ...revealed };
-      mockUsePlayerGame.mockReturnValue(
+      mockUseTeamLink.mockReturnValue(
         socketResult({
           snapshot: {
             progress: progress({ status: 'reveal', revealIndex: 0 }),

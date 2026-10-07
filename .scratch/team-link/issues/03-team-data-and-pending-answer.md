@@ -31,9 +31,9 @@ Parent spec: `.scratch/team-link/spec.md`
 
 **Blocked by:** 01 (Joins go through the Team link)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Module event-sequence tests, written first:
+- [x] Module event-sequence tests, written first:
   - each of the team-data rules above;
   - answer submitted, connection drops, reconnects, join accepted → the answer is resent exactly once;
   - supersede;
@@ -43,8 +43,8 @@ Parent spec: `.scratch/team-link/spec.md`
   - a stale acknowledgement doesn't clear a newer pending answer;
   - submitting while unlinked → toast, no send;
   - a new identity clears team data.
-- [ ] Adapter tests on the fake socket: socket events reach the module; an answer send emits and arms the timer; the timer firing forces a reconnect; a bonus award toasts.
-- [ ] The player hook is gone; no page or test imports it. The rules page renders from its snapshot-only connection.
-- [ ] All `/play`, join-panel, home-page and rules page tests pass against the adapter mock.
-- [ ] `docs/architecture.md`'s frontend diagram is updated.
-- [ ] `pnpm --filter frontend test`, `pnpm lint`, `pnpm typecheck` and `pnpm build` pass.
+- [x] Adapter tests on the fake socket: socket events reach the module; an answer send emits and arms the timer; the timer firing forces a reconnect; a bonus award toasts.
+- [x] The player hook is gone; no page or test imports it. The rules page renders from its snapshot-only connection.
+- [x] All `/play`, join-panel, home-page and rules page tests pass against the adapter mock.
+- [x] `docs/architecture.md`'s frontend diagram is updated.
+- [x] `pnpm --filter frontend test`, `pnpm lint`, `pnpm typecheck` and `pnpm build` pass.

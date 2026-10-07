@@ -23,7 +23,7 @@ Keep the structure and the 8 sections unless the code no longer supports one:
 5. **Sequence diagram, Advance**: the quiz master presses Advance (or a lock timer fires), through `MoveCommitter` to the broadcast.
 6. **Status machine**: `stateDiagram-v2` of the game statuses, grouped as answering / break / revealing, with labelled edges.
 7. **Data model**: `erDiagram` of every entity in `apps/backend/src/db/entities/`.
-8. **Frontend modules**: routes → hooks (`useDisplayGame`, `useAdminSession`/`useAdminGame`, `useTeamJoin`/`usePlayerGame`) → `useGameConnection` (socket) and `lib/*-api.ts` (REST).
+8. **Frontend modules**: routes → hooks (`useDisplayGame`, `useAdminSession`/`useAdminGame`, `useTeamLink`, which runs the `team-link.ts` module) → `useGameConnection` (socket) and `lib/*-api.ts` (REST).
 
 ## Rules
 

@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -23,12 +23,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('shows a free-text answer form once the team has joined and a question is open', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -61,7 +61,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     'shows the right input for an audio question %s',
     (_label, options, expectedRole) => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-      mockUsePlayerGame.mockReturnValue(
+      mockUseTeamLink.mockReturnValue(
         socketResult({
           snapshot: {
             progress: progress({ status: 'question_open' }),
@@ -101,7 +101,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('submits the typed free-text answer with the question and team id', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -134,7 +134,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows multiple-choice options and submits the chosen option on Submit click', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -167,7 +167,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('shows the previously submitted free-text answer below the question prompt', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -197,7 +197,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('does not show a submitted-answer note before the team has answered', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -222,7 +222,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('indicates which option the team chose on a multiple-choice question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -256,7 +256,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('shows the multiple-choice Submit button as green "Submitted" when it matches the recorded answer, and back to magenta "Submit" when a different option is chosen', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -291,7 +291,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('shows the free-text Submit button as green "Submitted" when it matches the recorded answer, and back to magenta "Submit" when the text changes', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -329,7 +329,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('submits the IDK sentinel when the free-text "I don\'t know" button is pressed', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -360,7 +360,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('clears the answer when the IDK button is pressed again while already chosen', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -391,7 +391,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('shows the IDK button as pressed once submitted, on both free-text and multiple-choice', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),
@@ -441,7 +441,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     it('submits immediately on tap, with no Submit button and no "I don\'t know" button', async () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
-      mockUsePlayerGame.mockReturnValue(
+      mockUseTeamLink.mockReturnValue(
         socketResult({
           snapshot: kahootSnapshot(),
           team: {
@@ -469,7 +469,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     it('locks every option after answering, so a second tap does not resubmit', async () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
-      mockUsePlayerGame.mockReturnValue(
+      mockUseTeamLink.mockReturnValue(
         socketResult({
           snapshot: kahootSnapshot(),
           team: {
@@ -494,7 +494,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
     it('highlights the tapped option as chosen', async () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-      mockUsePlayerGame.mockReturnValue(
+      mockUseTeamLink.mockReturnValue(
         socketResult({
           snapshot: kahootSnapshot(),
           team: {
@@ -521,7 +521,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     it('leaves non-Kahoot multiple-choice behavior untouched (Submit button, IDK button, staged pick)', async () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
-      mockUsePlayerGame.mockReturnValue(
+      mockUseTeamLink.mockReturnValue(
         socketResult({
           snapshot: kahootSnapshot({ isCurrentRoundKahoot: false }),
           team: {
@@ -548,7 +548,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
   it('does not show an answer form before the team identity has been confirmed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'question_open' }),

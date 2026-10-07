@@ -69,6 +69,11 @@ _Avoid_: bonus (on its own), extra points
 **Bonus category**:
 What a bonus award was given for: shot, selfie, or custom. A custom award carries a reason the quiz master writes.
 
+## Team link
+
+**Team link**:
+A phone's link to its team in a live session: who the team is, whether the server has this connection registered as the team's, and the team's own answers, grades, bonus awards and ratings. It's made by a join, remade after every reconnect and after a session restart, and ended by a kick, the session closing or logging out.
+
 ## Feedback
 
 **Feedback**:

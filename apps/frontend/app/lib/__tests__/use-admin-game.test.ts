@@ -2,10 +2,8 @@ import { renderHook, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SOCKET_EVENTS, type AckResult } from '@campus-pubquiz/types';
 import { useAdminGame } from '@/app/lib/use-admin-game';
-import {
-  ACK_TIMEOUT_MS,
-  NOT_CONNECTED_MESSAGE,
-} from '@/app/lib/use-game-connection';
+import { ACK_TIMEOUT_MS } from '@/app/lib/use-game-connection';
+import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
 import {
   createFakeSocket,
   type FakeSocket,

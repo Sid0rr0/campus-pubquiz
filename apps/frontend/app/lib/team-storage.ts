@@ -1,4 +1,4 @@
-import type { JoinTeamOptions } from '@/app/lib/use-player-game';
+import type { StoredIdentity } from '@/app/lib/team-link';
 
 export const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
 export const TEAM_TOKEN_STORAGE_KEY = 'campus-pubquiz-team-token';
@@ -9,11 +9,12 @@ export function normalizeJoinCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
-export function storedJoinOptions(): JoinTeamOptions {
+export function readStoredIdentity(): StoredIdentity {
   return {
+    teamName: window.localStorage.getItem(TEAM_NAME_STORAGE_KEY),
     teamToken: window.localStorage.getItem(TEAM_TOKEN_STORAGE_KEY) ?? undefined,
     teamCode: window.localStorage.getItem(TEAM_CODE_STORAGE_KEY) ?? undefined,
-    joinCode: window.localStorage.getItem(JOIN_CODE_STORAGE_KEY) ?? undefined,
+    gameCode: window.localStorage.getItem(JOIN_CODE_STORAGE_KEY) ?? undefined,
   };
 }
 

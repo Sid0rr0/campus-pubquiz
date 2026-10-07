@@ -25,7 +25,7 @@ const PlayerMenuStateContext = createContext<PlayerMenuState | null>(null);
 const PublishPlayerMenuContext = createContext<PublishPlayerMenu>(() => {});
 
 /**
- * Bridges the team identity/log-out action owned by /play's useTeamJoin (a
+ * Bridges the team identity/log-out action owned by /play's useTeamLink (a
  * route-local hook) up to the shared SiteHeader, which is a layout-level
  * sibling with no direct access to it — mirrors AuthProvider's role for the
  * admin/moderator side of the same header.

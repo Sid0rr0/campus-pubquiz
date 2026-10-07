@@ -6,13 +6,13 @@ import type { FeedbackField } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -39,7 +39,7 @@ function renderEnded(
   window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
   const rateRound =
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
-  mockUsePlayerGame.mockReturnValue(
+  mockUseTeamLink.mockReturnValue(
     socketResult({
       snapshot: {
         progress: progress({ status: 'ended' }),
@@ -66,7 +66,7 @@ describe('PlayPage — the final feedback form', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('shows "Quiz complete!" followed by a star row for every listed round', () => {

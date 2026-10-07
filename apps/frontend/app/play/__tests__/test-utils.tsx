@@ -56,18 +56,22 @@ export function playersView<T extends PlayersFixture>(
   };
 }
 
+const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
+
+/**
+ * The result of the Team link adapter (`useTeamLink`) for a page test. A phone
+ * counts as joined when the test saved a team name in localStorage (the
+ * `joinAsTeam` helpers) — the stand-in for the identity the real adapter
+ * restores — so those fields are read when the page asks for them.
+ */
 export function socketResult(overrides: Record<string, unknown> = {}) {
   const { snapshot } = overrides;
-  return {
+  const result = {
     snapshot: null,
     connectionError: null,
-    sendAction: vi.fn(),
     team: null,
-    joinTeam: vi.fn().mockResolvedValue({ success: true }),
     submitAnswer: vi.fn(),
-    liveAnswers: null,
-    gradeAnswer: vi.fn(),
-    leaveSession: vi.fn(),
+    submitShowdownGuess: vi.fn(),
     myAnswers: {},
     myAnswerGrades: {},
     myBonusAwards: [],
@@ -77,14 +81,37 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     roundRatingsEpoch: 0,
     rateRound: vi.fn().mockResolvedValue({ success: true }),
     seenQuestions: {},
-    // A fixed "already connected" marker — useTeamJoin's join effect only
-    // sends once this is non-null (it mirrors usePlayerGame's real
-    // post-connect timestamp), so tests that don't care about reconnect
-    // timing need a stand-in value here to still see an immediate joinTeam
-    // call. Tests exercising an actual second connection (retry, reconnect)
-    // should override this with a distinct value of their own.
-    reconnectedAt: 1,
+    nameInput: '',
+    setNameInput: vi.fn(),
+    codeInput: '',
+    setCodeInput: vi.fn(),
+    teamCodeInput: '',
+    setTeamCodeInput: vi.fn(),
+    handleJoin: vi.fn(),
+    handleLogOut: vi.fn(),
     ...overrides,
     ...(snapshot ? { snapshot: playersView(snapshot as PlayersFixture) } : {}),
+  };
+  const storedName = () => window.localStorage.getItem(TEAM_NAME_STORAGE_KEY);
+  return Object.defineProperties(result, {
+    teamName: lazy(overrides, 'teamName', storedName),
+    hasStoredIdentity: lazy(overrides, 'hasStoredIdentity', () =>
+      Boolean(storedName()),
+    ),
+    activeJoinCode: lazy(overrides, 'activeJoinCode', () =>
+      storedName() ? 'ABCDEF' : null,
+    ),
+  });
+}
+
+/** A property an override sets wins; otherwise it is read on access. */
+function lazy<T>(
+  overrides: Record<string, unknown>,
+  key: string,
+  read: () => T,
+): PropertyDescriptor {
+  return {
+    enumerable: true,
+    get: () => (key in overrides ? overrides[key] : read()),
   };
 }

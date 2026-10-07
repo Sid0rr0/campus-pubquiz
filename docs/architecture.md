@@ -319,8 +319,8 @@ flowchart TD
   useDisplay["useDisplayGame"]
   useAdminSession["useAdminSession"]
   useAdmin["useAdminGame"]
-  useTeamJoin["useTeamJoin"]
-  usePlayer["usePlayerGame"]
+  teamLink["Team link module<br/>plain TS: events + intents in, state + commands out"]
+  useTeamLink["useTeamLink<br/>adapter: socket, timer, storage, router, toasts"]
   useAuth["useAuth"]
   conn["useGameConnection<br/>socket.io-client · STATE_SYNC on connect"]
   api["lib/*-api.ts<br/>fetch + TanStack Query"]
@@ -331,8 +331,10 @@ flowchart TD
   display --> useDisplay --> conn
   control & remote --> useAdminSession --> useAdmin --> conn
   useAdminSession --> useAuth
-  play --> useTeamJoin --> usePlayer --> conn
-  useTeamJoin --> storage
+  play --> useTeamLink --> conn
+  useTeamLink --> teamLink
+  useTeamLink --> storage
+  rules["/rules"] --> conn
   pages --> api
   control --> api
   useAuth --> api

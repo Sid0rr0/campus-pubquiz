@@ -1,6 +1,6 @@
 # Spec: A Team link module for the phone's join and rejoin lifecycle
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none. It doesn't need `socket-protocol`, but if that lands first the hook adapter uses its typed socket and emit helper.
 

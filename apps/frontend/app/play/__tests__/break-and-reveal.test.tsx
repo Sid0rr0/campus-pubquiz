@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { progress, socketResult } from './test-utils';
 
-const { mockUsePlayerGame, searchParamsRef } = vi.hoisted(() => ({
-  mockUsePlayerGame: vi.fn(),
+const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
+  mockUseTeamLink: vi.fn(),
   searchParamsRef: { current: new URLSearchParams() },
 }));
 
-vi.mock('@/app/lib/use-player-game', () => ({
-  usePlayerGame: mockUsePlayerGame,
+vi.mock('@/app/lib/use-team-link', () => ({
+  useTeamLink: mockUseTeamLink,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -23,12 +23,12 @@ describe('PlayPage — break and reveal', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUsePlayerGame.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(socketResult());
   });
 
   it('tells the team answering is locked during the grading break', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -77,7 +77,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 2,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break' }),
@@ -134,7 +134,7 @@ describe('PlayPage — break and reveal', () => {
       questionNumberInRound: 1,
       roundTitle: 'Geography',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           // progress.roundIndex stays pinned to the block's last round
@@ -173,7 +173,7 @@ describe('PlayPage — break and reveal', () => {
       questionNumberInRound: 1,
       roundTitle: 'General Knowledge',
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'break_round_intro', revealIndex: 0 }),
@@ -214,7 +214,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 2,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal' }),
@@ -249,7 +249,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -282,7 +282,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -321,7 +321,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -362,7 +362,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -404,7 +404,7 @@ describe('PlayPage — break and reveal', () => {
       questionNumberInRound: 1,
       options: ['Imola', 'Spa', 'Silverstone'],
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -437,7 +437,7 @@ describe('PlayPage — break and reveal', () => {
       questionNumberInRound: 1,
       options: ['Imola', 'Spa', 'Silverstone'],
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -477,7 +477,7 @@ describe('PlayPage — break and reveal', () => {
       options: ['arthur', 'captain america'],
       matchTargets: ['shield', 'excalibur'],
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -514,7 +514,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 1,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -562,7 +562,7 @@ describe('PlayPage — break and reveal', () => {
       roundNumber: 1,
       questionNumberInRound: 3,
     };
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 0 }),
@@ -590,7 +590,7 @@ describe('PlayPage — break and reveal', () => {
 
     // The admin advances the reveal on /display to question 2 — /play snaps
     // back to follow it, discarding the team's manual browse to question 3.
-    mockUsePlayerGame.mockReturnValue(
+    mockUseTeamLink.mockReturnValue(
       socketResult({
         snapshot: {
           progress: progress({ status: 'reveal', revealIndex: 1 }),
