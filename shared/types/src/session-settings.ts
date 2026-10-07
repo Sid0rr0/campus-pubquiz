@@ -1,5 +1,10 @@
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 
+/** Discrete steps the admin can pick between for /display's text size — 1 is the original, unscaled size. */
+export const DISPLAY_TEXT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
+export const DEFAULT_DISPLAY_TEXT_SCALE: (typeof DISPLAY_TEXT_SCALE_STEPS)[number] = 1;
+
 /** Per-session configuration, set at creation and editable in the lobby before START_QUIZ. */
 export interface SessionSettings {
   /** Replaces the hardcoded 60s post-block auto-lock grace period. */
