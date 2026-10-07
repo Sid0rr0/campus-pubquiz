@@ -14,14 +14,14 @@ Parent spec: `.scratch/team-link/spec.md`
 
 **Blocked by:** 01 (Joins go through the Team link)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Module event-sequence tests, written first:
+- [x] Module event-sequence tests, written first:
   - kicked (live, while a join is in flight, and as the starting state) → clear all storage, empty form, kick notice, go to the join screen, no further join;
   - session closed → clear session storage, keep name and team code, go to the join screen;
   - logout with a team → leave command before the storage clear;
   - logout with no confirmed team → no leave;
   - after each, the next submit is let through.
-- [ ] Adapter tests on the fake socket: a kick clears `localStorage` and navigates; logout emits a leave with the team's id.
-- [ ] The `/play` kick, session-close and logout page tests pass, with lifecycle-ordering assertions moved to module tests and the rendering ones kept.
-- [ ] `pnpm --filter frontend test`, `pnpm lint` and `pnpm typecheck` pass.
+- [x] Adapter tests on the fake socket: a kick clears `localStorage` and navigates; logout emits a leave with the team's id.
+- [x] The `/play` kick, session-close and logout page tests pass, with lifecycle-ordering assertions moved to module tests and the rendering ones kept.
+- [x] `pnpm --filter frontend test`, `pnpm lint` and `pnpm typecheck` pass.

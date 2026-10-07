@@ -356,48 +356,199 @@ describe('team link: entry precedence', () => {
   });
 });
 
-describe('team link: leaving a session', () => {
-  it('releases the guard, clears the error and forgets the token', () => {
+const KICK_NOTICE = 'You were removed from this team by the quiz master';
+
+/** A phone linked to team 1 on connection 1. */
+function linkedPhone() {
+  return run(
+    returningPhone(),
+    connected(1),
+    { type: 'joinAccepted', payload: ACCEPTED },
+    status('lobby'),
+  );
+}
+
+function expectNextSubmitLetThrough(state: TeamLinkState) {
+  const { commands } = run(
+    state,
+    { type: 'nameTyped', value: 'Another Team' },
+    { type: 'gameCodeTyped', value: 'zzzzzz' },
+    { type: 'joinSubmitted' },
+  );
+  expect(commands).toContainEqual({
+    type: 'openConnection',
+    gameCode: 'ZZZZZZ',
+    attempt: expect.any(Number),
+  });
+}
+
+describe('team link: being kicked', () => {
+  it('clears all storage, empties the form, shows the notice and goes to the join screen', () => {
+    const { state, commands } = run(linkedPhone().state, { type: 'kicked' });
+
+    expect(commands).toEqual([
+      { type: 'clearIdentity', scope: 'all' },
+      { type: 'goToJoinScreen' },
+    ]);
+    expect(state).toMatchObject({
+      teamName: null,
+      nameInput: '',
+      teamCodeInput: '',
+      codeInput: '',
+      activeJoinCode: null,
+      hasStoredIdentity: false,
+      kickNotice: KICK_NOTICE,
+    });
+  });
+
+  it('sends no further join when kicked while a join is in flight', () => {
+    const { state, commands } = run(
+      returningPhone(),
+      connected(1),
+      { type: 'kicked' },
+      connected(2),
+      { type: 'joinRefused', connectionId: 1, reason: 'late' },
+    );
+
+    expect(joinsIn(commands)).toHaveLength(1);
+    expect(state.isJoinInFlight).toBe(false);
+    expect(state.joinError).toBeNull();
+    expect(commands).toContainEqual({ type: 'clearIdentity', scope: 'all' });
+  });
+
+  it('holds when the page mounts already kicked, even if storage is read afterwards', () => {
+    const { state, commands } = run(
+      initialTeamLink({ url: {} }),
+      { type: 'kicked' },
+      { type: 'storageRead', stored: STORED },
+      connected(1),
+    );
+
+    expect(joinsIn(commands)).toEqual([]);
+    expect(state).toMatchObject({
+      teamName: null,
+      nameInput: '',
+      kickNotice: KICK_NOTICE,
+    });
+  });
+
+  it('lets the next submit through and drops the notice', () => {
+    const kicked = run(linkedPhone().state, { type: 'kicked' }).state;
+
+    expectNextSubmitLetThrough(kicked);
+    const submitted = run(
+      kicked,
+      { type: 'nameTyped', value: 'Again' },
+      { type: 'gameCodeTyped', value: 'abcdef' },
+      { type: 'joinSubmitted' },
+    ).state;
+    expect(submitted.kickNotice).toBeNull();
+  });
+});
+
+describe('team link: the session closing', () => {
+  it('clears the session part of storage, keeps name and team code, and goes to the join screen', () => {
     const { state, commands } = run(
       returningPhone(),
       connected(1),
       { type: 'joinRefused', connectionId: 1, reason: 'nope' },
-      { type: 'identityReset', clearAll: false, gameCode: '' },
+      { type: 'sessionClosed' },
     );
 
+    expect(commands.slice(-2)).toEqual([
+      { type: 'clearIdentity', scope: 'session' },
+      { type: 'goToJoinScreen' },
+    ]);
     expect(state).toMatchObject({
       teamName: null,
       activeJoinCode: null,
+      codeInput: '',
       joinError: null,
       isJoinInFlight: false,
       hasStoredIdentity: false,
       nameInput: 'The Quizzards',
       teamCodeInput: 'QUICK-JADE-FOX',
-    });
-    expect(commands).toContainEqual({
-      type: 'clearIdentity',
-      scope: 'session',
+      kickNotice: null,
     });
   });
 
-  it('empties the form when everything is cleared', () => {
-    const { state, commands } = run(returningPhone(), {
-      type: 'identityReset',
-      clearAll: true,
-      gameCode: '',
-    });
-
-    expect(state).toMatchObject({ nameInput: '', teamCodeInput: '' });
-    expect(commands).toEqual([{ type: 'clearIdentity', scope: 'all' }]);
-  });
-
-  it('sends no join on a later connection once the identity is gone', () => {
+  it('sends no join on a later connection', () => {
     const { commands } = run(
       returningPhone(),
-      { type: 'identityReset', clearAll: true, gameCode: '' },
+      { type: 'sessionClosed' },
       connected(1),
     );
 
     expect(joinsIn(commands)).toEqual([]);
+  });
+
+  it('lets the next submit through', () => {
+    const closed = run(returningPhone(), connected(1), {
+      type: 'sessionClosed',
+    }).state;
+
+    expectNextSubmitLetThrough(closed);
+  });
+});
+
+describe('team link: logging out', () => {
+  it('sends the leave before clearing storage when a team is confirmed', () => {
+    const { state, commands } = run(linkedPhone().state, {
+      type: 'logoutRequested',
+    });
+
+    expect(commands).toEqual([
+      { type: 'sendLeave', teamId: ACCEPTED.teamId },
+      { type: 'clearIdentity', scope: 'session' },
+    ]);
+    expect(state).toMatchObject({
+      teamName: null,
+      nameInput: 'The Quizzards',
+      teamCodeInput: 'ASSIGNED-CODE',
+      isJoinInFlight: false,
+      joinError: null,
+      hasStoredIdentity: false,
+    });
+  });
+
+  it('resets the game code to the one in the URL', () => {
+    const { state } = run(
+      returningPhone({ url: { gameCode: 'URLGAM' } }),
+      connected(1),
+      { type: 'joinAccepted', payload: ACCEPTED },
+      { type: 'logoutRequested' },
+    );
+
+    expect(state).toMatchObject({
+      codeInput: 'URLGAM',
+      activeJoinCode: 'URLGAM',
+    });
+  });
+
+  it('sends no leave when no team is confirmed', () => {
+    const { commands } = run(returningPhone(), connected(1), {
+      type: 'logoutRequested',
+    });
+
+    expect(commands.map((command) => command.type)).toEqual([
+      'sendJoin',
+      'clearIdentity',
+    ]);
+  });
+
+  it('sends only one leave when logging out twice', () => {
+    const { commands } = run(
+      linkedPhone().state,
+      { type: 'logoutRequested' },
+      { type: 'logoutRequested' },
+    );
+
+    expect(commands.filter((c) => c.type === 'sendLeave')).toHaveLength(1);
+  });
+
+  it('lets the next submit through', () => {
+    const { state } = run(linkedPhone().state, { type: 'logoutRequested' });
+
+    expectNextSubmitLetThrough(state);
   });
 });

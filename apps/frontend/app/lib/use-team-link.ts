@@ -27,8 +27,6 @@ import {
   readStoredIdentity,
 } from '@/app/lib/team-storage';
 
-const KICKED_MESSAGE = 'You were removed from this team by the quiz master';
-
 const STORAGE_KEY_BY_IDENTITY_FIELD = {
   teamName: TEAM_NAME_STORAGE_KEY,
   gameCode: JOIN_CODE_STORAGE_KEY,
@@ -90,6 +88,10 @@ export function useTeamLink(
   // sees the double-tap guard.
   const linkRef = useRef(link);
   const sendJoinRef = useRef<UsePlayerGameResult['sendJoin'] | null>(null);
+  const leaveSessionRef = useRef<UsePlayerGameResult['leaveSession'] | null>(
+    null,
+  );
+  const goToJoinScreenRef = useRef<() => void>(() => undefined);
   // A join's refusal arrives later and re-enters the module.
   const dispatchRef = useRef<(input: TeamLinkInput) => void>(() => undefined);
 
@@ -115,6 +117,13 @@ export function useTeamLink(
           break;
         case 'clearIdentity':
           clearStoredSession(command.scope === 'all');
+          break;
+        case 'sendLeave':
+          // Best-effort: the team is leaving whether or not the server hears it.
+          void leaveSessionRef.current?.(command.teamId);
+          break;
+        case 'goToJoinScreen':
+          goToJoinScreenRef.current();
           break;
         case 'openConnection':
           // The player hook below opens it from `activeJoinCode` and `attempt`.
@@ -145,8 +154,10 @@ export function useTeamLink(
 
   useEffect(() => {
     sendJoinRef.current = sendJoin;
+    leaveSessionRef.current = leaveSession;
+    goToJoinScreenRef.current = () => router.push('/play');
     dispatchRef.current = dispatch;
-  }, [sendJoin, dispatch]);
+  }, [sendJoin, leaveSession, router, dispatch]);
 
   useEffect(() => {
     // localStorage is unavailable during SSR, so the stored identity can only
@@ -188,22 +199,16 @@ export function useTeamLink(
   }, [team, dispatch]);
 
   useEffect(() => {
-    // The admin closed this session server-side — its token and game code are
-    // stale, so the team goes back to a fresh join screen with its name and
-    // team code kept.
-    if (!sessionClosed) return;
-    dispatch({ type: 'identityReset', clearAll: false, gameCode: '' });
-    router.push('/play');
-  }, [sessionClosed, dispatch, router]);
+    // The admin closed this session server-side. Runs in an effect so it also
+    // applies when a component mounts already closed.
+    if (sessionClosed) dispatch({ type: 'sessionClosed' });
+  }, [sessionClosed, dispatch]);
 
   useEffect(() => {
-    // The admin kicked this team: everything stored goes, so a refresh can't
-    // silently rejoin. Runs in an effect so it also applies when a component
-    // mounts already kicked.
-    if (!kicked) return;
-    dispatch({ type: 'identityReset', clearAll: true, gameCode: '' });
-    router.push('/play');
-  }, [kicked, dispatch, router]);
+    // The admin kicked this team. Runs in an effect so it also applies when a
+    // component mounts already kicked.
+    if (kicked) dispatch({ type: 'kicked' });
+  }, [kicked, dispatch]);
 
   const setNameInput = useCallback(
     (value: string) => dispatch({ type: 'nameTyped', value }),
@@ -225,12 +230,10 @@ export function useTeamLink(
 
   // Stable across renders since SiteHeader's PlayerMenuProvider bridge
   // depends on this reference.
-  const handleLogOut = useCallback(() => {
-    // Tell the server this team is intentionally leaving while the socket is
-    // still connected, so it doesn't linger on /control. Best-effort.
-    if (team) void leaveSession(team.teamId);
-    dispatch({ type: 'identityReset', clearAll: false, gameCode: codeFromUrl });
-  }, [codeFromUrl, team, leaveSession, dispatch]);
+  const handleLogOut = useCallback(
+    () => dispatch({ type: 'logoutRequested' }),
+    [dispatch],
+  );
 
   return {
     ...player,
@@ -239,8 +242,7 @@ export function useTeamLink(
     kicked,
     sessionClosed,
     leaveSession,
-    connectionError:
-      link.joinError ?? (kicked ? KICKED_MESSAGE : playerConnectionError),
+    connectionError: link.joinError ?? link.kickNotice ?? playerConnectionError,
     teamName: link.teamName,
     nameInput: link.nameInput,
     setNameInput,
