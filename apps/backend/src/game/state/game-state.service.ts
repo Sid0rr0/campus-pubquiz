@@ -433,17 +433,20 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     const gameSessionId = this.getGameSessionId(joinCode);
     try {
-      const team = await this.teamService.join(
-        gameSessionId,
-        request.teamName,
-        {
-          teamToken: request.teamToken,
-          teamCode: request.teamCode,
-          joinCode: request.joinCode,
-        },
-      );
-
+      let resolved: Awaited<ReturnType<TeamService['join']>> | undefined;
       const joined = await this.writeSession(joinCode, async (session) => {
+        // Resolved inside the write, so a leave or kick for the same team
+        // lands either wholly before or wholly after this join.
+        const team = await this.teamService.join(
+          gameSessionId,
+          request.teamName,
+          {
+            teamToken: request.teamToken,
+            teamCode: request.teamCode,
+            joinCode: request.joinCode,
+          },
+        );
+        resolved = team;
         const heldBy = session.connectedTeamSockets[team.id];
         const takenOver =
           heldBy && heldBy !== socketId && isSocketLive(heldBy) ? heldBy : null;
@@ -469,6 +472,8 @@ export class GameStateService implements OnModuleInit {
           },
         };
       });
+      if (!resolved) throw new Error('Unable to join');
+      const team = resolved;
 
       return {
         ...joined,
@@ -847,17 +852,19 @@ export class GameStateService implements OnModuleInit {
    * the team's seat; otherwise removes the team from the roster and refreshes
    * the roster and leaderboard in every room.
    */
-  async teamLeft(
+  teamLeft(
     joinCode: string,
     teamId: number,
     socketId: string,
   ): Promise<SessionOutcome> {
-    if (
-      this.sessionStore.get(joinCode).connectedTeamSockets[teamId] !== socketId
-    ) {
-      throw new SessionRefusal('Can only leave the session as your own team');
-    }
-    return await this.teamRemoved(joinCode, teamId, 'left');
+    return this.writeSession(joinCode, async (session) => {
+      // Checked against the session as the previous write left it, so a
+      // leave from a socket that just lost the seat to a rejoin is refused.
+      if (session.connectedTeamSockets[teamId] !== socketId) {
+        throw new SessionRefusal('Can only leave the session as your own team');
+      }
+      return await this.teamRemovedChange(joinCode, session, teamId, 'left');
+    });
   }
 
   /**
@@ -866,47 +873,48 @@ export class GameStateService implements OnModuleInit {
    * any, and closes that socket after the notice.
    */
   kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
-    return this.teamRemoved(joinCode, teamId, 'kicked');
+    return this.writeSession(joinCode, (session) =>
+      this.teamRemovedChange(joinCode, session, teamId, 'kicked'),
+    );
   }
 
   /**
-   * Removes the team from the roster, then a session write that drops its
-   * connection and swaps in the roster after its removal (read inside the
-   * write), so the next snapshot never has one without the other. A kick also
-   * carries TEAM_KICKED for the socket the team held when the write ran, if it
-   * still has one, then closes that socket.
+   * The change a team's removal makes, run inside the caller's own session
+   * write: removes the team from the roster, then drops its connection and
+   * swaps in the roster after its removal, so the next snapshot never has one
+   * without the other. A kick also carries TEAM_KICKED for the socket the team
+   * held when the write ran, if it still has one, then closes that socket.
    */
-  private async teamRemoved(
+  private async teamRemovedChange(
     joinCode: string,
+    session: SessionState,
     teamId: number,
     reason: 'kicked' | 'left',
-  ): Promise<SessionOutcome> {
+  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
     const gameSessionId = this.getGameSessionId(joinCode);
     await this.teamService.removeFromRoster(gameSessionId, teamId);
-    return this.writeSession(joinCode, async (session) => {
-      const socketId = session.connectedTeamSockets[teamId];
-      const notices =
-        reason === 'kicked' && socketId
-          ? [
-              {
-                socketId,
-                event: SOCKET_EVENTS.TEAM_KICKED,
-                payload: undefined,
-              },
-            ]
-          : [];
-      return {
-        session: withTeams(
-          withoutTeamConnection(session, teamId),
-          await this.teamService.listForSession(gameSessionId),
-        ),
-        outcome: {
-          ...BROADCAST_STATE_OUTCOME,
-          notices,
-          socketsToClose: notices.map((notice) => notice.socketId),
-        },
-      };
-    });
+    const socketId = session.connectedTeamSockets[teamId];
+    const notices =
+      reason === 'kicked' && socketId
+        ? [
+            {
+              socketId,
+              event: SOCKET_EVENTS.TEAM_KICKED,
+              payload: undefined,
+            },
+          ]
+        : [];
+    return {
+      session: withTeams(
+        withoutTeamConnection(session, teamId),
+        await this.teamService.listForSession(gameSessionId),
+      ),
+      outcome: {
+        ...BROADCAST_STATE_OUTCOME,
+        notices,
+        socketsToClose: notices.map((notice) => notice.socketId),
+      },
+    };
   }
 
   /**
