@@ -9,9 +9,9 @@ Parent spec: `.scratch/grading-policy/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The disconnected-team test asserts: no team sync is sent to the disconnected team, the connected teams each get one with their rescored points, and the leaderboard shows every team's rescored total.
-- [ ] The two-question test asserts: an admin answer list for each corrected question, exactly one team sync per answering team, and an ungraded set that matches a fresh read of the database.
-- [ ] Both tests go in whichever of the quiz edited and live edit regrade specs already sets up the matching quiz, and reuse their helpers.
-- [ ] Both pass against today's code, without any production change.
+- [x] The disconnected-team test asserts: no team sync is sent to the disconnected team, the connected teams each get one with their rescored points, and the leaderboard shows every team's rescored total.
+- [x] The two-question test asserts: an admin answer list for each corrected question, exactly one team sync per answering team, and an ungraded set that matches a fresh read of the database.
+- [x] Both tests go in whichever of the quiz edited and live edit regrade specs already sets up the matching quiz, and reuse their helpers.
+- [x] Both pass against today's code, without any production change.
