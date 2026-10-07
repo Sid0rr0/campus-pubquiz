@@ -4,6 +4,8 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| question-answer-kinds       | [One answer kind per question, defined once for every surface](question-answer-kinds/spec.md)                                                                       | 4       |
+| team-link                   | [A Team link module for the phone's join and rejoin lifecycle](team-link/spec.md)                                                                                   | 3       |
 | socket-protocol             | [A typed socket protocol module, and socket-events split by concept](socket-protocol/spec.md)                                                                       | 4       |
 | team-event-gates            | [Team events check whether they're allowed inside their session write](team-event-gates/spec.md)                                                                    | 5       |
 | bonus-award-toast           | [Toast when a bonus award is given](bonus-award-toast/spec.md)                                                                                                      | 3       |
