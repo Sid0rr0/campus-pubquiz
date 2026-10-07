@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -27,20 +27,11 @@ describe('PlayPage — leaderboard overlay', () => {
 
   it('hides the block question picker during break when the leaderboard overlay is toggled on', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'break', isLeaderboardVisible: true }),
-          currentQuestion: null,
-          blockQuestions: [q1],
+        session: {
+          rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
+          progress: { status: 'break', isLeaderboardVisible: true },
         },
         team: {
           teamId: 'team-1',
@@ -59,10 +50,7 @@ describe('PlayPage — leaderboard overlay', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ isLeaderboardVisible: true }),
-          currentQuestion: null,
-        },
+        session: { progress: { isLeaderboardVisible: true } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -74,17 +62,9 @@ describe('PlayPage — leaderboard overlay', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({
-            status: 'question_open',
-            isLeaderboardVisible: true,
-          }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
+          progress: { status: 'question_open', isLeaderboardVisible: true },
         },
         team: {
           teamId: 'team-1',
@@ -106,29 +86,14 @@ describe('PlayPage — leaderboard overlay', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({
-            status: 'question_open',
-            isLeaderboardVisible: true,
-          }),
-          isCurrentRoundKahoot: true,
-          currentQuestion: {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name a vegetable',
-            points: 1,
-          },
-          blockQuestions: [
+        session: {
+          rounds: [
             {
-              id: 'r1q2',
-              type: 'free_text',
-              prompt: 'Name a vegetable',
-              points: 1,
-              roundNumber: 1,
-              questionNumberInRound: 2,
-              roundTitle: 'Round 1',
+              kahootMode: true,
+              questions: [{ prompt: 'Name a vegetable' }],
             },
           ],
+          progress: { status: 'question_open', isLeaderboardVisible: true },
         },
         team: {
           teamId: 'team-1',
@@ -150,14 +115,9 @@ describe('PlayPage — leaderboard overlay', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'locking', isLeaderboardVisible: true }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
+          progress: { status: 'locking', isLeaderboardVisible: true },
         },
       }),
     );
@@ -173,24 +133,14 @@ describe('PlayPage — leaderboard overlay', () => {
       teamName: 'Returning Team',
       teamToken: 'team-token-1',
     };
-    const question = {
-      id: 'r1q2',
-      type: 'free_text' as const,
-      prompt: 'Name a planet',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 2,
-    };
+    const kahootRounds = [
+      { kahootMode: true, questions: [{ prompt: 'Name a planet' }] },
+    ];
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({
-            status: 'question_open',
-            isLeaderboardVisible: true,
-          }),
-          isCurrentRoundKahoot: true,
-          currentQuestion: null,
-          blockQuestions: [],
+        session: {
+          rounds: kahootRounds,
+          progress: { status: 'question_open', isLeaderboardVisible: true },
         },
         team,
       }),
@@ -201,14 +151,9 @@ describe('PlayPage — leaderboard overlay', () => {
 
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({
-            status: 'question_open',
-            isLeaderboardVisible: false,
-          }),
-          isCurrentRoundKahoot: true,
-          currentQuestion: question,
-          blockQuestions: [question],
+        session: {
+          rounds: kahootRounds,
+          progress: { status: 'question_open', isLeaderboardVisible: false },
         },
         team,
       }),

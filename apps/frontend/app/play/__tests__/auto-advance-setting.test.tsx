@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { AUTO_ADVANCE_STORAGE_KEY } from '@/app/lib/player-settings-storage';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -26,22 +26,15 @@ const TEAM = {
   teamToken: 'team-token-1',
 };
 
-const q1 = {
-  id: 'r1q1',
-  type: 'free_text' as const,
-  prompt: 'Name a fruit',
-  points: 1,
-  roundNumber: 1,
-  questionNumberInRound: 1,
-};
-const q2 = {
-  id: 'r1q2',
-  type: 'free_text' as const,
-  prompt: 'Name a planet',
-  points: 1,
-  roundNumber: 1,
-  questionNumberInRound: 2,
-};
+const ROUNDS = [
+  {
+    questions: [
+      { prompt: 'Name a fruit' },
+      { prompt: 'Name a planet' },
+      { prompt: 'Name a country' },
+    ],
+  },
+];
 
 describe('PlayPage — auto-advance setting', () => {
   beforeEach(() => {
@@ -55,11 +48,7 @@ describe('PlayPage — auto-advance setting', () => {
     window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: q1,
-          blockQuestions: [q1],
-        },
+        session: { rounds: ROUNDS, progress: { status: 'question_open' } },
         team: TEAM,
       }),
     );
@@ -72,10 +61,9 @@ describe('PlayPage — auto-advance setting', () => {
     // The admin opens a second question — the team's screen must not move.
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open', questionIndex: 1 }),
-          currentQuestion: q2,
-          blockQuestions: [q1, q2],
+        session: {
+          rounds: ROUNDS,
+          progress: { status: 'question_open', questionIndex: 1 },
         },
         team: TEAM,
       }),
@@ -101,10 +89,9 @@ describe('PlayPage — auto-advance setting', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open', questionIndex: 1 }),
-          currentQuestion: q2,
-          blockQuestions: [q1, q2],
+        session: {
+          rounds: ROUNDS,
+          progress: { status: 'question_open', questionIndex: 1 },
         },
         team: TEAM,
       }),
@@ -121,28 +108,9 @@ describe('PlayPage — auto-advance setting', () => {
     // A third question opens while the team is frozen on the second.
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open', questionIndex: 2 }),
-          currentQuestion: {
-            id: 'r1q3',
-            type: 'free_text',
-            prompt: 'Name a country',
-            points: 1,
-            roundNumber: 1,
-            questionNumberInRound: 3,
-          },
-          blockQuestions: [
-            q1,
-            q2,
-            {
-              id: 'r1q3',
-              type: 'free_text',
-              prompt: 'Name a country',
-              points: 1,
-              roundNumber: 1,
-              questionNumberInRound: 3,
-            },
-          ],
+        session: {
+          rounds: ROUNDS,
+          progress: { status: 'question_open', questionIndex: 2 },
         },
         team: TEAM,
       }),

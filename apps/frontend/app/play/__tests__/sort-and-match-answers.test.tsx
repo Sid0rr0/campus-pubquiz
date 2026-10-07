@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -31,15 +31,20 @@ describe('PlayPage — sort and match answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'sort',
-            prompt: 'Order these planets from the sun outward.',
-            options: ['Venus', 'Mercury', 'Earth'],
-            points: 3,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'sort',
+                  prompt: 'Order these planets from the sun outward.',
+                  options: ['Venus', 'Mercury', 'Earth'],
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -64,7 +69,7 @@ describe('PlayPage — sort and match answers', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
     expect(submitAnswer).toHaveBeenCalledWith(
-      'r1q1',
+      1,
       'team-1',
       'Mercury|Venus|Earth',
     );
@@ -75,16 +80,21 @@ describe('PlayPage — sort and match answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'match',
-            prompt: 'Match the hero to their weapon.',
-            options: ['arthur', 'captain america'],
-            matchTargets: ['shield', 'excalibur'],
-            points: 4,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'match',
+                  prompt: 'Match the hero to their weapon.',
+                  options: ['arthur', 'captain america'],
+                  matchTargets: ['shield', 'excalibur'],
+                  points: 4,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -111,11 +121,7 @@ describe('PlayPage — sort and match answers', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-    expect(submitAnswer).toHaveBeenCalledWith(
-      'r1q1',
-      'team-1',
-      'shield|excalibur',
-    );
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', 'shield|excalibur');
   });
 
   it('shows the sort Submit button as green "Submitted" when the order matches the recorded answer, and reverts to magenta "Submit" once reordered', async () => {
@@ -123,22 +129,27 @@ describe('PlayPage — sort and match answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'sort',
-            prompt: 'Order these planets from the sun outward.',
-            options: ['Venus', 'Mercury', 'Earth'],
-            points: 3,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'sort',
+                  prompt: 'Order these planets from the sun outward.',
+                  options: ['Venus', 'Mercury', 'Earth'],
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: 'Venus|Mercury|Earth' },
+        myAnswers: { 1: 'Venus|Mercury|Earth' },
         submitAnswer,
       }),
     );
@@ -162,15 +173,20 @@ describe('PlayPage — sort and match answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'sort',
-            prompt: 'Order these planets from the sun outward.',
-            options: ['Venus', 'Mercury', 'Earth'],
-            points: 3,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'sort',
+                  prompt: 'Order these planets from the sun outward.',
+                  options: ['Venus', 'Mercury', 'Earth'],
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -186,7 +202,7 @@ describe('PlayPage — sort and match answers', () => {
       screen.getByRole('button', { name: /i don't know/i }),
     );
 
-    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', '__idk__');
   });
 
   it('submits the IDK sentinel from the match question\'s "I don\'t know" button', async () => {
@@ -194,16 +210,21 @@ describe('PlayPage — sort and match answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'match',
-            prompt: 'Match the hero to their weapon.',
-            options: ['arthur', 'captain america'],
-            matchTargets: ['shield', 'excalibur'],
-            points: 4,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'match',
+                  prompt: 'Match the hero to their weapon.',
+                  options: ['arthur', 'captain america'],
+                  matchTargets: ['shield', 'excalibur'],
+                  points: 4,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -219,6 +240,6 @@ describe('PlayPage — sort and match answers', () => {
       screen.getByRole('button', { name: /i don't know/i }),
     );
 
-    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', '__idk__');
   });
 });

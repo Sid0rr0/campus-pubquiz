@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { seenQuestionsOf, socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -19,6 +19,29 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
+const TEAM = {
+  teamId: 'team-1',
+  teamName: 'Returning Team',
+  teamToken: 'team-token-1',
+};
+
+const GRADED_AT = '2024-01-01T00:00:00.000Z';
+
+/** A single fruit question whose reveal is on air. */
+const FRUIT_REVEAL = {
+  rounds: [
+    { questions: [{ prompt: 'Name a fruit', points: 5, answer: 'Banana' }] },
+  ],
+  progress: { status: 'reveal' as const, revealIndex: 0 },
+};
+
+const CIRCUITS = {
+  type: 'sort' as const,
+  prompt: 'Order these circuits by season.',
+  points: 3,
+  options: ['Imola', 'Spa', 'Silverstone'],
+};
+
 describe('PlayPage — break and reveal', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -26,32 +49,23 @@ describe('PlayPage — break and reveal', () => {
     mockUseTeamLink.mockReturnValue(socketResult());
   });
 
-  it('tells the team answering is locked during the grading break', () => {
+  /** A phone that joined, sent the view for `session`. */
+  function renderPhone(
+    session: Parameters<typeof seenQuestionsOf>[0],
+    hook: Record<string, unknown> = {},
+  ) {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'break' }),
-          currentQuestion: null,
-          blockQuestions: [
-            {
-              id: 'r1q1',
-              type: 'free_text',
-              prompt: 'Name a fruit',
-              points: 1,
-              roundNumber: 1,
-              questionNumberInRound: 1,
-            },
-          ],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-      }),
+      socketResult({ session, team: TEAM, ...hook }),
     );
-    renderWithQuery(<PlayPage />);
+    return renderWithQuery(<PlayPage />);
+  }
+
+  it('tells the team answering is locked during the grading break', () => {
+    renderPhone({
+      rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
+      progress: { status: 'break' },
+    });
 
     expect(
       screen.queryByRole('textbox', { name: /your answer/i }),
@@ -60,39 +74,20 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('still shows the block question picker during the grading break so teams can browse back', async () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    const q2 = {
-      id: 'r1q2',
-      type: 'free_text' as const,
-      prompt: 'Name a planet',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 2,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'break' }),
-          currentQuestion: null,
-          blockQuestions: [q1, q2],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Banana', r1q2: 'Mars' },
-      }),
+    renderPhone(
+      {
+        rounds: [
+          {
+            questions: [
+              { prompt: 'Name a fruit' },
+              { prompt: 'Name a planet' },
+            ],
+          },
+        ],
+        progress: { status: 'break', questionIndex: 1 },
+      },
+      { myAnswers: { 1: 'Banana', 2: 'Mars' } },
     );
-    renderWithQuery(<PlayPage />);
 
     // Defaults to the block's last question, with the picker showing both.
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
@@ -115,46 +110,30 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('shows a "look at the screen" title card for the round reveal is crossing into, not the stale top-level round title', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const r1q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      roundTitle: 'General Knowledge',
-    };
-    const r2q1 = {
-      id: 'r2q1',
-      type: 'free_text' as const,
-      prompt: 'Tallest mountain?',
-      points: 1,
-      roundNumber: 2,
-      questionNumberInRound: 1,
-      roundTitle: 'Geography',
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          // progress.roundIndex stays pinned to the block's last round
-          // (the breakAfter round) throughout reveal — roundTitle here
-          // deliberately mismatches revealQuestions[revealIndex] so the
-          // test fails if the screen ever falls back to that stale prop.
-          progress: progress({ status: 'reveal_intro', revealIndex: 1 }),
-          currentQuestion: null,
-          roundTitle: 'Geography',
-          blockQuestions: [r1q1, r2q1],
-          revealQuestions: [r1q1, r2q1],
+    renderPhone({
+      rounds: [
+        {
+          title: 'General Knowledge',
+          breakAfter: false,
+          questions: [{ prompt: 'Name a fruit' }],
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        {
+          title: 'Geography',
+          breakAfter: false,
+          questions: [{ prompt: 'Tallest mountain?' }],
         },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+        { title: 'History', questions: [{ prompt: 'Year of the Armada?' }] },
+      ],
+      // progress.roundIndex stays pinned to the block's last round (the
+      // breakAfter round, History) throughout reveal — the card must name
+      // the round at revealIndex (Geography), not fall back to that stale one.
+      progress: {
+        status: 'reveal_intro',
+        revealIndex: 1,
+        roundIndex: 2,
+        questionIndex: 0,
+      },
+    });
 
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
     expect(
@@ -163,32 +142,22 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('shows a "look at the screen" title card for a round\'s own title while stepping back through break review', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const r1q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      roundTitle: 'General Knowledge',
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'break_round_intro', revealIndex: 0 }),
-          currentQuestion: null,
-          roundTitle: 'Geography',
-          blockQuestions: [r1q1],
+    renderPhone({
+      rounds: [
+        {
+          title: 'General Knowledge',
+          breakAfter: false,
+          questions: [{ prompt: 'Name a fruit' }],
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+        { title: 'Geography', questions: [{ prompt: 'Tallest mountain?' }] },
+      ],
+      progress: {
+        status: 'break_round_intro',
+        revealIndex: 0,
+        roundIndex: 1,
+        questionIndex: 0,
+      },
+    });
 
     expect(screen.getByText(/look at the screen/i)).toBeInTheDocument();
     expect(
@@ -196,39 +165,15 @@ describe('PlayPage — break and reveal', () => {
     ).toBeInTheDocument();
   });
 
-  it('still shows the block question picker during reveal', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    const q2 = {
-      id: 'r1q2',
-      type: 'free_text' as const,
-      prompt: 'Name a planet',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 2,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal' }),
-          currentQuestion: null,
-          blockQuestions: [q1, q2],
+  it('still shows the block question picker during reveal', async () => {
+    renderPhone({
+      rounds: [
+        {
+          questions: [{ prompt: 'Name a fruit' }, { prompt: 'Name a planet' }],
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+      ],
+      progress: { status: 'reveal', revealIndex: 0, questionIndex: 1 },
+    });
 
     expect(
       screen.getByRole('button', { name: /^question 1$/i }),
@@ -236,36 +181,16 @@ describe('PlayPage — break and reveal', () => {
     expect(
       screen.getByRole('button', { name: /^question 2$/i }),
     ).toBeInTheDocument();
+
+    // The reveal has reached question 1 only; question 2 is not revealed yet.
+    await userEvent.click(
+      screen.getByRole('button', { name: /^question 2$/i }),
+    );
     expect(screen.getByText(/revealing answers/i)).toBeInTheDocument();
   });
 
   it("shows the correct answer and the team's own submitted answer during reveal", () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Banana' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Mango' },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+    renderPhone(FRUIT_REVEAL, { myAnswers: { 1: 'Mango' } });
 
     expect(screen.getByText('Banana')).toBeInTheDocument();
     expect(screen.getByText(/your answer/i)).toBeInTheDocument();
@@ -273,79 +198,25 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('shows points awarded next to YOUR ANSWER during reveal once graded', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 5,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Banana' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Mango' },
-        myAnswerGrades: {
-          r1q1: {
-            pointsAwarded: 0,
-            gradedAt: '2024-01-01T00:00:00.000Z',
-            verdict: 'incorrect',
-          },
-        },
-        seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: { 1: 'Mango' },
+      myAnswerGrades: {
+        1: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
+      },
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
 
     expect(screen.getByText('0 / 5 points')).toBeInTheDocument();
   });
 
   it('colors YOUR ANSWER green during reveal when it earned full points', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 5,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Banana' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Banana' },
-        myAnswerGrades: {
-          r1q1: {
-            pointsAwarded: 5,
-            gradedAt: '2024-01-01T00:00:00.000Z',
-            verdict: 'correct',
-          },
-        },
-        seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: { 1: 'Banana' },
+      myAnswerGrades: {
+        1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
+      },
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
 
     expect(
       screen.getByText('Banana', { selector: 'p.font-display' }),
@@ -353,40 +224,13 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('colors YOUR ANSWER red during reveal when it earned less than full points', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 5,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Banana' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Mango' },
-        myAnswerGrades: {
-          r1q1: {
-            pointsAwarded: 0,
-            gradedAt: '2024-01-01T00:00:00.000Z',
-            verdict: 'incorrect',
-          },
-        },
-        seenQuestions: { r1q1: { ...q1, answer: 'Banana' } },
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+    renderPhone(FRUIT_REVEAL, {
+      myAnswers: { 1: 'Mango' },
+      myAnswerGrades: {
+        1: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
+      },
+      seenQuestions: seenQuestionsOf(FRUIT_REVEAL),
+    });
 
     expect(
       screen.getByText('Mango', { selector: 'p.font-display' }),
@@ -394,66 +238,30 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('formats YOUR ANSWER for a sort/match question during reveal instead of showing the raw pipe-joined value', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'sort' as const,
-      prompt: 'Order these circuits by season.',
-      points: 3,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      options: ['Imola', 'Spa', 'Silverstone'],
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Silverstone|Imola|Spa' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Imola|Spa|Silverstone' },
-      }),
+    renderPhone(
+      {
+        rounds: [
+          { questions: [{ ...CIRCUITS, answer: 'Silverstone|Imola|Spa' }] },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+      },
+      { myAnswers: { 1: 'Imola|Spa|Silverstone' } },
     );
-    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('Imola → Spa → Silverstone')).toBeInTheDocument();
     expect(screen.queryByText('Imola|Spa|Silverstone')).not.toBeInTheDocument();
   });
 
   it("shows the team's own order for a sort question during reveal, not the correct order", () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'sort' as const,
-      prompt: 'Order these circuits by season.',
-      points: 3,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      options: ['Imola', 'Spa', 'Silverstone'],
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Imola|Silverstone|Spa' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: { r1q1: 'Imola|Spa|Silverstone' },
-      }),
+    renderPhone(
+      {
+        rounds: [
+          { questions: [{ ...CIRCUITS, answer: 'Imola|Silverstone|Spa' }] },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+      },
+      { myAnswers: { 1: 'Imola|Spa|Silverstone' } },
     );
-    renderWithQuery(<PlayPage />);
 
     // Each row of the reveal list shows the team's own submitted order —
     // 'Imola' is correct (index 0 matches the answer key), 'Spa' and
@@ -466,35 +274,27 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it("shows the team's own pairing for a match question during reveal, not the correct pairing", () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'match' as const,
-      prompt: 'Match the hero to their weapon.',
-      points: 4,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-      options: ['arthur', 'captain america'],
-      matchTargets: ['shield', 'excalibur'],
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'excalibur|shield' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        // arthur -> shield (wrong, correct is excalibur), captain america -> excalibur (wrong, correct is shield)
-        myAnswers: { r1q1: 'shield|excalibur' },
-      }),
+    renderPhone(
+      {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'match',
+                prompt: 'Match the hero to their weapon.',
+                points: 4,
+                options: ['arthur', 'captain america'],
+                matchTargets: ['shield', 'excalibur'],
+                answer: 'excalibur|shield',
+              },
+            ],
+          },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+      },
+      // arthur -> shield (wrong, correct is excalibur), captain america -> excalibur (wrong, correct is shield)
+      { myAnswers: { 1: 'shield|excalibur' } },
     );
-    renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('arthur').closest('li')).toHaveClass(
       'border-magenta',
@@ -505,79 +305,26 @@ describe('PlayPage — break and reveal', () => {
   });
 
   it('tells the team they submitted nothing when reveal shows a question they never answered', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1],
-          revealQuestions: [{ ...q1, answer: 'Banana' }],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-        myAnswers: {},
-      }),
-    );
-    renderWithQuery(<PlayPage />);
+    renderPhone(FRUIT_REVEAL, { myAnswers: {} });
 
     expect(screen.getByText('Banana')).toBeInTheDocument();
     expect(screen.getByText(/no answer submitted/i)).toBeInTheDocument();
   });
 
   it('follows the display through the reveal walk, even overriding a question the team had browsed to', async () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
-    const q2 = {
-      id: 'r1q2',
-      type: 'free_text' as const,
-      prompt: 'Name a planet',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 2,
-    };
-    const q3 = {
-      id: 'r1q3',
-      type: 'free_text' as const,
-      prompt: 'Name a country',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 3,
-    };
-    mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 0 }),
-          currentQuestion: null,
-          blockQuestions: [q1, q2, q3],
-          revealQuestions: [q1, q2, q3],
+    const revealAt = (revealIndex: number) => ({
+      rounds: [
+        {
+          questions: [
+            { prompt: 'Name a fruit' },
+            { prompt: 'Name a planet' },
+            { prompt: 'Name a country' },
+          ],
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-      }),
-    );
-    const { rerender } = renderWithQuery(<PlayPage />);
+      ],
+      progress: { status: 'reveal' as const, revealIndex, questionIndex: 2 },
+    });
+    const { rerender } = renderPhone(revealAt(0));
 
     // Defaults to the question at revealIndex, not the block's last question.
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
@@ -591,19 +338,7 @@ describe('PlayPage — break and reveal', () => {
     // The admin advances the reveal on /display to question 2 — /play snaps
     // back to follow it, discarding the team's manual browse to question 3.
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'reveal', revealIndex: 1 }),
-          currentQuestion: null,
-          blockQuestions: [q1, q2, q3],
-          revealQuestions: [q1, q2, q3],
-        },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
-        },
-      }),
+      socketResult({ session: revealAt(1), team: TEAM }),
     );
     rerender(<PlayPage />);
 

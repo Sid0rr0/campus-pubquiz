@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -30,14 +30,15 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -64,16 +65,21 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
         socketResult({
-          snapshot: {
-            progress: progress({ status: 'question_open' }),
-            currentQuestion: {
-              id: 'r1q1',
-              type: 'audio',
-              prompt: 'Name the film',
-              points: 1,
-              mediaUrl: 'https://example.com/clip.mp3',
-              ...(options ? { options: [...options] } : {}),
-            },
+          session: {
+            rounds: [
+              {
+                questions: [
+                  {
+                    type: 'audio',
+                    prompt: 'Name the film',
+                    points: 1,
+                    mediaUrl: 'https://example.com/clip.mp3',
+                    ...(options ? { options: [...options] } : {}),
+                  },
+                ],
+              },
+            ],
+            progress: { status: 'question_open' },
           },
           team: {
             teamId: 'team-1',
@@ -104,14 +110,15 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -129,7 +136,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /submit/i }));
 
-    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Banana');
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', 'Banana');
   });
 
   it('shows multiple-choice options and submits the chosen option on Submit click', async () => {
@@ -137,15 +144,20 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'multiple_choice',
-            prompt: 'Capital of France?',
-            options: ['Paris', 'London', 'Berlin', 'Rome'],
-            points: 2,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'multiple_choice',
+                  prompt: 'Capital of France?',
+                  options: ['Paris', 'London', 'Berlin', 'Rome'],
+                  points: 2,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -163,28 +175,29 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', 'Paris');
   });
 
   it('shows the previously submitted free-text answer below the question prompt', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: 'Banana' },
+        myAnswers: { 1: 'Banana' },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -200,14 +213,15 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -225,22 +239,27 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'multiple_choice',
-            prompt: 'Capital of France?',
-            options: ['Paris', 'London', 'Berlin', 'Rome'],
-            points: 2,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'multiple_choice',
+                  prompt: 'Capital of France?',
+                  options: ['Paris', 'London', 'Berlin', 'Rome'],
+                  points: 2,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: 'Paris' },
+        myAnswers: { 1: 'Paris' },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -259,22 +278,27 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'multiple_choice',
-            prompt: 'Capital of France?',
-            options: ['Paris', 'London', 'Berlin', 'Rome'],
-            points: 2,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'multiple_choice',
+                  prompt: 'Capital of France?',
+                  options: ['Paris', 'London', 'Berlin', 'Rome'],
+                  points: 2,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: 'Paris' },
+        myAnswers: { 1: 'Paris' },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -294,21 +318,22 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: 'Banana' },
+        myAnswers: { 1: 'Banana' },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -332,14 +357,15 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
@@ -355,7 +381,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       screen.getByRole('button', { name: /i don't know/i }),
     );
 
-    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '__idk__');
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', '__idk__');
   });
 
   it('clears the answer when the IDK button is pressed again while already chosen', async () => {
@@ -363,21 +389,22 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: '__idk__' },
+        myAnswers: { 1: '__idk__' },
         submitAnswer,
       }),
     );
@@ -387,29 +414,34 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       screen.getByRole('button', { name: /i don't know/i }),
     );
 
-    expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', '');
+    expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', '');
   });
 
   it('shows the IDK button as pressed once submitted, on both free-text and multiple-choice', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'multiple_choice',
-            prompt: 'Capital of France?',
-            options: ['Paris', 'London', 'Berlin', 'Rome'],
-            points: 2,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'multiple_choice',
+                  prompt: 'Capital of France?',
+                  options: ['Paris', 'London', 'Berlin', 'Rome'],
+                  points: 2,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',
           teamName: 'Returning Team',
           teamToken: 'team-token-1',
         },
-        myAnswers: { r1q1: '__idk__' },
+        myAnswers: { 1: '__idk__' },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -424,18 +456,22 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   });
 
   describe('Kahoot mode multiple-choice', () => {
-    function kahootSnapshot(overrides: Record<string, unknown> = {}) {
+    function kahootSession({ isKahoot = true } = {}) {
       return {
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'multiple_choice',
-          prompt: 'Capital of France?',
-          options: ['Paris', 'London', 'Berlin', 'Rome'],
-          points: 2,
-        },
-        isCurrentRoundKahoot: true,
-        ...overrides,
+        rounds: [
+          {
+            kahootMode: isKahoot,
+            questions: [
+              {
+                type: 'multiple_choice' as const,
+                prompt: 'Capital of France?',
+                options: ['Paris', 'London', 'Berlin', 'Rome'],
+                points: 2,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' as const },
       };
     }
 
@@ -444,7 +480,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
         socketResult({
-          snapshot: kahootSnapshot(),
+          session: kahootSession(),
           team: {
             teamId: 'team-1',
             teamName: 'Returning Team',
@@ -464,7 +500,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
 
       await userEvent.click(screen.getByRole('button', { name: 'Paris' }));
 
-      expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
+      expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', 'Paris');
     });
 
     it('locks every option after answering, so a second tap does not resubmit', async () => {
@@ -472,7 +508,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
         socketResult({
-          snapshot: kahootSnapshot(),
+          session: kahootSession(),
           team: {
             teamId: 'team-1',
             teamName: 'Returning Team',
@@ -497,7 +533,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
         socketResult({
-          snapshot: kahootSnapshot(),
+          session: kahootSession(),
           team: {
             teamId: 'team-1',
             teamName: 'Returning Team',
@@ -524,7 +560,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
         socketResult({
-          snapshot: kahootSnapshot({ isCurrentRoundKahoot: false }),
+          session: kahootSession({ isKahoot: false }),
           team: {
             teamId: 'team-1',
             teamName: 'Returning Team',
@@ -543,7 +579,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       ).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
-      expect(submitAnswer).toHaveBeenCalledWith('r1q1', 'team-1', 'Paris');
+      expect(submitAnswer).toHaveBeenCalledWith(1, 'team-1', 'Paris');
     });
   });
 
@@ -551,14 +587,15 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
       }),
     );

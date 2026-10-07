@@ -74,6 +74,8 @@ export interface SessionDescription {
   /** Defaults the roster from its rows when `teams` is left out. */
   leaderboard?: LeaderboardDescription[];
   leaderboardRevealCount?: number;
+  /** The closest_guess reveal sub-step on air (0-indexed); the phone is sent each step's stats and answer only once it is reached. */
+  closestGuessRevealStep?: number;
   timers?: Partial<
     Pick<
       SessionState,
@@ -152,6 +154,17 @@ function buildLeaderboard(rows: LeaderboardDescription[]): LeaderboardEntry[] {
   }));
 }
 
+/** A closest_guess question's `closestGuess` stats are what its reveal walks through, so the session keeps them as its summary for that question. */
+function closestGuessSummariesOf(rounds: SeededRound[]) {
+  return Object.fromEntries(
+    rounds
+      .flatMap((round) => round.questions)
+      .flatMap(({ id, closestGuess }) =>
+        closestGuess ? [[id, closestGuess]] : [],
+      ),
+  );
+}
+
 function buildPhaseTimer(
   state: SessionState,
   phaseTimer: SessionDescription['phaseTimer'],
@@ -182,6 +195,7 @@ function buildPhaseTimer(
 export function buildSessionState(
   description: SessionDescription = {},
 ): SessionState {
+  const rounds = buildRounds(description.rounds ?? DEFAULT_ROUNDS);
   const leaderboard = buildLeaderboard(description.leaderboard ?? []);
   const teams =
     description.teams ??
@@ -192,7 +206,7 @@ export function buildSessionState(
         quizId: 1,
         gameSessionId: 1,
         joinCode: description.joinCode ?? 'ABCDEF',
-        rounds: buildRounds(description.rounds ?? DEFAULT_ROUNDS),
+        rounds,
         settings: { ...DEFAULT_SESSION_SETTINGS, ...description.settings },
       },
       buildProgress(description.progress),
@@ -208,6 +222,8 @@ export function buildSessionState(
     teams,
     leaderboard,
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
+    closestGuessRevealStep: description.closestGuessRevealStep ?? 0,
+    closestGuessSummaries: closestGuessSummariesOf(rounds),
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},
     activeShowdownRound: description.showdown?.round ?? null,
     showdownRevealStep: description.showdown?.revealStep ?? 0,

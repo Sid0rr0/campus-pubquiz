@@ -2,9 +2,9 @@ import { act, screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FeedbackField, TeamFeedbackView } from '@campus-pubquiz/types';
+import type { TeamFeedbackView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -20,15 +20,18 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-const FINAL_FORM: FeedbackField = {
-  kind: 'final_form',
-  rounds: [{ id: 11, title: 'Music' }],
-};
+function endedSession(isFeedbackCollected: boolean) {
+  return {
+    rounds: [{ title: 'Music', questions: [{}] }],
+    progress: { status: 'ended' as const },
+    settings: { collectFeedback: isFeedbackCollected },
+  };
+}
 
 const MAX_TOPICS = 10;
 
 interface EndedOverrides {
-  feedback?: FeedbackField | null;
+  isFeedbackCollected?: boolean;
   myFeedback?: TeamFeedbackView;
   sendFeedback?: ReturnType<typeof vi.fn>;
   roundRatingsEpoch?: number;
@@ -36,12 +39,7 @@ interface EndedOverrides {
 
 function endedHook(overrides: EndedOverrides) {
   return socketResult({
-    snapshot: {
-      progress: progress({ status: 'ended' }),
-      currentQuestion: null,
-      phoneScreen: { kind: 'ended' },
-      feedback: 'feedback' in overrides ? overrides.feedback : FINAL_FORM,
-    },
+    session: endedSession(overrides.isFeedbackCollected ?? true),
     team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
     myFeedback: overrides.myFeedback ?? { comment: '', topics: [] },
     sendFeedback: overrides.sendFeedback,
@@ -246,8 +244,8 @@ describe('PlayPage — the comment and topic suggestions on the final form', () 
     expect(sendButton()).toBeEnabled();
   });
 
-  it('shows no comment box while the feedback field is empty', () => {
-    renderEnded({ feedback: null });
+  it('shows no comment box while the session does not collect feedback', () => {
+    renderEnded({ isFeedbackCollected: false });
 
     expect(
       screen.queryByRole('textbox', { name: 'Anything else?' }),
