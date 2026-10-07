@@ -1,6 +1,6 @@
 # Spec: One answer kind per question, defined once for every surface
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows question-kind-module and scoring-module, both done)
 
