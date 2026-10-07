@@ -622,7 +622,7 @@ position on restore.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
 If an opened question's `answer` or `points` changed, its existing answers are
-re-graded (`BlockGradingService.regradeQuestions`): auto-graded types
+re-graded (`BlockGradingService.regradeForKeyFix`): auto-graded types
 (`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
 speed scaling (kept to the nearest half point, so a half-credit match never

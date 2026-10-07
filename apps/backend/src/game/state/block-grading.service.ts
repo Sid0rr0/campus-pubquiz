@@ -136,21 +136,78 @@ export class BlockGradingService {
   }
 
   /**
-   * Re-grades already-shown questions after a live edit changed their
-   * answer/points — `session.seededGame` must already be reloaded, since
-   * that's where the corrected key is read from, and `previousQuestions`
-   * holds each edited question as it stood before the edit (a question
-   * missing from it is taken as unchanged). Auto-graded types re-score every
-   * answer (kahoot questions re-apply speed scaling from the response times
-   * stored at submit); match-or-human types grade new matches correct, keep
-   * the moderator's grades and leave other non-matches ungraded;
-   * closest_guess re-runs its batch only if it was already graded (otherwise
-   * the normal lock flow grades it with the new key). Only writes grades:
-   * names the questions it re-scored and the closest_guess summaries it
-   * recomputed, and leaves the session to the caller, which ends through
-   * gradesChanged.
+   * Regrade for a key fix: re-grades already-shown questions after a live
+   * edit changed their answer/points. `reloaded` is the session with its
+   * quiz already re-read (that's where the corrected key is read from),
+   * `before` is the session as it stood before the edit (the previous
+   * questions are read from its seeded game) and `questionIds` are the
+   * questions the save corrected. Returns the new session (closest_guess
+   * summaries merged, ended through the grading refresh), the questions it
+   * actually re-scored and the teams with an answer to one of them. With
+   * nothing re-scored the session comes back unchanged.
    */
-  async regradeQuestions(
+  async regradeForKeyFix(
+    reloaded: SessionState,
+    before: SessionState,
+    questionIds: readonly number[],
+  ): Promise<{
+    session: SessionState;
+    regradedQuestionIds: readonly number[];
+    answeredTeamIds: ReadonlySet<number>;
+  }> {
+    const previousQuestions = new Map(
+      before.seededGame.rounds
+        .flatMap((round) => round.questions)
+        .map((question) => [question.id, question] as const),
+    );
+    const { regradedQuestionIds, closestGuessSummaries } =
+      await this.regradeQuestions(reloaded, questionIds, previousQuestions);
+    if (regradedQuestionIds.length === 0) {
+      return {
+        session: reloaded,
+        regradedQuestionIds,
+        answeredTeamIds: new Set(),
+      };
+    }
+
+    const session = await this.gradesChanged(
+      {
+        ...reloaded,
+        closestGuessSummaries: {
+          ...reloaded.closestGuessSummaries,
+          ...closestGuessSummaries,
+        },
+      },
+      regradedQuestionIds,
+    );
+    const answerLists = await Promise.all(
+      regradedQuestionIds.map((questionId) =>
+        this.answerService.listForQuestion(
+          session.seededGame.gameSessionId,
+          questionId,
+        ),
+      ),
+    );
+    return {
+      session,
+      regradedQuestionIds,
+      answeredTeamIds: new Set(
+        answerLists.flat().map((answer) => answer.teamId),
+      ),
+    };
+  }
+
+  /**
+   * The per-type regrade behind regradeForKeyFix: auto-graded types re-score
+   * every answer (kahoot questions re-apply speed scaling from the response
+   * times stored at submit); match-or-human types grade new matches correct,
+   * keep the moderator's grades and leave other non-matches ungraded;
+   * closest_guess re-runs its batch only if it was already graded (otherwise
+   * the normal lock flow grades it with the new key). A question missing from
+   * `previousQuestions` is taken as unchanged. Only writes grades: names the
+   * questions it re-scored and the closest_guess summaries it recomputed.
+   */
+  private async regradeQuestions(
     session: SessionState,
     questionIds: readonly number[],
     previousQuestions: ReadonlyMap<number, ScoredQuestion> = new Map(),
