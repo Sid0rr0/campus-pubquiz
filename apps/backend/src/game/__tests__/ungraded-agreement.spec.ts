@@ -1,10 +1,8 @@
-import { RequestContext } from '@mikro-orm/postgresql';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type AdminStatePayload,
 } from '@campus-pubquiz/types';
-import { Question } from '@/db/entities/question.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -162,18 +160,10 @@ describe('GameGateway — the admin view agrees with the database on ungraded qu
     expect(ack).toEqual(expect.objectContaining({ success: true }));
   }
 
-  // QuizController.update corrects the stored key, then calls
-  // notifyQuizEdited inside its HTTP request context.
+  // An editor save through the Live edit module corrects the stored key and
+  // reloads the session.
   async function fixAnswerKey(questionId: number, answer: string) {
-    await game.inRequestContext(async () => {
-      const em = RequestContext.getEntityManager()!;
-      const question = await em.findOneOrFail(Question, { id: questionId });
-      question.answer = answer;
-      await em.flush();
-    });
-    await game.inRequestContext(() =>
-      game.gateway.notifyQuizEdited(game.joinCode, [questionId]),
-    );
+    await game.saveAnswerKeyFix(questionId, { answer });
   }
 
   async function kick(team: JoinedTeam): Promise<void> {

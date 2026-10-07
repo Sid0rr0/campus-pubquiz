@@ -1,9 +1,9 @@
 import {
-  getOpenedPrefixLength,
-  getRoundStructureEditing,
+  describeLiveEditRounds,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
+  type RoundEditingDescription,
   type MatchScoringMode,
   type QuestionType,
   type QuizDraftSaveRequest,
@@ -201,24 +201,18 @@ export function questionToPreview(
   };
 }
 
-/** How many questions at the start of `round` (at `roundIndex`) a live session pins in place: all of them in a round the session has reached and whose block is locking, the opened ones in the current round before that, none after it or when nothing is live. */
-export function getPinnedQuestionCount(
-  round: EditorRound,
-  roundIndex: number,
+/** What the live sessions allow for each editor round, or undefined when nothing is live — the one description the panel and the outline read. */
+export function describeEditorRounds(
+  rounds: readonly EditorRound[],
   liveEdit: LiveEditFrontier | undefined,
-): number {
-  if (!liveEdit) return 0;
-  switch (getRoundStructureEditing(liveEdit, roundIndex)) {
-    case 'frozen':
-      return round.questions.length;
-    case 'after-opened':
-      return getOpenedPrefixLength(
-        round.questions.map((question) => question.dbId),
-        new Set(liveEdit.openedQuestionIds),
-      );
-    case 'free':
-      return 0;
-  }
+): RoundEditingDescription[] | undefined {
+  if (!liveEdit) return undefined;
+  return describeLiveEditRounds(
+    liveEdit,
+    rounds.map((round) => ({
+      questionIds: round.questions.map((question) => question.dbId),
+    })),
+  );
 }
 
 /** Moves a question to the end of another round — the draft's way of changing which round a question plays in. Returns `rounds` itself when there is nothing to move. */

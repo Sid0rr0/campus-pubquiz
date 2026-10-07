@@ -445,24 +445,12 @@ export class GameGateway
     await deliverOutcome(this.outcomeDeps, joinCode, BROADCAST_STATE_OUTCOME);
   }
 
-  /**
-   * Called by QuizController.update after persisting an in-place edit to a
-   * quiz with a live session on it — reloads that session's in-memory
-   * question snapshot from the DB, re-grades `regradeQuestionIds` (already-
-   * shown questions whose answer/points were corrected) against it, and
-   * rebroadcasts the full state, so /display, /control, and /play pick up
-   * the correction without needing a reconnect. No @CreateRequestContext()
-   * needed, same reasoning as notifyBonusAwardsChanged below.
-   */
-  async notifyQuizEdited(
+  /** Delivers an outcome a session write returned outside the gateway (the Live edit module's save), after its queues were released. */
+  async deliverSessionOutcome(
     joinCode: string,
-    regradeQuestionIds: readonly number[] = [],
+    outcome: SessionOutcome,
   ): Promise<void> {
-    await deliverOutcome(
-      this.outcomeDeps,
-      joinCode,
-      await this.gameState.quizEdited(joinCode, regradeQuestionIds),
-    );
+    await deliverOutcome(this.outcomeDeps, joinCode, outcome);
   }
 
   /**

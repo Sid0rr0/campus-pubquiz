@@ -20,6 +20,7 @@ import {
   ImportLockedError,
   ImportService,
 } from '@/import/import.service';
+import { toQuizHttpError } from '@/quiz/quiz-http-errors';
 import { SheetFetchError } from '@/import/sheet-url-fetcher';
 
 function requireCsvText(body: Partial<ImportRequest>): ImportRequest {
@@ -116,5 +117,5 @@ function mapConfirmError(error: unknown): unknown {
   if (error instanceof ImportLockedError) {
     return new ConflictException(error.message);
   }
-  return error;
+  return toQuizHttpError(error);
 }

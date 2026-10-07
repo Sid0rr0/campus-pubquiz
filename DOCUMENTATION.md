@@ -588,10 +588,26 @@ editor's disabled controls:
   current round of every live session, questions can be added, deleted,
   reordered and moved to another such round (the editor's "Move to…" select),
   and the sessions play them in their new places when they reach them. The
-  frontier is checked against the sessions' state at save time, so a save
-  made after a session opened a question in, or started locking, an edited
-  round is refused with a `409` naming that round, and the quiz master
-  reloads (the "Refresh lock state" button).
+  frontier is checked and applied while the live sessions are held: the
+  Live edit module (`apps/backend/src/game/live-edit/live-edit.service.ts`)
+  holds every unfinished session on the quiz's write queue, decides which are
+  running, merges their frontiers, checks the draft, saves, then reloads each
+  session (regrading opened questions whose answer or points changed) and
+  delivers the outcomes once the hold is released. The game can't move past
+  the frontier during a save, so a save either lands with every session still
+  behind the frontier it was checked against, or is refused with a `409`
+  naming that round when a press opened a question in, or started locking, an
+  edited round just before it — and the quiz master reloads (the "Refresh lock
+  state" button). A save waits for a press already in flight on a session of
+  the quiz; sessions on other quizzes aren't held. The quiz controller only
+  maps the module's errors to `409`, `422` and `404`. A re-import (CSV or
+  Google Sheets link) onto a quiz another session is playing is checked the
+  same way: it saves through the Live edit module, matching each sheet row to
+  the stored question at the same round and position, so it is refused with
+  a `409` and the same issue list when it would change what that session has
+  reached, and otherwise applied under its held writes. The importing
+  session's own lobby-or-ended rule stays, and its screens are sent the new
+  rounds after the save.
 - **Opened questions keep their type and choices** (`type`, `options`,
   `matchTargets`) — that's what teams answered against, and auto-grading is
   exact-match, so e.g. fixing an option's spelling would zero every team that

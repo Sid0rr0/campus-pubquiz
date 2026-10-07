@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| live-edit-save              | [A live quiz save is checked and applied inside the live sessions' writes](live-edit-save/spec.md)                                                                      | 4       |
 | question-answer-kinds       | [One answer kind per question, defined once for every surface](question-answer-kinds/spec.md)                                                                       | 4       |
 | team-link                   | [A Team link module for the phone's join and rejoin lifecycle](team-link/spec.md)                                                                                   | 3       |
 | socket-protocol             | [A typed socket protocol module, and socket-events split by concept](socket-protocol/spec.md)                                                                       | 4       |

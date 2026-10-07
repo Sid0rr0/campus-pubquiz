@@ -10,6 +10,7 @@ import { UsersController } from '@/auth/users.controller';
 import { DbModule } from '@/db/db.module';
 import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
+import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import { TeamService } from '@/team/team.service';
@@ -77,6 +78,7 @@ import { StatsService } from '@/stats/stats.service';
     GameProgressRepository,
     GameStateService,
     GameGateway,
+    LiveEditService,
     ImportService,
     { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
     MediaService,

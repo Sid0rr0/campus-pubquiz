@@ -1,11 +1,10 @@
 import {
-  getOpenedPrefixLength,
-  getRoundStructureEditing,
-  type RoundStructureEditing,
+  describeLiveEditRounds,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
   type QuizDraftIssue,
+  type RoundEditingDescription,
 } from '@campus-pubquiz/types';
 
 /** Thrown by `QuizController.update` when a save would violate `findLiveEditViolations` — mapped to 409 Conflict, distinct from `QuizDraftInvalidError`'s 422 for malformed payloads. */
@@ -53,8 +52,8 @@ function diffQuestionFields(
 }
 
 /** Why a frozen round can't change, for the editor's issue list — the current round only freezes once its block starts locking. */
-function frozenReason(frontier: LiveEditFrontier, roundIndex: number): string {
-  return roundIndex === frontier.currentRoundIndex
+function frozenReason(round: RoundEditingDescription): string {
+  return round.lockReason === 'block-locking'
     ? 'its block has started locking — add the question to a later round instead'
     : 'a live session has already reached it';
 }
@@ -70,18 +69,12 @@ function findRoundQuestionViolations(
   roundIndex: number,
   currentRound: ImportRoundPreview,
   incomingRound: ImportRoundPreview,
-  editing: Exclude<RoundStructureEditing, 'free'>,
+  described: RoundEditingDescription,
   openedIds: ReadonlySet<number>,
-  frontier: LiveEditFrontier,
 ): QuizDraftIssue[] {
   const issues: QuizDraftIssue[] = [];
-  const isFrozen = editing === 'frozen';
-  const pinnedCount = isFrozen
-    ? currentRound.questions.length
-    : getOpenedPrefixLength(
-        currentRound.questions.map((question) => question.questionId),
-        openedIds,
-      );
+  const isFrozen = described.structureEditing === 'frozen';
+  const pinnedCount = described.pinnedQuestionCount;
   const hasLostPinned = isFrozen
     ? incomingRound.questions.length !== pinnedCount
     : incomingRound.questions.length < pinnedCount;
@@ -91,7 +84,7 @@ function findRoundQuestionViolations(
       questionIndex: null,
       field: 'questions',
       message: isFrozen
-        ? `Cannot add or remove questions in this round — ${frozenReason(frontier, roundIndex)}`
+        ? `Cannot add or remove questions in this round — ${frozenReason(described)}`
         : 'Cannot remove or move opened questions out of this round',
     });
   }
@@ -111,7 +104,7 @@ function findRoundQuestionViolations(
         questionIndex,
         field: 'questionId',
         message: isFrozen
-          ? `Cannot reorder or replace questions in this round — ${frozenReason(frontier, roundIndex)}`
+          ? `Cannot reorder or replace questions in this round — ${frozenReason(described)}`
           : 'Cannot insert a question before, or reorder, opened questions — add it after the last opened one',
       });
       continue;
@@ -147,7 +140,7 @@ function findRoundQuestionViolations(
  * earlier round stay in place with their breakAfter/kahootMode, a round before
  * the frontier's current round keeps exactly its questions in their order, and
  * so does the current round once its block has started locking (see
- * getRoundStructureEditing). Before that, the current round keeps its opened
+ * describeLiveEditRounds). Before that, the current round keeps its opened
  * questions at its start in order, and the questions after them can be
  * added, deleted, reordered and moved. Rounds after the current round are
  * free: they can be added, deleted and reordered, their breakAfter/kahootMode
@@ -168,10 +161,13 @@ export function findLiveEditViolations(
   const issues: QuizDraftIssue[] = [];
   const openedIds = new Set(frontier.openedQuestionIds);
 
-  const reachedRoundCount = Math.min(
-    frontier.currentRoundIndex + 1,
-    currentRounds.length,
+  const described = describeLiveEditRounds(
+    frontier,
+    currentRounds.map((round) => ({
+      questionIds: round.questions.map((question) => question.questionId),
+    })),
   );
+  const reachedRoundCount = described.filter((round) => round.isReached).length;
   if (incomingRounds.length < reachedRoundCount) {
     issues.push({
       roundIndex: -1,
@@ -199,17 +195,16 @@ export function findLiveEditViolations(
       ),
     );
 
-    const editing = getRoundStructureEditing(frontier, roundIndex);
-    if (editing === 'free') continue;
+    const roundDescription = described[roundIndex];
+    if (roundDescription.structureEditing === 'free') continue;
 
     issues.push(
       ...findRoundQuestionViolations(
         roundIndex,
         currentRound,
         incomingRound,
-        editing,
+        roundDescription,
         openedIds,
-        frontier,
       ),
     );
   }

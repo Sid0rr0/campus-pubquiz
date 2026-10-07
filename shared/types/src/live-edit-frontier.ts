@@ -78,3 +78,72 @@ export function isRoundReached(
 ): boolean {
   return roundIndex <= frontier.currentRoundIndex;
 }
+
+/** Why a round's structure is frozen: a live session has reached it, or it is the current round and its block has started locking. */
+export type RoundLockReason = 'reached' | 'block-locking';
+
+/** What the live sessions allow for one round — the single description the editor and the backend's save guard both read. */
+export interface RoundEditingDescription {
+  /** A live session has reached it: it keeps its place, break-after and kahoot setting, and can't be deleted. */
+  isReached: boolean;
+  structureEditing: RoundStructureEditing;
+  /** Questions at the start of the round that must stay in place. */
+  pinnedQuestionCount: number;
+  /** A question moved from another round may be added to it. */
+  canTakeMovedQuestion: boolean;
+  /** Why it is locked: `reached` for any round a live session has reached, `block-locking` for the current round once its block has started locking; null for an unreached round. */
+  lockReason: RoundLockReason | null;
+}
+
+/** A round as the description needs it: its questions' saved ids, `undefined` for ones not saved yet. */
+export interface LiveEditRoundShape {
+  questionIds: readonly (number | undefined)[];
+}
+
+/** Describes each round against the merged frontier, in the rounds' order. */
+export function describeLiveEditRounds(
+  frontier: LiveEditFrontier,
+  rounds: readonly LiveEditRoundShape[],
+): RoundEditingDescription[] {
+  const openedIds = new Set(frontier.openedQuestionIds);
+  return rounds.map((round, roundIndex) => {
+    const structureEditing = getRoundStructureEditing(frontier, roundIndex);
+    return {
+      isReached: isRoundReached(frontier, roundIndex),
+      structureEditing,
+      pinnedQuestionCount: pinnedCountFor(
+        structureEditing,
+        round.questionIds,
+        openedIds,
+      ),
+      canTakeMovedQuestion: structureEditing !== 'frozen',
+      lockReason: lockReasonFor(frontier, roundIndex, structureEditing),
+    };
+  });
+}
+
+function pinnedCountFor(
+  editing: RoundStructureEditing,
+  questionIds: readonly (number | undefined)[],
+  openedIds: ReadonlySet<number>,
+): number {
+  switch (editing) {
+    case 'frozen':
+      return questionIds.length;
+    case 'after-opened':
+      return getOpenedPrefixLength(questionIds, openedIds);
+    case 'free':
+      return 0;
+  }
+}
+
+function lockReasonFor(
+  frontier: LiveEditFrontier,
+  roundIndex: number,
+  editing: RoundStructureEditing,
+): RoundLockReason | null {
+  if (!isRoundReached(frontier, roundIndex)) return null;
+  return editing === 'frozen' && roundIndex === frontier.currentRoundIndex
+    ? 'block-locking'
+    : 'reached';
+}

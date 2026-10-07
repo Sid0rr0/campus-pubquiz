@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  describeLiveEditRounds,
   getOpenedPrefixLength,
   getRoundStructureEditing,
   isRoundReached,
@@ -140,5 +141,122 @@ describe('isRoundReached', () => {
 
   it('keeps the current round reached while only its title card is showing', () => {
     expect(isRoundReached(frontierOf(1, false, []), 1)).toBe(true);
+  });
+});
+
+describe('describeLiveEditRounds', () => {
+  // Round 1 has two opened questions (11, 12) then an unopened one (13).
+  const rounds = [
+    { questionIds: [1, 2] },
+    { questionIds: [11, 12, 13] },
+    { questionIds: [21, undefined] },
+    { questionIds: [] },
+  ];
+
+  const describeAt = (frontier: LiveEditFrontier) =>
+    describeLiveEditRounds(frontier, rounds);
+
+  it('pins nothing before any question has opened', () => {
+    expect(describeAt(frontierOf(0))).toEqual([
+      {
+        isReached: true,
+        structureEditing: 'after-opened',
+        pinnedQuestionCount: 0,
+        canTakeMovedQuestion: true,
+        lockReason: 'reached',
+      },
+      {
+        isReached: false,
+        structureEditing: 'free',
+        pinnedQuestionCount: 0,
+        canTakeMovedQuestion: true,
+        lockReason: null,
+      },
+      {
+        isReached: false,
+        structureEditing: 'free',
+        pinnedQuestionCount: 0,
+        canTakeMovedQuestion: true,
+        lockReason: null,
+      },
+      {
+        isReached: false,
+        structureEditing: 'free',
+        pinnedQuestionCount: 0,
+        canTakeMovedQuestion: true,
+        lockReason: null,
+      },
+    ]);
+  });
+
+  it('freezes earlier rounds as reached and pins the opened prefix mid-round', () => {
+    const [first, current, next] = describeAt(frontierOf(1, false, [11, 12]));
+
+    expect(first).toEqual({
+      isReached: true,
+      structureEditing: 'frozen',
+      pinnedQuestionCount: 2,
+      canTakeMovedQuestion: false,
+      lockReason: 'reached',
+    });
+    expect(current).toEqual({
+      isReached: true,
+      structureEditing: 'after-opened',
+      pinnedQuestionCount: 2,
+      canTakeMovedQuestion: true,
+      lockReason: 'reached',
+    });
+    expect(next.isReached).toBe(false);
+    expect(next.pinnedQuestionCount).toBe(0);
+  });
+
+  it('freezes the current round with its own reason once its block starts locking', () => {
+    const [, current, next] = describeAt(frontierOf(1, true, [11, 12]));
+
+    expect(current).toEqual({
+      isReached: true,
+      structureEditing: 'frozen',
+      pinnedQuestionCount: 3,
+      canTakeMovedQuestion: false,
+      lockReason: 'block-locking',
+    });
+    expect(next.canTakeMovedQuestion).toBe(true);
+  });
+
+  it('keeps later rounds unreached when a session is stepped back with Previous', () => {
+    const described = describeAt(frontierOf(0, false, [1, 2, 11]));
+
+    expect(described[0]).toMatchObject({
+      isReached: true,
+      pinnedQuestionCount: 2,
+    });
+    expect(described[1]).toMatchObject({
+      isReached: false,
+      structureEditing: 'free',
+      pinnedQuestionCount: 0,
+    });
+  });
+
+  it('describes two merged sessions by the furthest-on line and every opened question', () => {
+    const merged = mergeLiveEditFrontiers([
+      frontierOf(0, true, [1]),
+      frontierOf(2, false, [1, 2, 11, 12, 13, 21]),
+    ]);
+
+    const described = describeAt(merged);
+
+    expect(described.map((round) => round.structureEditing)).toEqual([
+      'frozen',
+      'frozen',
+      'after-opened',
+      'free',
+    ]);
+    expect(described[2].pinnedQuestionCount).toBe(1);
+    expect(described.map((round) => round.lockReason)).toEqual([
+      'reached',
+      'reached',
+      'reached',
+      null,
+    ]);
   });
 });

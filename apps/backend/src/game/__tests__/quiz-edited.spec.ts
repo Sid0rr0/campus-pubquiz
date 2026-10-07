@@ -1,4 +1,3 @@
-import { RequestContext } from '@mikro-orm/postgresql';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -6,7 +5,6 @@ import {
   type LeaderboardEntry,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { Question } from '@/db/entities/question.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -41,25 +39,6 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
     game.clearEmits();
   });
 
-  async function correctAnswerKey(answer: string, points: number) {
-    await game.inRequestContext(async () => {
-      const em = RequestContext.getEntityManager()!;
-      const question = await em.findOneOrFail(Question, {
-        id: game.questionIds.multipleChoice,
-      });
-      question.answer = answer;
-      question.points = points;
-      await em.flush();
-    });
-  }
-
-  // QuizController.update calls notifyQuizEdited inside an HTTP request context.
-  function editQuiz(regradeQuestionIds: number[]) {
-    return game.inRequestContext(() =>
-      game.gateway.notifyQuizEdited(game.joinCode, regradeQuestionIds),
-    );
-  }
-
   function emitsTo(room: string, event: string): RoomEmit[] {
     return game
       .roomEmits()
@@ -75,9 +54,10 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
   }
 
   it('sends the admin room the re-scored answer list of a corrected shown question', async () => {
-    await correctAnswerKey('London', 5);
-
-    await editQuiz([game.questionIds.multipleChoice]);
+    await game.saveAnswerKeyFix(game.questionIds.multipleChoice, {
+      answer: 'London',
+      points: 5,
+    });
 
     const [update] = emitsTo(
       sessionRoom(game.joinCode, SOCKET_ROOMS.ADMIN),
@@ -97,9 +77,10 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
   });
 
   it('syncs each answering team its re-scored answer and refreshes the leaderboard', async () => {
-    await correctAnswerKey('London', 5);
-
-    await editQuiz([game.questionIds.multipleChoice]);
+    await game.saveAnswerKeyFix(game.questionIds.multipleChoice, {
+      answer: 'London',
+      points: 5,
+    });
 
     for (const [team, points] of [
       [londonTeam, 5],
@@ -118,7 +99,7 @@ describe('GameGateway — quiz edited (live answer-key fix)', () => {
   });
 
   it('only reloads and broadcasts when no shown question was corrected', async () => {
-    await editQuiz([]);
+    await game.saveQuizEdit();
 
     expect(
       emitsTo(
