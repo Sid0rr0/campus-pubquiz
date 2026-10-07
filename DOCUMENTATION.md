@@ -189,6 +189,10 @@ revoked mid-event, only that one admin socket drops — live game state lives
 server-side independent of any admin connection, so `display`/`players`
 clients are unaffected; the admin just reconnects with a fresh token.
 
+Every event is declared once, in the protocol map in `shared/types`
+(`socket-protocol.ts`), and both the backend gateway and the frontend clients
+type their emits and listeners against that map.
+
 Events for one session are applied one at a time: each change to a live
 session (an answer, a grade, a bonus, a roster change, a press, a quiz edit)
 runs after the previous one for that session has finished, sees the session as
