@@ -13,11 +13,10 @@ import {
   UploadIcon,
 } from '@radix-ui/react-icons';
 import {
-  getRoundStructureEditing,
-  isRoundReached,
   type ImportPreview,
   type LiveEditFrontier,
   type QuizDraftIssue,
+  type RoundEditingDescription,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import {
@@ -37,7 +36,7 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
-  getPinnedQuestionCount,
+  describeEditorRounds,
   makeRound,
   mergeRoundsFromPreview,
   moveQuestionToRound,
@@ -83,15 +82,14 @@ function issueLabel(issue: QuizDraftIssue): string {
   return `Round ${issue.roundIndex + 1}${questionLabel} (${issue.field}): ${issue.message}`;
 }
 
-/** The rounds a question in round `fromIndex` may move to: every other round, minus those a live session has reached. */
+/** The rounds a question in round `fromIndex` may move to: every other round that can take a moved question. */
 function moveTargetRounds(
   rounds: EditorRound[],
   fromIndex: number,
-  liveEdit: LiveEditFrontier | undefined,
+  described: RoundEditingDescription[] | undefined,
 ): MoveTargetRound[] {
   return rounds.flatMap((round, index) =>
-    index === fromIndex ||
-    (liveEdit && getRoundStructureEditing(liveEdit, index) === 'frozen')
+    index === fromIndex || described?.[index].canTakeMovedQuestion === false
       ? []
       : [
           {
@@ -104,20 +102,16 @@ function moveTargetRounds(
 }
 
 /** Tells the editor why a round's questions are restricted while a session is live — and what to do instead — or nothing when they aren't. */
-function structureNoteFor(
-  liveEdit: LiveEditFrontier,
-  roundIndex: number,
-  pinnedQuestionCount: number,
-): string | undefined {
-  switch (getRoundStructureEditing(liveEdit, roundIndex)) {
+function structureNoteFor(round: RoundEditingDescription): string | undefined {
+  switch (round.structureEditing) {
     case 'free':
       return undefined;
     case 'after-opened':
-      return pinnedQuestionCount > 0
+      return round.pinnedQuestionCount > 0
         ? 'The opened questions stay at the start of this round. The questions after them can still be added, reordered, deleted or moved to a later round.'
         : undefined;
     case 'frozen':
-      return roundIndex === liveEdit.currentRoundIndex
+      return round.lockReason === 'block-locking'
         ? "This round's block has started locking, so its questions can't be added, removed or reordered until the quiz moves on. Add new questions to a later round instead."
         : "A live session has already reached this round, so its questions can't be added, removed or reordered.";
   }
@@ -198,6 +192,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   }
 
   const isLive = liveEditState !== undefined;
+  const described = describeEditorRounds(rounds, liveEditState);
   const openedQuestionIds = liveEditState
     ? new Set(liveEditState.openedQuestionIds)
     : EMPTY_OPENED_QUESTION_IDS;
@@ -616,20 +611,13 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {rounds.map((round, index) => {
             const isLast = index === rounds.length - 1;
-            const isReached =
-              liveEditState !== undefined &&
-              isRoundReached(liveEditState, index);
+            const roundEditing = described?.[index];
+            const isReached = roundEditing?.isReached ?? false;
             const isPreviousReached =
-              liveEditState !== undefined &&
-              isRoundReached(liveEditState, index - 1);
+              index > 0 && !!described?.[index - 1].isReached;
             const isStructureFrozen =
-              liveEditState !== undefined &&
-              getRoundStructureEditing(liveEditState, index) === 'frozen';
-            const pinnedQuestionCount = getPinnedQuestionCount(
-              round,
-              index,
-              liveEditState,
-            );
+              roundEditing?.structureEditing === 'frozen';
+            const pinnedQuestionCount = roundEditing?.pinnedQuestionCount ?? 0;
             return (
               <div key={round.id} className="flex flex-col gap-4">
                 <QuizRoundEditor
@@ -641,15 +629,8 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   isPreviousReached={isPreviousReached}
                   isStructureFrozen={isStructureFrozen}
                   pinnedQuestionCount={pinnedQuestionCount}
-                  structureNote={
-                    liveEditState &&
-                    structureNoteFor(liveEditState, index, pinnedQuestionCount)
-                  }
-                  moveTargetRounds={moveTargetRounds(
-                    rounds,
-                    index,
-                    liveEditState,
-                  )}
+                  structureNote={roundEditing && structureNoteFor(roundEditing)}
+                  moveTargetRounds={moveTargetRounds(rounds, index, described)}
                   openedQuestionIds={openedQuestionIds}
                   issues={saveIssues.filter(
                     (issue) => issue.roundIndex === index,
