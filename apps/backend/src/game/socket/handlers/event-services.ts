@@ -1,4 +1,4 @@
-import type { Server } from 'socket.io';
+import type { GameServer } from '@/game/socket/game-socket.types';
 import type { AnswerService } from '@/answer/answer.service';
 import type { BonusService } from '@/bonus/bonus.service';
 import type { FeedbackService } from '@/feedback/feedback.service';
@@ -14,5 +14,5 @@ export interface EventServices {
   bonusService: BonusService;
   feedbackService: FeedbackService;
   showdownService: ShowdownService;
-  server: Server;
+  server: GameServer;
 }

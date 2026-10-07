@@ -1,4 +1,4 @@
-import type { Server } from 'socket.io';
+import type { GameServer } from '@/game/socket/game-socket.types';
 import type { GameAction } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
 import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
@@ -7,7 +7,7 @@ import type { GameStateService } from '@/game/state/game-state.service';
 interface AdminActionDeps {
   gameState: GameStateService;
   answerService: AnswerService;
-  server: Server;
+  server: GameServer;
 }
 
 /**

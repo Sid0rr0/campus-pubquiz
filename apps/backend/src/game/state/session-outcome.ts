@@ -1,18 +1,25 @@
-import type { GameStatus } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  type GameStatus,
+  type ServerToClientProtocol,
+} from '@campus-pubquiz/types';
 import type { SessionState } from '@/game/state/session-state';
 
-/** A direct emit to one socket (e.g. kicked, bonus awarded), delivered after every room push. */
-export interface SocketNotice {
-  socketId: string;
-  event: string;
-  payload: unknown;
-}
+/** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
+type EventEmit<E extends keyof ServerToClientProtocol> =
+  E extends keyof ServerToClientProtocol
+    ? { event: E; payload: ServerToClientProtocol[E] }
+    : never;
 
-/** A direct emit to the socket that sent the event (e.g. answer received), delivered before any room push. */
-export interface SocketReply {
-  event: string;
-  payload: unknown;
-}
+/** A direct emit to one socket (kicked, bonus awarded), delivered after every room push. */
+export type SocketNotice = { socketId: string } & EventEmit<
+  typeof SOCKET_EVENTS.TEAM_KICKED | typeof SOCKET_EVENTS.BONUS_AWARDED
+>;
+
+/** A direct emit to the socket that sent the event (answer received, join accepted), delivered before any room push. */
+export type SocketReply = EventEmit<
+  typeof SOCKET_EVENTS.ANSWER_RECEIVED | typeof SOCKET_EVENTS.JOIN_ACCEPTED
+>;
 
 /** A connected team whose own graded-answer list needs a sync, with the socket it is on. */
 export interface TeamSync {

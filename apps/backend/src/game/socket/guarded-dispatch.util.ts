@@ -1,6 +1,6 @@
 import type { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import type { Server, Socket } from 'socket.io';
+import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
 import { sessionRoom, type AckResult } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
@@ -16,7 +16,7 @@ import type { SessionOutcome } from '@/game/state/session-outcome';
 export interface EventContext<P> {
   joinCode: string;
   payload: P;
-  client: Socket;
+  client: GameSocket;
 }
 
 /**
@@ -32,7 +32,7 @@ export type EventResult =
 export interface DispatchDeps {
   gameState: GameStateService;
   answerService: AnswerService;
-  server: Server;
+  server: GameServer;
   logger: Logger;
 }
 
@@ -42,7 +42,7 @@ function isAfterDelivery(
   return 'afterDelivery' in result;
 }
 
-function resolveJoinCode(client: Socket): string {
+function resolveJoinCode(client: GameSocket): string {
   const joinCode = (client.data as { joinCode?: string }).joinCode;
   if (!joinCode) {
     throw new WsException('Connection not associated with a game session');
@@ -52,7 +52,7 @@ function resolveJoinCode(client: Socket): string {
 
 function logAccepted<S extends z.ZodType>(
   logger: Logger,
-  client: Socket,
+  client: GameSocket,
   declaration: SocketEventDeclaration<S>,
   payload: z.infer<S>,
 ): void {
@@ -72,7 +72,7 @@ function logAccepted<S extends z.ZodType>(
  */
 export async function dispatchSocketEvent<S extends z.ZodType>(
   deps: DispatchDeps,
-  client: Socket,
+  client: GameSocket,
   declaration: SocketEventDeclaration<S>,
   rawPayload: unknown,
   body: (context: EventContext<z.infer<S>>) => Promise<EventResult>,

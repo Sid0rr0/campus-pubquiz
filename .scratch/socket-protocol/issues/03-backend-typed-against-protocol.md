@@ -13,10 +13,10 @@ Parent spec: `.scratch/socket-protocol/spec.md`
 
 **Blocked by:** 02 (The protocol map, and the frontend typed against it)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first: a compile-time assertion fails when a declaration's schema gains or loses a field its protocol payload doesn't have (shown with `@ts-expect-error` on a deliberately mismatched schema).
-- [ ] `SocketReply` and `SocketNotice` no longer carry `event: string, payload: unknown`; an outcome built with a mismatched event and payload doesn't compile.
-- [ ] The state broadcast and connection sync are typed by room; the gateway's server is typed by the protocol.
-- [ ] The existing gateway specs pass unchanged, apart from typings: socket payload validation, event authorisation, outcome delivery order, screen projection delivery, room scoping, connection, team answers sync and notify session closed.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass across all workspaces.
+- [x] Written first: a compile-time assertion fails when a declaration's schema gains or loses a field its protocol payload doesn't have (shown with `@ts-expect-error` on a deliberately mismatched schema).
+- [x] `SocketReply` and `SocketNotice` no longer carry `event: string, payload: unknown`; an outcome built with a mismatched event and payload doesn't compile.
+- [x] The state broadcast and connection sync are typed by room; the gateway's server is typed by the protocol.
+- [x] The existing gateway specs pass unchanged, apart from typings: socket payload validation, event authorisation, outcome delivery order, screen projection delivery, room scoping, connection, team answers sync and notify session closed.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass across all workspaces.

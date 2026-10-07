@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import type { Socket } from 'socket.io';
+import type { GameSocket } from '@/game/socket/game-socket.types';
 import {
   acknowledge,
   GENERIC_ERROR_MESSAGE,
@@ -12,7 +12,7 @@ describe('acknowledge', () => {
   const logError = jest
     .spyOn(logger, 'error')
     .mockImplementation(() => undefined);
-  const client = { id: 'sock-1', emit } as unknown as Socket;
+  const client = { id: 'sock-1', emit } as unknown as GameSocket;
 
   beforeEach(() => {
     logError.mockClear();

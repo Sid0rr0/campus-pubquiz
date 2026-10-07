@@ -1,6 +1,6 @@
 import type { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import type { Socket } from 'socket.io';
+import type { GameSocket } from '@/game/socket/game-socket.types';
 import type { AckResult } from '@campus-pubquiz/types';
 
 export const GENERIC_ERROR_MESSAGE = 'Internal server error';
@@ -16,7 +16,7 @@ function errorMessage(error: unknown): string {
  * that call handler methods directly see the same result.
  */
 export async function acknowledge<T = void>(
-  client: Socket,
+  client: GameSocket,
   logger: Logger,
   event: string,
   run: () => Promise<T>,
@@ -42,7 +42,7 @@ function wsMessage(error: WsException): string {
 
 function logUnexpected(
   logger: Logger,
-  client: Socket,
+  client: GameSocket,
   event: string,
   error: unknown,
 ): string {

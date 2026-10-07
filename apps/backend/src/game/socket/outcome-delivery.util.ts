@@ -1,4 +1,4 @@
-import type { Server, Socket } from 'socket.io';
+import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -8,7 +8,11 @@ import type { AnswerService } from '@/answer/answer.service';
 import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payload.util';
 import { broadcastGameState } from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
-import type { SessionOutcome } from '@/game/state/session-outcome';
+import type {
+  SessionOutcome,
+  SocketNotice,
+  SocketReply,
+} from '@/game/state/session-outcome';
 
 /**
  * The one place a SessionOutcome becomes emits, always in the same order:
@@ -22,11 +26,11 @@ export async function deliverOutcome(
   deps: {
     gameState: GameStateService;
     answerService: AnswerService;
-    server: Server;
+    server: GameServer;
   },
   joinCode: string,
   outcome: SessionOutcome,
-  sender?: Pick<Socket, 'emit'>,
+  sender?: Pick<GameSocket, 'emit'>,
 ): Promise<void> {
   const { server } = deps;
   try {
@@ -42,15 +46,15 @@ async function deliverEmits(
   deps: {
     gameState: GameStateService;
     answerService: AnswerService;
-    server: Server;
+    server: GameServer;
   },
   joinCode: string,
   outcome: SessionOutcome,
-  sender: Pick<Socket, 'emit'> | undefined,
+  sender: Pick<GameSocket, 'emit'> | undefined,
 ): Promise<void> {
   const { gameState, answerService, server } = deps;
   for (const reply of outcome.replies) {
-    sender?.emit(reply.event, reply.payload);
+    if (sender) emitReply(sender, reply);
   }
   if (outcome.shouldBroadcastState) {
     broadcastGameState(server, joinCode, gameState);
@@ -78,8 +82,33 @@ async function deliverEmits(
   }
 
   for (const notice of outcome.notices) {
-    const target = server.to(notice.socketId);
-    if (notice.payload === undefined) target.emit(notice.event);
-    else target.emit(notice.event, notice.payload);
+    emitNotice(server.to(notice.socketId), notice);
+  }
+}
+
+/** A reply goes to the sender as its event with that event's payload; the switch keeps each pair checked. */
+function emitReply(sender: Pick<GameSocket, 'emit'>, reply: SocketReply): void {
+  switch (reply.event) {
+    case SOCKET_EVENTS.ANSWER_RECEIVED:
+      sender.emit(reply.event, reply.payload);
+      return;
+    case SOCKET_EVENTS.JOIN_ACCEPTED:
+      sender.emit(reply.event, reply.payload);
+      return;
+  }
+}
+
+/** A notice goes to one socket as its event; `TEAM_KICKED` carries no payload. */
+function emitNotice(
+  target: Pick<GameSocket, 'emit'>,
+  notice: SocketNotice,
+): void {
+  switch (notice.event) {
+    case SOCKET_EVENTS.TEAM_KICKED:
+      target.emit(notice.event);
+      return;
+    case SOCKET_EVENTS.BONUS_AWARDED:
+      target.emit(notice.event, notice.payload);
+      return;
   }
 }
