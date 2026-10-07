@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, mockFetchPublicSessions, searchParamsRef } =
   vi.hoisted(() => ({
@@ -88,14 +88,9 @@ describe('PlayPage — logout and errors', () => {
     const handleLogOut = vi.fn();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
+          progress: { status: 'question_open' },
         },
         team: {
           teamId: 'team-1',

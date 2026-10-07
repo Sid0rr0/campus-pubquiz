@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import { authenticatedAuthResult, progress, adminView } from './test-utils';
+import { authenticatedAuthResult } from './test-utils';
 
 const {
   mockUseAdminGame,
@@ -60,15 +60,18 @@ describe('AdminPage — grading question browsing', () => {
 
   it('requests and shows the first block question answers during the grading break', async () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break', questionIndex: 1 }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        progress: { status: 'break', questionIndex: 1 },
+        rounds: [
+          {
+            questions: [
+              { prompt: 'Name a fruit', points: 1 },
+              { prompt: 'Name a planet', points: 1 },
+            ],
+          },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -78,27 +81,24 @@ describe('AdminPage — grading question browsing', () => {
     renderWithQuery(<AdminPage />);
 
     await vi.waitFor(() =>
-      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r1q1'),
+      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 1),
     );
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
   it('keeps showing the last question answers for grading once the quiz has ended', async () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'ended', isLeaderboardVisible: true }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 2 },
-        ],
-        teams: [{ teamId: 'team-1', teamName: 'The Quizzards' }],
-      }),
+        progress: { status: 'ended', isLeaderboardVisible: true },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 2 }] }],
+        teams: [{ teamId: 1, teamName: 'The Quizzards' }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
       liveAnswers: {
-        questionId: 'r1q1',
+        questionId: 1,
         question: {
           type: 'free_text',
           prompt: 'Name a fruit',
@@ -112,7 +112,7 @@ describe('AdminPage — grading question browsing', () => {
         answers: [
           {
             answerId: 'answer-1',
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             value: 'Banana',
             pointsAwarded: 0,
@@ -142,8 +142,8 @@ describe('AdminPage — grading question browsing', () => {
               title: 'Round 1',
               breakAfter: true,
               questions: [
-                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
-                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+                { id: 1, prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 2, prompt: 'Name a planet', answer: 'Mars' },
               ],
             },
           ],
@@ -151,15 +151,18 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break', questionIndex: 1 }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        progress: { status: 'break', questionIndex: 1 },
+        rounds: [
+          {
+            questions: [
+              { prompt: 'Name a fruit', points: 1 },
+              { prompt: 'Name a planet', points: 1 },
+            ],
+          },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -175,7 +178,7 @@ describe('AdminPage — grading question browsing', () => {
     );
 
     await vi.waitFor(() =>
-      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 'r1q2'),
+      expect(mockFetchAnswers).toHaveBeenCalledWith('TESTCODE', 2),
     );
     expect(screen.getByText('Name a planet')).toBeInTheDocument();
   });
@@ -192,8 +195,8 @@ describe('AdminPage — grading question browsing', () => {
               title: 'Round 1',
               breakAfter: true,
               questions: [
-                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
-                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+                { id: 1, prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 2, prompt: 'Name a planet', answer: 'Mars' },
               ],
             },
           ],
@@ -202,15 +205,18 @@ describe('AdminPage — grading question browsing', () => {
     });
     const focusAnswersQuestionId = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break', questionIndex: 1 }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        progress: { status: 'break', questionIndex: 1 },
+        rounds: [
+          {
+            questions: [
+              { prompt: 'Name a fruit', points: 1 },
+              { prompt: 'Name a planet', points: 1 },
+            ],
+          },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -221,7 +227,7 @@ describe('AdminPage — grading question browsing', () => {
     renderWithQuery(<AdminPage />);
 
     await vi.waitFor(() =>
-      expect(focusAnswersQuestionId).toHaveBeenCalledWith('r1q1'),
+      expect(focusAnswersQuestionId).toHaveBeenCalledWith(1),
     );
 
     await userEvent.click(
@@ -231,7 +237,7 @@ describe('AdminPage — grading question browsing', () => {
     );
 
     await vi.waitFor(() =>
-      expect(focusAnswersQuestionId).toHaveBeenCalledWith('r1q2'),
+      expect(focusAnswersQuestionId).toHaveBeenCalledWith(2),
     );
   });
 
@@ -247,8 +253,8 @@ describe('AdminPage — grading question browsing', () => {
               title: 'Round 1',
               breakAfter: true,
               questions: [
-                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
-                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+                { id: 1, prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 2, prompt: 'Name a planet', answer: 'Mars' },
               ],
             },
           ],
@@ -256,16 +262,19 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'break', questionIndex: 1 }),
-        currentQuestion: null,
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-          { id: 'r1q2', type: 'free_text', prompt: 'Name a planet', points: 1 },
+        progress: { status: 'break', questionIndex: 1 },
+        rounds: [
+          {
+            questions: [
+              { prompt: 'Name a fruit', points: 1 },
+              { prompt: 'Name a planet', points: 1 },
+            ],
+          },
         ],
-        ungradedQuestionIds: ['r1q2'],
-      }),
+        ungradedQuestionIds: [2],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),
@@ -298,8 +307,8 @@ describe('AdminPage — grading question browsing', () => {
               title: 'Round 1',
               breakAfter: true,
               questions: [
-                { id: 'r1q1', prompt: 'Name a fruit', answer: 'Banana' },
-                { id: 'r1q2', prompt: 'Name a planet', answer: 'Mars' },
+                { id: 1, prompt: 'Name a fruit', answer: 'Banana' },
+                { id: 2, prompt: 'Name a planet', answer: 'Mars' },
               ],
             },
             {
@@ -314,16 +323,11 @@ describe('AdminPage — grading question browsing', () => {
       ],
     });
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
+      session: {
         joinCode: 'TESTCODE',
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r1q1',
-          type: 'free_text',
-          prompt: 'Name a fruit',
-          points: 1,
-        },
-      }),
+        progress: { status: 'question_open' },
+        rounds: [{ questions: [{ prompt: 'Name a fruit', points: 1 }] }],
+      },
       connectionError: null,
       sendAction: vi.fn(),
       setLiveAnswers: vi.fn(),

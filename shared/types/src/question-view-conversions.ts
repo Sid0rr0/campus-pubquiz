@@ -3,7 +3,7 @@ import type {
   BlockRevealQuestionView,
   QuestionView,
   RevealQuestionView,
-} from '@campus-pubquiz/types';
+} from './question-views';
 
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -35,15 +36,20 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders a question with an image mediaUrl as an image', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r2q1',
-          type: 'free_text',
-          prompt: 'Which landmark is shown?',
-          mediaUrl: 'https://example.com/landmark.jpg',
-          points: 3,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which landmark is shown?',
+                mediaUrl: 'https://example.com/landmark.jpg',
+                points: 3,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -57,15 +63,20 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders an audio question as an autoplaying audio player, not an image', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r2q2',
-          type: 'audio',
-          prompt: 'Name this song.',
-          mediaUrl: 'https://example.com/song.mp3',
-          points: 3,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'audio',
+                prompt: 'Name this song.',
+                mediaUrl: 'https://example.com/song.mp3',
+                points: 3,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -81,16 +92,21 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders media_url on a multiple_choice/free_text question too, not just audio', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r3q1',
-          type: 'multiple_choice',
-          prompt: 'Which flag is this?',
-          mediaUrl: 'https://example.com/flag.jpg',
-          options: ['France', 'Italy'],
-          points: 2,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'multiple_choice',
+                prompt: 'Which flag is this?',
+                mediaUrl: 'https://example.com/flag.jpg',
+                options: ['France', 'Italy'],
+                points: 2,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -105,17 +121,22 @@ describe('DisplayPage — media rendering', () => {
 
   it('renders a YouTube media_url as an embedded iframe with the clip start/end, not an image', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r4q1',
-          type: 'free_text',
-          prompt: 'Name this music video.',
-          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
-          mediaStartSeconds: 82,
-          mediaEndSeconds: 140,
-          points: 3,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Name this music video.',
+                mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+                mediaStartSeconds: 82,
+                mediaEndSeconds: 140,
+                points: 3,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -132,15 +153,20 @@ describe('DisplayPage — media rendering', () => {
 
   it('does not autoplay an audio question when the session disables autoplayMedia', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r2q2',
-          type: 'audio',
-          prompt: 'Name this song.',
-          mediaUrl: 'https://example.com/song.mp3',
-          points: 3,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'audio',
+                prompt: 'Name this song.',
+                mediaUrl: 'https://example.com/song.mp3',
+                points: 3,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
         settings: { autoplayMedia: false },
       }),
       connectionError: null,
@@ -155,15 +181,20 @@ describe('DisplayPage — media rendering', () => {
 
   it('sets the YouTube embed autoplay param to 0 when the session disables autoplayMedia', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: {
-          id: 'r4q1',
-          type: 'free_text',
-          prompt: 'Name this music video.',
-          mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
-          points: 3,
-        },
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Name this music video.',
+                mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+                points: 3,
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
         settings: { autoplayMedia: false },
       }),
       connectionError: null,
@@ -178,20 +209,19 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('keeps the same YouTube iframe element when toggling media fullscreen, so playback continues instead of restarting', () => {
-    const currentQuestion = {
-      id: 'r4q1',
+    const openQuestion = {
       type: 'free_text' as const,
       prompt: 'Name this music video.',
       mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
       points: 3,
     };
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [openQuestion] }],
+        progress: {
           status: 'question_open',
           isMediaFullscreen: false,
-        }),
-        currentQuestion,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -200,12 +230,12 @@ describe('DisplayPage — media rendering', () => {
     const iframeBeforeToggle = screen.getByTestId('question-youtube');
 
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [openQuestion] }],
+        progress: {
           status: 'question_open',
           isMediaFullscreen: true,
-        }),
-        currentQuestion,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -216,17 +246,16 @@ describe('DisplayPage — media rendering', () => {
   });
 
   it('remounts the YouTube iframe when mediaReplayToken changes, restarting playback', () => {
-    const currentQuestion = {
-      id: 'r4q1',
+    const openQuestion = {
       type: 'free_text' as const,
       prompt: 'Name this music video.',
       mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
       points: 3,
     };
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open', mediaReplayToken: 1 }),
-        currentQuestion,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [openQuestion] }],
+        progress: { status: 'question_open', mediaReplayToken: 1 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -235,9 +264,9 @@ describe('DisplayPage — media rendering', () => {
     const iframeBeforeReplay = screen.getByTestId('question-youtube');
 
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open', mediaReplayToken: 2 }),
-        currentQuestion,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [openQuestion] }],
+        progress: { status: 'question_open', mediaReplayToken: 2 },
       }),
       connectionError: null,
       sendAction: vi.fn(),

@@ -1,13 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { UseAdminGameResult } from '@/app/lib/use-admin-game';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import { useAdminSession } from '@/app/lib/use-admin-session';
 import {
   adminGameResult,
-  adminView,
   authenticatedAuthResult,
-  progress,
 } from '@/app/control/__tests__/test-utils';
 
 const { mockUseAdminGame, mockUseAuth, searchParamsRef, routerRef } =
@@ -37,10 +34,7 @@ function setAuth(overrides: Partial<UseAuthResult> = {}) {
 
 function connectedTo(joinCode: string, connectionError: string | null = null) {
   return adminGameResult({
-    snapshot: adminView({
-      progress: progress(),
-      joinCode,
-    }) as UseAdminGameResult['snapshot'],
+    session: { progress: {}, joinCode },
     connectionError,
   });
 }

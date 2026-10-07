@@ -1,17 +1,16 @@
 import {
-  getTimedPhaseKey,
+  computeInitialRevealStep,
   type GameAction,
   type GameContext,
   type GameProgress,
-} from '@campus-pubquiz/types';
-import { computeInitialRevealStep } from '@/game/state/closest-guess-reveal.util';
-import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
-import {
-  getPastRevealedQuestions,
   getBlockSeededQuestions,
-} from '@/game/state/block-questions.util';
+  getGameContext,
+  getPastRevealedQuestions,
+  getTimedPhaseKey,
+  type SessionState,
+} from '@campus-pubquiz/types';
+import { computeLeaderboardRevealCount } from '@/game/state/leaderboard-reveal.util';
 import { computePhaseTimerFields } from '@/game/state/phase-timer.util';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
 
 /** The persisted half of the phase timer — what a restart restores exactly. */
 export interface SavedPhaseTimer {

@@ -1,5 +1,5 @@
-import { isAnsweringStatus } from '@campus-pubquiz/types';
-import type { SessionState } from '@/game/state/session-state';
+import { isAnsweringStatus } from './game-state-groups';
+import type { SessionState } from './session-state';
 
 /**
  * A kahootMode question opens right after the previous one's reveal (see

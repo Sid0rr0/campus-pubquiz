@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -28,15 +29,27 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-// roundIndex 1 (round "2") is this fixture's only break — breakRoundNumbers
-// is what getBreakNumber (display/page.tsx) reads to number "BREAK N".
-const breakAfterRoundTwo = {
-  blockCount: 1,
-  topicsPerBlock: 2,
-  breakRoundNumbers: [2],
-  minQuestionsPerTopic: 1,
-  maxQuestionsPerTopic: 1,
+const WORLD_LANDMARKS = {
+  title: 'World Landmarks',
+  questions: [
+    {
+      id: 23,
+      prompt: 'Which landmark?',
+      mediaUrl: 'https://example.com/landmark.jpg',
+      points: 3,
+    },
+    { id: 24, prompt: 'Name this flag.', points: 3 },
+  ],
 };
+
+// Round 2 is the first break: round 1 flows into it, so "BREAK 1" follows round 2.
+const breakAfterRoundTwoQuiz = [
+  { breakAfter: false, questions: [{}] },
+  WORLD_LANDMARKS,
+];
+
+// Both rounds break, so round 2's two questions are a block of their own.
+const roundTwoBlockQuiz = [{ questions: [{}] }, WORLD_LANDMARKS];
 
 describe('DisplayPage — break', () => {
   beforeEach(() => {
@@ -45,10 +58,9 @@ describe('DisplayPage — break', () => {
 
   it('shows a "BREAK" title card once a round locks (break_intro)', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'break_intro', roundIndex: 1 }),
-        currentQuestion: null,
-        quizStructure: breakAfterRoundTwo,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: breakAfterRoundTwoQuiz,
+        progress: { status: 'break_intro', roundIndex: 1, questionIndex: 1 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -59,39 +71,16 @@ describe('DisplayPage — break', () => {
     expect(screen.getByText(/round 2/i)).toBeInTheDocument();
   });
 
-  const twoQuestionBlock = [
-    {
-      id: 23,
-      type: 'free_text' as const,
-      prompt: 'Which landmark?',
-      mediaUrl: 'https://example.com/landmark.jpg',
-      points: 3,
-      roundNumber: 2,
-      questionNumberInRound: 1,
-      roundTitle: 'World Landmarks',
-    },
-    {
-      id: 24,
-      type: 'free_text' as const,
-      prompt: 'Name this flag.',
-      points: 3,
-      roundNumber: 2,
-      questionNumberInRound: 2,
-      roundTitle: 'World Landmarks',
-    },
-  ];
-
   it('keeps showing the generic BREAK card for break_intro even once block questions have loaded, never showing Q5 itself', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: breakAfterRoundTwoQuiz,
+        progress: {
           status: 'break_intro',
           roundIndex: 1,
+          questionIndex: 1,
           revealIndex: 1,
-        }),
-        currentQuestion: null,
-        blockQuestions: twoQuestionBlock,
-        quizStructure: breakAfterRoundTwo,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -104,13 +93,17 @@ describe('DisplayPage — break', () => {
 
   it("shows the block's last question (no answer) immediately once break proper is entered (Previous from break_intro), without skipping it", () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: roundTwoBlockQuiz,
         // revealIndex 1 is the last index of a 2-question block: the one
         // that just locked — it must show its own content, not a generic
         // card, so Previous steps to the second-to-last question next.
-        progress: progress({ status: 'break', roundIndex: 1, revealIndex: 1 }),
-        currentQuestion: null,
-        blockQuestions: twoQuestionBlock,
+        progress: {
+          status: 'break',
+          roundIndex: 1,
+          questionIndex: 1,
+          revealIndex: 1,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -123,10 +116,14 @@ describe('DisplayPage — break', () => {
 
   it("shows the specific question (no answer) once Previous walks revealIndex off the entry position, matching question_open's layout", () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'break', roundIndex: 1, revealIndex: 0 }),
-        currentQuestion: null,
-        blockQuestions: twoQuestionBlock,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: roundTwoBlockQuiz,
+        progress: {
+          status: 'break',
+          roundIndex: 1,
+          questionIndex: 1,
+          revealIndex: 0,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -141,14 +138,14 @@ describe('DisplayPage — break', () => {
 
   it("shows the round's own title card once Previous crosses a round boundary during break review", () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: roundTwoBlockQuiz,
+        progress: {
           status: 'break_round_intro',
           roundIndex: 1,
+          questionIndex: 1,
           revealIndex: 0,
-        }),
-        currentQuestion: null,
-        blockQuestions: twoQuestionBlock,
+        },
       }),
       connectionError: null,
       sendAction: vi.fn(),

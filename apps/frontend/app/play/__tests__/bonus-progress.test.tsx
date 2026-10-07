@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -34,9 +34,8 @@ describe('PlayPage — bonus points panel', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'lobby' },
           settings: {
             rules: [],
             enabledBonusCategories: ['shot', 'selfie', 'custom'],
@@ -73,9 +72,8 @@ describe('PlayPage — bonus points panel', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'lobby' },
           settings: {
             rules: [],
             enabledBonusCategories: ['shot', 'selfie', 'custom'],
@@ -108,9 +106,8 @@ describe('PlayPage — bonus points panel', () => {
       joinAsTeam();
       mockUseTeamLink.mockReturnValue(
         socketResult({
-          snapshot: {
-            progress: progress({ status: 'lobby' }),
-            currentQuestion: null,
+          session: {
+            progress: { status: 'lobby' },
             settings: {
               rules: [],
               enabledBonusCategories: ['custom'],
@@ -135,9 +132,8 @@ describe('PlayPage — bonus points panel', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'lobby' },
           settings: {
             rules: [],
             enabledBonusCategories: ['shot', 'selfie', 'custom'],
@@ -162,9 +158,8 @@ describe('PlayPage — bonus points panel', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'lobby' },
           settings: {
             rules: [],
             enabledBonusCategories: ['shot'],
@@ -193,9 +188,8 @@ describe('PlayPage — bonus points panel', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'lobby' },
           settings: {
             rules: [],
             enabledBonusCategories: [],

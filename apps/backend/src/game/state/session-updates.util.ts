@@ -1,9 +1,9 @@
-import type { LeaderboardEntry } from '@campus-pubquiz/types';
-import type {
-  ActiveShowdownRoundState,
-  SessionState,
-} from '@/game/state/session-state';
-import type { TeamRosterEntry } from '@/team/team.service';
+import {
+  type ActiveShowdownRoundState,
+  type LeaderboardEntry,
+  type SessionState,
+  type TeamRosterEntry,
+} from '@campus-pubquiz/types';
 
 /**
  * Pure per-field updates over one session record. Internal to the Live

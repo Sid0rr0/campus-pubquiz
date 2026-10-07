@@ -91,8 +91,12 @@ flowchart TD
     store["GameSessionStore<br/>in-memory SessionState"]
     mover["MoveCommitter<br/>plan → grade → settle → save"]
     grading["BlockGradingService"]
-    project["projectScreen<br/>per-room views"]
     progress["GameProgressRepository"]
+  end
+
+  subgraph shared["shared/types — pure rules"]
+    project["projectScreen<br/>per-room views"]
+    plan["Move plan<br/>what one press does"]
   end
 
   subgraph domain["Domain services"]
@@ -121,7 +125,9 @@ flowchart TD
   gss --> queue --> store
   gss --> mover --> grading
   mover --> progress
+  mover --> plan
   gss --> project
+  fixtures["frontend test fixtures<br/>test-utils/room-view.ts"] --> project
   gss -->|"answers · roster · bonuses<br/>showdown · standings"| domain
 
   domain --> repos
@@ -140,7 +146,10 @@ Key seams:
 - **`MoveCommitter`** is the only place a press (admin action, timer expiry,
   session creation, restart restore) is planned, graded, settled and saved.
 - **`projectScreen`** builds each room's view, so nothing a room hasn't been
-  shown ever leaves the server.
+  shown ever leaves the server. It lives in `shared/types` with the Move plan
+  and the other pure rules it reads; the backend calls it, and the frontend's
+  test fixtures (`apps/frontend/test-utils/room-view.ts`) run the same
+  projection.
 
 ## Event flow: a team submits an answer
 

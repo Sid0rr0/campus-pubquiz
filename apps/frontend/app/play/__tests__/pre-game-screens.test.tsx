@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -29,16 +29,13 @@ describe('PlayPage — pre-game screens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'rules' }),
-          currentQuestion: null,
-          quizStructure: {
-            blockCount: 2,
-            topicsPerBlock: 3,
-            breakRoundNumbers: [3, 6],
-            minQuestionsPerTopic: 4,
-            maxQuestionsPerTopic: 4,
-          },
+        session: {
+          // Six topics of four questions, a break after every third.
+          rounds: Array.from({ length: 6 }, (_, index) => ({
+            breakAfter: index % 3 === 2,
+            questions: [{}, {}, {}, {}],
+          })),
+          progress: { status: 'rules' },
         },
         team: {
           teamId: 'team-1',
@@ -61,9 +58,8 @@ describe('PlayPage — pre-game screens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'rules' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'rules' },
           settings: {
             rules: ['Custom team-phone rule.'],
             enabledBonusCategories: [],
@@ -86,10 +82,9 @@ describe('PlayPage — pre-game screens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'round_intro' }),
-          currentQuestion: null,
-          roundTitle: 'Picture Round',
+        session: {
+          rounds: [{ title: 'Picture Round', questions: [{}, {}] }],
+          progress: { status: 'round_intro' },
         },
         team: {
           teamId: 'team-1',
@@ -106,21 +101,16 @@ describe('PlayPage — pre-game screens', () => {
 
   it('stays on the block browser, not the round intro card, when Previous re-enters an already-open round', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
-    const q1 = {
-      id: 'r1q1',
-      type: 'free_text' as const,
-      prompt: 'Name a fruit',
-      points: 1,
-      roundNumber: 1,
-      questionNumberInRound: 1,
-    };
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'round_intro', furthestOpenIndex: 0 }),
-          currentQuestion: null,
-          roundTitle: 'Picture Round',
-          blockQuestions: [q1],
+        session: {
+          rounds: [
+            {
+              title: 'Picture Round',
+              questions: [{ prompt: 'Name a fruit' }],
+            },
+          ],
+          progress: { status: 'round_intro', furthestOpenIndex: 0 },
         },
         team: {
           teamId: 'team-1',
@@ -139,11 +129,7 @@ describe('PlayPage — pre-game screens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
-          joinCode: 'ABCDEF',
-        },
+        session: { progress: { status: 'lobby' } },
         team: {
           teamId: 'team-1',
           teamName: 'The Quizzards',

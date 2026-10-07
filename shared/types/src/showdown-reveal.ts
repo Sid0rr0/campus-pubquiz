@@ -1,9 +1,6 @@
-import type { ActiveShowdownView } from '@campus-pubquiz/types';
-import { ShowdownGuessesPendingError } from '@/game/state/errors/showdown-guesses-pending.error';
-import type {
-  ActiveShowdownRoundState,
-  SessionState,
-} from '@/game/state/session-state';
+import type { ActiveShowdownRoundState, SessionState } from './session-state';
+import type { ActiveShowdownView } from './showdown';
+import { ShowdownGuessesPendingError } from './showdown-guesses-pending-error';
 
 /** How many reveal sub-steps an active showdown round has: one per participant's guess, plus one final step for the answer/winner. */
 function getShowdownRevealStepCount(round: ActiveShowdownRoundState): number {

@@ -1,10 +1,9 @@
 import {
   getBlockStartPosition,
   isBreakPointQuestion,
-  isGradedStatus,
-  isQuestionOnAirStatus,
-} from '@campus-pubquiz/types';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
+} from './game-state-block-position';
+import { isGradedStatus, isQuestionOnAirStatus } from './game-state-groups';
+import { getGameContext, type SessionState } from './session-state';
 
 /** roundIndex of the first round in the block the session is currently in — where the question browser's active block starts. */
 export function getActiveBlockStartIndex(session: SessionState): number {

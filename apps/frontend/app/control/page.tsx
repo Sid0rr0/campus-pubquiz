@@ -64,7 +64,7 @@ function AdminPageContent() {
     useLockCountdownSound({
       lockAt: snapshot?.questionLockAt ?? null,
       enabled:
-        snapshot?.settings?.playLockCountdownSound ??
+        snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
   const connectedJoinCode = snapshot?.joinCode;
@@ -121,7 +121,7 @@ function AdminPageContent() {
   // going stale. Outside display statuses, grading still needs *something*
   // to default to, so it falls back to the block's first question —
   // naturally null wherever blockQuestions is empty (e.g. round_intro).
-  const defaultBlockQuestionId = snapshot?.blockQuestions?.[0]?.id ?? null;
+  const defaultBlockQuestionId = snapshot?.blockQuestions[0]?.id ?? null;
   // Adjusted during render rather than in an Effect — once selectedQuestionId
   // is nulled, this condition is false on the next render, so it can't loop.
   if (selectedQuestionId !== null && selectedQuestionId === displayQuestionId) {
@@ -215,10 +215,9 @@ function AdminPageContent() {
   }
 
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
-  // Where the active block starts, and what the Advance slot and Previous do
-  // next, are decided by the server (the admin view) from the session's own
-  // rounds and the same plan the action handler applies.
-  const activeBlockStartIndex = snapshot?.activeBlockStartIndex ?? 0;
+  // What the Advance slot and Previous do next is decided by the server (the
+  // admin view). This hook runs before the null-snapshot early return below,
+  // so the fallbacks (including `?? false` below) cover "no view yet", when there is nothing to act on.
 
   useAdminKeyboardShortcuts({
     advanceStep: snapshot?.advanceStep ?? 'none',
@@ -251,13 +250,14 @@ function AdminPageContent() {
   const {
     progress,
     currentQuestion,
-    blockQuestions = [],
-    leaderboard = [],
+    activeBlockStartIndex,
+    blockQuestions,
+    leaderboard,
     teams,
-    ungradedQuestionIds = [],
-    phaseStartedAt = null,
-    phaseElapsedMs = null,
-    settings = DEFAULT_SESSION_SETTINGS,
+    ungradedQuestionIds,
+    phaseStartedAt,
+    phaseElapsedMs,
+    settings,
   } = snapshot;
   const fallbackQuestions = currentQuestion
     ? [currentQuestion, ...blockQuestions]

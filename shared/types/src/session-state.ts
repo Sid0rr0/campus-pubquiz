@@ -1,12 +1,53 @@
+import type { GameContext, GameProgress } from './game-state-types';
+import type {
+  ClosestGuessRevealData,
+  RevealQuestionView,
+} from './question-views';
+import type { LeaderboardEntry } from './room-views';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
-  type ClosestGuessRevealData,
-  type GameContext,
-  type GameProgress,
-  type LeaderboardEntry,
-} from '@campus-pubquiz/types';
-import type { SeededGame } from '@/db/seed.types';
-import type { TeamRosterEntry } from '@/team/team.service';
+  type SessionSettings,
+} from './session-settings';
+
+export interface SeededRound {
+  id: number;
+  title: string;
+  breakAfter: boolean;
+  /**
+   * See RoundConfig.kahootMode. Optional, like questionNotesById below, so
+   * callers building a SeededRound needn't set it; undefined behaves as false.
+   */
+  kahootMode?: boolean;
+  /** Round topic/theme — see Round.category. Optional, like kahootMode above. */
+  category?: string;
+  /** Who wrote this round's questions — see Round.author. Optional, like kahootMode above. */
+  author?: string;
+  // Carries the correct answer internally so reveal can show it; only
+  // answer-free QuestionView projections leave the server.
+  questions: RevealQuestionView[];
+  // Host-only notes, keyed by question id — deliberately a sibling of
+  // `questions` rather than a field on each question object. Every
+  // RevealQuestionView flows through toRevealQuestionViews' blind `{...question}`
+  // spread into the broadcast snapshot; notes must never ride along. Optional
+  // (like GameProgress.isMediaFullscreen) so callers building a SeededRound
+  // needn't set it; undefined behaves as "no notes for any question in this
+  // round".
+  questionNotesById?: Record<number, string | null>;
+}
+
+export interface SeededGame {
+  quizId: number;
+  gameSessionId: number;
+  joinCode: string;
+  rounds: SeededRound[];
+  settings: SessionSettings;
+}
+
+/** DB-only roster shape — live connection state is layered on by the backend. */
+export interface TeamRosterEntry {
+  teamId: number;
+  teamName: string;
+}
 
 export const LOBBY_PROGRESS: GameProgress = {
   status: 'lobby',
@@ -17,7 +58,7 @@ export const LOBBY_PROGRESS: GameProgress = {
   furthestOpenIndex: -1,
 };
 
-/** Everything GameStateService tracks for one concurrently-running GameSession, keyed by its joinCode. */
+/** Everything the backend tracks for one concurrently-running GameSession, keyed by its joinCode. */
 export interface SessionState {
   seededGame: SeededGame;
   progress: GameProgress;

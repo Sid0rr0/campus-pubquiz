@@ -2,9 +2,8 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FeedbackField } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -20,18 +19,26 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-const FINAL_FORM: FeedbackField = {
-  kind: 'final_form',
-  rounds: [
-    { id: 11, title: 'Music' },
-    { id: 12, title: 'Film' },
-    { id: 13, title: 'Kahoot Blitz' },
-  ],
-};
+// The builder numbers the rounds 1, 2 and 3.
+const MUSIC_ID = 1;
+const FILM_ID = 2;
+const BLITZ_ID = 3;
+
+function endedSession(isFeedbackCollected: boolean) {
+  return {
+    rounds: [
+      { title: 'Music', questions: [{}] },
+      { title: 'Film', questions: [{}] },
+      { title: 'Kahoot Blitz', kahootMode: true, questions: [{}] },
+    ],
+    progress: { status: 'ended' as const },
+    settings: { collectFeedback: isFeedbackCollected },
+  };
+}
 
 function renderEnded(
   overrides: {
-    feedback?: FeedbackField;
+    isFeedbackCollected?: boolean;
     rateRound?: ReturnType<typeof vi.fn>;
     myRoundRatings?: Record<number, number>;
   } = {},
@@ -41,12 +48,7 @@ function renderEnded(
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
   mockUseTeamLink.mockReturnValue(
     socketResult({
-      snapshot: {
-        progress: progress({ status: 'ended' }),
-        currentQuestion: null,
-        phoneScreen: { kind: 'ended' },
-        feedback: 'feedback' in overrides ? overrides.feedback : FINAL_FORM,
-      },
+      session: endedSession(overrides.isFeedbackCollected ?? true),
       team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
       rateRound,
       myRoundRatings: overrides.myRoundRatings ?? {},
@@ -81,7 +83,7 @@ describe('PlayPage — the final feedback form', () => {
   });
 
   it('fills the stars in from the saved ratings', () => {
-    renderEnded({ myRoundRatings: { 12: 4 } });
+    renderEnded({ myRoundRatings: { [FILM_ID]: 4 } });
 
     expect(star('Film', 4)).toHaveAttribute('aria-pressed', 'true');
     expect(star('Film', 5)).toHaveAttribute('aria-pressed', 'false');
@@ -90,11 +92,11 @@ describe('PlayPage — the final feedback form', () => {
 
   it('sends a changed rating and shows "Saved ✓"', async () => {
     const user = userEvent.setup();
-    const { rateRound } = renderEnded({ myRoundRatings: { 12: 4 } });
+    const { rateRound } = renderEnded({ myRoundRatings: { [FILM_ID]: 4 } });
 
     await user.click(star('Film', 2));
 
-    expect(rateRound).toHaveBeenCalledWith(12, 2);
+    expect(rateRound).toHaveBeenCalledWith(FILM_ID, 2);
     expect(await screen.findByText('Saved ✓')).toBeInTheDocument();
   });
 
@@ -113,7 +115,9 @@ describe('PlayPage — the final feedback form', () => {
 
   it('keeps every row open once all are rated, unlike the break card', async () => {
     const user = userEvent.setup();
-    renderEnded({ myRoundRatings: { 11: 5, 12: 4, 13: 3 } });
+    renderEnded({
+      myRoundRatings: { [MUSIC_ID]: 5, [FILM_ID]: 4, [BLITZ_ID]: 3 },
+    });
 
     await user.click(star('Music', 2));
 
@@ -121,8 +125,8 @@ describe('PlayPage — the final feedback form', () => {
     expect(screen.queryByText(/rated ✓ · edit/i)).not.toBeInTheDocument();
   });
 
-  it('shows no form while the feedback field is empty', () => {
-    renderEnded({ feedback: null });
+  it('shows no form while the session does not collect feedback', () => {
+    renderEnded({ isFeedbackCollected: false });
 
     expect(screen.getByText('Quiz complete!')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Rate / })).toBeNull();

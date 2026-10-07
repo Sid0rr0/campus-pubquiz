@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -29,14 +29,15 @@ describe('PlayPage — question visibility', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
       }),
     );
@@ -49,14 +50,15 @@ describe('PlayPage — question visibility', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'locking' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'locking' },
         },
       }),
     );
@@ -69,15 +71,20 @@ describe('PlayPage — question visibility', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r2q1',
-            type: 'free_text',
-            prompt: 'Which landmark is shown?',
-            mediaUrl: 'https://example.com/landmark.jpg',
-            points: 3,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'free_text',
+                  prompt: 'Which landmark is shown?',
+                  mediaUrl: 'https://example.com/landmark.jpg',
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
       }),
     );
@@ -90,15 +97,20 @@ describe('PlayPage — question visibility', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r2q2',
-            type: 'audio',
-            prompt: 'Name this song.',
-            mediaUrl: 'https://example.com/song.mp3',
-            points: 3,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'audio',
+                  prompt: 'Name this song.',
+                  mediaUrl: 'https://example.com/song.mp3',
+                  points: 3,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
       }),
     );
@@ -111,15 +123,20 @@ describe('PlayPage — question visibility', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q3',
-            type: 'free_text',
-            prompt: 'Name this flag.',
-            mediaUrl: 'https://example.com/france-flag.jpg',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'free_text',
+                  prompt: 'Name this flag.',
+                  mediaUrl: 'https://example.com/france-flag.jpg',
+                  points: 1,
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
       }),
     );
@@ -132,14 +149,15 @@ describe('PlayPage — question visibility', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
       socketResult({
-        snapshot: {
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: {
-            id: 'r1q1',
-            type: 'free_text',
-            prompt: 'Name a fruit',
-            points: 1,
-          },
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'free_text', prompt: 'Name a fruit', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
         },
       }),
     );

@@ -1,16 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
-import {
-  DEFAULT_DISPLAY_TEXT_SCALE,
-  describeAdminIndicators,
-  describeOnAirScreen,
-  type AdminIndicators,
-  type OnAirInput,
-  type AdminStatePayload,
-  type AuthUser,
-  type GameProgress,
-  type GameStatus,
-} from '@campus-pubquiz/types';
+import { SOCKET_ROOMS, type AuthUser } from '@campus-pubquiz/types';
+import { roomView, type SessionDescription } from '@/test-utils/room-view';
 import type { UseAuthResult } from '@/app/lib/use-auth';
 import type { UseAdminGameResult } from '@/app/lib/use-admin-game';
 
@@ -36,18 +27,6 @@ export function authenticatedAuthResult(
   };
 }
 
-export function progress(overrides: Partial<GameProgress> = {}): GameProgress {
-  return {
-    status: 'lobby',
-    roundIndex: 0,
-    questionIndex: 0,
-    isLeaderboardVisible: false,
-    revealIndex: 0,
-    furthestOpenIndex: 0,
-    ...overrides,
-  };
-}
-
 // Advance/Previous render in both the always-mounted mobile sticky bar and
 // the desktop sidebar (each hidden from the other via a CSS media query that
 // jsdom doesn't evaluate) — scope to the desktop <aside> (the "complementary"
@@ -58,110 +37,21 @@ export function getDesktopButton(name: RegExp): HTMLElement {
   });
 }
 
-const STATUSES_WITH_ADVANCE = new Set<GameStatus>([
-  'rules',
-  'round_overview',
-  'round_intro',
-  'question_open',
-  'locking',
-  'break_intro',
-  'break',
-  'break_round_intro',
-  'reveal_intro',
-  'reveal',
-]);
-const STATUSES_WITH_PREVIOUS = new Set<GameStatus>([
-  'round_overview',
-  'round_intro',
-  'question_open',
-  'locking',
-  'break_intro',
-  'break',
-  'reveal_intro',
-  'reveal',
-]);
-
-/**
- * Fixture default for what the server announces: the Advance step and the
- * Previous state. The real rules live in (and are tested against) the backend's
- * projection; a test that needs a different answer sets the flag itself.
- */
-function defaultActionAvailability(snapshot: {
-  progress: GameProgress;
-  activeShowdown?: OnAirInput['activeShowdown'];
-  showdownRevealStep?: number;
-}): Pick<AdminStatePayload, 'advanceStep' | 'previousState'> {
-  const { status, previousStatus, isLeaderboardVisible } = snapshot.progress;
-  const hasShowdown = snapshot.activeShowdown != null;
-  const canAdvance =
-    STATUSES_WITH_ADVANCE.has(status) || (status === 'ended' && hasShowdown);
-  const canGoToPreviousQuestion =
-    STATUSES_WITH_PREVIOUS.has(status) ||
-    (status === 'ended' && previousStatus != null) ||
-    (status === 'ended' &&
-      hasShowdown &&
-      (snapshot.showdownRevealStep ?? 0) > 0);
-  let previousState: AdminStatePayload['previousState'] = 'unavailable';
-  if (canGoToPreviousQuestion) {
-    previousState = isLeaderboardVisible
-      ? 'covered_by_leaderboard'
-      : 'available';
-  }
-  return {
-    // Under the leaderboard the step depends on the reveal count, which only
-    // the server knows — a test that needs a reveal or hide step sets it.
-    advanceStep: canAdvance ? 'advance' : 'none',
-    previousState,
-  };
-}
-
-/**
- * Builds the view /control is sent from a partial fixture: the fixture is the
- * core snapshot, and the fields the server adds to the admin view are filled
- * in — the on-air fields from the same shared rule the backend projection
- * uses, the Advance step and Previous state from a per-status default, and the
- * always-present snapshot fields a test didn't bother to set from empty defaults. Fields the
- * fixture sets itself win.
- */
-export function adminView<
-  T extends {
-    progress: GameProgress;
-    activeShowdown?: OnAirInput['activeShowdown'];
-    showdownRevealStep?: number;
-  },
->(
-  snapshot: T,
-): T &
-  Pick<AdminStatePayload, 'onAirScreen'> &
-  AdminIndicators &
-  Pick<AdminStatePayload, 'advanceStep' | 'previousState'> &
-  Pick<AdminStatePayload, 'isShowdownEligible' | 'isLastQuestionBeforeBreak'> {
-  return {
-    onAirScreen: describeOnAirScreen(snapshot).screen,
-    ...describeAdminIndicators(snapshot),
-    ...defaultActionAvailability(snapshot),
-    isShowdownEligible: false,
-    isLastQuestionBeforeBreak: false,
-    teams: [],
-    answeredTeamIds: [],
-    breakEndsAt: null,
-    displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
-    activeShowdown: null,
-    ...snapshot,
-  };
-}
-
 /**
  * A complete admin-hook result for page tests: each test passes only what it
  * exercises, and every other member is a spy that resolves to success — so a
  * page can't crash on a member the test didn't think about.
  */
 export function adminGameResult(
-  overrides: Partial<UseAdminGameResult> = {},
+  overrides: Partial<UseAdminGameResult> & {
+    /** Describe the session; the snapshot is the view the admin room is sent for it. */
+    session?: SessionDescription;
+  } = {},
 ): UseAdminGameResult {
+  const { session, ...hookOverrides } = overrides;
   const ok = () => Promise.resolve({ success: true as const });
   return {
-    snapshot: null,
+    snapshot: session ? roomView(SOCKET_ROOMS.ADMIN, session) : null,
     connectionError: null,
     reconnectedAt: null,
     liveAnswers: null,
@@ -175,6 +65,6 @@ export function adminGameResult(
     setBreakEndTime: vi.fn(ok),
     setDisplayTextScale: vi.fn(ok),
     createShowdownRound: vi.fn(ok),
-    ...overrides,
+    ...hookOverrides,
   };
 }

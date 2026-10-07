@@ -3,12 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from '@/app/control/page';
-import {
-  authenticatedAuthResult,
-  getDesktopButton,
-  progress,
-  adminView,
-} from './test-utils';
+import { authenticatedAuthResult, getDesktopButton } from './test-utils';
 
 const { mockUseAdminGame, mockFetchQuizzes, mockUseAuth, searchParamsRef } =
   vi.hoisted(() => ({
@@ -53,7 +48,9 @@ describe('AdminPage — leaderboard', () => {
   it('shows "Leaderboard" and sends TOGGLE_LEADERBOARD when hidden', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({ progress: progress(), currentQuestion: null }),
+      session: {
+        progress: {},
+      },
       connectionError: null,
       sendAction,
     });
@@ -69,10 +66,9 @@ describe('AdminPage — leaderboard', () => {
   it('still shows "Leaderboard" and sends TOGGLE_LEADERBOARD when visible', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
-      }),
+      session: {
+        progress: { isLeaderboardVisible: true },
+      },
       connectionError: null,
       sendAction,
     });
@@ -87,28 +83,13 @@ describe('AdminPage — leaderboard', () => {
 
   it('disables Previous while the leaderboard is visible', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({
+      session: {
+        progress: {
           status: 'question_open',
           questionIndex: 1,
           isLeaderboardVisible: true,
-        }),
-        currentQuestion: {
-          id: 'r1q2',
-          type: 'free_text',
-          prompt: 'Name a vegetable',
-          points: 1,
         },
-        blockQuestions: [
-          { id: 'r1q1', type: 'free_text', prompt: 'Name a fruit', points: 1 },
-          {
-            id: 'r1q2',
-            type: 'free_text',
-            prompt: 'Name a vegetable',
-            points: 1,
-          },
-        ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -120,9 +101,8 @@ describe('AdminPage — leaderboard', () => {
   it('labels the Advance slot "Show Next Team" and sends ADVANCE when the server announces a rank reveal', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      session: {
+        progress: { isLeaderboardVisible: true },
         leaderboard: [
           {
             teamId: 1,
@@ -137,8 +117,7 @@ describe('AdminPage — leaderboard', () => {
             bonusPoints: 0,
           },
         ],
-        advanceStep: 'reveal_next_rank',
-      }),
+      },
       connectionError: null,
       sendAction,
     });
@@ -156,12 +135,11 @@ describe('AdminPage — leaderboard', () => {
   it('labels the Advance slot "Hide Leaderboard" and sends ADVANCE when the server announces a hide', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({
+      session: {
+        progress: {
           status: 'question_open',
           isLeaderboardVisible: true,
-        }),
-        currentQuestion: null,
+        },
         leaderboard: [
           {
             teamId: 1,
@@ -170,8 +148,9 @@ describe('AdminPage — leaderboard', () => {
             bonusPoints: 0,
           },
         ],
-        advanceStep: 'hide_leaderboard',
-      }),
+        // Every team is already revealed, so the next press hides the board.
+        leaderboardRevealCount: 1,
+      },
       connectionError: null,
       sendAction,
     });
@@ -194,11 +173,9 @@ describe('AdminPage — leaderboard', () => {
 
   it('hides the Advance slot while the board is up and the server announces nothing to do', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'ended', isLeaderboardVisible: true }),
-        currentQuestion: null,
-        advanceStep: 'none',
-      }),
+      session: {
+        progress: { status: 'ended', isLeaderboardVisible: true },
+      },
       connectionError: null,
       sendAction: vi.fn(),
     });
@@ -215,12 +192,11 @@ describe('AdminPage — leaderboard', () => {
   it('re-enables Advance once the leaderboard is closed after a full reveal', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({
+      session: {
+        progress: {
           status: 'question_open',
           isLeaderboardVisible: false,
-        }),
-        currentQuestion: null,
+        },
         leaderboard: [
           {
             teamId: 1,
@@ -229,7 +205,7 @@ describe('AdminPage — leaderboard', () => {
             bonusPoints: 0,
           },
         ],
-      }),
+      },
       connectionError: null,
       sendAction,
     });
@@ -244,30 +220,26 @@ describe('AdminPage — leaderboard', () => {
 
   it('shows a leaderboard preview from the snapshot', () => {
     mockUseAdminGame.mockReturnValue({
-      snapshot: adminView({
-        progress: progress({ status: 'break' }),
-        currentQuestion: null,
-        teams: [
-          { teamId: 'team-1', teamName: 'The Quizzards', isConnected: true },
-          { teamId: 'team-2', teamName: 'Second Place', isConnected: true },
-        ],
+      session: {
+        progress: { status: 'break' },
+        connectedTeamIds: [1, 2],
         leaderboard: [
           {
-            teamId: 'team-1',
+            teamId: 1,
             teamName: 'The Quizzards',
             totalPoints: 5,
             bonusPoints: 0,
             roundPoints: [],
           },
           {
-            teamId: 'team-2',
+            teamId: 2,
             teamName: 'Second Place',
             totalPoints: 3,
             bonusPoints: 0,
             roundPoints: [],
           },
         ],
-      }),
+      },
       connectionError: null,
       sendAction: vi.fn(),
       liveAnswers: null,

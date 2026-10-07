@@ -1,9 +1,9 @@
 import {
-  SOCKET_EVENTS,
   type GameStatus,
   type ServerToClientProtocol,
+  type SessionState,
+  SOCKET_EVENTS,
 } from '@campus-pubquiz/types';
-import type { SessionState } from '@/game/state/session-state';
 
 /** One server-to-client event paired with its protocol payload, so a mismatched pair doesn't compile. An event that carries no payload (`TEAM_KICKED`) takes `undefined`. */
 type EventEmit<E extends keyof ServerToClientProtocol> =

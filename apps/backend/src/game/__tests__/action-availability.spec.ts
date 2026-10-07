@@ -1,11 +1,11 @@
 import {
-  SOCKET_ROOMS,
-  getLeaderboardRevealStepCount,
   type AdvanceSlotStep,
   type GameAction,
+  getLeaderboardRevealStepCount,
   type PreviousState,
+  projectScreen,
+  SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
-import { projectScreen } from '@/game/state/screen-projection.util';
 import type { GameSessionStore } from '@/game/state/game-session.store';
 import { asSocket } from '@/game/__tests__/test-utils';
 import { createAnswerer } from '@/game/__tests__/walk-test-utils';

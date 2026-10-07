@@ -1,9 +1,6 @@
-import {
-  describeFeedback,
-  getBlockStartPosition,
-  type FeedbackField,
-} from '@campus-pubquiz/types';
-import { getGameContext, type SessionState } from '@/game/state/session-state';
+import { getBlockStartPosition } from './game-state-block-position';
+import { describeFeedback, type FeedbackField } from './on-air-screen';
+import { getGameContext, type SessionState } from './session-state';
 
 /**
  * The rounds open for rating right now, as the players view carries them and

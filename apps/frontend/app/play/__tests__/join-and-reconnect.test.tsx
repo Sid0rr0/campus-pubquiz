@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
-import { progress, socketResult } from './test-utils';
+import { socketResult } from './test-utils';
 
 const { mockUseTeamLink, mockFetchPublicSessions, searchParamsRef, routerRef } =
   vi.hoisted(() => ({
@@ -186,13 +186,11 @@ describe('PlayPage — join and reconnect', () => {
     // down) still holds the old joinCode. With the URL now a bare /play,
     // that stale snapshot must not make the ?code= sync re-append it: the
     // sync is gated on the link still having a team name.
-    const staleSnapshot = {
-      joinCode: 'ABCDEF',
-      progress: progress({ status: 'question_open' }),
-      currentQuestion: null,
+    const staleSession = {
+      progress: { status: 'question_open' as const },
     };
     mockUseTeamLink.mockReturnValue(
-      socketResult({ teamName: null, snapshot: staleSnapshot }),
+      socketResult({ teamName: null, session: staleSession }),
     );
     searchParamsRef.current = new URLSearchParams();
     renderWithQuery(<PlayPage />);
@@ -204,10 +202,8 @@ describe('PlayPage — join and reconnect', () => {
     mockUseTeamLink.mockReturnValue(
       socketResult({
         teamName: 'Returning Team',
-        snapshot: {
-          joinCode: 'ABCDEF',
-          progress: progress({ status: 'question_open' }),
-          currentQuestion: null,
+        session: {
+          progress: { status: 'question_open' },
         },
       }),
     );

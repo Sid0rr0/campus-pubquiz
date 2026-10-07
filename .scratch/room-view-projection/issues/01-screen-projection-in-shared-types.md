@@ -14,12 +14,12 @@ Parent spec: `.scratch/room-view-projection/spec.md`
 
 **Blocked by:** socket-protocol 01 (split socket-events by concept) and socket-protocol 04 (single-room fields in their room view).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The diff reads as moves plus import changes. Any logic change is called out in the commit body, and ideally there is none.
-- [ ] The backend projection specs pass unchanged: screen projection, players view, admin flags projection, core snapshot, block questions, session snapshot leak and screen projection delivery. So do the Move plan, Commit a move and Settle step specs, and the shared types game-state tests.
-- [ ] No backend module keeps a second copy of a moved rule.
-- [ ] `DOCUMENTATION.md`'s room-view paragraph names the shared projection in place of the backend file.
-- [ ] `docs/architecture.md` diagrams that place the Screen projection or the Move plan in the backend show them in shared types.
-- [ ] The **Move plan** and **Settle step** entries in `GLOSSARY.md` are checked so they don't say "the backend's".
-- [ ] `pnpm typecheck`, `pnpm lint` and the backend and shared-types suites pass.
+- [x] The diff reads as moves plus import changes. Any logic change is called out in the commit body, and ideally there is none.
+- [x] The backend projection specs pass unchanged: screen projection, players view, admin flags projection, core snapshot, block questions, session snapshot leak and screen projection delivery. So do the Move plan, Commit a move and Settle step specs, and the shared types game-state tests.
+- [x] No backend module keeps a second copy of a moved rule.
+- [x] `DOCUMENTATION.md`'s room-view paragraph names the shared projection in place of the backend file.
+- [x] `docs/architecture.md` diagrams that place the Screen projection or the Move plan in the backend show them in shared types.
+- [x] The **Move plan** and **Settle step** entries in `GLOSSARY.md` are checked so they don't say "the backend's".
+- [x] `pnpm typecheck`, `pnpm lint` and the backend and shared-types suites pass.
