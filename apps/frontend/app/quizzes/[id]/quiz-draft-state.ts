@@ -215,19 +215,6 @@ export function describeEditorRounds(
   );
 }
 
-/** How many questions at the start of `round` (at `roundIndex`) a live session pins in place: all of them in a round the session has reached and whose block is locking, the opened ones in the current round before that, none after it or when nothing is live. */
-export function getPinnedQuestionCount(
-  round: EditorRound,
-  roundIndex: number,
-  liveEdit: LiveEditFrontier | undefined,
-): number {
-  const rounds = Array.from({ length: roundIndex + 1 }, () => round);
-  return (
-    describeEditorRounds(rounds, liveEdit)?.[roundIndex].pinnedQuestionCount ??
-    0
-  );
-}
-
 /** Moves a question to the end of another round — the draft's way of changing which round a question plays in. Returns `rounds` itself when there is nothing to move. */
 export function moveQuestionToRound(
   rounds: EditorRound[],

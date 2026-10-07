@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { createImportPreview, type ImportPreview } from '@campus-pubquiz/types';
@@ -12,6 +13,8 @@ import {
   ImportLockedError,
   type ImportService,
 } from '@/import/import.service';
+import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
+import { QuizDraftInvalidError, QuizNotFoundError } from '@/quiz/quiz.service';
 import { SheetFetchError } from '@/import/sheet-url-fetcher';
 
 const CSV = 'round,type,question,options,answer,points,media_url,notes\n';
@@ -106,6 +109,36 @@ describe('ImportController', () => {
       await expect(controller.confirm({ csvText: CSV })).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('maps a live-edit refusal to 409 with the issues attached', async () => {
+      const { controller, importService } = makeController();
+      const issues = [{ message: 'moved' }] as never;
+      importService.confirm.mockRejectedValue(
+        new QuizLiveEditBlockedError(issues),
+      );
+
+      const promise = controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' });
+
+      await expect(promise).rejects.toThrow(ConflictException);
+      await promise.catch((error: ConflictException) => {
+        expect(error.getResponse()).toMatchObject({ issues });
+      });
+    });
+
+    it('maps an invalid saved draft to 422 and an unknown quiz to 404', async () => {
+      const { controller, importService } = makeController();
+      importService.confirm.mockRejectedValueOnce(
+        new QuizDraftInvalidError([{ message: 'bad' }] as never),
+      );
+      importService.confirm.mockRejectedValueOnce(new QuizNotFoundError(9));
+
+      await expect(
+        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
+      ).rejects.toThrow(UnprocessableEntityException);
+      await expect(
+        controller.confirm({ csvText: CSV, joinCode: 'ABCDEF' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('maps a blocked import to 422 with the issues attached', async () => {

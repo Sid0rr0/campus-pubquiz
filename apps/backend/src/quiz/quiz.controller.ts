@@ -11,7 +11,6 @@ import {
   Post,
   Put,
   Query,
-  UnprocessableEntityException,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -25,12 +24,8 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
-import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
-import {
-  QuizDraftInvalidError,
-  QuizNotFoundError,
-  QuizService,
-} from '@/quiz/quiz.service';
+import { toQuizHttpError } from '@/quiz/quiz-http-errors';
+import { QuizService } from '@/quiz/quiz.service';
 
 @Controller('quizzes')
 @UseGuards(SessionGuard, RolesGuard)
@@ -69,7 +64,7 @@ export class QuizController {
     try {
       return await this.quizService.create(body.title, body.rounds);
     } catch (error) {
-      throw this.toHttpError(error);
+      throw toQuizHttpError(error);
     }
   }
 
@@ -81,7 +76,7 @@ export class QuizController {
     try {
       return await this.liveEdit.save(id, body);
     } catch (error) {
-      throw this.toHttpError(error);
+      throw toQuizHttpError(error);
     }
   }
 
@@ -97,26 +92,7 @@ export class QuizController {
     try {
       await this.quizService.remove(id);
     } catch (error) {
-      throw this.toHttpError(error);
+      throw toQuizHttpError(error);
     }
-  }
-
-  private toHttpError(error: unknown): Error {
-    if (error instanceof QuizDraftInvalidError) {
-      return new UnprocessableEntityException({
-        message: error.message,
-        issues: error.issues,
-      });
-    }
-    if (error instanceof QuizLiveEditBlockedError) {
-      return new ConflictException({
-        message: error.message,
-        issues: error.issues,
-      });
-    }
-    if (error instanceof QuizNotFoundError) {
-      return new NotFoundException(error.message);
-    }
-    return error instanceof Error ? error : new Error(String(error));
   }
 }

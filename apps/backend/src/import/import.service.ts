@@ -4,6 +4,7 @@ import {
   createImportPreview,
   type ImportConfirmResult,
   type ImportPreview,
+  type ImportRoundPreview,
 } from '@campus-pubquiz/types';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { QuizRepository } from '@/db/repositories/quiz.repository';
@@ -40,6 +41,35 @@ export class ImportLockedError extends Error {
     );
     this.name = 'ImportLockedError';
   }
+}
+
+/** A sheet carries no question ids: each question is the stored question at the same round and position, as the plain sync of a sheet treats it, so the live-edit check compares like with like. */
+function withQuestionIdsBySlot(
+  stored: readonly ImportRoundPreview[],
+  incoming: readonly ImportRoundPreview[],
+): ImportRoundPreview[] {
+  return incoming.map((round, roundIndex) => ({
+    ...round,
+    questions: round.questions.map((question, questionIndex) => {
+      const questionId =
+        stored[roundIndex]?.questions[questionIndex]?.questionId;
+      return questionId === undefined ? question : { ...question, questionId };
+    }),
+  }));
+}
+
+function toConfirmResult(
+  quizId: number,
+  rounds: readonly ImportRoundPreview[],
+): ImportConfirmResult {
+  return {
+    quizId,
+    roundCount: rounds.length,
+    questionCount: rounds.reduce(
+      (total, round) => total + round.questions.length,
+      0,
+    ),
+  };
 }
 
 @Injectable()
@@ -155,24 +185,26 @@ export class ImportService {
     }
 
     const quizId = await this.upsertQuiz(preview.quizTitle);
-    // Same path as an editor save: checked against any session playing the
-    // quiz and applied under their held writes. The importing session's
-    // lobby/ended screens get the new rounds broadcast too, instead of
-    // keeping the old ones until the next press.
-    await this.liveEdit.save(
+    // Checked against any session playing the quiz and applied under their
+    // held writes, like an editor save. The importing session's lobby/ended
+    // screens get the new rounds broadcast too, instead of keeping the old
+    // ones until the next press. With no live session it writes exactly as
+    // a re-import always has (the sheet is already validated), not through
+    // the editor's validating update.
+    return this.liveEdit.save(
       quizId,
       { title: preview.quizTitle, rounds: preview.rounds },
-      { reloadJoinCode: joinCode, identifyQuestionsBySlot: true },
+      {
+        reloadJoinCode: joinCode,
+        strategy: {
+          identifyQuestions: withQuestionIdsBySlot,
+          persist: async (rounds) => {
+            await this.quizService.syncRoundsAndQuestions(quizId, rounds);
+            return toConfirmResult(quizId, rounds);
+          },
+        },
+      },
     );
-
-    return {
-      quizId,
-      roundCount: preview.rounds.length,
-      questionCount: preview.rounds.reduce(
-        (total, round) => total + round.questions.length,
-        0,
-      ),
-    };
   }
 
   private async upsertQuiz(title: string): Promise<number> {
