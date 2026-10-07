@@ -556,13 +556,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     const kahootScheduler = new ManualTimerScheduler();
     const gateway = new GameGateway(
       gameState,
-      services.teamService,
       services.answerService,
-      services.bonusService,
       asSessionService(sessionService),
       db.orm,
-      services.showdownService,
-      services.feedbackService,
       { lock: lockScheduler, kahoot: kahootScheduler },
     );
     gateways.push(gateway);
