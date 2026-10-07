@@ -8,12 +8,12 @@ import {
 } from '@radix-ui/react-icons';
 import {
   QUESTION_KINDS,
-  resolveAnswerKind,
   type AnswerKind,
   type MatchScoringMode,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import { resolveDraftAnswerKind } from '@/app/quizzes/[id]/answer-kind-drafts';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   makeMatchPair,
@@ -411,12 +411,6 @@ const ANSWER_KIND_FIELDS = {
 
 /** The answer fields for the question's answer kind, resolved from its type and the choices typed so far. */
 export function AnswerSection(props: AnswerFieldsProps) {
-  const Fields =
-    ANSWER_KIND_FIELDS[
-      resolveAnswerKind({
-        type: props.question.type,
-        options: props.question.options.map((option) => option.text),
-      })
-    ];
+  const Fields = ANSWER_KIND_FIELDS[resolveDraftAnswerKind(props.question)];
   return <Fields {...props} />;
 }
