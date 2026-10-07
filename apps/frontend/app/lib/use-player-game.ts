@@ -242,12 +242,13 @@ export function usePlayerGame(
       linkedSocketIdRef.current = null;
       pendingSubmitRef.current = null;
 
-      socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
+      const onStateReceived = (
+        payload: Parameters<typeof mergeSeenQuestions>[1],
+      ) => {
         setSeenQuestions((current) => mergeSeenQuestions(current, payload));
-      });
-      socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
-        setSeenQuestions((current) => mergeSeenQuestions(current, payload));
-      });
+      };
+      socket.on(SOCKET_EVENTS.STATE_SYNC, onStateReceived);
+      socket.on(SOCKET_EVENTS.STATE_UPDATED, onStateReceived);
 
       socket.on(SOCKET_EVENTS.JOIN_ACCEPTED, (payload) => {
         setTeam(payload);
