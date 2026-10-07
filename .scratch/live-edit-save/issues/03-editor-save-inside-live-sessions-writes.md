@@ -17,13 +17,13 @@ Parent spec: `.scratch/live-edit-save/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Written first, failing against today's code: a save that deletes the next unopened question, overlapped with an Advance that opens it (the press held on its progress save), is refused with the existing issue, and the session's on-air question is unchanged.
-- [ ] The reverse order: the save lands first, and the Advance opens the question that now follows.
-- [ ] A save the frontier allows, made during a press, lands, and the session carries on from the same opened question.
-- [ ] An answer-key fix on an opened question regrades consistently with a grade landing at the same moment.
-- [ ] Two sessions live on one quiz: the save is checked against both, and a press held on one holds the save.
-- [ ] A session on another quiz isn't held up by the save.
-- [ ] The quiz controller spec covers only HTTP mapping, with no mocked game state. The live-structural-edit, quiz-edited, live-edit-regrade and opened-questions specs pass, saving through the module where they used the controller or gateway path.
-- [ ] GLOSSARY, DOCUMENTATION and the `/guide` page are updated in the same commit.
+- [x] Written first, failing against today's code: a save that deletes the next unopened question, overlapped with an Advance that opens it (the press held on its progress save), is refused with the existing issue, and the session's on-air question is unchanged.
+- [x] The reverse order: the save lands first, and the Advance opens the question that now follows.
+- [x] A save the frontier allows, made during a press, lands, and the session carries on from the same opened question.
+- [x] An answer-key fix on an opened question regrades consistently with a grade landing at the same moment.
+- [x] Two sessions live on one quiz: the save is checked against both, and a press held on one holds the save.
+- [x] A session on another quiz isn't held up by the save.
+- [x] The quiz controller spec covers only HTTP mapping, with no mocked game state. The live-structural-edit, quiz-edited, live-edit-regrade and opened-questions specs pass, saving through the module where they used the controller or gateway path.
+- [x] GLOSSARY, DOCUMENTATION and the `/guide` page are updated in the same commit.

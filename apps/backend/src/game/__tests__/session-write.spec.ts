@@ -608,7 +608,7 @@ describe('GameGateway — session write: quiz edits and re-imports', () => {
     return snapshots[snapshots.length - 1];
   }
 
-  // QuizController.update and the re-import both end in notifyQuizEdited,
+  // The re-import ends in notifyQuizEdited,
   // inside an HTTP request context.
   function editQuiz() {
     return game.inRequestContext(() =>

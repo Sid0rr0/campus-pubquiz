@@ -15,9 +15,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  mergeLiveEditFrontiers,
-  type GameStatus,
-  type LiveEditFrontier,
   type QuizDraft,
   type QuizDraftSaveRequest,
   type QuizDraftSaveResult,
@@ -26,21 +23,14 @@ import {
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import { GameGateway } from '@/game/game.gateway';
+import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameStateService } from '@/game/state/game-state.service';
-import {
-  findLiveEditViolations,
-  findRegradeQuestionIds,
-  QuizLiveEditBlockedError,
-} from '@/quiz/live-edit-guard';
+import { QuizLiveEditBlockedError } from '@/quiz/live-edit-guard';
 import {
   QuizDraftInvalidError,
   QuizNotFoundError,
   QuizService,
 } from '@/quiz/quiz.service';
-
-/** A session in one of these statuses can't be corrupted by an editor save — every other status is "live" for locking purposes. */
-const NOT_LIVE_STATUSES: GameStatus[] = ['lobby', 'ended'];
 
 @Controller('quizzes')
 @UseGuards(SessionGuard, RolesGuard)
@@ -48,7 +38,7 @@ export class QuizController {
   constructor(
     private readonly quizService: QuizService,
     private readonly gameState: GameStateService,
-    private readonly gameGateway: GameGateway,
+    private readonly liveEdit: LiveEditService,
   ) {}
 
   @Get()
@@ -68,12 +58,8 @@ export class QuizController {
     if (!draft) {
       throw new NotFoundException(`Quiz ${id} does not exist`);
     }
-    const liveJoinCodes = this.getLiveSessionJoinCodes(id);
-    if (liveJoinCodes.length === 0) return draft;
-    return {
-      ...draft,
-      liveEdit: this.getLiveEditFrontier(liveJoinCodes),
-    };
+    const frontier = this.liveEdit.getFrontier(id);
+    return frontier ? { ...draft, liveEdit: frontier } : draft;
   }
 
   @Post()
@@ -93,19 +79,7 @@ export class QuizController {
     @Body() body: QuizDraftSaveRequest,
   ): Promise<QuizDraftSaveResult> {
     try {
-      const liveJoinCodes = this.getLiveSessionJoinCodes(id);
-      const regradeQuestionIds =
-        liveJoinCodes.length > 0
-          ? await this.checkLiveEdit(id, body, liveJoinCodes)
-          : [];
-
-      const result = await this.quizService.update(id, body.title, body.rounds);
-
-      for (const joinCode of liveJoinCodes) {
-        await this.gameGateway.notifyQuizEdited(joinCode, regradeQuestionIds);
-      }
-
-      return result;
+      return await this.liveEdit.save(id, body);
     } catch (error) {
       throw this.toHttpError(error);
     }
@@ -115,8 +89,7 @@ export class QuizController {
   @Roles('admin')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    const liveJoinCodes = this.getLiveSessionJoinCodes(id);
-    if (liveJoinCodes.length > 0) {
+    if (this.liveEdit.hasLiveSession(id)) {
       throw new ConflictException(
         'Cannot delete a quiz with a live session running — close the session first',
       );
@@ -126,57 +99,6 @@ export class QuizController {
     } catch (error) {
       throw this.toHttpError(error);
     }
-  }
-
-  /**
-   * Rejects a save that would break a live session (see
-   * findLiveEditViolations), otherwise returns the opened questions
-   * whose answer/points changed — each live session re-grades those after
-   * the save lands.
-   */
-  private async checkLiveEdit(
-    quizId: number,
-    body: QuizDraftSaveRequest,
-    liveJoinCodes: string[],
-  ): Promise<number[]> {
-    const currentDraft = await this.quizService.findDraftById(quizId);
-    if (!currentDraft) return []; // quizService.update below reports the 404
-
-    const frontier = this.getLiveEditFrontier(liveJoinCodes);
-    const issues = findLiveEditViolations(
-      currentDraft.rounds,
-      body.rounds,
-      frontier,
-    );
-    if (issues.length > 0) {
-      throw new QuizLiveEditBlockedError(issues);
-    }
-    return findRegradeQuestionIds(
-      currentDraft.rounds,
-      body.rounds,
-      frontier.openedQuestionIds,
-    );
-  }
-
-  /** Join codes of every currently-running session on `quizId` — lobby/ended sessions can't be broken by an editor save, so they're excluded. */
-  private getLiveSessionJoinCodes(quizId: number): string[] {
-    return this.gameState
-      .listSessions()
-      .filter(
-        (session) =>
-          session.quizId === quizId &&
-          !NOT_LIVE_STATUSES.includes(session.status),
-      )
-      .map((session) => session.joinCode);
-  }
-
-  /** The live sessions' frontiers merged — a question opened in any one stays opened in the shared draft, and the line is the furthest-on session's current round. */
-  private getLiveEditFrontier(liveJoinCodes: string[]): LiveEditFrontier {
-    return mergeLiveEditFrontiers(
-      liveJoinCodes.map((joinCode) =>
-        this.gameState.getLiveEditFrontier(joinCode),
-      ),
-    );
   }
 
   private toHttpError(error: unknown): Error {

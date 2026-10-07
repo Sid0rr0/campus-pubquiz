@@ -118,6 +118,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Creating a quiz',
     paragraphs: [
       'From the Sessions page, "New Quiz" opens the quiz editor. Start from a blank round and fill it in by hand, or import a CSV export of a spreadsheet to populate rounds and questions automatically — either way, everything stays editable before you press Save quiz. Reopening a saved quiz from the Sessions page lets you keep editing it, including importing another CSV: by default a fresh import replaces the rounds currently in the editor (save first if you want to keep both versions), but checking "Add to quiz instead of replacing" first appends the import instead — questions land in an existing round when its title matches, otherwise the CSV\'s round is added as a new one, so you can top up a quiz with just a round or a handful of questions at a time.',
+      'You can keep editing a quiz while a session is playing it, as long as you leave alone what the game has already reached. A save made just as the quiz moves on may be refused, because a question you changed has just opened. Reload the quiz and save again.',
       "CSV columns: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after. One row per question; a round ends a block once any of its rows has break_after = 1 — the last round always does, since the game can't reveal answers otherwise. The type column takes one of the identifiers below; what each type needs:",
     ],
     bullets: CSV_TYPE_BULLETS,

@@ -1,5 +1,4 @@
 import {
-  REAL_STORE_JOIN_CODE,
   setupRealStoreGatewayTest,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -35,8 +34,7 @@ describe('GameGateway — opened questions', () => {
 
   const openedIds = (target: RealStoreGateway = game): number[] =>
     [
-      ...target.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
-        .openedQuestionIds,
+      ...(target.liveEdit.getFrontier(target.quizId)?.openedQuestionIds ?? []),
     ].sort((a, b) => a - b);
 
   async function openBlockTwoFirstQuestion(): Promise<void> {
@@ -86,10 +84,7 @@ describe('GameGateway — opened questions', () => {
   it("reports the session's current round in its live-edit frontier", async () => {
     await openBlockTwoFirstQuestion();
 
-    expect(
-      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
-        .currentRoundIndex,
-    ).toBe(1);
+    expect(game.liveEdit.getFrontier(game.quizId)?.currentRoundIndex).toBe(1);
   });
 
   it('keeps the frontier at the furthest opened round after Previous steps back', async () => {
@@ -98,16 +93,12 @@ describe('GameGateway — opened questions', () => {
     await game.act('PREVIOUS'); // -> round_intro(B), first screen
     await game.act('PREVIOUS'); // -> block 1's reveal
 
-    expect(
-      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
-        .currentRoundIndex,
-    ).toBe(1);
+    expect(game.liveEdit.getFrontier(game.quizId)?.currentRoundIndex).toBe(1);
   });
 
   describe('hasCurrentBlockStartedLocking in the live-edit frontier', () => {
-    const hasStartedLocking = (): boolean =>
-      game.gameState.getLiveEditFrontier(REAL_STORE_JOIN_CODE)
-        .hasCurrentBlockStartedLocking;
+    const hasStartedLocking = (): boolean | undefined =>
+      game.liveEdit.getFrontier(game.quizId)?.hasCurrentBlockStartedLocking;
 
     it.each([
       ['question_open', 2, false],

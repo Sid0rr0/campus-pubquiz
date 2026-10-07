@@ -1,10 +1,8 @@
-import { RequestContext } from '@mikro-orm/postgresql';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
   type StateSnapshotPayload,
 } from '@campus-pubquiz/types';
-import { Question } from '@/db/entities/question.entity';
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   advanceClockBy,
@@ -24,7 +22,13 @@ const AUDIO_QUIZ: CreateGatewayOptions['rounds'] = [
     title: 'Round 1',
     breakAfter: true,
     questions: [
-      { type: 'audio', prompt: 'Name that tune', answer: 'Queen', points: 2 },
+      {
+        type: 'audio',
+        prompt: 'Name that tune',
+        answer: 'Queen',
+        points: 2,
+        payload: { mediaUrl: 'https://example.com/tune.mp3' },
+      },
     ],
   },
 ];
@@ -106,27 +110,6 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     });
   }
 
-  async function correctAnswerKey(
-    game: RealStoreGateway,
-    questionId: number,
-    fix: { answer?: string; points?: number },
-  ) {
-    await game.inRequestContext(async () => {
-      const em = RequestContext.getEntityManager()!;
-      const question = await em.findOneOrFail(Question, { id: questionId });
-      question.answer = fix.answer ?? question.answer;
-      question.points = fix.points ?? question.points;
-      await em.flush();
-    });
-  }
-
-  // QuizController.update calls notifyQuizEdited inside an HTTP request context.
-  function editQuiz(game: RealStoreGateway, regradeQuestionIds: number[]) {
-    return game.inRequestContext(() =>
-      game.gateway.notifyQuizEdited(game.joinCode, regradeQuestionIds),
-    );
-  }
-
   function lastAdminLeaderboard(game: RealStoreGateway) {
     const snapshots = game.payloadsTo<StateSnapshotPayload>(
       SOCKET_ROOMS.ADMIN,
@@ -146,11 +129,9 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     expect(await storedPoints(game, game.questionIds.freeText)).toEqual({
       'Saturn Fans': 0,
     });
-    await correctAnswerKey(game, game.questionIds.freeText, {
+    await game.saveAnswerKeyFix(game.questionIds.freeText, {
       answer: 'Saturn',
     });
-
-    await editQuiz(game, [game.questionIds.freeText]);
 
     expect(await storedPoints(game, game.questionIds.freeText)).toEqual({
       'Saturn Fans': 2,
@@ -184,9 +165,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
       'Abba Fan': 0,
       Moderated: 1,
     });
-    await correctAnswerKey(game, questionId, { answer: 'Abba', points: 5 });
-
-    await editQuiz(game, [questionId]);
+    await game.saveAnswerKeyFix(questionId, { answer: 'Abba', points: 5 });
 
     expect(await storedPoints(game, questionId)).toEqual({
       'Tune Team': 0, // no longer matches: back to ungraded
@@ -216,9 +195,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     await game.act('ADVANCE'); // -> locking
     await game.act('ADVANCE'); // -> reveal (speed-scored)
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 7.5 });
-    await correctAnswerKey(game, questionId, { points: 20 });
-
-    await editQuiz(game, [questionId]);
+    await game.saveAnswerKeyFix(questionId, { points: 20 });
 
     // 20 points at the stored response time's x0.75 multiplier, not the unscaled 20.
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
@@ -237,9 +214,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     advanceClockBy(HALF_TIMER_MS); // answers halfway through the timer: x0.75
     await submit(game, team, questionId, 'Paris');
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 10 });
-    await correctAnswerKey(game, questionId, { points: 20 });
-
-    await editQuiz(game, [questionId]);
+    await game.saveAnswerKeyFix(questionId, { points: 20 });
 
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
     await game.act('ADVANCE'); // -> locking
@@ -256,9 +231,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     const [questionId] = game.rounds[0].questionIds;
     await game.openFirstQuestion(admin);
     await submit(game, team, questionId, '400');
-    await correctAnswerKey(game, questionId, { answer: '400' });
-
-    await editQuiz(game, [questionId]);
+    await game.saveAnswerKeyFix(questionId, { answer: '400' });
 
     expect(await storedPoints(game, questionId)).toEqual({ Guesser: 0 });
   });
@@ -276,9 +249,7 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     await game.act('ADVANCE'); // -> locking, where closest_guess is graded
     await game.act('ADVANCE'); // -> break_intro
     expect(await storedPoints(game, questionId)).toEqual({ Near: 3, Far: 0 });
-    await correctAnswerKey(game, questionId, { answer: '650' });
-
-    await editQuiz(game, [questionId]);
+    await game.saveAnswerKeyFix(questionId, { answer: '650' });
 
     expect(await storedPoints(game, questionId)).toEqual({ Near: 0, Far: 3 });
   });

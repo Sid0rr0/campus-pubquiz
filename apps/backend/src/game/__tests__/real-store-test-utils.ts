@@ -6,6 +6,8 @@ import {
   SOCKET_ROOMS,
   sessionRoom,
   type GameAction,
+  type ImportRoundPreview,
+  type QuizDraftSaveResult,
   type QuestionType,
   type SessionSettings,
   type SocketRoomName,
@@ -43,6 +45,8 @@ import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-te
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
+import { LiveEditService } from '@/game/live-edit/live-edit.service';
+import { QuizService } from '@/quiz/quiz.service';
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
@@ -190,6 +194,18 @@ export interface RealStoreGateway extends PlayableQuiz {
   feedbackService: FeedbackService;
   showdownService: ShowdownService;
   seedService: SeedService;
+  quizService: QuizService;
+  /** The Live edit module — saves a quiz's title and rounds the way the editor's save does. */
+  liveEdit: LiveEditService;
+  /** Saves the seeded quiz through the Live edit module (in its own request context) with `edit` applied to the stored draft's rounds; no `edit` saves it unchanged. */
+  saveQuizEdit: (
+    edit?: (rounds: ImportRoundPreview[]) => ImportRoundPreview[],
+  ) => Promise<QuizDraftSaveResult>;
+  /** Saves a corrected answer key (and/or points) for one question of the seeded quiz through the Live edit module. */
+  saveAnswerKeyFix: (
+    questionId: number,
+    fix: { answer?: string; points?: number },
+  ) => Promise<QuizDraftSaveResult>;
   progressRepository: GameProgressRepository;
   /** Every room emit since the last clearEmits(), in emit order. */
   roomEmits: () => readonly RoomEmit[];
@@ -324,6 +340,7 @@ const PLAYABLE_QUESTIONS: Record<keyof SeededQuestionIds, SeedQuestion> = {
     prompt: 'Which band is this?',
     answer: 'Queen',
     points: 2,
+    payload: { mediaUrl: 'https://example.com/queen.mp3' },
   },
 };
 
@@ -480,6 +497,11 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         sessions,
       ),
       progressRepository: new GameProgressRepository(sessions),
+      quizService: new QuizService(
+        em.getRepository<Quiz, QuizRepository>(Quiz),
+        em.getRepository<Round, RoundRepository>(Round),
+        questions,
+      ),
     };
   }
 
@@ -544,6 +566,23 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       { lock: lockScheduler, kahoot: kahootScheduler },
     );
     gateways.push(gateway);
+    const liveEdit = new LiveEditService(
+      services.quizService,
+      gameState,
+      gateway,
+    );
+    const saveQuizEdit = (
+      edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
+        rounds,
+    ) =>
+      RequestContext.create(db.orm.em, async () => {
+        const draft = await services.quizService.findDraftById(quiz.quizId);
+        if (!draft) throw new Error(`Quiz ${quiz.quizId} does not exist`);
+        return liveEdit.save(quiz.quizId, {
+          title: draft.title,
+          rounds: edit(draft.rounds),
+        });
+      });
     // Nest runs this after every module's onModuleInit — i.e. after the
     // session store is loaded — so a restart re-arms its timers here.
     gateway.onApplicationBootstrap();
@@ -682,6 +721,19 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       ...quiz,
       ...services,
       gateway,
+      liveEdit,
+      saveQuizEdit,
+      saveAnswerKeyFix: (questionId, fix) =>
+        saveQuizEdit((rounds) =>
+          rounds.map((round) => ({
+            ...round,
+            questions: round.questions.map((question) =>
+              question.questionId === questionId
+                ? { ...question, ...fix }
+                : question,
+            ),
+          })),
+        ),
       server,
       gameState,
       roomEmits: () => emits,

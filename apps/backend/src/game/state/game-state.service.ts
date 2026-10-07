@@ -321,52 +321,116 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     regradeQuestionIds: readonly number[] = [],
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (started) => {
-      const previousQuestions = new Map(
-        started.seededGame.rounds
-          .flatMap((round) => round.questions)
-          .map((question) => [question.id, question] as const),
-      );
-      const reloaded = await this.withReloadedQuiz(started);
-      if (regradeQuestionIds.length === 0) {
-        return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
-      }
+    return this.writeSession(joinCode, (started) =>
+      this.quizEditedStep(started, regradeQuestionIds),
+    );
+  }
 
-      const { session, regradedQuestionIds } = await this.withRegradedQuestions(
-        reloaded,
-        regradeQuestionIds,
-        previousQuestions,
-      );
-      if (regradedQuestionIds.length === 0) {
-        return { session, outcome: BROADCAST_STATE_OUTCOME };
-      }
+  /**
+   * The change of a quiz edit: reloads the session's questions and re-grades
+   * `regradeQuestionIds`, taking and returning a session value. It stores
+   * nothing and never queues, so it runs inside quizEdited's session write —
+   * or, for a save that holds the quiz's sessions (the Live edit module),
+   * inside applyQuizEdit.
+   */
+  async quizEditedStep(
+    started: SessionState,
+    regradeQuestionIds: readonly number[],
+  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
+    const previousQuestions = new Map(
+      started.seededGame.rounds
+        .flatMap((round) => round.questions)
+        .map((question) => [question.id, question] as const),
+    );
+    const reloaded = await this.withReloadedQuiz(started);
+    if (regradeQuestionIds.length === 0) {
+      return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
+    }
 
-      const answerLists = await Promise.all(
-        regradedQuestionIds.map((questionId) =>
-          this.answerService.listForQuestion(
-            session.seededGame.gameSessionId,
-            questionId,
-          ),
+    const { session, regradedQuestionIds } = await this.withRegradedQuestions(
+      reloaded,
+      regradeQuestionIds,
+      previousQuestions,
+    );
+    if (regradedQuestionIds.length === 0) {
+      return { session, outcome: BROADCAST_STATE_OUTCOME };
+    }
+
+    const answerLists = await Promise.all(
+      regradedQuestionIds.map((questionId) =>
+        this.answerService.listForQuestion(
+          session.seededGame.gameSessionId,
+          questionId,
         ),
+      ),
+    );
+    const answeredTeamIds = new Set(
+      answerLists.flat().map((answer) => answer.teamId),
+    );
+    const teamSyncs = connectedTeamSyncs(
+      session,
+      session.teams
+        .filter((team) => answeredTeamIds.has(team.teamId))
+        .map((team) => team.teamId),
+    );
+    return {
+      session,
+      outcome: {
+        ...BROADCAST_STATE_OUTCOME,
+        answerListQuestionIds: regradedQuestionIds,
+        teamSyncs,
+      },
+    };
+  }
+
+  /**
+   * Runs the quiz edit on one session whose queue the caller already holds
+   * (see holdQuizSessions): the step, then the standings read, then the
+   * store. Not queued, so only call it inside the hold; the outcome is
+   * delivered after the hold is released.
+   */
+  async applyQuizEdit(
+    joinCode: string,
+    regradeQuestionIds: readonly number[],
+  ): Promise<SessionOutcome> {
+    const { session, outcome } = await this.quizEditedStep(
+      this.sessionStore.get(joinCode),
+      regradeQuestionIds,
+    );
+    await this.storeWithStandings(joinCode, session);
+    return outcome;
+  }
+
+  /**
+   * Runs `task` while holding the session writes of every unfinished session
+   * on `quizId` (the Live edit module's save). Lobby sessions are held too,
+   * so one that starts while the save waits is seen when the task looks at
+   * which sessions are live.
+   */
+  holdQuizSessions<T>(quizId: number, task: () => Promise<T>): Promise<T> {
+    return this.sessionWrites.hold(
+      this.sessionStore
+        .values()
+        .filter(
+          (session) =>
+            session.seededGame.quizId === quizId &&
+            session.progress.status !== 'ended',
+        )
+        .map((session) => session.seededGame.joinCode),
+      task,
+    );
+  }
+
+  /** Every running session on `quizId` (not in the lobby, not ended) as it stands now. Read it inside holdQuizSessions to count the sessions the way they stand while the game can't move. */
+  listLiveSessions(quizId: number): SessionState[] {
+    return this.sessionStore
+      .values()
+      .filter(
+        (session) =>
+          session.seededGame.quizId === quizId &&
+          session.progress.status !== 'lobby' &&
+          session.progress.status !== 'ended',
       );
-      const answeredTeamIds = new Set(
-        answerLists.flat().map((answer) => answer.teamId),
-      );
-      const teamSyncs = connectedTeamSyncs(
-        session,
-        session.teams
-          .filter((team) => answeredTeamIds.has(team.teamId))
-          .map((team) => team.teamId),
-      );
-      return {
-        session,
-        outcome: {
-          ...BROADCAST_STATE_OUTCOME,
-          answerListQuestionIds: regradedQuestionIds,
-          teamSyncs,
-        },
-      };
-    });
   }
 
   /**
@@ -377,8 +441,7 @@ export class GameStateService implements OnModuleInit {
    * and whether that round's block has started locking. Everything after the
    * opened questions stays editable until it has.
    */
-  getLiveEditFrontier(joinCode: string): LiveEditFrontier {
-    const session = this.sessionStore.get(joinCode);
+  getLiveEditFrontier(session: SessionState): LiveEditFrontier {
     const openedIds = new Set(session.openedQuestionIds);
     // Previous can step back before opened questions, but they keep their
     // place for good — so the line never falls behind the furthest opened one.
@@ -1092,32 +1155,38 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrites.run(joinCode, async () => {
       const started = this.sessionStore.get(joinCode);
       const { session, outcome } = await change(started);
-      if (!refreshStandings) {
-        this.sessionStore.set(joinCode, session);
-        return outcome;
-      }
-      // The change has already done its database work (a press has saved its
-      // progress), so it counts as done even if the standings read fails:
-      // memory must match what was saved and clients must hear about it. The
-      // session keeps its earlier leaderboard and the next write reads
-      // standings again.
-      let leaderboard: LeaderboardEntry[] | undefined;
-      try {
-        leaderboard = await this.standingsService.leaderboard(
-          session.seededGame.gameSessionId,
-        );
-      } catch (error) {
-        this.logger.error(
-          `Standings read failed for session ${joinCode}; keeping the earlier leaderboard until the next write`,
-          error instanceof Error ? error.stack : String(error),
-        );
-      }
-      this.sessionStore.set(
-        joinCode,
-        leaderboard ? withLeaderboard(session, leaderboard) : session,
-      );
+      if (refreshStandings) await this.storeWithStandings(joinCode, session);
+      else this.sessionStore.set(joinCode, session);
       return outcome;
     });
+  }
+
+  /**
+   * Stores `session` after reading its standings. The change has already
+   * done its database work (a press has saved its progress), so it counts as
+   * done even if the standings read fails: memory must match what was saved
+   * and clients must hear about it. The session keeps its earlier leaderboard
+   * and the next write reads standings again.
+   */
+  private async storeWithStandings(
+    joinCode: string,
+    session: SessionState,
+  ): Promise<void> {
+    let leaderboard: LeaderboardEntry[] | undefined;
+    try {
+      leaderboard = await this.standingsService.leaderboard(
+        session.seededGame.gameSessionId,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Standings read failed for session ${joinCode}; keeping the earlier leaderboard until the next write`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+    this.sessionStore.set(
+      joinCode,
+      leaderboard ? withLeaderboard(session, leaderboard) : session,
+    );
   }
 
   /**
