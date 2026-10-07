@@ -22,3 +22,8 @@ Each entry: date, skill, what changed, and why (the session or incident that pro
   _Why:_ marking it done on the integration branch conflicted with `main`'s edits to the same table.
 - **Step 9**: remove worktrees, then hand the user one `git branch -D` command listing every branch the run created, with shas.
   _Why:_ the gate blocks agent-run `branch -D`, and about 18 `ticket/*`, `tmp-merge-*` and `worktree-agent-*` branches were left behind.
+
+### 2026-10-08: open a PR at the end
+
+- **Step 10 (new)**: call the `pr` skill to write the PR body, then open the PR (or update the existing draft PR's body).
+  _Why:_ the run ended with a bare integration branch; the user wanted the PR created as part of the skill.
