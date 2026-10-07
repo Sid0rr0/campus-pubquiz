@@ -9,7 +9,7 @@ Parent spec: `.scratch/outcome-deadlines/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Both tests assert on which deadlines are armed and what firing them does, never on which method re-armed them.
 - [ ] They sit next to the existing outcome delivery and timers spec, reusing the manual scheduler and phase timer harness.
