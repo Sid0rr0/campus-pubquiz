@@ -1,12 +1,11 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ExitIcon, GearIcon } from '@radix-ui/react-icons';
 import {
   DEFAULT_SESSION_SETTINGS,
   isShowingLastBreak,
-  type GameStatus,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { GameStatusScreens } from '@/app/play/game-status-screens';
@@ -25,8 +24,7 @@ import {
   browsedQuestionAfterAutoAdvanceChange,
   selectPhoneQuestion,
 } from '@/app/play/phone-question-selection';
-import { useTeamJoin } from '@/app/lib/use-team-join';
-import { storedJoinOptions } from '@/app/lib/team-storage';
+import { useTeamLink } from '@/app/lib/use-team-link';
 import {
   readAutoAdvanceSetting,
   writeAutoAdvanceSetting,
@@ -54,7 +52,6 @@ function PlayPageContent() {
     snapshot,
     team,
     activeJoinCode,
-    joinTeam,
     submitAnswer,
     submitShowdownGuess,
     myAnswers = {},
@@ -68,7 +65,7 @@ function PlayPageContent() {
     seenQuestions = {},
     handleJoin,
     handleLogOut,
-  } = useTeamJoin(codeFromUrl, teamCodeFromUrl, nameFromUrl);
+  } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Stable reference (like handleLogOut) so the publish effect below doesn't
   // re-fire on every unrelated re-render.
@@ -82,7 +79,7 @@ function PlayPageContent() {
   usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
   // Starts true (today's always-follow behavior) and is corrected once
   // localStorage is readable post-mount — see the teamName restore effect
-  // in use-team-join.ts for the same SSR-safe pattern.
+  // in use-team-link.ts for the same SSR-safe pattern.
   const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -111,37 +108,13 @@ function PlayPageContent() {
   const [prevQuestionId, setPrevQuestionId] = useState(currentQuestionId);
   const [prevRevealSyncKey, setPrevRevealSyncKey] = useState(revealSyncKey);
 
-  const previousGameStatusRef = useRef<GameStatus | undefined>(undefined);
-  useEffect(() => {
-    const previousGameStatus = previousGameStatusRef.current;
-    previousGameStatusRef.current = gameStatus;
-    // A transition *into* lobby from some other status means the admin
-    // restarted the game session, which invalidates the team registration —
-    // re-joining re-registers the team under the new session. Skip the very
-    // first status this effect sees (whether from a fresh connect or a
-    // page refresh that happens to land back in lobby): use-team-join.ts's
-    // own reconnect join already covers that case, and firing a second join
-    // here too would race it against the old socket's still-pending
-    // disconnect cleanup and can wrongly bounce a refresh with "already
-    // connected".
-    if (
-      gameStatus !== 'lobby' ||
-      !teamName ||
-      previousGameStatus === undefined ||
-      previousGameStatus === 'lobby'
-    ) {
-      return;
-    }
-    joinTeam(teamName, storedJoinOptions());
-  }, [gameStatus, teamName, joinTeam]);
-
   useEffect(() => {
     // Keeps ?code= in the address bar in sync with whichever session this
     // socket actually landed on — covers arriving here without a code (e.g.
     // the home page's post-join redirect, or a restored localStorage
     // identity) so the URL is always shareable/bookmarkable for this game,
     // never a stale or absent one. Gated on teamName: once a session closes
-    // or a team is kicked, use-team-join.ts resets teamName to null but the
+    // or a team is kicked, use-team-link.ts resets teamName to null but the
     // socket's own snapshot (disabled, not torn down) still holds the old
     // joinCode — without this guard, this effect would re-append that stale
     // code right after the redirect back to a bare /play clears it.

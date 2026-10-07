@@ -56,6 +56,8 @@ export function playersView<T extends PlayersFixture>(
   };
 }
 
+const CONNECTION = { socketId: 'socket-1' };
+
 export function socketResult(overrides: Record<string, unknown> = {}) {
   const { snapshot } = overrides;
   return {
@@ -63,7 +65,7 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     connectionError: null,
     sendAction: vi.fn(),
     team: null,
-    joinTeam: vi.fn().mockResolvedValue({ success: true }),
+    sendJoin: vi.fn().mockResolvedValue({ success: true }),
     submitAnswer: vi.fn(),
     liveAnswers: null,
     gradeAnswer: vi.fn(),
@@ -77,13 +79,10 @@ export function socketResult(overrides: Record<string, unknown> = {}) {
     roundRatingsEpoch: 0,
     rateRound: vi.fn().mockResolvedValue({ success: true }),
     seenQuestions: {},
-    // A fixed "already connected" marker — useTeamJoin's join effect only
-    // sends once this is non-null (it mirrors usePlayerGame's real
-    // post-connect timestamp), so tests that don't care about reconnect
-    // timing need a stand-in value here to still see an immediate joinTeam
-    // call. Tests exercising an actual second connection (retry, reconnect)
-    // should override this with a distinct value of their own.
-    reconnectedAt: 1,
+    // A fixed "already connected" marker: the Team link only sends a join
+    // once the connection is known. The same object on every render, like
+    // the real hook's between connects.
+    socketConnection: CONNECTION,
     ...overrides,
     ...(snapshot ? { snapshot: playersView(snapshot as PlayersFixture) } : {}),
   };

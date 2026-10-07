@@ -106,8 +106,8 @@ describe('PlayPage — join and reconnect', () => {
   });
 
   it('does not join when the game code is empty', async () => {
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
+    const sendJoin = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
     renderWithQuery(<PlayPage />);
 
     await userEvent.type(
@@ -116,7 +116,7 @@ describe('PlayPage — join and reconnect', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    expect(joinTeam).not.toHaveBeenCalled();
+    expect(sendJoin).not.toHaveBeenCalled();
   });
 
   it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
@@ -188,32 +188,31 @@ describe('PlayPage — join and reconnect', () => {
     expect(screen.queryByText(/connecting…/i)).not.toBeInTheDocument();
   });
 
-  it('calls joinTeam with the stored name, token and join code on reconnect', () => {
+  it('sends a join with the stored name, token and join code on reconnect', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
     window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
+    const sendJoin = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
 
     renderWithQuery(<PlayPage />);
 
-    expect(joinTeam).toHaveBeenCalledWith('Returning Team', {
+    expect(sendJoin).toHaveBeenCalledWith({
+      teamName: 'Returning Team',
       teamToken: 'stored-token',
       joinCode: 'ABCDEF',
     });
   });
 
-  it('resends joinTeam with a corrected team code when retrying with the same name and game code', async () => {
-    const joinTeam = vi
+  it('resends the join with a corrected team code when retrying with the same name and game code', async () => {
+    const sendJoin = vi
       .fn()
       .mockResolvedValueOnce({
         success: false,
         error: 'Team name taken — enter its team code',
       })
       .mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({ joinTeam, reconnectedAt: 1 }),
-    );
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     const { rerender } = renderWithQuery(<PlayPage />);
 
@@ -223,12 +222,16 @@ describe('PlayPage — join and reconnect', () => {
     );
     await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ sendJoin, socketConnection: { socketId: 'socket-2' } }),
+    );
+    rerender(<PlayPage />);
 
     // The server rejects the name, and its reason lands on the join screen.
     expect(
       await screen.findByText('Team name taken — enter its team code'),
     ).toBeInTheDocument();
-    joinTeam.mockClear();
+    sendJoin.mockClear();
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team code/i }),
@@ -236,85 +239,18 @@ describe('PlayPage — join and reconnect', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
 
-    // Retrying forces a brand-new socket (see useTeamJoin's joinAttempt
-    // comment) — simulate its connect landing, same as the real hook would
-    // produce, with a fresh reconnectedAt.
+    // Retrying forces a brand-new socket (see the Team link's attempt) — simulate its connect landing, same as the real hook would
+    // produce, with a fresh connection.
     mockUsePlayerGame.mockReturnValue(
-      socketResult({ joinTeam, reconnectedAt: 2 }),
+      socketResult({ sendJoin, socketConnection: { socketId: 'socket-3' } }),
     );
     rerender(<PlayPage />);
 
-    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
+    expect(sendJoin).toHaveBeenCalledWith({
+      teamName: 'The Quizzards',
       joinCode: 'ABCDEF',
       teamCode: 'quick-jade-fox',
     });
-  });
-
-  it('re-joins with the stored name, token and join code when the game returns to the lobby', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    const joinedTeam = {
-      teamId: 'team-1',
-      teamName: 'Returning Team',
-      teamToken: 'stored-token',
-      teamCode: 'stored-team-code',
-    };
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'ended' }),
-          currentQuestion: null,
-        },
-        team: joinedTeam,
-        joinTeam,
-      }),
-    );
-    const { rerender } = renderWithQuery(<PlayPage />);
-    joinTeam.mockClear();
-
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
-        },
-        team: joinedTeam,
-        joinTeam,
-      }),
-    );
-    rerender(<PlayPage />);
-
-    expect(joinTeam).toHaveBeenCalledWith('Returning Team', {
-      teamToken: 'stored-token',
-      teamCode: 'stored-team-code',
-      joinCode: 'ABCDEF',
-    });
-  });
-
-  it('does not double-join when a page load/refresh lands directly on a lobby snapshot', () => {
-    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
-    window.localStorage.setItem('campus-pubquiz-team-token', 'stored-token');
-    window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(
-      socketResult({
-        snapshot: {
-          progress: progress({ status: 'lobby' }),
-          currentQuestion: null,
-        },
-        joinTeam,
-      }),
-    );
-
-    renderWithQuery(<PlayPage />);
-
-    // A duplicate JOIN_PLAYERS here would race the old socket's disconnect
-    // cleanup server-side and can wrongly bounce a refresh with "already
-    // connected" — see apps/backend game.gateway.ts's one-connection-per-team
-    // check.
-    expect(joinTeam).toHaveBeenCalledTimes(1);
   });
 
   it('clears the session token and redirects to /play when the admin closes the session', () => {

@@ -163,11 +163,11 @@ describe('HomePage', () => {
     expect(screen.getByText(/connecting to the table/i)).toBeInTheDocument();
   });
 
-  it('calls joinTeam with the trimmed name, selected game code, and typed team code', async () => {
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
+  it('sends a join with the trimmed name, selected game code, and typed team code', async () => {
+    const sendJoin = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    renderWithQuery(<HomePage />);
+    const { rerender } = renderWithQuery(<HomePage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -185,15 +185,22 @@ describe('HomePage', () => {
       screen.getByRole('button', { name: /join the quiz/i }),
     );
 
-    expect(joinTeam).toHaveBeenCalledWith('The Quizzards', {
+    // Submitting opens a fresh connection; its connect lets the join go out.
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ sendJoin, socketConnection: { socketId: 'socket-2' } }),
+    );
+    rerender(<HomePage />);
+
+    expect(sendJoin).toHaveBeenCalledWith({
+      teamName: 'The Quizzards',
       joinCode: 'ABCDEF',
       teamCode: 'quick-jade-fox',
     });
   });
 
   it('redirects straight to /play once the team is accepted', async () => {
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
+    const sendJoin = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     const { rerender } = renderWithQuery(<HomePage />);
 
@@ -210,14 +217,14 @@ describe('HomePage', () => {
 
     mockUsePlayerGame.mockReturnValue(
       socketResult({
-        joinTeam,
+        sendJoin,
         team: {
           teamId: 'team-1',
           teamName: 'The Quizzards',
           teamToken: 'token-1',
           teamCode: 'QUICK-JADE-FOX',
         },
-        snapshot: { joinCode: 'ABCDEF' },
+        snapshot: { joinCode: 'ABCDEF', progress: { status: 'lobby' } },
       }),
     );
     rerender(<HomePage />);

@@ -22,9 +22,9 @@ Parent spec: `.scratch/team-link/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Module event-sequence tests (no React, no socket, no timers), written first:
+- [x] Module event-sequence tests (no React, no socket, no timers), written first:
   - identity known and connection connected arriving in either order → one join command;
   - a second submit while a join is in flight → no command;
   - join refused → error in state, guard released, next submit opens a fresh connection and sends a join;
@@ -35,8 +35,8 @@ Parent spec: `.scratch/team-link/spec.md`
   - the first status seen on a connection being `lobby` → no extra join;
   - URL-versus-storage precedence;
   - the assigned team code shows up in the form after a join without one.
-- [ ] Adapter tests on the fake socket: one end-to-end join, connect and accept, with the emitted join payload and the stored token and team code written.
-- [ ] The `/play` page no longer sends a join itself; the page's restart and refresh-on-lobby tests move to module tests, and its rendering tests pass.
-- [ ] The real-socket join test that fails about one run in five is removed; its double-join case is a module test. The adapter and module test files pass ten runs in a row.
-- [ ] `GLOSSARY.md` has the **Team link** entry.
-- [ ] `pnpm --filter frontend test`, `pnpm lint` and `pnpm typecheck` pass.
+- [x] Adapter tests on the fake socket: one end-to-end join, connect and accept, with the emitted join payload and the stored token and team code written.
+- [x] The `/play` page no longer sends a join itself; the page's restart and refresh-on-lobby tests move to module tests, and its rendering tests pass.
+- [x] The real-socket join test that fails about one run in five is removed; its double-join case is a module test. The adapter and module test files pass ten runs in a row.
+- [x] `GLOSSARY.md` has the **Team link** entry.
+- [x] `pnpm --filter frontend test`, `pnpm lint` and `pnpm typecheck` pass.

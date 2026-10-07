@@ -26,6 +26,7 @@ import { formatBonusAwardToast } from '@/app/lib/bonus-categories';
 import {
   NOT_CONNECTED_MESSAGE,
   useGameConnection,
+  type SocketConnection,
   type RoomSocket,
 } from '@/app/lib/use-game-connection';
 
@@ -34,12 +35,6 @@ const BONUS_AWARD_TOAST_DURATION_MS = 8000;
 
 /** How long a submitted answer may go unacknowledged before the socket is treated as silently dead — e.g. a network switch or a phone waking from sleep, where socket.io can still believe it's connected until its ~45s ping timeout. */
 export const SUBMIT_CONFIRM_TIMEOUT_MS = 5000;
-
-export interface JoinTeamOptions {
-  teamToken?: string;
-  teamCode?: string;
-  joinCode?: string;
-}
 
 /** A team's own graded answer to one question — absent from the map entirely until grading happens (at submit when the answer is graded automatically, on admin grading otherwise). */
 export interface MyAnswerGrade {
@@ -66,6 +61,8 @@ export interface UsePlayerGameResult {
   connectionError: string | null;
   /** Timestamp of the most recent successful (re)connection, including the first. */
   reconnectedAt: number | null;
+  /** The live connection (a new object on every connect), or null while disconnected — what the Team link tells connections apart by. */
+  socketConnection: SocketConnection | null;
   team: JoinAcceptedPayload | null;
   /** True while the server has this socket registered as the team's (JOIN_ACCEPTED on the current connection) — false while disconnected or mid-rejoin, when answers can't be accepted. */
   isTeamLinked: boolean;
@@ -87,8 +84,8 @@ export interface UsePlayerGameResult {
   roundRatingsEpoch: number;
   /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the snapshot only ever covers the current block. */
   seenQuestions: SeenQuestions;
-  /** Resolves to the server's verdict on the join; the caller shows a rejection (it is not toasted here). */
-  joinTeam: (teamName: string, options?: JoinTeamOptions) => Promise<AckResult>;
+  /** Emits the join as given and resolves to the server's verdict; the Team link decides when to send one and shows a rejection (it is not toasted here). */
+  sendJoin: (payload: JoinPlayersPayload) => Promise<AckResult>;
   /** Refuses with a "not connected" toast while unlinked; otherwise keeps the answer pending (and resends it after a rejoin) until the server acknowledges it. A rejection is toasted and never treated as a dead connection. */
   submitAnswer: (
     questionId: number,
@@ -163,15 +160,6 @@ export function buildMyAnswerGrades(
   );
 }
 
-/** Only a *different* earlier socket is worth naming — a rejoin on the same socket needs no handover. */
-function getPreviousSocketId(
-  linkedSocketId: string | null,
-  currentSocketId: string | undefined,
-): string | undefined {
-  if (!linkedSocketId || linkedSocketId === currentSocketId) return undefined;
-  return linkedSocketId;
-}
-
 /**
  * A team phone's view of a live session. Every action returns a promise of
  * the server's acknowledgement; answer and showdown-guess rejections are
@@ -180,7 +168,7 @@ function getPreviousSocketId(
 export function usePlayerGame(
   enabled: boolean,
   joinCode: string | undefined,
-  // Bumped by callers (e.g. useTeamJoin's joinAttempt) to force a fresh
+  // Bumped by callers (e.g. the Team link's attempt) to force a fresh
   // socket even when the join code is unchanged — a server-rejected
   // connection (e.g. unknown session code) disconnects with `skipReconnect`
   // set, so socket.io-client never retries it on its own.
@@ -204,11 +192,6 @@ export function usePlayerGame(
   const [isTeamLinked, setIsTeamLinked] = useState(false);
   // Mirrors isTeamLinked for submitAnswer, which must check it synchronously.
   const isTeamLinkedRef = useRef(false);
-  const socketRef = useRef<RoomSocket<'players'> | null>(null);
-  // The socket id the server last registered this team on — sent back as
-  // `previousSocketId` on a rejoin so the server can hand the team over from
-  // that stale socket instead of rejecting this device as a second one.
-  const linkedSocketIdRef = useRef<string | null>(null);
   // The most recent answer not yet acknowledged — resent once the team is
   // linked again after a forced reconnect.
   const pendingSubmitRef = useRef<SubmitAnswerPayload | null>(null);
@@ -237,9 +220,7 @@ export function usePlayerGame(
 
   const bindSocket = useCallback(
     (socket: RoomSocket<'players'>) => {
-      socketRef.current = socket;
       isTeamLinkedRef.current = false;
-      linkedSocketIdRef.current = null;
       pendingSubmitRef.current = null;
 
       const onStateReceived = (
@@ -258,7 +239,6 @@ export function usePlayerGame(
         setMyRoundRatings(buildMyRoundRatings(payload.roundRatings ?? []));
         setMyFeedback(payload.feedback ?? EMPTY_FEEDBACK);
         setRoundRatingsEpoch((epoch) => epoch + 1);
-        linkedSocketIdRef.current = socket.id ?? null;
         setTeamLinked(true);
         resendPendingRef.current();
       });
@@ -389,20 +369,9 @@ export function usePlayerGame(
     };
   }, [sendAnswer]);
 
-  const joinTeam = useCallback(
-    (teamName: string, options: JoinTeamOptions = {}) => {
-      const payload: JoinPlayersPayload = {
-        teamName,
-        teamToken: options.teamToken,
-        teamCode: options.teamCode,
-        joinCode: options.joinCode,
-        previousSocketId: getPreviousSocketId(
-          linkedSocketIdRef.current,
-          socketRef.current?.id,
-        ),
-      };
-      return emitWithAck(SOCKET_EVENTS.JOIN_PLAYERS, payload);
-    },
+  const sendJoin = useCallback(
+    (payload: JoinPlayersPayload) =>
+      emitWithAck(SOCKET_EVENTS.JOIN_PLAYERS, payload),
     [emitWithAck],
   );
 
@@ -481,7 +450,7 @@ export function usePlayerGame(
     myFeedback,
     roundRatingsEpoch,
     seenQuestions,
-    joinTeam,
+    sendJoin,
     submitAnswer,
     leaveSession,
     rateRound,

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, type SubmitEvent } from 'react';
 import { JoinForm } from '@/app/components/join-form';
-import { useTeamJoin } from '@/app/lib/use-team-join';
+import { useTeamLink } from '@/app/lib/use-team-link';
 
 interface JoinPanelProps {
   codeFromUrl: string;
@@ -24,7 +24,7 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     snapshot,
     activeJoinCode,
     handleJoin,
-  } = useTeamJoin(codeFromUrl);
+  } = useTeamLink(codeFromUrl);
 
   // Mirrors /play's join gate: teamName (local state, cleared by "log out")
   // is the source of truth, not team (socket state, which the mocked/real

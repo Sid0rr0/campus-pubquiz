@@ -95,12 +95,12 @@ describe('PlayPage — logout and errors', () => {
   it('does not offer a "Log out" button when a fresh join fails because the name collides with an existing team', async () => {
     const reason =
       'Team name "Taken Name" is already registered — enter its team code to play as this team, or choose a different name';
-    const joinTeam = vi
+    const sendJoin = vi
       .fn()
       .mockResolvedValue({ success: false, error: reason });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    renderWithQuery(<PlayPage />);
+    const { rerender } = renderWithQuery(<PlayPage />);
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /team name/i }),
@@ -108,6 +108,11 @@ describe('PlayPage — logout and errors', () => {
     );
     await pickLiveSession();
     await userEvent.click(screen.getByRole('button', { name: /join/i }));
+    // Submitting opens a fresh connection; its connect lets the join go out.
+    mockUsePlayerGame.mockReturnValue(
+      socketResult({ sendJoin, socketConnection: { socketId: 'socket-2' } }),
+    );
+    rerender(<PlayPage />);
 
     expect(await screen.findByText(/already registered/i)).toBeInTheDocument();
     expect(
@@ -152,8 +157,8 @@ describe('PlayPage — logout and errors', () => {
   });
 
   it('prefills the team code field after logging out following a fresh join (server-issued code)', async () => {
-    const joinTeam = vi.fn().mockResolvedValue({ success: true });
-    mockUsePlayerGame.mockReturnValue(socketResult({ joinTeam }));
+    const sendJoin = vi.fn().mockResolvedValue({ success: true });
+    mockUsePlayerGame.mockReturnValue(socketResult({ sendJoin }));
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     const { rerender } = renderWithQuery(<PlayPage />);
 
@@ -166,7 +171,7 @@ describe('PlayPage — logout and errors', () => {
 
     mockUsePlayerGame.mockReturnValue(
       socketResult({
-        joinTeam,
+        sendJoin,
         team: {
           teamId: 'team-1',
           teamName: 'The Quizzards',

@@ -13,7 +13,7 @@ import { MobileHeaderMenu } from '@/app/components/mobile-header-menu';
  * Guide/Sessions/Teams/Log out links on every page (Users is admin-only),
  * inline on desktop or behind a hamburger drawer on mobile; /play publishes
  * its team's code/Log out into the same drawer via PlayerMenuProvider, since
- * useTeamJoin lives route-locally on that page and has no other way to reach
+ * useTeamLink lives route-locally on that page and has no other way to reach
  * this layout-level component. Signed-out visitors on non-/play pages see no
  * nav at all (no header-driven login entry point — /login and /register are
  * reached directly).

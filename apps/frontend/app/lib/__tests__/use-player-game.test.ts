@@ -99,7 +99,8 @@ describe('usePlayerGame', () => {
 
       let pending!: Promise<AckResult>;
       act(() => {
-        pending = result.current.joinTeam('The Quizzards', {
+        pending = result.current.sendJoin({
+          teamName: 'The Quizzards',
           teamToken: 'token',
           teamCode: 'code',
           joinCode: 'ABCDEF',
@@ -122,7 +123,7 @@ describe('usePlayerGame', () => {
 
       let pending!: Promise<AckResult>;
       act(() => {
-        pending = result.current.joinTeam('The Quizzards');
+        pending = result.current.sendJoin({ teamName: 'The Quizzards' });
       });
       await act(async () => socket.reject(SOCKET_EVENTS.JOIN_PLAYERS, reason));
 
@@ -131,32 +132,13 @@ describe('usePlayerGame', () => {
       expect(mockToastError).not.toHaveBeenCalled();
     });
 
-    it('names the socket the team was linked on when rejoining after a reconnect', () => {
-      const { result, socket } = renderConnectedPlayer();
-      socket.id = 'socket-1';
-      act(() =>
-        socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, JOIN_ACCEPTED_PAYLOAD),
-      );
-      act(() => {
-        socket.serverDisconnects();
-        socket.id = 'socket-2';
-        socket.serverConnects();
-      });
-
-      act(() => {
-        void result.current.joinTeam('The Quizzards', { joinCode: 'ABCDEF' });
-      });
-
-      expect(
-        socket.lastEmitOf(SOCKET_EVENTS.JOIN_PLAYERS).payload,
-      ).toMatchObject({ previousSocketId: 'socket-1' });
-    });
-
     it('fails a join fast while disconnected', async () => {
       const { result, socket } = renderConnectedPlayer();
       act(() => socket.serverDisconnects());
 
-      await expect(result.current.joinTeam('The Quizzards')).resolves.toEqual({
+      await expect(
+        result.current.sendJoin({ teamName: 'The Quizzards' }),
+      ).resolves.toEqual({
         success: false,
         error: NOT_CONNECTED_MESSAGE,
       });
@@ -695,7 +677,6 @@ describe('usePlayerGame', () => {
       [
         'connectionError',
         'isTeamLinked',
-        'joinTeam',
         'kicked',
         'leaveSession',
         'myAnswerGrades',
@@ -708,8 +689,10 @@ describe('usePlayerGame', () => {
         'roundRatingsEpoch',
         'seenQuestions',
         'sendFeedback',
+        'sendJoin',
         'sessionClosed',
         'snapshot',
+        'socketConnection',
         'submitAnswer',
         'submitShowdownGuess',
         'team',
