@@ -1,4 +1,4 @@
-import type { BonusCategory } from './socket-events';
+import type { BonusCategory } from './bonus';
 
 /** One row per **ended** game session, for the admin/moderator stats history view. */
 export interface PlayedSessionStats {

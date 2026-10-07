@@ -3,7 +3,7 @@ import {
   getLeaderboardRevealStepCount,
   getTiedForFirst,
 } from '../leaderboard-tiebreak';
-import type { LeaderboardEntry } from '../socket-events';
+import type { LeaderboardEntry } from '../room-views';
 
 function entry(
   teamId: number,
