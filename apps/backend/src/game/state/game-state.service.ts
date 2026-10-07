@@ -738,49 +738,55 @@ export class GameStateService implements OnModuleInit {
    * answered-team ids and its ungraded flag, and replies "answer received" to
    * the sender (graded points included for auto-graded types).
    */
-  async submitAnswer(
+  submitAnswer(
     joinCode: string,
     { teamId, questionId, value }: SubmitAnswerPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    const session = this.sessionStore.get(joinCode);
-    if (!isQuestionOpenForAnswering(session, questionId)) {
-      throw new SessionRefusal('Answers are locked for this question');
-    }
-    if (session.connectedTeamSockets[teamId] !== socketId) {
-      throw new SessionRefusal('You may only submit answers for your own team');
-    }
+    return this.writeSession(joinCode, async (session) => {
+      if (!isQuestionOpenForAnswering(session, questionId)) {
+        throw new SessionRefusal('Answers are locked for this question');
+      }
+      if (session.connectedTeamSockets[teamId] !== socketId) {
+        throw new SessionRefusal(
+          'You may only submit answers for your own team',
+        );
+      }
 
-    const responseMs =
-      session.phaseStartedAt === null
-        ? null
-        : Date.now() - session.phaseStartedAt;
-    const submitted = await this.answerService.submit(
-      session.seededGame.gameSessionId,
-      questionId,
-      teamId,
-      value,
-      responseMs,
-    );
+      const responseMs =
+        session.phaseStartedAt === null
+          ? null
+          : Date.now() - session.phaseStartedAt;
+      const submitted = await this.answerService.submit(
+        session.seededGame.gameSessionId,
+        questionId,
+        teamId,
+        value,
+        responseMs,
+      );
 
-    const outcome = await this.refreshAfterAnswerChange(joinCode, questionId);
-    return {
-      ...outcome,
-      replies: [
-        {
-          event: SOCKET_EVENTS.ANSWER_RECEIVED,
-          payload: {
-            questionId,
-            teamId: submitted.teamId,
-            teamName: submitted.teamName,
-            value: submitted.value,
-            pointsAwarded: submitted.pointsAwarded,
-            gradedAt: submitted.gradedAt,
-            verdict: submitted.verdict,
-          },
+      const refreshed = await this.answerChange(session, questionId);
+      return {
+        session: refreshed.session,
+        outcome: {
+          ...refreshed.outcome,
+          replies: [
+            {
+              event: SOCKET_EVENTS.ANSWER_RECEIVED,
+              payload: {
+                questionId,
+                teamId: submitted.teamId,
+                teamName: submitted.teamName,
+                value: submitted.value,
+                pointsAwarded: submitted.pointsAwarded,
+                gradedAt: submitted.gradedAt,
+                verdict: submitted.verdict,
+              },
+            },
+          ],
         },
-      ],
-    };
+      };
+    });
   }
 
   /**
@@ -805,7 +811,9 @@ export class GameStateService implements OnModuleInit {
         error instanceof Error ? error.message : 'Unable to grade answer',
       );
     }
-    return await this.refreshAfterAnswerChange(joinCode, questionId);
+    return this.writeSession(joinCode, (session) =>
+      this.answerChange(session, questionId),
+    );
   }
 
   /**
@@ -939,33 +947,36 @@ export class GameStateService implements OnModuleInit {
     });
   }
 
-  private refreshAfterAnswerChange(
-    joinCode: string,
+  /**
+   * The change after an answer was stored or graded: the question's
+   * answered-team ids and grading refresh, built from the session it is
+   * handed. Not a write of its own — callers run it inside theirs.
+   */
+  private async answerChange(
+    started: SessionState,
     questionId: number,
-  ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (started) => {
-      const [answers, refresh] = await Promise.all([
-        this.answerService.listForQuestion(
-          started.seededGame.gameSessionId,
+  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
+    const [answers, refresh] = await Promise.all([
+      this.answerService.listForQuestion(
+        started.seededGame.gameSessionId,
+        questionId,
+      ),
+      this.grading.gradingRefresh(started, [questionId]),
+    ]);
+    return {
+      session: withGradingRefresh(
+        withAnsweredTeamIds(
+          started,
           questionId,
+          answers.map((answer) => answer.teamId),
         ),
-        this.grading.gradingRefresh(started, [questionId]),
-      ]);
-      return {
-        session: withGradingRefresh(
-          withAnsweredTeamIds(
-            started,
-            questionId,
-            answers.map((answer) => answer.teamId),
-          ),
-          refresh,
-        ),
-        outcome: {
-          ...BROADCAST_STATE_OUTCOME,
-          answerListQuestionIds: [questionId],
-        },
-      };
-    });
+        refresh,
+      ),
+      outcome: {
+        ...BROADCAST_STATE_OUTCOME,
+        answerListQuestionIds: [questionId],
+      },
+    };
   }
 
   /**

@@ -189,7 +189,11 @@ clients are unaffected; the admin just reconnects with a fresh token.
 Events for one session are applied one at a time: each change to a live
 session (an answer, a grade, a bonus, a roster change, a press, a quiz edit)
 runs after the previous one for that session has finished, sees the session as
-that one left it, and ends by reading fresh standings. Sessions don't wait for
+that one left it, and ends by reading fresh standings. An event is checked
+against that session and stores nothing when it is refused: a team's last-second
+answer is either stored (and seen by the press that follows, so a closest_guess
+answer is graded by the break) or refused with "Answers are locked for this
+question", never stored unseen. Sessions don't wait for
 each other. If that final standings read fails, the write still counts as done
 (a press has already saved its progress, so memory must match the database and
 clients must hear about it): the failure is logged, the session keeps its
