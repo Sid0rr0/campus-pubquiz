@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import DisplayPage from '@/app/display/page';
-import { progress, question, displayView } from './test-utils';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -50,9 +51,8 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('shows a completion message once the quiz has ended', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'ended' }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'ended' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -63,12 +63,8 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('shows the leaderboard overlay whenever isLeaderboardVisible is true, regardless of status', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
-          status: 'question_open',
-          isLeaderboardVisible: true,
-        }),
-        currentQuestion: question,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'question_open', isLeaderboardVisible: true },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -79,24 +75,11 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('renders leaderboard entries in ranked order when visible', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { isLeaderboardVisible: true },
         leaderboard: [
-          {
-            teamId: 'team-1',
-            teamName: 'The Quizzards',
-            totalPoints: 5,
-            bonusPoints: 0,
-            roundPoints: [],
-          },
-          {
-            teamId: 'team-2',
-            teamName: 'Second Place',
-            totalPoints: 3,
-            bonusPoints: 0,
-            roundPoints: [],
-          },
+          { teamName: 'The Quizzards', totalPoints: 5 },
+          { teamName: 'Second Place', totalPoints: 3 },
         ],
         leaderboardRevealCount: 2,
       }),
@@ -114,24 +97,11 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('only shows teams revealed so far, bottom-up, while more remain hidden', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { isLeaderboardVisible: true },
         leaderboard: [
-          {
-            teamId: 'team-1',
-            teamName: 'The Quizzards',
-            totalPoints: 5,
-            bonusPoints: 0,
-            roundPoints: [],
-          },
-          {
-            teamId: 'team-2',
-            teamName: 'Second Place',
-            totalPoints: 3,
-            bonusPoints: 0,
-            roundPoints: [],
-          },
+          { teamName: 'The Quizzards', totalPoints: 5 },
+          { teamName: 'Second Place', totalPoints: 3 },
         ],
         leaderboardRevealCount: 1,
       }),
@@ -145,21 +115,19 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   const SIX_TEAMS = Array.from({ length: 6 }, (_, index) => ({
-    teamId: `team-${index + 1}`,
     teamName: `Team ${index + 1}`,
     totalPoints: 6 - index,
-    bonusPoints: 0,
-    roundPoints: [],
   }));
+
+  const kahootRound = { kahootMode: true, questions: [{}, {}] };
 
   it('caps the leaderboard to the top 5 while a kahoot round is active', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [kahootRound],
+        progress: { isLeaderboardVisible: true },
         leaderboard: SIX_TEAMS,
         leaderboardRevealCount: 6,
-        isCurrentRoundKahoot: true,
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -177,12 +145,11 @@ describe('DisplayPage — completion and leaderboard', () => {
     // min(KAHOOT_LEADERBOARD_TOP_N, leaderboard.length) — 5 here, not 6 —
     // for the Kahoot between-questions leaderboard's immediate full reveal.
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [kahootRound],
+        progress: { isLeaderboardVisible: true },
         leaderboard: SIX_TEAMS,
         leaderboardRevealCount: 5,
-        isCurrentRoundKahoot: true,
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -205,30 +172,17 @@ describe('DisplayPage — completion and leaderboard', () => {
     // and new would be identical, and the animation would have nothing to
     // count up.
     const PRE_GRADING_LEADERBOARD = [
-      {
-        teamId: 'team-1',
-        teamName: 'The Quizzards',
-        totalPoints: 10,
-        bonusPoints: 0,
-        roundPoints: [],
-      },
+      { teamName: 'The Quizzards', totalPoints: 10 },
     ];
     const POST_GRADING_LEADERBOARD = [
-      {
-        teamId: 'team-1',
-        teamName: 'The Quizzards',
-        totalPoints: 30,
-        bonusPoints: 0,
-        roundPoints: [],
-      },
+      { teamName: 'The Quizzards', totalPoints: 30 },
     ];
 
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'locking' }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [kahootRound],
+        progress: { status: 'locking' },
         leaderboard: PRE_GRADING_LEADERBOARD,
-        isCurrentRoundKahoot: true,
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -238,11 +192,10 @@ describe('DisplayPage — completion and leaderboard', () => {
     // Grading happens here, on the 'reveal' screen — leaderboard already
     // updated, but isLeaderboardVisible is still false.
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'reveal' }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [kahootRound],
+        progress: { status: 'reveal' },
         leaderboard: POST_GRADING_LEADERBOARD,
-        isCurrentRoundKahoot: true,
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -251,16 +204,17 @@ describe('DisplayPage — completion and leaderboard', () => {
 
     // The next question opens behind the between-questions leaderboard.
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [kahootRound],
+        progress: {
           status: 'question_open',
           questionIndex: 1,
+          // Every kahoot question is its own block, so it is block position 0.
+          furthestOpenIndex: 0,
           isLeaderboardVisible: true,
-        }),
-        currentQuestion: question,
+        },
         leaderboard: POST_GRADING_LEADERBOARD,
         leaderboardRevealCount: 1,
-        isCurrentRoundKahoot: true,
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -273,12 +227,10 @@ describe('DisplayPage — completion and leaderboard', () => {
 
   it('shows every team when the current round is not kahoot mode', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ isLeaderboardVisible: true }),
-        currentQuestion: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { isLeaderboardVisible: true },
         leaderboard: SIX_TEAMS,
         leaderboardRevealCount: 6,
-        isCurrentRoundKahoot: false,
       }),
       connectionError: null,
       sendAction: vi.fn(),

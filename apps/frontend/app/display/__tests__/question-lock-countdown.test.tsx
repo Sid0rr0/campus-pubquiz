@@ -1,7 +1,8 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
-import { progress, question, displayView } from './test-utils';
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -28,6 +29,13 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
+const capitalOfFrance = {
+  type: 'multiple_choice' as const,
+  prompt: 'Capital of France?',
+  options: ['Paris', 'London'],
+  points: 2,
+};
+
 describe('DisplayPage — question lock countdown', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
@@ -39,10 +47,9 @@ describe('DisplayPage — question lock countdown', () => {
 
   it('shows no countdown while the question itself is open', () => {
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
-        questionLockAt: null,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [capitalOfFrance] }],
+        progress: { status: 'question_open' },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -58,11 +65,10 @@ describe('DisplayPage — question lock countdown', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'question_open' }),
-        currentQuestion: question,
-        questionLockAt: null,
-        kahootQuestionEndsAt: Date.now() + 20_000,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ kahootMode: true, questions: [capitalOfFrance] }],
+        progress: { status: 'question_open' },
+        timers: { kahootQuestionEndsAt: Date.now() + 20_000 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -78,10 +84,10 @@ describe('DisplayPage — question lock countdown', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'locking' }),
-        currentQuestion: question,
-        questionLockAt: Date.now() + 45_000,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [capitalOfFrance] }],
+        progress: { status: 'locking' },
+        timers: { questionLockAt: Date.now() + 45_000 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
@@ -98,10 +104,10 @@ describe('DisplayPage — question lock countdown', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z').getTime());
     mockUseGame.mockReturnValue({
-      snapshot: displayView({
-        progress: progress({ status: 'locking' }),
-        currentQuestion: question,
-        questionLockAt: Date.now() + 10_000,
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [capitalOfFrance] }],
+        progress: { status: 'locking' },
+        timers: { questionLockAt: Date.now() + 10_000 },
       }),
       connectionError: null,
       sendAction: vi.fn(),
