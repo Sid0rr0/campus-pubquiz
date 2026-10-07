@@ -22,7 +22,7 @@ import {
   ArrowUpIcon,
   DragHandleDots2Icon,
 } from '@radix-ui/react-icons';
-import { splitPipeList } from '@campus-pubquiz/types';
+import { ANSWER_FORMATS } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { reorderOnDragEnd } from '@/app/lib/reorder-list';
 import { SubmitAnswerButton } from '@/app/play/submit-answer-button';
@@ -170,12 +170,15 @@ export function SortAnswer({
   initialValue,
   onSubmit,
 }: SortAnswerProps) {
-  const restoredOrder = initialValue ? splitPipeList(initialValue) : [];
+  const restoredOrder = initialValue
+    ? ANSWER_FORMATS.sort.decode(initialValue)
+    : [];
   const [order, setOrder] = useState<string[]>(
     restoredOrder.length === options.length ? restoredOrder : options,
   );
   const [isDragging, setIsDragging] = useState(false);
-  const isSubmitted = Boolean(initialValue) && order.join('|') === initialValue;
+  const isSubmitted =
+    Boolean(initialValue) && ANSWER_FORMATS.sort.encode(order) === initialValue;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, {
@@ -227,7 +230,7 @@ export function SortAnswer({
       </DndContext>
       <SubmitAnswerButton
         isSubmitted={isSubmitted}
-        onClick={() => onSubmit(order.join('|'))}
+        onClick={() => onSubmit(ANSWER_FORMATS.sort.encode(order))}
       />
     </div>
   );
