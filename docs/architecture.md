@@ -171,7 +171,7 @@ sequenceDiagram
   participant D as dispatchSocketEvent
   participant GS as GameStateService
   participant AS as AnswerService
-  participant Q as SessionWriteQueue
+  participant Q as SessionWrite
   participant ST as StandingsService
   participant DB as Postgres
   participant R as Rooms (display / admin / players)
@@ -183,7 +183,7 @@ sequenceDiagram
   GS->>GS: question still open? socket owns team?
   GS->>AS: submit(...) — grades auto-gradable types
   AS->>DB: upsert answer (last write wins)
-  GS->>Q: writeSession(joinCode, change)
+  GS->>Q: write(joinCode, change) — queued per join code
   Q->>AS: listForQuestion → answered team ids
   Q->>ST: leaderboard(gameSessionId)
   ST->>DB: read standings
@@ -203,7 +203,7 @@ sequenceDiagram
   participant C as /control or lock timer
   participant GW as GameGateway
   participant GS as GameStateService
-  participant Q as SessionWriteQueue
+  participant Q as SessionWrite
   participant MC as MoveCommitter
   participant BG as BlockGradingService
   participant PR as GameProgressRepository
@@ -212,7 +212,7 @@ sequenceDiagram
 
   C->>GW: ADMIN_ACTION ADVANCE (or timer expiry)
   GW->>GS: applyAdminAction(joinCode, action)
-  GS->>Q: writeSession
+  GS->>Q: write(joinCode, change) — queued per join code
   Q->>MC: commit(session, action)
   MC->>MC: planMove — legal transition?
   MC->>BG: ungraded answers in block? (refuses leaving the break)
