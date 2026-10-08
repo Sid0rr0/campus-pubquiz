@@ -865,6 +865,31 @@ function watchNextWrite(gameState: GameStateService): () => Promise<void> {
     });
 }
 
+/**
+ * Makes one call to `target[method]` reject with `error` without running it,
+ * letting the `skipCalls` calls before it pass through for real. Only that one
+ * call fails: the method is restored once it has been made.
+ */
+export function rejectNthCall<T extends object, K extends string & keyof T>(
+  target: T,
+  method: K,
+  error: Error,
+  skipCalls = 0,
+): void {
+  type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
+  const asyncTarget = target as unknown as Record<string, AsyncMethod>;
+  const original = asyncTarget[method];
+  let remainingSkips = skipCalls;
+  asyncTarget[method] = (...args: unknown[]) => {
+    if (remainingSkips > 0) {
+      remainingSkips -= 1;
+      return Reflect.apply(original, target, args);
+    }
+    asyncTarget[method] = original;
+    return Promise.reject(error);
+  };
+}
+
 export interface HeldCall {
   /** Resolves once the held call has been made and its real result computed. */
   started: Promise<void>;

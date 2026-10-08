@@ -19,6 +19,7 @@ export * from './team';
 export * from './quiz-draft';
 export {
   describeLiveEditRounds,
+  getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
   type LiveEditFrontier,
   type LiveEditRoundShape,

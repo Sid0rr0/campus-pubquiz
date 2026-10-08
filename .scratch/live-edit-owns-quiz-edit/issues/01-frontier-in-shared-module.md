@@ -14,12 +14,12 @@ Parent spec: `.scratch/live-edit-owns-quiz-edit/spec.md`
 
 **Blocked by:** None (can start immediately). It doesn't need the session-write-module spec.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The shared live-edit frontier module exports a pure function from a session value to its live-edit frontier. Its rules are unchanged.
-- [ ] The Live edit module uses that function. The game state class has no frontier method.
-- [ ] Every existing spec passes without assertion edits, in particular:
+- [x] The shared live-edit frontier module exports a pure function from a session value to its live-edit frontier. Its rules are unchanged.
+- [x] The Live edit module uses that function. The game state class has no frontier method.
+- [x] Every existing spec passes without assertion edits, in particular:
   - opened-questions (which covers "started locking" and stepping back with Previous), live-edit, live-structural-edit, the live-edit guard spec, the quiz controller spec,
   - the frontend's quiz-draft-state tests.
-- [ ] If the mock-based failing-delivery spec still exists when this lands, its fake no longer needs a frontier method. Drop it from the fake, and change nothing else.
-- [ ] `pnpm test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] If the mock-based failing-delivery spec still exists when this lands, its fake no longer needs a frontier method. Drop it from the fake, and change nothing else.
+- [x] `pnpm test`, `pnpm typecheck` and `pnpm lint` pass.

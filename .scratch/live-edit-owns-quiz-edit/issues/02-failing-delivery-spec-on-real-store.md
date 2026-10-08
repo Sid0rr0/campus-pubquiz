@@ -20,10 +20,10 @@ Parent spec: `.scratch/live-edit-owns-quiz-edit/spec.md`
 
 **Blocked by:** None (can start immediately). It doesn't need the session-write-module spec.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A real-store spec covers the scenario above and passes against today's code.
-- [ ] The mock-based failing-delivery spec is deleted. No spec in the repo builds a fake game state class for the Live edit module.
-- [ ] If the harness needs a small addition (for example, a one-shot rejection on a service call), it lives with the existing harness helpers and is reusable.
-- [ ] Every other spec passes unchanged.
-- [ ] `pnpm --filter backend test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] A real-store spec covers the scenario above and passes against today's code.
+- [x] The mock-based failing-delivery spec is deleted. No spec in the repo builds a fake game state class for the Live edit module.
+- [x] If the harness needs a small addition (for example, a one-shot rejection on a service call), it lives with the existing harness helpers and is reusable.
+- [x] Every other spec passes unchanged.
+- [x] `pnpm --filter backend test`, `pnpm typecheck` and `pnpm lint` pass.
