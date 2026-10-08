@@ -1,7 +1,9 @@
 import {
   freshSessionState,
   getBlockInPlayIds,
+  getBlockQuestions,
   getBlockSeededQuestions,
+  getRevealQuestions,
   getNextGameState,
   LOBBY_PROGRESS,
   type GameAction,
@@ -68,7 +70,7 @@ function walkedProgresses(): GameProgress[] {
   return [...new Map(all.map((p) => [JSON.stringify(p), p])).values()];
 }
 
-describe('the Block module against the reveal-view function', () => {
+describe('the reveal views follow the Block module', () => {
   const progresses = walkedProgresses();
 
   it('walks every status of the quiz, including through Previous', () => {
@@ -92,12 +94,30 @@ describe('the Block module against the reveal-view function', () => {
   });
 
   it.each(progresses.map((p, index) => [index, p] as const))(
-    'gives the same ids as the reveal views at step %i',
+    'lists the same questions in the same order as the Block module at step %i',
     (_index, progress) => {
       const session = freshSessionState(seededGame, progress);
-      expect(getBlockInPlayIds(BLOCK_IN_PLAY_ROUNDS, progress)).toEqual(
-        getBlockSeededQuestions(session).map((question) => question.id),
+      const expected = getBlockInPlayIds(BLOCK_IN_PLAY_ROUNDS, progress);
+
+      expect(getBlockSeededQuestions(session).map((q) => q.id)).toEqual(
+        expected,
       );
+      expect(getBlockQuestions(session).map((q) => q.id)).toEqual(expected);
+      const revealed = getRevealQuestions(session).map((q) => q.id);
+      expect(revealed.length === 0 || revealed.join() === expected.join()).toBe(
+        true,
+      );
+    },
+  );
+
+  it.each(progresses.map((p, index) => [index, p] as const))(
+    'reads the block of an explicit progress without a session copy at step %i',
+    (_index, progress) => {
+      const lobbySession = freshSessionState(seededGame, LOBBY_PROGRESS);
+
+      expect(
+        getBlockSeededQuestions(lobbySession, progress).map((q) => q.id),
+      ).toEqual(getBlockInPlayIds(BLOCK_IN_PLAY_ROUNDS, progress));
     },
   );
 });

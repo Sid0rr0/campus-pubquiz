@@ -20,10 +20,10 @@ Parent spec: `.scratch/block-membership/spec.md`
 
 **Blocked by:** 01 (The Block module, with grading asking it), 02 (The Settle step and the answering gate ask the Block module)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] No backend code outside tests builds a session copy with a swapped progress to read the block (search for spreads of the session with a replaced progress).
-- [ ] The reveal views are built from the Block module's positions; the equivalence test checks the views follow the module.
-- [ ] The block questions, past revealed questions, players reveal redaction, screen projection, screen projection delivery, presenter context, reveal paging and on-air screen specs pass without edits.
-- [ ] `CODING_STANDARDS.md` and (if applicable) `docs/architecture.md` are updated.
-- [ ] `pnpm --filter backend test`, `pnpm lint` and `pnpm typecheck` pass.
+- [x] No backend code outside tests builds a session copy with a swapped progress to read the block (search for spreads of the session with a replaced progress).
+- [x] The reveal views are built from the Block module's positions; the equivalence test checks the views follow the module.
+- [x] The block questions, past revealed questions, players reveal redaction, screen projection, screen projection delivery, presenter context, reveal paging and on-air screen specs pass without edits.
+- [x] `CODING_STANDARDS.md` and (if applicable) `docs/architecture.md` are updated.
+- [x] `pnpm --filter backend test`, `pnpm lint` and `pnpm typecheck` pass.

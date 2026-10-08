@@ -12,7 +12,7 @@ A run of consecutive rounds that is graded and revealed together, ending at a ro
 _Avoid_: section, segment, grading group
 
 **Block in play**:
-The questions of the current block a session has reached. While answering, those up to the furthest opened one (Previous never hides one); once the block locks, the whole block; at `ended`, the last block played, up to where progress stands. Grading, the answering gate and opened questions all cover the block in play.
+The questions of the current block a session has reached. While answering, those up to the furthest opened one (Previous never hides one); once the block locks, the whole block; at `ended`, the last block played, up to where progress stands. Grading, the answering gate and opened questions all cover the block in play. The **Block module** (`shared/types/src/block-in-play.ts`) answers it for any progress; the reveal views are built from its positions.
 _Avoid_: current block, active block
 
 **Kahoot round**:
