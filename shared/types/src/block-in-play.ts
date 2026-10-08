@@ -6,7 +6,7 @@ import {
   getRoundAndQuestionForBlockPosition,
   isAnsweringStatus,
   isBlockStartedStatus,
-} from '@campus-pubquiz/types';
+} from './game-state';
 
 /** The part of a seeded round the Block module reads — a SeededRound fits. */
 interface BlockRound {
@@ -113,4 +113,29 @@ export function getBlockInPlayIds(
   progress: GameProgress,
 ): number[] {
   return getBlockInPlay(rounds, progress).map(({ questionId }) => questionId);
+}
+
+/**
+ * The question ids of every block that finished before the one `progress` is
+ * in: every round before the block's round, plus the questions of a kahoot
+ * round that come before the block's start. Same set as
+ * getPastRevealedQuestions, asked of a progress and answered in ids.
+ */
+export function getPastBlockIds(
+  rounds: readonly BlockRound[],
+  progress: GameProgress,
+): number[] {
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    toGameContext(rounds),
+  );
+  const ids = (round: BlockRound, count = round.questions.length) =>
+    round.questions.slice(0, count).map(({ id }) => id);
+  return [
+    ...rounds.slice(0, blockStart.roundIndex).flatMap((round) => ids(round)),
+    ...(blockStart.questionIndex > 0
+      ? ids(rounds[blockStart.roundIndex], blockStart.questionIndex)
+      : []),
+  ];
 }

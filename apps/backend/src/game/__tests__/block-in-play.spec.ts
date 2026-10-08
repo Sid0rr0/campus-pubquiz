@@ -1,8 +1,10 @@
-import type { GameProgress, GameStatus } from '@campus-pubquiz/types';
 import {
   getBlockInPlay,
   getBlockInPlayIds,
-} from '@/game/state/block-in-play.util';
+  getPastBlockIds,
+  type GameProgress,
+  type GameStatus,
+} from '@campus-pubquiz/types';
 import {
   BLOCK_IN_PLAY_ROUNDS,
   questionId,
@@ -126,5 +128,44 @@ describe('getBlockInPlay', () => {
       { roundIndex: 1, questionIndex: 0, questionId: q(1, 0) },
       { roundIndex: 1, questionIndex: 1, questionId: q(1, 1) },
     ]);
+  });
+});
+
+describe('getPastBlockIds', () => {
+  const cases: [string, GameProgress, number[]][] = [
+    [
+      'the first block has nothing behind it',
+      progress('question_open', 0, 1, 1),
+      [],
+    ],
+    [
+      'a round inside the first block has nothing behind it',
+      progress('question_open', 1, 0, 2),
+      [],
+    ],
+    [
+      'the second block has the whole first block behind it',
+      progress('question_open', 2, 0, 0),
+      FIRST_BLOCK,
+    ],
+    [
+      'a kahoot round at its first question has the earlier blocks behind it',
+      progress('question_open', 3, 0, 0),
+      [...FIRST_BLOCK, q(2, 0), q(2, 1)],
+    ],
+    [
+      "a kahoot round's second question has its first question behind it too",
+      progress('question_open', 3, 1, 0),
+      [...FIRST_BLOCK, q(2, 0), q(2, 1), q(3, 0)],
+    ],
+    [
+      'the final round has everything before it behind it',
+      progress('question_open', 4, 0, 0),
+      [...FIRST_BLOCK, q(2, 0), q(2, 1), q(3, 0), q(3, 1)],
+    ],
+  ];
+
+  it.each(cases)('is the right ids when %s', (_name, given, expected) => {
+    expect(getPastBlockIds(BLOCK_IN_PLAY_ROUNDS, given)).toEqual(expected);
   });
 });
