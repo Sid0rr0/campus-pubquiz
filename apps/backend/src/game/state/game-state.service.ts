@@ -12,10 +12,8 @@ import {
   freshSessionState,
   type GameAction,
   getFeedbackField,
-  getTiedForFirst,
   isGradedStatus,
   isQuestionOpenForAnswering,
-  isShowdownAcceptingGuesses,
   type JoinPlayersPayload,
   type LiveEditFrontier,
   LOBBY_PROGRESS,
@@ -44,14 +42,13 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionWrite } from '@/game/state/session-write';
 import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
+import { ShowdownsChanges } from '@/game/state/showdowns-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 import {
   findTeamIdBySocketId,
-  withActiveShowdownRound,
   withAnsweredTeamIds,
-  withShowdownGuess,
   withTeamConnected,
   withTeams,
   withoutTeamConnection,
@@ -64,10 +61,7 @@ import {
   deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import {
-  InvalidShowdownError,
-  ShowdownService,
-} from '@/showdown/showdown.service';
+import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 
 /** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
@@ -93,18 +87,6 @@ const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
   shouldBroadcastState: false,
 };
 
-/** Runs a showdown service call, turning its domain error into the refusal a team or the admin sees. */
-async function refusingInvalidShowdown<T>(call: () => Promise<T>): Promise<T> {
-  try {
-    return await call();
-  } catch (error) {
-    if (error instanceof InvalidShowdownError) {
-      throw new SessionRefusal(error.message);
-    }
-    throw error;
-  }
-}
-
 @Injectable()
 export class GameStateService implements OnModuleInit {
   // A string, not `GameStateService.name`: `nest build` crashes with
@@ -115,6 +97,7 @@ export class GameStateService implements OnModuleInit {
   private readonly moveCommitter: MoveCommitter;
   private readonly settingsChanges: SessionSettingsChanges;
   private readonly bonusChanges: BonusAwardsChanges;
+  private readonly showdownsChanges: ShowdownsChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -131,6 +114,7 @@ export class GameStateService implements OnModuleInit {
     this.grading = new BlockGradingService(this.answerService);
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.bonusChanges = new BonusAwardsChanges(this.bonusService);
+    this.showdownsChanges = new ShowdownsChanges(this.showdownService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
@@ -656,43 +640,12 @@ export class GameStateService implements OnModuleInit {
    */
   submitShowdownGuess(
     joinCode: string,
-    { showdownRoundId, teamId, value }: SubmitShowdownGuessPayload,
+    payload: SubmitShowdownGuessPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        const round = session.activeShowdownRound;
-        if (
-          !isShowdownAcceptingGuesses(
-            round,
-            showdownRoundId,
-            session.showdownRevealStep,
-          )
-        ) {
-          throw new SessionRefusal(
-            'This showdown round is no longer accepting guesses',
-          );
-        }
-        if (session.connectedTeamSockets[teamId] !== socketId) {
-          throw new SessionRefusal(
-            'You may only submit guesses for your own team',
-          );
-        }
-        if (!round?.participants.some((entry) => entry.teamId === teamId)) {
-          throw new SessionRefusal(
-            'Your team is not part of this showdown round',
-          );
-        }
-
-        await refusingInvalidShowdown(() =>
-          this.showdownService.submitGuess(showdownRoundId, teamId, value),
-        );
-        return {
-          session: withShowdownGuess(session, teamId, value),
-          outcome: BROADCAST_STATE_OUTCOME,
-        };
-      },
+      (session) => this.showdownsChanges.guess(session, payload, socketId),
       NOT_TOUCHING_SCORES,
     );
   }
@@ -708,30 +661,11 @@ export class GameStateService implements OnModuleInit {
    */
   createShowdownRound(
     joinCode: string,
-    { question, answer, points }: CreateShowdownRoundPayload,
+    payload: CreateShowdownRoundPayload,
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        const tied = getTiedForFirst(session.leaderboard);
-        if (tied.length < 2) {
-          throw new SessionRefusal('No tie for first place to break');
-        }
-
-        const round = await refusingInvalidShowdown(() =>
-          this.showdownService.createRound(
-            session.seededGame.gameSessionId,
-            tied.map(({ teamId, teamName }) => ({ teamId, teamName })),
-            question,
-            answer,
-            points,
-          ),
-        );
-        return {
-          session: withActiveShowdownRound(session, round),
-          outcome: BROADCAST_STATE_OUTCOME,
-        };
-      },
+      (session) => this.showdownsChanges.newRound(session, payload),
       NOT_TOUCHING_SCORES,
     );
   }
