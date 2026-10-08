@@ -25,7 +25,6 @@ import {
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
-  type TeamRosterEntry,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
@@ -55,7 +54,6 @@ import {
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 
-/** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
 /** What a hold on a quiz's sessions lets its task do to them: apply a quiz edit to one held session, returning the outcome to deliver once the hold is released. */
 export interface HeldQuizSessions {
   applyQuizEdit(
@@ -63,8 +61,6 @@ export interface HeldQuizSessions {
     regradeQuestionIds: readonly number[],
   ): Promise<SessionOutcome>;
 }
-
-export type RosterLoader = () => Promise<TeamRosterEntry[]>;
 
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
@@ -375,10 +371,7 @@ export class GameStateService implements OnModuleInit {
     };
   }
 
-  /**
-   * A team rates a round of the break card. A session write built by the team
-   * feedback change module; changes no scores and pushes nothing.
-   */
+  /** A team rates a round of the break card. Changes no scores and pushes nothing. */
   roundRated(
     joinCode: string,
     payload: RateRoundPayload,
@@ -406,15 +399,9 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A team joins (or rejoins) from `socketId`. The team service resolves the
-   * team; then the seat takeover rule applies: a live socket already holding
-   * the seat refuses the join, unless the request names that socket as its
-   * previous one — then it is listed to close. Records the connection and the
-   * roster in one session write, so the team is on the leaderboard from the
-   * moment it joins, at zero points until it scores. The join reply (saved
-   * answers, bonus awards, ratings and feedback) goes to the sender before
-   * any room push. `isSocketLive` comes from the socket layer, the only place
-   * that knows whether a socket is still connected.
+   * A team joins (or rejoins) from `socketId`; see the team roster change
+   * module for the seat takeover rule. The join reply goes to the sender
+   * before any room push. `isSocketLive` comes from the socket layer.
    */
   async teamJoined(
     joinCode: string,
@@ -506,14 +493,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * A showdown guess from `socketId`. A session write: inside it, checks the
-   * showdown still accepts guesses, then that the socket owns the seat, then
-   * that the team takes part, stores the guess and records it on the session.
-   * Checked against the session the write holds, so a guess sent as the
-   * reveal starts is either counted by the resolve or refused. The latest
-   * guess replaces any earlier one.
-   */
+  /** A showdown guess from `socketId`; checked against the session the write holds, so a guess sent as the reveal starts is counted or refused. */
   submitShowdownGuess(
     joinCode: string,
     payload: SubmitShowdownGuessPayload,
@@ -526,15 +506,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * Starts a showdown round for the teams tied for first, in leaderboard
-   * (seat) order. A session write: the tie is read from the leaderboard of
-   * the session the write holds, so a round is only created for teams still
-   * tied. Leaves
-   * isLeaderboardVisible alone: the admin's own Hide Leaderboard press clears
-   * it before the reveal starts, and forcing it here would yank the final
-   * standings off the display the moment the tiebreaker question is saved.
-   */
+  /** Starts a showdown round for the teams tied for first, read from the session the write holds. Leaves isLeaderboardVisible alone. */
   createShowdownRound(
     joinCode: string,
     payload: CreateShowdownRoundPayload,
@@ -546,13 +518,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * Merges `partial` over the session's current settings, lobby-only — the
-   * admin can keep adjusting settings freely up until START_QUIZ, at which
-   * point the values in effect must stop moving under the game. A session
-   * write (no standings read): the lobby check runs against the session the
-   * previous write left, so a join or START_QUIZ queued first is respected.
-   */
+  /** Merges `partial` over the session's settings, lobby-only: the check runs against the session the previous write left. */
   async updateSessionSettings(
     joinCode: string,
     partial: Partial<SessionSettings>,
@@ -565,18 +531,10 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Applies an admin action (or a timer expiry standing in for one) and says
-   * what must be pushed. Carries the press out through the Move committer —
-   * every follow-up it implies (the fresh leaderboard when it is toggled on,
-   * the per-team answer sync on reveal entry) comes back in the outcome — so
-   * the admin path and both timer paths behave the same. A session write:
-   * the commit runs against the session as the previous write left it, so
-   * no other session write (answers, grades, bonuses, roster changes, other
-   * presses) that landed while the press waited on the database is lost. The
-   * session is stored only once its progress is saved,
-   * so a refused press leaves it where it was. Refuses with the commit's own
-   * message (illegal transition, ungraded answers); a failed save is refused
-   * the same way.
+   * Applies an admin action (or a timer expiry standing in for one) through
+   * the Move committer, inside a session write, so no other write that landed
+   * meanwhile is lost. A refused press (or failed save) leaves the session
+   * where it was and is refused with the commit's own message.
    */
   applyAdminAction(
     joinCode: string,
@@ -591,14 +549,7 @@ export class GameStateService implements OnModuleInit {
       });
   }
 
-  /**
-   * A team's answer arrived from `socketId`. Refuses it when the question is
-   * no longer open or the socket doesn't own the team's seat; otherwise
-   * measures the kahoot response time from the phase start that speed scoring
-   * anchors to, stores the answer, refreshes the leaderboard, the question's
-   * answered-team ids and its ungraded flag, and replies "answer received" to
-   * the sender (graded points included for auto-graded types).
-   */
+  /** A team's answer from `socketId`: refused when the question is closed or the seat isn't the socket's; see the answers change module. */
   submitAnswer(
     joinCode: string,
     payload: SubmitAnswerPayload,
@@ -609,11 +560,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * An admin grades an answer by hand. Refuses what the answer service
-   * refuses (an unknown answer, a closest_guess answer); otherwise runs the
-   * same refresh as submitAnswer for the answer's question.
-   */
+  /** An admin grades an answer by hand; runs the same refresh as submitAnswer. */
   async gradeAnswer(
     joinCode: string,
     answerId: number,
@@ -624,10 +571,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * An admin awards a bonus. A refusal carries the bonus service's message;
-   * the awarded team's socket, if connected, gets the BONUS_AWARDED notice.
-   */
+  /** An admin awards a bonus; a refusal carries the bonus service's message. */
   awardBonus(
     joinCode: string,
     payload: AwardBonusPayload,
@@ -637,11 +581,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * A team leaves the session from `socketId`. Refuses unless that socket owns
-   * the team's seat; otherwise removes the team from the roster and refreshes
-   * the roster and leaderboard in every room.
-   */
+  /** A team leaves from `socketId`; refused unless that socket owns the seat. */
   teamLeft(
     joinCode: string,
     teamId: number,
@@ -652,11 +592,7 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
-  /**
-   * The admin kicks a team: removes it from the roster even when it has no
-   * socket. The outcome carries TEAM_KICKED for the socket the team holds, if
-   * any, and closes that socket after the notice.
-   */
+  /** The admin kicks a team, even one with no socket; the team's socket, if any, gets TEAM_KICKED and is closed. */
   kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
       this.rosterChanges.kick(session, teamId),
