@@ -3,9 +3,9 @@ import {
   type GameAction,
   type GameContext,
   type GameProgress,
-  getBlockSeededQuestions,
+  getBlockInPlayIds,
   getGameContext,
-  getPastRevealedQuestions,
+  getPastBlockIds,
   getTimedPhaseKey,
   type SessionState,
 } from '@campus-pubquiz/types';
@@ -164,15 +164,16 @@ function computeBreakEndsAt(
 
 /**
  * The session's opened questions plus everything `progress` has opened: every
- * past block's questions and the current block up to its furthest-opened
- * position. Only ever grows, so Previous stepping back leaves earlier ones
- * opened.
+ * past block's questions and the block in play for `progress`. Only ever
+ * grows, so Previous stepping back leaves earlier ones opened.
  */
 function withOpenedAt(session: SessionState, progress: GameProgress): number[] {
-  const moved = { ...session, progress };
-  const opened = [
-    ...getPastRevealedQuestions(moved),
-    ...getBlockSeededQuestions(moved),
-  ].map((question) => question.id);
-  return [...new Set([...session.openedQuestionIds, ...opened])];
+  const { rounds } = session.seededGame;
+  return [
+    ...new Set([
+      ...session.openedQuestionIds,
+      ...getPastBlockIds(rounds, progress),
+      ...getBlockInPlayIds(rounds, progress),
+    ]),
+  ];
 }

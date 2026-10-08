@@ -1,3 +1,4 @@
+import { getBlockInPlayIds } from './block-in-play';
 import {
   getAnsweredTeamIds,
   getBlockQuestions,
@@ -148,7 +149,7 @@ export function isBlockAnswerable(session: SessionState): boolean {
   return (
     isAnsweringStatus(session.progress.status) &&
     !isQuestionHiddenBehindKahootLeaderboard(session) &&
-    getBlockQuestions(session).length > 0
+    getBlockInPlayIds(session.seededGame.rounds, session.progress).length > 0
   );
 }
 
@@ -158,7 +159,9 @@ export function isQuestionOpenForAnswering(
 ): boolean {
   return (
     isBlockAnswerable(session) &&
-    getBlockQuestions(session).some((question) => question.id === questionId)
+    getBlockInPlayIds(session.seededGame.rounds, session.progress).includes(
+      questionId,
+    )
   );
 }
 

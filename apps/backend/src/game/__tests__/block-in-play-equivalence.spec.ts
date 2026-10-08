@@ -1,5 +1,6 @@
 import {
   freshSessionState,
+  getBlockInPlayIds,
   getBlockSeededQuestions,
   getNextGameState,
   LOBBY_PROGRESS,
@@ -9,7 +10,6 @@ import {
   type SeededGame,
 } from '@campus-pubquiz/types';
 import { BLOCK_IN_PLAY_ROUNDS } from '@/game/__tests__/block-in-play-quiz';
-import { getBlockInPlayIds } from '@/game/state/block-in-play.util';
 
 const seededGame: SeededGame = {
   quizId: 1,

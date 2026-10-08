@@ -42,6 +42,7 @@ export * from './question-payload-schema';
 export * from './answer-kind';
 export * from './session-state';
 export * from './question-view-conversions';
+export * from './block-in-play';
 export * from './block-questions';
 export * from './kahoot-visibility';
 export * from './admin-view-flags';

@@ -12,9 +12,9 @@ Parent spec: `.scratch/block-membership/spec.md`
 
 **Blocked by:** 01 (The Block module, with grading asking it)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Settle step and the answering gate no longer call the reveal-view function, and the Settle step builds no session copy.
-- [ ] The opened questions, live structural edit, players view, kahoot answer gate, last-second answer, submit answer and commit-a-move specs pass without edits.
-- [ ] The equivalence test from 01 still passes.
-- [ ] `pnpm --filter backend test`, `pnpm lint` and `pnpm typecheck` pass.
+- [x] The Settle step and the answering gate no longer call the reveal-view function, and the Settle step builds no session copy.
+- [x] The opened questions, live structural edit, players view, kahoot answer gate, last-second answer, submit answer and commit-a-move specs pass without edits.
+- [x] The equivalence test from 01 still passes.
+- [x] `pnpm --filter backend test`, `pnpm lint` and `pnpm typecheck` pass.

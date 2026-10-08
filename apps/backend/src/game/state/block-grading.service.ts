@@ -9,12 +9,10 @@ import {
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
-} from '@campus-pubquiz/types';
-import { AnswerService } from '@/answer/answer.service';
-import {
   getBlockInPlay,
   getBlockInPlayIds,
-} from '@/game/state/block-in-play.util';
+} from '@campus-pubquiz/types';
+import { AnswerService } from '@/answer/answer.service';
 
 /**
  * The one rule for which questions can ever count as "ungraded": closest_guess
