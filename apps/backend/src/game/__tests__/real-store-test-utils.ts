@@ -831,9 +831,10 @@ function watchNextWrite(gameState: GameStateService): () => Promise<void> {
     joinCode: string,
     task: () => Promise<unknown>,
   ) => Promise<unknown>;
-  const { sessionWrites: queue } = gameState as unknown as {
-    sessionWrites: SessionWriteQueue;
+  const { sessionWrite } = gameState as unknown as {
+    sessionWrite: { queue: SessionWriteQueue };
   };
+  const { queue } = sessionWrite;
   const target = queue as unknown as { run: Run };
   const originalRun = target.run;
   const run: Run = (joinCode, task) =>
