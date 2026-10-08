@@ -1,9 +1,5 @@
 import type { Logger } from '@nestjs/common';
-import {
-  socketOfRoom,
-  type GameServer,
-  type GameSocket,
-} from '@/game/socket/game-socket.types';
+import { socketOfRoom, type GameSocket } from '@/game/socket/game-socket.types';
 import {
   SOCKET_EVENTS,
   SOCKET_ROOMS,
@@ -13,8 +9,10 @@ import {
 } from '@campus-pubquiz/types';
 import { extractSessionCookie } from '@/auth/session-cookie';
 import type { SessionService } from '@/auth/session.service';
-import type { AnswerService } from '@/answer/answer.service';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
+import {
+  deliverOutcome,
+  type OutcomeDeliveryDeps,
+} from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 
@@ -114,12 +112,7 @@ function syncState<R extends SocketRoomName>(
 }
 
 export async function disconnectClient(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    server: GameServer;
-    logger: Logger;
-  },
+  deps: OutcomeDeliveryDeps & { logger: Logger },
   client: GameSocket,
 ): Promise<void> {
   const joinCode = (client.data as { joinCode?: string }).joinCode;
