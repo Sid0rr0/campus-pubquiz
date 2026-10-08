@@ -86,8 +86,7 @@ flowchart TD
 
   subgraph state["game/state — the live session module"]
     gss["GameStateService"]
-    queue["SessionWriteQueue<br/>one write at a time per join code"]
-    store["GameSessionStore<br/>in-memory SessionState"]
+    write["SessionWrite<br/>owns the in-memory SessionState store<br/>and the queue: one write at a time per join code"]
     mover["MoveCommitter<br/>plan → grade → settle → save"]
     grading["BlockGradingService"]
     progress["GameProgressRepository"]
@@ -123,7 +122,8 @@ flowchart TD
   rest -->|read-only lookups| gss
   rest --> domain
 
-  gss --> queue --> store
+  gss --> write
+  live["Live edit save"] -->|"hold: held writer"| write
   gss --> mover --> grading
   mover --> progress
   mover --> plan
@@ -144,9 +144,11 @@ Key seams:
 - **`dispatchSocketEvent`** is the single template every client-to-server
   event goes through, so rejection order never varies and refusals become
   socket errors in one place.
-- **`GameStateService.writeSession`** is the only way a live session changes:
+- **`SessionWrite`** is the only way a live session changes and is stored:
   queued per join code, applied to the session as the previous write left it,
-  ends with a standings read, then stored.
+  ends with a standings read, then stored. A Live edit save holds a quiz's
+  sessions through its `hold`, whose held writer is valid only while the hold
+  lasts.
 - **`MoveCommitter`** is the only place a press (admin action, timer expiry,
   session creation, restart restore) is planned, graded, settled and saved.
 - **`projectScreen`** builds each room's view, so nothing a room hasn't been

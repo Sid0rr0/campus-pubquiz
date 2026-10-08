@@ -16,6 +16,19 @@ export interface SessionWriteOptions {
   refreshStandings?: boolean;
 }
 
+/**
+ * The write a hold's task gets: same change and options as the queued write,
+ * but run without queueing (the hold already owns the queues). Throws for a
+ * join code outside the hold and for any call after the hold is released.
+ */
+export interface HeldWriter {
+  write<T>(
+    joinCode: string,
+    change: (session: SessionState) => Promise<SessionChange<T>>,
+    options?: SessionWriteOptions,
+  ): Promise<T>;
+}
+
 function isSessionOutcome(value: unknown): value is SessionOutcome {
   return typeof value === 'object' && value !== null && 'replies' in value;
 }
@@ -126,15 +139,9 @@ export class SessionWrite {
     change: (session: SessionState) => Promise<SessionChange<T>>,
     { refreshStandings = true }: SessionWriteOptions = {},
   ): Promise<T> {
-    return this.queue.run(joinCode, async () => {
-      const started = this.read(joinCode);
-      return this.commit(
-        joinCode,
-        started,
-        await change(started),
-        refreshStandings,
-      );
-    });
+    return this.queue.run(joinCode, () =>
+      this.writeNow(joinCode, change, refreshStandings),
+    );
   }
 
   /**
@@ -154,24 +161,54 @@ export class SessionWrite {
   }
 
   /**
-   * TRANSITIONAL (ticket 02 replaces both this and `commitUnqueued` with a
-   * held writer): holds the queues of every join code in `joinCodes` while
-   * `task` runs.
+   * Holds the queues of every join code in `joinCodes` while `task` runs, and
+   * gives the task a held writer for them. The writer is valid only while the
+   * hold lasts: it refuses a join code outside the hold and every write once
+   * the hold is released, so a session is never written outside its queue
+   * after the hold ends.
    */
-  hold<T>(joinCodes: readonly string[], task: () => Promise<T>): Promise<T> {
-    return this.queue.hold(joinCodes, task);
+  hold<T>(
+    joinCodes: readonly string[],
+    task: (held: HeldWriter) => Promise<T>,
+  ): Promise<T> {
+    const heldCodes = new Set(joinCodes);
+    let isReleased = false;
+    const held: HeldWriter = {
+      write: async (joinCode, change, { refreshStandings = true } = {}) => {
+        if (isReleased) {
+          throw new Error(
+            `Held writer used after its hold was released (join code "${joinCode}")`,
+          );
+        }
+        if (!heldCodes.has(joinCode)) {
+          throw new Error(
+            `Held writer refused: join code "${joinCode}" is not part of the hold`,
+          );
+        }
+        return this.writeNow(joinCode, change, refreshStandings);
+      },
+    };
+    return this.queue.hold(joinCodes, async () => {
+      try {
+        return await task(held);
+      } finally {
+        isReleased = true;
+      }
+    });
   }
 
-  /**
-   * TRANSITIONAL (ticket 02): the commit step without the queue, for the held
-   * quiz edit. Only valid while the caller holds `joinCode`'s queue.
-   */
-  commitUnqueuedWhileHeld<T>(
+  private async writeNow<T>(
     joinCode: string,
-    started: SessionState,
-    change: SessionChange<T>,
+    change: (session: SessionState) => Promise<SessionChange<T>>,
+    refreshStandings: boolean,
   ): Promise<T> {
-    return this.commit(joinCode, started, change, true);
+    const started = this.read(joinCode);
+    return this.commit(
+      joinCode,
+      started,
+      await change(started),
+      refreshStandings,
+    );
   }
 
   /**

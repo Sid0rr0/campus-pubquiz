@@ -320,27 +320,6 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Runs the quiz edit on one session whose queue is held (see
-   * holdQuizSessions, the only caller): the step, then the standings read,
-   * then the store. Not queued; the outcome is delivered after the hold is
-   * released.
-   */
-  private async applyQuizEdit(
-    joinCode: string,
-    regradeQuestionIds: readonly number[],
-  ): Promise<SessionOutcome> {
-    const started = this.sessionWrite.read(joinCode);
-    const { session, outcome } = await this.quizEditedStep(
-      started,
-      regradeQuestionIds,
-    );
-    return this.sessionWrite.commitUnqueuedWhileHeld(joinCode, started, {
-      session,
-      outcome,
-    });
-  }
-
-  /**
    * Runs `task` while holding the session writes of every unfinished session
    * on `quizId` (the Live edit module's save). Lobby sessions are held too,
    * so one that starts while the save waits is seen when the task looks at
@@ -360,10 +339,12 @@ export class GameStateService implements OnModuleInit {
             session.progress.status !== 'ended',
         )
         .map((session) => session.seededGame.joinCode),
-      () =>
+      (writer) =>
         task({
           applyQuizEdit: (joinCode, regradeQuestionIds) =>
-            this.applyQuizEdit(joinCode, regradeQuestionIds),
+            writer.write(joinCode, (started) =>
+              this.quizEditedStep(started, regradeQuestionIds),
+            ),
         }),
     );
   }

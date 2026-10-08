@@ -21,7 +21,7 @@ Parent spec: `.scratch/session-write-module/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Session write module has no unqueued commit in its interface. The only way to write a session outside its queue is the held writer from an active `hold`.
 - [ ] The held writer refuses a join code outside the hold, and refuses every write after the hold is released. Each refusal is an error naming the join code, and nothing is stored.
