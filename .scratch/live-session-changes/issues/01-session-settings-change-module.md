@@ -17,7 +17,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** None within this spec. The session-write-module spec (tickets 01 and 02) must be done first.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The break end time, display text size and lobby settings events are built by the session settings change module. Their façade methods are each a single `write` call carrying the "doesn't touch scores" option.
 - [ ] The session settings change module imports neither the Session write module nor the game state class.
