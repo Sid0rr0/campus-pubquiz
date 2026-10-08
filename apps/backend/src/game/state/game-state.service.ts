@@ -22,7 +22,6 @@ import {
   type SendFeedbackPayload,
   type SessionSettings,
   type SessionState,
-  SOCKET_EVENTS,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -42,16 +41,12 @@ import { SessionWrite } from '@/game/state/session-write';
 import { AnswersChanges } from '@/game/state/answers-changes';
 import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
+import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { ShowdownsChanges } from '@/game/state/showdowns-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
-import {
-  findTeamIdBySocketId,
-  withTeamConnected,
-  withTeams,
-  withoutTeamConnection,
-} from '@/game/state/session-updates.util';
+import { findTeamIdBySocketId } from '@/game/state/session-updates.util';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -97,6 +92,7 @@ export class GameStateService implements OnModuleInit {
   private readonly settingsChanges: SessionSettingsChanges;
   private readonly answersChanges: AnswersChanges;
   private readonly bonusChanges: BonusAwardsChanges;
+  private readonly rosterChanges: TeamRosterChanges;
   private readonly showdownsChanges: ShowdownsChanges;
 
   constructor(
@@ -115,6 +111,12 @@ export class GameStateService implements OnModuleInit {
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.answersChanges = new AnswersChanges(this.answerService, this.grading);
     this.bonusChanges = new BonusAwardsChanges(this.bonusService);
+    this.rosterChanges = new TeamRosterChanges(
+      this.teamService,
+      this.answerService,
+      this.bonusService,
+      this.feedbackService,
+    );
     this.showdownsChanges = new ShowdownsChanges(this.showdownService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
@@ -473,81 +475,13 @@ export class GameStateService implements OnModuleInit {
     try {
       const { team, joined } = await this.sessionWrite.write(
         joinCode,
-        async (session) => {
-          // Resolved inside the write, so a leave or kick for the same team
-          // lands either wholly before or wholly after this join.
-          const team = await this.teamService.join(
-            session.seededGame.gameSessionId,
-            request.teamName,
-            {
-              teamToken: request.teamToken,
-              teamCode: request.teamCode,
-              joinCode: request.joinCode,
-            },
-          );
-          const heldBy = session.connectedTeamSockets[team.id];
-          const takenOver =
-            heldBy && heldBy !== socketId && isSocketLive(heldBy)
-              ? heldBy
-              : null;
-          // A takeover is the same device auto-reconnecting on a fresh socket
-          // before our ping timeout noticed its old one died (network switch,
-          // phone waking up). Socket ids are random and never shared with other
-          // clients, so only the device that held that socket can name it here.
-          // Decided inside the write, so two joins racing for one seat can't
-          // both pass.
-          if (takenOver && request.previousSocketId !== takenOver) {
-            throw new SessionRefusal(
-              `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
-            );
-          }
-          return {
-            session: withTeams(
-              withTeamConnected(session, team.id, socketId),
-              await this.teamService.listForSession(
-                session.seededGame.gameSessionId,
-              ),
-            ),
-            outcome: {
-              team,
-              joined: {
-                ...BROADCAST_STATE_OUTCOME,
-                socketsToClose: takenOver ? [takenOver] : [],
-              },
-            },
-          };
-        },
+        (session) =>
+          this.rosterChanges.join(session, { request, socketId, isSocketLive }),
       );
 
       return {
         ...joined,
-        replies: [
-          {
-            event: SOCKET_EVENTS.JOIN_ACCEPTED,
-            payload: {
-              teamId: team.id,
-              teamName: team.name,
-              teamToken: team.token,
-              teamCode: team.code,
-              answers: await this.answerService.listForTeam(
-                gameSessionId,
-                team.id,
-              ),
-              bonusAwards: await this.bonusService.listForTeam(
-                gameSessionId,
-                team.id,
-              ),
-              roundRatings: await this.feedbackService.listRoundRatingsForTeam(
-                gameSessionId,
-                team.id,
-              ),
-              feedback: await this.feedbackService.getFeedbackForTeam(
-                gameSessionId,
-                team.id,
-              ),
-            },
-          },
-        ],
+        replies: [await this.rosterChanges.joinReply(gameSessionId, team)],
       };
     } catch (error) {
       if (error instanceof SessionRefusal) throw error;
@@ -564,17 +498,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome | null> {
     return this.sessionWrite.write<SessionOutcome | null>(
       joinCode,
-      (session) => {
-        const teamId = findTeamIdBySocketId(session, socketId);
-        return Promise.resolve(
-          teamId === null
-            ? { session, outcome: null }
-            : {
-                session: withoutTeamConnection(session, teamId),
-                outcome: BROADCAST_STATE_OUTCOME,
-              },
-        );
-      },
+      (session) => this.rosterChanges.disconnect(session, socketId),
       NOT_TOUCHING_SCORES,
     );
   }
@@ -772,14 +696,9 @@ export class GameStateService implements OnModuleInit {
     teamId: number,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      // Checked against the session as the previous write left it, so a
-      // leave from a socket that just lost the seat to a rejoin is refused.
-      if (session.connectedTeamSockets[teamId] !== socketId) {
-        throw new SessionRefusal('Can only leave the session as your own team');
-      }
-      return await this.teamRemovedChange(session, teamId, 'left');
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.rosterChanges.leave(session, { teamId, socketId }),
+    );
   }
 
   /**
@@ -789,46 +708,8 @@ export class GameStateService implements OnModuleInit {
    */
   kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      this.teamRemovedChange(session, teamId, 'kicked'),
+      this.rosterChanges.kick(session, teamId),
     );
-  }
-
-  /**
-   * The change a team's removal makes, run inside the caller's own session
-   * write: removes the team from the roster, then drops its connection and
-   * swaps in the roster after its removal, so the next snapshot never has one
-   * without the other. A kick also carries TEAM_KICKED for the socket the team
-   * held when the write ran, if it still has one, then closes that socket.
-   */
-  private async teamRemovedChange(
-    session: SessionState,
-    teamId: number,
-    reason: 'kicked' | 'left',
-  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const { gameSessionId } = session.seededGame;
-    await this.teamService.removeFromRoster(gameSessionId, teamId);
-    const socketId = session.connectedTeamSockets[teamId];
-    const notices =
-      reason === 'kicked' && socketId
-        ? [
-            {
-              socketId,
-              event: SOCKET_EVENTS.TEAM_KICKED,
-              payload: undefined,
-            },
-          ]
-        : [];
-    return {
-      session: withTeams(
-        withoutTeamConnection(session, teamId),
-        await this.teamService.listForSession(gameSessionId),
-      ),
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        notices,
-        socketsToClose: notices.map((notice) => notice.socketId),
-      },
-    };
   }
 
   /** A bonus award was added, edited or deleted: refreshes the leaderboard. */
