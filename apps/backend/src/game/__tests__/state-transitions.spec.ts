@@ -194,10 +194,9 @@ describe('GameGateway — state transitions', () => {
     });
   });
 
-  it('rejects moving back out of the rules screen', async () => {
-    await game.act('START_QUIZ');
+  it('rejects moving back out of the lobby', async () => {
     await expect(game.act('PREVIOUS')).rejects.toThrow(
-      'Cannot apply action "PREVIOUS" from state "rules"',
+      'Cannot apply action "PREVIOUS" from state "lobby"',
     );
   });
 
