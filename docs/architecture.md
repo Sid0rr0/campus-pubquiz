@@ -96,6 +96,7 @@ flowchart TD
   subgraph shared["shared/types — pure rules"]
     project["projectScreen<br/>per-room views"]
     plan["Move plan<br/>what one press does"]
+    block["Block module<br/>block-in-play.ts<br/>which questions are in the block in play"]
   end
 
   subgraph domain["Domain services"]
@@ -126,6 +127,9 @@ flowchart TD
   gss --> mover --> grading
   mover --> progress
   mover --> plan
+  grading --> block
+  mover -->|"settle step"| block
+  project -->|"reveal views"| block
   gss --> project
   fixtures["frontend test fixtures<br/>test-utils/room-view.ts"] --> project
   gss -->|"answers · roster · bonuses<br/>showdown · standings"| domain
@@ -150,6 +154,10 @@ Key seams:
   and the other pure rules it reads; the backend calls it, and the frontend's
   test fixtures (`apps/frontend/test-utils/room-view.ts`) run the same
   projection.
+- **The Block module** (`shared/types/src/block-in-play.ts`) says which
+  questions are in the block in play for a progress. Grading, the Settle step,
+  the answering gate and the reveal views all ask it; the reveal views dress
+  its positions with answers, summaries, numbers and titles.
 
 ## Event flow: a team submits an answer
 
