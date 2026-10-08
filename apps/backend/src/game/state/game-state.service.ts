@@ -43,6 +43,7 @@ import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
@@ -115,6 +116,7 @@ export class GameStateService implements OnModuleInit {
   private readonly sessionWrite: SessionWrite;
   private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
+  private readonly settingsChanges: SessionSettingsChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -129,6 +131,7 @@ export class GameStateService implements OnModuleInit {
   ) {
     this.sessionWrite = new SessionWrite(this.standingsService);
     this.grading = new BlockGradingService(this.answerService);
+    this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
@@ -626,11 +629,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      (session) =>
-        Promise.resolve({
-          session: withBreakEndTime(session, breakEndsAt),
-          outcome: BROADCAST_STATE_OUTCOME,
-        }),
+      (session) => this.settingsChanges.breakEndTime(session, breakEndsAt),
       NOT_TOUCHING_SCORES,
     );
   }
@@ -643,10 +642,7 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.write(
       joinCode,
       (session) =>
-        Promise.resolve({
-          session: withDisplayTextScale(session, displayTextScale),
-          outcome: BROADCAST_STATE_OUTCOME,
-        }),
+        this.settingsChanges.displayTextScale(session, displayTextScale),
       NOT_TOUCHING_SCORES,
     );
   }
@@ -754,26 +750,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<void> {
     await this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        if (session.progress.status !== 'lobby') {
-          throw new SessionSettingsUpdateBlockedError(
-            joinCode,
-            `already started (status: "${session.progress.status}")`,
-          );
-        }
-        const settings = { ...session.seededGame.settings, ...partial };
-        await this.seedService.updateSettings(
-          session.seededGame.gameSessionId,
-          settings,
-        );
-        return {
-          session: {
-            ...session,
-            seededGame: { ...session.seededGame, settings },
-          },
-          outcome: undefined,
-        };
-      },
+      (session) => this.settingsChanges.lobbySettings(session, partial),
       NOT_TOUCHING_SCORES,
     );
   }
