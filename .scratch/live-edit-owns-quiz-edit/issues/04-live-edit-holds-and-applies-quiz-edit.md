@@ -35,16 +35,16 @@ Parent spec: `.scratch/live-edit-owns-quiz-edit/spec.md`
 
 **Blocked by:** 01, 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Live edit module doesn't import the game state class. The game state class has none of the members listed above, and the HeldQuizSessions type is gone.
-- [ ] The Live edit module's interface (whether a quiz has a live session, the quiz's merged frontier, and save with its options) is unchanged. The quiz controller and the import module need no edits.
-- [ ] Refusals (409 with its issues, 422, 404), re-grade results, admin answer lists, team syncs and delivery order are unchanged.
-- [ ] The real-store harness builds the Live edit module with its new dependencies. No spec assertion changes.
-- [ ] Every existing spec passes without assertion edits, in particular:
+- [x] The Live edit module doesn't import the game state class. The game state class has none of the members listed above, and the HeldQuizSessions type is gone.
+- [x] The Live edit module's interface (whether a quiz has a live session, the quiz's merged frontier, and save with its options) is unchanged. The quiz controller and the import module need no edits.
+- [x] Refusals (409 with its issues, 422, 404), re-grade results, admin answer lists, team syncs and delivery order are unchanged.
+- [x] The real-store harness builds the Live edit module with its new dependencies. No spec assertion changes.
+- [x] Every existing spec passes without assertion edits, in particular:
   - live-edit, live-structural-edit, live-edit-regrade, quiz-edited, quiz-reimported, opened-questions,
   - the real-store failing-delivery spec from ticket 02,
   - the session-write spec's quiz-edit and re-import cases,
   - the quiz controller and import specs.
-- [ ] If `docs/architecture.md` shows the live-edit save flow, it shows the Live edit module holding the sessions and applying the quiz-edit change through the Session write module.
-- [ ] `pnpm test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] If `docs/architecture.md` shows the live-edit save flow, it shows the Live edit module holding the sessions and applying the quiz-edit change through the Session write module.
+- [x] `pnpm test`, `pnpm typecheck` and `pnpm lint` pass.

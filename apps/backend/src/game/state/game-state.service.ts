@@ -17,7 +17,6 @@ import {
   type RateRoundPayload,
   type SendFeedbackPayload,
   type SessionSettings,
-  type SessionState,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -43,22 +42,12 @@ import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
-  BROADCAST_STATE_OUTCOME,
-  connectedTeamSyncs,
   type DeadlineChange,
   deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
-
-/** What a hold on a quiz's sessions lets its task do to them: apply a quiz edit to one held session, returning the outcome to deliver once the hold is released. */
-export interface HeldQuizSessions {
-  applyQuizEdit(
-    joinCode: string,
-    regradeQuestionIds: readonly number[],
-  ): Promise<SessionOutcome>;
-}
 
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
@@ -213,126 +202,6 @@ export class GameStateService implements OnModuleInit {
       }),
     );
     return this.getSnapshot(seededGame.joinCode);
-  }
-
-  /**
-   * Re-reads the active quiz's rounds from the database, keeping the
-   * session, join code and progress. A step of quizEdited, so it takes and
-   * returns a session value and never queues.
-   */
-  private async withReloadedQuiz(session: SessionState): Promise<SessionState> {
-    const { quizId, gameSessionId, joinCode } = session.seededGame;
-    const seededGame = await this.seedService.loadGame(
-      quizId,
-      gameSessionId,
-      joinCode,
-    );
-    return { ...session, seededGame };
-  }
-
-  /**
-   * The quiz behind a live session was edited in place (an editor save or a
-   * re-import): a session write that reloads its questions and re-grades
-   * `regradeQuestionIds` (already-shown questions whose answer/points were
-   * corrected), so answers and grades that land at the same moment are
-   * neither undone nor out of step with the ungraded markers. The outcome
-   * names every re-scored question for a fresh admin answer list, and every
-   * connected team with an answer to one for a per-team sync — so the
-   * grading panel, the big screen and the phones all show the corrected
-   * points. A reload always ends in a broadcast.
-   */
-  quizEdited(
-    joinCode: string,
-    regradeQuestionIds: readonly number[] = [],
-  ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, (started) =>
-      this.quizEditedStep(started, regradeQuestionIds),
-    );
-  }
-
-  /**
-   * The change of a quiz edit: reloads the session's questions and re-grades
-   * `regradeQuestionIds`, taking and returning a session value. It stores
-   * nothing and never queues, so it runs inside quizEdited's session write —
-   * or, for a save that holds the quiz's sessions (the Live edit module),
-   * inside applyQuizEdit. Private: the only way to reach it unqueued is the
-   * hold's callback.
-   */
-  private async quizEditedStep(
-    started: SessionState,
-    regradeQuestionIds: readonly number[],
-  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const reloaded = await this.withReloadedQuiz(started);
-    if (regradeQuestionIds.length === 0) {
-      return { session: reloaded, outcome: BROADCAST_STATE_OUTCOME };
-    }
-
-    const { session, regradedQuestionIds, answeringTeamIds } =
-      await this.grading.regradeForKeyFix(
-        reloaded,
-        started,
-        regradeQuestionIds,
-      );
-    if (regradedQuestionIds.length === 0) {
-      return { session, outcome: BROADCAST_STATE_OUTCOME };
-    }
-
-    const teamSyncs = connectedTeamSyncs(
-      session,
-      session.teams
-        .filter((team) => answeringTeamIds.has(team.teamId))
-        .map((team) => team.teamId),
-    );
-    return {
-      session,
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        answerListQuestionIds: regradedQuestionIds,
-        teamSyncs,
-      },
-    };
-  }
-
-  /**
-   * Runs `task` while holding the session writes of every unfinished session
-   * on `quizId` (the Live edit module's save). Lobby sessions are held too,
-   * so one that starts while the save waits is seen when the task looks at
-   * which sessions are live. The task gets the held quiz's way to apply a
-   * quiz edit to a session — usable only while the hold lasts.
-   */
-  holdQuizSessions<T>(
-    quizId: number,
-    task: (held: HeldQuizSessions) => Promise<T>,
-  ): Promise<T> {
-    return this.sessionWrite.hold(
-      this.sessionWrite
-        .list()
-        .filter(
-          (session) =>
-            session.seededGame.quizId === quizId &&
-            session.progress.status !== 'ended',
-        )
-        .map((session) => session.seededGame.joinCode),
-      (writer) =>
-        task({
-          applyQuizEdit: (joinCode, regradeQuestionIds) =>
-            writer.write(joinCode, (started) =>
-              this.quizEditedStep(started, regradeQuestionIds),
-            ),
-        }),
-    );
-  }
-
-  /** Every running session on `quizId` (not in the lobby, not ended) as it stands now. Read it inside holdQuizSessions to count the sessions the way they stand while the game can't move. */
-  listLiveSessions(quizId: number): SessionState[] {
-    return this.sessionWrite
-      .list()
-      .filter(
-        (session) =>
-          session.seededGame.quizId === quizId &&
-          session.progress.status !== 'lobby' &&
-          session.progress.status !== 'ended',
-      );
   }
 
   /** A team rates a round of the break card. Changes no scores and pushes nothing. */

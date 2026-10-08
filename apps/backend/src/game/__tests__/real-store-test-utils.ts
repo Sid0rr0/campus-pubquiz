@@ -540,6 +540,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   // first boot of a freshly seeded quiz, or a restart over the same one.
   async function assemble(quiz: PlayableQuiz): Promise<RealStoreGateway> {
     const services = buildServices();
+    const sessionWrite = new SessionWrite(services.standingsService);
+    const grading = new BlockGradingService(services.answerService);
     const gameState = new GameStateService(
       services.seedService,
       services.progressRepository,
@@ -550,8 +552,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.teamService,
       services.bonusService,
       services.feedbackService,
-      new SessionWrite(services.standingsService),
-      new BlockGradingService(services.answerService),
+      sessionWrite,
+      grading,
     );
     await gameState.onModuleInit();
     const nextWriteWaiting = watchNextWrite(gameState);
@@ -568,8 +570,10 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     gateways.push(gateway);
     const liveEdit = new LiveEditService(
       services.quizService,
-      gameState,
       gateway,
+      sessionWrite,
+      services.seedService,
+      grading,
     );
     const saveQuizEdit = (
       edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
