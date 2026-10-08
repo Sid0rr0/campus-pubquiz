@@ -65,6 +65,8 @@ import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
   connectedTeamSyncs,
+  type DeadlineChange,
+  deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 import {
@@ -94,27 +96,36 @@ function isSessionOutcome(value: unknown): value is SessionOutcome {
   return typeof value === 'object' && value !== null && 'replies' in value;
 }
 
+function haveDeadlinesMoved(
+  before: SessionState,
+  after: SessionState,
+): boolean {
+  const { questionLockAt, kahootQuestionEndsAt } = deadlinesOf(before);
+  return (
+    questionLockAt !== after.questionLockAt ||
+    kahootQuestionEndsAt !== after.kahootQuestionEndsAt
+  );
+}
+
 /**
  * The Session write's deadline report: `outcome` with the new auto-lock
  * deadlines attached when `stored` moved either one from `started`. Results
- * that aren't a SessionOutcome (nothing to push, a join's team) pass through.
+ * that carry no deadlines (nothing to push, a join's team) pass through, but
+ * a deadline that moved with nowhere to report it throws: dropping it would
+ * leave a timer on a stale deadline live on stage.
  */
 function reportDeadlineChange<T>(
   started: SessionState,
   stored: SessionState,
   outcome: T,
 ): T {
-  const moved =
-    started.questionLockAt !== stored.questionLockAt ||
-    started.kahootQuestionEndsAt !== stored.kahootQuestionEndsAt;
-  if (!moved || !isSessionOutcome(outcome)) return outcome;
-  return {
-    ...outcome,
-    deadlineChange: {
-      questionLockAt: stored.questionLockAt,
-      kahootQuestionEndsAt: stored.kahootQuestionEndsAt,
-    },
-  };
+  if (!haveDeadlinesMoved(started, stored)) return outcome;
+  if (!isSessionOutcome(outcome)) {
+    throw new Error(
+      'A session write moved an auto-lock deadline but returned no SessionOutcome to carry it',
+    );
+  }
+  return { ...outcome, deadlineChange: deadlinesOf(stored) };
 }
 
 /** The outcome of an event that is only acknowledged to its sender: no emits, no broadcast. */
@@ -368,8 +379,7 @@ export class GameStateService implements OnModuleInit {
       started,
       regradeQuestionIds,
     );
-    await this.storeWithStandings(joinCode, session);
-    return reportDeadlineChange(started, session, outcome);
+    return this.commit(joinCode, started, { session, outcome }, true);
   }
 
   /**
@@ -655,14 +665,19 @@ export class GameStateService implements OnModuleInit {
     return projectScreen(this.sessionStore.get(joinCode), room);
   }
 
+  /** Both auto-lock deadlines (epoch-ms, or null when none is armed). */
+  getDeadlines(joinCode: string): DeadlineChange {
+    return deadlinesOf(this.sessionStore.get(joinCode));
+  }
+
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
   getQuestionLockAt(joinCode: string): number | null {
-    return this.sessionStore.get(joinCode).questionLockAt;
+    return this.getDeadlines(joinCode).questionLockAt;
   }
 
   /** Epoch-ms deadline for auto-locking the currently-open kahootMode question, or null when none is armed. */
   getKahootQuestionEndsAt(joinCode: string): number | null {
-    return this.sessionStore.get(joinCode).kahootQuestionEndsAt;
+    return this.getDeadlines(joinCode).kahootQuestionEndsAt;
   }
 
   /** Admin-set/clear the epoch-ms time the break is expected to end — see StateSnapshotPayload.breakEndsAt. */
@@ -1130,11 +1145,33 @@ export class GameStateService implements OnModuleInit {
   ): Promise<T> {
     return this.sessionWrites.run(joinCode, async () => {
       const started = this.sessionStore.get(joinCode);
-      const { session, outcome } = await change(started);
-      if (refreshStandings) await this.storeWithStandings(joinCode, session);
-      else this.sessionStore.set(joinCode, session);
-      return reportDeadlineChange(started, session, outcome);
+      return this.commit(
+        joinCode,
+        started,
+        await change(started),
+        refreshStandings,
+      );
     });
+  }
+
+  /**
+   * The one place a write is stored and its deadline change reported, for
+   * the queued session write and the held quiz edit alike. Compares the
+   * session as stored (with its fresh leaderboard) to the one it started from.
+   */
+  private async commit<T>(
+    joinCode: string,
+    started: SessionState,
+    { session, outcome }: { session: SessionState; outcome: T },
+    refreshStandings: boolean,
+  ): Promise<T> {
+    if (refreshStandings) await this.storeWithStandings(joinCode, session);
+    else this.sessionStore.set(joinCode, session);
+    return reportDeadlineChange(
+      started,
+      this.sessionStore.get(joinCode),
+      outcome,
+    );
   }
 
   /**

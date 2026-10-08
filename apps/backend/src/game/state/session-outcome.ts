@@ -33,6 +33,14 @@ export interface DeadlineChange {
   kahootQuestionEndsAt: number | null;
 }
 
+/** The auto-lock deadlines of a session, the one place the pair is built. */
+export function deadlinesOf(session: DeadlineChange): DeadlineChange {
+  return {
+    questionLockAt: session.questionLockAt,
+    kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+  };
+}
+
 /**
  * What the Live session module says must be pushed after it applies an event.
  * The socket layer's one delivery step turns this into emits, so no caller
@@ -52,8 +60,11 @@ export interface SessionOutcome {
   socketsToClose: readonly string[];
   /**
    * The new auto-lock deadlines, present only when the write that produced
-   * this outcome changed either one. Only the Session write fills it, from a
-   * before/after comparison, so no event sets it by hand; the delivery step
+   * this outcome changed either one. Only the Session write's commit step
+   * (every write, including the held quiz edit) fills it, from a
+   * before/after comparison of the stored session, so no event sets it by
+   * hand; a write that moves a deadline must return an outcome or the commit
+   * throws rather than drop the re-arm. The delivery step
    * re-arms the session's timers from it before any emit. A write that throws
    * reports nothing.
    */
