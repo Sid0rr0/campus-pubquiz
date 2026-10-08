@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                   | Title                                                                                                                       | Tickets | Blocked by             |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
-| outcome-deadlines      | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md)         | 3       | —                      |
 | block-membership       | [Block membership is its own rule, and the reveal views are built on it](block-membership/spec.md)                          | 3       | —                      |
 
 ## Won't do

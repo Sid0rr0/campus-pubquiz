@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| outcome-deadlines | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md) | 3 |
 | delete-middle-question | [Deleting a middle question from a round saves](delete-middle-question/spec.md) | 1 |
 | room-view-projection        | [One room-view projection shared by the server and the frontend fixtures](room-view-projection/spec.md)                                                             | 6       |
 | grading-policy | [Grading policy in one module — key-fix regrades and the Grading refresh behind a narrow interface](grading-policy/spec.md) | 3 |
