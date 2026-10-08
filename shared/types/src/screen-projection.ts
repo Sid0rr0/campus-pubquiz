@@ -107,12 +107,10 @@ function endedRevealWalk(
   if (!progress.previousStatus || !isRevealingStatus(progress.previousStatus)) {
     return [];
   }
+  const endedFrom = { ...progress, status: progress.previousStatus };
   return trimToRevealWalk(
-    getBlockSeededQuestions({
-      ...session,
-      progress: { ...progress, status: progress.previousStatus },
-    }),
-    { ...progress, status: progress.previousStatus },
+    getBlockSeededQuestions(session, endedFrom),
+    endedFrom,
     CLOSEST_TEAMS_STEP,
   );
 }

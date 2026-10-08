@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| block-membership | [Block membership is its own rule, and the reveal views are built on it](block-membership/spec.md) | 3 |
 | outcome-deadlines | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md) | 3 |
 | delete-middle-question | [Deleting a middle question from a round saves](delete-middle-question/spec.md) | 1 |
 | room-view-projection        | [One room-view projection shared by the server and the frontend fixtures](room-view-projection/spec.md)                                                             | 6       |

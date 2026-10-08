@@ -1,6 +1,5 @@
 import {
   type GameProgress,
-  getBlockSeededQuestions,
   isAutoGradedType,
   isBatchGradedType,
   isBreakStatus,
@@ -10,6 +9,8 @@ import {
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
+  getBlockInPlay,
+  getBlockInPlayIds,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 
@@ -64,10 +65,13 @@ export class BlockGradingService {
   ): Promise<SessionState> {
     if (!isGradedStatus(newProgress.status)) return session;
 
-    const blockQuestions = getBlockSeededQuestions({
-      ...session,
-      progress: newProgress,
-    });
+    const blockQuestions = getBlockInPlay(
+      session.seededGame.rounds,
+      newProgress,
+    ).map(
+      ({ roundIndex, questionIndex }) =>
+        session.seededGame.rounds[roundIndex].questions[questionIndex],
+    );
     const ungraded = blockQuestions.filter(
       (question) =>
         isBatchGradedType(question.type) &&
@@ -90,7 +94,8 @@ export class BlockGradingService {
     // The batch scored these questions; closest_guess can never be ungraded,
     // so the refresh has nothing to change in the ungraded set.
     const refresh = await this.readGradingRefresh(
-      { ...session, progress: newProgress },
+      session,
+      newProgress,
       ungraded.map((question) => question.id),
     );
     return applyGradingRefresh(
@@ -263,7 +268,7 @@ export class BlockGradingService {
   /**
    * Grades changed for `questionIds`: runs the grading refresh and returns the
    * session with those questions' ungraded entries replaced. Only questions in
-   * the current block are refreshed. Reading and applying are one step; safe
+   * the block in play are refreshed. Reading and applying are one step; safe
    * because every grade change runs inside the session write.
    */
   async gradesChanged(
@@ -272,23 +277,24 @@ export class BlockGradingService {
   ): Promise<SessionState> {
     return applyGradingRefresh(
       session,
-      await this.readGradingRefresh(session, questionIds),
+      await this.readGradingRefresh(session, session.progress, questionIds),
     );
   }
 
   /**
    * The read half of the grading refresh: which of the current block's
    * questions among `questionIds` are ungraded (through the one ungraded
-   * reader, so closest_guess is still dropped). Questions outside the
-   * current block are left alone: the cached set only ever describes the
-   * block in play.
+   * reader, so closest_guess is still dropped). Questions outside the block
+   * in play for `progress` are left alone: the cached set only ever
+   * describes the block in play.
    */
   private async readGradingRefresh(
     session: SessionState,
+    progress: GameProgress,
     questionIds: readonly number[],
   ): Promise<GradingRefresh> {
     const blockQuestionIds = new Set(
-      getBlockSeededQuestions(session).map((question) => question.id),
+      getBlockInPlayIds(session.seededGame.rounds, progress),
     );
     const refreshedIds = questionIds.filter((id) => blockQuestionIds.has(id));
     const ungradedQuestionIds = await this.listUngradedQuestionIds(session, [
@@ -323,7 +329,7 @@ export class BlockGradingService {
   async getUngradedBlockQuestionIds(session: SessionState): Promise<number[]> {
     return this.listUngradedQuestionIds(
       session,
-      getBlockSeededQuestions(session).map((question) => question.id),
+      getBlockInPlayIds(session.seededGame.rounds, session.progress),
     );
   }
 
@@ -339,10 +345,10 @@ export class BlockGradingService {
     newProgress: GameProgress,
   ): Promise<SessionState> {
     if (!isBreakStatus(newProgress.status)) return session;
-    const blockSession = { ...session, progress: newProgress };
     const refresh = await this.readGradingRefresh(
-      blockSession,
-      getBlockSeededQuestions(blockSession).map((question) => question.id),
+      session,
+      newProgress,
+      getBlockInPlayIds(session.seededGame.rounds, newProgress),
     );
     // The refresh covers the whole block, so its set replaces the cached one
     // outright — nothing from an earlier block or a live edit survives.

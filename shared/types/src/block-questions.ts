@@ -1,12 +1,12 @@
+import { getBlockInPlay } from './block-in-play';
 import {
   getBlockEndPosition,
-  getBlockPositionForQuestion,
   getBlockStartPosition,
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
+import type { GameProgress } from './game-state';
 import {
   isAnsweringStatus,
-  isBlockStartedStatus,
   isQuestionOnAirStatus,
   isRevealingStatus,
 } from './game-state-groups';
@@ -83,60 +83,29 @@ export function getCurrentQuestion(session: SessionState): QuestionView | null {
  * ended — the last block ADVANCE walked through, so the admin can still
  * review/grade its answers instead of the panel vanishing the moment
  * reveal finishes. Empty otherwise.
+ *
+ * Built on the Block module: it says which questions, this dresses each. Pass
+ * `progress` to read the block of a progress other than the session's own
+ * rather than building a session copy.
  */
 export function getBlockSeededQuestions(
   session: SessionState,
+  progress: GameProgress = session.progress,
 ): BlockRevealQuestionView[] {
-  const { status, roundIndex, questionIndex, furthestOpenIndex } =
-    session.progress;
-  if (!isBlockStartedStatus(status)) {
-    return [];
-  }
-
-  const context = getGameContext(session);
-  const rounds = session.seededGame.rounds;
-  const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
-  const isOpenPhase = isAnsweringStatus(status);
-  const revealBoundaryPosition = isOpenPhase
-    ? furthestOpenIndex
-    : getBlockPositionForQuestion(roundIndex, questionIndex, context);
-
-  // furthestOpenIndex === -1: a fresh block, nothing opened yet.
-  if (revealBoundaryPosition < 0) return [];
-
-  const targets = Array.from(
-    { length: revealBoundaryPosition + 1 },
-    (_, position) =>
-      getRoundAndQuestionForBlockPosition(blockStart, position, context),
-  );
-
-  const groups = targets.reduce<
-    { roundIndex: number; entries: RoundQuestionEntry[] }[]
-  >((acc, target) => {
-    const entry: RoundQuestionEntry = {
-      question: rounds[target.roundIndex].questions[target.questionIndex],
-      questionIndexInRound: target.questionIndex,
-    };
-    const lastGroup = acc[acc.length - 1];
-    if (lastGroup && lastGroup.roundIndex === target.roundIndex) {
-      return [
-        ...acc.slice(0, -1),
-        {
-          roundIndex: lastGroup.roundIndex,
-          entries: [...lastGroup.entries, entry],
-        },
-      ];
-    }
-    return [...acc, { roundIndex: target.roundIndex, entries: [entry] }];
-  }, []);
-
-  return groups.flatMap((group) =>
-    toRevealQuestionViews(
-      group.entries,
-      group.roundIndex + 1,
-      rounds[group.roundIndex].title,
-      session,
-    ),
+  const { rounds } = session.seededGame;
+  return getBlockInPlay(rounds, progress).flatMap(
+    ({ roundIndex, questionIndex }) =>
+      toRevealQuestionViews(
+        [
+          {
+            question: rounds[roundIndex].questions[questionIndex],
+            questionIndexInRound: questionIndex,
+          },
+        ],
+        roundIndex + 1,
+        rounds[roundIndex].title,
+        session,
+      ),
   );
 }
 
