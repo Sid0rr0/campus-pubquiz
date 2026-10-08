@@ -9,13 +9,25 @@ import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payloa
 import { broadcastGameState } from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type {
+  DeadlineChange,
   SessionOutcome,
   SocketNotice,
   SocketReply,
 } from '@/game/state/session-outcome';
 
+/** What the delivery step needs: the module, the server, and the gateway's way to re-arm a session's auto-lock timers. */
+export interface OutcomeDeliveryDeps {
+  gameState: GameStateService;
+  answerService: AnswerService;
+  server: GameServer;
+  rearmTimers: (joinCode: string, deadlines: DeadlineChange) => void;
+}
+
 /**
- * The one place a SessionOutcome becomes emits, always in the same order:
+ * The one place a SessionOutcome becomes emits. First, the session's
+ * auto-lock timers are re-armed from the outcome's deadline change (if it has
+ * one), so a failed emit can't leave them out of step with a session that was
+ * already stored. Then, always in the same order:
  * replies to the sender, presenter context to admin, the state snapshot to
  * all three rooms, admin answer lists, per-team answer syncs, per-socket
  * notices, then the sockets to close. The closes run even if an earlier step
@@ -23,16 +35,15 @@ import type {
  * absent for events no socket sent (timer expiries), which have no replies.
  */
 export async function deliverOutcome(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    server: GameServer;
-  },
+  deps: OutcomeDeliveryDeps,
   joinCode: string,
   outcome: SessionOutcome,
   sender?: Pick<GameSocket, 'emit'>,
 ): Promise<void> {
   const { server } = deps;
+  if (outcome.deadlineChange) {
+    deps.rearmTimers(joinCode, outcome.deadlineChange);
+  }
   try {
     await deliverEmits(deps, joinCode, outcome, sender);
   } finally {
@@ -43,11 +54,7 @@ export async function deliverOutcome(
 }
 
 async function deliverEmits(
-  deps: {
-    gameState: GameStateService;
-    answerService: AnswerService;
-    server: GameServer;
-  },
+  deps: OutcomeDeliveryDeps,
   joinCode: string,
   outcome: SessionOutcome,
   sender: Pick<GameSocket, 'emit'> | undefined,

@@ -204,7 +204,12 @@ question", never stored unseen. Sessions don't wait for
 each other. If that final standings read fails, the write still counts as done
 (a press has already saved its progress, so memory must match the database and
 clients must hear about it): the failure is logged, the session keeps its
-earlier leaderboard, and the next write catches it up.
+earlier leaderboard, and the next write catches it up. A write that moves an
+auto-lock deadline (the question lock or the kahoot question timer) reports the
+new deadlines with its outcome, and the delivery step re-arms that session's
+timers from them before anything is emitted, so the timers follow the
+session's deadlines after every change. A refused event reports nothing and
+leaves the timers as they were.
 
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):

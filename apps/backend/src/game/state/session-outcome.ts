@@ -27,6 +27,12 @@ export interface TeamSync {
   socketId: string;
 }
 
+/** The session's auto-lock deadlines (epoch-ms, or null when none is due) after a write that moved either. */
+export interface DeadlineChange {
+  questionLockAt: number | null;
+  kahootQuestionEndsAt: number | null;
+}
+
 /**
  * What the Live session module says must be pushed after it applies an event.
  * The socket layer's one delivery step turns this into emits, so no caller
@@ -44,6 +50,14 @@ export interface SessionOutcome {
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
+  /**
+   * The new auto-lock deadlines, present only when the write that produced
+   * this outcome changed either one. Only the Session write fills it, from a
+   * before/after comparison, so no event sets it by hand; the delivery step
+   * re-arms the session's timers from it before any emit. A write that throws
+   * reports nothing.
+   */
+  deadlineChange?: DeadlineChange;
 }
 
 export const BROADCAST_STATE_OUTCOME: SessionOutcome = {

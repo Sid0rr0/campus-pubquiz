@@ -1,15 +1,16 @@
 import type { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
+import type { GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
 import { sessionRoom, type AckResult } from '@campus-pubquiz/types';
-import type { AnswerService } from '@/answer/answer.service';
 import { acknowledge } from '@/game/socket/acknowledge.util';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
+import {
+  deliverOutcome,
+  type OutcomeDeliveryDeps,
+} from '@/game/socket/outcome-delivery.util';
 import type { SocketEventDeclaration } from '@/game/socket/socket-event-declarations';
 import { parseSocketPayload } from '@/game/socket/socket-payload.schemas';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
-import type { GameStateService } from '@/game/state/game-state.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 
 /** What an event body receives: the session it was sent to, its parsed payload, and who sent it. */
@@ -19,27 +20,11 @@ export interface EventContext<P> {
   client: GameSocket;
 }
 
-/**
- * What an event body hands back for delivery. `afterDelivery` is for
- * socket-level work that must follow the emits (re-arming timers); it runs
- * even if delivery fails, since the event was already applied by then.
- */
-export type EventResult =
-  | SessionOutcome
-  | { outcome: SessionOutcome; afterDelivery: () => void }
-  | undefined;
+/** What an event body hands back for delivery: its outcome, or nothing when it is only acknowledged. */
+export type EventResult = SessionOutcome | undefined;
 
-export interface DispatchDeps {
-  gameState: GameStateService;
-  answerService: AnswerService;
-  server: GameServer;
+export interface DispatchDeps extends OutcomeDeliveryDeps {
   logger: Logger;
-}
-
-function isAfterDelivery(
-  result: Exclude<EventResult, undefined>,
-): result is { outcome: SessionOutcome; afterDelivery: () => void } {
-  return 'afterDelivery' in result;
 }
 
 function resolveJoinCode(client: GameSocket): string {
@@ -94,13 +79,6 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
       },
     );
     if (!result) return;
-    const { outcome, afterDelivery } = isAfterDelivery(result)
-      ? result
-      : { outcome: result, afterDelivery: undefined };
-    try {
-      await deliverOutcome(deps, joinCode, outcome, client);
-    } finally {
-      afterDelivery?.();
-    }
+    await deliverOutcome(deps, joinCode, result, client);
   });
 }

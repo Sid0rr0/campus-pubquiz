@@ -32,7 +32,6 @@ import {
   acceptConnection,
   disconnectClient,
 } from '@/game/socket/connection.util';
-import { runAdminAction } from '@/game/socket/handlers/admin-action.handler';
 import {
   dispatchSocketEvent,
   type EventContext,
@@ -49,6 +48,7 @@ import {
 } from '@/game/socket/socket-event-declarations';
 import {
   BROADCAST_STATE_OUTCOME,
+  type DeadlineChange,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
 
@@ -99,7 +99,10 @@ export class GameGateway
    */
   onApplicationBootstrap(): void {
     for (const { joinCode } of this.gameState.listSessions()) {
-      this.rearmTimers(joinCode);
+      this.armTimers(joinCode, {
+        questionLockAt: this.gameState.getQuestionLockAt(joinCode),
+        kahootQuestionEndsAt: this.gameState.getKahootQuestionEndsAt(joinCode),
+      });
     }
   }
 
@@ -139,22 +142,8 @@ export class GameGateway
       SOCKET_EVENT_DECLARATIONS.adminAction,
       rawPayload,
       client,
-      async ({ joinCode, payload }) => {
-        // The deadlines must follow the state whether or not the action
-        // applied cleanly, and even if delivering it fails.
-        const rearm = () => this.rearmTimers(joinCode);
-        let outcome: SessionOutcome;
-        try {
-          outcome = await this.gameState.applyAdminAction(
-            joinCode,
-            payload.action,
-          );
-        } catch (error) {
-          rearm();
-          throw error;
-        }
-        return { outcome, afterDelivery: rearm };
-      },
+      ({ joinCode, payload }) =>
+        this.gameState.applyAdminAction(joinCode, payload.action),
     );
   }
 
@@ -360,6 +349,8 @@ export class GameGateway
       gameState: this.gameState,
       answerService: this.answerService,
       server: this.server,
+      rearmTimers: (joinCode: string, deadlines: DeadlineChange) =>
+        this.armTimers(joinCode, deadlines),
     };
   }
 
@@ -387,32 +378,37 @@ export class GameGateway
     await this.advanceFromTimer(joinCode, 'Kahoot auto-lock');
   }
 
-  /** Both timers share the admin's ADVANCE path; a failure is logged (there's no client to tell) and leaves the timers as they were. */
+  /**
+   * Both timers share the admin's ADVANCE path: the Live session's press,
+   * delivered like any event, whose outcome arms the next deadline. A failure
+   * is logged (there's no client to tell) and leaves the timers as the failed
+   * write left them.
+   */
   private async advanceFromTimer(
     joinCode: string,
     label: string,
   ): Promise<void> {
     try {
-      await runAdminAction(this.outcomeDeps, joinCode, 'ADVANCE');
+      await deliverOutcome(
+        this.outcomeDeps,
+        joinCode,
+        await this.gameState.applyAdminAction(joinCode, 'ADVANCE'),
+      );
     } catch (error) {
       this.logger.error(
         `${label} ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
       );
-      return;
     }
-    this.rearmTimers(joinCode);
   }
 
-  /** (Re)arms both this session's auto-lock timers to match GameStateService's current deadlines, clearing any stale ones first. */
-  private rearmTimers(joinCode: string): void {
-    this.lockTimers.rearm(
-      joinCode,
-      this.gameState.getQuestionLockAt(joinCode),
-      () => this.handleQuestionLockTimerExpired(joinCode),
+  /** (Re)arms both this session's auto-lock timers to `deadlines`, clearing any stale ones first. */
+  private armTimers(joinCode: string, deadlines: DeadlineChange): void {
+    this.lockTimers.rearm(joinCode, deadlines.questionLockAt, () =>
+      this.handleQuestionLockTimerExpired(joinCode),
     );
     this.kahootQuestionTimers.rearm(
       joinCode,
-      this.gameState.getKahootQuestionEndsAt(joinCode),
+      deadlines.kahootQuestionEndsAt,
       () => this.handleKahootQuestionTimerExpired(joinCode),
     );
   }

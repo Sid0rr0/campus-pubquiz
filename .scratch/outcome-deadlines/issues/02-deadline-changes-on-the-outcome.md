@@ -13,7 +13,7 @@ Parent spec: `.scratch/outcome-deadlines/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The SessionOutcome has an optional deadline change, filled only by the Session write's before/after comparison. No event sets it by hand.
 - [ ] The delivery step re-arms from it before any emit, and its ordering doc says so.

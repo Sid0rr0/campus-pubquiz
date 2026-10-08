@@ -90,6 +90,33 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 /** The option for a session write whose event doesn't change scores: skips the standings read. */
 const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
 
+function isSessionOutcome(value: unknown): value is SessionOutcome {
+  return typeof value === 'object' && value !== null && 'replies' in value;
+}
+
+/**
+ * The Session write's deadline report: `outcome` with the new auto-lock
+ * deadlines attached when `stored` moved either one from `started`. Results
+ * that aren't a SessionOutcome (nothing to push, a join's team) pass through.
+ */
+function reportDeadlineChange<T>(
+  started: SessionState,
+  stored: SessionState,
+  outcome: T,
+): T {
+  const moved =
+    started.questionLockAt !== stored.questionLockAt ||
+    started.kahootQuestionEndsAt !== stored.kahootQuestionEndsAt;
+  if (!moved || !isSessionOutcome(outcome)) return outcome;
+  return {
+    ...outcome,
+    deadlineChange: {
+      questionLockAt: stored.questionLockAt,
+      kahootQuestionEndsAt: stored.kahootQuestionEndsAt,
+    },
+  };
+}
+
 /** The outcome of an event that is only acknowledged to its sender: no emits, no broadcast. */
 const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
   ...BROADCAST_STATE_OUTCOME,
@@ -336,12 +363,13 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     regradeQuestionIds: readonly number[],
   ): Promise<SessionOutcome> {
+    const started = this.sessionStore.get(joinCode);
     const { session, outcome } = await this.quizEditedStep(
-      this.sessionStore.get(joinCode),
+      started,
       regradeQuestionIds,
     );
     await this.storeWithStandings(joinCode, session);
-    return outcome;
+    return reportDeadlineChange(started, session, outcome);
   }
 
   /**
@@ -1105,7 +1133,7 @@ export class GameStateService implements OnModuleInit {
       const { session, outcome } = await change(started);
       if (refreshStandings) await this.storeWithStandings(joinCode, session);
       else this.sessionStore.set(joinCode, session);
-      return outcome;
+      return reportDeadlineChange(started, session, outcome);
     });
   }
 
