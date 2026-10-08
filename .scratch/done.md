@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| live-edit-owns-quiz-edit | [The Live edit module owns the quiz edit, its hold and the live-edit frontier](live-edit-owns-quiz-edit/spec.md) | 4 |
 | live-session-changes | [Live session events are built by per-domain change modules](live-session-changes/spec.md) | 7 |
 | session-write-module | [The Session write is its own module](session-write-module/spec.md) | 2 |
 | block-membership | [Block membership is its own rule, and the reveal views are built on it](block-membership/spec.md) | 3 |
