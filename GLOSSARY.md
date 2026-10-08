@@ -120,8 +120,12 @@ lobby → rules → round_overview
 ## Moving through the quiz
 
 **Move plan**:
-What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a showdown or closest*guess reveal step, move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard and never moves the quiz underneath.
+What one press of an admin action does right now. Advance and Previous: reveal the next leaderboard rank, hide the leaderboard, take a showdown or closest*guess reveal step, move the quiz to its next status, wait for grading (Advance out of the break while an answer is ungraded — pressable, but refused with the ungraded questions), or nothing. Any other action (Start quiz in the lobby, Toggle leaderboard, …) is a plain transition, or blocked when illegal. The Move plan also owns "the next press": Start quiz in the lobby, Advance everywhere else. While the leaderboard is up, a press only works the leaderboard; while the join overlay is up, Advance or Previous only hides it. Neither ever moves the quiz underneath. Previous on the rules goes back to the lobby.
 \_Avoid*: next step, action result
+
+**Join overlay**:
+The join code and QR code shown over the big screen once the quiz has started, so late teams can join without the quiz moving. Like the leaderboard it is not a status: the quiz carries on underneath, timers included, and phones are untouched. Only one of the two is up at a time, and it can't be up in the lobby or once the quiz has ended.
+_Avoid_: QR screen, lobby overlay
 
 **Settle step**:
 Bringing a session's timers, deadlines and reveal counters into line with the point in the quiz it is moving to. Every way a session reaches a new point (starting, restoring after a restart, Advance, Previous) goes through it.
