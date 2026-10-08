@@ -130,12 +130,14 @@ export function getPastBlockIds(
     progress.questionIndex,
     toGameContext(rounds),
   );
-  const ids = (round: BlockRound, count = round.questions.length) =>
+  const questionIdsOf = (round: BlockRound, count = round.questions.length) =>
     round.questions.slice(0, count).map(({ id }) => id);
   return [
-    ...rounds.slice(0, blockStart.roundIndex).flatMap((round) => ids(round)),
+    ...rounds
+      .slice(0, blockStart.roundIndex)
+      .flatMap((round) => questionIdsOf(round)),
     ...(blockStart.questionIndex > 0
-      ? ids(rounds[blockStart.roundIndex], blockStart.questionIndex)
+      ? questionIdsOf(rounds[blockStart.roundIndex], blockStart.questionIndex)
       : []),
   ];
 }

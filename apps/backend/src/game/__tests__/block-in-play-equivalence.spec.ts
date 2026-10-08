@@ -1,6 +1,8 @@
 import {
   freshSessionState,
   getBlockInPlayIds,
+  getPastBlockIds,
+  getPastRevealedQuestions,
   getBlockQuestions,
   getBlockSeededQuestions,
   getRevealQuestions,
@@ -120,4 +122,77 @@ describe('the reveal views follow the Block module', () => {
       ).toEqual(getBlockInPlayIds(BLOCK_IN_PLAY_ROUNDS, progress));
     },
   );
+
+  it.each(progresses.map((p, index) => [index, p] as const))(
+    'lists the same past questions as getPastRevealedQuestions at step %i',
+    (_index, progress) => {
+      const session = freshSessionState(seededGame, progress);
+
+      expect(getPastBlockIds(BLOCK_IN_PLAY_ROUNDS, progress)).toEqual(
+        getPastRevealedQuestions(session).map((q) => q.id),
+      );
+    },
+  );
+
+  it('labels a multi-round block with round-relative question numbers', () => {
+    // Round 0 has no break, so the first block is rounds 0 and 1.
+    const atReveal = walkedProgresses().find(
+      (p) => p.status === 'reveal' && p.roundIndex === 1,
+    )!;
+    const session = freshSessionState(seededGame, atReveal);
+
+    expect(
+      getBlockSeededQuestions(session).map(
+        ({ id, roundNumber, questionNumberInRound, roundTitle }) => ({
+          id,
+          roundNumber,
+          questionNumberInRound,
+          roundTitle,
+        }),
+      ),
+    ).toEqual([
+      {
+        id: 100,
+        roundNumber: 1,
+        questionNumberInRound: 1,
+        roundTitle: 'Round 0',
+      },
+      {
+        id: 101,
+        roundNumber: 1,
+        questionNumberInRound: 2,
+        roundTitle: 'Round 0',
+      },
+      {
+        id: 110,
+        roundNumber: 2,
+        questionNumberInRound: 1,
+        roundTitle: 'Round 1',
+      },
+      {
+        id: 111,
+        roundNumber: 2,
+        questionNumberInRound: 2,
+        roundTitle: 'Round 1',
+      },
+    ]);
+  });
+
+  it('numbers a kahoot block by its place in the round, not within the block', () => {
+    const secondKahoot = walkedProgresses().find(
+      (p) =>
+        p.status === 'question_open' &&
+        p.roundIndex === 3 &&
+        p.questionIndex === 1,
+    )!;
+    const session = freshSessionState(seededGame, secondKahoot);
+
+    expect(
+      getBlockSeededQuestions(session).map((q) => [
+        q.id,
+        q.roundNumber,
+        q.questionNumberInRound,
+      ]),
+    ).toEqual([[131, 4, 2]]);
+  });
 });
