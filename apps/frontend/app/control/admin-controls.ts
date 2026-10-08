@@ -9,6 +9,7 @@ export interface AdminControls {
   canStartQuiz: boolean;
   canEndQuiz: boolean;
   canCloseSession: boolean;
+  canToggleJoinOverlay: boolean;
   canReplayMedia: boolean;
   showAnswerStatus: boolean;
   tiedTeamNames: string[];
@@ -30,6 +31,8 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
     canStartQuiz: status === 'lobby',
     canEndQuiz: status !== 'ended',
     canCloseSession: status === 'ended',
+    // Not in the lobby (it already shows the QR code) or once the quiz has ended.
+    canToggleJoinOverlay: status !== 'lobby' && status !== 'ended',
     // currentQuestion (and with it its own media) is only populated while a
     // question is actually open on /display — see getCurrentQuestion.
     canReplayMedia:

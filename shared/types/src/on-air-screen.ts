@@ -45,6 +45,7 @@ export type OnAirScreen =
     }
   | { kind: 'reveal'; roundIndex: number | null; questionId: number | null }
   | { kind: 'leaderboard' }
+  | { kind: 'join_overlay' }
   | { kind: 'ended'; isFeedbackPromptShown: boolean }
   | { kind: 'showdown'; showdownId: number };
 
@@ -122,6 +123,7 @@ function getScreen(
 ): OnAirScreen {
   const { progress } = input;
   if (progress.isLeaderboardVisible) return { kind: 'leaderboard' };
+  if (progress.isJoinOverlayVisible) return { kind: 'join_overlay' };
 
   const questionId = input.currentQuestion?.id ?? null;
   const isFeedbackPromptShown = input.settings?.collectFeedback ?? false;
@@ -194,6 +196,7 @@ function getScreenKey(
 ): string {
   const { progress } = input;
   if (progress.isLeaderboardVisible) return 'leaderboard';
+  if (progress.isJoinOverlayVisible) return 'join_overlay';
 
   const revealPosition = `${revealQuestion?.roundNumber ?? 0}-${revealQuestion?.questionNumberInRound ?? 0}`;
   switch (progress.status) {
@@ -254,7 +257,11 @@ export interface AdminIndicators {
 export function describeAdminIndicators(input: OnAirInput): AdminIndicators {
   const { screen } = describeOnAirScreen({
     ...input,
-    progress: { ...input.progress, isLeaderboardVisible: false },
+    progress: {
+      ...input.progress,
+      isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
+    },
   });
   switch (screen.kind) {
     case 'question':
@@ -377,7 +384,11 @@ function getPhoneScreen(input: PlayersScreenInput): PhoneScreen {
 
   const { screen } = describeOnAirScreen({
     ...input,
-    progress: { ...input.progress, isLeaderboardVisible: false },
+    progress: {
+      ...input.progress,
+      isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
+    },
   });
   switch (screen.kind) {
     case 'lobby':

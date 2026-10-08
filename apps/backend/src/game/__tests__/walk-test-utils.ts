@@ -98,6 +98,7 @@ export const HEADING_BY_SCREEN: Record<OnAirScreen['kind'], RegExp> = {
   reveal_intro: /^Revealing · Round \d+ title$/,
   reveal: /^Revealing R\d+ Q\d+$/,
   leaderboard: /^Leaderboard$/,
+  join_overlay: /^Join overlay$/,
   ended: /^Quiz complete!$/,
   showdown: /^Showdown$/,
 };

@@ -41,6 +41,22 @@ export function getNextGameState(
   action: GameAction,
   context: GameContext,
 ): GameProgress {
+  const next = getNextGameStateWithOverlay(progress, action, context);
+  // The join overlay never outlives the lobby or the end of the quiz, however
+  // the transition got there (END_QUIZ, an advance into 'ended', a return to
+  // the lobby).
+  const landsOnOverlayFreeStatus =
+    next.status === 'lobby' || next.status === 'ended';
+  return next.isJoinOverlayVisible && landsOnOverlayFreeStatus
+    ? { ...next, isJoinOverlayVisible: false }
+    : next;
+}
+
+function getNextGameStateWithOverlay(
+  progress: GameProgress,
+  action: GameAction,
+  context: GameContext,
+): GameProgress {
   if (action === 'TOGGLE_MEDIA_FULLSCREEN') {
     return {
       ...progress,
@@ -70,6 +86,16 @@ export function getNextGameState(
     return {
       ...progress,
       isLeaderboardVisible: !progress.isLeaderboardVisible,
+    };
+  }
+
+  if (action === 'TOGGLE_JOIN_OVERLAY') {
+    if (progress.status === 'lobby' || progress.status === 'ended') {
+      illegal(progress.status, action);
+    }
+    return {
+      ...progress,
+      isJoinOverlayVisible: !progress.isJoinOverlayVisible,
     };
   }
 

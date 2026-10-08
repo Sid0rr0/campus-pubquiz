@@ -149,19 +149,26 @@ role is now split across `locking`/`break`). Any database row still carrying
 the retired `locked` value is normalized to `question_open` on load — see
 [Persistence](#persistence-and-restart-resilience).
 
-The leaderboard is deliberately _not_ a status: `isLeaderboardVisible` is a
-flag the admin can toggle from any status, so hiding it always resumes exactly
-where the game was.
+The leaderboard and the join overlay are deliberately _not_ statuses:
+`isLeaderboardVisible` is a flag the admin can toggle from any status, and
+`isJoinOverlayVisible` is a flag the admin can toggle from every status except
+`lobby` and `ended`. Hiding either resumes exactly where the game was — the
+quiz carries on underneath, timers included, and phones are untouched by the
+join overlay. The join overlay shows the QR code, join code and team-size line
+(no roster) on the big screen so a late team can join; it is saved with the
+session, so it survives a restart, and any transition that lands on `lobby` or
+`ended` (including `END_QUIZ`) clears it.
 
 ### Admin actions
 
-| Action               | Legal from                              | Effect                                                                                          |
-| -------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `START_QUIZ`         | `lobby`                                 | → `rules`                                                                                       |
-| `ADVANCE`            | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                      |
-| `PREVIOUS`           | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
-| `END_QUIZ`           | any except `ended`                      | Force-end                                                                                       |
-| `TOGGLE_LEADERBOARD` | any                                     | Flips `isLeaderboardVisible`, status untouched                                                  |
+| Action                | Legal from                              | Effect                                                                                          |
+| --------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `START_QUIZ`          | `lobby`                                 | → `rules`                                                                                       |
+| `ADVANCE`             | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                      |
+| `PREVIOUS`            | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal` |
+| `END_QUIZ`            | any except `ended`                      | Force-end                                                                                       |
+| `TOGGLE_LEADERBOARD`  | any                                     | Flips `isLeaderboardVisible`, status untouched                                                  |
+| `TOGGLE_JOIN_OVERLAY` | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere      |
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
