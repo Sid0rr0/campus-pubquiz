@@ -11,10 +11,10 @@ Parent spec: `.scratch/live-edit-owns-quiz-edit/spec.md`
 
 **Blocked by:** The session-write-module spec (tickets 01 and 02).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Session write module and block grading are registered as Nest providers. The game state class and the Move committer receive them instead of constructing them.
-- [ ] No module other than the game state class injects the Session write module yet.
-- [ ] The app boots. Restart restore places the seeded session, and a read before that still fails with the same error.
-- [ ] Every existing backend spec passes without assertion edits. Only harness wiring changes.
-- [ ] `pnpm --filter backend test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] The Session write module and block grading are registered as Nest providers. The game state class and the Move committer receive them instead of constructing them.
+- [x] No module other than the game state class injects the Session write module yet.
+- [x] The app boots. Restart restore places the seeded session, and a read before that still fails with the same error.
+- [x] Every existing backend spec passes without assertion edits. Only harness wiring changes.
+- [x] `pnpm --filter backend test`, `pnpm typecheck` and `pnpm lint` pass.

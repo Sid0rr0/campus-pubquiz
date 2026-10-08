@@ -73,8 +73,6 @@ export class GameStateService implements OnModuleInit {
   // A string, not `GameStateService.name`: `nest build` crashes with
   // "reading 'checkJsDirective'" on that self-reference in this file.
   private readonly logger = new Logger('GameStateService');
-  private readonly sessionWrite: SessionWrite;
-  private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
   private readonly settingsChanges: SessionSettingsChanges;
   private readonly answersChanges: AnswersChanges;
@@ -93,9 +91,9 @@ export class GameStateService implements OnModuleInit {
     private readonly teamService: TeamService,
     private readonly bonusService: BonusService,
     private readonly feedbackService: FeedbackService,
+    private readonly sessionWrite: SessionWrite,
+    private readonly grading: BlockGradingService,
   ) {
-    this.sessionWrite = new SessionWrite(this.standingsService);
-    this.grading = new BlockGradingService(this.answerService);
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
     this.answersChanges = new AnswersChanges(this.answerService, this.grading);
     this.bonusChanges = new BonusAwardsChanges(this.bonusService);

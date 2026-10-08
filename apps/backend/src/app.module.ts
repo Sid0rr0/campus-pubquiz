@@ -12,6 +12,8 @@ import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
+import { SessionWrite } from '@/game/state/session-write';
+import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { TeamService } from '@/team/team.service';
 import { TeamsController } from '@/team/teams.controller';
@@ -76,6 +78,8 @@ import { StatsService } from '@/stats/stats.service';
     FeedbackService,
     QuizService,
     GameProgressRepository,
+    SessionWrite,
+    BlockGradingService,
     GameStateService,
     GameGateway,
     LiveEditService,

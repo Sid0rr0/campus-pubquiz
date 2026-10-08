@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import {
   type GameProgress,
   isAutoGradedType,
@@ -55,6 +56,7 @@ function applyGradingRefresh(
  * fresh. Split out of GameStateService since neither participates in the
  * state machine itself, only in what happens around it.
  */
+@Injectable()
 export class BlockGradingService {
   constructor(private readonly answerService: AnswerService) {}
 

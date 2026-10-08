@@ -50,6 +50,8 @@ import { QuizService } from '@/quiz/quiz.service';
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
+import { SessionWrite } from '@/game/state/session-write';
+import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionWriteQueue } from '@/game/state/session-write-queue';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
@@ -548,6 +550,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.teamService,
       services.bonusService,
       services.feedbackService,
+      new SessionWrite(services.standingsService),
+      new BlockGradingService(services.answerService),
     );
     await gameState.onModuleInit();
     const nextWriteWaiting = watchNextWrite(gameState);
