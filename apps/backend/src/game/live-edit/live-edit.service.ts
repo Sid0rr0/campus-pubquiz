@@ -69,28 +69,29 @@ export class LiveEditService {
     private readonly grading: BlockGradingService,
   ) {}
 
-  /** Every running session on `quizId` (not in the lobby, not ended) as it stands now. Read it inside the hold to count the sessions the way they stand while the game can't move. */
-  private listLiveSessions(quizId: number): SessionState[] {
+  /** Every session on `quizId` that has not ended, lobby sessions included. */
+  private listUnfinishedSessions(quizId: number): SessionState[] {
     return this.sessionWrite
       .list()
       .filter(
         (session) =>
           session.seededGame.quizId === quizId &&
-          session.progress.status !== 'lobby' &&
           session.progress.status !== 'ended',
       );
   }
 
+  /** Every running session on `quizId` (not in the lobby, not ended) as it stands now. Read it inside the hold to count the sessions the way they stand while the game can't move. */
+  private listLiveSessions(quizId: number): SessionState[] {
+    return this.listUnfinishedSessions(quizId).filter(
+      (session) => session.progress.status !== 'lobby',
+    );
+  }
+
   /** The join codes of every unfinished session on `quizId`, lobby sessions included. */
   private unfinishedJoinCodes(quizId: number): string[] {
-    return this.sessionWrite
-      .list()
-      .filter(
-        (session) =>
-          session.seededGame.quizId === quizId &&
-          session.progress.status !== 'ended',
-      )
-      .map((session) => session.seededGame.joinCode);
+    return this.listUnfinishedSessions(quizId).map(
+      (session) => session.seededGame.joinCode,
+    );
   }
 
   /** Whether any session is running (not lobby, not ended) on the quiz. */
