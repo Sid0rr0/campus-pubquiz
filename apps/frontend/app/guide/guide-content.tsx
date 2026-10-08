@@ -41,6 +41,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'While teams are joining, the Session Settings panel lets you pick the quiz, edit the rules text, and enable bonus categories before pressing Start Quiz. The big screen shows the join code and QR code until you start.',
       'Starting shows the rules, then an overview of every round, then the first round title card. Each press of Advance moves on.',
+      'Pressed Start Quiz too early? While the rules are showing, Previous takes the session back to the lobby: the big screen shows the join code and QR code again, phones go back to "Waiting for the quiz to start…", and the session settings, quiz import and closing the session work again. There is no confirm dialog, and Start Quiz moves forward again as before. This only works from the rules: from the round overview Previous goes to the rules first, and once the first round title card is up the quiz can no longer go back to the lobby.',
     ],
   },
   {

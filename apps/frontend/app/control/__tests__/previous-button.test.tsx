@@ -79,6 +79,23 @@ describe('AdminPage — previous button', () => {
     expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
   });
 
+  it('sends PREVIOUS from the rules to take the session back to the lobby', async () => {
+    const sendAction = vi.fn();
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'rules' },
+        rounds: [{ title: 'Picture Round', questions: [{}, {}] }],
+      },
+      connectionError: null,
+      sendAction,
+    });
+    renderWithQuery(<AdminPage />);
+
+    await userEvent.click(getDesktopButton(/^previous$/i));
+
+    expect(sendAction).toHaveBeenCalledWith('PREVIOUS');
+  });
+
   it('sends PREVIOUS from the round intro card', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
