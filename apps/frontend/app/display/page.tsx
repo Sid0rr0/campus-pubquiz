@@ -25,6 +25,7 @@ import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
 import { DisplaySessionPicker } from '@/app/display/display-session-picker';
+import { JoinOverlayScreen } from '@/app/display/join-overlay-screen';
 import { LobbyScreen } from '@/app/display/lobby-screen';
 import { QuestionDisplay } from '@/app/display/question-display';
 import {
@@ -200,6 +201,14 @@ function DisplayPageContent() {
         return (
           <LobbyScreen
             teams={teams}
+            joinCode={codeFromUrl}
+            maxPlayersPerTeam={settings.maxPlayersPerTeam}
+            extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+          />
+        );
+      case 'join_overlay':
+        return (
+          <JoinOverlayScreen
             joinCode={codeFromUrl}
             maxPlayersPerTeam={settings.maxPlayersPerTeam}
             extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}

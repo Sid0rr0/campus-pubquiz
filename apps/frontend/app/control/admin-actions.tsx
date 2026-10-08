@@ -4,6 +4,7 @@ import {
   Cross2Icon,
   EyeClosedIcon,
   EyeOpenIcon,
+  Link2Icon,
   PlayIcon,
   StopIcon,
 } from '@radix-ui/react-icons';
@@ -17,7 +18,9 @@ interface AdminActionsProps {
   canStartQuiz: boolean;
   canEndQuiz: boolean;
   canCloseSession: boolean;
+  canToggleJoinOverlay: boolean;
   isLeaderboardVisible: boolean;
+  isJoinOverlayVisible: boolean;
   isMediaFullscreen: boolean;
   canReplayMedia: boolean;
   onAction: (action: GameAction) => void;
@@ -25,12 +28,14 @@ interface AdminActionsProps {
   className?: string;
 }
 
-/** Start Quiz, Leaderboard toggle (+ fullscreen/replay media controls), End Quiz, Close Session — everything but Previous/Advance. */
+/** Start Quiz, Leaderboard and Join overlay toggles (+ fullscreen/replay media controls), End Quiz, Close Session — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canEndQuiz,
   canCloseSession,
+  canToggleJoinOverlay,
   isLeaderboardVisible,
+  isJoinOverlayVisible,
   isMediaFullscreen,
   canReplayMedia,
   onAction,
@@ -63,6 +68,18 @@ export function AdminActions({
           )}
           Leaderboard
         </Button>
+        {canToggleJoinOverlay && (
+          <Button
+            variant="outline"
+            size="lg"
+            aria-pressed={isJoinOverlayVisible}
+            onClick={() => onAction('TOGGLE_JOIN_OVERLAY')}
+            className="flex-1"
+          >
+            <Link2Icon aria-hidden="true" />
+            Join overlay
+          </Button>
+        )}
         <MediaFullscreenToggle
           isMediaFullscreen={isMediaFullscreen}
           onAction={onAction}
