@@ -24,7 +24,7 @@ Parent spec: `.scratch/session-write-module/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The game state class no longer holds the store or the queue directly, and has no private queued-write, commit or store-with-standings methods. The deadline-report helpers and the SessionOutcome type guard live in the Session write module.
 - [ ] The session store and the per-session queue are private to the Session write module. Nothing outside it can set or delete a session. The existing queue spec still passes as an internal-seam test.
