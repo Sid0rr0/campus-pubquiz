@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
   type ImportRoundPreview,
   type LiveEditFrontier,
@@ -72,7 +73,7 @@ export class LiveEditService {
     const sessions = this.gameState.listLiveSessions(quizId);
     if (sessions.length === 0) return null;
     return mergeLiveEditFrontiers(
-      sessions.map((session) => this.gameState.getLiveEditFrontier(session)),
+      sessions.map((session) => getSessionLiveEditFrontier(session)),
     );
   }
 
@@ -103,9 +104,7 @@ export class LiveEditService {
           ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
           : requestedRounds;
         const frontier = mergeLiveEditFrontiers(
-          liveSessions.map((session) =>
-            this.gameState.getLiveEditFrontier(session),
-          ),
+          liveSessions.map((session) => getSessionLiveEditFrontier(session)),
         );
         const issues = findLiveEditViolations(
           currentDraft.rounds,

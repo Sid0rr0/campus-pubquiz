@@ -10,9 +10,7 @@ import {
   DEFAULT_SESSION_SETTINGS,
   freshSessionState,
   type GameAction,
-  isGradedStatus,
   type JoinPlayersPayload,
-  type LiveEditFrontier,
   LOBBY_PROGRESS,
   type PresenterContextPayload,
   projectScreen,
@@ -337,38 +335,6 @@ export class GameStateService implements OnModuleInit {
           session.progress.status !== 'lobby' &&
           session.progress.status !== 'ended',
       );
-  }
-
-  /**
-   * Where this session has got to, for protecting it against live editing
-   * (`QuizController`): the questions that have opened, for good — Previous
-   * stepping back never takes one away — and the current round, which is the
-   * round of the furthest opened question if Previous stepped back before it —
-   * and whether that round's block has started locking. Everything after the
-   * opened questions stays editable until it has.
-   */
-  getLiveEditFrontier(session: SessionState): LiveEditFrontier {
-    const openedIds = new Set(session.openedQuestionIds);
-    // Previous can step back before opened questions, but they keep their
-    // place for good — so the line never falls behind the furthest opened one.
-    const furthestOpenedRoundIndex = session.seededGame.rounds.findLastIndex(
-      (round) => round.questions.some((question) => openedIds.has(question.id)),
-    );
-    const currentRoundIndex = Math.max(
-      session.progress.roundIndex,
-      furthestOpenedRoundIndex,
-    );
-    const { status, roundIndex } = session.progress;
-    return {
-      openedQuestionIds: session.openedQuestionIds,
-      currentRoundIndex,
-      // Stepped back before the furthest opened round, its block may already
-      // have locked — keep that round frozen rather than guess.
-      hasCurrentBlockStartedLocking:
-        status === 'locking' ||
-        isGradedStatus(status) ||
-        roundIndex < currentRoundIndex,
-    };
   }
 
   /** A team rates a round of the break card. Changes no scores and pushes nothing. */
