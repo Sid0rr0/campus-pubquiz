@@ -879,7 +879,7 @@ export function rejectNthCall<T extends object, K extends string & keyof T>(
   asyncTarget[method] = (...args: unknown[]) => {
     if (remainingSkips > 0) {
       remainingSkips -= 1;
-      return Reflect.apply(original, target, args) as Promise<unknown>;
+      return Reflect.apply(original, target, args);
     }
     asyncTarget[method] = original;
     return Promise.reject(error);
