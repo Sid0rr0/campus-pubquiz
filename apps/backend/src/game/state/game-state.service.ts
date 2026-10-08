@@ -17,7 +17,6 @@ import {
   isQuestionOpenForAnswering,
   isShowdownAcceptingGuesses,
   type JoinPlayersPayload,
-  type LeaderboardEntry,
   type LiveEditFrontier,
   LOBBY_PROGRESS,
   type PresenterContextPayload,
@@ -43,8 +42,7 @@ import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
-import { GameSessionStore } from '@/game/state/game-session.store';
-import { SessionWriteQueue } from '@/game/state/session-write-queue';
+import { SessionWrite } from '@/game/state/session-write';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
@@ -55,7 +53,6 @@ import {
   withAnsweredTeamIds,
   withBreakEndTime,
   withDisplayTextScale,
-  withLeaderboard,
   withShowdownGuess,
   withTeamConnected,
   withTeams,
@@ -92,42 +89,6 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 /** The option for a session write whose event doesn't change scores: skips the standings read. */
 const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
 
-function isSessionOutcome(value: unknown): value is SessionOutcome {
-  return typeof value === 'object' && value !== null && 'replies' in value;
-}
-
-function haveDeadlinesMoved(
-  before: SessionState,
-  after: SessionState,
-): boolean {
-  const { questionLockAt, kahootQuestionEndsAt } = deadlinesOf(before);
-  return (
-    questionLockAt !== after.questionLockAt ||
-    kahootQuestionEndsAt !== after.kahootQuestionEndsAt
-  );
-}
-
-/**
- * The Session write's deadline report: `outcome` with the new auto-lock
- * deadlines attached when `stored` moved either one from `started`. Results
- * that carry no deadlines (nothing to push, a join's team) pass through, but
- * a deadline that moved with nowhere to report it throws: dropping it would
- * leave a timer on a stale deadline live on stage.
- */
-function reportDeadlineChange<T>(
-  started: SessionState,
-  stored: SessionState,
-  outcome: T,
-): T {
-  if (!haveDeadlinesMoved(started, stored)) return outcome;
-  if (!isSessionOutcome(outcome)) {
-    throw new Error(
-      'A session write moved an auto-lock deadline but returned no SessionOutcome to carry it',
-    );
-  }
-  return { ...outcome, deadlineChange: deadlinesOf(stored) };
-}
-
 /** The outcome of an event that is only acknowledged to its sender: no emits, no broadcast. */
 const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
   ...BROADCAST_STATE_OUTCOME,
@@ -151,8 +112,7 @@ export class GameStateService implements OnModuleInit {
   // A string, not `GameStateService.name`: `nest build` crashes with
   // "reading 'checkJsDirective'" on that self-reference in this file.
   private readonly logger = new Logger('GameStateService');
-  private readonly sessionStore = new GameSessionStore();
-  private readonly sessionWrites = new SessionWriteQueue();
+  private readonly sessionWrite: SessionWrite;
   private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
 
@@ -167,6 +127,7 @@ export class GameStateService implements OnModuleInit {
     private readonly bonusService: BonusService,
     private readonly feedbackService: FeedbackService,
   ) {
+    this.sessionWrite = new SessionWrite(this.standingsService);
     this.grading = new BlockGradingService(this.answerService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
@@ -184,7 +145,7 @@ export class GameStateService implements OnModuleInit {
     const seededGame = await this.seedService.seed();
     const saved = await this.progressRepository.load(seededGame.gameSessionId);
     const progress = saved?.progress ?? { ...LOBBY_PROGRESS };
-    this.sessionStore.set(
+    this.sessionWrite.place(
       seededGame.joinCode,
       await this.moveCommitter.place(
         freshSessionState(seededGame),
@@ -192,20 +153,20 @@ export class GameStateService implements OnModuleInit {
         saved ?? undefined,
       ),
     );
-    this.sessionStore.markInitialized();
+    this.sessionWrite.markInitialized();
   }
 
   /** Whether a session exists for this joinCode — lets the gateway reject a handshake's `?code=` before trusting it. */
   hasSession(joinCode: string): boolean {
-    return this.sessionStore.has(joinCode);
+    return this.sessionWrite.has(joinCode);
   }
 
   getGameSessionId(joinCode: string): number {
-    return this.sessionStore.get(joinCode).seededGame.gameSessionId;
+    return this.sessionWrite.read(joinCode).seededGame.gameSessionId;
   }
 
   getActiveQuizId(joinCode: string): number {
-    return this.sessionStore.get(joinCode).seededGame.quizId;
+    return this.sessionWrite.read(joinCode).seededGame.quizId;
   }
 
   /** Every currently-running session, for the admin session picker (`GET /sessions`). Titles, names, and start times are filled in by the caller — this service only knows quizId, not quiz/GameSession metadata. */
@@ -213,7 +174,7 @@ export class GameStateService implements OnModuleInit {
     ActiveSessionSummary,
     'quizTitle' | 'name' | 'startedAt'
   >[] {
-    return this.sessionStore.values().map((session) => ({
+    return this.sessionWrite.list().map((session) => ({
       joinCode: session.seededGame.joinCode,
       quizId: session.seededGame.quizId,
       status: session.progress.status,
@@ -226,7 +187,7 @@ export class GameStateService implements OnModuleInit {
    * Only observes the queue; lets a test assert after in-flight writes land.
    */
   whenSessionWritesIdle(joinCode: string): Promise<void> {
-    return this.sessionWrites.idle(joinCode);
+    return this.sessionWrite.idle(joinCode);
   }
 
   /**
@@ -238,19 +199,13 @@ export class GameStateService implements OnModuleInit {
    * with the unknown-session error.
    */
   closeSession(joinCode: string): Promise<void> {
-    // On the queue like a session write, but it deletes the session rather
-    // than storing one — so a write still in progress can't put it back, and
-    // one queued behind it finds no session.
-    return this.sessionWrites.run(joinCode, () => {
-      const session = this.sessionStore.get(joinCode);
+    return this.sessionWrite.remove(joinCode, (session) => {
       if (session.progress.status !== 'ended') {
         throw new SessionCloseBlockedError(
           joinCode,
           `still in progress (status: "${session.progress.status}")`,
         );
       }
-      this.sessionStore.delete(joinCode);
-      return Promise.resolve();
     });
   }
 
@@ -277,7 +232,7 @@ export class GameStateService implements OnModuleInit {
     );
     // The fresh game_sessions row already starts in lobby state, so there is
     // no progress to persist here.
-    this.sessionStore.set(
+    this.sessionWrite.place(
       seededGame.joinCode,
       await this.moveCommitter.place(freshSessionState(seededGame), {
         ...LOBBY_PROGRESS,
@@ -316,7 +271,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     regradeQuestionIds: readonly number[] = [],
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, (started) =>
+    return this.sessionWrite.write(joinCode, (started) =>
       this.quizEditedStep(started, regradeQuestionIds),
     );
   }
@@ -365,24 +320,6 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * Runs the quiz edit on one session whose queue is held (see
-   * holdQuizSessions, the only caller): the step, then the standings read,
-   * then the store. Not queued; the outcome is delivered after the hold is
-   * released.
-   */
-  private async applyQuizEdit(
-    joinCode: string,
-    regradeQuestionIds: readonly number[],
-  ): Promise<SessionOutcome> {
-    const started = this.sessionStore.get(joinCode);
-    const { session, outcome } = await this.quizEditedStep(
-      started,
-      regradeQuestionIds,
-    );
-    return this.commit(joinCode, started, { session, outcome }, true);
-  }
-
-  /**
    * Runs `task` while holding the session writes of every unfinished session
    * on `quizId` (the Live edit module's save). Lobby sessions are held too,
    * so one that starts while the save waits is seen when the task looks at
@@ -393,27 +330,29 @@ export class GameStateService implements OnModuleInit {
     quizId: number,
     task: (held: HeldQuizSessions) => Promise<T>,
   ): Promise<T> {
-    return this.sessionWrites.hold(
-      this.sessionStore
-        .values()
+    return this.sessionWrite.hold(
+      this.sessionWrite
+        .list()
         .filter(
           (session) =>
             session.seededGame.quizId === quizId &&
             session.progress.status !== 'ended',
         )
         .map((session) => session.seededGame.joinCode),
-      () =>
+      (writer) =>
         task({
           applyQuizEdit: (joinCode, regradeQuestionIds) =>
-            this.applyQuizEdit(joinCode, regradeQuestionIds),
+            writer.write(joinCode, (started) =>
+              this.quizEditedStep(started, regradeQuestionIds),
+            ),
         }),
     );
   }
 
   /** Every running session on `quizId` (not in the lobby, not ended) as it stands now. Read it inside holdQuizSessions to count the sessions the way they stand while the game can't move. */
   listLiveSessions(quizId: number): SessionState[] {
-    return this.sessionStore
-      .values()
+    return this.sessionWrite
+      .list()
       .filter(
         (session) =>
           session.seededGame.quizId === quizId &&
@@ -508,7 +447,7 @@ export class GameStateService implements OnModuleInit {
       store: (gameSessionId: number, teamId: number) => Promise<void>;
     },
   ): Promise<SessionOutcome> {
-    return this.writeSession(
+    return this.sessionWrite.write(
       joinCode,
       async (session) => {
         const teamId = findTeamIdBySocketId(session, socketId);
@@ -545,7 +484,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     const gameSessionId = this.getGameSessionId(joinCode);
     try {
-      const { team, joined } = await this.writeSession(
+      const { team, joined } = await this.sessionWrite.write(
         joinCode,
         async (session) => {
           // Resolved inside the write, so a leave or kick for the same team
@@ -636,7 +575,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     socketId: string,
   ): Promise<SessionOutcome | null> {
-    return this.writeSession<SessionOutcome | null>(
+    return this.sessionWrite.write<SessionOutcome | null>(
       joinCode,
       (session) => {
         const teamId = findTeamIdBySocketId(session, socketId);
@@ -654,7 +593,7 @@ export class GameStateService implements OnModuleInit {
   }
 
   getSnapshot(joinCode: string): StateSnapshotPayload {
-    return buildSnapshot(this.sessionStore.get(joinCode));
+    return buildSnapshot(this.sessionWrite.read(joinCode));
   }
 
   /** The view of the session that one room is sent — see projectScreen. */
@@ -662,12 +601,12 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     room: Room,
   ): StateViewByRoom[Room] {
-    return projectScreen(this.sessionStore.get(joinCode), room);
+    return projectScreen(this.sessionWrite.read(joinCode), room);
   }
 
   /** Both auto-lock deadlines (epoch-ms, or null when none is armed). */
   getDeadlines(joinCode: string): DeadlineChange {
-    return deadlinesOf(this.sessionStore.get(joinCode));
+    return deadlinesOf(this.sessionWrite.read(joinCode));
   }
 
   /** Epoch-ms deadline for auto-locking the current question, or null when none is armed. */
@@ -685,7 +624,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     breakEndsAt: number | null,
   ): Promise<SessionOutcome> {
-    return this.writeSession(
+    return this.sessionWrite.write(
       joinCode,
       (session) =>
         Promise.resolve({
@@ -701,7 +640,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     displayTextScale: number,
   ): Promise<SessionOutcome> {
-    return this.writeSession(
+    return this.sessionWrite.write(
       joinCode,
       (session) =>
         Promise.resolve({
@@ -725,7 +664,7 @@ export class GameStateService implements OnModuleInit {
     { showdownRoundId, teamId, value }: SubmitShowdownGuessPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.writeSession(
+    return this.sessionWrite.write(
       joinCode,
       async (session) => {
         const round = session.activeShowdownRound;
@@ -776,7 +715,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     { question, answer, points }: CreateShowdownRoundPayload,
   ): Promise<SessionOutcome> {
-    return this.writeSession(
+    return this.sessionWrite.write(
       joinCode,
       async (session) => {
         const tied = getTiedForFirst(session.leaderboard);
@@ -813,7 +752,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     partial: Partial<SessionSettings>,
   ): Promise<void> {
-    await this.writeSession(
+    await this.sessionWrite.write(
       joinCode,
       async (session) => {
         if (session.progress.status !== 'lobby') {
@@ -857,13 +796,13 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     action: GameAction,
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, (session) =>
-      this.moveCommitter.commit(session, action),
-    ).catch((error: unknown) => {
-      throw new SessionRefusal(
-        error instanceof Error ? error.message : 'Invalid game action',
-      );
-    });
+    return this.sessionWrite
+      .write(joinCode, (session) => this.moveCommitter.commit(session, action))
+      .catch((error: unknown) => {
+        throw new SessionRefusal(
+          error instanceof Error ? error.message : 'Invalid game action',
+        );
+      });
   }
 
   /**
@@ -879,7 +818,7 @@ export class GameStateService implements OnModuleInit {
     { teamId, questionId, value }: SubmitAnswerPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (session) => {
+    return this.sessionWrite.write(joinCode, async (session) => {
       if (!isQuestionOpenForAnswering(session, questionId)) {
         throw new SessionRefusal('Answers are locked for this question');
       }
@@ -935,7 +874,7 @@ export class GameStateService implements OnModuleInit {
     answerId: number,
     pointsAwarded: number,
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (session) => {
+    return this.sessionWrite.write(joinCode, async (session) => {
       let questionId: number;
       try {
         ({ questionId } = await this.answerService.grade(
@@ -962,7 +901,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     { teamId, category, points, reason }: AwardBonusPayload,
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (session) => {
+    return this.sessionWrite.write(joinCode, async (session) => {
       const { enabledBonusCategories, maxBonusAwardsPerCategory } =
         session.seededGame.settings;
       try {
@@ -998,7 +937,7 @@ export class GameStateService implements OnModuleInit {
     teamId: number,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, async (session) => {
+    return this.sessionWrite.write(joinCode, async (session) => {
       // Checked against the session as the previous write left it, so a
       // leave from a socket that just lost the seat to a rejoin is refused.
       if (session.connectedTeamSockets[teamId] !== socketId) {
@@ -1014,7 +953,7 @@ export class GameStateService implements OnModuleInit {
    * any, and closes that socket after the notice.
    */
   kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, (session) =>
+    return this.sessionWrite.write(joinCode, (session) =>
       this.teamRemovedChange(session, teamId, 'kicked'),
     );
   }
@@ -1063,7 +1002,7 @@ export class GameStateService implements OnModuleInit {
    * award a bonus run `bonusChange` inside their own write instead.
    */
   bonusChanged(joinCode: string): Promise<SessionOutcome> {
-    return this.writeSession(joinCode, (session) =>
+    return this.sessionWrite.write(joinCode, (session) =>
       Promise.resolve(this.bonusChange(session)),
     );
   }
@@ -1127,82 +1066,6 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A session write: runs `change` against the session as the previous write
-   * for this join code left it, reads standings once as the last step
-   * (unless the write says it doesn't change scores), stores the result and
-   * returns the change's outcome. A change that throws stores nothing and
-   * doesn't hold up the next write; a failed standings read, after the change
-   * has done its work, is logged and the session is stored with its earlier
-   * leaderboard. Not re-entrant: `change` must not call
-   * another public event method of this module.
-   */
-  private writeSession<T>(
-    joinCode: string,
-    change: (
-      session: SessionState,
-    ) => Promise<{ session: SessionState; outcome: T }>,
-    { refreshStandings = true }: { refreshStandings?: boolean } = {},
-  ): Promise<T> {
-    return this.sessionWrites.run(joinCode, async () => {
-      const started = this.sessionStore.get(joinCode);
-      return this.commit(
-        joinCode,
-        started,
-        await change(started),
-        refreshStandings,
-      );
-    });
-  }
-
-  /**
-   * The one place a write is stored and its deadline change reported, for
-   * the queued session write and the held quiz edit alike. Compares the
-   * session as stored (with its fresh leaderboard) to the one it started from.
-   */
-  private async commit<T>(
-    joinCode: string,
-    started: SessionState,
-    { session, outcome }: { session: SessionState; outcome: T },
-    refreshStandings: boolean,
-  ): Promise<T> {
-    if (refreshStandings) await this.storeWithStandings(joinCode, session);
-    else this.sessionStore.set(joinCode, session);
-    return reportDeadlineChange(
-      started,
-      this.sessionStore.get(joinCode),
-      outcome,
-    );
-  }
-
-  /**
-   * Stores `session` after reading its standings. The change has already
-   * done its database work (a press has saved its progress), so it counts as
-   * done even if the standings read fails: memory must match what was saved
-   * and clients must hear about it. The session keeps its earlier leaderboard
-   * and the next write reads standings again.
-   */
-  private async storeWithStandings(
-    joinCode: string,
-    session: SessionState,
-  ): Promise<void> {
-    let leaderboard: LeaderboardEntry[] | undefined;
-    try {
-      leaderboard = await this.standingsService.leaderboard(
-        session.seededGame.gameSessionId,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Standings read failed for session ${joinCode}; keeping the earlier leaderboard until the next write`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-    this.sessionStore.set(
-      joinCode,
-      leaderboard ? withLeaderboard(session, leaderboard) : session,
-    );
-  }
-
-  /**
    * Correct answer + round position for a question, for the admin grading
    * view alone. Callers MUST only forward this over an admin-room-only
    * channel (ANSWERS_UPDATED) — never through the broadcast snapshot.
@@ -1211,7 +1074,7 @@ export class GameStateService implements OnModuleInit {
     joinCode: string,
     questionId: number,
   ): AdminQuestionContext | null {
-    const rounds = this.sessionStore.get(joinCode).seededGame.rounds;
+    const rounds = this.sessionWrite.read(joinCode).seededGame.rounds;
     return buildAdminQuestionContext(rounds, questionId);
   }
 
@@ -1222,6 +1085,6 @@ export class GameStateService implements OnModuleInit {
    * the broadcast snapshot.
    */
   getPresenterContext(joinCode: string): PresenterContextPayload {
-    return buildPresenterContext(this.sessionStore.get(joinCode));
+    return buildPresenterContext(this.sessionWrite.read(joinCode));
   }
 }

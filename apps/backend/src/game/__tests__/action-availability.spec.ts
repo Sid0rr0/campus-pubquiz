@@ -6,7 +6,7 @@ import {
   projectScreen,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
-import type { GameSessionStore } from '@/game/state/game-session.store';
+import type { SessionWrite } from '@/game/state/session-write';
 import { asSocket } from '@/game/__tests__/test-utils';
 import { createAnswerer } from '@/game/__tests__/walk-test-utils';
 import {
@@ -157,8 +157,8 @@ describe('Screen projection — Advance/Previous availability', () => {
       expect(flags().canGoToPreviousQuestion).toBe(true);
 
       const session = (
-        game.gameState as unknown as { sessionStore: GameSessionStore }
-      ).sessionStore.get(game.joinCode);
+        game.gameState as unknown as { sessionWrite: SessionWrite }
+      ).sessionWrite.read(game.joinCode);
       const legacy = { ...session, progress: { ...session.progress } };
       delete legacy.progress.previousStatus;
       expect(projectScreen(legacy, SOCKET_ROOMS.ADMIN).previousState).toBe(
