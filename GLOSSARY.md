@@ -11,6 +11,10 @@ A titled group of questions in a quiz, shown to teams under one round intro.
 A run of consecutive rounds that is graded and revealed together, ending at a round marked to break after it. The last round always ends a block.
 _Avoid_: section, segment, grading group
 
+**Block in play**:
+The questions of the current block a session has reached. While answering, those up to the furthest opened one (Previous never hides one); once the block locks, the whole block; at `ended`, the last block played, up to where progress stands. Grading, the answering gate and opened questions all cover the block in play.
+_Avoid_: current block, active block
+
 **Kahoot round**:
 A round where every question is its own block, so each one is locked, scored and revealed before the next.
 
