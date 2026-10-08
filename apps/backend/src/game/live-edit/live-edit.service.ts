@@ -1,14 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  getSessionLiveEditFrontier,
   mergeLiveEditFrontiers,
   type ImportRoundPreview,
   type LiveEditFrontier,
   type QuizDraftSaveRequest,
   type QuizDraftSaveResult,
+  type SessionState,
 } from '@campus-pubquiz/types';
+import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
-import { GameStateService } from '@/game/state/game-state.service';
+import { quizEditChange } from '@/game/live-edit/quiz-edit-change';
+import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
+import { SessionWrite } from '@/game/state/session-write';
 import {
   findLiveEditViolations,
   findRegradeQuestionIds,
@@ -58,21 +63,48 @@ export class LiveEditService {
 
   constructor(
     private readonly quizService: QuizService,
-    private readonly gameState: GameStateService,
     private readonly gameGateway: GameGateway,
+    private readonly sessionWrite: SessionWrite,
+    private readonly seedService: SeedService,
+    private readonly grading: BlockGradingService,
   ) {}
+
+  /** Every session on `quizId` that has not ended, lobby sessions included. */
+  private listUnfinishedSessions(quizId: number): SessionState[] {
+    return this.sessionWrite
+      .list()
+      .filter(
+        (session) =>
+          session.seededGame.quizId === quizId &&
+          session.progress.status !== 'ended',
+      );
+  }
+
+  /** Every running session on `quizId` (not in the lobby, not ended) as it stands now. Read it inside the hold to count the sessions the way they stand while the game can't move. */
+  private listLiveSessions(quizId: number): SessionState[] {
+    return this.listUnfinishedSessions(quizId).filter(
+      (session) => session.progress.status !== 'lobby',
+    );
+  }
+
+  /** The join codes of every unfinished session on `quizId`, lobby sessions included. */
+  private unfinishedJoinCodes(quizId: number): string[] {
+    return this.listUnfinishedSessions(quizId).map(
+      (session) => session.seededGame.joinCode,
+    );
+  }
 
   /** Whether any session is running (not lobby, not ended) on the quiz. */
   hasLiveSession(quizId: number): boolean {
-    return this.gameState.listLiveSessions(quizId).length > 0;
+    return this.listLiveSessions(quizId).length > 0;
   }
 
   /** The running sessions' frontiers merged, or null when none is running. */
   getFrontier(quizId: number): LiveEditFrontier | null {
-    const sessions = this.gameState.listLiveSessions(quizId);
+    const sessions = this.listLiveSessions(quizId);
     if (sessions.length === 0) return null;
     return mergeLiveEditFrontiers(
-      sessions.map((session) => this.gameState.getLiveEditFrontier(session)),
+      sessions.map((session) => getSessionLiveEditFrontier(session)),
     );
   }
 
@@ -93,51 +125,59 @@ export class LiveEditService {
         : this.quizService.update(quizId, title, rounds);
     let result: QuizDraftSaveResult;
     try {
-      result = await this.gameState.holdQuizSessions(quizId, async (held) => {
-        const liveSessions = this.gameState.listLiveSessions(quizId);
-        if (liveSessions.length === 0) return persist(requestedRounds);
+      result = await this.sessionWrite.hold(
+        this.unfinishedJoinCodes(quizId),
+        async (held) => {
+          const liveSessions = this.listLiveSessions(quizId);
+          if (liveSessions.length === 0) return persist(requestedRounds);
 
-        const currentDraft = await this.quizService.findDraftById(quizId);
-        if (!currentDraft) throw new QuizNotFoundError(quizId);
-        const rounds = strategy
-          ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
-          : requestedRounds;
-        const frontier = mergeLiveEditFrontiers(
-          liveSessions.map((session) =>
-            this.gameState.getLiveEditFrontier(session),
-          ),
-        );
-        const issues = findLiveEditViolations(
-          currentDraft.rounds,
-          rounds,
-          frontier,
-        );
-        if (issues.length > 0) throw new QuizLiveEditBlockedError(issues);
-        const regradeQuestionIds = findRegradeQuestionIds(
-          currentDraft.rounds,
-          rounds,
-          frontier.openedQuestionIds,
-        );
+          const currentDraft = await this.quizService.findDraftById(quizId);
+          if (!currentDraft) throw new QuizNotFoundError(quizId);
+          const rounds = strategy
+            ? strategy.identifyQuestions(currentDraft.rounds, requestedRounds)
+            : requestedRounds;
+          const frontier = mergeLiveEditFrontiers(
+            liveSessions.map((session) => getSessionLiveEditFrontier(session)),
+          );
+          const issues = findLiveEditViolations(
+            currentDraft.rounds,
+            rounds,
+            frontier,
+          );
+          if (issues.length > 0) throw new QuizLiveEditBlockedError(issues);
+          const regradeQuestionIds = findRegradeQuestionIds(
+            currentDraft.rounds,
+            rounds,
+            frontier.openedQuestionIds,
+          );
 
-        const result = await persist(rounds);
-        for (const { seededGame } of liveSessions) {
-          deliveries.push({
-            joinCode: seededGame.joinCode,
-            outcome: await held.applyQuizEdit(
-              seededGame.joinCode,
-              regradeQuestionIds,
-            ),
-          });
-        }
-        return result;
-      });
+          const result = await persist(rounds);
+          for (const { seededGame } of liveSessions) {
+            deliveries.push({
+              joinCode: seededGame.joinCode,
+              outcome: await held.write(
+                seededGame.joinCode,
+                quizEditChange(
+                  this.seedService,
+                  this.grading,
+                  regradeQuestionIds,
+                ),
+              ),
+            });
+          }
+          return result;
+        },
+      );
       if (
         reloadJoinCode !== undefined &&
-        this.gameState.getActiveQuizId(reloadJoinCode) === quizId
+        this.sessionWrite.read(reloadJoinCode).seededGame.quizId === quizId
       ) {
         deliveries.push({
           joinCode: reloadJoinCode,
-          outcome: await this.gameState.quizEdited(reloadJoinCode),
+          outcome: await this.sessionWrite.write(
+            reloadJoinCode,
+            quizEditChange(this.seedService, this.grading, []),
+          ),
         });
       }
     } catch (error) {

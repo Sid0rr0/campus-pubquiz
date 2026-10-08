@@ -50,6 +50,8 @@ import { QuizService } from '@/quiz/quiz.service';
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
+import { SessionWrite } from '@/game/state/session-write';
+import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionWriteQueue } from '@/game/state/session-write-queue';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
@@ -538,6 +540,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   // first boot of a freshly seeded quiz, or a restart over the same one.
   async function assemble(quiz: PlayableQuiz): Promise<RealStoreGateway> {
     const services = buildServices();
+    const sessionWrite = new SessionWrite(services.standingsService);
+    const grading = new BlockGradingService(services.answerService);
     const gameState = new GameStateService(
       services.seedService,
       services.progressRepository,
@@ -548,6 +552,8 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       services.teamService,
       services.bonusService,
       services.feedbackService,
+      sessionWrite,
+      grading,
     );
     await gameState.onModuleInit();
     const nextWriteWaiting = watchNextWrite(gameState);
@@ -564,8 +570,10 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     gateways.push(gateway);
     const liveEdit = new LiveEditService(
       services.quizService,
-      gameState,
       gateway,
+      sessionWrite,
+      services.seedService,
+      grading,
     );
     const saveQuizEdit = (
       edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
@@ -859,6 +867,31 @@ function watchNextWrite(gameState: GameStateService): () => Promise<void> {
     new Promise<void>((resolve) => {
       waiters.push(resolve as WriteWaiter);
     });
+}
+
+/**
+ * Makes one call to `target[method]` reject with `error` without running it,
+ * letting the `skipCalls` calls before it pass through for real. Only that one
+ * call fails: the method is restored once it has been made.
+ */
+export function rejectNthCall<T extends object, K extends string & keyof T>(
+  target: T,
+  method: K,
+  error: Error,
+  skipCalls = 0,
+): void {
+  type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
+  const asyncTarget = target as unknown as Record<string, AsyncMethod>;
+  const original = asyncTarget[method];
+  let remainingSkips = skipCalls;
+  asyncTarget[method] = (...args: unknown[]) => {
+    if (remainingSkips > 0) {
+      remainingSkips -= 1;
+      return Reflect.apply(original, target, args);
+    }
+    asyncTarget[method] = original;
+    return Promise.reject(error);
+  };
 }
 
 export interface HeldCall {

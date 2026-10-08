@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { LeaderboardEntry, SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
@@ -75,8 +75,9 @@ function reportDeadlineChange<T>(
  * by joinCode, one backend instance — see CLAUDE.md) and the only way a
  * session is stored. Owns the per-session queue, the standings read and its
  * failed-read fallback, and the auto-lock deadline report. Composed inside
- * GameStateService rather than injected via Nest DI.
+ * a Nest provider, injected into the game state class.
  */
+@Injectable()
 export class SessionWrite {
   // A string, not `SessionWrite.name`: `nest build` crashes on a
   // self-reference in the owning game state class, so both avoid it.

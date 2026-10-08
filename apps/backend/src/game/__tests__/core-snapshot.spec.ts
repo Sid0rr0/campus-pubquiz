@@ -1,4 +1,6 @@
 import { GameStateService } from '@/game/state/game-state.service';
+import { SessionWrite } from '@/game/state/session-write';
+import { BlockGradingService } from '@/game/state/block-grading.service';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   TWO_ROUND_QUIZ,
@@ -25,6 +27,8 @@ describe('GameStateService — core snapshot', () => {
       game.teamService,
       game.bonusService,
       game.feedbackService,
+      new SessionWrite(game.standingsService),
+      new BlockGradingService(game.answerService),
     );
 
     await expect(
