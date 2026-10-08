@@ -10,7 +10,7 @@ Parent spec: `.scratch/outcome-deadlines/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] No handler file is left that only forwards to one Live session method.
 - [ ] The gateway's constructor injects only what it uses.

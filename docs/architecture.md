@@ -78,9 +78,8 @@ flowchart TD
   end
 
   subgraph socket["game/socket — event plumbing"]
-    dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run handler → deliver"]
-    handlers["handlers/*<br/>submit-answer · grade-answer · admin-action<br/>join · leave · kick · award-bonus<br/>showdown · rate-round · feedback"]
-    deliver["deliverOutcome<br/>replies · broadcast · admin answer lists<br/>team syncs · socket closes"]
+    dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run the event's one Live session call → deliver"]
+    deliver["deliverOutcome<br/>re-arm timers from the outcome's deadline change<br/>replies · broadcast · admin answer lists<br/>team syncs · socket closes"]
     broadcast["broadcastGameState<br/>one view per room"]
     timers["question-lock timer registry"]
   end
@@ -115,9 +114,10 @@ flowchart TD
   repos["db/repositories<br/>one per entity (MikroORM)"]
   db[("Postgres")]
 
-  gw --> dispatch --> handlers --> gss
+  gw --> dispatch --> gss
   dispatch --> deliver --> broadcast --> project
-  timers -->|"lock expiry = ADVANCE"| handlers
+  deliver -->|"deadline change: re-arm"| timers
+  timers -->|"expiry = ADVANCE press, delivered like any event"| gw
   rest -->|"notify* after live edits"| gw
   rest -->|read-only lookups| gss
   rest --> domain
@@ -211,6 +211,7 @@ sequenceDiagram
   Q->>ST: leaderboard
   Q-->>GS: store session
   GS-->>GW: SessionOutcome (or SessionRefusal)
+  GW->>GW: re-arm the auto-lock timers if the outcome carries a deadline change
   GW->>R: PRESENTER_CONTEXT_UPDATED (admin) + STATE_UPDATED (per room)
   GW->>R: TEAM_ANSWERS_SYNCED (each team, on reveal entry)
 ```
