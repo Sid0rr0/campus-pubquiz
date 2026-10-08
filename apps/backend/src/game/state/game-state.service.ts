@@ -14,7 +14,6 @@ import {
   getFeedbackField,
   getTiedForFirst,
   isGradedStatus,
-  isQuestionOpenForAnswering,
   isShowdownAcceptingGuesses,
   type JoinPlayersPayload,
   type LiveEditFrontier,
@@ -43,6 +42,7 @@ import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { AnswersChanges } from '@/game/state/answers-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
@@ -50,7 +50,6 @@ import { SessionCloseBlockedError } from '@/game/state/errors/session-close-bloc
 import {
   findTeamIdBySocketId,
   withActiveShowdownRound,
-  withAnsweredTeamIds,
   withShowdownGuess,
   withTeamConnected,
   withTeams,
@@ -114,6 +113,7 @@ export class GameStateService implements OnModuleInit {
   private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
   private readonly settingsChanges: SessionSettingsChanges;
+  private readonly answersChanges: AnswersChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -129,6 +129,7 @@ export class GameStateService implements OnModuleInit {
     this.sessionWrite = new SessionWrite(this.standingsService);
     this.grading = new BlockGradingService(this.answerService);
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
+    this.answersChanges = new AnswersChanges(this.answerService, this.grading);
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
@@ -789,53 +790,12 @@ export class GameStateService implements OnModuleInit {
    */
   submitAnswer(
     joinCode: string,
-    { teamId, questionId, value }: SubmitAnswerPayload,
+    payload: SubmitAnswerPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      if (!isQuestionOpenForAnswering(session, questionId)) {
-        throw new SessionRefusal('Answers are locked for this question');
-      }
-      if (session.connectedTeamSockets[teamId] !== socketId) {
-        throw new SessionRefusal(
-          'You may only submit answers for your own team',
-        );
-      }
-
-      const responseMs =
-        session.phaseStartedAt === null
-          ? null
-          : Date.now() - session.phaseStartedAt;
-      const submitted = await this.answerService.submit(
-        session.seededGame.gameSessionId,
-        questionId,
-        teamId,
-        value,
-        responseMs,
-      );
-
-      const refreshed = await this.answerChange(session, questionId);
-      return {
-        session: refreshed.session,
-        outcome: {
-          ...refreshed.outcome,
-          replies: [
-            {
-              event: SOCKET_EVENTS.ANSWER_RECEIVED,
-              payload: {
-                questionId,
-                teamId: submitted.teamId,
-                teamName: submitted.teamName,
-                value: submitted.value,
-                pointsAwarded: submitted.pointsAwarded,
-                gradedAt: submitted.gradedAt,
-                verdict: submitted.verdict,
-              },
-            },
-          ],
-        },
-      };
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.answersChanges.submit(session, payload, socketId),
+    );
   }
 
   /**
@@ -848,21 +808,9 @@ export class GameStateService implements OnModuleInit {
     answerId: number,
     pointsAwarded: number,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      let questionId: number;
-      try {
-        ({ questionId } = await this.answerService.grade(
-          session.seededGame.gameSessionId,
-          answerId,
-          pointsAwarded,
-        ));
-      } catch (error) {
-        throw new SessionRefusal(
-          error instanceof Error ? error.message : 'Unable to grade answer',
-        );
-      }
-      return await this.answerChange(session, questionId);
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.answersChanges.grade(session, answerId, pointsAwarded),
+    );
   }
 
   /**
@@ -1007,35 +955,6 @@ export class GameStateService implements OnModuleInit {
     return {
       session,
       outcome: { ...BROADCAST_STATE_OUTCOME, notices },
-    };
-  }
-
-  /**
-   * The change after an answer was stored or graded: the question's
-   * answered-team ids and grading refresh, built from the session it is
-   * handed. Not a write of its own — callers run it inside theirs.
-   */
-  private async answerChange(
-    started: SessionState,
-    questionId: number,
-  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const [answers, graded] = await Promise.all([
-      this.answerService.listForQuestion(
-        started.seededGame.gameSessionId,
-        questionId,
-      ),
-      this.grading.gradesChanged(started, [questionId]),
-    ]);
-    return {
-      session: withAnsweredTeamIds(
-        graded,
-        questionId,
-        answers.map((answer) => answer.teamId),
-      ),
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        answerListQuestionIds: [questionId],
-      },
     };
   }
 
