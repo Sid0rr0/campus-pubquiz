@@ -9,7 +9,11 @@ const DRAFT: QuizDraft = { id: 1, title: 'Quiz', rounds: [] };
 const SAVE_REQUEST = { title: 'Quiz', rounds: [] };
 
 function sessionOn(joinCode: string) {
-  return { seededGame: { joinCode } };
+  return {
+    seededGame: { joinCode, rounds: [] },
+    openedQuestionIds: [],
+    progress: { status: 'question', roundIndex: 0 },
+  };
 }
 
 /** Two live sessions; the second one's quiz edit fails after the first one's has landed. */
@@ -18,11 +22,6 @@ function makeService(deliver: jest.Mock) {
   const saveFailure = new Error('second reload failed');
   const gameState = {
     listLiveSessions: () => sessions,
-    getLiveEditFrontier: () => ({
-      openedQuestionIds: [],
-      currentRoundIndex: 0,
-      hasCurrentBlockStartedLocking: false,
-    }),
     holdQuizSessions: (
       _quizId: number,
       task: (held: unknown) => Promise<unknown>,

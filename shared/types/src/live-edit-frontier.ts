@@ -1,3 +1,6 @@
+import { isGradedStatus } from './game-state-groups';
+import type { SessionState } from './session-state';
+
 /**
  * Where the live sessions on a quiz have got to, merged across them — the
  * one description both the backend's save guard and the quiz editor read, so
@@ -11,6 +14,40 @@ export interface LiveEditFrontier {
   currentRoundIndex: number;
   /** The current block has started locking (or is past it, in its break or reveal) in the furthest-on live session — its rounds can't gain, lose or reorder questions any more. */
   hasCurrentBlockStartedLocking: boolean;
+}
+
+/**
+ * Where one session has got to, for protecting it against live editing: the
+ * questions that have opened, for good — Previous stepping back never takes
+ * one away — and the current round, which is the round of the furthest opened
+ * question if Previous stepped back before it — and whether that round's block
+ * has started locking. Everything after the opened questions stays editable
+ * until it has.
+ */
+export function getSessionLiveEditFrontier(
+  session: SessionState,
+): LiveEditFrontier {
+  const openedIds = new Set(session.openedQuestionIds);
+  // Previous can step back before opened questions, but they keep their
+  // place for good — so the line never falls behind the furthest opened one.
+  const furthestOpenedRoundIndex = session.seededGame.rounds.findLastIndex(
+    (round) => round.questions.some((question) => openedIds.has(question.id)),
+  );
+  const currentRoundIndex = Math.max(
+    session.progress.roundIndex,
+    furthestOpenedRoundIndex,
+  );
+  const { status, roundIndex } = session.progress;
+  return {
+    openedQuestionIds: session.openedQuestionIds,
+    currentRoundIndex,
+    // Stepped back before the furthest opened round, its block may already
+    // have locked — keep that round frozen rather than guess.
+    hasCurrentBlockStartedLocking:
+      status === 'locking' ||
+      isGradedStatus(status) ||
+      roundIndex < currentRoundIndex,
+  };
 }
 
 /** Combines per-session frontiers: every opened question counts, and the line is the furthest-on session's current round — locking only counts for a session standing on that round, since earlier rounds are frozen anyway. */
