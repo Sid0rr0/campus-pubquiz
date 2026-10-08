@@ -31,11 +31,10 @@ import {
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
-  type TeamBonusAwardView,
   type TeamRosterEntry,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
+import { BonusService } from '@/bonus/bonus.service';
 import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
@@ -43,6 +42,7 @@ import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
@@ -114,6 +114,7 @@ export class GameStateService implements OnModuleInit {
   private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
   private readonly settingsChanges: SessionSettingsChanges;
+  private readonly bonusChanges: BonusAwardsChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -129,6 +130,7 @@ export class GameStateService implements OnModuleInit {
     this.sessionWrite = new SessionWrite(this.standingsService);
     this.grading = new BlockGradingService(this.answerService);
     this.settingsChanges = new SessionSettingsChanges(this.seedService);
+    this.bonusChanges = new BonusAwardsChanges(this.bonusService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
@@ -866,39 +868,16 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * An admin awards a bonus. The session's own enabled categories and
-   * per-category limit decide whether it is allowed (a refusal carries the
-   * bonus service's message); the awarded team's socket, if connected, gets
-   * the BONUS_AWARDED notice.
+   * An admin awards a bonus. A refusal carries the bonus service's message;
+   * the awarded team's socket, if connected, gets the BONUS_AWARDED notice.
    */
-  async awardBonus(
+  awardBonus(
     joinCode: string,
-    { teamId, category, points, reason }: AwardBonusPayload,
+    payload: AwardBonusPayload,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      const { enabledBonusCategories, maxBonusAwardsPerCategory } =
-        session.seededGame.settings;
-      try {
-        await this.bonusService.award(
-          session.seededGame.gameSessionId,
-          teamId,
-          category,
-          points,
-          reason,
-          enabledBonusCategories,
-          maxBonusAwardsPerCategory,
-        );
-      } catch (error) {
-        if (error instanceof InvalidBonusAwardError) {
-          throw new SessionRefusal(error.message);
-        }
-        throw error;
-      }
-      return this.bonusChange(session, {
-        teamId,
-        notice: { category, points, reason },
-      });
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.bonusChanges.award(session, payload),
+    );
   }
 
   /**
@@ -970,44 +949,11 @@ export class GameStateService implements OnModuleInit {
     };
   }
 
-  /**
-   * A bonus award was added, edited or deleted: refreshes the leaderboard the
-   * same way grading does. Carries no BONUS_AWARDED notice: callers that
-   * award a bonus run `bonusChange` inside their own write instead.
-   */
+  /** A bonus award was added, edited or deleted: refreshes the leaderboard. */
   bonusChanged(joinCode: string): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      Promise.resolve(this.bonusChange(session)),
+      this.bonusChanges.changed(session),
     );
-  }
-
-  /**
-   * The change a bonus award makes, built from the session it is handed. Not
-   * a write of its own — callers run it inside theirs. `awarded` (a fresh
-   * award only) carries its BONUS_AWARDED notice for that team's socket, if
-   * it is connected.
-   */
-  private bonusChange(
-    session: SessionState,
-    awarded?: { teamId: number; notice: TeamBonusAwardView },
-  ): { session: SessionState; outcome: SessionOutcome } {
-    const socketId = awarded
-      ? session.connectedTeamSockets[awarded.teamId]
-      : undefined;
-    const notices =
-      awarded && socketId
-        ? [
-            {
-              socketId,
-              event: SOCKET_EVENTS.BONUS_AWARDED,
-              payload: awarded.notice,
-            },
-          ]
-        : [];
-    return {
-      session,
-      outcome: { ...BROADCAST_STATE_OUTCOME, notices },
-    };
   }
 
   /**
