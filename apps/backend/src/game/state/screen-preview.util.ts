@@ -112,6 +112,8 @@ function describeOnAirScreenText(
       return session.progress.status === 'ended'
         ? { heading: 'Leaderboard', body: 'Final standings' }
         : { heading: 'Leaderboard' };
+    case 'join_overlay':
+      return { heading: 'Join overlay' };
     case 'ended':
       return { heading: 'Quiz complete!' };
     case 'showdown':

@@ -82,11 +82,16 @@ export function settleSession({
     livePhaseKey,
     phaseStartedAt,
     phaseElapsedByKey,
-    questionLockAt: computeQuestionLockAt(
-      progress,
-      settings.lockGraceSeconds * 1000,
-      now,
-    ),
+    // Showing or hiding the join overlay must not hand the room extra time, so
+    // a countdown already running keeps its deadline.
+    questionLockAt:
+      action === 'TOGGLE_JOIN_OVERLAY'
+        ? session.questionLockAt
+        : computeQuestionLockAt(
+            progress,
+            settings.lockGraceSeconds * 1000,
+            now,
+          ),
     kahootQuestionEndsAt: computeKahootQuestionEndsAt(
       progress,
       context,

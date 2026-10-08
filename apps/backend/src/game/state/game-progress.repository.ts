@@ -32,6 +32,7 @@ export class GameProgressRepository {
     session.revealIndex = data.progress.revealIndex;
     session.furthestOpenIndex = data.progress.furthestOpenIndex;
     session.isLeaderboardVisible = data.progress.isLeaderboardVisible;
+    session.isJoinOverlayVisible = data.progress.isJoinOverlayVisible ?? false;
     session.previousStatus = data.progress.previousStatus ?? null;
     session.livePhaseKey = data.livePhaseKey;
     session.phaseStartedAt =
@@ -61,6 +62,7 @@ export class GameProgressRepository {
         revealIndex: session.revealIndex,
         furthestOpenIndex: session.furthestOpenIndex,
         isLeaderboardVisible: session.isLeaderboardVisible,
+        isJoinOverlayVisible: session.isJoinOverlayVisible,
         previousStatus: session.previousStatus,
       },
       livePhaseKey: session.livePhaseKey,

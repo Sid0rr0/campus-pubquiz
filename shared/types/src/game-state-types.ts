@@ -18,6 +18,7 @@ export type GameAction =
   | 'PREVIOUS'
   | 'END_QUIZ'
   | 'TOGGLE_LEADERBOARD'
+  | 'TOGGLE_JOIN_OVERLAY'
   | 'TOGGLE_MEDIA_FULLSCREEN'
   | 'REPLAY_MEDIA';
 
@@ -57,6 +58,15 @@ export interface GameProgress {
   roundIndex: number;
   questionIndex: number;
   isLeaderboardVisible: boolean;
+  /**
+   * Whether the join overlay (QR code, join code, team-size line) covers the
+   * big screen — toggled by TOGGLE_JOIN_OVERLAY, legal in every status but
+   * lobby and ended, and cleared by any transition that lands on either. Like
+   * the leaderboard it is not a status: the quiz carries on underneath.
+   * Optional, like isMediaFullscreen, so existing GameProgress literals
+   * don't all need updating; undefined behaves as false.
+   */
+  isJoinOverlayVisible?: boolean;
   /**
    * Whether the current question's media (image or YouTube) is shown
    * full-viewport on /display — toggled by TOGGLE_MEDIA_FULLSCREEN and
