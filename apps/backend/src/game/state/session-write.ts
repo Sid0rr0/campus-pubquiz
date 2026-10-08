@@ -29,6 +29,11 @@ export interface HeldWriter {
   ): Promise<T>;
 }
 
+/** Standings are read unless the write opts out. */
+function shouldRefreshStandings(options?: SessionWriteOptions): boolean {
+  return options?.refreshStandings ?? true;
+}
+
 function isSessionOutcome(value: unknown): value is SessionOutcome {
   return typeof value === 'object' && value !== null && 'replies' in value;
 }
@@ -74,7 +79,7 @@ function reportDeadlineChange<T>(
  */
 export class SessionWrite {
   // A string, not `SessionWrite.name`: `nest build` crashes on a
-  // self-reference in GameStateService, so both avoid it.
+  // self-reference in the owning game state class, so both avoid it.
   private readonly logger = new Logger('SessionWrite');
   private readonly sessions = new Map<string, SessionState>();
   private readonly queue = new SessionWriteQueue();
@@ -132,13 +137,14 @@ export class SessionWrite {
    * doesn't hold up the next write; a failed standings read, after the change
    * has done its work, is logged and the session is stored with its earlier
    * leaderboard. Not re-entrant: `change` must not call another public event
-   * method of GameStateService.
+   * method of the owning game state class.
    */
   write<T>(
     joinCode: string,
     change: (session: SessionState) => Promise<SessionChange<T>>,
-    { refreshStandings = true }: SessionWriteOptions = {},
+    options?: SessionWriteOptions,
   ): Promise<T> {
+    const refreshStandings = shouldRefreshStandings(options);
     return this.queue.run(joinCode, () =>
       this.writeNow(joinCode, change, refreshStandings),
     );
@@ -174,7 +180,7 @@ export class SessionWrite {
     const heldCodes = new Set(joinCodes);
     let isReleased = false;
     const held: HeldWriter = {
-      write: async (joinCode, change, { refreshStandings = true } = {}) => {
+      write: async (joinCode, change, options) => {
         if (isReleased) {
           throw new Error(
             `Held writer used after its hold was released (join code "${joinCode}")`,
@@ -185,7 +191,7 @@ export class SessionWrite {
             `Held writer refused: join code "${joinCode}" is not part of the hold`,
           );
         }
-        return this.writeNow(joinCode, change, refreshStandings);
+        return this.writeNow(joinCode, change, shouldRefreshStandings(options));
       },
     };
     return this.queue.hold(joinCodes, async () => {
