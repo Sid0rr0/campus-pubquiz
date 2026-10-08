@@ -99,10 +99,7 @@ export class GameGateway
    */
   onApplicationBootstrap(): void {
     for (const { joinCode } of this.gameState.listSessions()) {
-      this.armTimers(joinCode, {
-        questionLockAt: this.gameState.getQuestionLockAt(joinCode),
-        kahootQuestionEndsAt: this.gameState.getKahootQuestionEndsAt(joinCode),
-      });
+      this.armTimers(joinCode, this.gameState.getDeadlines(joinCode));
     }
   }
 
