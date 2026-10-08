@@ -47,13 +47,10 @@ import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
-import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 import {
   findTeamIdBySocketId,
   withActiveShowdownRound,
   withAnsweredTeamIds,
-  withBreakEndTime,
-  withDisplayTextScale,
   withShowdownGuess,
   withTeamConnected,
   withTeams,
