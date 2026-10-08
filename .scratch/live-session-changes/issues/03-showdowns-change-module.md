@@ -18,7 +18,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The showdown guess and the new showdown round are built by the showdowns change module. Their façade methods are each a single `write` call carrying the "doesn't touch scores" option.
 - [ ] The invalid-showdown-to-refusal translation lives in the showdowns change module only.

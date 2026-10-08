@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| live-session-changes | [Live session events are built by per-domain change modules](live-session-changes/spec.md) | 7 |
 | session-write-module | [The Session write is its own module](session-write-module/spec.md) | 2 |
 | block-membership | [Block membership is its own rule, and the reveal views are built on it](block-membership/spec.md) | 3 |
 | outcome-deadlines | [Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go](outcome-deadlines/spec.md) | 3 |

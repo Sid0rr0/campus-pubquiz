@@ -14,7 +14,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** 02, 03, 04, 05, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The game state class is under ~400 lines, and each change module is under ~250.
 - [ ] No change module imports the Session write module or the game state class. A grep shows this.

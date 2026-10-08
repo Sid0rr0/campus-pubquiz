@@ -85,7 +85,8 @@ flowchart TD
   end
 
   subgraph state["game/state — the live session module"]
-    gss["GameStateService"]
+    gss["GameStateService<br/>façade: one write call per event"]
+    changes["Change modules<br/>team roster · answers · bonus awards<br/>team feedback · showdowns · session settings<br/>build changes; never hold the write"]
     write["SessionWrite<br/>owns the in-memory SessionState store<br/>and the queue: one write at a time per join code"]
     mover["MoveCommitter<br/>plan → grade → settle → save"]
     grading["BlockGradingService"]
@@ -123,6 +124,8 @@ flowchart TD
   rest --> domain
 
   gss --> write
+  gss -->|"hands each event's change builder to the write"| changes
+  changes -->|"domain checks and writes"| domain
   live["Live edit save"] -->|"hold: held writer"| write
   gss --> mover --> grading
   mover --> progress
@@ -132,7 +135,7 @@ flowchart TD
   project -->|"reveal views"| block
   gss --> project
   fixtures["frontend test fixtures<br/>test-utils/room-view.ts"] --> project
-  gss -->|"answers · roster · bonuses<br/>showdown · standings"| domain
+  gss -->|"standings (via the write)"| domain
 
   domain --> repos
   progress --> repos

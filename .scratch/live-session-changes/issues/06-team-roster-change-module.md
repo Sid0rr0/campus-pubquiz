@@ -20,7 +20,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Join, disconnect, leave and kick are built by the team roster change module. Each façade method is a single `write` call. The join also builds its reply and wraps refusals, as today.
 - [ ] The seat takeover rule and the team-removal change live only in this module.

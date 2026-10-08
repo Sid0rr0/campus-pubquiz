@@ -19,7 +19,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Submit answer and grade answer are built by the answers change module. Their façade methods are each a single `write` call.
 - [ ] The answer refresh is private to the module and is the only path either event takes to the Grading refresh.

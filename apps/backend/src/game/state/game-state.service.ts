@@ -8,14 +8,9 @@ import {
   buildSnapshot,
   type CreateShowdownRoundPayload,
   DEFAULT_SESSION_SETTINGS,
-  type FeedbackField,
   freshSessionState,
   type GameAction,
-  getFeedbackField,
-  getTiedForFirst,
   isGradedStatus,
-  isQuestionOpenForAnswering,
-  isShowdownAcceptingGuesses,
   type JoinPlayersPayload,
   type LiveEditFrontier,
   LOBBY_PROGRESS,
@@ -25,39 +20,29 @@ import {
   type SendFeedbackPayload,
   type SessionSettings,
   type SessionState,
-  SOCKET_EVENTS,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
   type SubmitAnswerPayload,
   type SubmitShowdownGuessPayload,
-  type TeamBonusAwardView,
-  type TeamRosterEntry,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-import { BonusService, InvalidBonusAwardError } from '@/bonus/bonus.service';
-import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
+import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { AnswersChanges } from '@/game/state/answers-changes';
+import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
+import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
+import { TeamRosterChanges } from '@/game/state/team-roster-changes';
+import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
+import { ShowdownsChanges } from '@/game/state/showdowns-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
-import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
-import {
-  findTeamIdBySocketId,
-  withActiveShowdownRound,
-  withAnsweredTeamIds,
-  withBreakEndTime,
-  withDisplayTextScale,
-  withShowdownGuess,
-  withTeamConnected,
-  withTeams,
-  withoutTeamConnection,
-} from '@/game/state/session-updates.util';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -66,13 +51,9 @@ import {
   deadlinesOf,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-import {
-  InvalidShowdownError,
-  ShowdownService,
-} from '@/showdown/showdown.service';
+import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 
-/** Reads the session's current roster from the database — run inside a session write, so it sees every removal and join that ran before it. */
 /** What a hold on a quiz's sessions lets its task do to them: apply a quiz edit to one held session, returning the outcome to deliver once the hold is released. */
 export interface HeldQuizSessions {
   applyQuizEdit(
@@ -81,31 +62,11 @@ export interface HeldQuizSessions {
   ): Promise<SessionOutcome>;
 }
 
-export type RosterLoader = () => Promise<TeamRosterEntry[]>;
-
 export { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
 export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-settings-update-blocked.error';
 
 /** The option for a session write whose event doesn't change scores: skips the standings read. */
 const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
-
-/** The outcome of an event that is only acknowledged to its sender: no emits, no broadcast. */
-const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
-  ...BROADCAST_STATE_OUTCOME,
-  shouldBroadcastState: false,
-};
-
-/** Runs a showdown service call, turning its domain error into the refusal a team or the admin sees. */
-async function refusingInvalidShowdown<T>(call: () => Promise<T>): Promise<T> {
-  try {
-    return await call();
-  } catch (error) {
-    if (error instanceof InvalidShowdownError) {
-      throw new SessionRefusal(error.message);
-    }
-    throw error;
-  }
-}
 
 @Injectable()
 export class GameStateService implements OnModuleInit {
@@ -115,6 +76,12 @@ export class GameStateService implements OnModuleInit {
   private readonly sessionWrite: SessionWrite;
   private readonly grading: BlockGradingService;
   private readonly moveCommitter: MoveCommitter;
+  private readonly settingsChanges: SessionSettingsChanges;
+  private readonly answersChanges: AnswersChanges;
+  private readonly bonusChanges: BonusAwardsChanges;
+  private readonly rosterChanges: TeamRosterChanges;
+  private readonly feedbackChanges: TeamFeedbackChanges;
+  private readonly showdownsChanges: ShowdownsChanges;
 
   constructor(
     private readonly seedService: SeedService,
@@ -129,6 +96,17 @@ export class GameStateService implements OnModuleInit {
   ) {
     this.sessionWrite = new SessionWrite(this.standingsService);
     this.grading = new BlockGradingService(this.answerService);
+    this.settingsChanges = new SessionSettingsChanges(this.seedService);
+    this.answersChanges = new AnswersChanges(this.answerService, this.grading);
+    this.bonusChanges = new BonusAwardsChanges(this.bonusService);
+    this.rosterChanges = new TeamRosterChanges(
+      this.teamService,
+      this.answerService,
+      this.bonusService,
+      this.feedbackService,
+    );
+    this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
+    this.showdownsChanges = new ShowdownsChanges(this.showdownService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
       this.progressRepository,
@@ -393,88 +371,37 @@ export class GameStateService implements OnModuleInit {
     };
   }
 
-  /**
-   * A team rates a round of the break card. Checked against the session this
-   * write holds: the socket belongs to a team, feedback is collected, and the
-   * round is open for rating — so a rating sent as the break ends is either
-   * saved before the press or refused after it. Stores the rating inside the
-   * write; changes no scores and pushes nothing.
-   */
+  /** A team rates a round of the break card. Changes no scores and pushes nothing. */
   roundRated(
     joinCode: string,
-    { roundId, stars }: RateRoundPayload,
+    payload: RateRoundPayload,
     socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.writeTeamFeedback(joinCode, socketId, {
-      noTeamReason: 'Join a team before rating a round',
-      closedReason: "This round can't be rated right now",
-      isOpen: (feedback) =>
-        feedback?.rounds.some((round) => round.id === roundId) ?? false,
-      store: (gameSessionId, teamId) =>
-        this.feedbackService.rateRound(gameSessionId, teamId, roundId, stars),
-    });
-  }
-
-  /**
-   * A team sends its comment and topic suggestions from the final form.
-   * Checked and stored inside one session write, like `roundRated`, so
-   * feedback is never stored after the final form closed.
-   */
-  feedbackSent(
-    joinCode: string,
-    { comment, topics }: SendFeedbackPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.writeTeamFeedback(joinCode, socketId, {
-      noTeamReason: 'Join a team before sending feedback',
-      closedReason: "Feedback can't be sent right now",
-      isOpen: (feedback) => feedback?.kind === 'final_form',
-      store: (gameSessionId, teamId) =>
-        this.feedbackService.sendFeedback(gameSessionId, teamId, {
-          comment,
-          topics,
-        }),
-    });
-  }
-
-  private writeTeamFeedback(
-    joinCode: string,
-    socketId: string,
-    rules: {
-      noTeamReason: string;
-      closedReason: string;
-      isOpen: (feedback: FeedbackField) => boolean;
-      store: (gameSessionId: number, teamId: number) => Promise<void>;
-    },
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        const teamId = findTeamIdBySocketId(session, socketId);
-        if (teamId === null) throw new SessionRefusal(rules.noTeamReason);
-        if (!session.seededGame.settings.collectFeedback) {
-          throw new SessionRefusal(FEEDBACK_OFF_REASON);
-        }
-        if (!rules.isOpen(getFeedbackField(session))) {
-          throw new SessionRefusal(rules.closedReason);
-        }
-        await rules.store(session.seededGame.gameSessionId, teamId);
-        return { session, outcome: NOTHING_TO_PUSH_OUTCOME };
-      },
+      (session) => this.feedbackChanges.roundRated(session, payload, socketId),
+      NOT_TOUCHING_SCORES,
+    );
+  }
+
+  /** A team sends its comment and topic suggestions from the final form. Like `roundRated`. */
+  feedbackSent(
+    joinCode: string,
+    payload: SendFeedbackPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(
+      joinCode,
+      (session) =>
+        this.feedbackChanges.feedbackSent(session, payload, socketId),
       NOT_TOUCHING_SCORES,
     );
   }
 
   /**
-   * A team joins (or rejoins) from `socketId`. The team service resolves the
-   * team; then the seat takeover rule applies: a live socket already holding
-   * the seat refuses the join, unless the request names that socket as its
-   * previous one — then it is listed to close. Records the connection and the
-   * roster in one session write, so the team is on the leaderboard from the
-   * moment it joins, at zero points until it scores. The join reply (saved
-   * answers, bonus awards, ratings and feedback) goes to the sender before
-   * any room push. `isSocketLive` comes from the socket layer, the only place
-   * that knows whether a socket is still connected.
+   * A team joins (or rejoins) from `socketId`; see the team roster change
+   * module for the seat takeover rule. The join reply goes to the sender
+   * before any room push. `isSocketLive` comes from the socket layer.
    */
   async teamJoined(
     joinCode: string,
@@ -486,81 +413,13 @@ export class GameStateService implements OnModuleInit {
     try {
       const { team, joined } = await this.sessionWrite.write(
         joinCode,
-        async (session) => {
-          // Resolved inside the write, so a leave or kick for the same team
-          // lands either wholly before or wholly after this join.
-          const team = await this.teamService.join(
-            session.seededGame.gameSessionId,
-            request.teamName,
-            {
-              teamToken: request.teamToken,
-              teamCode: request.teamCode,
-              joinCode: request.joinCode,
-            },
-          );
-          const heldBy = session.connectedTeamSockets[team.id];
-          const takenOver =
-            heldBy && heldBy !== socketId && isSocketLive(heldBy)
-              ? heldBy
-              : null;
-          // A takeover is the same device auto-reconnecting on a fresh socket
-          // before our ping timeout noticed its old one died (network switch,
-          // phone waking up). Socket ids are random and never shared with other
-          // clients, so only the device that held that socket can name it here.
-          // Decided inside the write, so two joins racing for one seat can't
-          // both pass.
-          if (takenOver && request.previousSocketId !== takenOver) {
-            throw new SessionRefusal(
-              `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
-            );
-          }
-          return {
-            session: withTeams(
-              withTeamConnected(session, team.id, socketId),
-              await this.teamService.listForSession(
-                session.seededGame.gameSessionId,
-              ),
-            ),
-            outcome: {
-              team,
-              joined: {
-                ...BROADCAST_STATE_OUTCOME,
-                socketsToClose: takenOver ? [takenOver] : [],
-              },
-            },
-          };
-        },
+        (session) =>
+          this.rosterChanges.join(session, { request, socketId, isSocketLive }),
       );
 
       return {
         ...joined,
-        replies: [
-          {
-            event: SOCKET_EVENTS.JOIN_ACCEPTED,
-            payload: {
-              teamId: team.id,
-              teamName: team.name,
-              teamToken: team.token,
-              teamCode: team.code,
-              answers: await this.answerService.listForTeam(
-                gameSessionId,
-                team.id,
-              ),
-              bonusAwards: await this.bonusService.listForTeam(
-                gameSessionId,
-                team.id,
-              ),
-              roundRatings: await this.feedbackService.listRoundRatingsForTeam(
-                gameSessionId,
-                team.id,
-              ),
-              feedback: await this.feedbackService.getFeedbackForTeam(
-                gameSessionId,
-                team.id,
-              ),
-            },
-          },
-        ],
+        replies: [await this.rosterChanges.joinReply(gameSessionId, team)],
       };
     } catch (error) {
       if (error instanceof SessionRefusal) throw error;
@@ -577,17 +436,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome | null> {
     return this.sessionWrite.write<SessionOutcome | null>(
       joinCode,
-      (session) => {
-        const teamId = findTeamIdBySocketId(session, socketId);
-        return Promise.resolve(
-          teamId === null
-            ? { session, outcome: null }
-            : {
-                session: withoutTeamConnection(session, teamId),
-                outcome: BROADCAST_STATE_OUTCOME,
-              },
-        );
-      },
+      (session) => this.rosterChanges.disconnect(session, socketId),
       NOT_TOUCHING_SCORES,
     );
   }
@@ -626,11 +475,7 @@ export class GameStateService implements OnModuleInit {
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      (session) =>
-        Promise.resolve({
-          session: withBreakEndTime(session, breakEndsAt),
-          outcome: BROADCAST_STATE_OUTCOME,
-        }),
+      (session) => this.settingsChanges.breakEndTime(session, breakEndsAt),
       NOT_TOUCHING_SCORES,
     );
   }
@@ -643,154 +488,53 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.write(
       joinCode,
       (session) =>
-        Promise.resolve({
-          session: withDisplayTextScale(session, displayTextScale),
-          outcome: BROADCAST_STATE_OUTCOME,
-        }),
+        this.settingsChanges.displayTextScale(session, displayTextScale),
       NOT_TOUCHING_SCORES,
     );
   }
 
-  /**
-   * A showdown guess from `socketId`. A session write: inside it, checks the
-   * showdown still accepts guesses, then that the socket owns the seat, then
-   * that the team takes part, stores the guess and records it on the session.
-   * Checked against the session the write holds, so a guess sent as the
-   * reveal starts is either counted by the resolve or refused. The latest
-   * guess replaces any earlier one.
-   */
+  /** A showdown guess from `socketId`; checked against the session the write holds, so a guess sent as the reveal starts is counted or refused. */
   submitShowdownGuess(
     joinCode: string,
-    { showdownRoundId, teamId, value }: SubmitShowdownGuessPayload,
+    payload: SubmitShowdownGuessPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        const round = session.activeShowdownRound;
-        if (
-          !isShowdownAcceptingGuesses(
-            round,
-            showdownRoundId,
-            session.showdownRevealStep,
-          )
-        ) {
-          throw new SessionRefusal(
-            'This showdown round is no longer accepting guesses',
-          );
-        }
-        if (session.connectedTeamSockets[teamId] !== socketId) {
-          throw new SessionRefusal(
-            'You may only submit guesses for your own team',
-          );
-        }
-        if (!round?.participants.some((entry) => entry.teamId === teamId)) {
-          throw new SessionRefusal(
-            'Your team is not part of this showdown round',
-          );
-        }
-
-        await refusingInvalidShowdown(() =>
-          this.showdownService.submitGuess(showdownRoundId, teamId, value),
-        );
-        return {
-          session: withShowdownGuess(session, teamId, value),
-          outcome: BROADCAST_STATE_OUTCOME,
-        };
-      },
+      (session) => this.showdownsChanges.guess(session, payload, socketId),
       NOT_TOUCHING_SCORES,
     );
   }
 
-  /**
-   * Starts a showdown round for the teams tied for first, in leaderboard
-   * (seat) order. A session write: the tie is read from the leaderboard of
-   * the session the write holds, so a round is only created for teams still
-   * tied. Leaves
-   * isLeaderboardVisible alone: the admin's own Hide Leaderboard press clears
-   * it before the reveal starts, and forcing it here would yank the final
-   * standings off the display the moment the tiebreaker question is saved.
-   */
+  /** Starts a showdown round for the teams tied for first, read from the session the write holds. Leaves isLeaderboardVisible alone. */
   createShowdownRound(
     joinCode: string,
-    { question, answer, points }: CreateShowdownRoundPayload,
+    payload: CreateShowdownRoundPayload,
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        const tied = getTiedForFirst(session.leaderboard);
-        if (tied.length < 2) {
-          throw new SessionRefusal('No tie for first place to break');
-        }
-
-        const round = await refusingInvalidShowdown(() =>
-          this.showdownService.createRound(
-            session.seededGame.gameSessionId,
-            tied.map(({ teamId, teamName }) => ({ teamId, teamName })),
-            question,
-            answer,
-            points,
-          ),
-        );
-        return {
-          session: withActiveShowdownRound(session, round),
-          outcome: BROADCAST_STATE_OUTCOME,
-        };
-      },
+      (session) => this.showdownsChanges.newRound(session, payload),
       NOT_TOUCHING_SCORES,
     );
   }
 
-  /**
-   * Merges `partial` over the session's current settings, lobby-only — the
-   * admin can keep adjusting settings freely up until START_QUIZ, at which
-   * point the values in effect must stop moving under the game. A session
-   * write (no standings read): the lobby check runs against the session the
-   * previous write left, so a join or START_QUIZ queued first is respected.
-   */
+  /** Merges `partial` over the session's settings, lobby-only: the check runs against the session the previous write left. */
   async updateSessionSettings(
     joinCode: string,
     partial: Partial<SessionSettings>,
   ): Promise<void> {
     await this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        if (session.progress.status !== 'lobby') {
-          throw new SessionSettingsUpdateBlockedError(
-            joinCode,
-            `already started (status: "${session.progress.status}")`,
-          );
-        }
-        const settings = { ...session.seededGame.settings, ...partial };
-        await this.seedService.updateSettings(
-          session.seededGame.gameSessionId,
-          settings,
-        );
-        return {
-          session: {
-            ...session,
-            seededGame: { ...session.seededGame, settings },
-          },
-          outcome: undefined,
-        };
-      },
+      (session) => this.settingsChanges.lobbySettings(session, partial),
       NOT_TOUCHING_SCORES,
     );
   }
 
   /**
-   * Applies an admin action (or a timer expiry standing in for one) and says
-   * what must be pushed. Carries the press out through the Move committer —
-   * every follow-up it implies (the fresh leaderboard when it is toggled on,
-   * the per-team answer sync on reveal entry) comes back in the outcome — so
-   * the admin path and both timer paths behave the same. A session write:
-   * the commit runs against the session as the previous write left it, so
-   * no other session write (answers, grades, bonuses, roster changes, other
-   * presses) that landed while the press waited on the database is lost. The
-   * session is stored only once its progress is saved,
-   * so a refused press leaves it where it was. Refuses with the commit's own
-   * message (illegal transition, ungraded answers); a failed save is refused
-   * the same way.
+   * Applies an admin action (or a timer expiry standing in for one) through
+   * the Move committer, inside a session write, so no other write that landed
+   * meanwhile is lost. A refused press (or failed save) leaves the session
+   * where it was and is refused with the commit's own message.
    */
   applyAdminAction(
     joinCode: string,
@@ -805,264 +549,61 @@ export class GameStateService implements OnModuleInit {
       });
   }
 
-  /**
-   * A team's answer arrived from `socketId`. Refuses it when the question is
-   * no longer open or the socket doesn't own the team's seat; otherwise
-   * measures the kahoot response time from the phase start that speed scoring
-   * anchors to, stores the answer, refreshes the leaderboard, the question's
-   * answered-team ids and its ungraded flag, and replies "answer received" to
-   * the sender (graded points included for auto-graded types).
-   */
+  /** A team's answer from `socketId`: refused when the question is closed or the seat isn't the socket's; see the answers change module. */
   submitAnswer(
     joinCode: string,
-    { teamId, questionId, value }: SubmitAnswerPayload,
+    payload: SubmitAnswerPayload,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      if (!isQuestionOpenForAnswering(session, questionId)) {
-        throw new SessionRefusal('Answers are locked for this question');
-      }
-      if (session.connectedTeamSockets[teamId] !== socketId) {
-        throw new SessionRefusal(
-          'You may only submit answers for your own team',
-        );
-      }
-
-      const responseMs =
-        session.phaseStartedAt === null
-          ? null
-          : Date.now() - session.phaseStartedAt;
-      const submitted = await this.answerService.submit(
-        session.seededGame.gameSessionId,
-        questionId,
-        teamId,
-        value,
-        responseMs,
-      );
-
-      const refreshed = await this.answerChange(session, questionId);
-      return {
-        session: refreshed.session,
-        outcome: {
-          ...refreshed.outcome,
-          replies: [
-            {
-              event: SOCKET_EVENTS.ANSWER_RECEIVED,
-              payload: {
-                questionId,
-                teamId: submitted.teamId,
-                teamName: submitted.teamName,
-                value: submitted.value,
-                pointsAwarded: submitted.pointsAwarded,
-                gradedAt: submitted.gradedAt,
-                verdict: submitted.verdict,
-              },
-            },
-          ],
-        },
-      };
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.answersChanges.submit(session, payload, socketId),
+    );
   }
 
-  /**
-   * An admin grades an answer by hand. Refuses what the answer service
-   * refuses (an unknown answer, a closest_guess answer); otherwise runs the
-   * same refresh as submitAnswer for the answer's question.
-   */
+  /** An admin grades an answer by hand; runs the same refresh as submitAnswer. */
   async gradeAnswer(
     joinCode: string,
     answerId: number,
     pointsAwarded: number,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      let questionId: number;
-      try {
-        ({ questionId } = await this.answerService.grade(
-          session.seededGame.gameSessionId,
-          answerId,
-          pointsAwarded,
-        ));
-      } catch (error) {
-        throw new SessionRefusal(
-          error instanceof Error ? error.message : 'Unable to grade answer',
-        );
-      }
-      return await this.answerChange(session, questionId);
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.answersChanges.grade(session, answerId, pointsAwarded),
+    );
   }
 
-  /**
-   * An admin awards a bonus. The session's own enabled categories and
-   * per-category limit decide whether it is allowed (a refusal carries the
-   * bonus service's message); the awarded team's socket, if connected, gets
-   * the BONUS_AWARDED notice.
-   */
-  async awardBonus(
+  /** An admin awards a bonus; a refusal carries the bonus service's message. */
+  awardBonus(
     joinCode: string,
-    { teamId, category, points, reason }: AwardBonusPayload,
+    payload: AwardBonusPayload,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      const { enabledBonusCategories, maxBonusAwardsPerCategory } =
-        session.seededGame.settings;
-      try {
-        await this.bonusService.award(
-          session.seededGame.gameSessionId,
-          teamId,
-          category,
-          points,
-          reason,
-          enabledBonusCategories,
-          maxBonusAwardsPerCategory,
-        );
-      } catch (error) {
-        if (error instanceof InvalidBonusAwardError) {
-          throw new SessionRefusal(error.message);
-        }
-        throw error;
-      }
-      return this.bonusChange(session, {
-        teamId,
-        notice: { category, points, reason },
-      });
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.bonusChanges.award(session, payload),
+    );
   }
 
-  /**
-   * A team leaves the session from `socketId`. Refuses unless that socket owns
-   * the team's seat; otherwise removes the team from the roster and refreshes
-   * the roster and leaderboard in every room.
-   */
+  /** A team leaves from `socketId`; refused unless that socket owns the seat. */
   teamLeft(
     joinCode: string,
     teamId: number,
     socketId: string,
   ): Promise<SessionOutcome> {
-    return this.sessionWrite.write(joinCode, async (session) => {
-      // Checked against the session as the previous write left it, so a
-      // leave from a socket that just lost the seat to a rejoin is refused.
-      if (session.connectedTeamSockets[teamId] !== socketId) {
-        throw new SessionRefusal('Can only leave the session as your own team');
-      }
-      return await this.teamRemovedChange(session, teamId, 'left');
-    });
+    return this.sessionWrite.write(joinCode, (session) =>
+      this.rosterChanges.leave(session, { teamId, socketId }),
+    );
   }
 
-  /**
-   * The admin kicks a team: removes it from the roster even when it has no
-   * socket. The outcome carries TEAM_KICKED for the socket the team holds, if
-   * any, and closes that socket after the notice.
-   */
+  /** The admin kicks a team, even one with no socket; the team's socket, if any, gets TEAM_KICKED and is closed. */
   kickTeam(joinCode: string, teamId: number): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      this.teamRemovedChange(session, teamId, 'kicked'),
+      this.rosterChanges.kick(session, teamId),
     );
   }
 
-  /**
-   * The change a team's removal makes, run inside the caller's own session
-   * write: removes the team from the roster, then drops its connection and
-   * swaps in the roster after its removal, so the next snapshot never has one
-   * without the other. A kick also carries TEAM_KICKED for the socket the team
-   * held when the write ran, if it still has one, then closes that socket.
-   */
-  private async teamRemovedChange(
-    session: SessionState,
-    teamId: number,
-    reason: 'kicked' | 'left',
-  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const { gameSessionId } = session.seededGame;
-    await this.teamService.removeFromRoster(gameSessionId, teamId);
-    const socketId = session.connectedTeamSockets[teamId];
-    const notices =
-      reason === 'kicked' && socketId
-        ? [
-            {
-              socketId,
-              event: SOCKET_EVENTS.TEAM_KICKED,
-              payload: undefined,
-            },
-          ]
-        : [];
-    return {
-      session: withTeams(
-        withoutTeamConnection(session, teamId),
-        await this.teamService.listForSession(gameSessionId),
-      ),
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        notices,
-        socketsToClose: notices.map((notice) => notice.socketId),
-      },
-    };
-  }
-
-  /**
-   * A bonus award was added, edited or deleted: refreshes the leaderboard the
-   * same way grading does. Carries no BONUS_AWARDED notice: callers that
-   * award a bonus run `bonusChange` inside their own write instead.
-   */
+  /** A bonus award was added, edited or deleted: refreshes the leaderboard. */
   bonusChanged(joinCode: string): Promise<SessionOutcome> {
     return this.sessionWrite.write(joinCode, (session) =>
-      Promise.resolve(this.bonusChange(session)),
+      this.bonusChanges.changed(session),
     );
-  }
-
-  /**
-   * The change a bonus award makes, built from the session it is handed. Not
-   * a write of its own — callers run it inside theirs. `awarded` (a fresh
-   * award only) carries its BONUS_AWARDED notice for that team's socket, if
-   * it is connected.
-   */
-  private bonusChange(
-    session: SessionState,
-    awarded?: { teamId: number; notice: TeamBonusAwardView },
-  ): { session: SessionState; outcome: SessionOutcome } {
-    const socketId = awarded
-      ? session.connectedTeamSockets[awarded.teamId]
-      : undefined;
-    const notices =
-      awarded && socketId
-        ? [
-            {
-              socketId,
-              event: SOCKET_EVENTS.BONUS_AWARDED,
-              payload: awarded.notice,
-            },
-          ]
-        : [];
-    return {
-      session,
-      outcome: { ...BROADCAST_STATE_OUTCOME, notices },
-    };
-  }
-
-  /**
-   * The change after an answer was stored or graded: the question's
-   * answered-team ids and grading refresh, built from the session it is
-   * handed. Not a write of its own — callers run it inside theirs.
-   */
-  private async answerChange(
-    started: SessionState,
-    questionId: number,
-  ): Promise<{ session: SessionState; outcome: SessionOutcome }> {
-    const [answers, graded] = await Promise.all([
-      this.answerService.listForQuestion(
-        started.seededGame.gameSessionId,
-        questionId,
-      ),
-      this.grading.gradesChanged(started, [questionId]),
-    ]);
-    return {
-      session: withAnsweredTeamIds(
-        graded,
-        questionId,
-        answers.map((answer) => answer.teamId),
-      ),
-      outcome: {
-        ...BROADCAST_STATE_OUTCOME,
-        answerListQuestionIds: [questionId],
-      },
-    };
   }
 
   /**

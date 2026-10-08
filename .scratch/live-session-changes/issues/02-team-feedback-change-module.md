@@ -16,7 +16,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Round rated and feedback sent are built by the team feedback change module. Their façade methods are each a single `write` call carrying the "doesn't touch scores" option.
 - [ ] The nothing-to-push outcome lives in the team feedback change module, and the game state class no longer defines it.

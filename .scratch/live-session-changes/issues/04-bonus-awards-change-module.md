@@ -12,7 +12,7 @@ Parent spec: `.scratch/live-session-changes/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Award bonus and bonus changed are built by the bonus awards change module. Their façade methods are each a single `write` call.
 - [ ] The shared bonus change is private to the module. Only a fresh award produces BONUS_AWARDED.
