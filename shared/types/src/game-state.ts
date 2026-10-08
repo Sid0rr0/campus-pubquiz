@@ -178,6 +178,15 @@ export function getNextGameState(
       return illegal(progress.status, action);
 
     case 'PREVIOUS':
+      // Undoes START_QUIZ: no question has opened yet, so nothing is lost.
+      if (progress.status === 'rules')
+        return {
+          ...progress,
+          status: 'lobby',
+          roundIndex: 0,
+          questionIndex: 0,
+          revealIndex: 0,
+        };
       if (progress.status === 'round_overview')
         return {
           ...progress,
