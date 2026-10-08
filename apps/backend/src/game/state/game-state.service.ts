@@ -8,10 +8,8 @@ import {
   buildSnapshot,
   type CreateShowdownRoundPayload,
   DEFAULT_SESSION_SETTINGS,
-  type FeedbackField,
   freshSessionState,
   type GameAction,
-  getFeedbackField,
   isGradedStatus,
   type JoinPlayersPayload,
   type LiveEditFrontier,
@@ -31,7 +29,6 @@ import {
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
-import { FEEDBACK_OFF_REASON } from '@/feedback/feedback-off-reason';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { StandingsService } from '@/standings/standings.service';
 import { SeedService } from '@/db/seed.service';
@@ -42,11 +39,11 @@ import { AnswersChanges } from '@/game/state/answers-changes';
 import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
+import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
 import { ShowdownsChanges } from '@/game/state/showdowns-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
 import { SessionCloseBlockedError } from '@/game/state/errors/session-close-blocked.error';
-import { findTeamIdBySocketId } from '@/game/state/session-updates.util';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -75,12 +72,6 @@ export { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 /** The option for a session write whose event doesn't change scores: skips the standings read. */
 const NOT_TOUCHING_SCORES = { refreshStandings: false } as const;
 
-/** The outcome of an event that is only acknowledged to its sender: no emits, no broadcast. */
-const NOTHING_TO_PUSH_OUTCOME: SessionOutcome = {
-  ...BROADCAST_STATE_OUTCOME,
-  shouldBroadcastState: false,
-};
-
 @Injectable()
 export class GameStateService implements OnModuleInit {
   // A string, not `GameStateService.name`: `nest build` crashes with
@@ -93,6 +84,7 @@ export class GameStateService implements OnModuleInit {
   private readonly answersChanges: AnswersChanges;
   private readonly bonusChanges: BonusAwardsChanges;
   private readonly rosterChanges: TeamRosterChanges;
+  private readonly feedbackChanges: TeamFeedbackChanges;
   private readonly showdownsChanges: ShowdownsChanges;
 
   constructor(
@@ -117,6 +109,7 @@ export class GameStateService implements OnModuleInit {
       this.bonusService,
       this.feedbackService,
     );
+    this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
     this.showdownsChanges = new ShowdownsChanges(this.showdownService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
@@ -383,73 +376,31 @@ export class GameStateService implements OnModuleInit {
   }
 
   /**
-   * A team rates a round of the break card. Checked against the session this
-   * write holds: the socket belongs to a team, feedback is collected, and the
-   * round is open for rating — so a rating sent as the break ends is either
-   * saved before the press or refused after it. Stores the rating inside the
-   * write; changes no scores and pushes nothing.
+   * A team rates a round of the break card. A session write built by the team
+   * feedback change module; changes no scores and pushes nothing.
    */
   roundRated(
     joinCode: string,
-    { roundId, stars }: RateRoundPayload,
+    payload: RateRoundPayload,
     socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.writeTeamFeedback(joinCode, socketId, {
-      noTeamReason: 'Join a team before rating a round',
-      closedReason: "This round can't be rated right now",
-      isOpen: (feedback) =>
-        feedback?.rounds.some((round) => round.id === roundId) ?? false,
-      store: (gameSessionId, teamId) =>
-        this.feedbackService.rateRound(gameSessionId, teamId, roundId, stars),
-    });
-  }
-
-  /**
-   * A team sends its comment and topic suggestions from the final form.
-   * Checked and stored inside one session write, like `roundRated`, so
-   * feedback is never stored after the final form closed.
-   */
-  feedbackSent(
-    joinCode: string,
-    { comment, topics }: SendFeedbackPayload,
-    socketId: string,
-  ): Promise<SessionOutcome> {
-    return this.writeTeamFeedback(joinCode, socketId, {
-      noTeamReason: 'Join a team before sending feedback',
-      closedReason: "Feedback can't be sent right now",
-      isOpen: (feedback) => feedback?.kind === 'final_form',
-      store: (gameSessionId, teamId) =>
-        this.feedbackService.sendFeedback(gameSessionId, teamId, {
-          comment,
-          topics,
-        }),
-    });
-  }
-
-  private writeTeamFeedback(
-    joinCode: string,
-    socketId: string,
-    rules: {
-      noTeamReason: string;
-      closedReason: string;
-      isOpen: (feedback: FeedbackField) => boolean;
-      store: (gameSessionId: number, teamId: number) => Promise<void>;
-    },
   ): Promise<SessionOutcome> {
     return this.sessionWrite.write(
       joinCode,
-      async (session) => {
-        const teamId = findTeamIdBySocketId(session, socketId);
-        if (teamId === null) throw new SessionRefusal(rules.noTeamReason);
-        if (!session.seededGame.settings.collectFeedback) {
-          throw new SessionRefusal(FEEDBACK_OFF_REASON);
-        }
-        if (!rules.isOpen(getFeedbackField(session))) {
-          throw new SessionRefusal(rules.closedReason);
-        }
-        await rules.store(session.seededGame.gameSessionId, teamId);
-        return { session, outcome: NOTHING_TO_PUSH_OUTCOME };
-      },
+      (session) => this.feedbackChanges.roundRated(session, payload, socketId),
+      NOT_TOUCHING_SCORES,
+    );
+  }
+
+  /** A team sends its comment and topic suggestions from the final form. Like `roundRated`. */
+  feedbackSent(
+    joinCode: string,
+    payload: SendFeedbackPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(
+      joinCode,
+      (session) =>
+        this.feedbackChanges.feedbackSent(session, payload, socketId),
       NOT_TOUCHING_SCORES,
     );
   }
