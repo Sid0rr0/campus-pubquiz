@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { ImportQuestionPreview } from '../import';
-import { checkQuestion } from '../question-kind';
+import { QUESTION_KINDS, checkQuestion } from '../question-kind';
+import { QUESTION_TYPES } from '../question-types';
+
+describe('which question types carry a margin', () => {
+  it('is Number alone', () => {
+    const withMargin = QUESTION_TYPES.filter(
+      (type) => QUESTION_KINDS[type].hasMargin,
+    );
+
+    expect(withMargin).toEqual(['number']);
+  });
+});
 
 function numberQuestion(
   overrides: Partial<ImportQuestionPreview> = {},
