@@ -198,7 +198,8 @@ export interface ImportOutcome {
   result: { kind: 'summary' | 'issues'; message: string };
 }
 
-function plural(count: number, noun: string): string {
+/** "1 round" / "2 rounds" — the count with its noun, pluralised. */
+export function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
@@ -244,6 +245,14 @@ export function importOutcome({
     title: newTitle,
     result: { kind: 'summary', message },
   };
+}
+
+/** The title after an import lands: the latest title if it isn't blank, otherwise the import's. Decided against the latest state so an edit made during an in-flight fetch isn't overwritten. */
+export function titleAfterImport(
+  currentTitle: string,
+  importedTitle: string,
+): string {
+  return currentTitle.trim() ? currentTitle : importedTitle;
 }
 
 /** The title to send with a CSV import: the current title, or the file name without ".csv" when the title is blank. */
@@ -337,6 +346,7 @@ export function addRound(
   return [...rounds, makeRound(id, `Round ${rounds.length + 1}`)];
 }
 
+/** Applies a partial patch to the round with this id. */
 export function updateRound(
   rounds: readonly EditorRound[],
   roundId: string,
@@ -347,6 +357,7 @@ export function updateRound(
   );
 }
 
+/** Removes the round with this id. */
 export function deleteRound(
   rounds: readonly EditorRound[],
   roundId: string,
@@ -355,11 +366,11 @@ export function deleteRound(
 }
 
 /** Moves a round one place up (-1) or down (1). Returns `rounds` itself at either end or for an unknown id. */
-export function moveRound(
-  rounds: EditorRound[],
+export function moveRound<Rounds extends readonly EditorRound[]>(
+  rounds: Rounds,
   roundId: string,
   direction: -1 | 1,
-): EditorRound[] {
+): Rounds | EditorRound[] {
   const index = rounds.findIndex((round) => round.id === roundId);
   const targetIndex = index + direction;
   if (index === -1 || targetIndex < 0 || targetIndex >= rounds.length)

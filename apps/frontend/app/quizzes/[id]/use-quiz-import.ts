@@ -11,6 +11,7 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import {
   csvImportTitle,
   importOutcome,
+  type ImportOutcome,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 
@@ -20,7 +21,7 @@ interface UseQuizImportOptions {
   /** Whether the editor (not the empty state) is showing — "add to quiz" only applies there. */
   isEditorShowing: boolean;
   /** Applies an import's new rounds and title to the draft. */
-  onApply: (outcome: { rounds: EditorRound[]; title: string }) => void;
+  onApply: (outcome: ImportOutcome) => void;
 }
 
 export interface QuizImport {
@@ -53,7 +54,7 @@ export function useQuizImport({
       shouldAdd: appendImport && isEditorShowing,
       makeId: () => crypto.randomUUID(),
     });
-    onApply({ rounds: outcome.rounds, title: outcome.title });
+    onApply(outcome);
     if (outcome.result.kind === 'issues') {
       setImportError(outcome.result.message);
     } else {

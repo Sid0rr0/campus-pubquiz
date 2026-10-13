@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -18,6 +18,9 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
 import {
   makeRound,
+  plural,
+  titleAfterImport,
+  type ImportOutcome,
   roundFromPreview,
   toSaveRequest,
   withSyncedQuestionIds,
@@ -54,7 +57,7 @@ export interface QuizDraft {
   /** Applies a pure round edit (current rounds in, new rounds out). */
   editRounds: (edit: (rounds: EditorRound[]) => EditorRound[]) => void;
   /** Replaces the draft's rounds and title (an import's outcome) and shows the editor. */
-  applyImport: (outcome: { rounds: EditorRound[]; title: string }) => void;
+  applyImport: (outcome: ImportOutcome) => void;
   liveEdit: LiveEditFrontier | undefined;
   refreshLockState: () => void;
   isRefreshingLockState: boolean;
@@ -101,6 +104,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [savedFlashRun, setSavedFlashRun] = useState(0);
   const [liveEdit, setLiveEdit] = useState<LiveEditFrontier | undefined>(
     undefined,
   );
@@ -139,6 +143,14 @@ export function useQuizDraft(quizId: string): QuizDraft {
     );
   }
 
+  // Hides the flash after a moment; re-saving restarts the timer and
+  // unmounting cancels it.
+  useEffect(() => {
+    if (!savedFlash) return;
+    const timer = setTimeout(() => setSavedFlash(false), SAVED_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [savedFlash, savedFlashRun]);
+
   const refreshLockStateMutation = useMutation({
     mutationFn: () => fetchQuizDraft(numericQuizId as number),
     onSuccess: (draft) => setLiveEdit(draft.liveEdit),
@@ -155,7 +167,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
         router.replace(`/quizzes/${result.quizId}`);
       }
       setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), SAVED_FLASH_MS);
+      setSavedFlashRun((run) => run + 1);
       toast.success('Quiz saved');
       void queryClient.invalidateQueries({ queryKey: queryKeys.quizzes.all });
     },
@@ -164,7 +176,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
         error instanceof QuizDraftApiError ? error.issues.length : 0;
       toast.error(
         issueCount > 0
-          ? `${saveErrorMessage(error)} (${issueCount} issue${issueCount === 1 ? '' : 's'} — see below)`
+          ? `${saveErrorMessage(error)} (${plural(issueCount, 'issue')} — see below)`
           : saveErrorMessage(error),
       );
     },
@@ -195,7 +207,7 @@ export function useQuizDraft(quizId: string): QuizDraft {
     editRounds: (edit) => setRounds(edit),
     applyImport: (outcome) => {
       setRounds(outcome.rounds);
-      setTitle(outcome.title);
+      setTitle((current) => titleAfterImport(current, outcome.title));
       setPhase('editor');
     },
     liveEdit,
