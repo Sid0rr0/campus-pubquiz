@@ -9,7 +9,6 @@ import {
   ShowdownGuessesPendingError,
 } from '@campus-pubquiz/types';
 import { BlockGradingService } from '@/game/state/block-grading.service';
-import { UngradedAnswersError } from '@/game/state/errors/ungraded-answers.error';
 import type {
   GameProgressRepository,
   PersistedGameProgress,
@@ -120,18 +119,8 @@ export class MoveCommitter {
   ): Promise<SessionState> {
     // The ungraded cache and the closest_guess summaries live in memory
     // only; they must be rebuilt so /control, showdown eligibility and a
-    // closest_guess reveal walk are right straight away. Rebuilding a
-    // summary never re-scores a question the batch already graded. Its stale
-    // answer lists need no push: no socket is connected yet, and /control
-    // reads its answer list fresh when it connects.
-    const { session: summarized } = await this.grading.ensureBlockGraded(
-      session,
-      progress,
-    );
-    const refreshed = await this.grading.refreshUngradedQuestionIds(
-      summarized,
-      progress,
-    );
+    // closest_guess reveal walk are right straight away.
+    const refreshed = await this.grading.gradeForPlacement(session, progress);
     // A saved phase timer is restored exactly (unlike the auto-lock
     // deadline's deliberate re-arm-fresh) — its epoch-ms start time is real
     // and persisted, so the elapsed time it shows after a restart is still
@@ -161,18 +150,8 @@ export class MoveCommitter {
   ): Promise<CommittedMove> {
     const { progress } = step;
 
-    await this.assertNothingUngradedLeavingBreak(session, progress);
-
-    const speedScored = await this.grading.ensureKahootSpeedScored(
-      session,
-      progress,
-    );
-    const { session: graded, staleAnswerListIds } =
-      await this.grading.ensureBlockGraded(speedScored, progress);
-    const refreshed = await this.grading.refreshUngradedQuestionIds(
-      graded,
-      progress,
-    );
+    const { session: refreshed, staleAnswerListIds } =
+      await this.grading.gradeForMove(session, progress);
     // settleMove carries a raw ADVANCE under the leaderboard out as the action
     // it plans — ADVANCE for a rank reveal, TOGGLE_LEADERBOARD to hide — so the
     // reveal count, the kahoot timer and everything else downstream treat it
@@ -198,26 +177,6 @@ export class MoveCommitter {
           : [],
       },
     };
-  }
-
-  /**
-   * Committing out of the break/grading screens into reveal — the one moment
-   * this must be DB-authoritative rather than relying on the (possibly stale,
-   * e.g. post-restart) ungradedQuestionIds cache the plan and the refresh read.
-   */
-  private async assertNothingUngradedLeavingBreak(
-    session: SessionState,
-    progress: GameProgress,
-  ): Promise<void> {
-    const { status } = session.progress;
-    const isLeavingBreak = status === 'break_intro' || status === 'break';
-    if (!isLeavingBreak || progress.status !== 'reveal_intro') return;
-
-    const ungradedQuestionIds =
-      await this.grading.getUngradedBlockQuestionIds(session);
-    if (ungradedQuestionIds.length > 0) {
-      throw new UngradedAnswersError(ungradedQuestionIds);
-    }
   }
 
   /** Crossing into a showdown's final reveal step records the winner; the session write's standings read then puts its bonus on the leaderboard. */
