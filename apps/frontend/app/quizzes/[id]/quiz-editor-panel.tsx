@@ -16,7 +16,6 @@ import {
   type ImportPreview,
   type LiveEditFrontier,
   type QuizDraftIssue,
-  type RoundEditingDescription,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import {
@@ -36,20 +35,23 @@ import { queryKeys } from '@/app/lib/query-keys';
 import { csvFilename, quizToCsv } from '@/app/lib/quiz-csv-export';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
+  addRound,
+  deleteRound,
   describeEditorRounds,
   makeRound,
   mergeRoundsFromPreview,
   moveQuestionToRound,
+  moveRound,
+  moveTargetRounds,
   roundFromPreview,
+  structureNoteFor,
   toSaveRequest,
+  updateRound,
   withSyncedQuestionIds,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 import { QuizOutline } from '@/app/quizzes/[id]/quiz-outline';
-import {
-  QuizRoundEditor,
-  type MoveTargetRound,
-} from '@/app/quizzes/[id]/quiz-round-editor';
+import { QuizRoundEditor } from '@/app/quizzes/[id]/quiz-round-editor';
 
 interface QuizEditorPanelProps {
   quizId: string;
@@ -80,41 +82,6 @@ function issueLabel(issue: QuizDraftIssue): string {
   const questionLabel =
     issue.questionIndex !== null ? `, Q${issue.questionIndex + 1}` : '';
   return `Round ${issue.roundIndex + 1}${questionLabel} (${issue.field}): ${issue.message}`;
-}
-
-/** The rounds a question in round `fromIndex` may move to: every other round that can take a moved question. */
-function moveTargetRounds(
-  rounds: EditorRound[],
-  fromIndex: number,
-  described: RoundEditingDescription[] | undefined,
-): MoveTargetRound[] {
-  return rounds.flatMap((round, index) =>
-    index === fromIndex || described?.[index].canTakeMovedQuestion === false
-      ? []
-      : [
-          {
-            id: round.id,
-            label: `${index + 1}. ${round.title.trim() || 'Untitled round'}`,
-            kahootMode: round.kahootMode,
-          },
-        ],
-  );
-}
-
-/** Tells the editor why a round's questions are restricted while a session is live — and what to do instead — or nothing when they aren't. */
-function structureNoteFor(round: RoundEditingDescription): string | undefined {
-  switch (round.structureEditing) {
-    case 'free':
-      return undefined;
-    case 'after-opened':
-      return round.pinnedQuestionCount > 0
-        ? 'The opened questions stay at the start of this round. The questions after them can still be added, reordered, deleted or moved to a later round.'
-        : undefined;
-    case 'frozen':
-      return round.lockReason === 'block-locking'
-        ? "This round's block has started locking, so its questions can't be added, removed or reordered until the quiz moves on. Add new questions to a later round instead."
-        : "A live session has already reached this round, so its questions can't be added, removed or reordered.";
-  }
 }
 
 export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
@@ -292,30 +259,6 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     previewFromUrlMutation.mutate(sheetUrl);
   }
 
-  function updateRound(roundId: string, patch: Partial<EditorRound>): void {
-    setRounds((current) =>
-      current.map((round) =>
-        round.id === roundId ? { ...round, ...patch } : round,
-      ),
-    );
-  }
-
-  function deleteRound(roundId: string): void {
-    setRounds((current) => current.filter((round) => round.id !== roundId));
-  }
-
-  function moveRound(roundId: string, direction: -1 | 1): void {
-    setRounds((current) => {
-      const index = current.findIndex((round) => round.id === roundId);
-      const targetIndex = index + direction;
-      if (index === -1 || targetIndex < 0 || targetIndex >= current.length)
-        return current;
-      const copy = current.slice();
-      [copy[index], copy[targetIndex]] = [copy[targetIndex], copy[index]];
-      return copy;
-    });
-  }
-
   function moveQuestionBetweenRounds(
     questionId: string,
     targetRoundId: string,
@@ -323,13 +266,6 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     setRounds((current) =>
       moveQuestionToRound(current, questionId, targetRoundId),
     );
-  }
-
-  function addRound(): void {
-    setRounds((current) => [
-      ...current,
-      makeRound(crypto.randomUUID(), `Round ${current.length + 1}`),
-    ]);
   }
 
   const saveMutation = useMutation({
@@ -635,10 +571,20 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
                   issues={saveIssues.filter(
                     (issue) => issue.roundIndex === index,
                   )}
-                  onChange={(patch) => updateRound(round.id, patch)}
-                  onDelete={() => deleteRound(round.id)}
-                  onMoveUp={() => moveRound(round.id, -1)}
-                  onMoveDown={() => moveRound(round.id, 1)}
+                  onChange={(patch) =>
+                    setRounds((current) =>
+                      updateRound(current, round.id, patch),
+                    )
+                  }
+                  onDelete={() =>
+                    setRounds((current) => deleteRound(current, round.id))
+                  }
+                  onMoveUp={() =>
+                    setRounds((current) => moveRound(current, round.id, -1))
+                  }
+                  onMoveDown={() =>
+                    setRounds((current) => moveRound(current, round.id, 1))
+                  }
                   onMoveQuestionToRound={moveQuestionBetweenRounds}
                 />
                 {!isLast &&
@@ -662,7 +608,9 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           <FieldErrors issues={fieldIssues(quizLevelIssues, 'rounds')} />
           <Button
             type="button"
-            onClick={addRound}
+            onClick={() =>
+              setRounds((current) => addRound(current, crypto.randomUUID()))
+            }
             className="flex items-center gap-1.5 self-center rounded-2xl bg-foreground px-6 py-3 text-sm font-extrabold text-background disabled:opacity-50"
           >
             <PlusIcon aria-hidden="true" />
@@ -674,7 +622,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           liveEdit={liveEditState}
           onReorderRounds={setRounds}
           onReorderQuestions={(roundId, questions) =>
-            updateRound(roundId, { questions })
+            setRounds((current) => updateRound(current, roundId, { questions }))
           }
         />
       </div>
