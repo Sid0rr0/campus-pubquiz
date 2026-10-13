@@ -48,6 +48,22 @@ const CLOSEST_GUESS_QUIZ: CreateGatewayOptions['rounds'] = [
   },
 ];
 
+const NUMBER_QUIZ: CreateGatewayOptions['rounds'] = [
+  {
+    title: 'Estimation',
+    breakAfter: true,
+    questions: [
+      {
+        type: 'number',
+        prompt: 'How many bones?',
+        answer: '100',
+        points: 3,
+        payload: { margin: { value: 10, unit: 'percent' } },
+      },
+    ],
+  },
+];
+
 const KAHOOT_QUIZ: CreateGatewayOptions['rounds'] = [
   {
     title: 'Speed Round',
@@ -220,6 +236,37 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     await game.act('ADVANCE'); // -> locking
     await game.act('ADVANCE'); // -> reveal (speed-scored at lock)
     expect(await storedPoints(game, questionId)).toEqual({ Speedy: 15 });
+  });
+
+  it('re-scores a number question when its margin is widened, discarding a manual override', async () => {
+    const { game, admin } = await start({
+      teamNames: ['Near', 'Far'],
+      rounds: NUMBER_QUIZ,
+    });
+    const [near, far] = game.teams;
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(admin);
+    await submit(game, near, questionId, '105'); // inside the stored 10%
+    await submit(game, far, questionId, '130'); // outside it
+    const answers = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    const farAnswer = answers.find((a) => a.teamName === 'Far')!;
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: farAnswer.answerId,
+      pointsAwarded: 1,
+    });
+    expect(await storedPoints(game, questionId)).toEqual({ Near: 3, Far: 1 });
+    await game.saveAnswerKeyFix(questionId, {
+      margin: { value: 5, unit: 'absolute' },
+    });
+
+    expect(await storedPoints(game, questionId)).toEqual({ Near: 3, Far: 0 });
+    await game.saveAnswerKeyFix(questionId, {
+      margin: { value: 30, unit: 'percent' },
+    });
+
+    expect(await storedPoints(game, questionId)).toEqual({ Near: 3, Far: 3 });
   });
 
   it('skips a closest_guess question that has not been graded yet', async () => {

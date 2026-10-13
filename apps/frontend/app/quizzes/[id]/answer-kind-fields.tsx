@@ -9,6 +9,8 @@ import {
 import {
   QUESTION_KINDS,
   type AnswerKind,
+  parseFiniteNumber,
+  type MarginUnit,
   type MatchScoringMode,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
@@ -183,8 +185,71 @@ function TextFields(props: AnswerFieldsProps) {
   return <TypedAnswerFields {...props} inputType="text" />;
 }
 
+const MARGIN_UNIT_LABELS: readonly { unit: MarginUnit; label: string }[] = [
+  { unit: 'percent', label: '%' },
+  { unit: 'absolute', label: 'absolute' },
+];
+
+function marginUnitButtonClass(isActive: boolean): string {
+  return isActive
+    ? 'px-3 py-1.5 text-xs font-extrabold bg-cyan text-white'
+    : 'px-3 py-1.5 text-xs font-extrabold bg-white text-foreground';
+}
+
+/** Number questions only: how far an answer may be from the key and still be correct. Editable on an opened question too — changing it re-scores the answers. */
+function MarginRow({ question, issues, onChange }: AnswerFieldsProps) {
+  const isZeroKeyWithPercent =
+    question.marginUnit === 'percent' &&
+    parseFiniteNumber(question.correctText) === 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold text-foreground/60">
+        <label className="flex items-center gap-2">
+          Margin
+          <input
+            type="number"
+            min={0}
+            step="any"
+            value={question.marginValue}
+            onChange={(event) => onChange({ marginValue: event.target.value })}
+            className="w-20 rounded-lg border-2 border-foreground/20 px-2 py-1 text-sm font-bold text-foreground"
+          />
+        </label>
+        <div className="flex overflow-hidden rounded-lg border-2 border-foreground/20">
+          {MARGIN_UNIT_LABELS.map(({ unit, label }) => (
+            <Button
+              key={unit}
+              type="button"
+              aria-pressed={question.marginUnit === unit}
+              onClick={() => onChange({ marginUnit: unit })}
+              className={marginUnitButtonClass(question.marginUnit === unit)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        <span>0 accepts only the exact answer</span>
+      </div>
+      {isZeroKeyWithPercent && (
+        <p className="text-xs font-extrabold text-foreground/60">
+          A percentage of 0 is 0, so only an exact 0 will be accepted — switch
+          to an absolute margin to allow near misses.
+        </p>
+      )}
+      <FieldErrors issues={fieldIssues(issues, 'margin')} />
+    </div>
+  );
+}
+
 function NumberFields(props: AnswerFieldsProps) {
-  return <TypedAnswerFields {...props} inputType="number" />;
+  return (
+    <>
+      <TypedAnswerFields {...props} inputType="number" />
+      {QUESTION_KINDS[props.question.type].hasMargin && (
+        <MarginRow {...props} />
+      )}
+    </>
+  );
 }
 
 function ChoiceFields(props: AnswerFieldsProps) {

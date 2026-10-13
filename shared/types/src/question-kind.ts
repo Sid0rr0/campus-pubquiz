@@ -66,6 +66,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   gradingMode: GradingMode;
   /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
   kahootAllowed: boolean;
+  /** Whether the question carries a Margin the author sets in the editor (see margin.ts). */
+  hasMargin: boolean;
 }
 
 export const QUESTION_KINDS: {
@@ -87,6 +89,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
+    hasMargin: false,
   },
   multiple_choice: {
     type: 'multiple_choice',
@@ -101,6 +104,7 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: false,
   },
   audio: {
     type: 'audio',
@@ -115,6 +119,7 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
+    hasMargin: false,
   },
   youtube: {
     type: 'youtube',
@@ -130,6 +135,7 @@ export const QUESTION_KINDS: {
     clipNotes: youtubeClipNotes,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
+    hasMargin: false,
   },
   sort: {
     type: 'sort',
@@ -144,6 +150,7 @@ export const QUESTION_KINDS: {
     csv: sortCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: false,
   },
   match: {
     type: 'match',
@@ -158,6 +165,7 @@ export const QUESTION_KINDS: {
     csv: matchCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: false,
   },
   closest_guess: {
     type: 'closest_guess',
@@ -172,6 +180,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'batch',
     kahootAllowed: false,
+    hasMargin: false,
   },
   number: {
     type: 'number',
@@ -186,6 +195,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: true,
   },
 };
 

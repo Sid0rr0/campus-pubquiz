@@ -80,8 +80,7 @@ export function isBatchGradedType(type: QuestionType): boolean {
 
 /** Whether the type carries a margin: a number graded automatically at submit (closest guess is a number graded in batch). */
 export function hasMarginType(type: QuestionType): boolean {
-  const kind = QUESTION_KINDS[type];
-  return kind.inputKind === 'number' && kind.gradingMode === 'auto';
+  return QUESTION_KINDS[type].hasMargin;
 }
 
 export function isKahootAllowedType(type: QuestionType): boolean {

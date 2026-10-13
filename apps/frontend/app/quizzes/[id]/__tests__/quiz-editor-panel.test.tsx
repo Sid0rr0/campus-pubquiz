@@ -1615,4 +1615,174 @@ describe('QuizEditorPanel', () => {
       expect(saved).not.toHaveProperty('options');
     });
   });
+
+  describe('Number question margin', () => {
+    async function startWithQuestion(user: ReturnType<typeof userEvent.setup>) {
+      renderWithQuery(<QuizEditorPanel quizId="new" />);
+      await user.click(
+        screen.getByRole('button', { name: /start from scratch/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /add question/i }));
+    }
+
+    it('shows the margin row only for the Number type, starting at 10%', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+
+      expect(screen.queryByLabelText(/^margin$/i)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      expect(screen.getByLabelText(/^margin$/i)).toHaveValue(10);
+      expect(screen.getByRole('button', { name: '%' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: /^closest guess$/i }),
+      );
+
+      expect(screen.queryByLabelText(/^margin$/i)).not.toBeInTheDocument();
+    });
+
+    it('saves a decimal absolute margin with the question', async () => {
+      const user = userEvent.setup();
+      mockCreateQuiz.mockResolvedValue({
+        quizId: 42,
+        roundCount: 1,
+        questionCount: 1,
+      });
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+      await user.type(
+        screen.getByPlaceholderText(/question prompt/i),
+        'Height in metres?',
+      );
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), '330');
+      await user.click(screen.getByRole('button', { name: /absolute/i }));
+      await user.clear(screen.getByLabelText(/^margin$/i));
+      await user.type(screen.getByLabelText(/^margin$/i), '0.5');
+
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      await waitFor(() =>
+        expect(mockCreateQuiz).toHaveBeenCalledWith(
+          expect.objectContaining({
+            rounds: [
+              expect.objectContaining({
+                questions: [
+                  expect.objectContaining({
+                    type: 'number',
+                    answer: '330',
+                    margin: { value: 0.5, unit: 'absolute' },
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ),
+      );
+    });
+
+    it('loads a stored margin back into the editor', async () => {
+      mockFetchQuizDraft.mockResolvedValue({
+        id: 5,
+        title: 'Trivia Night',
+        rounds: [
+          {
+            title: 'Estimation',
+            breakAfter: true,
+            questions: [
+              {
+                type: 'number',
+                prompt: 'Bones?',
+                answer: '206',
+                points: 1,
+                margin: { value: 2.5, unit: 'percent' },
+              },
+            ],
+          },
+        ],
+      });
+
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
+
+      expect(await screen.findByLabelText(/^margin$/i)).toHaveValue(2.5);
+    });
+
+    it('hints at an absolute margin, without blocking, when the key is 0 and the margin is a percentage', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      expect(screen.queryByText(/only an exact 0/i)).not.toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), '0');
+
+      expect(screen.getByText(/only an exact 0/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /absolute/i }));
+
+      expect(screen.queryByText(/only an exact 0/i)).not.toBeInTheDocument();
+    });
+
+    it('keeps the prompt and a numeric answer when a Free text question becomes Number', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^free text$/i }));
+      await user.type(
+        screen.getByPlaceholderText(/question prompt/i),
+        'How many bones?',
+      );
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), '206');
+
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      expect(screen.getByPlaceholderText(/question prompt/i)).toHaveValue(
+        'How many bones?',
+      );
+      expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue(206);
+    });
+
+    it('clears a Free text answer that is not a number when it becomes Number', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^free text$/i }));
+      await user.type(
+        screen.getByPlaceholderText(/question prompt/i),
+        'How many bones?',
+      );
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), 'lots');
+
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      expect(screen.getByPlaceholderText(/question prompt/i)).toHaveValue(
+        'How many bones?',
+      );
+      expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue(null);
+    });
+
+    it('shows a rejected margin next to the margin field', async () => {
+      const user = userEvent.setup();
+      mockCreateQuiz.mockRejectedValue(
+        new QuizDraftApiError('Validation failed', 422, [
+          {
+            roundIndex: 0,
+            questionIndex: 0,
+            field: 'margin',
+            message: 'A percentage margin must be at most 100',
+          },
+        ]),
+      );
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      expect(
+        await screen.findAllByText(/percentage margin must be at most 100/i),
+      ).not.toHaveLength(0);
+    });
+  });
 });

@@ -48,6 +48,14 @@ describe('GuideContent', () => {
     }
   });
 
+  it('describes the Number question margin controls and that CSV carries no margin', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('margin row');
+    expect(text).toContain('% / absolute');
+    expect(text).toContain('no margin column');
+  });
+
   it('lists every keyboard shortcut the control page listens for', () => {
     const text = renderGuideText();
 

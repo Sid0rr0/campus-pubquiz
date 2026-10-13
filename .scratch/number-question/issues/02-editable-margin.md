@@ -6,7 +6,7 @@ CSV has no margin column, the same as match's scoring mode. An imported Number q
 
 **Blocked by:** 01 (Number question type with a fixed 10% margin)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Grading uses the stored margin. For an absolute margin, allowed = value. For a percentage, allowed = |key| × value / 100. Both edges count.
 - [ ] The Number preview schema rejects a negative margin value and a percentage over 100, with issues on the margin field that the editor shows.

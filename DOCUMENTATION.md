@@ -529,7 +529,16 @@ grading behavior:
   finite number, is incorrect. A key of 0 with a percentage margin therefore
   accepts only an exact 0, and a margin of 0 accepts only the exact key. There
   is no partial credit, a Number answer is never ungraded, and the admin can
-  override any grade. Allowed in kahoot rounds, where a correct answer is
+  override any grade. **Editor:** a Number question shows a margin row next
+  to the answer (a number field, decimals allowed, plus a `%` / `absolute`
+  toggle, 10% on a new question); a key of 0 with a percentage margin shows an
+  advisory hint, not an error. Switching Free text to Number keeps the prompt
+  and keeps the answer only if it parses as a number. **CSV:** there is no
+  margin column (like match's scoring mode): import fills in 10% and export
+  writes no margin, so a custom margin is lost on export → re-import.
+  Changing the margin of an opened question is a grading-input change like a
+  key fix and re-scores its answers, discarding manual overrides.
+  Allowed in kahoot rounds, where a correct answer is
   scaled by the speed multiplier. While the question is open, the phone (under
   the prompt) and the big screen show the margin ("within 10%", "within 5");
   on reveal both show the key and the accepted range ("200 · 180–220
