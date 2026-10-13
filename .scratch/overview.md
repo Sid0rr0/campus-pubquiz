@@ -6,7 +6,7 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                   | Title                                                                                                                       | Tickets | Blocked by             |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
-| sortable-table         | [One sortable table module across five panels, and a smaller session picker](sortable-table/spec.md)                        | —       | —                      |
+| sortable-table         | [One sortable table module across five panels, and a smaller session picker](sortable-table/spec.md)                        | 3       | —                      |
 
 ## Won't do
 
