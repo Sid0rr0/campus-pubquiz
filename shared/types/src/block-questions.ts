@@ -11,6 +11,7 @@ import {
   isRevealingStatus,
 } from './game-state-groups';
 import {
+  marginOf,
   toBlockQuestionView,
   toQuestionView,
 } from './question-view-conversions';
@@ -18,14 +19,14 @@ import type {
   BlockQuestionView,
   BlockRevealQuestionView,
   QuestionView,
-  RevealQuestionView,
+  SeededQuestion,
   UpcomingQuestionPosition,
 } from './question-views';
 import { isBatchGradedType } from './scoring';
 import { getGameContext, type SessionState } from './session-state';
 
 interface RoundQuestionEntry {
-  question: RevealQuestionView;
+  question: SeededQuestion;
   questionIndexInRound: number;
 }
 
@@ -36,20 +37,30 @@ function toRevealQuestionViews(
   roundTitle: string,
   session: SessionState,
 ): BlockRevealQuestionView[] {
-  return entries.map(({ question, questionIndexInRound }) => ({
-    ...question,
-    ...(isBatchGradedType(question.type)
-      ? {
-          closestGuess: session.closestGuessSummaries[question.id] ?? {
-            hasSubmissions: false,
-            closestGuesses: [],
-          },
-        }
-      : {}),
-    roundNumber,
-    questionNumberInRound: questionIndexInRound + 1,
-    roundTitle,
-  }));
+  return entries.map(
+    ({ question: stored, questionIndexInRound }): BlockRevealQuestionView => {
+      const { margin: _stored, ...rest } = stored;
+      const margin = marginOf(stored);
+      const question = margin !== undefined ? { ...rest, margin } : rest;
+      const placement = {
+        roundNumber,
+        questionNumberInRound: questionIndexInRound + 1,
+        roundTitle,
+      };
+      if (!isBatchGradedType(question.type)) {
+        return { ...question, ...placement, revealKind: 'answer' };
+      }
+      return {
+        ...question,
+        ...placement,
+        revealKind: 'closest_guess',
+        closestGuess: session.closestGuessSummaries[question.id] ?? {
+          hasSubmissions: false,
+          closestGuesses: [],
+        },
+      };
+    },
+  );
 }
 
 export function getCurrentRoundTitle(session: SessionState): string {

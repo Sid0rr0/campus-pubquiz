@@ -4,13 +4,13 @@ import {
   type GameProgress,
   type GameStatus,
   projectScreen,
-  type RevealQuestionView,
+  type SeededQuestion,
   type SeededRound,
   type SessionState,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
 
-function question(id: number): RevealQuestionView {
+function question(id: number): SeededQuestion {
   return {
     id,
     type: 'free_text',
@@ -18,7 +18,7 @@ function question(id: number): RevealQuestionView {
     options: [],
     points: 1,
     answer: 'A',
-  } as unknown as RevealQuestionView;
+  } as unknown as SeededQuestion;
 }
 
 function round(

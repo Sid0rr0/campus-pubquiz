@@ -37,7 +37,7 @@ export interface GradedAnswer {
   questionId: number;
 }
 
-/** A question as grading sees it: the scoring inputs plus the id its answers hang off. RevealQuestionView satisfies it. */
+/** A question as grading sees it: the scoring inputs plus the id its answers hang off. SeededQuestion satisfies it. */
 export type GradableQuestion = ScoredQuestion & { id: number };
 
 type MergeField =

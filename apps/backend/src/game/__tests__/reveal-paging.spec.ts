@@ -71,6 +71,12 @@ describe('GameGateway — reveal paging', () => {
       [q3, 'Eiffel Tower'],
       [q4, 'France'],
     ]);
+    expect(revealed.revealQuestions.map((q) => q.revealKind)).toEqual([
+      'answer',
+      'answer',
+      'answer',
+      'answer',
+    ]);
     expect(
       revealed.revealQuestions.find((q) => q.id === q4)?.answerMediaUrl,
     ).toBe('https://example.com/france-flag.jpg');

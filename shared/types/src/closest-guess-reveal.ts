@@ -4,10 +4,7 @@ import {
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
 import type { GameAction, GameProgress } from './game-state-types';
-import type {
-  ClosestGuessRevealData,
-  RevealQuestionView,
-} from './question-views';
+import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
 import { findClosestGuesses, isBatchGradedType } from './scoring';
 import { getGameContext, type SessionState } from './session-state';
 
@@ -48,7 +45,7 @@ function getRevealTargetQuestion(
   roundIndex: number,
   questionIndex: number,
   revealIndex: number,
-): RevealQuestionView | undefined {
+): SeededQuestion | undefined {
   const context = getGameContext(session);
   const blockStart = getBlockStartPosition(roundIndex, questionIndex, context);
   const { roundIndex: targetRound, questionIndex: targetQuestion } =
@@ -66,7 +63,7 @@ function getRevealTargetQuestion(
  * (1 step: question + answer together immediately).
  */
 function getRevealStepCount(
-  question: RevealQuestionView | undefined,
+  question: SeededQuestion | undefined,
   session: SessionState,
 ): number {
   if (!question || !isBatchGradedType(question.type)) return 1;

@@ -13,6 +13,7 @@ function closestGuessQuestion(id: number) {
     questionNumberInRound: 1,
     roundTitle: 'Round 1',
     answer: '100',
+    revealKind: 'closest_guess' as const,
     closestGuess: {
       hasSubmissions: true,
       minGuess: '80',
@@ -75,6 +76,7 @@ describe('buildOpenedQuestions', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
       answer: 'Banana',
+      revealKind: 'answer' as const,
     };
 
     const entries = buildOpenedQuestions({ 1: revealed }, { 1: 'Apple' });
@@ -115,6 +117,7 @@ describe('buildOpenedQuestions', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
       answer: 'Banana',
+      revealKind: 'answer' as const,
     };
 
     const entries = buildOpenedQuestions(
@@ -168,6 +171,7 @@ describe('buildOpenedQuestions', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
       answer: 'Banana',
+      revealKind: 'answer' as const,
     };
 
     const entries = buildOpenedQuestions({ 1: question }, {});
@@ -224,6 +228,7 @@ describe('buildOpenedQuestions', () => {
       questionNumberInRound: 1,
       roundTitle: 'Round 1',
       answer: 'a|b|c|d',
+      revealKind: 'answer' as const,
     };
 
     const entries = buildOpenedQuestions(
@@ -267,6 +272,7 @@ describe('buildOpenedQuestions', () => {
       options: ['arthur', 'captain america'],
       matchTargets: ['shield', 'excalibur'],
       answer: 'excalibur|shield',
+      revealKind: 'answer' as const,
     };
 
     const entries = buildOpenedQuestions(

@@ -26,15 +26,22 @@ export interface OpenedQuestionEntry {
   verdict: Verdict | null;
 }
 
+/** A question not yet revealed carries no reveal kind, and a pending closest-guess one carries no answer yet; naming the optional key lets `revealKind` discriminate the union. */
+type SeenQuestion =
+  | (BlockQuestionView & { revealKind?: 'closest_guess_pending' })
+  | BlockRevealQuestionView;
+
 function isRevealed(
-  question: BlockQuestionView | BlockRevealQuestionView,
+  question: SeenQuestion,
 ): question is BlockRevealQuestionView {
-  return 'answer' in question;
+  return (
+    question.revealKind === 'answer' || question.revealKind === 'closest_guess'
+  );
 }
 
 /** Every question the team has seen open so far, oldest round/position first, paired with the team's own answer (if any), the correct answer (once revealed), and points awarded plus verdict (shown once the question arrives with its answer — 0 for an unanswered question — even if the answer was actually graded earlier). A question counts as revealed when it arrives with an answer: the players view only carries answers the big screen has already shown. Both come from the team's own synced graded answers, closest_guess included. */
 export function buildOpenedQuestions(
-  seenQuestions: Record<number, BlockQuestionView | BlockRevealQuestionView>,
+  seenQuestions: Record<number, SeenQuestion>,
   myAnswers: Record<number, string>,
   myAnswerGrades: Record<number, MyAnswerGrade> = {},
 ): OpenedQuestionEntry[] {

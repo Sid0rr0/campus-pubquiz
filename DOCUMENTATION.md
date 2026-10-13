@@ -233,7 +233,23 @@ far: `revealQuestions` holds the questions before `revealIndex`, plus the one at
 `revealIndex` once its `reveal` step is on air. A question the walk hasn't
 reached stays in `blockQuestions` without its answer, so the phone shows a
 correct answer exactly when one arrives and stepping back with Previous takes it
-away again. At `ended` the players view keeps the final block's walk as it stood
+away again.
+
+Every reveal question carries a **reveal kind** (`revealKind`), decided once by the
+projection from the question type registry, and the screens switch on it instead
+of re-deriving it from the type. `/display` and the admin views receive `answer`
+(the question with its answer and optional answer media, no closest-guess stats)
+or `closest_guess` (the same plus the `closestGuess` stats; the "no submissions"
+stats when nobody guessed). The players view can also send
+`closest_guess_pending`: before the on-air closest_guess question's answer step
+(3) it is the block question view plus the stats shown so far, with no answer and
+no answer media; from step 3 on it is `closest_guess` with the stats trimmed to
+the current step. A closest_guess question nobody guessed on is sent whole as
+`closest_guess`, and so is the `ended` reveal walk. The seeded question has no
+reveal kind or stats; they are added when the block's questions are dressed as
+reveal views. Both closest-guess kinds draw `ClosestGuessRevealScreen`, but only
+`closest_guess` passes the correct answer and answer media; the screens' switches
+are exhaustive, so a new kind fails typecheck until each handles it. At `ended` the players view keeps the final block's walk as it stood
 when the quiz ended (trimmed by `previousStatus`, so a reconnecting phone keeps
 its history): the whole block after advancing past the last reveal, the walk so
 far if End Quiz was pressed mid-reveal, nothing if it was pressed before the
@@ -545,8 +561,12 @@ grading behavior:
   accepted"; just the key when the margin is 0). The text comes from one
   shared formatter (`formatMarginText`/`formatNumberReveal` in
   `shared/types/src/margin.ts`), numbers show at most 2 decimals with trailing
-  zeros dropped, and grading always uses the exact range. Only a Number
-  question's `QuestionView` carries `margin`.
+  zeros dropped, and grading always uses the exact range. A question view (the
+  open question, the block questions and the reveal questions) carries `margin`
+  if and only if its type has one, already resolved from the Answer key: a
+  Number question with no stored margin is sent with the default, and
+  `closest_guess` and every other type are sent without one. The screens show
+  margin text from the view alone and never ask the question type registry.
 
 `multiple_choice`/`sort`/`match`/`number` are auto-graded the instant a team
 submits, and the admin can still override any of them per answer;

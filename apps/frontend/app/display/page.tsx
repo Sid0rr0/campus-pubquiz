@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
-  isBatchGradedType,
   isShowingLastBreak,
   type LeaderboardEntry,
   type OnAirScreen,
@@ -295,29 +294,37 @@ function DisplayPageContent() {
         );
       case 'reveal':
         if (!revealQuestion) return null;
-        return isBatchGradedType(revealQuestion.type) &&
-          revealQuestion.closestGuess ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-            <ClosestGuessRevealScreen
-              prompt={revealQuestion.prompt}
-              step={closestGuessRevealStep}
-              correctAnswer={revealQuestion.answer}
-              answerMediaUrl={revealQuestion.answerMediaUrl}
-              closestGuess={revealQuestion.closestGuess}
-              mediaTestIdPrefix="reveal"
-              autoplayMedia={settings.autoplayMedia}
-            />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-            <QuestionDisplay
-              question={revealQuestion}
-              mediaTestIdPrefix="reveal"
-              autoplayMedia={settings.autoplayMedia}
-              isFullscreen={progress.isMediaFullscreen}
-            />
-          </div>
-        );
+        switch (revealQuestion.revealKind) {
+          case 'closest_guess':
+            return (
+              <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+                <ClosestGuessRevealScreen
+                  prompt={revealQuestion.prompt}
+                  step={closestGuessRevealStep}
+                  correctAnswer={revealQuestion.answer}
+                  answerMediaUrl={revealQuestion.answerMediaUrl}
+                  closestGuess={revealQuestion.closestGuess}
+                  mediaTestIdPrefix="reveal"
+                  autoplayMedia={settings.autoplayMedia}
+                />
+              </div>
+            );
+          case 'answer':
+            return (
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
+                <QuestionDisplay
+                  question={revealQuestion}
+                  mediaTestIdPrefix="reveal"
+                  autoplayMedia={settings.autoplayMedia}
+                  isFullscreen={progress.isMediaFullscreen}
+                />
+              </div>
+            );
+          default: {
+            const unhandled: never = revealQuestion;
+            return unhandled;
+          }
+        }
       case 'ended':
         return (
           <div className="flex flex-1 items-center justify-center px-16 text-center">

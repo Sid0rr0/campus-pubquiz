@@ -1,8 +1,7 @@
-import { isBatchGradedType, isBreakStatus } from '@campus-pubquiz/types';
+import { isBreakStatus } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
-  BlockRevealQuestionView,
-  PendingClosestGuessRevealView,
+  PlayersRevealQuestionView,
   GameProgress,
   JoinAcceptedPayload,
   QuestionView,
@@ -31,7 +30,7 @@ interface QuestionBrowserProps {
   totalPickerSlots: number;
   selectedQuestion: QuestionView | BlockQuestionView;
   /** selectedQuestion as the reveal has shown it so far — set only while reveal is showing this question; a closest_guess question has no answer until its answer step. */
-  revealQuestion?: BlockRevealQuestionView | PendingClosestGuessRevealView;
+  revealQuestion?: PlayersRevealQuestionView;
   /** closest_guess only — which reveal sub-step to show, 0 for every other type. */
   closestGuessRevealStep: number;
   /** Active round's Kahoot-style speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
@@ -47,6 +46,55 @@ interface QuestionBrowserProps {
   ) => void;
   /** Set only when the team has turned off auto-advance — renders Prev/Next controls bounded to questions already opened. */
   navigation?: QuestionNavigation;
+}
+
+interface RevealBodyProps {
+  revealQuestion: PlayersRevealQuestionView;
+  closestGuessRevealStep: number;
+  myAnswer: string;
+}
+
+/** The revealed question as its reveal kind lays it out; both closest-guess kinds draw the closest-guess sequence, but only `closest_guess` carries the correct answer. */
+function RevealBody({
+  revealQuestion,
+  closestGuessRevealStep,
+  myAnswer,
+}: RevealBodyProps) {
+  switch (revealQuestion.revealKind) {
+    case 'closest_guess':
+    case 'closest_guess_pending': {
+      const answerProps =
+        revealQuestion.revealKind === 'closest_guess'
+          ? {
+              correctAnswer: revealQuestion.answer,
+              answerMediaUrl: revealQuestion.answerMediaUrl,
+            }
+          : {};
+      return (
+        <ClosestGuessRevealScreen
+          prompt={revealQuestion.prompt}
+          step={closestGuessRevealStep}
+          closestGuess={revealQuestion.closestGuess}
+          mediaTestIdPrefix="play-reveal"
+          {...answerProps}
+        />
+      );
+    }
+    case 'answer':
+      return (
+        <QuestionDisplay
+          question={revealQuestion}
+          isMediaHidden
+          playerAnswer={myAnswer}
+          mediaTestIdPrefix="play-reveal"
+          promptClassName="text-balance font-display text-2xl leading-tight"
+        />
+      );
+    default: {
+      const unhandled: never = revealQuestion;
+      return unhandled;
+    }
+  }
 }
 
 /** The block question picker + prompt + answer form, shown while a question is open and, unless the leaderboard overlay is on, through break/reveal so teams can browse back. */
@@ -104,31 +152,11 @@ export function QuestionBrowser({
       )}
       {progress.status === 'reveal' && revealQuestion ? (
         <div className="flex flex-col items-center gap-6 text-center">
-          {isBatchGradedType(revealQuestion.type) &&
-          revealQuestion.closestGuess ? (
-            <ClosestGuessRevealScreen
-              prompt={revealQuestion.prompt}
-              step={closestGuessRevealStep}
-              correctAnswer={
-                'answer' in revealQuestion ? revealQuestion.answer : undefined
-              }
-              answerMediaUrl={
-                'answerMediaUrl' in revealQuestion
-                  ? revealQuestion.answerMediaUrl
-                  : undefined
-              }
-              closestGuess={revealQuestion.closestGuess}
-              mediaTestIdPrefix="play-reveal"
-            />
-          ) : (
-            <QuestionDisplay
-              question={revealQuestion}
-              isMediaHidden
-              playerAnswer={myAnswer ?? ''}
-              mediaTestIdPrefix="play-reveal"
-              promptClassName="text-balance font-display text-2xl leading-tight"
-            />
-          )}
+          <RevealBody
+            revealQuestion={revealQuestion}
+            closestGuessRevealStep={closestGuessRevealStep}
+            myAnswer={myAnswer ?? ''}
+          />
           <p
             className={`font-display text-2xl ${
               myAnswerPoints === revealQuestion.points

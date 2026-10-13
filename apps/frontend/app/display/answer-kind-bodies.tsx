@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import {
   ANSWER_FORMATS,
   formatNumberReveal,
-  gradingSettingsOf,
   type AnswerKind,
   type QuestionView,
 } from '@campus-pubquiz/types';
@@ -207,7 +206,7 @@ function MatchQuestionBody({
   );
 }
 
-/** Shared by Number and closest-guess; only a Number question has a margin to show. */
+/** Shared by Number and closest-guess; the view carries a margin only for a type that has one. */
 function NumberQuestionBody({ question }: QuestionBodyProps) {
   return (
     <NumberMarginText
@@ -285,13 +284,14 @@ function typedRevealBody({ correctAnswer }: RevealBodyProps): RevealBody {
   return { lead: <AnswerLine answer={correctAnswer} /> };
 }
 
-/** Number shows the key with its accepted range; closest-guess shares the kind and keeps the plain key. */
+/** A view with a margin shows the key with its accepted range; without one (closest-guess shares the kind) it keeps the plain key. */
 function numberRevealBody(props: RevealBodyProps): RevealBody {
   const { question, correctAnswer } = props;
-  const { margin } = gradingSettingsOf(question);
-  if (!margin) return typedRevealBody(props);
+  if (!question.margin) return typedRevealBody(props);
   return {
-    lead: <AnswerLine answer={formatNumberReveal(correctAnswer, margin)} />,
+    lead: (
+      <AnswerLine answer={formatNumberReveal(correctAnswer, question.margin)} />
+    ),
   };
 }
 

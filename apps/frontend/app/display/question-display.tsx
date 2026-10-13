@@ -3,7 +3,7 @@ import {
   extractYoutubeVideoId,
   resolveAnswerKind,
   type QuestionView,
-  type RevealQuestionView,
+  type SeededQuestion,
 } from '@campus-pubquiz/types';
 import {
   QUESTION_BODIES,
@@ -124,7 +124,7 @@ export type QuestionDisplayQuestion = Pick<
   | 'matchTargets'
   | 'margin'
 > &
-  Partial<Pick<RevealQuestionView, 'answer' | 'answerMediaUrl'>>;
+  Partial<Pick<SeededQuestion, 'answer' | 'answerMediaUrl'>>;
 
 interface QuestionDisplayProps {
   /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a YouTube `mediaUrl` — ignored for non-YouTube media and for `answerMediaUrl`. */
