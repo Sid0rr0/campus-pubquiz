@@ -48,6 +48,10 @@ _Avoid_: tiebreaker round, sudden death
 The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then revises an answer into something that doesn't match the key, its mark is cleared and must be given again. A typed answer (free text, audio, YouTube) that matches the key is graded correct automatically; only the others wait for the quiz master.
 _Avoid_: scoring, marking
 
+**Grading policy**:
+The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, kahoot speed scoring, key fix.
+_Avoid_: grading rules, grading service
+
 **Half points**:
 Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a kahoot speed score) are kept to the nearest half point.
 _Avoid_: partial points (a partial answer can earn any share, not just half)
