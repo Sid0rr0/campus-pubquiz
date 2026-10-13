@@ -52,9 +52,7 @@ export function usePhoneQuestionBrowser(
     setAutoAdvanceEnabled(readAutoAdvanceSetting());
   }, []);
   // null = follow the question currently shown on the big screen.
-  const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(
-    null,
-  );
+  const [browsedQuestionId, selectQuestion] = useState<number | null>(null);
   const currentQuestion = view?.currentQuestion ?? null;
   const currentQuestionId = currentQuestion?.id ?? null;
   // Only changes while actively revealing (currentQuestionId stays null
@@ -69,7 +67,7 @@ export function usePhoneQuestionBrowser(
   const phoneScreen = view?.phoneScreen;
   const blockQuestions = view?.blockQuestions ?? NO_QUESTIONS;
   const {
-    selectedQuestion: browsedQuestion,
+    selectedQuestion: resolvedQuestion,
     previousQuestion,
     nextQuestion,
     browsedQuestionId: nextBrowsedQuestionId,
@@ -87,7 +85,7 @@ export function usePhoneQuestionBrowser(
   // Adjusted during render rather than in an Effect, per
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   if (nextBrowsedQuestionId !== browsedQuestionId) {
-    setBrowsedQuestionId(nextBrowsedQuestionId);
+    selectQuestion(nextBrowsedQuestionId);
   }
   if (currentQuestionId !== prevQuestionId) {
     setPrevQuestionId(currentQuestionId);
@@ -99,13 +97,13 @@ export function usePhoneQuestionBrowser(
   function setAutoAdvance(enabled: boolean): void {
     writeAutoAdvanceSetting(enabled);
     setAutoAdvanceEnabled(enabled);
-    setBrowsedQuestionId(
+    selectQuestion(
       browsedQuestionAfterAutoAdvanceChange(enabled, browsedQuestionId),
     );
   }
 
   const selectedQuestion =
-    phoneScreen?.kind === 'block' ? browsedQuestion : null;
+    phoneScreen?.kind === 'block' ? resolvedQuestion : null;
   const revealQuestion =
     view?.progress.status === 'reveal' && selectedQuestion
       ? view.revealQuestions.find(
@@ -126,17 +124,17 @@ export function usePhoneQuestionBrowser(
           canGoForward: nextQuestion !== null,
           onBack: () => {
             if (previousQuestion) {
-              setBrowsedQuestionId(previousQuestion.id);
+              selectQuestion(previousQuestion.id);
             }
           },
           onForward: () => {
             if (nextQuestion) {
-              setBrowsedQuestionId(nextQuestion.id);
+              selectQuestion(nextQuestion.id);
             }
           },
         },
     jumpableQuestionIds,
-    selectQuestion: setBrowsedQuestionId,
+    selectQuestion,
     autoAdvanceEnabled,
     setAutoAdvance,
   };
