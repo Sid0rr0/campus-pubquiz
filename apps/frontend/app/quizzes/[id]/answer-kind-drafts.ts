@@ -1,5 +1,6 @@
 import {
   ANSWER_FORMATS,
+  gradingSettingsOf,
   resolveAnswerKind,
   type AnswerKind,
   type ImportQuestionPreview,
@@ -93,7 +94,7 @@ const matchDraft: AnswerKindDraft = {
     const rights = ANSWER_FORMATS.match.decode(question.answer);
     const lefts = question.options ?? [];
     return {
-      matchScoringMode: question.matchScoringMode ?? 'partial',
+      matchScoringMode: gradingSettingsOf(question).matchScoringMode,
       ...(lefts.length > 0
         ? {
             matchPairs: lefts.map((left, index) => ({
