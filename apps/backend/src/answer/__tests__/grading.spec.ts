@@ -630,6 +630,39 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       expect(answers.every((a) => a.gradedAt !== null)).toBe(true);
     });
 
+    it('leaves closest_guess answers alone: only the batch grades them', async () => {
+      const guessQuestion = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'closest_guess',
+        prompt: 'How many students attend?',
+        answer: '1000',
+        points: 5,
+      });
+      await state.em.flush();
+      const team = await insertTeam('Team A', 'token-a');
+      await state.answerService.submit(
+        state.session.id,
+        guessQuestion.id,
+        team.id,
+        '1000',
+      );
+
+      await state.answerService.regradeAutoGraded(state.session.id, {
+        id: guessQuestion.id,
+        type: 'closest_guess',
+        answer: '1000',
+        points: 5,
+      });
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        guessQuestion.id,
+      );
+      expect(answer.gradedAt).toBeNull();
+      expect(answer.pointsAwarded).toBe(0);
+    });
+
     it('re-scores match partial credit against new points, replacing a manual override', async () => {
       const matchQuestion = state.em.create(Question, {
         round: state.round,

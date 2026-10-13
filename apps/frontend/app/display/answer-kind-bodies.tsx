@@ -2,13 +2,12 @@ import type { ReactNode } from 'react';
 import {
   ANSWER_FORMATS,
   DEFAULT_MARGIN,
-  formatMarginText,
   formatNumberReveal,
   hasMarginType,
   type AnswerKind,
-  type Margin,
   type QuestionView,
 } from '@campus-pubquiz/types';
+import { NumberMarginText } from '@/app/components/number-margin-text';
 import {
   getLowerOptionLetter,
   getOptionLetter,
@@ -19,17 +18,6 @@ export type AnswerBodyQuestion = Pick<
   QuestionView,
   'type' | 'options' | 'matchTargets' | 'margin'
 >;
-
-/** How precise a Number question's answer must be; the phone and the big screen both render this one text. */
-export function NumberMarginText({
-  margin = DEFAULT_MARGIN,
-  className,
-}: {
-  margin?: Margin;
-  className?: string;
-}) {
-  return <p className={className}>{formatMarginText(margin)}</p>;
-}
 
 interface QuestionBodyProps {
   question: AnswerBodyQuestion;

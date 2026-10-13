@@ -1,8 +1,11 @@
 import {
+  DEFAULT_MARGIN,
   describeLiveEditRounds,
+  hasMarginType,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
+  type Margin,
   type QuizDraftIssue,
   type RoundEditingDescription,
 } from '@campus-pubquiz/types';
@@ -41,15 +44,34 @@ function effectiveBreakAfter(
   return roundIndex === roundCount - 1 || round.breakAfter;
 }
 
+/** A question's margin as grading reads it: a Number question without a stored one has the default. */
+function effectiveMargin(question: ImportQuestionPreview): Margin | undefined {
+  if (question.margin === undefined && hasMarginType(question.type)) {
+    return DEFAULT_MARGIN;
+  }
+  return question.margin;
+}
+
+/** Whether two values of one field mean the same to grading. A margin compares by value and unit (not key order), with the default applied. */
+function isFieldEqual(
+  field: keyof ImportQuestionPreview,
+  current: ImportQuestionPreview,
+  incoming: ImportQuestionPreview,
+): boolean {
+  if (field === 'margin') {
+    const a = effectiveMargin(current);
+    const b = effectiveMargin(incoming);
+    return a?.value === b?.value && a?.unit === b?.unit;
+  }
+  return JSON.stringify(current[field]) === JSON.stringify(incoming[field]);
+}
+
 function diffQuestionFields(
   current: ImportQuestionPreview,
   incoming: ImportQuestionPreview,
   fields: (keyof ImportQuestionPreview)[],
 ): string[] {
-  return fields.filter(
-    (field) =>
-      JSON.stringify(current[field]) !== JSON.stringify(incoming[field]),
-  );
+  return fields.filter((field) => !isFieldEqual(field, current, incoming));
 }
 
 /** Why a frozen round can't change, for the editor's issue list — the current round only freezes once its block starts locking. */

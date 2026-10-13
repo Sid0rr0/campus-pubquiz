@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DEFAULT_MARGIN, MARGIN_UNITS } from './margin';
+import { DEFAULT_MARGIN, MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { isSameMultiset, splitPipeList } from './sort-match';
 import { extractYoutubeVideoId } from './youtube';
 
@@ -106,7 +106,7 @@ export const youtubePreviewSchema = withOptionalChoiceRules(
 /** An answer key that is a finite number — closest guess and Number share it. */
 const numberAnswer = z
   .string()
-  .refine((value) => value !== '' && Number.isFinite(Number(value)), {
+  .refine((value) => parseFiniteNumber(value) !== null, {
     error: 'Answer must be a number',
   });
 

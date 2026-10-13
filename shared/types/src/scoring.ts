@@ -78,7 +78,7 @@ export function isBatchGradedType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingMode === 'batch';
 }
 
-/** Whether the type carries a margin: a number graded automatically at submit (closest guess is a number graded in batch). */
+/** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */
 export function hasMarginType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].hasMargin;
 }

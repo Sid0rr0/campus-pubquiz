@@ -11,7 +11,7 @@ import type {
   JoinAcceptedPayload,
   QuestionView,
 } from '@campus-pubquiz/types';
-import { NumberMarginText } from '@/app/display/answer-kind-bodies';
+import { NumberMarginText } from '@/app/components/number-margin-text';
 import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';

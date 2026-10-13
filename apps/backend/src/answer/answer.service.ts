@@ -231,6 +231,9 @@ export class AnswerService {
     question: GradableQuestion,
     kahootTimerSeconds: number | null = null,
   ): Promise<void> {
+    // Only auto types score per answer; closest_guess is batch-graded, and
+    // scoring it here would grade each guess against the key on its own.
+    if (!isAutoGradedType(question.type)) return;
     const rows = await this.answers.find({
       gameSession: gameSessionId,
       question: question.id,

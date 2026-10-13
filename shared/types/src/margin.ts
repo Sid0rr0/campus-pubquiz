@@ -37,11 +37,15 @@ export function isWithinMargin(
   answer: number,
   margin: Margin,
 ): boolean {
+  const allowed = allowedDistance(key, margin);
+  // A margin of 0 means the exact key only, so it gets no slack.
   const slack =
-    Number.EPSILON *
-    ROUNDING_ERROR_ULPS *
-    Math.max(Math.abs(key), Math.abs(answer), 1);
-  return Math.abs(answer - key) <= allowedDistance(key, margin) + slack;
+    allowed > 0
+      ? Number.EPSILON *
+        ROUNDING_ERROR_ULPS *
+        Math.max(Math.abs(key), Math.abs(answer), 1)
+      : 0;
+  return Math.abs(answer - key) <= allowed + slack;
 }
 
 /** Parses a typed number: a non-blank string that reads as a finite number, otherwise null. */
