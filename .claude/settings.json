@@ -36,7 +36,7 @@
     ]
   },
   "env": {
-    "GATEGUARD_EXEMPT_GLOBS": "**",
+    "GATEGUARD_EXEMPT_GLOBS": "**,/private/tmp/claude-501/**",
     "GATEGUARD_BASH_ROUTINE_DISABLED": "1"
   }
 }
