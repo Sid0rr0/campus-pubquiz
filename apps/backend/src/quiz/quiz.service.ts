@@ -98,6 +98,21 @@ interface SyncContext {
   questionRepo: QuestionRepository;
 }
 
+/** The counts a save or import confirm reports back for the rounds it wrote. */
+export function toSaveResult(
+  quizId: number,
+  rounds: readonly ImportRoundPreview[],
+): QuizDraftSaveResult {
+  return {
+    quizId,
+    roundCount: rounds.length,
+    questionCount: rounds.reduce(
+      (total, round) => total + round.questions.length,
+      0,
+    ),
+  };
+}
+
 @Injectable()
 export class QuizService {
   constructor(
@@ -166,7 +181,7 @@ export class QuizService {
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
     await this.syncRoundsAndQuestions(quiz.id, normalizedRounds);
 
-    return this.toSaveResult(quiz.id, normalizedRounds);
+    return toSaveResult(quiz.id, normalizedRounds);
   }
 
   async update(
@@ -190,7 +205,7 @@ export class QuizService {
     await this.quizzes.getEntityManager().persistAndFlush(quiz);
     await this.syncRoundsAndQuestions(quizId, normalizedRounds);
 
-    return this.toSaveResult(quizId, normalizedRounds);
+    return toSaveResult(quizId, normalizedRounds);
   }
 
   /** Deletes a quiz and, via the DB's `game_sessions.quiz_id` cascade rule, every session ever run from it. Callers must reject this while a live session is running — see QuizController.remove. */
@@ -198,20 +213,6 @@ export class QuizService {
     const quiz = await this.quizzes.findOne({ id: quizId });
     if (!quiz) throw new QuizNotFoundError(quizId);
     await this.quizzes.getEntityManager().removeAndFlush(quiz);
-  }
-
-  private toSaveResult(
-    quizId: number,
-    rounds: ImportRoundPreview[],
-  ): QuizDraftSaveResult {
-    return {
-      quizId,
-      roundCount: rounds.length,
-      questionCount: rounds.reduce(
-        (total, round) => total + round.questions.length,
-        0,
-      ),
-    };
   }
 
   /**

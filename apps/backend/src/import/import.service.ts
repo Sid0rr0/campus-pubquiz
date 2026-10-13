@@ -18,7 +18,7 @@ import {
   SheetFetchError,
   type SheetCsvResult,
 } from '@/import/sheet-url-fetcher';
-import { QuizService } from '@/quiz/quiz.service';
+import { QuizService, toSaveResult } from '@/quiz/quiz.service';
 
 const DEFAULT_QUIZ_TITLE = 'Imported Quiz';
 
@@ -56,20 +56,6 @@ function withQuestionIdsBySlot(
       return questionId === undefined ? question : { ...question, questionId };
     }),
   }));
-}
-
-function toConfirmResult(
-  quizId: number,
-  rounds: readonly ImportRoundPreview[],
-): ImportConfirmResult {
-  return {
-    quizId,
-    roundCount: rounds.length,
-    questionCount: rounds.reduce(
-      (total, round) => total + round.questions.length,
-      0,
-    ),
-  };
 }
 
 @Injectable()
@@ -200,7 +186,7 @@ export class ImportService {
           identifyQuestions: withQuestionIdsBySlot,
           persist: async (rounds) => {
             await this.quizService.syncRoundsAndQuestions(quizId, rounds);
-            return toConfirmResult(quizId, rounds);
+            return toSaveResult(quizId, rounds);
           },
         },
       },

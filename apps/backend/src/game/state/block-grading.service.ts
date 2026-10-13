@@ -290,14 +290,14 @@ export class BlockGradingService {
     regradedQuestionIds: readonly number[];
     closestGuessSummaries: SessionState['closestGuessSummaries'];
   }> {
-    const { gameSessionId } = session.seededGame;
-    const { kahootQuestionTimerSeconds } = session.seededGame.settings;
+    const { gameSessionId, settings } = session.seededGame;
     const questions = session.seededGame.rounds
       .flatMap((round) =>
         round.questions.map((question) => ({
           question,
-          kahootTimerSeconds:
-            round.kahootMode === true ? kahootQuestionTimerSeconds : null,
+          kahootTimerSeconds: round.kahootMode
+            ? settings.kahootQuestionTimerSeconds
+            : null,
         })),
       )
       .filter(({ question }) => questionIds.includes(question.id));

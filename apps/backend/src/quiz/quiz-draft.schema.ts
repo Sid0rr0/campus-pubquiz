@@ -1,10 +1,16 @@
 import {
   isKahootAllowedType,
+  KAHOOT_ALLOWED_TYPES,
+  QUESTION_KINDS,
   checkQuestion,
   ROUND_CATEGORIES,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
+
+const KAHOOT_TYPES_MESSAGE = `Kahoot rounds only support ${KAHOOT_ALLOWED_TYPES.map(
+  (type) => QUESTION_KINDS[type].label.toLowerCase(),
+).join(', ')} questions`;
 
 /**
  * Validates a full quiz draft (manual edits and/or a CSV-import preview
@@ -92,8 +98,7 @@ export function validateQuizDraft(
             roundIndex,
             questionIndex,
             field: 'type',
-            message:
-              'Kahoot rounds only support multiple choice, sort, match, and number questions',
+            message: KAHOOT_TYPES_MESSAGE,
           });
         }
         return;

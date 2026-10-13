@@ -1,4 +1,4 @@
-import { isBreakStatus } from '@campus-pubquiz/types';
+import { formatAnswer, isBreakStatus } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   PlayersRevealQuestionView,
@@ -13,7 +13,6 @@ import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
 import { QuestionPicker } from '@/app/play/question-picker';
 import type { PickerRound } from '@/app/play/question-picker-slots';
-import { formatAnswerValue } from '@/app/lib/format-answer-value';
 
 interface QuestionNavigation {
   canGoBack: boolean;
@@ -168,11 +167,10 @@ export function QuestionBrowser({
               Your answer{': '}
             </span>
             {myAnswer
-              ? formatAnswerValue(
-                  myAnswer,
-                  revealQuestion.type,
-                  revealQuestion.options,
-                )
+              ? formatAnswer(myAnswer, {
+                  type: revealQuestion.type,
+                  options: revealQuestion.options,
+                })
               : 'No answer submitted'}
           </p>
           {myAnswerPoints !== null && (
@@ -198,11 +196,10 @@ export function QuestionBrowser({
           {myAnswer && (
             <p className="text-center text-lg font-extrabold tracking-wide">
               <span className="text-foreground/55">Submitted: </span>
-              {formatAnswerValue(
-                myAnswer,
-                selectedQuestion.type,
-                selectedQuestion.options,
-              )}
+              {formatAnswer(myAnswer, {
+                type: selectedQuestion.type,
+                options: selectedQuestion.options,
+              })}
             </p>
           )}
           {isAnswerable && team && (

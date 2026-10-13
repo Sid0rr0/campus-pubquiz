@@ -1,6 +1,5 @@
-import type { Verdict } from '@campus-pubquiz/types';
+import { formatAnswer, type Verdict } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import { formatAnswerValue } from '@/app/lib/format-answer-value';
 import type { OpenedQuestionEntry } from '@/app/play/opened-questions';
 
 const VERDICT_LABELS: Record<Verdict, string> = {
@@ -40,7 +39,10 @@ export function AnsweredQuestionsList({
             <p className="mt-1 text-sm">
               <span className="font-extrabold text-foreground/55">You: </span>
               {entry.myAnswer
-                ? formatAnswerValue(entry.myAnswer, entry.type, entry.options)
+                ? formatAnswer(entry.myAnswer, {
+                    type: entry.type,
+                    options: entry.options,
+                  })
                 : 'No answer submitted'}
             </p>
             {entry.correctAnswer !== null && (
@@ -48,11 +50,10 @@ export function AnsweredQuestionsList({
                 <span className="font-extrabold text-foreground/55">
                   Correct:{' '}
                 </span>
-                {formatAnswerValue(
-                  entry.correctAnswer,
-                  entry.type,
-                  entry.options,
-                )}
+                {formatAnswer(entry.correctAnswer, {
+                  type: entry.type,
+                  options: entry.options,
+                })}
               </p>
             )}
             {entry.pointsAwarded !== null && (

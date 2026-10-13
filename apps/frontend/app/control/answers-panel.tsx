@@ -3,6 +3,7 @@
 import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import { motion } from 'motion/react';
 import {
+  formatAnswer,
   halfPoints,
   isBatchGradedType,
   type AnswerView,
@@ -10,7 +11,6 @@ import {
   type QuestionType,
   type TeamView,
 } from '@campus-pubquiz/types';
-import { formatAnswerValue } from '@/app/lib/format-answer-value';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 import { Button } from '@/app/components/button';
 import { CustomGradeControl } from '@/app/control/custom-grade-control';
@@ -87,7 +87,10 @@ function AnswerRow({
       <span className="w-40 shrink-0 font-extrabold">{teamName}</span>
       <span className="flex-1 text-[15px]">
         {hasAnswered
-          ? formatAnswerValue(answer.value, questionType, questionOptions)
+          ? formatAnswer(answer.value, {
+              type: questionType,
+              options: questionOptions,
+            })
           : 'No answer yet'}
       </span>
       {isAwaitingBatch ? (
@@ -208,11 +211,10 @@ export function AnswersPanel({
         <p className="flex gap-5 text-sm font-bold">
           <span className="text-green">
             Correct answer:{' '}
-            {formatAnswerValue(
-              question.correctAnswer,
-              question.type,
-              question.options,
-            )}
+            {formatAnswer(question.correctAnswer, {
+              type: question.type,
+              options: question.options,
+            })}
           </span>
           <span className="text-cyan">
             {answeredCount}/{teams.length} answered

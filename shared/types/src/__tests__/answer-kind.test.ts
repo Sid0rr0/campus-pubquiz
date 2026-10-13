@@ -80,6 +80,13 @@ describe('formatAnswer', () => {
     expect(formatAnswer('42', { type: 'closest_guess' })).toBe('42');
   });
 
+  it('returns an audio answer unchanged, with and without choices', () => {
+    expect(formatAnswer('Jaws', { type: 'audio' })).toBe('Jaws');
+    expect(
+      formatAnswer('Jaws', { type: 'audio', options: ['Jaws', 'Alien'] }),
+    ).toBe('Jaws');
+  });
+
   it('chains sort items with arrows, ignoring stray whitespace', () => {
     expect(formatAnswer(' a |b||c', { type: 'sort' })).toBe('a → b → c');
   });

@@ -175,7 +175,14 @@ export const ANSWER_FORMATS = {
   match: matchFormat,
 } satisfies { readonly [K in AnswerKind]: AnswerFormat<unknown> };
 
-/** A stored answer as text people read; "I don't know" is handled here, once, in front of every format. */
+/**
+ * A stored answer as text people read; "I don't know" is handled here, once,
+ * in front of every format. sort/match answers are stored as a `|`-joined
+ * string: sort shows as one arrow chain (the value *is* the order); match
+ * values are positionally aligned to the question's `options` (the left
+ * items), shown as "left → right" pairs, falling back to a bare chain when
+ * `options` is missing or its length doesn't match.
+ */
 export function formatAnswer(
   stored: string,
   question: AnswerKindQuestion,
