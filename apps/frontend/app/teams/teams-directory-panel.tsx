@@ -14,12 +14,7 @@ import type {
   SortingState,
   Updater,
 } from '@tanstack/react-table';
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  DotsVerticalIcon,
-  EyeOpenIcon,
-} from '@radix-ui/react-icons';
+import { DotsVerticalIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 import { DropdownMenu } from 'radix-ui';
 import type {
   TeamListItem,
@@ -30,6 +25,7 @@ import { fetchTeams, TeamsApiError } from '@/app/lib/teams-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
+import { SortableTable } from '@/app/components/sortable-table';
 import { TeamCodeDialog } from '@/app/control/team-code-dialog';
 
 const features = tableFeatures({ rowSortingFeature, rowPaginationFeature });
@@ -173,68 +169,7 @@ export function TeamsDirectoryPanel() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-foreground/15">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr
-                key={headerGroup.id}
-                className="border-b border-foreground/15 bg-foreground/5"
-              >
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-4 py-2 font-display text-sm text-foreground/70"
-                  >
-                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                      <button
-                        type="button"
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="flex items-center gap-1"
-                      >
-                        <table.FlexRender header={header} />
-                        {header.column.getIsSorted() === 'asc' && (
-                          <ChevronUpIcon aria-hidden="true" />
-                        )}
-                        {header.column.getIsSorted() === 'desc' && (
-                          <ChevronDownIcon aria-hidden="true" />
-                        )}
-                      </button>
-                    ) : (
-                      <table.FlexRender header={header} />
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-3 text-center text-foreground/50"
-                >
-                  No teams have joined yet.
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-foreground/10 last:border-b-0"
-                >
-                  {row.getAllCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-2">
-                      <table.FlexRender cell={cell} />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <SortableTable table={table} emptyMessage="No teams have joined yet." />
 
       <div className="flex items-center gap-3">
         <Button

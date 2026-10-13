@@ -11,7 +11,7 @@ import {
   useTable,
   type SortingState,
 } from '@tanstack/react-table';
-import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
+import { SortableTable } from '@/app/components/sortable-table';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
 
@@ -106,67 +106,6 @@ export function QuestionsTable({
   });
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-foreground/15">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              key={headerGroup.id}
-              className="border-b border-foreground/15 bg-foreground/5"
-            >
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="px-4 py-2 font-display text-sm text-foreground/70"
-                >
-                  {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                    <button
-                      type="button"
-                      onClick={header.column.getToggleSortingHandler()}
-                      className="flex items-center gap-1"
-                    >
-                      <table.FlexRender header={header} />
-                      {header.column.getIsSorted() === 'asc' && (
-                        <ChevronUpIcon aria-hidden="true" />
-                      )}
-                      {header.column.getIsSorted() === 'desc' && (
-                        <ChevronDownIcon aria-hidden="true" />
-                      )}
-                    </button>
-                  ) : (
-                    <table.FlexRender header={header} />
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.length === 0 ? (
-            <tr>
-              <td
-                colSpan={6}
-                className="px-4 py-3 text-center text-foreground/50"
-              >
-                No questions in this quiz.
-              </td>
-            </tr>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="border-b border-foreground/10 last:border-b-0"
-              >
-                {row.getAllCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-2">
-                    <table.FlexRender cell={cell} />
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <SortableTable table={table} emptyMessage="No questions in this quiz." />
   );
 }

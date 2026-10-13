@@ -18,8 +18,6 @@ import { Dialog, DropdownMenu, Tabs } from 'radix-ui';
 import {
   ArrowRightIcon,
   CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   Cross2Icon,
   DotsVerticalIcon,
   ExternalLinkIcon,
@@ -51,6 +49,7 @@ import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { RoundsList } from '@/app/components/rounds-list';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
 import { CopyButton } from '@/app/components/copy-button';
+import { SortableTable } from '@/app/components/sortable-table';
 
 const quizTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -372,57 +371,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           {quizzes.length === 0 ? (
             <p className="text-sm text-foreground/55">No quizzes yet.</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-foreground/15">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  {quizTable.getHeaderGroups().map((headerGroup) => (
-                    <tr
-                      key={headerGroup.id}
-                      className="border-b border-foreground/15 bg-foreground/5"
-                    >
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-4 py-2 font-display text-sm text-foreground/70"
-                        >
-                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                            <button
-                              type="button"
-                              onClick={header.column.getToggleSortingHandler()}
-                              className="flex items-center gap-1"
-                            >
-                              <quizTable.FlexRender header={header} />
-                              {header.column.getIsSorted() === 'asc' && (
-                                <ChevronUpIcon aria-hidden="true" />
-                              )}
-                              {header.column.getIsSorted() === 'desc' && (
-                                <ChevronDownIcon aria-hidden="true" />
-                              )}
-                            </button>
-                          ) : (
-                            <quizTable.FlexRender header={header} />
-                          )}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {quizTable.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-foreground/10 last:border-b-0"
-                    >
-                      {row.getAllCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-2">
-                          <quizTable.FlexRender cell={cell} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SortableTable table={quizTable} />
           )}
         </section>
       </div>
