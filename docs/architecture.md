@@ -78,6 +78,7 @@ flowchart TD
   end
 
   subgraph socket["game/socket — event plumbing"]
+    sb["SessionBroadcaster<br/>game/socket/session-broadcaster.ts<br/>the one outbound path: deliver · notify · disconnect"]
     dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run the event's one Live session call → deliver"]
     deliver["deliverOutcome<br/>re-arm timers from the outcome's deadline change<br/>replies · broadcast · admin answer lists<br/>team syncs · socket closes"]
     broadcast["broadcastGameState<br/>one view per room"]
@@ -112,14 +113,17 @@ flowchart TD
     auth["AuthModule<br/>SessionService · guards"]
   end
 
+  adapter["Socket.IO adapter<br/>rooms · emits · socket closes"]
   repos["db/repositories<br/>one per entity (MikroORM)"]
   db[("Postgres")]
 
   gw --> dispatch --> gss
-  dispatch --> deliver --> broadcast --> project
-  deliver -->|"deadline change: re-arm"| timers
-  timers -->|"expiry = ADVANCE press, delivered like any event"| gw
-  rest -->|"notify* after live edits"| gw
+  gw -->|"hands each outcome over"| sb
+  sb --> deliver --> broadcast --> project
+  sb --> adapter
+  sb -->|"owns; deadline change: re-arm"| timers
+  timers -->|"expiry = ADVANCE press, delivered like any outcome"| sb
+  rest -->|"notify · broadcastState · disconnectUser"| sb
   rest -->|read-only lookups| gss
   rest --> domain
 
@@ -127,6 +131,7 @@ flowchart TD
   gss -->|"hands each event's change builder to the write"| changes
   changes -->|"domain checks and writes"| domain
   live["Live edit save"] -->|"hold: held writer"| write
+  live -->|"outcome after the hold is released"| sb
   gss --> mover --> grading
   mover --> progress
   mover --> plan
@@ -143,7 +148,7 @@ flowchart TD
 ```
 
 The live game is one Nest module, `game/game.module.ts` (the Game module): the
-gateway, the Live session module (`GameStateService`, `SessionWrite`,
+gateway, the Session broadcaster, the Live session module (`GameStateService`, `SessionWrite`,
 `BlockGradingService`, `GameProgressRepository`), the Live edit module and the
 domain services they depend on (seed, team, answer, standings, bonus, feedback,
 showdown, quiz). The app module imports it and keeps the controllers, import,
@@ -155,6 +160,10 @@ Key seams:
 - **`dispatchSocketEvent`** is the single template every client-to-server
   event goes through, so rejection order never varies and refusals become
   socket errors in one place.
+- **`SessionBroadcaster`** is the only code that touches the Socket.IO
+  server: it delivers every outcome (socket events, phase-timer expiries, Live
+  edit saves), pushes REST-triggered notifications and owns the phase timers.
+  The gateway is inbound only and hands it the server once it exists.
 - **`SessionWrite`** is the only way a live session changes and is stored:
   queued per join code, applied to the session as the previous write left it,
   ends with a standings read, then stored. A Live edit save holds a quiz's
@@ -213,6 +222,7 @@ sequenceDiagram
   autonumber
   participant C as /control or lock timer
   participant GW as GameGateway
+  participant B as SessionBroadcaster
   participant GS as GameStateService
   participant Q as SessionWrite
   participant MC as MoveCommitter
@@ -232,9 +242,9 @@ sequenceDiagram
   Q->>ST: leaderboard
   Q-->>GS: store session
   GS-->>GW: SessionOutcome (or SessionRefusal)
-  GW->>GW: re-arm the auto-lock timers if the outcome carries a deadline change
-  GW->>R: PRESENTER_CONTEXT_UPDATED (admin) + STATE_UPDATED (per room)
-  GW->>R: TEAM_ANSWERS_SYNCED (each team, on reveal entry)
+  GW->>B: deliver(outcome) — re-arms the auto-lock timers if it carries a deadline change
+  B->>R: PRESENTER_CONTEXT_UPDATED (admin) + STATE_UPDATED (per room)
+  B->>R: TEAM_ANSWERS_SYNCED (each team, on reveal entry)
 ```
 
 ## Game status machine

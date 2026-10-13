@@ -23,7 +23,7 @@ import {
   BonusService,
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
-import { GameGateway } from '@/game/game.gateway';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { GameStateService } from '@/game/state/game-state.service';
 
 /**
@@ -67,7 +67,7 @@ export class BonusAwardMutationsController {
   constructor(
     private readonly bonusService: BonusService,
     private readonly gameState: GameStateService,
-    private readonly gameGateway: GameGateway,
+    private readonly broadcaster: SessionBroadcaster,
   ) {}
 
   @Patch(':awardId')
@@ -98,7 +98,10 @@ export class BonusAwardMutationsController {
       throw error;
     }
 
-    await this.gameGateway.notifyBonusAwardsChanged(joinCode);
+    await this.broadcaster.deliver(
+      joinCode,
+      await this.gameState.bonusChanged(joinCode),
+    );
     return updated;
   }
 
@@ -124,6 +127,9 @@ export class BonusAwardMutationsController {
       throw error;
     }
 
-    await this.gameGateway.notifyBonusAwardsChanged(joinCode);
+    await this.broadcaster.deliver(
+      joinCode,
+      await this.gameState.bonusChanged(joinCode),
+    );
   }
 }

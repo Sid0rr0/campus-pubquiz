@@ -8,7 +8,7 @@ See the parent spec: `.scratch/session-broadcaster/spec.md`.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Session broadcaster is a Nest provider registered next to the gateway, with `attach(server)` and `deliver(joinCode, outcome, sender?)`; delivery behaviour and order are unchanged (deadline re-arm first, socket closes in a `finally`)
 - [ ] The broadcaster builds the phase timers with its own `deliver`, takes over the timer-scheduler injection token, restores every session's deadlines on application bootstrap and clears all timers on module destroy

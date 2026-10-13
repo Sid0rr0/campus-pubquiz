@@ -19,7 +19,7 @@ import type {
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { SeedService } from '@/db/seed.service';
-import { GameGateway } from '@/game/game.gateway';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import {
   GameStateService,
   SessionCloseBlockedError,
@@ -60,7 +60,7 @@ export class SessionsController {
   constructor(
     private readonly gameState: GameStateService,
     private readonly quizService: QuizService,
-    private readonly gameGateway: GameGateway,
+    private readonly broadcaster: SessionBroadcaster,
     private readonly seedService: SeedService,
   ) {}
 
@@ -130,7 +130,7 @@ export class SessionsController {
       this.throwIfClosedMeanwhile(joinCode);
       throw error;
     }
-    await this.gameGateway.notifySettingsUpdated(joinCode);
+    await this.broadcaster.broadcastState(joinCode);
   }
 
   @Delete(':joinCode')
@@ -148,7 +148,7 @@ export class SessionsController {
       this.throwIfClosedMeanwhile(joinCode);
       throw error;
     }
-    this.gameGateway.notifySessionClosed(joinCode);
+    this.broadcaster.notifySessionClosed(joinCode);
   }
 
   /** A write queued behind another session's close fails with the store's unknown-session error — that is a 404, not a 500. */

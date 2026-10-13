@@ -6,7 +6,7 @@ See the parent spec: `.scratch/session-broadcaster/spec.md`.
 
 **Blocked by:** 02 (Live edit delivers through the Session broadcaster), 03 (REST notifications go through the Session broadcaster)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The gateway's `notifySettingsUpdated`, `notifySessionClosed`, `disconnectUser`, `deliverSessionOutcome` and `notifyBonusAwardsChanged` are deleted
 - [ ] The gateway's constructor takes only the Live session façade, the auth SessionService and the Session broadcaster (no AnswerService, ORM or timer schedulers)

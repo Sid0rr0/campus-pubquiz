@@ -17,7 +17,7 @@ import { AuthService, UserNotFoundError } from '@/auth/auth.service';
 import { Roles } from '@/auth/roles.decorator';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
-import { GameGateway } from '@/game/game.gateway';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 
 function requireRole(body: Partial<ApproveUserRequest>): ApproveUserRequest {
   if (body.role !== 'admin' && body.role !== 'moderator') {
@@ -32,7 +32,7 @@ function requireRole(body: Partial<ApproveUserRequest>): ApproveUserRequest {
 export class UsersController {
   constructor(
     private readonly authService: AuthService,
-    private readonly gateway: GameGateway,
+    private readonly broadcaster: SessionBroadcaster,
   ) {}
 
   @Get()
@@ -60,7 +60,7 @@ export class UsersController {
   async deactivate(@Param('id', ParseIntPipe) id: number): Promise<void> {
     try {
       await this.authService.deactivate(id);
-      this.gateway.disconnectUser(id);
+      this.broadcaster.disconnectUser(id);
     } catch (error) {
       if (error instanceof UserNotFoundError) {
         throw new NotFoundException(error.message);

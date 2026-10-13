@@ -1,11 +1,4 @@
-import {
-  Inject,
-  Logger,
-  Optional,
-  type OnApplicationBootstrap,
-  type OnModuleDestroy,
-} from '@nestjs/common';
-import { CreateRequestContext, MikroORM } from '@mikro-orm/core';
+import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -13,19 +6,13 @@ import {
   WebSocketGateway,
   WebSocketServer,
   type OnGatewayConnection,
+  type OnGatewayInit,
   type OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
-import {
-  type AckResult,
-  type AuthUser,
-  SOCKET_EVENTS,
-  SOCKET_ROOMS,
-  sessionRoom,
-} from '@campus-pubquiz/types';
+import type { AckResult } from '@campus-pubquiz/types';
 import { SessionService } from '@/auth/session.service';
-import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import { corsOriginValidator } from '@/config/cors.config';
 import {
@@ -37,93 +24,61 @@ import {
   type EventContext,
   type EventResult,
 } from '@/game/socket/guarded-dispatch.util';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
-import {
-  PHASE_TIMER_SCHEDULERS,
-  PhaseTimers,
-  type PhaseTimerSchedulers,
-} from '@/game/socket/phase-timers';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import {
   SOCKET_EVENT_DECLARATIONS,
   type SocketEventDeclaration,
 } from '@/game/socket/socket-event-declarations';
-import {
-  BROADCAST_STATE_OUTCOME,
-  type DeadlineChange,
-  type SessionOutcome,
-} from '@/game/state/session-outcome';
 
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
 })
 export class GameGateway
-  implements
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-    OnApplicationBootstrap,
-    OnModuleDestroy
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   server!: GameServer;
 
   private readonly logger = new Logger(GameGateway.name);
-  private readonly phaseTimers: PhaseTimers;
 
   constructor(
     private readonly gameState: GameStateService,
-    private readonly answerService: AnswerService,
     private readonly sessions: SessionService,
-    private readonly orm: MikroORM,
-    @Optional()
-    @Inject(PHASE_TIMER_SCHEDULERS)
-    timerSchedulers?: PhaseTimerSchedulers,
-  ) {
-    this.phaseTimers = new PhaseTimers({
-      schedulers: timerSchedulers,
-      gameState,
-      orm,
-      deliver: (joinCode, outcome) =>
-        deliverOutcome(this.outcomeDeps, joinCode, outcome),
-      logger: this.logger,
-    });
+    private readonly broadcaster: SessionBroadcaster,
+  ) {}
+
+  /** Nest calls this once the Socket.IO server exists; the broadcaster needs it to emit. */
+  afterInit(server: GameServer): void {
+    this.broadcaster.attach(server);
   }
 
-  /**
-   * Runs once every module's onModuleInit has loaded the session store, so a
-   * backend restart mid-countdown or mid-kahoot-question restores its
-   * deadlines — otherwise nothing re-arms them until the next admin action.
-   */
-  onApplicationBootstrap(): void {
-    this.phaseTimers.restoreAll();
-  }
-
-  onModuleDestroy(): void {
-    this.phaseTimers.clearAll();
-  }
-
-  @CreateRequestContext()
-  async handleConnection(client: GameSocket): Promise<void> {
-    await acceptConnection(
-      {
-        gameState: this.gameState,
-        sessions: this.sessions,
-        logger: this.logger,
-      },
-      client,
+  handleConnection(client: GameSocket): Promise<void> {
+    return this.broadcaster.runInRequestContext(() =>
+      acceptConnection(
+        {
+          gameState: this.gameState,
+          sessions: this.sessions,
+          logger: this.logger,
+        },
+        client,
+      ),
     );
   }
 
   async handleDisconnect(client: GameSocket): Promise<void> {
     await disconnectClient(
-      { ...this.outcomeDeps, logger: this.logger },
+      {
+        gameState: this.gameState,
+        logger: this.logger,
+        deliver: this.broadcaster.deliver,
+      },
       client,
     );
   }
 
-  // Socket.IO events aren't covered by @mikro-orm/nestjs's HTTP-only
-  // auto request-context middleware — @CreateRequestContext() forks one.
+  // Every handler goes through dispatch(), which forks the request context
+  // Socket.IO events don't get from @mikro-orm/nestjs's HTTP-only middleware.
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.adminAction.event)
-  @CreateRequestContext()
   async handleAdminAction(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -138,7 +93,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.joinPlayers.event)
-  @CreateRequestContext()
   async handleJoinPlayers(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -159,7 +113,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.submitAnswer.event)
-  @CreateRequestContext()
   async handleSubmitAnswer(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -174,7 +127,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.rateRound.event)
-  @CreateRequestContext()
   async handleRateRound(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -189,7 +141,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.sendFeedback.event)
-  @CreateRequestContext()
   async handleSendFeedback(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -204,7 +155,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.gradeAnswer.event)
-  @CreateRequestContext()
   async handleGradeAnswer(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -223,7 +173,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.kickTeam.event)
-  @CreateRequestContext()
   async handleKickTeam(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -246,7 +195,6 @@ export class GameGateway
    * a stale entry in /control that the admin has to kick by hand.
    */
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.leaveSession.event)
-  @CreateRequestContext()
   async handleLeaveSession(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -261,7 +209,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setBreakEndTime.event)
-  @CreateRequestContext()
   async handleSetBreakEndTime(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -276,7 +223,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setDisplayTextScale.event)
-  @CreateRequestContext()
   async handleSetDisplayTextScale(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -291,7 +237,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.awardBonus.event)
-  @CreateRequestContext()
   async handleAwardBonus(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -305,7 +250,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.createShowdownRound.event)
-  @CreateRequestContext()
   async handleCreateShowdownRound(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -320,7 +264,6 @@ export class GameGateway
   }
 
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.submitShowdownGuess.event)
-  @CreateRequestContext()
   async handleSubmitShowdownGuess(
     @ConnectedSocket() client: GameSocket,
     @MessageBody() rawPayload: unknown,
@@ -334,88 +277,20 @@ export class GameGateway
     );
   }
 
-  private get outcomeDeps() {
-    return {
-      gameState: this.gameState,
-      answerService: this.answerService,
-      server: this.server,
-      rearmTimers: (joinCode: string, deadlines: DeadlineChange) =>
-        this.phaseTimers.arm(joinCode, deadlines),
-    };
-  }
-
-  /**
-   * Called by UsersController once it has deactivated a user — revoking their
-   * session rows only stops future requests; an already-open /control socket
-   * would otherwise keep its admin powers until it happened to disconnect.
-   */
-  disconnectUser(userId: number): void {
-    for (const socket of this.server.sockets.sockets.values()) {
-      const user = (socket.data as { user?: AuthUser }).user;
-      if (user?.id === userId) socket.disconnect(true);
-    }
-  }
-
-  /**
-   * Called by SessionsController once it has evicted a session (`DELETE
-   * /sessions/:joinCode`) — the in-memory session is already gone by this
-   * point, so any player still connected to it would otherwise only find out
-   * on its next action, as an opaque "Unknown game session" error. Scoped to
-   * the players room alone: the closing admin already navigates away via its
-   * own REST response, and /display has no redirect target of its own yet.
-   */
-  notifySessionClosed(joinCode: string): void {
-    this.server
-      .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
-      .emit(SOCKET_EVENTS.SESSION_CLOSED, { joinCode });
-  }
-
-  /**
-   * Called by SessionsController once it has persisted new settings (`PATCH
-   * /sessions/:joinCode/settings`) — a full state re-broadcast (unlike
-   * notifySessionClosed's narrow one-off emit) so /display, /control, and
-   * /rules?code= all pick up the change immediately.
-   */
-  async notifySettingsUpdated(joinCode: string): Promise<void> {
-    await deliverOutcome(this.outcomeDeps, joinCode, BROADCAST_STATE_OUTCOME);
-  }
-
-  /** Delivers an outcome a session write returned outside the gateway (the Live edit module's save), after its queues were released. */
-  async deliverSessionOutcome(
-    joinCode: string,
-    outcome: SessionOutcome,
-  ): Promise<void> {
-    await deliverOutcome(this.outcomeDeps, joinCode, outcome);
-  }
-
-  /**
-   * Called by BonusAwardMutationsController after editing/deleting a bonus
-   * award via REST, so /display and /control never show a stale bonus total
-   * after an out-of-band edit. No @CreateRequestContext() needed: invoked
-   * synchronously from inside a REST controller method, already covered by
-   * @mikro-orm/nestjs's HTTP-request-context middleware (unlike socket
-   * handlers, which fork their own context — see handleAdminAction above).
-   */
-  async notifyBonusAwardsChanged(joinCode: string): Promise<void> {
-    await deliverOutcome(
-      this.outcomeDeps,
-      joinCode,
-      await this.gameState.bonusChanged(joinCode),
-    );
-  }
-
   private dispatch<S extends z.ZodType>(
     declaration: SocketEventDeclaration<S>,
     rawPayload: unknown,
     client: GameSocket,
     body: (context: EventContext<z.infer<S>>) => Promise<EventResult>,
   ): Promise<AckResult> {
-    return dispatchSocketEvent(
-      { ...this.outcomeDeps, logger: this.logger },
-      client,
-      declaration,
-      rawPayload,
-      body,
+    return this.broadcaster.runInRequestContext(() =>
+      dispatchSocketEvent(
+        { deliver: this.broadcaster.deliver, logger: this.logger },
+        client,
+        declaration,
+        rawPayload,
+        body,
+      ),
     );
   }
 }

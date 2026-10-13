@@ -12,7 +12,7 @@ import {
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import type { SeedService } from '@/db/seed.service';
-import type { GameGateway } from '@/game/game.gateway';
+import type { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import {
   SessionCloseBlockedError,
   SessionSettingsUpdateBlockedError,
@@ -30,9 +30,9 @@ function makeController() {
     updateSessionSettings: jest.fn(),
   };
   const quizService = { findTitles: jest.fn() };
-  const gameGateway = {
+  const broadcaster = {
     notifySessionClosed: jest.fn(),
-    notifySettingsUpdated: jest.fn(),
+    broadcastState: jest.fn(),
   };
   const seedService = {
     findStartedAtByJoinCodes: jest.fn().mockResolvedValue(new Map()),
@@ -41,10 +41,10 @@ function makeController() {
   const controller = new SessionsController(
     gameState as unknown as GameStateService,
     quizService as unknown as QuizService,
-    gameGateway as unknown as GameGateway,
+    broadcaster as unknown as SessionBroadcaster,
     seedService as unknown as SeedService,
   );
-  return { controller, gameState, quizService, gameGateway, seedService };
+  return { controller, gameState, quizService, broadcaster, seedService };
 }
 
 function snapshot(
@@ -355,7 +355,7 @@ describe('SessionsController', () => {
 
   describe('updateSettings', () => {
     it('updates settings and notifies clients while in the lobby', async () => {
-      const { controller, gameState, gameGateway } = makeController();
+      const { controller, gameState, broadcaster } = makeController();
       gameState.hasSession.mockReturnValue(true);
 
       await controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 });
@@ -363,7 +363,7 @@ describe('SessionsController', () => {
       expect(gameState.updateSessionSettings).toHaveBeenCalledWith('GHIJKL', {
         lockGraceSeconds: 15,
       });
-      expect(gameGateway.notifySettingsUpdated).toHaveBeenCalledWith('GHIJKL');
+      expect(broadcaster.broadcastState).toHaveBeenCalledWith('GHIJKL');
     });
 
     it('404s for an unknown join code', async () => {
@@ -387,7 +387,7 @@ describe('SessionsController', () => {
     });
 
     it('maps a blocked update (game already started) to 409 without notifying clients', async () => {
-      const { controller, gameState, gameGateway } = makeController();
+      const { controller, gameState, broadcaster } = makeController();
       gameState.hasSession.mockReturnValue(true);
       gameState.updateSessionSettings.mockRejectedValue(
         new SessionSettingsUpdateBlockedError('GHIJKL', 'already started'),
@@ -396,7 +396,7 @@ describe('SessionsController', () => {
       await expect(
         controller.updateSettings('GHIJKL', { lockGraceSeconds: 15 }),
       ).rejects.toThrow(ConflictException);
-      expect(gameGateway.notifySettingsUpdated).not.toHaveBeenCalled();
+      expect(broadcaster.broadcastState).not.toHaveBeenCalled();
     });
   });
 
@@ -411,12 +411,12 @@ describe('SessionsController', () => {
     });
 
     it('notifies connected players once the session is evicted', async () => {
-      const { controller, gameState, gameGateway } = makeController();
+      const { controller, gameState, broadcaster } = makeController();
       gameState.hasSession.mockReturnValue(true);
 
       await controller.close('GHIJKL');
 
-      expect(gameGateway.notifySessionClosed).toHaveBeenCalledWith('GHIJKL');
+      expect(broadcaster.notifySessionClosed).toHaveBeenCalledWith('GHIJKL');
     });
 
     it('404s for an unknown join code', async () => {
@@ -430,7 +430,7 @@ describe('SessionsController', () => {
     });
 
     it('maps a blocked close to 409 conflict without notifying players', async () => {
-      const { controller, gameState, gameGateway } = makeController();
+      const { controller, gameState, broadcaster } = makeController();
       gameState.hasSession.mockReturnValue(true);
       gameState.closeSession.mockImplementation(() => {
         throw new SessionCloseBlockedError('GHIJKL', 'still in progress');
@@ -439,7 +439,7 @@ describe('SessionsController', () => {
       await expect(controller.close('GHIJKL')).rejects.toThrow(
         ConflictException,
       );
-      expect(gameGateway.notifySessionClosed).not.toHaveBeenCalled();
+      expect(broadcaster.notifySessionClosed).not.toHaveBeenCalled();
     });
 
     it('404s when the session was closed by a close that ran first', async () => {
