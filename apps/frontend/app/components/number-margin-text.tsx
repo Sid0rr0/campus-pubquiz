@@ -1,16 +1,18 @@
 import {
-  DEFAULT_MARGIN,
   formatMarginText,
-  type Margin,
+  gradingSettingsOf,
+  type GradingSettingsSource,
 } from '@campus-pubquiz/types';
 
-/** How precise a Number question's answer must be; the phone and the big screen both render this one text. */
+/** How precise a Number question's answer must be; the phone and the big screen both render this one text. Renders nothing for a type with no margin. */
 export function NumberMarginText({
-  margin = DEFAULT_MARGIN,
+  question,
   className,
 }: {
-  margin?: Margin;
+  question: GradingSettingsSource;
   className?: string;
 }) {
+  const { margin } = gradingSettingsOf(question);
+  if (!margin) return null;
   return <p className={className}>{formatMarginText(margin)}</p>;
 }

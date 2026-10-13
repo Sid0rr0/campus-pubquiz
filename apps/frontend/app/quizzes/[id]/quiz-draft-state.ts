@@ -1,5 +1,6 @@
 import {
   DEFAULT_MARGIN,
+  gradingSettingsOf,
   describeLiveEditRounds,
   parseFiniteNumber,
   hasMarginType,
@@ -117,8 +118,8 @@ export function makeRound(id: string, title = ''): EditorRound {
 function loadMarginDraft(
   question: ImportQuestionPreview,
 ): Partial<Pick<EditorQuestion, 'marginValue' | 'marginUnit'>> {
-  if (!hasMarginType(question.type)) return {};
-  const margin = question.margin ?? DEFAULT_MARGIN;
+  const { margin } = gradingSettingsOf(question);
+  if (!margin) return {};
   return { marginValue: String(margin.value), marginUnit: margin.unit };
 }
 
