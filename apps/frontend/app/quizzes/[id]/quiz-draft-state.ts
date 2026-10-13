@@ -1,5 +1,6 @@
 import {
   describeLiveEditRounds,
+  type ImportPreview,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
@@ -179,6 +180,75 @@ export function mergeRoundsFromPreview(
     };
   }
   return merged;
+}
+
+export interface ImportOutcomeInput {
+  rounds: EditorRound[];
+  title: string;
+  preview: ImportPreview;
+  /** Add to the current rounds instead of replacing them. */
+  shouldAdd: boolean;
+  makeId: () => string;
+}
+
+export interface ImportOutcome {
+  rounds: EditorRound[];
+  title: string;
+  /** A summary to toast, or an issue message to show as the import error. */
+  result: { kind: 'summary' | 'issues'; message: string };
+}
+
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+/** What an import preview does to the draft: the new rounds, the title to use (the current one unless blank), and the message to show. */
+export function importOutcome({
+  rounds,
+  title,
+  preview,
+  shouldAdd,
+  makeId,
+}: ImportOutcomeInput): ImportOutcome {
+  const newRounds = shouldAdd
+    ? mergeRoundsFromPreview(rounds, preview.rounds, makeId)
+    : preview.rounds.map((round) =>
+        roundFromPreview(makeId(), round, () => makeId()),
+      );
+  const questionCount = preview.rounds.reduce(
+    (total, round) => total + round.questions.length,
+    0,
+  );
+  const newTitle = title.trim() ? title : preview.quizTitle;
+
+  if (preview.issues.length > 0) {
+    const listed = preview.issues
+      .map(
+        (issue) => `row ${issue.rowNumber} (${issue.field}): ${issue.message}`,
+      )
+      .join('; ');
+    return {
+      rounds: newRounds,
+      title: newTitle,
+      result: {
+        kind: 'issues',
+        message: `Imported with ${preview.issues.length} issue(s) to fix before saving — ${listed}`,
+      },
+    };
+  }
+  const message = shouldAdd
+    ? `Added ${plural(questionCount, 'question')} from ${plural(preview.rounds.length, 'round')} to the quiz — review and edit below.`
+    : `Imported ${plural(newRounds.length, 'round')} and ${plural(questionCount, 'question')} — review and edit below.`;
+  return {
+    rounds: newRounds,
+    title: newTitle,
+    result: { kind: 'summary', message },
+  };
+}
+
+/** The title to send with a CSV import: the current title, or the file name without ".csv" when the title is blank. */
+export function csvImportTitle(title: string, fileName: string): string {
+  return title.trim() || fileName.replace(/\.csv$/i, '');
 }
 
 /** Converts editable state back into the API shape — derives `answer` from whichever option is marked correct, trims text, and drops blank optional fields. */

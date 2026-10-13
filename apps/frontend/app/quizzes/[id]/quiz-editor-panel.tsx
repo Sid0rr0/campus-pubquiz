@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -8,21 +8,13 @@ import {
   CheckIcon,
   DownloadIcon,
   FilePlusIcon,
-  Link2Icon,
   PlusIcon,
-  UploadIcon,
 } from '@radix-ui/react-icons';
 import {
-  type ImportPreview,
   type LiveEditFrontier,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import {
-  ImportApiError,
-  previewImport,
-  previewImportFromUrl,
-} from '@/app/lib/import-api';
 import {
   createQuiz,
   fetchQuizDraft,
@@ -39,7 +31,6 @@ import {
   deleteRound,
   describeEditorRounds,
   makeRound,
-  mergeRoundsFromPreview,
   moveQuestionToRound,
   moveRound,
   moveTargetRounds,
@@ -50,6 +41,8 @@ import {
   withSyncedQuestionIds,
   type EditorRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
+import { QuizImportControls } from '@/app/quizzes/[id]/quiz-import-controls';
+import { useQuizImport } from '@/app/quizzes/[id]/use-quiz-import';
 import { QuizOutline } from '@/app/quizzes/[id]/quiz-outline';
 import { QuizRoundEditor } from '@/app/quizzes/[id]/quiz-round-editor';
 
@@ -116,10 +109,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
   const [quizTitle, setQuizTitle] = useState('');
   const [rounds, setRounds] = useState<EditorRound[]>([]);
   const [savedQuizId, setSavedQuizId] = useState<number | null>(numericQuizId);
-  const [importError, setImportError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
-  const [sheetUrlInput, setSheetUrlInput] = useState('');
-  const [appendImport, setAppendImport] = useState(false);
   const [liveEditState, setLiveEditState] = useState<
     LiveEditFrontier | undefined
   >(undefined);
@@ -174,90 +164,17 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
     setPhase('editor');
   }
 
-  function handleImportPreview(preview: ImportPreview): void {
-    const isAppending = appendImport && phase === 'editor';
-    const newRounds = isAppending
-      ? mergeRoundsFromPreview(rounds, preview.rounds, () =>
-          crypto.randomUUID(),
-        )
-      : preview.rounds.map((round) =>
-          roundFromPreview(crypto.randomUUID(), round, () =>
-            crypto.randomUUID(),
-          ),
-        );
-    setRounds(newRounds);
-    if (!quizTitle.trim()) setQuizTitle(preview.quizTitle);
-    setPhase('editor');
-
-    const importedQuestionCount = preview.rounds.reduce(
-      (total, round) => total + round.questions.length,
-      0,
-    );
-    if (preview.issues.length > 0) {
-      setImportError(
-        `Imported with ${preview.issues.length} issue(s) to fix before saving — ` +
-          preview.issues
-            .map(
-              (issue) =>
-                `row ${issue.rowNumber} (${issue.field}): ${issue.message}`,
-            )
-            .join('; '),
-      );
-    } else if (isAppending) {
-      toast.success(
-        `Added ${importedQuestionCount} question${importedQuestionCount === 1 ? '' : 's'} from ${preview.rounds.length} round${preview.rounds.length === 1 ? '' : 's'} to the quiz — review and edit below.`,
-      );
-    } else {
-      toast.success(
-        `Imported ${newRounds.length} round${newRounds.length === 1 ? '' : 's'} and ${importedQuestionCount} question${importedQuestionCount === 1 ? '' : 's'} — review and edit below.`,
-      );
-    }
-  }
-
-  function handleImportError(error: unknown, fallback: string): void {
-    setImportError(
-      apiErrorMessage(error, ImportApiError, fallback) ?? fallback,
-    );
-  }
-
-  const previewMutation = useMutation({
-    mutationFn: ({ csvText, title }: { csvText: string; title: string }) =>
-      previewImport(csvText, title || undefined),
-    onSuccess: handleImportPreview,
-    onError: (error) => handleImportError(error, 'Could not read that CSV.'),
+  const quizImport = useQuizImport({
+    rounds,
+    title: quizTitle,
+    isEditorShowing: phase === 'editor',
+    onApply: (outcome) => {
+      setRounds(outcome.rounds);
+      setQuizTitle(outcome.title);
+      setPhase('editor');
+    },
   });
-
-  const previewFromUrlMutation = useMutation({
-    mutationFn: (sheetUrl: string) =>
-      previewImportFromUrl(sheetUrl, quizTitle.trim() || undefined),
-    onSuccess: handleImportPreview,
-    onError: (error) =>
-      handleImportError(error, 'Could not fetch that Google Sheet.'),
-  });
-
-  async function handleCsvFile(
-    event: ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-
-    setImportError(null);
-    const text = await file.text();
-    // Only a brand-new quiz (no title yet) picks up the file name — once a
-    // title exists, later imports (replace or add) must not overwrite it.
-    const title = quizTitle.trim() || file.name.replace(/\.csv$/i, '');
-    previewMutation.mutate({ csvText: text, title });
-  }
-
-  function handleSheetUrlSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    const sheetUrl = sheetUrlInput.trim();
-    if (!sheetUrl) return;
-
-    setImportError(null);
-    previewFromUrlMutation.mutate(sheetUrl);
-  }
+  const { importError } = quizImport;
 
   function moveQuestionBetweenRounds(
     questionId: string,
@@ -360,37 +277,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
             <FilePlusIcon aria-hidden="true" />
             Start from scratch
           </Button>
-          <label className="flex min-h-16 min-w-56 cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-foreground bg-white px-6 font-display text-lg text-foreground">
-            <UploadIcon aria-hidden="true" />
-            Import CSV
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) => void handleCsvFile(event)}
-              className="hidden"
-            />
-          </label>
-          <form
-            onSubmit={handleSheetUrlSubmit}
-            className="flex min-h-16 min-w-72 items-center gap-2 rounded-2xl border-2 border-foreground bg-white px-4 text-foreground"
-          >
-            <Link2Icon aria-hidden="true" className="shrink-0" />
-            <input
-              type="url"
-              value={sheetUrlInput}
-              onChange={(event) => setSheetUrlInput(event.target.value)}
-              placeholder="Paste a Google Sheets link"
-              aria-label="Google Sheets link"
-              className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-foreground/40"
-            />
-            <Button
-              type="submit"
-              disabled={previewFromUrlMutation.isPending}
-              className="shrink-0 rounded-xl bg-foreground px-3 py-2 text-xs font-extrabold text-background disabled:opacity-50"
-            >
-              {previewFromUrlMutation.isPending ? 'Importing…' : 'Import'}
-            </Button>
-          </form>
+          <QuizImportControls variant="empty" quizImport={quizImport} />
         </div>
         {importError && (
           <p role="alert" className="font-extrabold text-magenta">
@@ -423,50 +310,7 @@ export function QuizEditorPanel({ quizId }: QuizEditorPanelProps) {
           {questionCount} question
           {questionCount === 1 ? '' : 's'}
         </span>
-        <label className="flex min-h-10 cursor-pointer items-center gap-1.5 whitespace-nowrap px-1 text-xs font-bold text-background/80">
-          <input
-            type="checkbox"
-            checked={appendImport}
-            onChange={(event) => setAppendImport(event.target.checked)}
-          />
-          Add to quiz instead of replacing
-        </label>
-        <label className="flex min-h-10 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-background/50 px-4 text-xs font-extrabold text-background">
-          <UploadIcon aria-hidden="true" />
-          Import CSV
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(event) => void handleCsvFile(event)}
-            className="hidden"
-          />
-        </label>
-        <form
-          onSubmit={handleSheetUrlSubmit}
-          className="flex min-h-10 min-w-56 items-center gap-1.5 rounded-xl border-2 border-background/50 px-3 text-background"
-        >
-          <Link2Icon aria-hidden="true" className="shrink-0" />
-          <input
-            type="url"
-            value={sheetUrlInput}
-            onChange={(event) => setSheetUrlInput(event.target.value)}
-            placeholder={
-              appendImport
-                ? 'Add more from Google Sheets'
-                : 'Re-import from Google Sheets'
-            }
-            aria-label="Google Sheets link"
-            className="min-w-0 flex-1 bg-transparent text-xs font-bold outline-none placeholder:text-background/40"
-          />
-          <Button
-            type="submit"
-            disabled={previewFromUrlMutation.isPending}
-            size="sm"
-            className="shrink-0 rounded-lg bg-background/20 px-2 py-1 text-xs font-extrabold text-background disabled:opacity-50"
-          >
-            {previewFromUrlMutation.isPending ? '…' : 'Import'}
-          </Button>
-        </form>
+        <QuizImportControls variant="toolbar" quizImport={quizImport} />
         <Button
           type="button"
           onClick={handleExportCsv}
