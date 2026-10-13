@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -23,13 +23,13 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('shows a free-text answer form once the team has joined and a question is open', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -40,10 +40,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );
@@ -64,7 +66,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     (_label, options, expectedRole) => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
-        socketResult({
+        teamLinkResult({
           session: {
             rounds: [
               {
@@ -81,10 +83,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
             ],
             progress: { status: 'question_open' },
           },
-          team: {
-            teamId: 'team-1',
-            teamName: 'Returning Team',
-            teamToken: 'team-token-1',
+          join: {
+            team: {
+              teamId: 'team-1',
+              teamName: 'Returning Team',
+              teamToken: 'team-token-1',
+            },
           },
         }),
       );
@@ -108,7 +112,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows the number keypad input for a Number question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -119,10 +123,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );
@@ -135,7 +141,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows the margin under the prompt of an open Number question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -151,10 +157,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );
@@ -167,7 +175,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -178,12 +186,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -201,7 +211,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -217,12 +227,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -239,7 +251,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows the previously submitted free-text answer below the question prompt', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -250,12 +262,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: 'Banana' },
+        game: { myAnswers: { 1: 'Banana' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -270,7 +284,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('does not show a submitted-answer note before the team has answered', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -281,10 +295,12 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );
@@ -296,7 +312,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('indicates which option the team chose on a multiple-choice question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -312,12 +328,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: 'Paris' },
+        game: { myAnswers: { 1: 'Paris' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -335,7 +353,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows the multiple-choice Submit button as green "Submitted" when it matches the recorded answer, and back to magenta "Submit" when a different option is chosen', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -351,12 +369,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: 'Paris' },
+        game: { myAnswers: { 1: 'Paris' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -375,7 +395,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows the free-text Submit button as green "Submitted" when it matches the recorded answer, and back to magenta "Submit" when the text changes', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -386,12 +406,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: 'Banana' },
+        game: { myAnswers: { 1: 'Banana' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -414,7 +436,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -425,12 +447,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -446,7 +470,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -457,13 +481,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: '__idk__' },
-        submitAnswer,
+        game: { myAnswers: { 1: '__idk__' }, submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -478,7 +503,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('shows the IDK button as pressed once submitted, on both free-text and multiple-choice', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -494,12 +519,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: '__idk__' },
+        game: { myAnswers: { 1: '__idk__' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -537,14 +564,16 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
-        socketResult({
+        teamLinkResult({
           session: kahootSession(),
-          team: {
-            teamId: 'team-1',
-            teamName: 'Returning Team',
-            teamToken: 'team-token-1',
+          join: {
+            team: {
+              teamId: 'team-1',
+              teamName: 'Returning Team',
+              teamToken: 'team-token-1',
+            },
           },
-          submitAnswer,
+          game: { submitAnswer },
         }),
       );
       renderWithQuery(<PlayPage />);
@@ -565,14 +594,16 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
-        socketResult({
+        teamLinkResult({
           session: kahootSession(),
-          team: {
-            teamId: 'team-1',
-            teamName: 'Returning Team',
-            teamToken: 'team-token-1',
+          join: {
+            team: {
+              teamId: 'team-1',
+              teamName: 'Returning Team',
+              teamToken: 'team-token-1',
+            },
           },
-          submitAnswer,
+          game: { submitAnswer },
         }),
       );
       renderWithQuery(<PlayPage />);
@@ -590,12 +621,14 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     it('highlights the tapped option as chosen', async () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
-        socketResult({
+        teamLinkResult({
           session: kahootSession(),
-          team: {
-            teamId: 'team-1',
-            teamName: 'Returning Team',
-            teamToken: 'team-token-1',
+          join: {
+            team: {
+              teamId: 'team-1',
+              teamName: 'Returning Team',
+              teamToken: 'team-token-1',
+            },
           },
         }),
       );
@@ -617,14 +650,16 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       const submitAnswer = vi.fn();
       mockUseTeamLink.mockReturnValue(
-        socketResult({
+        teamLinkResult({
           session: kahootSession({ isKahoot: false }),
-          team: {
-            teamId: 'team-1',
-            teamName: 'Returning Team',
-            teamToken: 'team-token-1',
+          join: {
+            team: {
+              teamId: 'team-1',
+              teamName: 'Returning Team',
+              teamToken: 'team-token-1',
+            },
           },
-          submitAnswer,
+          game: { submitAnswer },
         }),
       );
       renderWithQuery(<PlayPage />);
@@ -644,7 +679,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   it('does not show an answer form before the team identity has been confirmed', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {

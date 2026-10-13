@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { seenQuestionsOf, socketResult } from './test-utils';
+import { seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -46,17 +46,17 @@ describe('PlayPage — break and reveal', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   /** A phone that joined, sent the view for `session`. */
   function renderPhone(
     session: Parameters<typeof seenQuestionsOf>[0],
-    hook: Record<string, unknown> = {},
+    game: Record<string, unknown> = {},
   ) {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({ session, team: TEAM, ...hook }),
+      teamLinkResult({ session, join: { team: TEAM }, game }),
     );
     return renderWithQuery(<PlayPage />);
   }
@@ -358,7 +358,7 @@ describe('PlayPage — break and reveal', () => {
     // The admin advances the reveal on /display to question 2 — /play snaps
     // back to follow it, discarding the team's manual browse to question 3.
     mockUseTeamLink.mockReturnValue(
-      socketResult({ session: revealAt(1), team: TEAM }),
+      teamLinkResult({ session: revealAt(1), join: { team: TEAM } }),
     );
     rerender(<PlayPage />);
 

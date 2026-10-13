@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, mockFetchPublicSessions, searchParamsRef } =
   vi.hoisted(() => ({
@@ -39,7 +39,7 @@ describe('PlayPage — logout and errors', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
   });
@@ -47,11 +47,13 @@ describe('PlayPage — logout and errors', () => {
   it('shows the join error directly on the join form, pre-filled, and offers log out, when a returning team reconnect fails', async () => {
     const handleLogOut = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        connectionError: 'Invalid join code',
-        nameInput: 'Returning Team',
-        hasStoredIdentity: true,
-        handleLogOut,
+      teamLinkResult({
+        join: {
+          connectionError: 'Invalid join code',
+          nameInput: 'Returning Team',
+          hasStoredIdentity: true,
+          handleLogOut,
+        },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -70,10 +72,12 @@ describe('PlayPage — logout and errors', () => {
     const reason =
       'Team name "Taken Name" is already registered — enter its team code to play as this team, or choose a different name';
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        connectionError: reason,
-        nameInput: 'Taken Name',
-        hasStoredIdentity: false,
+      teamLinkResult({
+        join: {
+          connectionError: reason,
+          nameInput: 'Taken Name',
+          hasStoredIdentity: false,
+        },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -87,18 +91,20 @@ describe('PlayPage — logout and errors', () => {
   it('lets a joined team log out from the game view', async () => {
     const handleLogOut = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
           teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+          handleLogOut,
         },
-        teamName: 'Returning Team',
-        handleLogOut,
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -110,10 +116,12 @@ describe('PlayPage — logout and errors', () => {
 
   it('shows the team code the server issued in the join form after logging out', () => {
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        nameInput: 'The Quizzards',
-        teamCodeInput: 'QUICK-JADE-FOX',
-        hasStoredIdentity: false,
+      teamLinkResult({
+        join: {
+          nameInput: 'The Quizzards',
+          teamCodeInput: 'QUICK-JADE-FOX',
+          hasStoredIdentity: false,
+        },
       }),
     );
     renderWithQuery(<PlayPage />);

@@ -80,6 +80,9 @@ A screen showing a round's name before its content: the round intro before its q
 **Phone screen**:
 The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries the question the big screen is revealing. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
 
+**Auto-advance**:
+A phone setting, on by default and remembered on that phone. On, the block browser follows the big screen's current question and reveal step; off, the team browses the block freely with previous/next.
+
 ## Bonuses
 
 **Bonus award**:

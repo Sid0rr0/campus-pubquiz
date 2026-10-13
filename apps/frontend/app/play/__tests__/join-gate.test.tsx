@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { JoinPanel } from '@/app/components/join-panel';
 import { renderWithQuery } from '@/test-utils/query';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, mockFetchPublicSessions } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -50,7 +50,7 @@ describe('the join gate on /play and the home page join panel', () => {
 
   const cases: ReadonlyArray<{
     name: string;
-    setup: () => Record<string, unknown>;
+    setup: () => Parameters<typeof teamLinkResult>[0];
     isFormExpected: boolean;
   }> = [
     {
@@ -62,7 +62,7 @@ describe('the join gate on /play and the home page join panel', () => {
       name: 'a restored team name with no game to reconnect to and no view',
       setup: () => {
         saveTeamName();
-        return { activeJoinCode: null };
+        return { join: { activeJoinCode: null } };
       },
       isFormExpected: true,
     },
@@ -70,7 +70,7 @@ describe('the join gate on /play and the home page join panel', () => {
       name: 'a connection error and no team',
       setup: () => {
         saveTeamName();
-        return { session: {}, connectionError: 'Unknown game' };
+        return { session: {}, join: { connectionError: 'Unknown game' } };
       },
       isFormExpected: true,
     },
@@ -86,7 +86,7 @@ describe('the join gate on /play and the home page join panel', () => {
       name: 'a joined team with a view',
       setup: () => {
         saveTeamName();
-        return { session: {}, team: JOINED_TEAM };
+        return { session: {}, join: { team: JOINED_TEAM } };
       },
       isFormExpected: false,
     },
@@ -94,7 +94,10 @@ describe('the join gate on /play and the home page join panel', () => {
       name: 'the Team link saying the join form is needed, whatever else is set',
       setup: () => {
         saveTeamName();
-        return { session: {}, team: JOINED_TEAM, needsJoinForm: true };
+        return {
+          session: {},
+          join: { team: JOINED_TEAM, needsJoinForm: true },
+        };
       },
       isFormExpected: true,
     },
@@ -102,7 +105,7 @@ describe('the join gate on /play and the home page join panel', () => {
 
   describe.each(cases)('$name', ({ setup, isFormExpected }) => {
     it('decides the same on /play', () => {
-      mockUseTeamLink.mockReturnValue(socketResult(setup()));
+      mockUseTeamLink.mockReturnValue(teamLinkResult(setup()));
 
       renderWithQuery(<PlayPage />);
 
@@ -110,7 +113,7 @@ describe('the join gate on /play and the home page join panel', () => {
     });
 
     it('decides the same on the home page join panel', () => {
-      mockUseTeamLink.mockReturnValue(socketResult(setup()));
+      mockUseTeamLink.mockReturnValue(teamLinkResult(setup()));
 
       renderWithQuery(<JoinPanel codeFromUrl="" />);
 

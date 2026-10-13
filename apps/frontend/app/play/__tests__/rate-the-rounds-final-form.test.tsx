@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -47,11 +47,12 @@ function renderEnded(
   const rateRound =
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
   mockUseTeamLink.mockReturnValue(
-    socketResult({
+    teamLinkResult({
       session: endedSession(overrides.isFeedbackCollected ?? true),
-      team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
-      rateRound,
-      myRoundRatings: overrides.myRoundRatings ?? {},
+      join: {
+        team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
+      },
+      game: { rateRound, myRoundRatings: overrides.myRoundRatings ?? {} },
     }),
   );
   renderWithQuery(<PlayPage />);
@@ -68,7 +69,7 @@ describe('PlayPage — the final feedback form', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('shows "Quiz complete!" followed by a star row for every listed round', () => {

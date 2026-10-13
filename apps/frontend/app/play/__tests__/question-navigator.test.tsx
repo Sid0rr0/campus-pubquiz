@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -28,23 +28,25 @@ describe('PlayPage — question navigator', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('shows a navigator for revealed block questions with answered questions marked', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [{ questions: [FRUIT, PLANET] }],
           progress: { status: 'question_open', questionIndex: 1 },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: 'Banana' },
+        game: { myAnswers: { 1: 'Banana' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -61,15 +63,17 @@ describe('PlayPage — question navigator', () => {
   it('shows the whole round as disabled slots in the picker, not just the next question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [{ questions: [FRUIT, PLANET, COUNTRY] }],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );
@@ -91,7 +95,7 @@ describe('PlayPage — question navigator', () => {
   it('restarts question numbering from 1 for each round in the picker', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             { breakAfter: false, questions: [FRUIT, PLANET] },
@@ -103,10 +107,12 @@ describe('PlayPage — question navigator', () => {
             furthestOpenIndex: 2,
           },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );
@@ -131,18 +137,19 @@ describe('PlayPage — question navigator', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [{ questions: [FRUIT, PLANET] }],
           progress: { status: 'question_open', questionIndex: 1 },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
-        myAnswers: { 1: 'Banana' },
+        game: { submitAnswer, myAnswers: { 1: 'Banana' } },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -171,10 +178,7 @@ describe('PlayPage — question navigator', () => {
   it('keeps showing the furthest-opened question when the display steps PREVIOUS', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        // The admin hit PREVIOUS on /display: progress/currentQuestion step
-        // back to q1, but furthestOpenIndex (and so blockQuestions) still
-        // reflects q2 as the latest question ever opened.
+      teamLinkResult({
         session: {
           rounds: [{ questions: [FRUIT, PLANET] }],
           progress: {
@@ -183,10 +187,12 @@ describe('PlayPage — question navigator', () => {
             furthestOpenIndex: 1,
           },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );

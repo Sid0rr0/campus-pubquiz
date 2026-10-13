@@ -40,13 +40,13 @@ describe('useTeamLink', () => {
   it('joins once on connect, then stores the token and team code once the join is accepted', () => {
     const { result } = renderHook(() => useTeamLink(''));
     act(() => {
-      result.current.setNameInput('The Quizzards');
-      result.current.setCodeInput('abcdef');
+      result.current.join.setNameInput('The Quizzards');
+      result.current.join.setCodeInput('abcdef');
     });
     // A double tap: the second submit must not open a second connection.
     act(() => {
-      result.current.handleJoin(fakeSubmitEvent());
-      result.current.handleJoin(fakeSubmitEvent());
+      result.current.join.handleJoin(fakeSubmitEvent());
+      result.current.join.handleJoin(fakeSubmitEvent());
     });
     const socket = latestSocket();
     expect(mockIo).toHaveBeenCalledTimes(1);
@@ -80,15 +80,15 @@ describe('useTeamLink', () => {
     expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe(
       'QUICK-JADE-FOX',
     );
-    expect(result.current.teamCodeInput).toBe('QUICK-JADE-FOX');
-    expect(result.current.connectionError).toBeNull();
+    expect(result.current.join.teamCodeInput).toBe('QUICK-JADE-FOX');
+    expect(result.current.join.connectionError).toBeNull();
   });
 
   describe('the join form gate', () => {
     it('needs the join form when the phone has no team name', () => {
       const { result } = renderHook(() => useTeamLink(''));
 
-      expect(result.current.needsJoinForm).toBe(true);
+      expect(result.current.join.needsJoinForm).toBe(true);
     });
 
     it('needs the join form for a restored team name with no game to reconnect to and no view', () => {
@@ -96,18 +96,18 @@ describe('useTeamLink', () => {
 
       const { result } = renderHook(() => useTeamLink(''));
 
-      expect(result.current.teamName).toBe('The Quizzards');
-      expect(result.current.activeJoinCode).toBeNull();
-      expect(result.current.needsJoinForm).toBe(true);
+      expect(result.current.join.teamName).toBe('The Quizzards');
+      expect(result.current.join.activeJoinCode).toBeNull();
+      expect(result.current.join.needsJoinForm).toBe(true);
     });
 
     it('needs the join form when the join is refused and there is no team', async () => {
       const { result } = renderHook(() => useTeamLink(''));
       act(() => {
-        result.current.setNameInput('The Quizzards');
-        result.current.setCodeInput('abcdef');
+        result.current.join.setNameInput('The Quizzards');
+        result.current.join.setCodeInput('abcdef');
       });
-      act(() => result.current.handleJoin(fakeSubmitEvent()));
+      act(() => result.current.join.handleJoin(fakeSubmitEvent()));
       const socket = latestSocket();
       act(() => socket.serverConnects());
 
@@ -115,9 +115,9 @@ describe('useTeamLink', () => {
         socket.reject(SOCKET_EVENTS.JOIN_PLAYERS, 'Unknown game'),
       );
 
-      expect(result.current.connectionError).toBe('Unknown game');
-      expect(result.current.team).toBeNull();
-      expect(result.current.needsJoinForm).toBe(true);
+      expect(result.current.join.connectionError).toBe('Unknown game');
+      expect(result.current.join.team).toBeNull();
+      expect(result.current.join.needsJoinForm).toBe(true);
     });
 
     it('no longer needs the join form once a view has arrived', () => {
@@ -134,8 +134,8 @@ describe('useTeamLink', () => {
         ),
       );
 
-      expect(result.current.snapshot).not.toBeNull();
-      expect(result.current.needsJoinForm).toBe(false);
+      expect(result.current.game?.view).toBeDefined();
+      expect(result.current.join.needsJoinForm).toBe(false);
     });
   });
 
@@ -173,8 +173,8 @@ describe('useTeamLink', () => {
         window.localStorage.getItem('campus-pubquiz-team-token'),
       ).toBeNull();
       expect(mockPush).toHaveBeenCalledWith('/play');
-      expect(result.current.nameInput).toBe('');
-      expect(result.current.connectionError).toBe(
+      expect(result.current.join.nameInput).toBe('');
+      expect(result.current.join.connectionError).toBe(
         'You were removed from this team by the quiz master',
       );
     });
@@ -182,7 +182,7 @@ describe('useTeamLink', () => {
     it('emits a leave with the team id before clearing the session when logging out', () => {
       const { result, socket } = linkedTeam();
 
-      act(() => result.current.handleLogOut());
+      act(() => result.current.join.handleLogOut());
 
       const leaves = socket.emitsOf(SOCKET_EVENTS.LEAVE_SESSION);
       expect(leaves).toHaveLength(1);
@@ -209,7 +209,7 @@ describe('useTeamLink', () => {
       expect(window.localStorage.getItem('campus-pubquiz-team-code')).toBe(
         'QUICK-JADE-FOX',
       );
-      expect(result.current.nameInput).toBe('The Quizzards');
+      expect(result.current.join.nameInput).toBe('The Quizzards');
       expect(mockPush).toHaveBeenCalledWith('/play');
     });
   });

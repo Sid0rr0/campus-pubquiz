@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { seenQuestionsOf, socketResult } from './test-utils';
+import { seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -41,15 +41,14 @@ const HEROES = {
 /** A phone that joined, whose history holds what the view it is sent carries. */
 function renderHistory(
   session: Parameters<typeof seenQuestionsOf>[0],
-  hook: Record<string, unknown> = {},
+  game: Record<string, unknown> = {},
 ) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
   mockUseTeamLink.mockReturnValue(
-    socketResult({
+    teamLinkResult({
       session,
-      team: TEAM,
-      seenQuestions: seenQuestionsOf(session),
-      ...hook,
+      join: { team: TEAM },
+      game: { seenQuestions: seenQuestionsOf(session), ...game },
     }),
   );
   return renderWithQuery(<PlayPage />);
@@ -59,7 +58,7 @@ describe('PlayPage — answered questions history', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('lists every seen question with the team answer, and the correct answer once revealed', () => {
@@ -180,12 +179,14 @@ describe('PlayPage — answered questions history', () => {
           questionIndex: 1,
         },
       };
-      return socketResult({
+      return teamLinkResult({
         session,
-        team: TEAM,
-        myAnswers: { 1: 'Banana', 2: 'Mars' },
-        myAnswerGrades: grades,
-        seenQuestions: seenQuestionsOf(session),
+        join: { team: TEAM },
+        game: {
+          myAnswers: { 1: 'Banana', 2: 'Mars' },
+          myAnswerGrades: grades,
+          seenQuestions: seenQuestionsOf(session),
+        },
       });
     }
 

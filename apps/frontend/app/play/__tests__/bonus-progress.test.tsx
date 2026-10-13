@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -27,13 +27,13 @@ describe('PlayPage — bonus points panel', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('lists every enabled predefined category with its explanation and award count, but never "Custom" as available', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           progress: { status: 'lobby' },
           settings: {
@@ -42,12 +42,14 @@ describe('PlayPage — bonus points panel', () => {
             maxBonusAwardsPerCategory: { shot: 2, selfie: 1 },
           },
         },
-        team: {
-          teamId: 1,
-          teamName: 'The Quizzards',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            teamToken: 'team-token-1',
+          },
         },
-        myBonusAwards: [{ category: 'shot', points: 1 }],
+        game: { myBonusAwards: [{ category: 'shot', points: 1 }] },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -71,7 +73,7 @@ describe('PlayPage — bonus points panel', () => {
   it('shows a received custom award with its points and reason, without a generic "custom available" line', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           progress: { status: 'lobby' },
           settings: {
@@ -80,14 +82,18 @@ describe('PlayPage — bonus points panel', () => {
             maxBonusAwardsPerCategory: {},
           },
         },
-        team: {
-          teamId: 1,
-          teamName: 'The Quizzards',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            teamToken: 'team-token-1',
+          },
         },
-        myBonusAwards: [
-          { category: 'custom', points: 3, reason: 'Best team name' },
-        ],
+        game: {
+          myBonusAwards: [
+            { category: 'custom', points: 3, reason: 'Best team name' },
+          ],
+        },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -105,7 +111,7 @@ describe('PlayPage — bonus points panel', () => {
     ({ points, expected }) => {
       joinAsTeam();
       mockUseTeamLink.mockReturnValue(
-        socketResult({
+        teamLinkResult({
           session: {
             progress: { status: 'lobby' },
             settings: {
@@ -114,12 +120,18 @@ describe('PlayPage — bonus points panel', () => {
               maxBonusAwardsPerCategory: {},
             },
           },
-          team: {
-            teamId: 1,
-            teamName: 'The Quizzards',
-            teamToken: 'team-token-1',
+          join: {
+            team: {
+              teamId: 1,
+              teamName: 'The Quizzards',
+              teamToken: 'team-token-1',
+            },
           },
-          myBonusAwards: [{ category: 'custom', points, reason: 'Phone use' }],
+          game: {
+            myBonusAwards: [
+              { category: 'custom', points, reason: 'Phone use' },
+            ],
+          },
         }),
       );
       renderWithQuery(<PlayPage />);
@@ -131,7 +143,7 @@ describe('PlayPage — bonus points panel', () => {
   it('does not show any custom-award content when the team has not received one', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           progress: { status: 'lobby' },
           settings: {
@@ -140,12 +152,14 @@ describe('PlayPage — bonus points panel', () => {
             maxBonusAwardsPerCategory: {},
           },
         },
-        team: {
-          teamId: 1,
-          teamName: 'The Quizzards',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            teamToken: 'team-token-1',
+          },
         },
-        myBonusAwards: [],
+        game: { myBonusAwards: [] },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -157,7 +171,7 @@ describe('PlayPage — bonus points panel', () => {
   it('opens the mobile drawer with the same bonus content when its trigger is clicked', async () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           progress: { status: 'lobby' },
           settings: {
@@ -166,12 +180,14 @@ describe('PlayPage — bonus points panel', () => {
             maxBonusAwardsPerCategory: {},
           },
         },
-        team: {
-          teamId: 1,
-          teamName: 'The Quizzards',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            teamToken: 'team-token-1',
+          },
         },
-        myBonusAwards: [],
+        game: { myBonusAwards: [] },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -187,7 +203,7 @@ describe('PlayPage — bonus points panel', () => {
   it('does not render the bonus panel when no bonus categories are enabled', () => {
     joinAsTeam();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           progress: { status: 'lobby' },
           settings: {
@@ -196,10 +212,12 @@ describe('PlayPage — bonus points panel', () => {
             maxBonusAwardsPerCategory: {},
           },
         },
-        team: {
-          teamId: 1,
-          teamName: 'The Quizzards',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 1,
+            teamName: 'The Quizzards',
+            teamToken: 'team-token-1',
+          },
         },
       }),
     );

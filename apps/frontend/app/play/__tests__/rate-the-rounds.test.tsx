@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -54,11 +54,12 @@ function renderBreak(
   const rateRound =
     overrides.rateRound ?? vi.fn().mockResolvedValue({ success: true });
   mockUseTeamLink.mockReturnValue(
-    socketResult({
+    teamLinkResult({
       session: breakSession(overrides.isFeedbackCollected ?? true),
-      team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
-      rateRound,
-      myRoundRatings: overrides.myRoundRatings ?? {},
+      join: {
+        team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
+      },
+      game: { rateRound, myRoundRatings: overrides.myRoundRatings ?? {} },
     }),
   );
   const { rerender } = renderWithQuery(<PlayPage />);
@@ -75,7 +76,7 @@ describe('PlayPage — rating the rounds in the break', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('shows a row of five stars for each listed round, above the block browser', () => {
@@ -179,12 +180,12 @@ describe('PlayPage — rating the rounds in the break', () => {
 
     // The phone rejoined: the join payload says the server never got the tap.
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: breakSession(true),
-        team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
-        rateRound,
-        myRoundRatings: {},
-        roundRatingsEpoch: 1,
+        join: {
+          team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
+        },
+        game: { rateRound, myRoundRatings: {}, roundRatingsEpoch: 1 },
       }),
     );
     rerender(<PlayPage />);
