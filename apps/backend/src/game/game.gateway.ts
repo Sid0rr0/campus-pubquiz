@@ -39,9 +39,10 @@ import {
 } from '@/game/socket/guarded-dispatch.util';
 import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
 import {
-  QuestionLockTimerRegistry,
-  type TimerScheduler,
-} from '@/game/socket/question-lock-timer.registry';
+  PHASE_TIMER_SCHEDULERS,
+  PhaseTimers,
+  type PhaseTimerSchedulers,
+} from '@/game/socket/phase-timers';
 import {
   SOCKET_EVENT_DECLARATIONS,
   type SocketEventDeclaration,
@@ -51,14 +52,6 @@ import {
   type DeadlineChange,
   type SessionOutcome,
 } from '@/game/state/session-outcome';
-
-/** Injection token for swapping the phase timers' schedulers; nothing provides it in production, so both timers use real timers. */
-export const PHASE_TIMER_SCHEDULERS = Symbol('PHASE_TIMER_SCHEDULERS');
-
-export interface PhaseTimerSchedulers {
-  lock: TimerScheduler;
-  kahoot: TimerScheduler;
-}
 
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
@@ -74,8 +67,7 @@ export class GameGateway
   server!: GameServer;
 
   private readonly logger = new Logger(GameGateway.name);
-  private readonly lockTimers: QuestionLockTimerRegistry;
-  private readonly kahootQuestionTimers: QuestionLockTimerRegistry;
+  private readonly phaseTimers: PhaseTimers;
 
   constructor(
     private readonly gameState: GameStateService,
@@ -86,10 +78,14 @@ export class GameGateway
     @Inject(PHASE_TIMER_SCHEDULERS)
     timerSchedulers?: PhaseTimerSchedulers,
   ) {
-    this.lockTimers = new QuestionLockTimerRegistry(timerSchedulers?.lock);
-    this.kahootQuestionTimers = new QuestionLockTimerRegistry(
-      timerSchedulers?.kahoot,
-    );
+    this.phaseTimers = new PhaseTimers({
+      schedulers: timerSchedulers,
+      gameState,
+      orm,
+      deliver: (joinCode, outcome) =>
+        deliverOutcome(this.outcomeDeps, joinCode, outcome),
+      logger: this.logger,
+    });
   }
 
   /**
@@ -98,14 +94,11 @@ export class GameGateway
    * deadlines — otherwise nothing re-arms them until the next admin action.
    */
   onApplicationBootstrap(): void {
-    for (const { joinCode } of this.gameState.listSessions()) {
-      this.armTimers(joinCode, this.gameState.getDeadlines(joinCode));
-    }
+    this.phaseTimers.restoreAll();
   }
 
   onModuleDestroy(): void {
-    this.lockTimers.clearAll();
-    this.kahootQuestionTimers.clearAll();
+    this.phaseTimers.clearAll();
   }
 
   @CreateRequestContext()
@@ -347,67 +340,8 @@ export class GameGateway
       answerService: this.answerService,
       server: this.server,
       rearmTimers: (joinCode: string, deadlines: DeadlineChange) =>
-        this.armTimers(joinCode, deadlines),
+        this.phaseTimers.arm(joinCode, deadlines),
     };
-  }
-
-  /**
-   * Fires when the last question of a breakAfter round has been open for
-   * the session's settings.lockGraceSeconds with no admin action —
-   * auto-advances exactly as if the admin had clicked "Advance" themselves.
-   */
-  @CreateRequestContext()
-  private async handleQuestionLockTimerExpired(
-    joinCode: string,
-  ): Promise<void> {
-    await this.advanceFromTimer(joinCode, 'Auto-lock');
-  }
-
-  /**
-   * Fires when a kahootMode question has been open for the session's
-   * settings.kahootQuestionTimerSeconds with no admin action — auto-locks it
-   * exactly as if the admin had clicked "Advance" themselves.
-   */
-  @CreateRequestContext()
-  private async handleKahootQuestionTimerExpired(
-    joinCode: string,
-  ): Promise<void> {
-    await this.advanceFromTimer(joinCode, 'Kahoot auto-lock');
-  }
-
-  /**
-   * Both timers share the admin's ADVANCE path: the Live session's press,
-   * delivered like any event, whose outcome arms the next deadline. A failure
-   * is logged (there's no client to tell) and leaves the timers as the failed
-   * write left them.
-   */
-  private async advanceFromTimer(
-    joinCode: string,
-    label: string,
-  ): Promise<void> {
-    try {
-      await deliverOutcome(
-        this.outcomeDeps,
-        joinCode,
-        await this.gameState.applyAdminAction(joinCode, 'ADVANCE'),
-      );
-    } catch (error) {
-      this.logger.error(
-        `${label} ADVANCE failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  /** (Re)arms both this session's auto-lock timers to `deadlines`, clearing any stale ones first. */
-  private armTimers(joinCode: string, deadlines: DeadlineChange): void {
-    this.lockTimers.rearm(joinCode, deadlines.questionLockAt, () =>
-      this.handleQuestionLockTimerExpired(joinCode),
-    );
-    this.kahootQuestionTimers.rearm(
-      joinCode,
-      deadlines.kahootQuestionEndsAt,
-      () => this.handleKahootQuestionTimerExpired(joinCode),
-    );
   }
 
   /**

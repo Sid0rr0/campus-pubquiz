@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| phase-timers | [Phase timers are their own module, apart from the gateway](phase-timers/spec.md) | 1 |
 | quiz-editor-split | [Split the quiz editor panel into a draft hook, an import hook and pure round edits](quiz-editor-split/spec.md) | 3 |
 | leaderboard-rows | [Leaderboard row selection is a pure module, apart from the leaderboard view](leaderboard-rows/spec.md) | 3 |
 | join-overlay | [Join overlay and Previous back to the lobby](join-overlay/spec.md) | 3 |

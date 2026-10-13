@@ -81,7 +81,7 @@ flowchart TD
     dispatch["dispatchSocketEvent<br/>validate → find session → check room<br/>→ run the event's one Live session call → deliver"]
     deliver["deliverOutcome<br/>re-arm timers from the outcome's deadline change<br/>replies · broadcast · admin answer lists<br/>team syncs · socket closes"]
     broadcast["broadcastGameState<br/>one view per room"]
-    timers["question-lock timer registry"]
+    timers["PhaseTimers<br/>question lock + kahoot question timers<br/>(timer registry per timer)"]
   end
 
   subgraph state["game/state — the live session module"]

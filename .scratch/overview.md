@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                   | Title                                                                                                                       | Tickets | Blocked by             |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
-| phase-timers           | [Phase timers are their own module, apart from the gateway](phase-timers/spec.md)                                           | 1       | —                      |
 | sortable-table         | [One sortable table module across five panels, and a smaller session picker](sortable-table/spec.md)                        | —       | —                      |
 
 ## Won't do
