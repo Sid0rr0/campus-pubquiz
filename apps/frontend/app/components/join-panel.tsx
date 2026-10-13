@@ -22,22 +22,12 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     connectionError,
     team,
     snapshot,
-    activeJoinCode,
+    needsJoinForm,
     handleJoin,
   } = useTeamLink(codeFromUrl);
 
-  // Mirrors /play's join gate: teamName (local state, cleared by "log out")
-  // is the source of truth, not team (socket state, which the mocked/real
-  // hook never explicitly resets once a join has been accepted). Also
-  // mirrors /play's canReachSnapshot guard — a closed session's stored team
-  // name survives (see clearStoredSession) with its join code cleared, so
-  // without this a refresh could restore teamName with nothing left to
-  // connect to and hang on "Connecting to the table…" forever.
-  const canReachSnapshot = Boolean(activeJoinCode) || Boolean(snapshot);
-  const isForm =
-    !teamName || !canReachSnapshot || Boolean(connectionError && !team);
-  const isJoined = !isForm && Boolean(team);
-  const isConnecting = !isForm && !team;
+  const isJoined = !needsJoinForm && Boolean(team);
+  const isConnecting = !needsJoinForm && !team;
 
   useEffect(() => {
     // A successful join has nothing left to do on the home page — hand off
@@ -56,7 +46,7 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
   return (
     <section className="flex flex-1 justify-center px-5 pb-14 pt-9">
       <div className="w-full max-w-md rounded-3xl border-2 border-foreground/10 bg-white p-7 shadow-[0_16px_36px_rgba(46,49,146,0.1)]">
-        {isForm && (
+        {needsJoinForm && (
           <>
             <h2 className="mb-1 font-display text-2xl">Join the quiz</h2>
             <p className="mb-5 text-sm font-semibold text-foreground/55">
