@@ -1,5 +1,10 @@
 import type { ScoredQuestion } from '@campus-pubquiz/types';
-import { canGradeByHand, gradeOnSubmit } from '@/answer/grading-policy';
+import {
+  canGradeByHand,
+  gradeOnKeyFix,
+  gradeOnSubmit,
+  type StoredAnswerRow,
+} from '@/answer/grading-policy';
 
 const AUTO: ScoredQuestion = {
   type: 'multiple_choice',
@@ -130,5 +135,133 @@ describe('Grading policy: can grade by hand', () => {
 
   it('allows a batch answer once graded', () => {
     expect(canGradeByHand(BATCH, { gradedAt: new Date() })).toBe(true);
+  });
+});
+
+describe('Grading policy: key fix', () => {
+  const at = new Date('2026-01-01');
+  const row = (over: Partial<StoredAnswerRow> = {}): StoredAnswerRow => ({
+    value: 'x',
+    responseMs: null,
+    gradedAt: null,
+    verdict: null,
+    pointsAwarded: 0,
+    ...over,
+  });
+  const graded = (
+    value: string,
+    verdict: 'correct' | 'partial',
+    pointsAwarded: number,
+  ) => row({ value, gradedAt: at, verdict, pointsAwarded });
+
+  describe('auto', () => {
+    it('rescores every row against the corrected key, discarding an override', () => {
+      const result = gradeOnKeyFix({
+        question: { ...AUTO, answer: 'Lyon' },
+        previous: AUTO,
+        rows: [row({ value: 'Lyon' }), graded('Paris', 'correct', 2)],
+        kahootTimerSeconds: null,
+        hasBatchRun: false,
+      });
+      expect(result).toEqual({
+        rescored: true,
+        writes: [
+          { kind: 'set', points: 2, verdict: 'correct' },
+          { kind: 'set', points: 0, verdict: 'incorrect' },
+        ],
+      });
+    });
+
+    it('speed-scales from the stored response time when a kahoot timer is given', () => {
+      const fix = (responseMs: number) =>
+        gradeOnKeyFix({
+          question: AUTO,
+          previous: AUTO,
+          rows: [row({ value: 'Paris', responseMs })],
+          kahootTimerSeconds: 10,
+          hasBatchRun: false,
+        }).writes[0];
+      expect(fix(0)).toEqual({ kind: 'set', points: 2, verdict: 'correct' });
+      expect(fix(10_000)).toMatchObject({ kind: 'set', verdict: 'correct' });
+      expect((fix(10_000) as { points: number }).points).toBeLessThan(2);
+    });
+
+    it('is rescored even with no rows', () => {
+      expect(
+        gradeOnKeyFix({
+          question: AUTO,
+          previous: AUTO,
+          rows: [],
+          kahootTimerSeconds: null,
+          hasBatchRun: false,
+        }),
+      ).toEqual({ rescored: true, writes: [] });
+    });
+  });
+
+  describe('match-or-human', () => {
+    const fix = (rows: StoredAnswerRow[]) =>
+      gradeOnKeyFix({
+        question: { ...MATCH_OR_HUMAN, answer: 'pear' },
+        previous: MATCH_OR_HUMAN,
+        rows,
+        kahootTimerSeconds: null,
+        hasBatchRun: false,
+      });
+
+    it('sets a row that matches the corrected key correct', () => {
+      expect(fix([row({ value: 'pear' })])).toEqual({
+        rescored: true,
+        writes: [{ kind: 'set', points: 3, verdict: 'correct' }],
+      });
+    });
+
+    it('clears a row graded automatically under the old key that no longer matches', () => {
+      expect(fix([graded('apple', 'correct', 3)]).writes).toEqual([
+        { kind: 'clear' },
+      ]);
+    });
+
+    it('keeps a moderator grade on a non-matching row', () => {
+      expect(fix([graded('apple', 'partial', 1)]).writes).toEqual([
+        { kind: 'keep' },
+      ]);
+    });
+
+    it('clears a moderator grade identical to the automatic one (accepted tradeoff)', () => {
+      // Indistinguishable from the automatic grade, so it counts as automatic.
+      expect(fix([graded('apple', 'correct', 3)]).writes).toEqual([
+        { kind: 'clear' },
+      ]);
+    });
+
+    it('keeps an ungraded non-matching row', () => {
+      expect(fix([row({ value: 'apple' })]).writes).toEqual([{ kind: 'keep' }]);
+    });
+  });
+
+  describe('batch', () => {
+    const fix = (hasBatchRun: boolean) =>
+      gradeOnKeyFix({
+        question: BATCH,
+        previous: BATCH,
+        rows: [row({ value: '990' }), row({ value: '500' })],
+        kahootTimerSeconds: null,
+        hasBatchRun,
+      });
+
+    it('reports not rescored when the batch has not run', () => {
+      expect(fix(false)).toEqual({ rescored: false, writes: [] });
+    });
+
+    it('re-runs the batch when it has already run', () => {
+      expect(fix(true)).toEqual({
+        rescored: true,
+        writes: [
+          { kind: 'set', points: 5, verdict: 'correct' },
+          { kind: 'set', points: 0, verdict: 'incorrect' },
+        ],
+      });
+    });
   });
 });

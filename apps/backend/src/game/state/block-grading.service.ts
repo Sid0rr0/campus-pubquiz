@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import {
   type GameProgress,
-  isAutoGradedType,
   isBatchGradedType,
   isBreakStatus,
   isGradedStatus,
-  isMatchOrHumanType,
   type QuestionType,
   type ScoredQuestion,
   type SessionState,
@@ -217,12 +215,11 @@ export class BlockGradingService {
   }
 
   /**
-   * The per-type regrade behind regradeForKeyFix: auto-graded types re-score
-   * every answer (kahoot questions re-apply speed scaling from the response
-   * times stored at submit); match-or-human types grade new matches correct,
-   * keep the moderator's grades and leave other non-matches ungraded;
-   * closest_guess re-runs its batch only if it was already graded (otherwise
-   * the normal lock flow grades it with the new key). A question missing from
+   * The regrade behind regradeForKeyFix: one call per corrected question,
+   * the Grading policy deciding what each grading mode does (see the answer
+   * module's regradeForKeyFix). "Has the batch run" is whether the session
+   * holds the question's closest_guess summary; when it does, the summary is
+   * recomputed from the returned answers. A question missing from
    * `previousQuestions` is taken as unchanged. Only writes grades: names the
    * questions it re-scored and the closest_guess summaries it recomputed.
    */
@@ -249,33 +246,22 @@ export class BlockGradingService {
     let summaries: SessionState['closestGuessSummaries'] = {};
     const regradedQuestionIds: number[] = [];
     for (const { question, kahootTimerSeconds } of questions) {
-      if (isAutoGradedType(question.type)) {
-        await this.answerService.regradeAutoGraded(
-          gameSessionId,
-          question,
-          kahootTimerSeconds,
-        );
-        regradedQuestionIds.push(question.id);
-      } else if (isMatchOrHumanType(question.type)) {
-        await this.answerService.regradeMatchOrHuman(
-          gameSessionId,
-          question,
-          previousQuestions.get(question.id) ?? question,
-        );
-        regradedQuestionIds.push(question.id);
-      } else if (
-        isBatchGradedType(question.type) &&
-        session.closestGuessSummaries[question.id] !== undefined
-      ) {
-        const graded = await this.answerService.gradeClosestGuess(
-          gameSessionId,
-          question,
-        );
+      const hasBatchRun =
+        session.closestGuessSummaries[question.id] !== undefined;
+      const { rescored, answers } = await this.answerService.regradeForKeyFix(
+        gameSessionId,
+        question,
+        previousQuestions.get(question.id) ?? question,
+        kahootTimerSeconds,
+        hasBatchRun,
+      );
+      if (!rescored) continue;
+      regradedQuestionIds.push(question.id);
+      if (hasBatchRun) {
         summaries = {
           ...summaries,
-          [question.id]: summarizeClosestGuess(question.answer, graded),
+          [question.id]: summarizeClosestGuess(question.answer, answers),
         };
-        regradedQuestionIds.push(question.id);
       }
     }
     return { regradedQuestionIds, closestGuessSummaries: summaries };

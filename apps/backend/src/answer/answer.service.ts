@@ -7,10 +7,8 @@ import type {
   Verdict,
 } from '@campus-pubquiz/types';
 import {
-  gradeAtSubmit,
   gradeClosestGuessBatch,
   isAutoGradedType,
-  scoreSubmission,
   verdictForManualGrade,
 } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
@@ -20,7 +18,13 @@ import { readQuestionPayload } from '@/db/question-payload';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
-import { canGradeByHand, gradeOnSubmit } from '@/answer/grading-policy';
+import {
+  canGradeByHand,
+  gradeOnKeyFix,
+  gradeOnSubmit,
+  rescoreAuto,
+  type GradeWrite,
+} from '@/answer/grading-policy';
 
 export interface SubmittedAnswer {
   answerId: number;
@@ -197,108 +201,62 @@ export class AnswerService {
   }
 
   /**
-   * Re-scores every existing answer to an auto-graded question (see
-   * Scoring's AUTO_GRADED_TYPES) against the corrected `question` — used
-   * after a live edit to an opened question. Deliberately overwrites
-   * any manual override (e.g. adjusted match partial credit): the key it was
-   * judged against just changed, and the admin can override again in break.
-   * `kahootTimerSeconds` is the session's configured kahoot question timer
-   * for a kahootMode question, null otherwise (or when unlimited): when set,
-   * each answer is speed-scaled by the response time stored at submit, so a
-   * regrade after a backend restart gives the same points as one without.
+   * Regrade for a key fix: re-grades the stored answers to an already-shown
+   * question after a live edit corrected its key, as the Grading policy
+   * decides (auto rescores every answer, kahoot speed-scaled when
+   * `kahootTimerSeconds` is given; match-or-human grades new matches correct
+   * and clears only automatic grades; batch re-runs only when
+   * `hasBatchRun`). `previous` is the question as it stood before the edit.
+   * Returns whether the question was rescored at all, and its answers.
    */
-  async regradeAutoGraded(
-    gameSessionId: number,
-    question: GradableQuestion,
-    kahootTimerSeconds: number | null = null,
-  ): Promise<void> {
-    // Only auto types score per answer; closest_guess is batch-graded, and
-    // scoring it here would grade each guess against the key on its own.
-    if (!isAutoGradedType(question.type)) return;
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      question: question.id,
-    });
-    if (rows.length === 0) return;
-
-    const timerMs =
-      kahootTimerSeconds === null ? null : kahootTimerSeconds * 1000;
-    const now = new Date();
-    for (const row of rows) {
-      const score = scoreSubmission(
-        question,
-        row.value,
-        timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
-      );
-      row.pointsAwarded = score.points;
-      row.verdict = score.verdict;
-      row.gradedAt = now;
-    }
-    await this.answers.getEntityManager().flush();
-  }
-
-  /**
-   * Re-grades every existing answer to a match-or-human question (see
-   * Scoring's MATCH_OR_HUMAN_TYPES) against the corrected `question`, after a
-   * live edit to an opened question. An answer matching the corrected
-   * key is graded correct. A non-matching one keeps the moderator's grade,
-   * and goes back to ungraded only if it was graded automatically — told
-   * apart by re-running the submit-time grade against `previous`, the
-   * question as it stood before the edit: a grade that equals what the old
-   * key would have given automatically was automatic, anything else was the
-   * moderator's.
-   */
-  async regradeMatchOrHuman(
+  async regradeForKeyFix(
     gameSessionId: number,
     question: GradableQuestion,
     previous: ScoredQuestion,
-  ): Promise<void> {
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      question: question.id,
+    kahootTimerSeconds: number | null,
+    hasBatchRun: boolean,
+  ): Promise<{ rescored: boolean; answers: AnswerView[] }> {
+    const rows = await this.findForQuestion(gameSessionId, question.id);
+    const { rescored, writes } = gradeOnKeyFix({
+      question,
+      previous,
+      rows,
+      kahootTimerSeconds,
+      hasBatchRun,
     });
-    if (rows.length === 0) return;
+    await this.applyWrites(rows, writes);
+    return { rescored, answers: rows.map(toAnswerView) };
+  }
 
+  /** Applies the policy's grade writes (one per row), stamping one grading time per flush; keep is a no-op. */
+  private async applyWrites(
+    rows: readonly Answer[],
+    writes: readonly GradeWrite[],
+  ): Promise<void> {
     const now = new Date();
-    for (const row of rows) {
-      const score = gradeAtSubmit(question, row.value);
-      if (score) {
-        row.pointsAwarded = score.points;
-        row.verdict = score.verdict;
+    let isChanged = false;
+    rows.forEach((row, index) => {
+      const write = writes[index];
+      if (write === undefined || write.kind === 'keep') return;
+      isChanged = true;
+      if (write.kind === 'set') {
+        row.pointsAwarded = write.points;
+        row.verdict = write.verdict;
         row.gradedAt = now;
-        continue;
-      }
-      const previousScore = gradeAtSubmit(previous, row.value);
-      const wasGradedAutomatically =
-        previousScore !== null &&
-        row.gradedAt !== null &&
-        row.verdict === previousScore.verdict &&
-        row.pointsAwarded === previousScore.points;
-      if (wasGradedAutomatically) {
+      } else {
         row.pointsAwarded = 0;
         row.verdict = null;
         row.gradedAt = null;
       }
-    }
-    await this.answers.getEntityManager().flush();
+    });
+    if (isChanged) await this.answers.getEntityManager().flush();
   }
 
   /**
-   * Batch-grades every submitted guess for a closest_guess question (see
-   * Scoring's gradeClosestGuessBatch for the rule). Can only run once all
-   * teams are done answering (needs every guess to know who's closest),
-   * unlike the types graded at submit() time. Safe to call more than once
-   * for the same question — unconditionally recomputes from the stored guesses and overwrites.
+   * Batch-grades the rows of a closest_guess question (see Scoring's
+   * gradeClosestGuessBatch for the rule) from the stored guesses and
+   * overwrites; returns them as views.
    */
-  async gradeClosestGuess(
-    gameSessionId: number,
-    question: GradableQuestion,
-  ): Promise<AnswerView[]> {
-    const rows = await this.findForQuestion(gameSessionId, question.id);
-    return this.gradeClosestGuessRows(question, rows);
-  }
-
-  /** gradeClosestGuess over rows already read, so a caller that read them first needn't read them twice. */
   private async gradeClosestGuessRows(
     question: GradableQuestion,
     rows: Answer[],
@@ -370,7 +328,14 @@ export class AnswerService {
     // Kahoot rounds only hold auto-graded types (Scoring's
     // KAHOOT_ALLOWED_TYPES); never overwrite a human or batch grade.
     if (!isAutoGradedType(question.type)) return;
-    await this.regradeAutoGraded(gameSessionId, question, questionTimerSeconds);
+    const rows = await this.answers.find({
+      gameSession: gameSessionId,
+      question: question.id,
+    });
+    await this.applyWrites(
+      rows,
+      rescoreAuto(question, rows, questionTimerSeconds),
+    );
   }
 }
 

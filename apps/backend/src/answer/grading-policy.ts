@@ -1,6 +1,8 @@
 import {
   gradeAtSubmit,
+  gradeClosestGuessBatch,
   QUESTION_KINDS,
+  scoreSubmission,
   type GradingMode,
   type ScoredQuestion,
   type ScoreResult,
@@ -83,6 +85,102 @@ const CAN_GRADE_BY_HAND: Record<
   // "any row graded" as "the batch ran".
   batch: (stored) => stored.gradedAt !== null,
 };
+
+/** A stored answer as the key-fix event reads it. */
+export interface StoredAnswerRow extends StoredAnswerGrade {
+  responseMs: number | null;
+  verdict: ScoreResult['verdict'] | null;
+  pointsAwarded: number;
+}
+
+export interface KeyFixInput {
+  question: ScoredQuestion;
+  /** The question as it stood before the fix; the key the stored grades were judged against. */
+  previous: ScoredQuestion;
+  rows: readonly StoredAnswerRow[];
+  /** The session's kahoot question timer for a kahootMode question, else null. */
+  kahootTimerSeconds: number | null;
+  /** Whether a batch question's batch already ran (the session holds its summary). */
+  hasBatchRun: boolean;
+}
+
+export interface KeyFixResult {
+  /** Whether the question was rescored at all; false leaves the grades untouched. */
+  rescored: boolean;
+  /** One write per input row, in order (empty when nothing was rescored). */
+  writes: GradeWrite[];
+}
+
+/**
+ * Whether a stored grade is what the submit-time grade gives against `key`:
+ * the only way to tell an automatic grade from the moderator's. A moderator
+ * grade identical to the automatic one counts as automatic (accepted tradeoff).
+ */
+function isGradedAutomatically(
+  key: ScoredQuestion,
+  stored: StoredAnswerRow,
+): boolean {
+  const score = gradeAtSubmit(key, stored.value);
+  return (
+    score !== null &&
+    stored.gradedAt !== null &&
+    stored.verdict === score.verdict &&
+    stored.pointsAwarded === score.points
+  );
+}
+
+/** Rescores every row speed-scaled by its stored response time when a timer is given. The auto key-fix and kahoot speed scoring share it. */
+export function rescoreAuto(
+  question: ScoredQuestion,
+  rows: readonly StoredAnswerRow[],
+  kahootTimerSeconds: number | null,
+): GradeWrite[] {
+  const timerMs =
+    kahootTimerSeconds === null ? null : kahootTimerSeconds * 1000;
+  return rows.map((row) =>
+    setOf(
+      scoreSubmission(
+        question,
+        row.value,
+        timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
+      ),
+    ),
+  );
+}
+
+const KEY_FIX: Record<GradingMode, (input: KeyFixInput) => KeyFixResult> = {
+  auto: ({ question, rows, kahootTimerSeconds }) => ({
+    rescored: true,
+    writes: rescoreAuto(question, rows, kahootTimerSeconds),
+  }),
+  // A new match grades correct; a grade the old key gave automatically and
+  // the new one no longer gives goes back to ungraded; the rest is the
+  // moderator's.
+  'match-or-human': ({ question, previous, rows }) => ({
+    rescored: true,
+    writes: rows.map((row) => {
+      const score = gradeAtSubmit(question, row.value);
+      if (score) return setOf(score);
+      return isGradedAutomatically(previous, row) ? CLEAR : KEEP;
+    }),
+  }),
+  // Before the lock the normal lock flow grades with the new key.
+  batch: ({ question, rows, hasBatchRun }) =>
+    hasBatchRun
+      ? {
+          rescored: true,
+          writes: gradeClosestGuessBatch(
+            question,
+            rows.map((row) => row.value),
+          ).map(setOf),
+        }
+      : { rescored: false, writes: [] },
+};
+
+/** What a live answer-key fix does to the stored grades of the corrected question. */
+export function gradeOnKeyFix(input: KeyFixInput): KeyFixResult {
+  return KEY_FIX[QUESTION_KINDS[input.question.type].gradingMode](input);
+}
 
 /** Whether the quiz master may hand-grade this stored answer now. */
 export function canGradeByHand(

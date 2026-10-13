@@ -1,6 +1,9 @@
 import { IDK_ANSWER_VALUE } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
-import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
+import {
+  regradeAuto,
+  setupAnswerServiceTest,
+} from '@/answer/__tests__/answer-service-test-utils';
 
 describe('AnswerService (Postgres integration) - auto-grading on submit', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
@@ -554,7 +557,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       );
       await state.answerService.grade(state.session.id, submitted.answerId, 1);
 
-      await state.answerService.regradeAutoGraded(state.session.id, {
+      await regradeAuto(state.answerService, state.session.id, {
         id: question.id,
         type: 'number',
         answer: '330',
