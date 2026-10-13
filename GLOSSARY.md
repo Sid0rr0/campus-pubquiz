@@ -33,7 +33,7 @@ _Avoid_: shown question, locked question (locked means no longer accepting answe
 Where the live sessions on a quiz have got to — their opened questions, the current round of the furthest-on one, and whether that round's block has started locking. The rounds after the current round can be added, deleted and reordered, and their break-after and kahoot setting can change (which moves where the current block ends); the current round and earlier ones keep their place, break-after and kahoot setting. Questions in rounds after the current round can be added, reordered, moved between those rounds and deleted. In the current round the questions after the last opened one can too, until its block starts locking; from then on its rounds are frozen. Rounds before it are always frozen. It is checked and applied while the live sessions are held, so the game can't move past it during a save.
 
 **Question type**:
-What a question asks teams to do (free text, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
+What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
 _Avoid_: question kind, question format
 
 **Answer kind**:
@@ -51,6 +51,10 @@ _Avoid_: scoring, marking
 **Half points**:
 Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a kahoot speed score) are kept to the nearest half point.
 _Avoid_: partial points (a partial answer can earn any share, not just half)
+
+**Margin**:
+How far a Number question's answer may be from the key and still be correct, either as a percentage of the key or as an absolute amount; both ends count. A margin of 0 means only the exact key is correct.
+_Avoid_: tolerance, error margin, range
 
 **Ungraded**:
 An answer still waiting for the quiz master to grade it, and a question with at least one such answer. closest*guess is never ungraded: it is graded in one batch at the lock.

@@ -4,8 +4,9 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 ## Not implemented
 
-| Spec                   | Title                                                                                                                       | Tickets | Blocked by             |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
+| Spec            | Title                                                                    | Tickets | Blocked by |
+| --------------- | ------------------------------------------------------------------------ | ------- | ---------- |
+| number-question | [Number question type, graded against a margin](number-question/spec.md) | 3       | —          |
 
 ## Won't do
 
