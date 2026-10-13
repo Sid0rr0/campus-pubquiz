@@ -4,8 +4,8 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Behaviour, wording, accessible names and roles are unchanged; the quiz actions menu and delete flow are untouched.
-- [ ] No standalone test for the component; the existing session picker tests (start dialog tabs, name, kahoot prefill, create, cancel, errors) pass unchanged.
-- [ ] `pnpm --filter frontend test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] Behaviour, wording, accessible names and roles are unchanged; the quiz actions menu and delete flow are untouched.
+- [x] No standalone test for the component; the existing session picker tests (start dialog tabs, name, kahoot prefill, create, cancel, errors) pass unchanged.
+- [x] `pnpm --filter frontend test`, `pnpm typecheck` and `pnpm lint` pass.

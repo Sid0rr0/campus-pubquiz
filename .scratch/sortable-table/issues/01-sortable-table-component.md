@@ -13,9 +13,9 @@ Panels adopt it and keep their own columns, data, sorting, paging and Prev/Next 
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] No panel hand-writes table, header, sort-button or empty-row markup any more.
-- [ ] No standalone test for the component; the existing panel tests (session picker, sessions page, teams directory, played sessions, stats detail, control teams table) pass unchanged.
-- [ ] No backend or shared-types changes; no wording, accessible name or role changes.
-- [ ] `pnpm --filter frontend test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] No panel hand-writes table, header, sort-button or empty-row markup any more.
+- [x] No standalone test for the component; the existing panel tests (session picker, sessions page, teams directory, played sessions, stats detail, control teams table) pass unchanged.
+- [x] No backend or shared-types changes; no wording, accessible name or role changes.
+- [x] `pnpm --filter frontend test`, `pnpm typecheck` and `pnpm lint` pass.

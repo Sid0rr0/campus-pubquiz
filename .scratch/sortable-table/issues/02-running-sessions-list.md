@@ -4,8 +4,8 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Behaviour, wording, accessible names and roles are unchanged.
-- [ ] No standalone test for the component; the existing session picker and sessions page tests pass unchanged.
-- [ ] `pnpm --filter frontend test`, `pnpm typecheck` and `pnpm lint` pass.
+- [x] Behaviour, wording, accessible names and roles are unchanged.
+- [x] No standalone test for the component; the existing session picker and sessions page tests pass unchanged.
+- [x] `pnpm --filter frontend test`, `pnpm typecheck` and `pnpm lint` pass.
