@@ -26,7 +26,7 @@ describe('GameGateway — outcome delivery re-arms the auto-lock timers', () => 
   it('arms both timers to the deadlines an outcome carries', async () => {
     const game = await openKahootQuestion();
 
-    await game.gateway.deliverSessionOutcome(game.joinCode, {
+    await game.broadcaster.deliver(game.joinCode, {
       ...BROADCAST_STATE_OUTCOME,
       deadlineChange: { questionLockAt: LOCK_AT, kahootQuestionEndsAt: null },
     });
@@ -40,10 +40,7 @@ describe('GameGateway — outcome delivery re-arms the auto-lock timers', () => 
     const dueAt = game.timers().kahoot.dueAt();
     expect(dueAt).not.toBeNull();
 
-    await game.gateway.deliverSessionOutcome(
-      game.joinCode,
-      BROADCAST_STATE_OUTCOME,
-    );
+    await game.broadcaster.deliver(game.joinCode, BROADCAST_STATE_OUTCOME);
 
     expect(game.timers().kahoot.dueAt()).toBe(dueAt);
     expect(game.timers().lock.isArmed()).toBe(false);
@@ -56,7 +53,7 @@ describe('GameGateway — outcome delivery re-arms the auto-lock timers', () => 
     });
 
     await expect(
-      game.gateway.deliverSessionOutcome(game.joinCode, {
+      game.broadcaster.deliver(game.joinCode, {
         ...BROADCAST_STATE_OUTCOME,
         deadlineChange: {
           questionLockAt: null,
