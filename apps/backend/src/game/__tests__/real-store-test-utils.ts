@@ -1,3 +1,5 @@
+import { Global, Module, type DynamicModule } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { WsException } from '@nestjs/websockets';
 import { MikroORM, RequestContext } from '@mikro-orm/postgresql';
 import {
@@ -19,47 +21,31 @@ import { AnswerService } from '@/answer/answer.service';
 import { StandingsService } from '@/standings/standings.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
-import { Answer } from '@/db/entities/answer.entity';
-import { BonusAward } from '@/db/entities/bonus-award.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
-import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
-import { RoundRating } from '@/db/entities/round-rating.entity';
-import { SessionFeedback } from '@/db/entities/session-feedback.entity';
-import { ShowdownRound } from '@/db/entities/showdown-round.entity';
-import { ShowdownRoundTeam } from '@/db/entities/showdown-round-team.entity';
-import { Team } from '@/db/entities/team.entity';
 import { useTestDatabase } from '@/test-db/test-database';
-import { AnswerRepository } from '@/db/repositories/answer.repository';
-import { BonusAwardRepository } from '@/db/repositories/bonus-award.repository';
-import { GameSessionRepository } from '@/db/repositories/game-session.repository';
-import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
-import { QuestionRepository } from '@/db/repositories/question.repository';
-import { QuizRepository } from '@/db/repositories/quiz.repository';
-import { RoundRepository } from '@/db/repositories/round.repository';
-import { RoundRatingRepository } from '@/db/repositories/round-rating.repository';
-import { SessionFeedbackRepository } from '@/db/repositories/session-feedback.repository';
-import { ShowdownRoundRepository } from '@/db/repositories/showdown-round.repository';
-import { ShowdownRoundTeamRepository } from '@/db/repositories/showdown-round-team.repository';
-import { TeamRepository } from '@/db/repositories/team.repository';
+import { createTestDatabaseModule } from '@/test-db/test-database.module';
+import { SessionService } from '@/auth/session.service';
 import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
+import { GameModule } from '@/game/game.module';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ManualTimerScheduler } from '@/game/__tests__/manual-timer-scheduler';
+import {
+  PHASE_TIMER_SCHEDULERS,
+  type PhaseTimerSchedulers,
+} from '@/game/socket/phase-timers';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
-import { SessionWrite } from '@/game/state/session-write';
-import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionWriteQueue } from '@/game/state/session-write-queue';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { TeamService } from '@/team/team.service';
 import {
   TEST_SESSION_TOKEN,
   asServer,
-  asSessionService,
   asSocket,
   createFakeSessionService,
   createMockServer,
@@ -373,6 +359,20 @@ function unavailableQuestionIds(): SeededQuestionIds {
   return ids as SeededQuestionIds;
 }
 
+/** The one provider the Game module leaves to its host: the phase timers' schedulers (nothing provides them in production). */
+function phaseTimerSchedulersModule(
+  schedulers: PhaseTimerSchedulers,
+): DynamicModule {
+  @Global()
+  @Module({
+    providers: [{ provide: PHASE_TIMER_SCHEDULERS, useValue: schedulers }],
+    exports: [PHASE_TIMER_SCHEDULERS],
+  })
+  class PhaseTimerSchedulersModule {}
+
+  return { module: PhaseTimerSchedulersModule };
+}
+
 /**
  * Gateway test harness backed by the real answer, team, bonus, showdown,
  * seed and game-progress modules on a Postgres testcontainer — the only way
@@ -383,15 +383,18 @@ function unavailableQuestionIds(): SeededQuestionIds {
  * (one container per run, game tables emptied after each test).
  */
 export function setupRealStoreGatewayTest(): RealStoreHarness {
-  let gateways: GameGateway[] = [];
+  let modules: TestingModule[] = [];
 
-  // Registered before useTestDatabase() so the gateways are destroyed before
-  // its afterEach empties the tables (hooks run in definition order).
-  afterEach(() => {
-    // Armed lock/kahoot timers would otherwise fire into truncated tables
-    // and keep the worker alive.
-    gateways.forEach((gateway) => gateway.onModuleDestroy());
-    gateways = [];
+  // Registered before useTestDatabase() so the modules are closed before its
+  // afterEach empties the tables (hooks run in definition order).
+  afterEach(async () => {
+    // Closing runs module destroy, which clears armed lock/kahoot timers that
+    // would otherwise fire into truncated tables and keep the worker alive.
+    // It never closes the worker's ORM: the test database module only hands
+    // that ORM out.
+    const closing = modules;
+    modules = [];
+    await Promise.all(closing.map((module) => module.close()));
   });
 
   const db = useTestDatabase();
@@ -453,61 +456,6 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     };
   }
 
-  // Repositories come from the global em, so the gateway's
-  // @CreateRequestContext() handlers give each call its own forked em —
-  // the way the running app resolves them.
-  function buildServices() {
-    const { em } = db.orm;
-    const sessionTeams = em.getRepository<
-      GameSessionTeam,
-      GameSessionTeamRepository
-    >(GameSessionTeam);
-    const sessions = em.getRepository<GameSession, GameSessionRepository>(
-      GameSession,
-    );
-    const teams = em.getRepository<Team, TeamRepository>(Team);
-    const questions = em.getRepository<Question, QuestionRepository>(Question);
-    const bonusService = new BonusService(
-      em.getRepository<BonusAward, BonusAwardRepository>(BonusAward),
-      sessionTeams,
-    );
-    return {
-      answerService: new AnswerService(
-        em.getRepository<Answer, AnswerRepository>(Answer),
-        teams,
-        questions,
-      ),
-      standingsService: new StandingsService(sessionTeams),
-      teamService: new TeamService(teams, sessions, sessionTeams),
-      bonusService,
-      feedbackService: new FeedbackService(
-        em.getRepository<RoundRating, RoundRatingRepository>(RoundRating),
-        em.getRepository<SessionFeedback, SessionFeedbackRepository>(
-          SessionFeedback,
-        ),
-      ),
-      showdownService: new ShowdownService(
-        em.getRepository<ShowdownRound, ShowdownRoundRepository>(ShowdownRound),
-        em.getRepository<ShowdownRoundTeam, ShowdownRoundTeamRepository>(
-          ShowdownRoundTeam,
-        ),
-        bonusService,
-      ),
-      seedService: new SeedService(
-        em.getRepository<Quiz, QuizRepository>(Quiz),
-        em.getRepository<Round, RoundRepository>(Round),
-        questions,
-        sessions,
-      ),
-      progressRepository: new GameProgressRepository(sessions),
-      quizService: new QuizService(
-        em.getRepository<Quiz, QuizRepository>(Quiz),
-        em.getRepository<Round, RoundRepository>(Round),
-        questions,
-      ),
-    };
-  }
-
   // Captures emits in order: the gateway emits via
   // server.to(a).to(b).emit(event, payload), so `to` accumulates rooms until
   // the next `emit` consumes them.
@@ -540,42 +488,41 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
   // Builds the module and gateway over the database as it stands — the
   // first boot of a freshly seeded quiz, or a restart over the same one.
   async function assemble(quiz: PlayableQuiz): Promise<RealStoreGateway> {
-    const services = buildServices();
-    const sessionWrite = new SessionWrite(services.standingsService);
-    const grading = new BlockGradingService(services.answerService);
-    const gameState = new GameStateService(
-      services.seedService,
-      services.progressRepository,
-      db.orm,
-      services.answerService,
-      services.standingsService,
-      services.showdownService,
-      services.teamService,
-      services.bonusService,
-      services.feedbackService,
-      sessionWrite,
-      grading,
-    );
-    await gameState.onModuleInit();
-    const nextWriteWaiting = watchNextWrite(gameState);
     const sessionService = createFakeSessionService();
     const lockScheduler = new ManualTimerScheduler();
     const kahootScheduler = new ManualTimerScheduler();
-    const gateway = new GameGateway(
-      gameState,
-      services.answerService,
-      asSessionService(sessionService),
-      db.orm,
-      { lock: lockScheduler, kahoot: kahootScheduler },
-    );
-    gateways.push(gateway);
-    const liveEdit = new LiveEditService(
-      services.quizService,
-      gateway,
-      sessionWrite,
-      services.seedService,
-      grading,
-    );
+    // Nest runs module init (the session store loads), then application
+    // bootstrap (timers re-arm), the way the app boots.
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        GameModule,
+        createTestDatabaseModule(db.orm),
+        phaseTimerSchedulersModule({
+          lock: lockScheduler,
+          kahoot: kahootScheduler,
+        }),
+      ],
+    })
+      .overrideProvider(SessionService)
+      .useValue(sessionService)
+      .compile();
+    modules.push(moduleRef);
+    await moduleRef.init();
+    const gateway = moduleRef.get(GameGateway);
+    const gameState = moduleRef.get(GameStateService);
+    const liveEdit = moduleRef.get(LiveEditService);
+    const services = {
+      answerService: moduleRef.get(AnswerService),
+      standingsService: moduleRef.get(StandingsService),
+      teamService: moduleRef.get(TeamService),
+      bonusService: moduleRef.get(BonusService),
+      feedbackService: moduleRef.get(FeedbackService),
+      showdownService: moduleRef.get(ShowdownService),
+      seedService: moduleRef.get(SeedService),
+      progressRepository: moduleRef.get(GameProgressRepository),
+      quizService: moduleRef.get(QuizService),
+    };
+    const nextWriteWaiting = watchNextWrite(gameState);
     const saveQuizEdit = (
       edit: (rounds: ImportRoundPreview[]) => ImportRoundPreview[] = (rounds) =>
         rounds,
@@ -588,9 +535,6 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
           rounds: edit(draft.rounds),
         });
       });
-    // Nest runs this after every module's onModuleInit — i.e. after the
-    // session store is loaded — so a restart re-arms its timers here.
-    gateway.onApplicationBootstrap();
     const server = createMockServer();
     gateway.server = asServer(server);
     const emits = captureRoomEmits(server);

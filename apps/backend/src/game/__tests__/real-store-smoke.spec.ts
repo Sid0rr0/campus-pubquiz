@@ -18,6 +18,29 @@ describe('GameGateway — real-store harness smoke', () => {
     game = await harness.createGateway({ teamNames: ['The Quizzards'] });
   });
 
+  it('hands out the instances the module built, wired to each other', () => {
+    const privates = (target: object) =>
+      target as unknown as Record<string, unknown>;
+
+    expect(privates(game.gateway).gameState).toBe(game.gameState);
+    expect(privates(game.liveEdit).sessionWrite).toBe(
+      privates(game.gameState).sessionWrite,
+    );
+    expect(privates(game.gameState).progressRepository).toBe(
+      game.progressRepository,
+    );
+  });
+
+  it('builds a fresh module over the same database on restart, leaving the earlier handle usable', async () => {
+    const restarted = await game.restart();
+
+    expect(restarted.gateway).not.toBe(game.gateway);
+    expect(restarted.gameState).not.toBe(game.gameState);
+    // Sockets and connected teams do not survive a restart; the earlier handle still answers.
+    expect((await restarted.snapshot()).teams).toEqual([]);
+    expect((await game.snapshot()).teams).toHaveLength(1);
+  });
+
   it('plays a real submit and grade through the gateway and shows the results to each room', async () => {
     const admin = await game.connectAdmin();
     const [{ socket: team, teamId }] = game.teams;
