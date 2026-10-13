@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import HomePage from '@/app/page';
 import { renderWithQuery } from '@/test-utils/query';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from '@/app/play/__tests__/test-utils';
 
 const {
   mockUseTeamLink,
@@ -64,7 +64,7 @@ describe('HomePage', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
     mockRouterPush.mockClear();
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
@@ -122,10 +122,12 @@ describe('HomePage', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem('campus-pubquiz-team-code', 'QUICK-JADE-FOX');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        connectionError: 'Session expired',
-        nameInput: 'Returning Team',
-        teamCodeInput: 'QUICK-JADE-FOX',
+      teamLinkResult({
+        join: {
+          connectionError: 'Session expired',
+          nameInput: 'Returning Team',
+          teamCodeInput: 'QUICK-JADE-FOX',
+        },
       }),
     );
 
@@ -139,7 +141,9 @@ describe('HomePage', () => {
   it('prefills the game code from the ?code= query parameter (QR scan)', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
-    mockUseTeamLink.mockReturnValue(socketResult({ codeInput: 'ABCDEF' }));
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ join: { codeInput: 'ABCDEF' } }),
+    );
     renderWithQuery(<HomePage />);
 
     // The combobox exists (with a placeholder) before the session list
@@ -154,7 +158,9 @@ describe('HomePage', () => {
 
   it('shows a connecting state while the link has a name and game but no team yet', () => {
     mockUseTeamLink.mockReturnValue(
-      socketResult({ teamName: 'The Quizzards', activeJoinCode: 'ABCDEF' }),
+      teamLinkResult({
+        join: { teamName: 'The Quizzards', activeJoinCode: 'ABCDEF' },
+      }),
     );
     renderWithQuery(<HomePage />);
 
@@ -166,7 +172,7 @@ describe('HomePage', () => {
     const setCodeInput = vi.fn();
     const handleJoin = vi.fn((event) => event.preventDefault());
     mockUseTeamLink.mockReturnValue(
-      socketResult({ setNameInput, setCodeInput, handleJoin }),
+      teamLinkResult({ join: { setNameInput, setCodeInput, handleJoin } }),
     );
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     renderWithQuery(<HomePage />);
@@ -186,21 +192,23 @@ describe('HomePage', () => {
   });
 
   it('redirects straight to /play once the team is accepted', () => {
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
     const { rerender } = renderWithQuery(<HomePage />);
     expect(mockRouterPush).not.toHaveBeenCalled();
 
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        teamName: 'The Quizzards',
-        activeJoinCode: 'ABCDEF',
-        team: {
-          teamId: 'team-1',
+      teamLinkResult({
+        session: { joinCode: 'ABCDEF' },
+        join: {
           teamName: 'The Quizzards',
-          teamToken: 'token-1',
-          teamCode: 'QUICK-JADE-FOX',
+          activeJoinCode: 'ABCDEF',
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+            teamCode: 'QUICK-JADE-FOX',
+          },
         },
-        snapshot: { joinCode: 'ABCDEF', progress: { status: 'lobby' } },
       }),
     );
     rerender(<HomePage />);

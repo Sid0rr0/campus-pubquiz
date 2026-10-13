@@ -17,18 +17,9 @@ import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
-import {
-  browsedQuestionAfterAutoAdvanceChange,
-  selectPhoneQuestion,
-} from '@/app/play/phone-question-selection';
+import { usePhoneQuestionBrowser } from '@/app/play/use-phone-question-browser';
 import { useTeamLink } from '@/app/lib/use-team-link';
-import {
-  readAutoAdvanceSetting,
-  writeAutoAdvanceSetting,
-} from '@/app/lib/player-settings-storage';
 import { usePublishPlayerMenu } from '@/app/lib/player-menu-context';
-
-const NO_FEEDBACK = { comment: '', topics: [] };
 
 function PlayPageContent() {
   const router = useRouter();
@@ -36,6 +27,7 @@ function PlayPageContent() {
   const codeFromUrl = searchParams.get('code') ?? '';
   const teamCodeFromUrl = searchParams.get('teamCode') ?? '';
   const nameFromUrl = searchParams.get('name') ?? '';
+  const { join, game } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
   const {
     teamName,
     nameInput,
@@ -46,23 +38,11 @@ function PlayPageContent() {
     setTeamCodeInput,
     hasStoredIdentity,
     connectionError,
-    snapshot,
     team,
-    activeJoinCode,
-    submitAnswer,
-    submitShowdownGuess,
-    myAnswers = {},
-    myAnswerGrades = {},
-    myBonusAwards = [],
-    myRoundRatings = {},
-    roundRatingsEpoch = 0,
-    rateRound,
-    myFeedback = NO_FEEDBACK,
-    sendFeedback,
-    seenQuestions = {},
+    needsJoinForm,
     handleJoin,
     handleLogOut,
-  } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
+  } = join;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Stable reference (like handleLogOut) so the publish effect below doesn't
   // re-fire on every unrelated re-render.
@@ -74,37 +54,17 @@ function PlayPageContent() {
   // header so its mobile hamburger can surface them — see
   // player-menu-context.tsx.
   usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
-  // Starts true (today's always-follow behavior) and is corrected once
-  // localStorage is readable post-mount — see the teamName restore effect
-  // in use-team-link.ts for the same SSR-safe pattern.
-  const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState(true);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAutoAdvanceEnabled(readAutoAdvanceSetting());
-  }, []);
-  // null = follow the question currently shown on the big screen.
-  const [browsedQuestionId, setBrowsedQuestionId] = useState<number | null>(
-    null,
-  );
-  function handleAutoAdvanceChange(enabled: boolean): void {
-    writeAutoAdvanceSetting(enabled);
-    setAutoAdvanceEnabled(enabled);
-    setBrowsedQuestionId(
-      browsedQuestionAfterAutoAdvanceChange(enabled, browsedQuestionId),
-    );
-  }
-  const gameStatus = snapshot?.progress.status;
-  const currentQuestionId = snapshot?.currentQuestion?.id ?? null;
-  const revealIndex = snapshot?.progress.revealIndex ?? null;
-  // Only changes while actively revealing (currentQuestionId stays null
-  // throughout break/reveal), so this alone can key the reveal-walk sync.
-  const revealSyncKey = gameStatus === 'reveal' ? revealIndex : null;
+  const {
+    selectedQuestion,
+    revealQuestion,
+    navigation,
+    jumpableQuestionIds,
+    selectQuestion,
+    autoAdvanceEnabled,
+    setAutoAdvance,
+  } = usePhoneQuestionBrowser(game?.view ?? null);
 
-  // What selectPhoneQuestion compares against to spot a new question or
-  // reveal step; synced during render after the call below.
-  const [prevQuestionId, setPrevQuestionId] = useState(currentQuestionId);
-  const [prevRevealSyncKey, setPrevRevealSyncKey] = useState(revealSyncKey);
-
+  const joinCode = game?.view.joinCode;
   useEffect(() => {
     // Keeps ?code= in the address bar in sync with whichever session this
     // socket actually landed on — covers arriving here without a code (e.g.
@@ -115,21 +75,12 @@ function PlayPageContent() {
     // socket's own snapshot (disabled, not torn down) still holds the old
     // joinCode — without this guard, this effect would re-append that stale
     // code right after the redirect back to a bare /play clears it.
-    if (teamName && snapshot?.joinCode && snapshot.joinCode !== codeFromUrl) {
-      router.replace(`/play?code=${snapshot.joinCode}`);
+    if (teamName && joinCode && joinCode !== codeFromUrl) {
+      router.replace(`/play?code=${joinCode}`);
     }
-  }, [teamName, snapshot, codeFromUrl, router]);
+  }, [teamName, joinCode, codeFromUrl, router]);
 
-  // A stored team name alone doesn't mean a reconnect is actually possible —
-  // a closed session deliberately keeps the team name in storage (see
-  // clearStoredSession) but clears its join code, so a refresh can restore
-  // teamName with nothing left to connect to. Without this, the checks below
-  // would fall through to the "Connecting…" screen and hang there forever
-  // since the socket never has a join code to open. Once a snapshot has
-  // actually arrived it proves a connection did happen, so that alone is
-  // also enough even if activeJoinCode was cleared in the meantime.
-  const canReachSnapshot = Boolean(activeJoinCode) || Boolean(snapshot);
-  if (!teamName || !canReachSnapshot || (connectionError && !team)) {
+  if (needsJoinForm) {
     return (
       <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
         <h1 className="text-center font-display text-3xl text-magenta">
@@ -165,7 +116,7 @@ function PlayPageContent() {
     );
   }
 
-  if (!snapshot) {
+  if (!game) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background text-foreground">
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">
@@ -186,11 +137,23 @@ function PlayPageContent() {
   }
 
   const {
+    view,
+    myAnswers,
+    myAnswerGrades,
+    myBonusAwards,
+    myRoundRatings,
+    roundRatingsEpoch,
+    rateRound,
+    myFeedback,
+    sendFeedback,
+    seenQuestions,
+    submitAnswer,
+    submitShowdownGuess,
+  } = game;
+  const {
     progress,
-    currentQuestion,
     blockQuestions,
     upcomingQuestions,
-    revealQuestions,
     quizStructure,
     isCurrentRoundKahoot,
     closestGuessRevealStep,
@@ -200,69 +163,18 @@ function PlayPageContent() {
     isAnswerable,
     phoneScreen,
     feedback,
-  } = snapshot;
-  const onScreenQuestionId =
-    phoneScreen.kind === 'block' ? phoneScreen.onScreenQuestionId : null;
+  } = view;
   const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
-  const {
-    selectedQuestion,
-    previousQuestion,
-    nextQuestion,
-    browsedQuestionId: nextBrowsedQuestionId,
-  } = selectPhoneQuestion({
-    openedQuestions: blockQuestions,
-    currentQuestion,
-    onScreenQuestionId,
-    browsedQuestionId,
-    autoAdvanceEnabled,
-    revealSyncKey,
-    previousCurrentQuestionId: prevQuestionId,
-    previousRevealSyncKey: prevRevealSyncKey,
-  });
-  // Adjusted during render rather than in an Effect, per
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  if (nextBrowsedQuestionId !== browsedQuestionId) {
-    setBrowsedQuestionId(nextBrowsedQuestionId);
-  }
-  if (currentQuestionId !== prevQuestionId) {
-    setPrevQuestionId(currentQuestionId);
-  }
-  if (revealSyncKey !== prevRevealSyncKey) {
-    setPrevRevealSyncKey(revealSyncKey);
-  }
-  function goToPreviousQuestion(): void {
-    if (previousQuestion) {
-      setBrowsedQuestionId(previousQuestion.id);
-    }
-  }
-  function goToNextQuestion(): void {
-    if (nextQuestion) {
-      setBrowsedQuestionId(nextQuestion.id);
-    }
-  }
-  // The same question with its correct answer attached, for showing "your
-  // answer" alongside it while reveal is up.
-  const revealQuestion =
-    progress.status === 'reveal' && selectedQuestion
-      ? revealQuestions.find((question) => question.id === selectedQuestion.id)
-      : undefined;
   // The block browser (question picker + prompt) is the `block` phone
   // screen: open questions, and break/reveal so teams can review the block
   // they just answered. It needs a question to show.
-  const showBlockBrowser =
-    phoneScreen.kind === 'block' && Boolean(selectedQuestion);
   const openedQuestions = buildOpenedQuestions(
     seenQuestions,
     myAnswers,
     myAnswerGrades,
   );
-  // Only the active block's questions can actually be jumped to in the
-  // browser above — older, already-closed blocks aren't rendered there.
-  const jumpableQuestionIds = showBlockBrowser
-    ? new Set(blockQuestions.map((question) => question.id))
-    : new Set<number>();
   const selectedQuestionPoints = selectedQuestion
     ? (openedQuestions.find((entry) => entry.id === selectedQuestion.id)
         ?.pointsAwarded ?? null)
@@ -341,7 +253,7 @@ function PlayPageContent() {
         <GameStatusScreens
           phoneScreen={phoneScreen}
           quizStructure={quizStructure}
-          joinCode={snapshot.joinCode}
+          joinCode={view.joinCode}
           settings={settings}
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
@@ -360,7 +272,7 @@ function PlayPageContent() {
         )}
       </div>
       <div className="order-3 md:order-4 flex flex-col items-center gap-6 lg:flex-row lg:items-start">
-        {showBlockBrowser && selectedQuestion && (
+        {selectedQuestion && (
           <div className="md:min-w-0 md:flex-1">
             <QuestionBrowser
               progress={progress}
@@ -374,18 +286,9 @@ function PlayPageContent() {
               isKahootMode={isCurrentRoundKahoot}
               myAnswers={myAnswers}
               myAnswerPoints={selectedQuestionPoints}
-              onSelectQuestion={setBrowsedQuestionId}
+              onSelectQuestion={selectQuestion}
               onSubmitAnswer={submitAnswer}
-              navigation={
-                autoAdvanceEnabled
-                  ? undefined
-                  : {
-                      canGoBack: previousQuestion !== null,
-                      canGoForward: nextQuestion !== null,
-                      onBack: goToPreviousQuestion,
-                      onForward: goToNextQuestion,
-                    }
-              }
+              navigation={navigation}
             />
           </div>
         )}
@@ -394,7 +297,7 @@ function PlayPageContent() {
             <AnsweredQuestionsPanel
               entries={openedQuestions}
               jumpableIds={jumpableQuestionIds}
-              onSelectQuestion={setBrowsedQuestionId}
+              onSelectQuestion={selectQuestion}
             />
           )}
           {hasBonusPanel && (
@@ -411,7 +314,7 @@ function PlayPageContent() {
       <MobileQuizActionsBar
         historyEntries={openedQuestions}
         jumpableHistoryIds={jumpableQuestionIds}
-        onSelectHistoryQuestion={setBrowsedQuestionId}
+        onSelectHistoryQuestion={selectQuestion}
         bonus={
           hasBonusPanel
             ? {
@@ -428,7 +331,7 @@ function PlayPageContent() {
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
         autoAdvanceEnabled={autoAdvanceEnabled}
-        onAutoAdvanceChange={handleAutoAdvanceChange}
+        onAutoAdvanceChange={setAutoAdvance}
       />
     </main>
   );

@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { seenQuestionsOf, socketResult } from './test-utils';
+import { seenQuestionsOf, teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -41,15 +41,14 @@ const HEROES = {
 /** A phone that joined, whose history holds what the view it is sent carries. */
 function renderHistory(
   session: Parameters<typeof seenQuestionsOf>[0],
-  hook: Record<string, unknown> = {},
+  game: Record<string, unknown> = {},
 ) {
   window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
   mockUseTeamLink.mockReturnValue(
-    socketResult({
+    teamLinkResult({
       session,
-      team: TEAM,
-      seenQuestions: seenQuestionsOf(session),
-      ...hook,
+      join: { team: TEAM },
+      game: { seenQuestions: seenQuestionsOf(session), ...game },
     }),
   );
   return renderWithQuery(<PlayPage />);
@@ -59,7 +58,7 @@ describe('PlayPage — answered questions history', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('lists every seen question with the team answer, and the correct answer once revealed', () => {
@@ -126,7 +125,11 @@ describe('PlayPage — answered questions history', () => {
       {
         myAnswers: { 1: 'Banana' },
         myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
+          1: {
+            pointsAwarded: 3,
+            gradedAt: GRADED_AT,
+            verdict: 'partial' as const,
+          },
         },
       },
     );
@@ -144,7 +147,11 @@ describe('PlayPage — answered questions history', () => {
         myAnswers: { 1: 'Banana', 2: 'excalibur|excalibur', 3: 'Venus' },
         myAnswerGrades: {
           1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
-          2: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'partial' },
+          2: {
+            pointsAwarded: 2,
+            gradedAt: GRADED_AT,
+            verdict: 'partial' as const,
+          },
           3: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
         },
       },
@@ -165,8 +172,8 @@ describe('PlayPage — answered questions history', () => {
 
   describe('across the reveal walk', () => {
     const grades = {
-      1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
-      2: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
+      1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' as const },
+      2: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' as const },
     };
 
     // The phone is sent only the walk so far: the first `shownCount` reveal
@@ -180,12 +187,14 @@ describe('PlayPage — answered questions history', () => {
           questionIndex: 1,
         },
       };
-      return socketResult({
+      return teamLinkResult({
         session,
-        team: TEAM,
-        myAnswers: { 1: 'Banana', 2: 'Mars' },
-        myAnswerGrades: grades,
-        seenQuestions: seenQuestionsOf(session),
+        join: { team: TEAM },
+        game: {
+          myAnswers: { 1: 'Banana', 2: 'Mars' },
+          myAnswerGrades: grades,
+          seenQuestions: seenQuestionsOf(session),
+        },
       });
     }
 
@@ -231,7 +240,11 @@ describe('PlayPage — answered questions history', () => {
       {
         myAnswers: { 1: 'Banana' },
         myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
+          1: {
+            pointsAwarded: 3,
+            gradedAt: GRADED_AT,
+            verdict: 'partial' as const,
+          },
         },
       },
     );

@@ -16,7 +16,7 @@ See the parent spec: `.scratch/phone-question-browser/spec.md`.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The hook takes the players view (or none, since it is called before /play's early returns) and returns the selected question (none when the phone screen isn't `block`), the reveal question, the navigation (only with auto-advance off), the jumpable question ids, `selectQuestion`, and the auto-advance setting with its setter
 - [ ] The browsed pick, the auto-advance setting with its localStorage read after mount and write on change, and the snap-back bookkeeping with its render-time sync all live in the hook; it delegates to the existing pure phone question selection and auto-advance-change rule, unchanged

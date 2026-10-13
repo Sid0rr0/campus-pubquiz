@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -22,13 +22,13 @@ describe('PlayPage — question visibility', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('shows the current question once joined and connected', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -49,7 +49,7 @@ describe('PlayPage — question visibility', () => {
   it('keeps showing the question and answer form during the locking countdown', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -70,7 +70,7 @@ describe('PlayPage — question visibility', () => {
   it('shows a hint to look at the big screen for a question with an image mediaUrl', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -96,7 +96,7 @@ describe('PlayPage — question visibility', () => {
   it('shows a hint to look at the big screen for an audio question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -122,7 +122,7 @@ describe('PlayPage — question visibility', () => {
   it('shows the screen hint for a free-text question carrying a media_url, regardless of type', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -148,7 +148,7 @@ describe('PlayPage — question visibility', () => {
   it('does not show the screen hint for a free-text question', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {

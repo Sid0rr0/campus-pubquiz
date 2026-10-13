@@ -1,7 +1,12 @@
 import { renderHook, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SubmitEvent } from 'react';
-import { SOCKET_EVENTS, type AckResult } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  type AckResult,
+} from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 import {
   SUBMIT_CONFIRM_TIMEOUT_MS,
   useTeamLink,
@@ -69,20 +74,38 @@ function submitEvent() {
 function renderLinkedTeam() {
   const hook = renderHook(() => useTeamLink(''));
   act(() => {
-    hook.result.current.setNameInput('The Quizzards');
-    hook.result.current.setCodeInput('abcdef');
+    hook.result.current.join.setNameInput('The Quizzards');
+    hook.result.current.join.setCodeInput('abcdef');
   });
-  act(() => hook.result.current.handleJoin(submitEvent()));
+  act(() => hook.result.current.join.handleJoin(submitEvent()));
   const socket = latestSocket();
   act(() => socket.serverConnects());
   act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
   return { ...hook, socket };
 }
 
+/** A phone that joined and has received its first view. */
+function renderPlayingTeam() {
+  const linked = renderLinkedTeam();
+  act(() =>
+    linked.socket.trigger(
+      SOCKET_EVENTS.STATE_SYNC,
+      roomView(SOCKET_ROOMS.PLAYERS, {}),
+    ),
+  );
+  return linked;
+}
+
+function joinedGame(result: { current: ReturnType<typeof useTeamLink> }) {
+  const { game } = result.current;
+  if (!game) throw new Error('Expected a joined game');
+  return game;
+}
+
 function submit(result: { current: ReturnType<typeof useTeamLink> }) {
   let pending!: Promise<AckResult>;
   act(() => {
-    pending = result.current.submitAnswer(21, 31, 'Banana');
+    pending = joinedGame(result).submitAnswer(21, 31, 'Banana');
   });
   return pending;
 }
@@ -101,10 +124,24 @@ describe('useTeamLink: the team data and the pending answer', () => {
     vi.useRealTimers();
   });
 
-  it('feeds join accepted, answer received and team answers synced into the team data', () => {
+  it('has no joined game before the first view and one carrying the team data after it', () => {
     const { result, socket } = renderLinkedTeam();
-    expect(result.current.team?.teamId).toBe(31);
-    expect(result.current.myAnswers).toEqual({ 20: 'Paris' });
+    expect(result.current.game).toBeUndefined();
+
+    const view = roomView(SOCKET_ROOMS.PLAYERS, {});
+    act(() => socket.trigger(SOCKET_EVENTS.STATE_SYNC, view));
+
+    expect(result.current.game?.view).toEqual(view);
+    expect(result.current.game?.myAnswers).toEqual({ 20: 'Paris' });
+    expect(result.current.game?.myAnswerGrades).toMatchObject({
+      20: { pointsAwarded: 2 },
+    });
+  });
+
+  it('feeds join accepted, answer received and team answers synced into the team data', () => {
+    const { result, socket } = renderPlayingTeam();
+    expect(result.current.join.team?.teamId).toBe(31);
+    expect(result.current.game?.myAnswers).toEqual({ 20: 'Paris' });
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.ANSWER_RECEIVED, {
@@ -117,16 +154,16 @@ describe('useTeamLink: the team data and the pending answer', () => {
         verdict: null,
       }),
     );
-    expect(result.current.myAnswers).toEqual({ 20: 'Paris', 21: 'Rome' });
+    expect(result.current.game?.myAnswers).toEqual({ 20: 'Paris', 21: 'Rome' });
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers: [] }),
     );
-    expect(result.current.myAnswers).toEqual({});
+    expect(result.current.game?.myAnswers).toEqual({});
   });
 
   it('accumulates the questions seen on the socket', () => {
-    const { result, socket } = renderLinkedTeam();
+    const { result, socket } = renderPlayingTeam();
     const question = { id: 5 };
 
     act(() =>
@@ -136,11 +173,11 @@ describe('useTeamLink: the team data and the pending answer', () => {
       }),
     );
 
-    expect(result.current.seenQuestions).toEqual({ 5: question });
+    expect(result.current.game?.seenQuestions).toEqual({ 5: question });
   });
 
   it('toasts a live bonus award once, with its points', () => {
-    const { socket } = renderLinkedTeam();
+    const { socket } = renderPlayingTeam();
 
     act(() =>
       socket.trigger(SOCKET_EVENTS.BONUS_AWARDED, {
@@ -154,7 +191,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
   });
 
   it('emits the answer and resolves once the server acknowledges it, without reconnecting', async () => {
-    const { result, socket } = renderLinkedTeam();
+    const { result, socket } = renderPlayingTeam();
 
     const pending = submit(result);
     expect(socket.lastEmitOf(SOCKET_EVENTS.SUBMIT_ANSWER).payload).toEqual({
@@ -169,7 +206,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
   });
 
   it('toasts a refused answer and does not resend it after a rejoin', async () => {
-    const { result, socket } = renderLinkedTeam();
+    const { result, socket } = renderPlayingTeam();
 
     const pending = submit(result);
     await act(async () =>
@@ -188,7 +225,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
 
   it('forces a fresh connection when the answer is never acknowledged, then resends it after the rejoin', async () => {
     vi.useFakeTimers();
-    const { result, socket } = renderLinkedTeam();
+    const { result, socket } = renderPlayingTeam();
 
     const pending = submit(result);
     await act(async () => {
@@ -207,7 +244,7 @@ describe('useTeamLink: the team data and the pending answer', () => {
   });
 
   it('refuses with the "not connected" toast and sends nothing while unlinked', async () => {
-    const { result, socket } = renderLinkedTeam();
+    const { result, socket } = renderPlayingTeam();
     act(() => socket.serverDisconnects());
 
     const pending = submit(result);
@@ -220,15 +257,15 @@ describe('useTeamLink: the team data and the pending answer', () => {
   });
 
   it('keeps an acknowledged rating after a rejoin only when the server held it', async () => {
-    const { result, socket } = renderLinkedTeam();
+    const { result, socket } = renderPlayingTeam();
 
     let rated!: Promise<AckResult>;
     act(() => {
-      rated = result.current.rateRound(11, 4);
+      rated = joinedGame(result).rateRound(11, 4);
     });
     await act(async () => socket.acknowledge(SOCKET_EVENTS.RATE_ROUND));
     await rated;
 
-    expect(result.current.myRoundRatings).toEqual({ 11: 4 });
+    expect(result.current.game?.myRoundRatings).toEqual({ 11: 4 });
   });
 });

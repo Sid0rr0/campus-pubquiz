@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TeamFeedbackView } from '@campus-pubquiz/types';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -38,12 +38,16 @@ interface EndedOverrides {
 }
 
 function endedHook(overrides: EndedOverrides) {
-  return socketResult({
+  return teamLinkResult({
     session: endedSession(overrides.isFeedbackCollected ?? true),
-    team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
-    myFeedback: overrides.myFeedback ?? { comment: '', topics: [] },
-    sendFeedback: overrides.sendFeedback,
-    roundRatingsEpoch: overrides.roundRatingsEpoch ?? 0,
+    join: {
+      team: { teamId: 7, teamName: 'The Quizzards', teamToken: 'token-7' },
+    },
+    game: {
+      myFeedback: overrides.myFeedback ?? { comment: '', topics: [] },
+      sendFeedback: overrides.sendFeedback,
+      roundRatingsEpoch: overrides.roundRatingsEpoch ?? 0,
+    },
   });
 }
 
@@ -77,7 +81,7 @@ describe('PlayPage — the comment and topic suggestions on the final form', () 
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('sends the comment and topics together and shows "Sent ✓" once acknowledged', async () => {

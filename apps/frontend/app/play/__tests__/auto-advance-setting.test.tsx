@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { AUTO_ADVANCE_STORAGE_KEY } from '@/app/lib/player-settings-storage';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -40,16 +40,16 @@ describe('PlayPage — auto-advance setting', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('keeps showing the current question and offers Prev/Next when auto-advance is off', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: { rounds: ROUNDS, progress: { status: 'question_open' } },
-        team: TEAM,
+        join: { team: TEAM },
       }),
     );
     const { rerender } = renderWithQuery(<PlayPage />);
@@ -60,12 +60,12 @@ describe('PlayPage — auto-advance setting', () => {
 
     // The admin opens a second question — the team's screen must not move.
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: ROUNDS,
           progress: { status: 'question_open', questionIndex: 1 },
         },
-        team: TEAM,
+        join: { team: TEAM },
       }),
     );
     rerender(<PlayPage />);
@@ -85,15 +85,39 @@ describe('PlayPage — auto-advance setting', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
+  it('keeps the navigation when a new view arrives for the same question with auto-advance off', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
+    const session = {
+      rounds: ROUNDS,
+      progress: { status: 'question_open' as const, questionIndex: 1 },
+    };
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ session, join: { team: TEAM } }),
+    );
+    const { rerender } = renderWithQuery(<PlayPage />);
+    await userEvent.click(screen.getByRole('button', { name: /prev/i }));
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ session, join: { team: TEAM } }),
+    );
+    rerender(<PlayPage />);
+
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /prev/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+  });
+
   it('immediately snaps to the newest question when auto-advance is turned back on', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: ROUNDS,
           progress: { status: 'question_open', questionIndex: 1 },
         },
-        team: TEAM,
+        join: { team: TEAM },
       }),
     );
     const { rerender } = renderWithQuery(<PlayPage />);
@@ -107,12 +131,12 @@ describe('PlayPage — auto-advance setting', () => {
 
     // A third question opens while the team is frozen on the second.
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: ROUNDS,
           progress: { status: 'question_open', questionIndex: 2 },
         },
-        team: TEAM,
+        join: { team: TEAM },
       }),
     );
     rerender(<PlayPage />);

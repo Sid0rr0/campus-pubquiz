@@ -25,6 +25,7 @@ import {
   NOT_CONNECTED_MESSAGE,
   isNotDelivered,
 } from '@/app/lib/connection-messages';
+import { needsJoinForm } from '@/app/lib/join-gate';
 import {
   mergeSeenQuestions,
   type SeenQuestions,
@@ -70,9 +71,30 @@ type PlayerConnection = Pick<
   'emitWithAck' | 'forceReconnect'
 >;
 
-export interface UseTeamLinkResult {
-  snapshot: StateViewByRoom['players'] | null;
+/** Who the team is and how it gets in. */
+export interface TeamLinkJoin {
   team: JoinAcceptedPayload | null;
+  /** What the join screen shows: a rejected join's reason, the kick notice, or a connection problem — in that order. */
+  connectionError: string | null;
+  teamName: string | null;
+  nameInput: string;
+  setNameInput: (value: string) => void;
+  codeInput: string;
+  setCodeInput: (value: string) => void;
+  teamCodeInput: string;
+  setTeamCodeInput: (value: string) => void;
+  hasStoredIdentity: boolean;
+  /** Whether the phone should show the join form: no team name, nothing to reconnect to, or an unrecovered connection error. The one gate /play and the home page's join panel share. */
+  needsJoinForm: boolean;
+  /** The game code the connection is opened for, or null when none is known yet — tells "genuinely mid-connection" apart from "no session to reconnect to" even while teamName is already restored from storage. */
+  activeJoinCode: string | null;
+  handleJoin: (event: SubmitEvent<HTMLFormElement>) => void;
+  handleLogOut: () => void;
+}
+
+/** What a joined phone plays with; present once a view has arrived. */
+export interface TeamLinkGame {
+  view: StateViewByRoom['players'];
   /** The team's own saved answers by question id. */
   myAnswers: Record<number, string>;
   /** The team's own points awarded by question id, present only once that question's answer is graded. */
@@ -85,7 +107,7 @@ export interface UseTeamLinkResult {
   myFeedback: TeamFeedbackView;
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
   roundRatingsEpoch: number;
-  /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the snapshot only ever covers the current block. */
+  /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the view only ever covers the current block. */
   seenQuestions: SeenQuestions;
   /** Refuses with a "not connected" toast while unlinked; otherwise keeps the answer pending (and resends it after a rejoin) until the server acknowledges it. */
   submitAnswer: (
@@ -102,20 +124,12 @@ export interface UseTeamLinkResult {
     teamId: number,
     value: string,
   ) => Promise<AckResult>;
-  /** What the join screen shows: a rejected join's reason, the kick notice, or a connection problem — in that order. */
-  connectionError: string | null;
-  teamName: string | null;
-  nameInput: string;
-  setNameInput: (value: string) => void;
-  codeInput: string;
-  setCodeInput: (value: string) => void;
-  teamCodeInput: string;
-  setTeamCodeInput: (value: string) => void;
-  hasStoredIdentity: boolean;
-  /** The game code the connection is opened for, or null when none is known yet — tells "genuinely mid-connection" apart from "no session to reconnect to" even while teamName is already restored from storage. */
-  activeJoinCode: string | null;
-  handleJoin: (event: SubmitEvent<HTMLFormElement>) => void;
-  handleLogOut: () => void;
+}
+
+export interface UseTeamLinkResult {
+  join: TeamLinkJoin;
+  /** Absent until the first view arrives. */
+  game: TeamLinkGame | undefined;
 }
 
 function writeIdentity(
@@ -435,31 +449,47 @@ export function useTeamLink(
     [dispatch],
   );
 
+  const connectionError =
+    link.joinError ?? link.kickNotice ?? socketConnectionError;
+
   return {
-    snapshot,
-    team: link.team,
-    myAnswers: link.myAnswers,
-    myAnswerGrades: link.myAnswerGrades,
-    myBonusAwards: link.myBonusAwards,
-    myRoundRatings: link.myRoundRatings,
-    myFeedback: link.myFeedback,
-    roundRatingsEpoch: link.roundRatingsEpoch,
-    seenQuestions,
-    submitAnswer,
-    rateRound,
-    sendFeedback,
-    submitShowdownGuess,
-    connectionError: link.joinError ?? link.kickNotice ?? socketConnectionError,
-    teamName: link.teamName,
-    nameInput: link.nameInput,
-    setNameInput,
-    codeInput: link.codeInput,
-    setCodeInput,
-    teamCodeInput: link.teamCodeInput,
-    setTeamCodeInput,
-    hasStoredIdentity: link.hasStoredIdentity,
-    activeJoinCode: link.activeJoinCode,
-    handleJoin,
-    handleLogOut,
+    join: {
+      team: link.team,
+      needsJoinForm: needsJoinForm({
+        teamName: link.teamName,
+        activeJoinCode: link.activeJoinCode,
+        hasView: Boolean(snapshot),
+        connectionError,
+        hasTeam: Boolean(link.team),
+      }),
+      connectionError,
+      teamName: link.teamName,
+      nameInput: link.nameInput,
+      setNameInput,
+      codeInput: link.codeInput,
+      setCodeInput,
+      teamCodeInput: link.teamCodeInput,
+      setTeamCodeInput,
+      hasStoredIdentity: link.hasStoredIdentity,
+      activeJoinCode: link.activeJoinCode,
+      handleJoin,
+      handleLogOut,
+    },
+    game: snapshot
+      ? {
+          view: snapshot,
+          myAnswers: link.myAnswers,
+          myAnswerGrades: link.myAnswerGrades,
+          myBonusAwards: link.myBonusAwards,
+          myRoundRatings: link.myRoundRatings,
+          myFeedback: link.myFeedback,
+          roundRatingsEpoch: link.roundRatingsEpoch,
+          seenQuestions,
+          submitAnswer,
+          rateRound,
+          sendFeedback,
+          submitShowdownGuess,
+        }
+      : undefined,
   };
 }

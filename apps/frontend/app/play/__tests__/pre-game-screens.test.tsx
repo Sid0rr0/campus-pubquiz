@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -22,13 +22,13 @@ describe('PlayPage — pre-game screens', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('shows the rules screen after the lobby, before the first question opens', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           // Six topics of four questions, a break after every third.
           rounds: Array.from({ length: 6 }, (_, index) => ({
@@ -37,10 +37,12 @@ describe('PlayPage — pre-game screens', () => {
           })),
           progress: { status: 'rules' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'The Quizzards',
-          teamToken: 'token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+          },
         },
       }),
     );
@@ -57,7 +59,7 @@ describe('PlayPage — pre-game screens', () => {
   it('shows the session-specific rules instead of the hardcoded defaults', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           progress: { status: 'rules' },
           settings: {
@@ -65,10 +67,12 @@ describe('PlayPage — pre-game screens', () => {
             enabledBonusCategories: [],
           },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'The Quizzards',
-          teamToken: 'token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+          },
         },
       }),
     );
@@ -81,15 +85,17 @@ describe('PlayPage — pre-game screens', () => {
   it('shows the round name and a "look at the screen" hint on a fresh round intro card', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [{ title: 'Picture Round', questions: [{}, {}] }],
           progress: { status: 'round_intro' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'The Quizzards',
-          teamToken: 'token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+          },
         },
       }),
     );
@@ -102,7 +108,7 @@ describe('PlayPage — pre-game screens', () => {
   it('stays on the block browser, not the round intro card, when Previous re-enters an already-open round', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -112,10 +118,12 @@ describe('PlayPage — pre-game screens', () => {
           ],
           progress: { status: 'round_intro', furthestOpenIndex: 0 },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'The Quizzards',
-          teamToken: 'token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+          },
         },
       }),
     );
@@ -128,12 +136,14 @@ describe('PlayPage — pre-game screens', () => {
   it('shows a link to the rules page while waiting in the lobby', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: { progress: { status: 'lobby' } },
-        team: {
-          teamId: 'team-1',
-          teamName: 'The Quizzards',
-          teamToken: 'token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+          },
         },
       }),
     );

@@ -8,7 +8,7 @@ See the parent spec: `.scratch/phone-question-browser/spec.md`.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Team link hook's result gains **needs join form**, computed from the team name, the active join code, the view, the connection error and the team
 - [ ] /play and the home page's join panel read it; their copied gate and the "mirrors /play" comment are removed; the join panel's own connecting vs joined split is unchanged
