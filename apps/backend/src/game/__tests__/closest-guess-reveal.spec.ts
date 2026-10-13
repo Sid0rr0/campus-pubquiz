@@ -141,7 +141,8 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     // Step 0: just the question, nothing revealed yet.
     expect(step0.progress.revealIndex).toBe(0);
     expect(step0.closestGuessRevealStep).toBe(0);
-    expect(step0.revealQuestions[0].closestGuess).toEqual({
+    expect(step0.revealQuestions[0].revealKind).toBe('closest_guess');
+    expect(step0.revealQuestions[0]).toHaveProperty('closestGuess', {
       hasSubmissions: true,
       minGuess: '900',
       maxGuess: '2000',
@@ -164,6 +165,11 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     const step4 = await game.act('ADVANCE');
     expect(step4.closestGuessRevealStep).toBe(4);
     expect(step4.progress.revealIndex).toBe(0);
+
+    // The admin and display views keep the closest_guess kind at every step.
+    for (const step of [step1, step2, step3, step4]) {
+      expect(step.revealQuestions[0].revealKind).toBe('closest_guess');
+    }
 
     // A 6th ADVANCE finally moves on to the block's next question.
     const nextQuestion = await game.act('ADVANCE');
@@ -204,7 +210,8 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     const step0 = await actAll(game, TO_REVEAL);
 
     expect(step0.closestGuessRevealStep).toBe(0);
-    expect(step0.revealQuestions[0].closestGuess).toEqual({
+    expect(step0.revealQuestions[0].revealKind).toBe('closest_guess');
+    expect(step0.revealQuestions[0]).toHaveProperty('closestGuess', {
       hasSubmissions: false,
       closestGuesses: [],
     });
@@ -222,9 +229,10 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     const afterRestart = await restarted.snapshot();
     const step1 = await restarted.act('ADVANCE');
 
-    expect(
-      afterRestart.revealQuestions[0].closestGuess?.closestGuesses,
-    ).toEqual([{ teamName: 'Team B', value: '950' }]);
+    expect(afterRestart.revealQuestions[0]).toHaveProperty(
+      'closestGuess.closestGuesses',
+      [{ teamName: 'Team B', value: '950' }],
+    );
     expect(step1.progress.revealIndex).toBe(0);
     expect(step1.closestGuessRevealStep).toBe(1);
   });
@@ -307,9 +315,10 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
         'Team B': 5,
         'Team C': 5,
       });
-      expect(atReveal.revealQuestions[0].closestGuess?.closestGuesses).toEqual([
-        { teamName: 'Team B', value: '950' },
-      ]);
+      expect(atReveal.revealQuestions[0]).toHaveProperty(
+        'closestGuess.closestGuesses',
+        [{ teamName: 'Team B', value: '950' }],
+      );
     });
 
     it('keeps a manual grade across a backend restart', async () => {
@@ -325,7 +334,7 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
         'Team B': 5,
         'Team C': 5,
       });
-      expect(atReveal.revealQuestions[0].closestGuess).toEqual({
+      expect(atReveal.revealQuestions[0]).toHaveProperty('closestGuess', {
         hasSubmissions: true,
         minGuess: '900',
         maxGuess: '2000',

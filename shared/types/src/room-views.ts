@@ -9,9 +9,9 @@ import type { GameProgress, QuizStructureSummary } from './game-state';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
-  PendingClosestGuessRevealView,
+  PlayersRevealQuestionView,
   QuestionView,
-  RevealQuestionView,
+  SeededQuestion,
   UpcomingQuestionPosition,
 } from './question-views';
 import type { QuestionType } from './question-types';
@@ -214,7 +214,7 @@ export interface PlayersStatePayload
   /** Which rounds the phone offers for rating right now — null when none; the same rule the server accepts a rating by. */
   feedback: FeedbackField;
   /** The reveal walk so far: questions the big screen has shown, plus the closest_guess question mid-walk without its not-yet-shown fields. */
-  revealQuestions: (BlockRevealQuestionView | PendingClosestGuessRevealView)[];
+  revealQuestions: PlayersRevealQuestionView[];
   /** Whether the current block can be answered right now — the same rule the answer-submission gate enforces. */
   isAnswerable: boolean;
   /**
@@ -276,7 +276,7 @@ export interface ScreenPreview {
   heading: string;
   body?: string;
   /** Full question content (including the correct answer) when the screen is an open question. */
-  question?: RevealQuestionView;
+  question?: SeededQuestion;
 }
 
 export interface PresenterContextPayload {

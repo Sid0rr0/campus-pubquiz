@@ -22,9 +22,10 @@ import {
   projectScreen,
   DEFAULT_SESSION_SETTINGS,
   type ActiveShowdownRoundState,
+  type ClosestGuessRevealData,
   type GameProgress,
   type LeaderboardEntry,
-  type RevealQuestionView,
+  type SeededQuestion,
   type SeededRound,
   type SessionSettings,
   type SessionState,
@@ -33,7 +34,9 @@ import {
   type TeamRosterEntry,
 } from '@campus-pubquiz/types';
 
-export interface QuestionDescription extends Partial<RevealQuestionView> {
+export interface QuestionDescription extends Partial<SeededQuestion> {
+  /** The closest-guess stats the reveal of a closest_guess question walks through; the session caches them as that question's summary. */
+  closestGuess?: ClosestGuessRevealData;
   /** Host-only note for this question (never reaches a view). */
   note?: string | null;
 }
@@ -90,12 +93,14 @@ const DEFAULT_ROUNDS: RoundDescription[] = [{ questions: [{}, {}] }];
 
 function describeQuestions(
   rounds: RoundDescription[],
-): { questions: RevealQuestionView[]; notes: Record<number, string | null> }[] {
+): { questions: SeededQuestion[]; notes: Record<number, string | null> }[] {
   let nextId = 1;
   return rounds.map((round) => {
     const notes: Record<number, string | null> = {};
     const questions = (round.questions ?? []).map((description) => {
-      const { note, ...view } = description;
+      // The stats become the session's summary (closestGuessSummariesOf), not a seeded field.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { note, closestGuess: _stats, ...view } = description;
       const id = view.id ?? nextId;
       nextId = Math.max(nextId, id) + 1;
       if (note !== undefined) notes[id] = note;
@@ -106,7 +111,7 @@ function describeQuestions(
         points: 1,
         ...view,
         id,
-      } satisfies RevealQuestionView;
+      } satisfies SeededQuestion;
     });
     return { questions, notes };
   });
@@ -164,13 +169,18 @@ function buildLeaderboard(rows: LeaderboardDescription[]): LeaderboardEntry[] {
 }
 
 /** A closest_guess question's `closestGuess` stats are what its reveal walks through, so the session keeps them as its summary for that question. */
-function closestGuessSummariesOf(rounds: SeededRound[]) {
+function closestGuessSummariesOf(
+  descriptions: RoundDescription[],
+  rounds: SeededRound[],
+) {
   return Object.fromEntries(
-    rounds
-      .flatMap((round) => round.questions)
-      .flatMap(({ id, closestGuess }) =>
-        closestGuess ? [[id, closestGuess]] : [],
+    descriptions.flatMap((round, roundIndex) =>
+      (round.questions ?? []).flatMap(({ closestGuess }, questionIndex) =>
+        closestGuess
+          ? [[rounds[roundIndex].questions[questionIndex].id, closestGuess]]
+          : [],
       ),
+    ),
   );
 }
 
@@ -204,7 +214,8 @@ function buildPhaseTimer(
 export function buildSessionState(
   description: SessionDescription = {},
 ): SessionState {
-  const rounds = buildRounds(description.rounds ?? DEFAULT_ROUNDS);
+  const roundDescriptions = description.rounds ?? DEFAULT_ROUNDS;
+  const rounds = buildRounds(roundDescriptions);
   const leaderboard = buildLeaderboard(description.leaderboard ?? []);
   const teams =
     description.teams ??
@@ -232,7 +243,7 @@ export function buildSessionState(
     leaderboard,
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
     closestGuessRevealStep: description.closestGuessRevealStep ?? 0,
-    closestGuessSummaries: closestGuessSummariesOf(rounds),
+    closestGuessSummaries: closestGuessSummariesOf(roundDescriptions, rounds),
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},
     activeShowdownRound: description.showdown?.round ?? null,
     showdownRevealStep: description.showdown?.revealStep ?? 0,

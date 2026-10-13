@@ -20,7 +20,7 @@ export type { ScoreResult, Verdict };
  * scoring option only touches this file and the question's own schema.
  */
 
-/** The slice of a question scoring needs — RevealQuestionView satisfies it. Unset settings are filled in by the Answer key. */
+/** The slice of a question scoring needs — SeededQuestion satisfies it. Unset settings are filled in by the Answer key. */
 export type ScoredQuestion = GradingSettingsSource & {
   answer: string;
   points: number;

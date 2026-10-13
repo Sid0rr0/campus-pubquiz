@@ -5,7 +5,7 @@ import {
   type GameProgress,
   type Margin,
   projectScreen,
-  type RevealQuestionView,
+  type SeededQuestion,
   type SessionState,
   SOCKET_ROOMS,
 } from '@campus-pubquiz/types';
@@ -14,9 +14,9 @@ const STORED_MARGIN: Margin = { value: 5, unit: 'absolute' };
 
 function question(
   id: number,
-  type: RevealQuestionView['type'],
+  type: SeededQuestion['type'],
   margin?: Margin,
-): RevealQuestionView {
+): SeededQuestion {
   return {
     id,
     type,

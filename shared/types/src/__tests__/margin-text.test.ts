@@ -5,7 +5,7 @@ import {
   formatNumberReveal,
 } from '../margin';
 import { toQuestionView } from '../question-view-conversions';
-import type { RevealQuestionView } from '../question-views';
+import type { SeededQuestion } from '../question-views';
 
 describe('formatMarginText', () => {
   it('words a percent margin', () => {
@@ -71,7 +71,7 @@ describe('formatNumberReveal', () => {
 });
 
 describe('toQuestionView margin', () => {
-  const base: RevealQuestionView = {
+  const base: SeededQuestion = {
     id: 1,
     type: 'number',
     prompt: 'How many?',

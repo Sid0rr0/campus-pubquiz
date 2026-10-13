@@ -20,7 +20,7 @@ Parent spec: `.scratch/reveal-kind/spec.md`
 
 **Blocked by:** None (can start immediately). Independent of 01.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Backend projection specs (closest-guess reveal, players reveal redaction, reveal paging, session snapshot leak) assert:
   - every non-closest_guess reveal question is `answer` with no stats

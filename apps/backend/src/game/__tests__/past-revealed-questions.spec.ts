@@ -95,6 +95,10 @@ describe('GameGateway — past-block revealed questions', () => {
       [idA, 'Answer-A1', 1, 1, 'Round A'],
       [idB, 'Answer-B1', 2, 1, 'Round B'],
     ]);
+    expect(roundCIntro.pastRevealedQuestions.map((q) => q.revealKind)).toEqual([
+      'answer',
+      'answer',
+    ]);
 
     await game.act('TOGGLE_LEADERBOARD'); // hides the end-of-block board
 

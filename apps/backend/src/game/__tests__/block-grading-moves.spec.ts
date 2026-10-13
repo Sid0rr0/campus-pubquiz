@@ -243,7 +243,7 @@ describe('GameGateway — Block grading runs its steps in order for a move', () 
     );
     await restarted.act('ADVANCE'); // -> reveal_intro
     const atReveal = await restarted.act('ADVANCE'); // -> reveal
-    expect(atReveal.revealQuestions[0].closestGuess).toEqual({
+    expect(atReveal.revealQuestions[0]).toHaveProperty('closestGuess', {
       hasSubmissions: true,
       minGuess: '900',
       maxGuess: '2000',
