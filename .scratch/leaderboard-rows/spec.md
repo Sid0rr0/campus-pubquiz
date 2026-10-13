@@ -1,6 +1,6 @@
 # Spec: Leaderboard row selection is a pure module, apart from the leaderboard view
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

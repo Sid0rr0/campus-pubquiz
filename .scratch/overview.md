@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                   | Title                                                                                                                       | Tickets | Blocked by             |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------- |
-| leaderboard-rows       | [Leaderboard row selection is a pure module, apart from the leaderboard view](leaderboard-rows/spec.md)                     | 3       | —                      |
 | quiz-editor-split      | [Split the quiz editor panel into a draft hook, an import hook and pure round edits](quiz-editor-split/spec.md)             | 3       | —                      |
 | phase-timers           | [Phase timers are their own module, apart from the gateway](phase-timers/spec.md)                                           | 1       | —                      |
 | sortable-table         | [One sortable table module across five panels, and a smaller session picker](sortable-table/spec.md)                        | —       | —                      |

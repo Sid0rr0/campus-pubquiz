@@ -10,12 +10,12 @@ Rules it owns, each unchanged from today:
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The leaderboard rows module exports row selection. It imports no React, motion or timers.
-- [ ] The input type carries the documentation that today sits on the leaderboard's props for these inputs, and the props refer to it. The props themselves are unchanged.
-- [ ] The leaderboard view gets its rows only from row selection. Its own cap, pool and reveal-walk helpers are deleted.
-- [ ] Table-driven Vitest tests for row selection cover:
+- [x] The leaderboard rows module exports row selection. It imports no React, motion or timers.
+- [x] The input type carries the documentation that today sits on the leaderboard's props for these inputs, and the props refer to it. The props themselves are unchanged.
+- [x] The leaderboard view gets its rows only from row selection. Its own cap, pool and reveal-walk helpers are deleted.
+- [x] Table-driven Vitest tests for row selection cover:
   - reveal count omitted, 0, 1, growing and over the count
   - labels relative to the full standings
   - ties sharing a label
@@ -23,5 +23,5 @@ Rules it owns, each unchanged from today:
   - old and counting rows holding old order with old then new totals, and settled rows reordering
   - an empty previous board at 0, capped
   - the old pool chosen by final standing when the old board had no ties
-- [ ] The matching rule cases are removed from the leaderboard DOM tests once their table-driven versions pass.
-- [ ] The display page's leaderboard tests pass unchanged. `pnpm --filter frontend test` and `pnpm typecheck` pass.
+- [x] The matching rule cases are removed from the leaderboard DOM tests once their table-driven versions pass.
+- [x] The display page's leaderboard tests pass unchanged. `pnpm --filter frontend test` and `pnpm typecheck` pass.
