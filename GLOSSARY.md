@@ -145,6 +145,9 @@ Bringing a session's timers, deadlines and reveal counters into line with the po
 **Phase timers**:
 The two auto-lock timers every live session can have: the question lock (the last question of a block has been open for the lock grace period) and the kahoot question timer (a kahoot question's time ran out). Armed from the session's deadlines, re-armed whenever a write moves one, cleared when it goes away, restored for every session after a restart. An expiry presses Advance exactly as the admin would.
 
+**Session broadcaster**:
+Everything the backend pushes to connected clients, through one delivery step for every outcome: the replies to the sender, the room broadcasts, the admin answer lists, the team syncs and any socket closes, in a fixed order, after re-arming the phase timers from the outcome's deadline change. A socket event, a phase-timer expiry, a Live edit save and a REST settings change all end here, so none of them knows about Socket.IO. It also sends the out-of-band notices (a session was closed, a deactivated user's sockets are dropped) and owns the phase timers. The gateway only receives events and hands each outcome over.
+
 **Commit a move**:
 Carrying out one planned press from start to finish: plan it, grade what it implies, settle the session, save its progress. An admin press and both timer expiries go through it. The session only moves once its progress is saved, so a press that can't be saved is refused and nothing changes. Session creation and restart restore reach their starting point through the same module, without a save. The presenter preview is a dry-run commit: the same plan and Settle step, with no grading writes, no showdown resolve and nothing saved, so /remote's "next" line describes the session as the press would leave it.
 \_Avoid\*: apply action
