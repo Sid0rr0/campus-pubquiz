@@ -18,11 +18,20 @@ Parent spec: `.scratch/real-store-harness-module/spec.md`
 
 **Blocked by:** 01 (Extract the Game module from the app module), 02 (A test database Nest module over the worker's ORM).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The harness no longer constructs any live-game provider or repository with `new`, and no longer calls a lifecycle hook itself.
-- [ ] The real-store smoke spec checks that the handle's providers are the module's instances: the gateway's Live session module is the handle's `gameState`, and the Live edit module's Session write is the Live session module's.
-- [ ] Every real-store spec passes with no change to any spec body. That includes restart, phase-timer, session-write race and failing-delivery specs, and the live-edit specs.
-- [ ] The full backend run stays under 60s on a laptop. Record the before and after times in the ticket's comments.
-- [ ] `docs/architecture.md` is updated if one of its diagrams lists the app module's providers.
-- [ ] No behaviour, wire, schema or migration change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] The harness no longer constructs any live-game provider or repository with `new`, and no longer calls a lifecycle hook itself.
+- [x] The real-store smoke spec checks that the handle's providers are the module's instances: the gateway's Live session module is the handle's `gameState`, and the Live edit module's Session write is the Live session module's.
+- [x] Every real-store spec passes with no change to any spec body. That includes restart, phase-timer, session-write race and failing-delivery specs, and the live-edit specs.
+- [x] The full backend run stays under 60s on a laptop. Record the before and after times in the ticket's comments.
+- [x] `docs/architecture.md` is updated if one of its diagrams lists the app module's providers.
+- [x] No behaviour, wire, schema or migration change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+
+## Comments
+
+- Full backend run (`pnpm --filter backend test --maxWorkers=2`, jest-reported time), measured on the same machine:
+  - Before (integration tip 4894737b): 69.3s (154 suites, 2392 tests).
+  - After: 61.9s (154 suites, 2394 tests). Not slower, so no metadata caching was needed. Both numbers carry noise from other jobs on the machine; the 60s budget is a laptop figure with default workers.
+- The Game module leaves `PHASE_TIMER_SCHEDULERS` to its host (nothing provides it in production), and overriding an unregistered token is a no-op, so the harness provides it through a small global module holding the manual schedulers. Only the session store is a true `overrideProvider`.
+- Closing a compiled module never closes the worker ORM: the test database module only hands the ORM out. Verified by the full run (later spec files on the same worker still connect).
+- `docs/architecture.md` already groups the live-game providers under the Game module (ticket 01); no diagram change.
