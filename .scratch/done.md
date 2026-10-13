@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| quiz-editor-split | [Split the quiz editor panel into a draft hook, an import hook and pure round edits](quiz-editor-split/spec.md) | 3 |
 | leaderboard-rows | [Leaderboard row selection is a pure module, apart from the leaderboard view](leaderboard-rows/spec.md) | 3 |
 | join-overlay | [Join overlay and Previous back to the lobby](join-overlay/spec.md) | 3 |
 | live-edit-owns-quiz-edit | [The Live edit module owns the quiz edit, its hold and the live-edit frontier](live-edit-owns-quiz-edit/spec.md) | 4 |
