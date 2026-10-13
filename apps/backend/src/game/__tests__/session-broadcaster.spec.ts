@@ -1,4 +1,5 @@
 import { SOCKET_EVENTS } from '@campus-pubquiz/types';
+import { asSocket } from '@/game/__tests__/test-utils';
 import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { BROADCAST_STATE_OUTCOME } from '@/game/state/session-outcome';
 import { setupRealStoreGatewayTest } from '@/game/__tests__/real-store-test-utils';
@@ -52,5 +53,28 @@ describe('SessionBroadcaster', () => {
       SOCKET_EVENTS.STATE_UPDATED,
       SOCKET_EVENTS.ANSWERS_UPDATED,
     ]);
+  });
+
+  it('broadcastState sends the same per-room snapshots as an admin action that only rebroadcasts', async () => {
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const admin = await game.connectAdmin();
+    await game.openFirstQuestion(admin);
+    game.clearEmits();
+    await game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'TOGGLE_LEADERBOARD',
+    });
+    const viaAdminAction = game.roomEmits();
+    await game.gateway.handleAdminAction(asSocket(admin), {
+      action: 'TOGGLE_LEADERBOARD',
+    });
+    game.clearEmits();
+
+    await game.inRequestContext(() =>
+      game.broadcaster.broadcastState(game.joinCode),
+    );
+
+    expect(game.roomEmits().map(({ rooms, event }) => [rooms, event])).toEqual(
+      viaAdminAction.map(({ rooms, event }) => [rooms, event]),
+    );
   });
 });

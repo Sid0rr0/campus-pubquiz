@@ -13,7 +13,7 @@ See the parent spec: `.scratch/session-broadcaster/spec.md`.
 
 **Blocked by:** 01 (Session broadcaster owns outcome delivery and phase timers)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Session broadcaster gains `broadcastState(joinCode)`, `notifySessionClosed(joinCode)` (players room only) and `disconnectUser(userId)`, moved from the gateway unchanged in behaviour
 - [ ] `broadcastState` sends the same per-room snapshots as an admin action that only rebroadcasts (new test)

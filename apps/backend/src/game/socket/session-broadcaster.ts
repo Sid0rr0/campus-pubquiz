@@ -16,7 +16,16 @@ import {
   PhaseTimers,
   type PhaseTimerSchedulers,
 } from '@/game/socket/phase-timers';
-import type { SessionOutcome } from '@/game/state/session-outcome';
+import {
+  BROADCAST_STATE_OUTCOME,
+  type SessionOutcome,
+} from '@/game/state/session-outcome';
+import {
+  type AuthUser,
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  sessionRoom,
+} from '@campus-pubquiz/types';
 
 /**
  * Owns everything the backend pushes to connected clients: the one delivery
@@ -84,6 +93,35 @@ export class SessionBroadcaster
       outcome,
       sender,
     );
+  }
+
+  /** Rebroadcasts the session state to /display, /control and /rules (after a REST settings change). */
+  async broadcastState(joinCode: string): Promise<void> {
+    await this.deliver(joinCode, BROADCAST_STATE_OUTCOME);
+  }
+
+  /**
+   * Tells the players room a session was closed, so a phone doesn't find out
+   * later as an opaque "Unknown game session" error. Players room only: the
+   * closing admin navigates away via its REST response, and /display has no
+   * redirect target.
+   */
+  notifySessionClosed(joinCode: string): void {
+    this.requireServer()
+      .to(sessionRoom(joinCode, SOCKET_ROOMS.PLAYERS))
+      .emit(SOCKET_EVENTS.SESSION_CLOSED, { joinCode });
+  }
+
+  /**
+   * Disconnects every open socket of a deactivated user — revoking their
+   * session rows only stops future requests; an open /control socket would
+   * keep its admin powers.
+   */
+  disconnectUser(userId: number): void {
+    for (const socket of this.requireServer().sockets.sockets.values()) {
+      const user = (socket.data as { user?: AuthUser }).user;
+      if (user?.id === userId) socket.disconnect(true);
+    }
   }
 
   private requireServer(): GameServer {
