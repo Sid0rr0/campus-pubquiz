@@ -25,7 +25,12 @@ export interface QuestionView {
   matchTargets?: string[];
   /** Match only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */
   matchScoringMode?: MatchScoringMode;
-  /** Number only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */
+  /**
+   * Present if and only if the question's type has a margin (it is graded
+   * within this margin), already resolved: the projection takes it from the
+   * Answer key, so an older Number question with none stored carries the
+   * default. Screens show margin text from this alone.
+   */
   margin?: Margin;
   mediaUrl?: string;
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */

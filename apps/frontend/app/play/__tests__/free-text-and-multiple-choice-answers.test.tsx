@@ -117,7 +117,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
           rounds: [
             {
               questions: [
-                { type: 'number', prompt: 'How tall is Everest?', points: 1 },
+                { type: 'closest_guess', prompt: 'How tall?', points: 1 },
               ],
             },
           ],
@@ -169,6 +169,34 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     renderWithQuery(<PlayPage />);
 
     expect(screen.getByText('within 5')).toBeInTheDocument();
+  });
+
+  it('shows no margin text for an open closest-guess question', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: {
+          rounds: [
+            {
+              questions: [
+                { type: 'closest_guess', prompt: 'How tall?', points: 1 },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
+        },
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.queryByText(/^within/)).not.toBeInTheDocument();
   });
 
   it('submits the typed free-text answer with the question and team id', async () => {
