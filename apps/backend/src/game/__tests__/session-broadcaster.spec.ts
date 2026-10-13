@@ -23,6 +23,26 @@ describe('SessionBroadcaster', () => {
     expect(game.roomEmits()).toEqual([]);
   });
 
+  it.each([
+    [
+      'notifySessionClosed',
+      (b: SessionBroadcaster) => b.notifySessionClosed('ABCDEF'),
+    ],
+    ['disconnectUser', (b: SessionBroadcaster) => b.disconnectUser(1)],
+  ])(
+    '%s throws a clear error when called before attach',
+    async (_name, call) => {
+      const game = await harness.createGateway();
+      const unattached = new SessionBroadcaster(
+        game.gameState,
+        game.answerService,
+        game.orm,
+      );
+
+      expect(() => call(unattached)).toThrow(/attach/i);
+    },
+  );
+
   it('delivers an outcome with no sender without replies but with everything else in the usual order', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const admin = await game.connectAdmin();

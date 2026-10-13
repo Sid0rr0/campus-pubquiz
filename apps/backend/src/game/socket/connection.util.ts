@@ -9,6 +9,7 @@ import {
 } from '@campus-pubquiz/types';
 import { extractSessionCookie } from '@/auth/session-cookie';
 import type { SessionService } from '@/auth/session.service';
+import type { DeliverFn } from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 
@@ -111,7 +112,7 @@ export async function disconnectClient(
   deps: {
     gameState: GameStateService;
     logger: Logger;
-    deliver: (joinCode: string, outcome: SessionOutcome) => Promise<void>;
+    deliver: DeliverFn;
   },
   client: GameSocket,
 ): Promise<void> {

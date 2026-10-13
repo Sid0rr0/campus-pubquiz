@@ -29,7 +29,6 @@ import {
   SOCKET_EVENT_DECLARATIONS,
   type SocketEventDeclaration,
 } from '@/game/socket/socket-event-declarations';
-import type { SessionOutcome } from '@/game/state/session-outcome';
 
 @WebSocketGateway({
   cors: { origin: corsOriginValidator, credentials: true },
@@ -71,7 +70,7 @@ export class GameGateway
       {
         gameState: this.gameState,
         logger: this.logger,
-        deliver: this.deliver,
+        deliver: this.broadcaster.deliver,
       },
       client,
     );
@@ -278,12 +277,6 @@ export class GameGateway
     );
   }
 
-  private readonly deliver = (
-    joinCode: string,
-    outcome: SessionOutcome,
-    sender?: Pick<GameSocket, 'emit'>,
-  ): Promise<void> => this.broadcaster.deliver(joinCode, outcome, sender);
-
   private dispatch<S extends z.ZodType>(
     declaration: SocketEventDeclaration<S>,
     rawPayload: unknown,
@@ -292,7 +285,7 @@ export class GameGateway
   ): Promise<AckResult> {
     return this.broadcaster.runInRequestContext(() =>
       dispatchSocketEvent(
-        { deliver: this.deliver, logger: this.logger },
+        { deliver: this.broadcaster.deliver, logger: this.logger },
         client,
         declaration,
         rawPayload,
