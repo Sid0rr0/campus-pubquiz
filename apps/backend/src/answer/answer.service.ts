@@ -6,7 +6,7 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import { verdictForManualGrade } from '@campus-pubquiz/types';
+import { answerKeyOf, verdictForManualGrade } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -109,10 +109,12 @@ export class AnswerService {
     const payload = readQuestionPayload(row);
     const question: ScoredQuestion = {
       type: row.type,
-      answer: row.answer,
-      points: row.points,
-      matchScoringMode: payload.matchScoringMode,
-      margin: payload.margin,
+      ...answerKeyOf({
+        type: row.type,
+        answer: row.answer,
+        points: row.points,
+        ...payload,
+      }),
     };
     // Whether this submission sets, clears or keeps the stored grade is the
     // Grading policy's call. The admin can grade an answer as soon as it

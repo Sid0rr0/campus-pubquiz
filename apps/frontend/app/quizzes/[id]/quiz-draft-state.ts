@@ -1,8 +1,9 @@
 import {
   DEFAULT_MARGIN,
+  gradingSettingsOf,
   describeLiveEditRounds,
   parseFiniteNumber,
-  QUESTION_KINDS,
+  hasMarginType,
   type MarginUnit,
   type ImportPreview,
   type ImportQuestionPreview,
@@ -117,8 +118,8 @@ export function makeRound(id: string, title = ''): EditorRound {
 function loadMarginDraft(
   question: ImportQuestionPreview,
 ): Partial<Pick<EditorQuestion, 'marginValue' | 'marginUnit'>> {
-  if (!QUESTION_KINDS[question.type].hasMargin) return {};
-  const margin = question.margin ?? DEFAULT_MARGIN;
+  const { margin } = gradingSettingsOf(question);
+  if (!margin) return {};
   return { marginValue: String(margin.value), marginUnit: margin.unit };
 }
 
@@ -126,7 +127,7 @@ function loadMarginDraft(
 function saveMarginDraft(
   question: EditorQuestion,
 ): Pick<ImportQuestionPreview, 'margin'> | Record<string, never> {
-  if (!QUESTION_KINDS[question.type].hasMargin) return {};
+  if (!hasMarginType(question.type)) return {};
   return {
     margin: {
       value: parseFiniteNumber(question.marginValue) ?? Number.NaN,
@@ -141,8 +142,7 @@ export function changeQuestionType(
   type: QuestionType,
 ): EditorQuestion {
   const keepsAnswer =
-    !QUESTION_KINDS[type].hasMargin ||
-    parseFiniteNumber(question.correctText) !== null;
+    !hasMarginType(type) || parseFiniteNumber(question.correctText) !== null;
   return {
     ...question,
     type,

@@ -1,11 +1,10 @@
 import {
-  DEFAULT_MARGIN,
+  answerKeyOf,
   describeLiveEditRounds,
-  hasMarginType,
+  isSameAnswerKey,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
-  type Margin,
   type QuizDraftIssue,
   type RoundEditingDescription,
 } from '@campus-pubquiz/types';
@@ -27,14 +26,6 @@ const OPENED_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'matchTargets',
 ];
 
-/** Inputs to auto-grading — a change on an opened question means existing answers need re-scoring. */
-const GRADING_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
-  'answer',
-  'points',
-  'matchScoringMode',
-  'margin',
-];
-
 /** The last round always breaks (QuizService forces it at save), so its stored value never reflects the draft's. */
 function effectiveBreakAfter(
   round: ImportRoundPreview,
@@ -44,34 +35,15 @@ function effectiveBreakAfter(
   return roundIndex === roundCount - 1 || round.breakAfter;
 }
 
-/** A question's margin as grading reads it: a Number question without a stored one has the default. */
-function effectiveMargin(question: ImportQuestionPreview): Margin | undefined {
-  if (question.margin === undefined && hasMarginType(question.type)) {
-    return DEFAULT_MARGIN;
-  }
-  return question.margin;
-}
-
-/** Whether two values of one field mean the same to grading. A margin compares by value and unit (not key order), with the default applied. */
-function isFieldEqual(
-  field: keyof ImportQuestionPreview,
-  current: ImportQuestionPreview,
-  incoming: ImportQuestionPreview,
-): boolean {
-  if (field === 'margin') {
-    const a = effectiveMargin(current);
-    const b = effectiveMargin(incoming);
-    return a?.value === b?.value && a?.unit === b?.unit;
-  }
-  return JSON.stringify(current[field]) === JSON.stringify(incoming[field]);
-}
-
 function diffQuestionFields(
   current: ImportQuestionPreview,
   incoming: ImportQuestionPreview,
   fields: (keyof ImportQuestionPreview)[],
 ): string[] {
-  return fields.filter((field) => !isFieldEqual(field, current, incoming));
+  return fields.filter(
+    (field) =>
+      JSON.stringify(current[field]) !== JSON.stringify(incoming[field]),
+  );
 }
 
 /** Why a frozen round can't change, for the editor's issue list — the current round only freezes once its block starts locking. */
@@ -270,8 +242,8 @@ function findBlockShapeViolations(
 }
 
 /**
- * Ids of opened questions whose answer or points
- * differ between the persisted and incoming drafts — their existing answers
+ * Ids of opened questions whose Answer key
+ * (answer, points and grading settings, defaults filled in) differs between the persisted and incoming drafts — their existing answers
  * need re-grading once the save lands. Pairs questions by position, which is
  * only meaningful once findLiveEditViolations has confirmed the structure is
  * unchanged; the questionId check below keeps it safe regardless.
@@ -291,11 +263,10 @@ export function findRegradeQuestionIds(
         questionId !== undefined &&
         openedIds.has(questionId) &&
         incomingQuestion?.questionId === questionId &&
-        diffQuestionFields(
-          currentQuestion,
-          incomingQuestion,
-          GRADING_QUESTION_FIELDS,
-        ).length > 0;
+        !isSameAnswerKey(
+          answerKeyOf(currentQuestion),
+          answerKeyOf(incomingQuestion),
+        );
       return needsRegrade ? [questionId] : [];
     }),
   );

@@ -11,9 +11,9 @@ Parent spec: `.scratch/answer-key/spec.md`
 
 **Blocked by:** 01 (Answer key module, used by the live-edit guard). It can run in parallel with 02.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] No frontend code outside the new-question initial values applies the default margin or the default scoring mode itself.
-- [ ] The frontend margin-text, display reveal, question display, play break-and-reveal, quiz draft state and quiz editor panel tests pass unchanged.
-- [ ] CODING_STANDARDS.md has the new line.
-- [ ] No behaviour, wire, schema or migration change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] No frontend code outside the new-question initial values applies the default margin or the default scoring mode itself.
+- [x] The frontend margin-text, display reveal, question display, play break-and-reveal, quiz draft state and quiz editor panel tests pass unchanged.
+- [x] CODING_STANDARDS.md has the new line.
+- [x] No behaviour, wire, schema or migration change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.

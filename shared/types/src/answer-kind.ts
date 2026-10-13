@@ -1,13 +1,8 @@
 import { IDK_ANSWER_VALUE } from './answers';
 import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
-import {
-  DEFAULT_MARGIN,
-  isWithinMargin,
-  parseFiniteNumber,
-  type Margin,
-} from './margin';
-import type { MatchScoringMode } from './question-views';
+import type { ResolvedAnswerKey } from './answer-key';
+import { isWithinMargin, parseFiniteNumber } from './margin';
 import { halfPoints, nearestHalfPoint } from './score-math';
 import { splitPipeList } from './sort-match';
 
@@ -49,17 +44,11 @@ export interface ScoreResult {
   verdict: Verdict;
 }
 
-/** What an answer format needs of a question to compare an answer with the key. */
-export interface KeyedQuestion {
-  answer: string;
-  points: number;
-  /** Match only: undefined behaves as 'partial'. */
-  matchScoringMode?: MatchScoringMode;
-  /** Number only: undefined behaves as DEFAULT_MARGIN. */
-  margin?: Margin;
-}
-
-type ScoreAgainstKey = (question: KeyedQuestion, value: string) => ScoreResult;
+/** A format compares an answer with a resolved Answer key: settings required, so it reads them directly and defaults nothing. */
+type ScoreAgainstKey = (
+  question: ResolvedAnswerKey,
+  value: string,
+) => ScoreResult;
 
 /** One answer kind's stored string: its parts, how to read it and how it is scored. */
 export interface AnswerFormat<Parts> {
@@ -73,7 +62,7 @@ export interface AnswerFormat<Parts> {
 
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
 
-const correct = (question: KeyedQuestion): ScoreResult => ({
+const correct = (question: ResolvedAnswerKey): ScoreResult => ({
   points: question.points,
   verdict: 'correct',
 });
@@ -83,7 +72,10 @@ function normalizeFreeText(value: string): string {
 }
 
 /** Whether a typed (or option-picked) value equals the key: trimmed and case-insensitive. */
-export function matchesKey(question: KeyedQuestion, value: string): boolean {
+export function matchesKey(
+  question: Pick<ResolvedAnswerKey, 'answer'>,
+  value: string,
+): boolean {
   return normalizeFreeText(value) === normalizeFreeText(question.answer);
 }
 
@@ -113,8 +105,9 @@ const numberFormat: AnswerFormat<string> = {
     const key = parseFiniteNumber(question.answer);
     const answer = parseFiniteNumber(value);
     if (key === null || answer === null) return INCORRECT;
-    const margin = question.margin ?? DEFAULT_MARGIN;
-    return isWithinMargin(key, answer, margin) ? correct(question) : INCORRECT;
+    return isWithinMargin(key, answer, question.margin)
+      ? correct(question)
+      : INCORRECT;
   },
 };
 

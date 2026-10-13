@@ -38,6 +38,9 @@ import { youtubeClipNotes, type ClipNotesCodec } from './youtube';
  */
 export type GradingMode = 'auto' | 'batch' | 'match-or-human';
 
+/** A grading setting a question type may carry: a match question's scoring mode, a Number question's margin (see margin.ts). */
+export type GradingSettingName = 'matchScoringMode' | 'margin';
+
 /** Which answer input a type renders on the phone, and which editor section holds its answer. */
 export type AnswerInputKind = 'text' | 'number' | 'choice' | 'sort' | 'match';
 
@@ -66,8 +69,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   gradingMode: GradingMode;
   /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
   kahootAllowed: boolean;
-  /** Whether the question carries a Margin the author sets in the editor (see margin.ts). */
-  hasMargin: boolean;
+  /** Which per-type grading settings the question carries beyond its answer and points (see answer-key.ts). */
+  gradingSettings: readonly GradingSettingName[];
 }
 
 export const QUESTION_KINDS: {
@@ -89,7 +92,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
-    hasMargin: false,
+    gradingSettings: [],
   },
   multiple_choice: {
     type: 'multiple_choice',
@@ -104,7 +107,7 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    hasMargin: false,
+    gradingSettings: [],
   },
   audio: {
     type: 'audio',
@@ -119,7 +122,7 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
-    hasMargin: false,
+    gradingSettings: [],
   },
   youtube: {
     type: 'youtube',
@@ -135,7 +138,7 @@ export const QUESTION_KINDS: {
     clipNotes: youtubeClipNotes,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
-    hasMargin: false,
+    gradingSettings: [],
   },
   sort: {
     type: 'sort',
@@ -150,7 +153,7 @@ export const QUESTION_KINDS: {
     csv: sortCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    hasMargin: false,
+    gradingSettings: [],
   },
   match: {
     type: 'match',
@@ -165,7 +168,7 @@ export const QUESTION_KINDS: {
     csv: matchCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    hasMargin: false,
+    gradingSettings: ['matchScoringMode'],
   },
   closest_guess: {
     type: 'closest_guess',
@@ -180,7 +183,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'batch',
     kahootAllowed: false,
-    hasMargin: false,
+    gradingSettings: [],
   },
   number: {
     type: 'number',
@@ -195,7 +198,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    hasMargin: true,
+    gradingSettings: ['margin'],
   },
 };
 

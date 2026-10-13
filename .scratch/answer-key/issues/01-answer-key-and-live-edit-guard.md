@@ -19,11 +19,11 @@ Parent spec: `.scratch/answer-key/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Both reproducers fail against today's code, and pass after the change.
-- [ ] A new Answer key table spec (Vitest, in shared), built from the registry so a new question type needs no new row. It covers each type's resolved settings with none stored, with each setting stored, and with a setting the type doesn't carry (dropped).
-- [ ] It also covers _same answer key_: unset vs the default (same); margin fields in another order (same); a different scoring mode, margin, answer or points (different); a difference only in a setting the type doesn't carry (same).
+- [x] A new Answer key table spec (Vitest, in shared), built from the registry so a new question type needs no new row. It covers each type's resolved settings with none stored, with each setting stored, and with a setting the type doesn't carry (dropped).
+- [x] It also covers _same answer key_: unset vs the default (same); margin fields in another order (same); a different scoring mode, margin, answer or points (different); a difference only in a setting the type doesn't carry (same).
 - [ ] The live-edit guard spec's existing margin and scoring-mode cases, `live-edit-regrade.spec.ts` and `quiz-edited.spec.ts` pass unchanged.
-- [ ] No `.type === '<literal>'` checks are added. GLOSSARY.md and DOCUMENTATION.md are updated.
-- [ ] No wire, schema, migration or CSV change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] No `.type === '<literal>'` checks are added. GLOSSARY.md and DOCUMENTATION.md are updated.
+- [x] No wire, schema, migration or CSV change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.

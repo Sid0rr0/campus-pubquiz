@@ -1085,24 +1085,77 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([1]);
   });
 
-  it('returns an opened question whose matchScoringMode changed', () => {
+  describe('match scoring mode', () => {
+    const matchRound = (
+      matchScoringMode?: 'partial' | 'all_or_nothing',
+    ): ImportRoundPreview[] => [
+      {
+        title: 'Round 1',
+        breakAfter: false,
+        questions: [
+          {
+            questionId: 1,
+            type: 'match',
+            prompt: 'Q1',
+            answer: 'Paris|Rome',
+            points: 2,
+            options: ['France', 'Italy'],
+            matchTargets: ['Rome', 'Paris'],
+            ...(matchScoringMode === undefined ? {} : { matchScoringMode }),
+          },
+        ],
+      },
+    ];
+
+    it('returns an opened question whose matchScoringMode changed', () => {
+      expect(
+        findRegradeQuestionIds(
+          matchRound('partial'),
+          matchRound('all_or_nothing'),
+          [1],
+        ),
+      ).toEqual([1]);
+    });
+
+    it('ignores a CSV-imported question with no stored mode saved as partial', () => {
+      expect(
+        findRegradeQuestionIds(matchRound(), matchRound('partial'), [1]),
+      ).toEqual([]);
+    });
+
+    it('returns a CSV-imported question switched to all or nothing', () => {
+      expect(
+        findRegradeQuestionIds(matchRound(), matchRound('all_or_nothing'), [1]),
+      ).toEqual([1]);
+    });
+  });
+
+  it('returns an opened Number question whose margin changed', () => {
+    const numberRound = (margin: {
+      value: number;
+      unit: 'percent' | 'absolute';
+    }): ImportRoundPreview[] => [
+      roundOf('Round 1', [
+        question(1, { type: 'number', answer: '100', margin }),
+      ]),
+    ];
     expect(
       findRegradeQuestionIds(
-        [round()],
-        withFirstQuestion({ matchScoringMode: 'all_or_nothing' }),
+        numberRound({ value: 10, unit: 'percent' }),
+        numberRound({ value: 5, unit: 'absolute' }),
         [1],
       ),
     ).toEqual([1]);
   });
 
-  it('returns an opened question whose margin changed', () => {
+  it('ignores a setting the question type does not carry', () => {
     expect(
       findRegradeQuestionIds(
         [round()],
         withFirstQuestion({ margin: { value: 5, unit: 'absolute' } }),
         [1],
       ),
-    ).toEqual([1]);
+    ).toEqual([]);
   });
 
   describe('number margin', () => {
