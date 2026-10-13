@@ -3,8 +3,9 @@
 **What to build:** Every real-store spec drives the same provider graph the app runs. The harness compiles the Game module over the test database module instead of building providers by hand, so a constructor change in the game code is made once, and a provider the Game module forgets fails the harness straight away. No spec body changes.
 
 - **The harness compiles the Game module** with Nest's testing module, together with the test database module from ticket 02. It overrides only:
-  - the login session store, with the existing fake session service;
-  - the phase timer schedulers token, with a pair of manual schedulers.
+  - the login session store, with the existing fake session service (the only true override).
+
+  The phase timer schedulers token is `@Optional()` and unregistered in production, so it is not overridden: the harness supplies a pair of manual schedulers through a small global test module.
 
   After init it attaches the mock socket server to the gateway, as today. If the session-broadcaster spec has landed, it attaches the server through the broadcaster's init hook instead.
 
@@ -32,6 +33,7 @@ Parent spec: `.scratch/real-store-harness-module/spec.md`
 - Full backend run (`pnpm --filter backend test --maxWorkers=2`, jest-reported time), measured on the same machine:
   - Before (integration tip 4894737b): 69.3s (154 suites, 2392 tests).
   - After: 61.9s (154 suites, 2394 tests). Not slower, so no metadata caching was needed. Both numbers carry noise from other jobs on the machine; the 60s budget is a laptop figure with default workers.
+- Re-measured on the final tip with default workers (`pnpm --filter backend test`, foreground), jest-reported time: this branch 33.1s (154 suites, 2394 tests), `main` tip 595c08d0 (the merge-base) 33.5s (153 suites, 2387 tests); wall clock about 40s for both. So the 60s box holds, and the suite is not slower than before. The earlier 69.3s/61.9s figures (`--maxWorkers=2`, machine under load) were not default-worker numbers.
 - The Game module leaves `PHASE_TIMER_SCHEDULERS` to its host (nothing provides it in production), and overriding an unregistered token is a no-op, so the harness provides it through a small global module holding the manual schedulers. Only the session store is a true `overrideProvider`.
 - Closing a compiled module never closes the worker ORM: the test database module only hands the ORM out. Verified by the full run (later spec files on the same worker still connect).
 - `docs/architecture.md` already groups the live-game providers under the Game module (ticket 01); no diagram change.

@@ -19,7 +19,8 @@ import { TeamService } from '@/team/team.service';
  * The live game: the Live session module, Session write, Block grading, the
  * gateway and the Live edit module, plus the domain providers they depend on.
  * Repositories come from the global database module, so it is not imported
- * here. Exports exactly what the app module's controllers and providers inject.
+ * here. Exports exactly what the app module's controllers and providers inject
+ * (ImportService, StatsService and the controllers); the rest stay internal.
  */
 @Module({
   imports: [AuthModule],

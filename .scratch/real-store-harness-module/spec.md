@@ -19,7 +19,7 @@ About 85 backend spec files drive the game through the real-store gateway harnes
 
 ## Solution
 
-The live-game providers move out of the app module into a **Game module**, which the app module imports. The real-store harness compiles that Game module with Nest's testing module, over the test database, and overrides only the true adapters: the login session store (the fake session service), the phase timer schedulers (the manual schedulers) and, as today, the socket server (the mock server).
+The live-game providers move out of the app module into a **Game module**, which the app module imports. The real-store harness compiles that Game module with Nest's testing module, over the test database, and overrides only the true adapter, the login session store (the fake session service), supplies the phase timer schedulers (manual schedulers) through a small global test module, and, as today, the socket server (the mock server).
 
 The harness's handle keeps every name it has today, and each provider on it is the one Nest built, so no spec body changes. A constructor change in the game code is then made once. A provider the Game module forgets fails the harness straight away.
 
@@ -51,7 +51,7 @@ Nothing changes for the quiz master, the teams, the big screen or the database. 
   - The Game module relies on the global database module for repositories, as the app does today. It doesn't import the database module itself.
 - **The harness compiles the Game module with Nest's testing module.** Over it, the harness provides:
   - **The database:** a test-only global module that provides the ORM, its entity manager and the entity repositories from the worker's ORM (the one `useTestDatabase` already holds), not from the production config. Repositories still resolve from the global entity manager, so the gateway's request-context handlers fork their own entity manager per call, as in the app. Closing a test's module must not close that ORM.
-  - **Overrides:** the login session store becomes the existing fake session service, and the phase timer schedulers token becomes a pair of manual schedulers. Nothing else is overridden.
+  - **Overrides:** the login session store becomes the existing fake session service (the only true `overrideProvider`). The phase timer schedulers token is `@Optional()` and unregistered in production, so there is nothing to override: the harness supplies a pair of manual schedulers through a small global test module. Nothing else is overridden.
   - **The socket server:** the mock server is attached to the gateway after init, as today. When the session-broadcaster spec lands, it is attached through the broadcaster's init hook instead.
 - **Lifecycle comes from Nest.** The harness initialises the testing module, which runs module init (the session store loads) and then application bootstrap (timers re-arm). It closes the module at the end of the test, which runs module destroy (armed timers are cleared). The harness's own calls to those hooks go. The order of test hooks stays as it is: modules close before the tables are emptied.
 - **`restart()` compiles and initialises a fresh Game module over the same database**, like a backend restart: progress and timers come back from persistence, while sockets and connected teams don't. As today, the previous module stays alive until the test ends, so a spec can still use the handle it held before the restart. Both are closed at teardown.

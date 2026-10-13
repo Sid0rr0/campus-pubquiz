@@ -1,5 +1,8 @@
+import { Test } from '@nestjs/testing';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
+import { Quiz } from '@/db/entities/quiz.entity';
+import { createTestDatabaseModule } from '@/test-db/test-database.module';
 import {
   setupRealStoreGatewayTest,
   type RealStoreGateway,
@@ -38,6 +41,18 @@ describe('GameGateway — real-store harness smoke', () => {
     expect(restarted.gameState).not.toBe(game.gameState);
     // Sockets and connected teams do not survive a restart; the earlier handle still answers.
     expect((await restarted.snapshot()).teams).toEqual([]);
+    expect((await game.snapshot()).teams).toHaveLength(1);
+  });
+
+  it('leaves the worker database usable after a module over it is closed', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [createTestDatabaseModule(game.orm)],
+    }).compile();
+    await moduleRef.init();
+
+    await moduleRef.close();
+
+    expect(await game.orm.em.fork().count(Quiz)).toBeGreaterThan(0);
     expect((await game.snapshot()).teams).toHaveLength(1);
   });
 
