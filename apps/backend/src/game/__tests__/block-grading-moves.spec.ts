@@ -1,0 +1,181 @@
+import { WsException } from '@nestjs/websockets';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  type AnswersUpdatedPayload,
+} from '@campus-pubquiz/types';
+import { asSocket } from '@/game/__tests__/test-utils';
+import {
+  advanceClockBy,
+  freezeClockAt,
+  restoreClock,
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
+
+/** The answer lists /control was sent for one question since the last clearEmits(). */
+function adminAnswerLists(
+  game: RealStoreGateway,
+  questionId: number,
+): AnswersUpdatedPayload[] {
+  return game
+    .payloadsTo<AnswersUpdatedPayload>(
+      SOCKET_ROOMS.ADMIN,
+      SOCKET_EVENTS.ANSWERS_UPDATED,
+    )
+    .filter((payload) => payload.questionId === questionId);
+}
+
+describe('GameGateway — Block grading runs its steps in order for a move', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('refuses leaving the break for the reveal with an ungraded question and leaves the session as it was', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['The Quizzards'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Largest planet?', answer: 'Jupiter' },
+            {
+              type: 'free_text',
+              prompt: 'Smallest planet?',
+              answer: 'Mercury',
+            },
+          ],
+        },
+      ],
+    });
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(await game.connectAdmin());
+    const [{ socket, teamId }] = game.teams;
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId,
+      teamId,
+      value: 'Saturn',
+    });
+    await game.act('ADVANCE'); // -> second question
+    await game.act('ADVANCE'); // -> locking
+    await game.act('ADVANCE'); // -> break_intro
+    const inBreak = await game.act('PREVIOUS'); // -> break
+    expect(inBreak.progress.status).toBe('break');
+    expect(inBreak.ungradedQuestionIds).toEqual([questionId]);
+
+    await expect(game.act('ADVANCE')).rejects.toThrow(WsException);
+
+    const after = await game.snapshot();
+    expect(after.progress).toEqual(inBreak.progress);
+    expect(after.ungradedQuestionIds).toEqual([questionId]);
+  });
+
+  it('enters a break with a closest_guess question graded, off the ungraded set, and its answer list re-sent', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A', 'Team B'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            { type: 'free_text', prompt: 'Name a fruit', answer: 'Apple' },
+            {
+              type: 'closest_guess',
+              prompt: 'How many students attend?',
+              points: 5,
+              answer: '1000',
+            },
+          ],
+        },
+      ],
+    });
+    const [freeTextId, closestGuessId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(await game.connectAdmin());
+    const [teamA, teamB] = game.teams;
+    await game.gateway.handleSubmitAnswer(asSocket(teamA.socket), {
+      questionId: freeTextId,
+      teamId: teamA.teamId,
+      value: 'Pear',
+    });
+    await game.act('ADVANCE'); // -> closest_guess question
+    for (const [team, value] of [
+      [teamA, '900'],
+      [teamB, '2000'],
+    ] as const) {
+      await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+        questionId: closestGuessId,
+        teamId: team.teamId,
+        value,
+      });
+    }
+    await game.act('ADVANCE'); // -> locking
+    game.clearEmits();
+
+    const inBreak = await game.act('ADVANCE'); // -> break_intro
+
+    expect(inBreak.progress.status).toBe('break_intro');
+    expect(inBreak.ungradedQuestionIds).toEqual([freeTextId]);
+    const lists = adminAnswerLists(game, closestGuessId);
+    expect(lists).toHaveLength(1);
+    expect(lists[0].answers.every((answer) => answer.gradedAt !== null)).toBe(
+      true,
+    );
+  });
+});
+
+const KAHOOT_ANSWER_DELAY_MS = 5_000;
+
+describe('GameGateway — kahoot speed scoring when a question leaves locking', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  beforeEach(() => {
+    freezeClockAt('2024-01-01T00:00:00.000Z');
+  });
+
+  afterEach(() => {
+    restoreClock();
+  });
+
+  it('scales the points by answer speed and puts them on the leaderboard with a correct ungraded set', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A'],
+      rounds: [
+        {
+          title: 'Speed Round',
+          kahootMode: true,
+          breakAfter: true,
+          questions: [
+            {
+              type: 'multiple_choice',
+              prompt: 'Capital of France?',
+              answer: 'Paris',
+              points: 10,
+              payload: { options: ['Paris', 'London'] },
+            },
+          ],
+        },
+      ],
+      settings: { kahootQuestionTimerSeconds: 10 },
+    });
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(await game.connectAdmin());
+    const [{ socket, teamId }] = game.teams;
+    advanceClockBy(KAHOOT_ANSWER_DELAY_MS);
+    await game.gateway.handleSubmitAnswer(asSocket(socket), {
+      questionId,
+      teamId,
+      value: 'Paris',
+    });
+    await game.act('ADVANCE'); // -> locking
+    const revealed = await game.act('ADVANCE'); // leaves locking, speed-scored
+
+    const [stored] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    expect(stored.pointsAwarded).toBeGreaterThan(0);
+    expect(stored.pointsAwarded).toBeLessThan(10);
+    expect(revealed.leaderboard).toEqual([
+      expect.objectContaining({ totalPoints: stored.pointsAwarded }),
+    ]);
+    expect(revealed.ungradedQuestionIds).toEqual([]);
+  });
+});
