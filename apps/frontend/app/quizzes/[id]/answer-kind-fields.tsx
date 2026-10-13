@@ -7,6 +7,7 @@ import {
   PlusIcon,
 } from '@radix-ui/react-icons';
 import {
+  hasMarginType,
   QUESTION_KINDS,
   type AnswerKind,
   parseFiniteNumber,
@@ -245,9 +246,7 @@ function NumberFields(props: AnswerFieldsProps) {
   return (
     <>
       <TypedAnswerFields {...props} inputType="number" />
-      {QUESTION_KINDS[props.question.type].hasMargin && (
-        <MarginRow {...props} />
-      )}
+      {hasMarginType(props.question.type) && <MarginRow {...props} />}
     </>
   );
 }

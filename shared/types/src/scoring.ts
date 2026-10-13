@@ -80,7 +80,7 @@ export function isBatchGradedType(type: QuestionType): boolean {
 
 /** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */
 export function hasMarginType(type: QuestionType): boolean {
-  return QUESTION_KINDS[type].hasMargin;
+  return QUESTION_KINDS[type].gradingSettings.includes('margin');
 }
 
 export function isKahootAllowedType(type: QuestionType): boolean {

@@ -679,8 +679,8 @@ session saved before this existed has none stored and derives them from its
 position on restore.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
-If an opened question's `answer`, `points`, `matchScoringMode` or `margin`
-changed, its existing answers are
+If an opened question's Answer key (its `answer`, `points` and the
+`matchScoringMode` or `margin` its type carries) changed, its existing answers are
 re-graded (`BlockGradingService.regradeForKeyFix`): auto-graded types
 (`multiple_choice`/`sort`/`match`/`number`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
@@ -695,7 +695,12 @@ answer, and send any other non-matching answer back to ungraded — including
 one that was auto-graded correct under the old key (told apart by re-running
 the submit-time grade against the key as it stood before the edit). The editor keeps sort/match
 display order stable across saves (`savedDisplayOrder`), so a re-save doesn't
-reshuffle what players see.
+reshuffle what players see. The keys are compared with defaults filled in
+(`answerKeyOf` / `isSameAnswerKey`), so a setting left unset and one saved as
+its default are the same: a CSV-imported `match` question (no stored scoring
+mode) saved as `partial` is not a key fix and keeps its overrides. A setting
+the type doesn't carry never counts, and a margin compares by value and unit
+whatever the order of its fields.
 
 **CSV export mechanics**: purely client-side — `quizToCsv`
 (`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
