@@ -10,7 +10,7 @@ Parent spec: `.scratch/answer-key/spec.md`
 
 **Blocked by:** 01 (Answer key module, used by the live-edit guard).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Nothing inside Scoring or its answer formats falls back to a default margin or scoring mode. The settings arrive filled in.
 - [ ] `scoring.test.ts`, `number-question-margin.test.ts`, `scoring-pinned-base-scores.test.ts` and `answer-kind.test.ts` pass unchanged.

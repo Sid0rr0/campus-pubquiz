@@ -1,14 +1,14 @@
+import { answerKeyOf, type GradingSettingsSource } from './answer-key';
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
 import {
   ANSWER_FORMATS,
   matchesKey,
   resolveAnswerKind,
+  type KeyedQuestion,
   type ScoreResult,
   type Verdict,
 } from './answer-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
-import type { Margin } from './margin';
-import type { MatchScoringMode } from './question-views';
 import { halfPoints, nearestHalfPoint } from './score-math';
 
 export { halfPoints, nearestHalfPoint };
@@ -21,16 +21,11 @@ export type { ScoreResult, Verdict };
  * scoring option only touches this file and the question's own schema.
  */
 
-/** The slice of a question scoring needs — RevealQuestionView satisfies it. */
-export interface ScoredQuestion {
-  type: QuestionType;
+/** The slice of a question scoring needs — RevealQuestionView satisfies it. Unset settings are filled in by the Answer key. */
+export type ScoredQuestion = GradingSettingsSource & {
   answer: string;
   points: number;
-  /** Match only: undefined behaves as 'partial'. */
-  matchScoringMode?: MatchScoringMode;
-  /** Number only: undefined behaves as DEFAULT_MARGIN. */
-  margin?: Margin;
-}
+};
 
 /** Kahoot speed inputs: how long the team took and the configured timer. Either null means no scaling. */
 export interface SpeedContext {
@@ -95,7 +90,9 @@ const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
  * still compared as typed text.
  */
 function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
-  return ANSWER_FORMATS[resolveAnswerKind(question)].score(question, value);
+  // A format reads only the settings its own types carry, which the key holds.
+  const key = answerKeyOf(question) as KeyedQuestion;
+  return ANSWER_FORMATS[resolveAnswerKind(question)].score(key, value);
 }
 
 /** Kahoot's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */
