@@ -8,7 +8,7 @@
 
 **Blocked by:** None (can start immediately). It runs in parallel with 02, and whichever lands second rebases its panel edits.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The draft state module exports the round edits, move targets and structure note. None of them mutates its input.
 - [ ] The panel's inline round setters, its move-targets helper and its structure-note helper are gone. The panel calls the module.
