@@ -9,13 +9,14 @@ describe('GameGateway — request context', () => {
     const game = await harness.createGateway();
     const admin = await game.connectAdmin();
     const seen: unknown[] = [];
-    const original = game.gameState.applyAdminAction.bind(game.gameState);
-    jest
-      .spyOn(game.gameState, 'applyAdminAction')
-      .mockImplementation((...args) => {
-        seen.push(RequestContext.getEntityManager());
-        return original(...args);
-      });
+    const { gameState } = game;
+    const original = gameState.applyAdminAction.bind(gameState) as (
+      ...args: Parameters<typeof gameState.applyAdminAction>
+    ) => ReturnType<typeof gameState.applyAdminAction>;
+    jest.spyOn(gameState, 'applyAdminAction').mockImplementation((...args) => {
+      seen.push(RequestContext.getEntityManager());
+      return original(...args);
+    });
 
     expect(RequestContext.getEntityManager()).toBeUndefined();
     await game.gateway.handleAdminAction(asSocket(admin), {
