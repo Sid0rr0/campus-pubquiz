@@ -4,6 +4,7 @@ import {
   DEFAULT_MARGIN,
   formatMarginText,
   formatNumberReveal,
+  hasMarginType,
   type AnswerKind,
   type Margin,
   type QuestionView,
@@ -221,7 +222,7 @@ function MatchQuestionBody({
 
 /** Shared by Number and closest-guess; only a Number question has a margin to show. */
 function NumberQuestionBody({ question }: QuestionBodyProps) {
-  if (question.type !== 'number') return null;
+  if (!hasMarginType(question.type)) return null;
   return (
     <NumberMarginText
       margin={question.margin}
@@ -301,7 +302,7 @@ function typedRevealBody({ correctAnswer }: RevealBodyProps): RevealBody {
 /** Number shows the key with its accepted range; closest-guess shares the kind and keeps the plain key. */
 function numberRevealBody(props: RevealBodyProps): RevealBody {
   const { question, correctAnswer } = props;
-  if (question.type !== 'number') return typedRevealBody(props);
+  if (!hasMarginType(question.type)) return typedRevealBody(props);
   return {
     lead: (
       <AnswerLine

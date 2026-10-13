@@ -4,6 +4,7 @@ import type {
   QuestionView,
   RevealQuestionView,
 } from './question-views';
+import { hasMarginType } from './scoring';
 
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.
@@ -17,7 +18,7 @@ export function toQuestionView(question: RevealQuestionView): QuestionView {
     ...(question.matchTargets !== undefined
       ? { matchTargets: question.matchTargets }
       : {}),
-    ...(question.type === 'number' && question.margin !== undefined
+    ...(hasMarginType(question.type) && question.margin !== undefined
       ? { margin: question.margin }
       : {}),
     ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),

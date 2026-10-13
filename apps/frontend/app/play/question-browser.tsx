@@ -1,4 +1,8 @@
-import { isBatchGradedType, isBreakStatus } from '@campus-pubquiz/types';
+import {
+  hasMarginType,
+  isBatchGradedType,
+  isBreakStatus,
+} from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -158,7 +162,7 @@ export function QuestionBrowser({
           <h1 className="text-balance font-display text-2xl leading-tight">
             {selectedQuestion.prompt}
           </h1>
-          {selectedQuestion.type === 'number' && (
+          {hasMarginType(selectedQuestion.type) && (
             <NumberMarginText
               margin={selectedQuestion.margin}
               className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
