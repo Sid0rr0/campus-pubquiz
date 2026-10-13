@@ -4,8 +4,15 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 ## Not implemented
 
-| Spec            | Title                                                                    | Tickets | Blocked by |
-| --------------- | ------------------------------------------------------------------------ | ------- | ---------- |
+| Spec                      | Title                                                                                                               | Tickets | Blocked by                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------ |
+| grading-mode-policy       | [One Grading policy per grading mode — every grading event decided in one pure module](grading-mode-policy/spec.md) | 3       | —                              |
+| session-broadcaster       | [Split outbound broadcasting out of the GameGateway](session-broadcaster/spec.md)                                   | 4       | —                              |
+| block-grading-moves       | [Give Block grading one entry point per move](block-grading-moves/spec.md)                                          | 2       | —                              |
+| answer-key                | [One Answer key — what an answer is graded against, defaults filled in once](answer-key/spec.md)                    | 3       | —                              |
+| reveal-kind               | [Let the reveal view say what kind of reveal it is](reveal-kind/spec.md)                                            | 2       | answer-key 01 (ticket 01 only) |
+| phone-question-browser    | [Move phone question browsing out of /play, and narrow the Team link hook](phone-question-browser/spec.md)          | 3       | —                              |
+| real-store-harness-module | [Build the real-store harness from a Game module, not by hand](real-store-harness-module/spec.md)                   | 3       | —                              |
 
 ## Won't do
 
