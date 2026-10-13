@@ -507,23 +507,69 @@ describe('selectLeaderboardRows trend', () => {
     );
   });
 
-  it.each<LeaderboardRowsInput['phase']>(['old', 'counting'])(
-    'gives no trend in the %s phase',
-    (phase) => {
-      const rows = selectLeaderboardRows({
-        entries: [
-          ranked(1, 'Challenger', 40, 1),
-          ranked(2, 'Runner Up', 15, 2),
-        ],
-        previousEntries: [
-          ranked(2, 'Runner Up', 15, 1),
-          ranked(1, 'Challenger', 10, 2),
-        ],
-        currentRoundIndex: 0,
-        phase,
-      });
+  describe('no trend before the board settles', () => {
+    const OLD_BOARD = [
+      ranked(2, 'Runner Up', 15, 1),
+      ranked(1, 'Challenger', 10, 2),
+    ];
+    const NEW_BOARD = [
+      withRound(ranked(1, 'Challenger', 40, 1), 30),
+      withRound(ranked(2, 'Runner Up', 15, 2), 0),
+    ];
 
-      expect(trends(rows)).toEqual(['Runner Up none', 'Challenger none']);
-    },
-  );
+    it.each<{
+      phase: LeaderboardRowsInput['phase'];
+      name: string;
+      basis: Partial<LeaderboardRowsInput>;
+      expected: string[];
+    }>([
+      {
+        phase: 'old',
+        name: 'previous entries',
+        basis: { previousEntries: OLD_BOARD, currentRoundIndex: 0 },
+        expected: ['Runner Up none', 'Challenger none'],
+      },
+      {
+        phase: 'counting',
+        name: 'previous entries',
+        basis: { previousEntries: OLD_BOARD, currentRoundIndex: 0 },
+        expected: ['Runner Up none', 'Challenger none'],
+      },
+      {
+        phase: 'old',
+        name: 'trend baseline',
+        basis: { trendBaseline: OLD_BOARD },
+        expected: ['Challenger none', 'Runner Up none'],
+      },
+      {
+        phase: 'counting',
+        name: 'trend baseline',
+        basis: { trendBaseline: OLD_BOARD },
+        expected: ['Challenger none', 'Runner Up none'],
+      },
+      {
+        phase: 'old',
+        name: 'round backed out',
+        basis: { currentRoundIndex: 0 },
+        expected: ['Challenger none', 'Runner Up none'],
+      },
+      {
+        phase: 'counting',
+        name: 'round backed out',
+        basis: { currentRoundIndex: 0 },
+        expected: ['Challenger none', 'Runner Up none'],
+      },
+    ])(
+      'gives no trend in the $phase phase against the $name',
+      ({ phase, basis, expected }) => {
+        const rows = selectLeaderboardRows({
+          entries: NEW_BOARD,
+          ...basis,
+          phase,
+        });
+
+        expect(trends(rows)).toEqual(expected);
+      },
+    );
+  });
 });

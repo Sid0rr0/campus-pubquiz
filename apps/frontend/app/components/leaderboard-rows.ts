@@ -312,11 +312,15 @@ function rankTrend(
   return 'same';
 }
 
-/** Settled rows with their trend against the trend basis, where one exists. */
+/**
+ * Rows with their trend against the trend basis, where one exists — only in
+ * 'settled', since before then a row's rank isn't the one it will settle on.
+ */
 function withTrends(
   rows: LeaderboardRow[],
   input: LeaderboardRowsInput,
 ): LeaderboardRow[] {
+  if (input.phase !== 'settled') return rows;
   const basis = trendBasis(input);
   if (basis === undefined) return rows;
   const isForcedUp = isAllTiedPriorBoard(input, basis);
