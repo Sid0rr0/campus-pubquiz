@@ -13,6 +13,7 @@ export const QUESTION_TYPE_LITERALS = [
   'sort',
   'match',
   'closest_guess',
+  'number',
 ];
 
 const TYPE_LITERAL = `/^(${QUESTION_TYPE_LITERALS.join('|')})$/`;

@@ -6,6 +6,7 @@ import {
   freeTextPreviewSchema,
   matchPreviewSchema,
   multipleChoicePreviewSchema,
+  numberPreviewSchema,
   sortPreviewSchema,
   youtubePreviewSchema,
 } from './question-preview-schema';
@@ -15,6 +16,7 @@ import {
   freeTextPayloadSchema,
   matchPayloadSchema,
   multipleChoicePayloadSchema,
+  numberPayloadSchema,
   sortPayloadSchema,
   youtubePayloadSchema,
   type QuestionPayload,
@@ -64,6 +66,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   gradingMode: GradingMode;
   /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
   kahootAllowed: boolean;
+  /** Whether the question carries a Margin the author sets in the editor (see margin.ts). */
+  hasMargin: boolean;
 }
 
 export const QUESTION_KINDS: {
@@ -85,6 +89,7 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
+    hasMargin: false,
   },
   multiple_choice: {
     type: 'multiple_choice',
@@ -99,6 +104,7 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: false,
   },
   audio: {
     type: 'audio',
@@ -113,6 +119,7 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
+    hasMargin: false,
   },
   youtube: {
     type: 'youtube',
@@ -128,6 +135,7 @@ export const QUESTION_KINDS: {
     clipNotes: youtubeClipNotes,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
+    hasMargin: false,
   },
   sort: {
     type: 'sort',
@@ -142,6 +150,7 @@ export const QUESTION_KINDS: {
     csv: sortCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: false,
   },
   match: {
     type: 'match',
@@ -156,6 +165,7 @@ export const QUESTION_KINDS: {
     csv: matchCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
+    hasMargin: false,
   },
   closest_guess: {
     type: 'closest_guess',
@@ -170,6 +180,22 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'batch',
     kahootAllowed: false,
+    hasMargin: false,
+  },
+  number: {
+    type: 'number',
+    label: 'Number',
+    moderatorNote:
+      'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',
+    inputKind: 'number',
+    requiresMedia: false,
+    choices: 'none',
+    schema: numberPreviewSchema,
+    payload: numberPayloadSchema,
+    csv: answerOnlyCsv,
+    gradingMode: 'auto',
+    kahootAllowed: true,
+    hasMargin: true,
   },
 };
 

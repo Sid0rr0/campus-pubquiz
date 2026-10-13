@@ -1,4 +1,8 @@
-import { isBatchGradedType, isBreakStatus } from '@campus-pubquiz/types';
+import {
+  hasMarginType,
+  isBatchGradedType,
+  isBreakStatus,
+} from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
@@ -7,6 +11,7 @@ import type {
   JoinAcceptedPayload,
   QuestionView,
 } from '@campus-pubquiz/types';
+import { NumberMarginText } from '@/app/components/number-margin-text';
 import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
@@ -157,6 +162,12 @@ export function QuestionBrowser({
           <h1 className="text-balance font-display text-2xl leading-tight">
             {selectedQuestion.prompt}
           </h1>
+          {hasMarginType(selectedQuestion.type) && (
+            <NumberMarginText
+              margin={selectedQuestion.margin}
+              className="text-center text-sm font-extrabold tracking-wide text-foreground/55"
+            />
+          )}
           {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
               👀 Look at the screen

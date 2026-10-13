@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_MARGIN, MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { isSameMultiset, splitPipeList } from './sort-match';
 import { extractYoutubeVideoId } from './youtube';
 
@@ -102,14 +103,39 @@ export const youtubePreviewSchema = withOptionalChoiceRules(
   }),
 );
 
+/** An answer key that is a finite number — closest guess and Number share it. */
+const numberAnswer = z
+  .string()
+  .refine((value) => parseFiniteNumber(value) !== null, {
+    error: 'Answer must be a number',
+  });
+
 export const closestGuessPreviewSchema = z.object({
   type: z.literal('closest_guess'),
   ...baseQuestionFields,
-  answer: z
-    .string()
-    .refine((value) => value !== '' && Number.isFinite(Number(value)), {
-      error: 'Answer must be a number',
-    }),
+  answer: numberAnswer,
+  mediaUrl: httpUrl.optional(),
+});
+
+const MAX_PERCENT_MARGIN = 100;
+
+const marginSchema = z
+  .object({
+    value: z
+      .number('Margin must be a number')
+      .min(0, 'Margin must not be negative'),
+    unit: z.enum(MARGIN_UNITS),
+  })
+  .refine(
+    (margin) => margin.unit !== 'percent' || margin.value <= MAX_PERCENT_MARGIN,
+    { path: ['value'], error: 'A percentage margin must be at most 100' },
+  );
+
+export const numberPreviewSchema = z.object({
+  type: z.literal('number'),
+  ...baseQuestionFields,
+  answer: numberAnswer,
+  margin: marginSchema.default(DEFAULT_MARGIN),
   mediaUrl: httpUrl.optional(),
 });
 

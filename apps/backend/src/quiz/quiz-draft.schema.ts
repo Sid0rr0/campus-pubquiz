@@ -93,7 +93,7 @@ export function validateQuizDraft(
             questionIndex,
             field: 'type',
             message:
-              'Kahoot rounds only support multiple choice, sort, and match questions',
+              'Kahoot rounds only support multiple choice, sort, match, and number questions',
           });
         }
         return;

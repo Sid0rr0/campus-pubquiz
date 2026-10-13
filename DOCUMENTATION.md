@@ -432,7 +432,7 @@ table (`GameSessionTeam`).
 ## Question Types
 
 `QuestionType` is one of `free_text`, `multiple_choice`, `audio`, `youtube`,
-`sort`, `match`, or `closest_guess`. Each has its own submission format and
+`sort`, `match`, `closest_guess`, or `number`. Each has its own submission format and
 grading behavior:
 
 - **`free_text`** — any typed answer (`FreeTextAnswer`). An answer matching
@@ -515,9 +515,41 @@ grading behavior:
   and `PREVIOUS` takes the later fields away again. A question with zero
   submissions collapses back to the normal single-shot reveal, since there's
   nothing to walk through, and carries its answer straight away.
+- **`number`** — a number graded against a **margin** (ADR 0003). The CSV
+  `answer` cell holds the key and must parse as a finite number (same rule and
+  message as `closest_guess`); players type on the decimal number keypad. The
+  question's `margin` is `{ value, unit }` with `unit` `percent` or `absolute`
+  (stored in the payload next to `matchScoringMode`, set in the manual editor
+  only — never from CSV, so an imported question, and one with no stored
+  margin, gets the default `{ value: 10, unit: 'percent' }`). The value must
+  not be negative and a percentage must be at most 100. It is **auto-graded at
+  submit**: with `allowed` = the margin value (absolute) or `|key| × value / 100`
+  (percent), an answer with `|answer − key| <= allowed` is correct with full
+  points (edges included) and anything else, including an answer that isn't a
+  finite number, is incorrect. A key of 0 with a percentage margin therefore
+  accepts only an exact 0, and a margin of 0 accepts only the exact key. There
+  is no partial credit, a Number answer is never ungraded, and the admin can
+  override any grade. **Editor:** a Number question shows a margin row next
+  to the answer (a number field, decimals allowed, plus a `%` / `absolute`
+  toggle, 10% on a new question); a key of 0 with a percentage margin shows an
+  advisory hint, not an error. Switching Free text to Number keeps the prompt
+  and keeps the answer only if it parses as a number. **CSV:** there is no
+  margin column (like match's scoring mode): import fills in 10% and export
+  writes no margin, so a custom margin is lost on export → re-import.
+  Changing the margin of an opened question is a grading-input change like a
+  key fix and re-scores its answers, discarding manual overrides.
+  Allowed in kahoot rounds, where a correct answer is
+  scaled by the speed multiplier. While the question is open, the phone (under
+  the prompt) and the big screen show the margin ("within 10%", "within 5");
+  on reveal both show the key and the accepted range ("200 · 180–220
+  accepted"; just the key when the margin is 0). The text comes from one
+  shared formatter (`formatMarginText`/`formatNumberReveal` in
+  `shared/types/src/margin.ts`), numbers show at most 2 decimals with trailing
+  zeros dropped, and grading always uses the exact range. Only a Number
+  question's `QuestionView` carries `margin`.
 
-`multiple_choice`/`sort`/`match` are auto-graded the instant a team submits,
-and the admin can still override any of them per answer;
+`multiple_choice`/`sort`/`match`/`number` are auto-graded the instant a team
+submits, and the admin can still override any of them per answer;
 `free_text`/`audio`/`youtube` (grading mode `match-or-human`) are graded
 correct at submit when the answer matches the key and otherwise left ungraded
 for the admin, who can override any of them too. A revision that matches is
@@ -539,8 +571,9 @@ with text, and otherwise its registry input kind (`text`); a question whose
 choices are all blank is `text`. Every other type takes its registry input
 kind. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
 encodes, formats and scores a stored answer, and Scoring takes its base score
-from it; `closest_guess` (`number`) has no per-answer score and is graded in
-one batch. Any type can
+from it. `closest_guess` shares the `number` kind but is never scored one
+answer at a time: `gradeAtSubmit` skips batch types and the batch grader
+decides its result. Any type can
 carry `media_url`/`answer_media_url` — image vs. audio vs. YouTube is inferred
 from the URL, so there is deliberately no dedicated `picture` type.
 
@@ -646,9 +679,10 @@ session saved before this existed has none stored and derives them from its
 position on restore.
 
 After the save, every live session reloads its in-memory quiz and rebroadcasts.
-If an opened question's `answer` or `points` changed, its existing answers are
+If an opened question's `answer`, `points`, `matchScoringMode` or `margin`
+changed, its existing answers are
 re-graded (`BlockGradingService.regradeForKeyFix`): auto-graded types
-(`multiple_choice`/`sort`/`match`) re-score every answer — overwriting any
+(`multiple_choice`/`sort`/`match`/`number`) re-score every answer — overwriting any
 manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
 speed scaling (kept to the nearest half point, so a half-credit match never
 rounds back up to full points) from the response time stored on each answer at submit (so it

@@ -56,6 +56,42 @@ describe('DisplayPage — question display', () => {
     expect(screen.getByText('London')).toBeInTheDocument();
   });
 
+  it('shows the margin under the prompt of an open Number question', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'number',
+                prompt: 'How tall is Everest in metres?',
+                margin: { value: 2.5, unit: 'percent' },
+              },
+            ],
+          },
+        ],
+        progress: { status: 'question_open' },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+    expect(screen.getByText('within 2.5%')).toBeInTheDocument();
+  });
+
+  it('shows no margin for a closest-guess question', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [{ questions: [{ type: 'closest_guess', prompt: 'Guess' }] }],
+        progress: { status: 'question_open' },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+    expect(screen.queryByText(/^within/)).not.toBeInTheDocument();
+  });
+
   it('shows sort items numbered in display order', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {

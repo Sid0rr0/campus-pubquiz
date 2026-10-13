@@ -1,16 +1,23 @@
 import type { ReactNode } from 'react';
 import {
   ANSWER_FORMATS,
+  DEFAULT_MARGIN,
+  formatNumberReveal,
+  hasMarginType,
   type AnswerKind,
   type QuestionView,
 } from '@campus-pubquiz/types';
+import { NumberMarginText } from '@/app/components/number-margin-text';
 import {
   getLowerOptionLetter,
   getOptionLetter,
 } from '@/app/lib/option-letters';
 
 /** The fields the answer bodies read; a missing one means there is nothing to show. */
-export type AnswerBodyQuestion = Pick<QuestionView, 'options' | 'matchTargets'>;
+export type AnswerBodyQuestion = Pick<
+  QuestionView,
+  'type' | 'options' | 'matchTargets' | 'margin'
+>;
 
 interface QuestionBodyProps {
   question: AnswerBodyQuestion;
@@ -201,10 +208,21 @@ function MatchQuestionBody({
   );
 }
 
+/** Shared by Number and closest-guess; only a Number question has a margin to show. */
+function NumberQuestionBody({ question }: QuestionBodyProps) {
+  if (!hasMarginType(question.type)) return null;
+  return (
+    <NumberMarginText
+      margin={question.margin}
+      className="font-extrabold text-display-2xl text-foreground/55"
+    />
+  );
+}
+
 /** What the big screen shows while a question is being asked, beyond its prompt and media. */
 export const QUESTION_BODIES = {
   text: noQuestionBody,
-  number: noQuestionBody,
+  number: NumberQuestionBody,
   choice: ChoiceQuestionBody,
   sort: SortQuestionBody,
   match: MatchQuestionBody,
@@ -269,6 +287,22 @@ function typedRevealBody({ correctAnswer }: RevealBodyProps): RevealBody {
   return { lead: <AnswerLine answer={correctAnswer} /> };
 }
 
+/** Number shows the key with its accepted range; closest-guess shares the kind and keeps the plain key. */
+function numberRevealBody(props: RevealBodyProps): RevealBody {
+  const { question, correctAnswer } = props;
+  if (!hasMarginType(question.type)) return typedRevealBody(props);
+  return {
+    lead: (
+      <AnswerLine
+        answer={formatNumberReveal(
+          correctAnswer,
+          question.margin ?? DEFAULT_MARGIN,
+        )}
+      />
+    ),
+  };
+}
+
 function choiceRevealBody({
   question: { options },
   correctAnswer,
@@ -284,7 +318,7 @@ function choiceRevealBody({
 /** What the big screen shows at reveal: the correct answer, or a team's own answer laid out the same way. */
 export const REVEAL_BODIES = {
   text: typedRevealBody,
-  number: typedRevealBody,
+  number: numberRevealBody,
   choice: choiceRevealBody,
   sort: sortRevealBody,
   match: matchRevealBody,

@@ -8,6 +8,7 @@ import type {
 } from '@campus-pubquiz/types';
 import {
   addRound,
+  changeQuestionType,
   deleteRound,
   csvImportTitle,
   describeEditorRounds,
@@ -44,6 +45,8 @@ describe('makeQuestion / makeRound', () => {
       sortItems: ['', ''],
       matchPairs: [makeMatchPair(), makeMatchPair()],
       matchScoringMode: 'partial',
+      marginValue: '10',
+      marginUnit: 'percent',
       correctText: '',
       mediaUrl: '',
       answerMediaUrl: '',
@@ -328,6 +331,78 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(question.matchScoringMode).toBe('partial');
   });
 
+  it('starts a new Number question at a 10% margin', () => {
+    const question = { ...makeQuestion('q1'), type: 'number' as const };
+
+    expect(questionToPreview(question).margin).toEqual({
+      value: 10,
+      unit: 'percent',
+    });
+  });
+
+  it('round-trips a stored margin, decimals included, through the editor', () => {
+    const preview: ImportQuestionPreview = {
+      type: 'number',
+      prompt: 'Height in metres?',
+      answer: '330',
+      points: 2,
+      margin: { value: 0.5, unit: 'absolute' },
+    };
+
+    const question = questionFromPreview('q1', preview);
+
+    expect(question.marginValue).toBe('0.5');
+    expect(question.marginUnit).toBe('absolute');
+    expect(questionToPreview(question).margin).toEqual({
+      value: 0.5,
+      unit: 'absolute',
+    });
+  });
+
+  it('loads a Number question without a stored margin as 10%', () => {
+    const question = questionFromPreview('q1', {
+      type: 'number',
+      prompt: 'Bones?',
+      answer: '206',
+      points: 1,
+    });
+
+    expect(questionToPreview(question).margin).toEqual({
+      value: 10,
+      unit: 'percent',
+    });
+  });
+
+  it('saves a margin of 0 as 0, not as the default', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'number' as const,
+      marginValue: '0',
+    };
+
+    expect(questionToPreview(question).margin?.value).toBe(0);
+  });
+
+  it('saves an emptied margin as not-a-number so the save is refused instead of defaulting', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'number' as const,
+      marginValue: '',
+    };
+
+    expect(questionToPreview(question).margin?.value).toBeNaN();
+  });
+
+  it('saves no margin for any other type', () => {
+    const question = {
+      ...makeQuestion('q1'),
+      type: 'closest_guess' as const,
+      correctText: '5',
+    };
+
+    expect(questionToPreview(question)).not.toHaveProperty('margin');
+  });
+
   it('round-trips an explicit matchScoringMode through questionFromPreview/questionToPreview', () => {
     const preview: ImportQuestionPreview = {
       type: 'match',
@@ -381,6 +456,53 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(preview).not.toHaveProperty('mediaUrl');
     expect(preview).not.toHaveProperty('answerMediaUrl');
     expect(preview).not.toHaveProperty('options');
+  });
+});
+
+describe('changeQuestionType', () => {
+  function freeTextQuestion(answer: string) {
+    return {
+      ...makeQuestion('q1'),
+      type: 'free_text' as const,
+      prompt: 'How many bones?',
+      correctText: answer,
+    };
+  }
+
+  it('keeps the prompt and a numeric answer when switching Free text to Number', () => {
+    const switched = changeQuestionType(freeTextQuestion('206'), 'number');
+
+    expect(switched.type).toBe('number');
+    expect(switched.prompt).toBe('How many bones?');
+    expect(switched.correctText).toBe('206');
+  });
+
+  it('clears an answer that is not a number when switching to Number', () => {
+    const switched = changeQuestionType(
+      freeTextQuestion('about 200'),
+      'number',
+    );
+
+    expect(switched.prompt).toBe('How many bones?');
+    expect(switched.correctText).toBe('');
+  });
+
+  it('leaves the answer alone when switching to any other type', () => {
+    const switched = changeQuestionType(
+      freeTextQuestion('about 200'),
+      'closest_guess',
+    );
+
+    expect(switched.correctText).toBe('about 200');
+  });
+
+  it('does not mutate the question it was given', () => {
+    const original = freeTextQuestion('about 200');
+
+    changeQuestionType(original, 'number');
+
+    expect(original.type).toBe('free_text');
+    expect(original.correctText).toBe('about 200');
   });
 });
 

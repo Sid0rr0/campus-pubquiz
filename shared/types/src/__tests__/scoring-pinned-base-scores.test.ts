@@ -19,7 +19,6 @@ describe('scoreSubmission — pinned base scores for every question type', () =>
     ['match', 'x|y|z|q', 'x|y|z|w', 'all_or_nothing', 5, 'partial'],
     ['match', 'x|y|q|q', 'x|y|z|w', 'all_or_nothing', 0, 'incorrect'],
     ['match', 'x|z', 'x|y', undefined, 5, 'partial'],
-    ['closest_guess', '5', '5', undefined, 0, 'incorrect'],
   ] as const)(
     '%s: %j against %j (%s) -> %i, %s',
     (type, value, answer, matchScoringMode, points, verdict) => {

@@ -8,7 +8,7 @@ Once the number answer kind has a real per-answer score, no answer kind is left 
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The registry has a `number` type labelled "Number", with these settings: number answer kind, no choices, optional media, auto grading, kahoot allowed, the answer-only CSV codec, and a `/guide` moderator note.
 - [ ] The Number preview schema rejects an answer that isn't a finite number, with the same message as closest guess. It fills in the 10% default when the margin is missing.

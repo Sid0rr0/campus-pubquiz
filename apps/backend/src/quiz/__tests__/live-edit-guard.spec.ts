@@ -1095,6 +1095,69 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([1]);
   });
 
+  it('returns an opened question whose margin changed', () => {
+    expect(
+      findRegradeQuestionIds(
+        [round()],
+        withFirstQuestion({ margin: { value: 5, unit: 'absolute' } }),
+        [1],
+      ),
+    ).toEqual([1]);
+  });
+
+  describe('number margin', () => {
+    const numberRound = (
+      margin?: { value: number; unit: 'percent' | 'absolute' },
+      extra: Record<string, unknown> = {},
+    ): ImportRoundPreview[] => [
+      {
+        title: 'Round 1',
+        breakAfter: false,
+        questions: [
+          {
+            questionId: 1,
+            type: 'number',
+            prompt: 'Q1',
+            answer: '100',
+            points: 1,
+            ...(margin === undefined ? {} : { margin }),
+            ...extra,
+          },
+        ],
+      },
+    ];
+
+    it('ignores a legacy question with no stored margin saved with the default margin', () => {
+      expect(
+        findRegradeQuestionIds(
+          numberRound(),
+          numberRound({ value: 10, unit: 'percent' }),
+          [1],
+        ),
+      ).toEqual([]);
+    });
+
+    it('ignores the same margin with its keys in another order', () => {
+      expect(
+        findRegradeQuestionIds(
+          numberRound({ value: 5, unit: 'absolute' }),
+          numberRound({ unit: 'absolute', value: 5 }),
+          [1],
+        ),
+      ).toEqual([]);
+    });
+
+    it('returns a legacy question whose margin moved off the default', () => {
+      expect(
+        findRegradeQuestionIds(
+          numberRound(),
+          numberRound({ value: 5, unit: 'percent' }),
+          [1],
+        ),
+      ).toEqual([1]);
+    });
+  });
+
   it('ignores an opened question whose grading inputs are unchanged', () => {
     expect(
       findRegradeQuestionIds(

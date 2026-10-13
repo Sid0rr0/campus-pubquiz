@@ -325,6 +325,32 @@ describe('QuizService (Postgres integration)', () => {
       });
     });
 
+    it('stores a Number question margin in the payload and reads it back into the draft', async () => {
+      const margin = { value: 5, unit: 'absolute' } as const;
+      const result = await quizService.create('Trivia Night', [
+        {
+          title: 'Numbers',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'number',
+              prompt: 'In what year did the Berlin Wall fall?',
+              answer: '1989',
+              points: 2,
+              margin,
+            },
+          ],
+        },
+      ]);
+
+      const [question] = await em.find(Question, {
+        round: { quiz: result.quizId },
+      });
+      expect(question.payload).toMatchObject({ margin });
+      const draft = await quizService.findDraftById(result.quizId);
+      expect(draft?.rounds[0].questions[0].margin).toEqual(margin);
+    });
+
     it('does not derive a clip range when notes has no clip syntax', async () => {
       const result = await quizService.create('Trivia Night', [
         {

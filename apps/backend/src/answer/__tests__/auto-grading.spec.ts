@@ -1,3 +1,4 @@
+import { IDK_ANSWER_VALUE } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
 
@@ -456,5 +457,117 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       state.question.id,
     );
     expect(answer.pointsAwarded).toBe(1);
+  });
+
+  describe('number questions', () => {
+    async function numberQuestion(margin?: {
+      value: number;
+      unit: 'percent' | 'absolute';
+    }) {
+      const question = state.em.create(Question, {
+        round: state.round,
+        orderIndex: 1,
+        type: 'number',
+        prompt: 'How tall is the Eiffel Tower in metres?',
+        answer: '330',
+        points: 4,
+        payload: margin === undefined ? {} : { margin },
+      });
+      await state.em.flush();
+      return question;
+    }
+
+    it.each([
+      ['an answer on the edge of the default 10% margin', '297', 4],
+      ['an answer inside the margin', '320', 4],
+      ['an answer just outside the margin', '296.9', 0],
+      ['an answer that is not a number', 'lots', 0],
+    ])('grades %s at submit', async (_name, value, expectedPoints) => {
+      const question = await numberQuestion();
+      const team = await insertTeam('The Quizzards', 'token-1');
+
+      await state.answerService.submit(
+        state.session.id,
+        question.id,
+        team.id,
+        value,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      expect(answer.pointsAwarded).toBe(expectedPoints);
+      expect(answer.gradedAt).not.toBeNull();
+      expect(answer.verdict).toBe(expectedPoints > 0 ? 'correct' : 'incorrect');
+    });
+
+    it('grades against the margin stored with the question', async () => {
+      const question = await numberQuestion({ value: 50, unit: 'absolute' });
+      const team = await insertTeam('The Quizzards', 'token-1');
+
+      await state.answerService.submit(
+        state.session.id,
+        question.id,
+        team.id,
+        '380',
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      expect(answer.pointsAwarded).toBe(4);
+    });
+
+    it('grades "I don\'t know" incorrect rather than leaving it ungraded', async () => {
+      const question = await numberQuestion();
+      const team = await insertTeam('The Quizzards', 'token-1');
+
+      await state.answerService.submit(
+        state.session.id,
+        question.id,
+        team.id,
+        IDK_ANSWER_VALUE,
+      );
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      expect(answer.pointsAwarded).toBe(0);
+      expect(answer.gradedAt).not.toBeNull();
+    });
+
+    it('re-scores every answer, discarding a manual override, when the margin is corrected', async () => {
+      const question = await numberQuestion();
+      const team = await insertTeam('The Quizzards', 'token-1');
+      await state.answerService.submit(
+        state.session.id,
+        question.id,
+        team.id,
+        '400',
+      );
+      const [submitted] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      await state.answerService.grade(state.session.id, submitted.answerId, 1);
+
+      await state.answerService.regradeAutoGraded(state.session.id, {
+        id: question.id,
+        type: 'number',
+        answer: '330',
+        points: 4,
+        margin: { value: 100, unit: 'absolute' },
+      });
+
+      const [answer] = await state.answerService.listForQuestion(
+        state.session.id,
+        question.id,
+      );
+      expect(answer.pointsAwarded).toBe(4);
+      expect(answer.verdict).toBe('correct');
+    });
   });
 });

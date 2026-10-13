@@ -41,6 +41,7 @@ export * from './question-preview-schema';
 export * from './question-kind';
 export * from './question-payload-schema';
 export * from './answer-kind';
+export * from './margin';
 export * from './session-state';
 export * from './question-view-conversions';
 export * from './block-in-play';

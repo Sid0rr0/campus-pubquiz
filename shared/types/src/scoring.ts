@@ -7,6 +7,7 @@ import {
   type Verdict,
 } from './answer-kind';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
+import type { Margin } from './margin';
 import type { MatchScoringMode } from './question-views';
 import { halfPoints, nearestHalfPoint } from './score-math';
 
@@ -27,6 +28,8 @@ export interface ScoredQuestion {
   points: number;
   /** Match only: undefined behaves as 'partial'. */
   matchScoringMode?: MatchScoringMode;
+  /** Number only: undefined behaves as DEFAULT_MARGIN. */
+  margin?: Margin;
 }
 
 /** Kahoot speed inputs: how long the team took and the configured timer. Either null means no scaling. */
@@ -75,6 +78,11 @@ export function isBatchGradedType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingMode === 'batch';
 }
 
+/** Whether the type carries a margin: how far an answer may be from the key and still be correct (Number only). */
+export function hasMarginType(type: QuestionType): boolean {
+  return QUESTION_KINDS[type].hasMargin;
+}
+
 export function isKahootAllowedType(type: QuestionType): boolean {
   return KAHOOT_ALLOWED_TYPES.includes(type);
 }
@@ -82,23 +90,12 @@ export function isKahootAllowedType(type: QuestionType): boolean {
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
 
 /**
- * What a kind with no per-answer score yields if it is scored one answer at a
- * time anyway. Unreachable from the backend: gradeAtSubmit never grades a
- * batch type and regradeAutoGraded only runs for auto types; the batch
- * (`gradeClosestGuessBatch`) decides the real result. Kept at zero so a
- * stray call can't award points.
- */
-const NO_PER_ANSWER_SCORE: ScoreResult = INCORRECT;
-
-/**
  * The base score comes from the answer format of the question's answer kind.
  * Resolved from the type alone, so an audio/youtube question with choices is
  * still compared as typed text.
  */
 function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
-  const { score } = ANSWER_FORMATS[resolveAnswerKind(question)];
-  if (score === null) return NO_PER_ANSWER_SCORE;
-  return score(question, value);
+  return ANSWER_FORMATS[resolveAnswerKind(question)].score(question, value);
 }
 
 /** Kahoot's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */

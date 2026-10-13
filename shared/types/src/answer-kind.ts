@@ -1,6 +1,12 @@
 import { IDK_ANSWER_VALUE } from './answers';
 import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
+import {
+  DEFAULT_MARGIN,
+  isWithinMargin,
+  parseFiniteNumber,
+  type Margin,
+} from './margin';
 import type { MatchScoringMode } from './question-views';
 import { halfPoints, nearestHalfPoint } from './score-math';
 import { splitPipeList } from './sort-match';
@@ -49,6 +55,8 @@ export interface KeyedQuestion {
   points: number;
   /** Match only: undefined behaves as 'partial'. */
   matchScoringMode?: MatchScoringMode;
+  /** Number only: undefined behaves as DEFAULT_MARGIN. */
+  margin?: Margin;
 }
 
 type ScoreAgainstKey = (question: KeyedQuestion, value: string) => ScoreResult;
@@ -59,8 +67,8 @@ export interface AnswerFormat<Parts> {
   encode(parts: Parts): string;
   /** The readable text for a stored answer; `leftItems` are a match question's left-hand items. */
   format(stored: string, leftItems?: readonly string[]): string;
-  /** Base score and verdict against the key; null when there is no per-answer score (closest_guess is batch-graded). */
-  score: ScoreAgainstKey | null;
+  /** Base score and verdict against the key. */
+  score: ScoreAgainstKey;
 }
 
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
@@ -97,10 +105,17 @@ const textFormat: AnswerFormat<string> = {
     matchesKey(question, value) ? correct(question) : INCORRECT,
 };
 
+/** Inside the margin (edges included) is correct with full points, anything else, including a non-number, incorrect. */
 const numberFormat: AnswerFormat<string> = {
   ...asIsCodec,
   format: asIs,
-  score: null,
+  score: (question, value) => {
+    const key = parseFiniteNumber(question.answer);
+    const answer = parseFiniteNumber(value);
+    if (key === null || answer === null) return INCORRECT;
+    const margin = question.margin ?? DEFAULT_MARGIN;
+    return isWithinMargin(key, answer, margin) ? correct(question) : INCORRECT;
+  },
 };
 
 const choiceFormat: AnswerFormat<string> = {

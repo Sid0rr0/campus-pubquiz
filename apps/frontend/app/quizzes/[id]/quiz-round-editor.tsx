@@ -15,6 +15,7 @@ import { Button } from '@/app/components/button';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   makeQuestion,
+  patchQuestion,
   type EditorQuestion,
   type EditorRound,
   type MoveTargetRound,
@@ -118,7 +119,7 @@ export function QuizRoundEditor({
   ): void {
     onChange({
       questions: round.questions.map((question) =>
-        question.id === questionId ? { ...question, ...patch } : question,
+        question.id === questionId ? patchQuestion(question, patch) : question,
       ),
     });
   }
@@ -221,8 +222,8 @@ export function QuizRoundEditor({
             id={kahootBlockedHintId}
             className="text-xs font-bold text-foreground/60"
           >
-            Kahoot rounds only hold multiple choice, sort and match — change or
-            remove {formatPositions(blockingPositions)} first.
+            Kahoot rounds only hold multiple choice, sort, match and number —
+            change or remove {formatPositions(blockingPositions)} first.
           </span>
         )}
         <FieldErrors issues={fieldIssues(roundLevelIssues, 'kahootMode')} />

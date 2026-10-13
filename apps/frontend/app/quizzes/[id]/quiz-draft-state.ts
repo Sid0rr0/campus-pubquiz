@@ -1,5 +1,9 @@
 import {
+  DEFAULT_MARGIN,
   describeLiveEditRounds,
+  parseFiniteNumber,
+  QUESTION_KINDS,
+  type MarginUnit,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRoundPreview,
@@ -45,6 +49,10 @@ export interface EditorQuestion {
   matchPairs: EditorMatchPair[];
   /** Match only — see MatchScoringMode. Defaults to 'partial'. */
   matchScoringMode: MatchScoringMode;
+  /** Number only: the margin value as typed, so a half-typed "0." or an emptied field survives; parsed at save. */
+  marginValue: string;
+  /** Number only — see Margin. */
+  marginUnit: MarginUnit;
   correctText: string;
   mediaUrl: string;
   answerMediaUrl: string;
@@ -85,6 +93,8 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
     matchScoringMode: 'partial',
+    marginValue: String(DEFAULT_MARGIN.value),
+    marginUnit: DEFAULT_MARGIN.unit,
     correctText: '',
     mediaUrl: '',
     answerMediaUrl: '',
@@ -103,6 +113,55 @@ export function makeRound(id: string, title = ''): EditorRound {
   };
 }
 
+/** A Number question's margin as the editor holds it; any other type leaves the draft's defaults. */
+function loadMarginDraft(
+  question: ImportQuestionPreview,
+): Partial<Pick<EditorQuestion, 'marginValue' | 'marginUnit'>> {
+  if (!QUESTION_KINDS[question.type].hasMargin) return {};
+  const margin = question.margin ?? DEFAULT_MARGIN;
+  return { marginValue: String(margin.value), marginUnit: margin.unit };
+}
+
+/** A Number question saves its margin. An unreadable value saves as NaN (null on the wire) so the server refuses it instead of quietly defaulting. */
+function saveMarginDraft(
+  question: EditorQuestion,
+): Pick<ImportQuestionPreview, 'margin'> | Record<string, never> {
+  if (!QUESTION_KINDS[question.type].hasMargin) return {};
+  return {
+    margin: {
+      value: parseFiniteNumber(question.marginValue) ?? Number.NaN,
+      unit: question.marginUnit,
+    },
+  };
+}
+
+/** Switches a question's type. Moving to Number keeps the prompt, and the answer only if it reads as a number, since a Number key must be one. */
+export function changeQuestionType(
+  question: EditorQuestion,
+  type: QuestionType,
+): EditorQuestion {
+  const keepsAnswer =
+    !QUESTION_KINDS[type].hasMargin ||
+    parseFiniteNumber(question.correctText) !== null;
+  return {
+    ...question,
+    type,
+    ...(keepsAnswer ? {} : { correctText: '' }),
+  };
+}
+
+/** Applies an editor patch to a question; a patch that changes the type goes through changeQuestionType, then the rest of the patch lands on top. */
+export function patchQuestion(
+  question: EditorQuestion,
+  patch: Partial<EditorQuestion>,
+): EditorQuestion {
+  const retyped =
+    patch.type !== undefined && patch.type !== question.type
+      ? changeQuestionType(question, patch.type)
+      : question;
+  return { ...retyped, ...patch };
+}
+
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
   id: string,
@@ -119,10 +178,13 @@ export function questionFromPreview(
     sortItems: ['', ''],
     matchPairs: [makeMatchPair(), makeMatchPair()],
     matchScoringMode: 'partial',
+    marginValue: String(DEFAULT_MARGIN.value),
+    marginUnit: DEFAULT_MARGIN.unit,
     correctText: '',
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
     ...loadAnswerDraft(question),
+    ...loadMarginDraft(question),
   };
 }
 
@@ -275,6 +337,7 @@ export function questionToPreview(
     points: question.points,
     ...(notes ? { notes } : {}),
     ...saveAnswerDraft(question),
+    ...saveMarginDraft(question),
     ...(mediaUrl ? { mediaUrl } : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
   };
