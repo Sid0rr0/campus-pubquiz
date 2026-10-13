@@ -16,11 +16,9 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Dialog, DropdownMenu, Tabs } from 'radix-ui';
 import {
-  ArrowRightIcon,
   CheckIcon,
   Cross2Icon,
   DotsVerticalIcon,
-  ExternalLinkIcon,
   Pencil1Icon,
   PlayIcon,
   PlusIcon,
@@ -48,7 +46,7 @@ import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { RoundsList } from '@/app/components/rounds-list';
 import { SessionSettingsForm } from '@/app/components/session-settings-form';
-import { CopyButton } from '@/app/components/copy-button';
+import { RunningSessionsList } from '@/app/components/running-sessions-list';
 import { SortableTable } from '@/app/components/sortable-table';
 
 const quizTableFeatures = tableFeatures({
@@ -302,60 +300,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         )}
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Running Sessions</h2>
-          {sessions.length === 0 && (
-            <p className="text-sm text-foreground/55">
-              No sessions running yet.
-            </p>
-          )}
-          <ul className="flex flex-col gap-2">
-            {sessions.map((session) => (
-              <li
-                key={session.joinCode}
-                className="flex items-center justify-between gap-3 rounded-xl border border-foreground/15 bg-white px-4 py-3"
-              >
-                <div className="flex flex-col">
-                  <span className="font-extrabold">{session.name}</span>
-                  <span className="flex items-center gap-1 text-xs text-foreground/55">
-                    {session.status} · {session.teamCount} teams ·{' '}
-                    {session.joinCode}
-                    <CopyButton value={session.joinCode} />· Started{' '}
-                    {new Date(session.startedAt).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  {session.status === 'ended' && (
-                    <Button
-                      type="button"
-                      variant="outline-muted"
-                      size="md"
-                      onClick={() => handleClose(session.joinCode)}
-                    >
-                      <Cross2Icon aria-hidden="true" />
-                      Close
-                    </Button>
-                  )}
-                  <Link
-                    href={`/remote?code=${session.joinCode}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
-                  >
-                    <ExternalLinkIcon aria-hidden="true" />
-                    Remote
-                  </Link>
-                  <Button
-                    type="button"
-                    variant="solid-flat"
-                    size="md"
-                    onClick={() => onOpenSession(session.joinCode)}
-                  >
-                    <ArrowRightIcon aria-hidden="true" />
-                    Control
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <RunningSessionsList
+            sessions={sessions}
+            onClose={handleClose}
+            onOpenSession={onOpenSession}
+          />
         </section>
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
