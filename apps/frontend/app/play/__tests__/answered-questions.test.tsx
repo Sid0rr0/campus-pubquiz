@@ -125,7 +125,11 @@ describe('PlayPage — answered questions history', () => {
       {
         myAnswers: { 1: 'Banana' },
         myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
+          1: {
+            pointsAwarded: 3,
+            gradedAt: GRADED_AT,
+            verdict: 'partial' as const,
+          },
         },
       },
     );
@@ -143,7 +147,11 @@ describe('PlayPage — answered questions history', () => {
         myAnswers: { 1: 'Banana', 2: 'excalibur|excalibur', 3: 'Venus' },
         myAnswerGrades: {
           1: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
-          2: { pointsAwarded: 2, gradedAt: GRADED_AT, verdict: 'partial' },
+          2: {
+            pointsAwarded: 2,
+            gradedAt: GRADED_AT,
+            verdict: 'partial' as const,
+          },
           3: { pointsAwarded: 0, gradedAt: GRADED_AT, verdict: 'incorrect' },
         },
       },
@@ -164,8 +172,8 @@ describe('PlayPage — answered questions history', () => {
 
   describe('across the reveal walk', () => {
     const grades = {
-      1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
-      2: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' },
+      1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' as const },
+      2: { pointsAwarded: 5, gradedAt: GRADED_AT, verdict: 'correct' as const },
     };
 
     // The phone is sent only the walk so far: the first `shownCount` reveal
@@ -232,7 +240,11 @@ describe('PlayPage — answered questions history', () => {
       {
         myAnswers: { 1: 'Banana' },
         myAnswerGrades: {
-          1: { pointsAwarded: 3, gradedAt: GRADED_AT, verdict: 'partial' },
+          1: {
+            pointsAwarded: 3,
+            gradedAt: GRADED_AT,
+            verdict: 'partial' as const,
+          },
         },
       },
     );

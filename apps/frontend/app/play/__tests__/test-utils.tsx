@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { needsJoinForm } from '@/app/lib/join-gate';
 import { mergeSeenQuestions } from '@/app/lib/seen-questions';
+import type { TeamLinkGame, TeamLinkJoin } from '@/app/lib/use-team-link';
 import { roomView, type SessionDescription } from '@/test-utils/room-view';
 
 /** The questions the Team link would have gathered from the one view a phone is sent for `session`. */
@@ -10,6 +11,15 @@ export function seenQuestionsOf(session: SessionDescription) {
 }
 
 const TEAM_NAME_STORAGE_KEY = 'campus-pubquiz-team-name';
+
+/**
+ * `join` overrides, typed against the real join part. `team` is the one
+ * exception: tests describe a team by the few fields a screen reads, so it
+ * takes a partial, loosely typed payload (many fixtures use a string `teamId`).
+ */
+type JoinOverrides = Partial<Omit<TeamLinkJoin, 'team'>> & {
+  team?: Record<string, unknown> | null;
+};
 
 /**
  * The result of the Team link adapter (`useTeamLink`) for a page test, in its
@@ -31,10 +41,10 @@ export function teamLinkResult({
   game: gameOverrides = {},
 }: {
   session?: SessionDescription;
-  join?: Record<string, unknown>;
-  game?: Record<string, unknown>;
-} = {}) {
-  const game = session
+  join?: JoinOverrides;
+  game?: Partial<TeamLinkGame>;
+} = {}): { join: TeamLinkJoin; game: TeamLinkGame | undefined } {
+  const game: TeamLinkGame | undefined = session
     ? {
         view: roomView(SOCKET_ROOMS.PLAYERS, session),
         submitAnswer: vi.fn(),
@@ -51,9 +61,14 @@ export function teamLinkResult({
         ...gameOverrides,
       }
     : undefined;
-  const join = {
+  // The lazily read fields below start as placeholders and are replaced by
+  // getters, so a field a test does not override is read on access.
+  const join: TeamLinkJoin = {
     connectionError: null,
-    team: null,
+    teamName: null,
+    hasStoredIdentity: false,
+    activeJoinCode: null,
+    needsJoinForm: false,
     nameInput: '',
     setNameInput: vi.fn(),
     codeInput: '',
@@ -63,13 +78,9 @@ export function teamLinkResult({
     handleJoin: vi.fn(),
     handleLogOut: vi.fn(),
     ...joinOverrides,
+    team: (joinOverrides.team ?? null) as TeamLinkJoin['team'],
   };
   const storedName = () => window.localStorage.getItem(TEAM_NAME_STORAGE_KEY);
-  // The lazily read fields, as seen through the finished join part.
-  const live = join as unknown as {
-    teamName: string | null;
-    activeJoinCode: string | null;
-  };
   Object.defineProperties(join, {
     teamName: lazy(joinOverrides, 'teamName', storedName),
     hasStoredIdentity: lazy(joinOverrides, 'hasStoredIdentity', () =>
@@ -80,8 +91,8 @@ export function teamLinkResult({
     ),
     needsJoinForm: lazy(joinOverrides, 'needsJoinForm', () =>
       needsJoinForm({
-        teamName: live.teamName,
-        activeJoinCode: live.activeJoinCode,
+        teamName: join.teamName,
+        activeJoinCode: join.activeJoinCode,
         hasView: Boolean(game),
         connectionError: join.connectionError,
         hasTeam: Boolean(join.team),
@@ -93,8 +104,8 @@ export function teamLinkResult({
 
 /** A property an override sets wins; otherwise it is read on access. */
 function lazy<T>(
-  overrides: Record<string, unknown>,
-  key: string,
+  overrides: JoinOverrides,
+  key: keyof TeamLinkJoin,
   read: () => T,
 ): PropertyDescriptor {
   return {
