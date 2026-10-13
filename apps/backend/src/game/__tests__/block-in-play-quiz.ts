@@ -1,4 +1,4 @@
-import type { RevealQuestionView, SeededRound } from '@campus-pubquiz/types';
+import type { SeededQuestion, SeededRound } from '@campus-pubquiz/types';
 
 /** A question whose id encodes its position: round 3, question 2 (zero-based) is 132. */
 export function questionId(roundIndex: number, questionIndex: number): number {
@@ -9,7 +9,7 @@ function round(
   roundIndex: number,
   overrides: Pick<SeededRound, 'breakAfter' | 'kahootMode'>,
 ): SeededRound {
-  const questions: RevealQuestionView[] = [0, 1].map((questionIndex) => ({
+  const questions: SeededQuestion[] = [0, 1].map((questionIndex) => ({
     id: questionId(roundIndex, questionIndex),
     type: 'free_text',
     prompt: `Round ${roundIndex} question ${questionIndex}`,

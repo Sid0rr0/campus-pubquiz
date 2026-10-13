@@ -11,7 +11,11 @@ const hidden = {
   questionNumberInRound: 1,
   roundTitle: 'Round 1',
 };
-const revealed = { ...hidden, answer: 'Banana' };
+const revealed = {
+  ...hidden,
+  answer: 'Banana',
+  revealKind: 'answer' as const,
+};
 
 function payload(overrides: Partial<PlayersStatePayload>): PlayersStatePayload {
   return {

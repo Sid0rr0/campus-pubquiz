@@ -16,7 +16,7 @@ export interface QuestionView {
   prompt: string;
   /**
    * Multiple choice: the choices. Sort: the items, in the order shown to
-   * players (not necessarily correct — see RevealQuestionView.answer for
+   * players (not necessarily correct — see SeededQuestion.answer for
    * that). Match: the left-hand items, paired positionally with `answer` at
    * reveal (left[i] pairs with answer.split('|')[i]).
    */
@@ -34,18 +34,19 @@ export interface QuestionView {
   points: number;
 }
 
-export interface RevealQuestionView extends QuestionView {
+/** A question as stored in the seeded game: the view plus its correct answer. Not a reveal view — it carries no reveal kind and no closest-guess stats. */
+export interface SeededQuestion extends QuestionView {
   answer: string;
   /** Shown alongside the answer during reveal only — never sent before the question is revealed. */
   answerMediaUrl?: string;
-  /** closest_guess only — undefined for every other type. */
-  closestGuess?: ClosestGuessRevealData;
 }
+
+/** How the screens reveal a revealed question; decided once by the Screen projection from the question type registry. */
+export type RevealKind = 'answer' | 'closest_guess' | 'closest_guess_pending';
 
 /**
  * closest_guess only — numeric-guess stats for the cumulative reveal sequence.
- * Present on RevealQuestionView only when the question's type is
- * 'closest_guess'; undefined for every other type.
+ * Present only on the closest_guess and closest_guess_pending reveal kinds.
  */
 export interface ClosestGuessRevealData {
   /** False when zero teams submitted a guess — reveal collapses to the correct-answer step only. */
@@ -79,14 +80,32 @@ export interface QuestionRoundTitle {
 export type BlockQuestionView = QuestionView &
   QuestionPosition &
   QuestionRoundTitle;
-export type BlockRevealQuestionView = RevealQuestionView &
-  QuestionPosition &
-  QuestionRoundTitle;
+type BlockPlacement = QuestionPosition & QuestionRoundTitle;
 
-/** A closest_guess question the big screen is revealing step by step, before its correct-answer step (3) is on air: no `answer`, and `closestGuess` carries only the stats shown so far. Only the players view sends one. */
+/** The `answer` reveal kind: the question with its correct answer, laid out by its answer kind. No closest-guess stats. */
+export type AnswerRevealView = SeededQuestion &
+  BlockPlacement & { revealKind: 'answer' };
+
+/** The `closest_guess` reveal kind: the question with its answer and the step-by-step closest-guess stats ("no submissions" stats when nobody guessed). */
+export type ClosestGuessRevealView = SeededQuestion &
+  BlockPlacement & {
+    revealKind: 'closest_guess';
+    closestGuess: ClosestGuessRevealData;
+  };
+
+/** What /display and the admin views receive for each revealed question. */
+export type BlockRevealQuestionView = AnswerRevealView | ClosestGuessRevealView;
+
+/** The `closest_guess_pending` reveal kind: a closest_guess question the big screen is revealing before its correct-answer step (3) is on air. No `answer` or `answerMediaUrl`; `closestGuess` carries only the stats shown so far. Only the players view sends one. */
 export type PendingClosestGuessRevealView = BlockQuestionView & {
+  revealKind: 'closest_guess_pending';
   closestGuess: ClosestGuessRevealData;
 };
+
+/** What the players view receives for each revealed question. */
+export type PlayersRevealQuestionView =
+  | BlockRevealQuestionView
+  | PendingClosestGuessRevealView;
 
 /** A not-yet-open question's position and its round's title — enough for a disabled picker slot labeled with the round it belongs to. */
 export type UpcomingQuestionPosition = QuestionPosition & QuestionRoundTitle;

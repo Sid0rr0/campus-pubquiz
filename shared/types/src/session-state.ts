@@ -1,8 +1,5 @@
 import type { GameContext, GameProgress } from './game-state-types';
-import type {
-  ClosestGuessRevealData,
-  RevealQuestionView,
-} from './question-views';
+import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
 import type { LeaderboardEntry } from './room-views';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
@@ -24,10 +21,10 @@ export interface SeededRound {
   author?: string;
   // Carries the correct answer internally so reveal can show it; only
   // answer-free QuestionView projections leave the server.
-  questions: RevealQuestionView[];
+  questions: SeededQuestion[];
   // Host-only notes, keyed by question id — deliberately a sibling of
   // `questions` rather than a field on each question object. Every
-  // RevealQuestionView flows through toRevealQuestionViews' blind `{...question}`
+  // SeededQuestion flows through toRevealQuestionViews' blind `{...question}`
   // spread into the broadcast snapshot; notes must never ride along. Optional
   // (like GameProgress.isMediaFullscreen) so callers building a SeededRound
   // needn't set it; undefined behaves as "no notes for any question in this

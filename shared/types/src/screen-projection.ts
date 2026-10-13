@@ -8,6 +8,7 @@ import { getFeedbackField } from './feedback-rounds';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import { toBlockQuestionView } from './question-view-conversions';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
   describeAdminIndicators,
@@ -15,10 +16,9 @@ import {
   describePlayersScreen,
 } from './on-air-screen';
 import type {
-  BlockQuestionView,
   BlockRevealQuestionView,
   ClosestGuessRevealData,
-  PendingClosestGuessRevealView,
+  PlayersRevealQuestionView,
 } from './question-views';
 import type { StateViewByRoom } from './room-views';
 import type { SessionState } from './session-state';
@@ -56,18 +56,21 @@ function trimClosestGuessStats(
 function trimToClosestGuessStep(
   question: BlockRevealQuestionView,
   step: number,
-): BlockRevealQuestionView | PendingClosestGuessRevealView {
-  const { closestGuess } = question;
-  if (!closestGuess?.hasSubmissions || step >= CLOSEST_TEAMS_STEP) {
+): PlayersRevealQuestionView {
+  if (
+    question.revealKind !== 'closest_guess' ||
+    !question.closestGuess.hasSubmissions ||
+    step >= CLOSEST_TEAMS_STEP
+  ) {
     return question;
   }
-  const trimmedStats = trimClosestGuessStats(closestGuess, step);
+  const trimmedStats = trimClosestGuessStats(question.closestGuess, step);
   if (step >= ANSWER_STEP) return { ...question, closestGuess: trimmedStats };
-  const unshownFields = new Set(['answer', 'answerMediaUrl']);
-  const shown = Object.fromEntries(
-    Object.entries(question).filter(([field]) => !unshownFields.has(field)),
-  ) as BlockQuestionView;
-  return { ...shown, closestGuess: trimmedStats };
+  return {
+    ...toBlockQuestionView(question),
+    revealKind: 'closest_guess_pending',
+    closestGuess: trimmedStats,
+  };
 }
 
 /**
@@ -81,7 +84,7 @@ function trimToRevealWalk(
   revealQuestions: readonly BlockRevealQuestionView[],
   { status, revealIndex }: GameProgress,
   closestGuessRevealStep: number,
-): (BlockRevealQuestionView | PendingClosestGuessRevealView)[] {
+): PlayersRevealQuestionView[] {
   const isOnAirRevealShown = status === 'reveal';
   const shownCount = isOnAirRevealShown ? revealIndex + 1 : revealIndex;
   return revealQuestions
@@ -100,9 +103,7 @@ function trimToRevealWalk(
  * quiz ended from; ending from a status that isn't revealing carries nothing.
  * The on-air question is carried whole — nothing is being revealed any more.
  */
-function endedRevealWalk(
-  session: SessionState,
-): (BlockRevealQuestionView | PendingClosestGuessRevealView)[] {
+function endedRevealWalk(session: SessionState): PlayersRevealQuestionView[] {
   const { progress } = session;
   if (!progress.previousStatus || !isRevealingStatus(progress.previousStatus)) {
     return [];

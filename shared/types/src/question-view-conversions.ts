@@ -2,13 +2,13 @@ import type {
   BlockQuestionView,
   BlockRevealQuestionView,
   QuestionView,
-  RevealQuestionView,
+  SeededQuestion,
 } from './question-views';
 import { hasMarginType } from './scoring';
 
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.
-export function toQuestionView(question: RevealQuestionView): QuestionView {
+export function toQuestionView(question: SeededQuestion): QuestionView {
   return {
     id: question.id,
     type: question.type,

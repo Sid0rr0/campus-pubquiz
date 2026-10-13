@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
-  type RevealQuestionView,
+  type SeededQuestion,
   type ScreenPreview,
 } from '@campus-pubquiz/types';
 import { useAdminSession } from '@/app/lib/use-admin-session';
@@ -15,7 +15,7 @@ import { DisplayTextScaleControl } from '@/app/control/display-text-scale-contro
 import { getAdminControls } from '@/app/control/admin-controls';
 import { countCorrectAnswers } from '@/app/lib/count-correct-answers';
 
-function NextQuestionPreview({ question }: { question: RevealQuestionView }) {
+function NextQuestionPreview({ question }: { question: SeededQuestion }) {
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="font-bold">{question.prompt}</p>

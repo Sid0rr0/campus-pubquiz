@@ -71,6 +71,41 @@ describe('DisplayPage — reveal', () => {
     expect(screen.queryByText('Largest planet?')).not.toBeInTheDocument();
   });
 
+  it('draws the closest-guess sequence for a closest_guess reveal question', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'closest_guess',
+                prompt: 'How tall is the tower?',
+                points: 5,
+                answer: '55',
+                closestGuess: {
+                  hasSubmissions: true,
+                  minGuess: '10',
+                  maxGuess: '90',
+                  closestGuesses: [{ teamName: 'Team A', value: '50' }],
+                },
+              },
+            ],
+          },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+        closestGuessRevealStep: 2,
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('How tall is the tower?')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('90')).toBeInTheDocument();
+    expect(screen.queryByText('55')).not.toBeInTheDocument();
+  });
+
   it('shows the key and the accepted range for a Number question on reveal', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
