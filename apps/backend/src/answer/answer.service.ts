@@ -6,15 +6,7 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import {
-  gradeAtSubmit,
-  gradeClosestGuessBatch,
-  isAutoGradedType,
-  isBatchGradedType,
-  isMatchOrHumanType,
-  scoreSubmission,
-  verdictForManualGrade,
-} from '@campus-pubquiz/types';
+import { verdictForManualGrade } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -22,6 +14,14 @@ import { readQuestionPayload } from '@/db/question-payload';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
+import {
+  canGradeByHand,
+  gradeOnKeyFix,
+  gradeOnSubmit,
+  lockBatchWrites,
+  speedScore,
+  type GradeWrite,
+} from '@/answer/grading-policy';
 
 export interface SubmittedAnswer {
   answerId: number;
@@ -39,6 +39,53 @@ export interface GradedAnswer {
 
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. RevealQuestionView satisfies it. */
 export type GradableQuestion = ScoredQuestion & { id: number };
+
+type MergeField =
+  | 'value'
+  | 'updatedAt'
+  | 'pointsAwarded'
+  | 'gradedAt'
+  | 'verdict'
+  | 'responseMs';
+
+const UNGRADED_MERGE_FIELDS: MergeField[] = [
+  'value',
+  'updatedAt',
+  'responseMs',
+];
+const GRADED_MERGE_FIELDS: MergeField[] = [
+  'value',
+  'updatedAt',
+  'pointsAwarded',
+  'gradedAt',
+  'verdict',
+  'responseMs',
+];
+
+/** The grade columns a submit upserts, and the columns a conflict merges, for the policy's grade write. */
+function upsertGradeOf(write: GradeWrite, now: Date) {
+  switch (write.kind) {
+    case 'set':
+      return {
+        values: {
+          pointsAwarded: write.points,
+          gradedAt: now,
+          verdict: write.verdict,
+        },
+        mergeFields: GRADED_MERGE_FIELDS,
+      };
+    case 'clear':
+      return {
+        values: { pointsAwarded: 0, gradedAt: null, verdict: null },
+        mergeFields: GRADED_MERGE_FIELDS,
+      };
+    case 'keep':
+      return {
+        values: { pointsAwarded: 0 },
+        mergeFields: UNGRADED_MERGE_FIELDS,
+      };
+  }
+}
 
 @Injectable()
 export class AnswerService {
@@ -67,64 +114,35 @@ export class AnswerService {
       matchScoringMode: payload.matchScoringMode,
       margin: payload.margin,
     };
-    // Whether a submission is graded the instant it lands, and how, is
-    // Scoring's concern (gradeAtSubmit): auto types always, free_text/audio/
-    // youtube only when it matches the key, closest_guess never. A null
-    // score leaves the answer for the moderator (or the lock-time batch).
-    const score = gradeAtSubmit(question, value);
-    const pointsAwarded = score?.points ?? 0;
-
-    // The admin can grade an answer as soon as it lands (grade() has no
-    // status gate — see control's "Grade Questions" panel), well before the
-    // block locks. A team can then revise its answer (last-write-wins,
-    // allowed until lock) — if that revision changes the value, any manual
-    // grade already given belongs to the *old* value and must not silently
-    // carry over onto the new one, so a revision with no automatic grade
-    // goes back to ungraded. Resubmitting the same value to a
-    // match-or-human question leaves its grade alone, so the moderator's
-    // survives.
+    // Whether this submission sets, clears or keeps the stored grade is the
+    // Grading policy's call. The admin can grade an answer as soon as it
+    // lands, well before the block locks, and a team can then revise it
+    // (last-write-wins until lock): the policy decides what survives.
     const existing = await this.answers.findOne(
       { gameSession: gameSessionId, question: questionId, team: teamId },
       { fields: ['value', 'gradedAt'] },
     );
-    const isSameValue = existing !== null && existing.value === value;
-    const keepsGrade =
-      isMatchOrHumanType(question.type) &&
-      isSameValue &&
-      existing.gradedAt !== null;
-    const appliesScore = score !== null && !keepsGrade;
-    const resetsGrading = score === null && existing !== null && !isSameValue;
+    const write = gradeOnSubmit(question, value, existing);
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
     const now = new Date();
+    const grade = upsertGradeOf(write, now);
     const answer = await this.answers.upsert(
       {
         gameSession: gameSessionId,
         question: questionId,
         team: teamId,
         value,
-        pointsAwarded,
         responseMs,
-        ...(appliesScore ? { gradedAt: now, verdict: score.verdict } : {}),
-        ...(resetsGrading ? { gradedAt: null, verdict: null } : {}),
+        ...grade.values,
         createdAt: now,
         updatedAt: now,
       },
       {
         onConflictFields: ['gameSession', 'question', 'team'],
         onConflictAction: 'merge',
-        onConflictMergeFields:
-          appliesScore || resetsGrading
-            ? [
-                'value',
-                'updatedAt',
-                'pointsAwarded',
-                'gradedAt',
-                'verdict',
-                'responseMs',
-              ]
-            : ['value', 'updatedAt', 'responseMs'],
+        onConflictMergeFields: grade.mergeFields,
       },
     );
 
@@ -196,14 +214,9 @@ export class AnswerService {
       { id: answerId, gameSession: gameSessionId },
       { populate: ['question'] },
     );
-    // Automatic grades (match's per-pair partial credit, a free_text
-    // synonym the exact match missed) are only a starting point — the quiz
-    // master may override any of them here. A batch-graded answer only once
-    // its batch has graded it at the lock: before then nobody knows who's
-    // closest, and the batch would overwrite the grade anyway. That refusal
-    // is also what lets ensureClosestGuessGraded read "any row graded" as
-    // "the batch ran".
-    if (isBatchGradedType(answer.question.type) && answer.gradedAt === null) {
+    // Whether this answer may be hand-graded yet is the Grading policy's
+    // call (a batch answer only once its batch has run).
+    if (!canGradeByHand(answer.question, answer)) {
       throw new Error(
         `${answer.question.type} answers can only be graded by hand once the block locks`,
       );
@@ -216,144 +229,71 @@ export class AnswerService {
   }
 
   /**
-   * Re-scores every existing answer to an auto-graded question (see
-   * Scoring's AUTO_GRADED_TYPES) against the corrected `question` — used
-   * after a live edit to an opened question. Deliberately overwrites
-   * any manual override (e.g. adjusted match partial credit): the key it was
-   * judged against just changed, and the admin can override again in break.
-   * `kahootTimerSeconds` is the session's configured kahoot question timer
-   * for a kahootMode question, null otherwise (or when unlimited): when set,
-   * each answer is speed-scaled by the response time stored at submit, so a
-   * regrade after a backend restart gives the same points as one without.
+   * Regrade for a key fix: re-grades the stored answers to an already-shown
+   * question after a live edit corrected its key, as the Grading policy
+   * decides (auto rescores every answer, kahoot speed-scaled when
+   * `kahootTimerSeconds` is given; match-or-human grades new matches correct
+   * and clears only automatic grades; batch re-runs only when
+   * `hasBatchRun`). `previous` is the question as it stood before the edit.
+   * Returns whether the question was rescored at all, and its answers.
    */
-  async regradeAutoGraded(
-    gameSessionId: number,
-    question: GradableQuestion,
-    kahootTimerSeconds: number | null = null,
-  ): Promise<void> {
-    // Only auto types score per answer; closest_guess is batch-graded, and
-    // scoring it here would grade each guess against the key on its own.
-    if (!isAutoGradedType(question.type)) return;
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      question: question.id,
-    });
-    if (rows.length === 0) return;
-
-    const timerMs =
-      kahootTimerSeconds === null ? null : kahootTimerSeconds * 1000;
-    const now = new Date();
-    for (const row of rows) {
-      const score = scoreSubmission(
-        question,
-        row.value,
-        timerMs === null ? undefined : { responseMs: row.responseMs, timerMs },
-      );
-      row.pointsAwarded = score.points;
-      row.verdict = score.verdict;
-      row.gradedAt = now;
-    }
-    await this.answers.getEntityManager().flush();
-  }
-
-  /**
-   * Re-grades every existing answer to a match-or-human question (see
-   * Scoring's MATCH_OR_HUMAN_TYPES) against the corrected `question`, after a
-   * live edit to an opened question. An answer matching the corrected
-   * key is graded correct. A non-matching one keeps the moderator's grade,
-   * and goes back to ungraded only if it was graded automatically — told
-   * apart by re-running the submit-time grade against `previous`, the
-   * question as it stood before the edit: a grade that equals what the old
-   * key would have given automatically was automatic, anything else was the
-   * moderator's.
-   */
-  async regradeMatchOrHuman(
+  async regradeForKeyFix(
     gameSessionId: number,
     question: GradableQuestion,
     previous: ScoredQuestion,
-  ): Promise<void> {
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      question: question.id,
+    kahootTimerSeconds: number | null,
+    hasBatchRun: boolean,
+  ): Promise<{ rescored: boolean; answers: AnswerView[] }> {
+    const rows = await this.findForQuestion(gameSessionId, question.id);
+    const { rescored, writes } = gradeOnKeyFix({
+      question,
+      previous,
+      rows,
+      kahootTimerSeconds,
+      hasBatchRun,
     });
-    if (rows.length === 0) return;
+    await this.applyWrites(rows, writes);
+    return { rescored, answers: rows.map(toAnswerView) };
+  }
 
+  /** Applies the policy's grade writes (one per row), stamping one grading time per flush; keep is a no-op. */
+  private async applyWrites(
+    rows: readonly Answer[],
+    writes: readonly GradeWrite[],
+  ): Promise<void> {
     const now = new Date();
-    for (const row of rows) {
-      const score = gradeAtSubmit(question, row.value);
-      if (score) {
-        row.pointsAwarded = score.points;
-        row.verdict = score.verdict;
+    let isChanged = false;
+    rows.forEach((row, index) => {
+      const write = writes[index];
+      if (write === undefined || write.kind === 'keep') return;
+      isChanged = true;
+      if (write.kind === 'set') {
+        row.pointsAwarded = write.points;
+        row.verdict = write.verdict;
         row.gradedAt = now;
-        continue;
-      }
-      const previousScore = gradeAtSubmit(previous, row.value);
-      const wasGradedAutomatically =
-        previousScore !== null &&
-        row.gradedAt !== null &&
-        row.verdict === previousScore.verdict &&
-        row.pointsAwarded === previousScore.points;
-      if (wasGradedAutomatically) {
+      } else {
         row.pointsAwarded = 0;
         row.verdict = null;
         row.gradedAt = null;
       }
-    }
-    await this.answers.getEntityManager().flush();
-  }
-
-  /**
-   * Batch-grades every submitted guess for a closest_guess question (see
-   * Scoring's gradeClosestGuessBatch for the rule). Can only run once all
-   * teams are done answering (needs every guess to know who's closest),
-   * unlike the types graded at submit() time. Safe to call more than once
-   * for the same question — unconditionally recomputes from the stored guesses and overwrites.
-   */
-  async gradeClosestGuess(
-    gameSessionId: number,
-    question: GradableQuestion,
-  ): Promise<AnswerView[]> {
-    const rows = await this.findForQuestion(gameSessionId, question.id);
-    return this.gradeClosestGuessRows(question, rows);
-  }
-
-  /** gradeClosestGuess over rows already read, so a caller that read them first needn't read them twice. */
-  private async gradeClosestGuessRows(
-    question: GradableQuestion,
-    rows: Answer[],
-  ): Promise<AnswerView[]> {
-    if (rows.length === 0) return [];
-
-    const results = gradeClosestGuessBatch(
-      question,
-      rows.map((row) => row.value),
-    );
-    const now = new Date();
-    rows.forEach((row, index) => {
-      row.pointsAwarded = results[index].points;
-      row.verdict = results[index].verdict;
-      row.gradedAt = now;
     });
-    await this.answers.getEntityManager().flush();
-    return rows.map(toAnswerView);
+    if (isChanged) await this.answers.getEntityManager().flush();
   }
 
   /**
-   * Batch-grades a closest_guess question unless its stored answers show the
-   * batch already ran (it grades every row at once, no answer can arrive
-   * after the lock, and grade() refuses a hand grade before the batch) — so
-   * a backend restart, which forgets the in-memory summaries, never wipes
-   * the quiz master's overrides. Returns the answers either way.
+   * Grade at the lock: applies the Grading policy's batch for a question
+   * graded when its block locks (the policy writes nothing once the stored
+   * answers show the batch already ran, so a backend restart, which forgets
+   * the in-memory summaries, never wipes the quiz master's overrides).
+   * Returns the answers either way.
    */
-  async ensureClosestGuessGraded(
+  async gradeAtLock(
     gameSessionId: number,
     question: GradableQuestion,
   ): Promise<AnswerView[]> {
     const rows = await this.findForQuestion(gameSessionId, question.id);
-    if (rows.some((row) => row.gradedAt !== null)) {
-      return rows.map(toAnswerView);
-    }
-    return this.gradeClosestGuessRows(question, rows);
+    await this.applyWrites(rows, lockBatchWrites(question, rows));
+    return rows.map(toAnswerView);
   }
 
   /** Every answer to one question, with its team, ordered by team name. */
@@ -381,15 +321,16 @@ export class AnswerService {
    * recomputed from the stored value and response time, never from the
    * current pointsAwarded, so a redundant re-run can't compound the scaling.
    */
-  async applyKahootSpeedScoring(
+  async speedScoreAtLock(
     gameSessionId: number,
     question: GradableQuestion,
     questionTimerSeconds: number | null,
   ): Promise<void> {
-    // Kahoot rounds only hold auto-graded types (Scoring's
-    // KAHOOT_ALLOWED_TYPES); never overwrite a human or batch grade.
-    if (!isAutoGradedType(question.type)) return;
-    await this.regradeAutoGraded(gameSessionId, question, questionTimerSeconds);
+    const rows = await this.findForQuestion(gameSessionId, question.id);
+    await this.applyWrites(
+      rows,
+      speedScore(question, rows, questionTimerSeconds),
+    );
   }
 }
 

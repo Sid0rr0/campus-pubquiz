@@ -1,6 +1,10 @@
 import type { Verdict } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
-import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
+import {
+  regradeAuto,
+  regradeBatch,
+  setupAnswerServiceTest,
+} from '@/answer/__tests__/answer-service-test-utils';
 
 describe('AnswerService (Postgres integration) - stored verdict', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
@@ -153,11 +157,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
       10_000,
     );
 
-    await state.answerService.applyKahootSpeedScoring(
-      state.session.id,
-      question,
-      10,
-    );
+    await state.answerService.speedScoreAtLock(state.session.id, question, 10);
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
@@ -182,7 +182,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
       [team.id]: 'incorrect',
     });
 
-    await state.answerService.regradeAutoGraded(state.session.id, {
+    await regradeAuto(state.answerService, state.session.id, {
       id: question.id,
       type: 'multiple_choice',
       answer: 'Paris',
@@ -209,7 +209,8 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
       '10',
     );
 
-    const graded = await state.answerService.gradeClosestGuess(
+    const graded = await regradeBatch(
+      state.answerService,
       state.session.id,
       question,
     );

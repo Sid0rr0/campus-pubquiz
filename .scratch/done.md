@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| grading-mode-policy | [One Grading policy per grading mode — every grading event decided in one pure module](grading-mode-policy/spec.md) | 3 |
 | number-question | [Number question type, graded against a margin](number-question/spec.md) | 3 |
 | sortable-table | [One sortable table module across five panels, and a smaller session picker](sortable-table/spec.md) | 3 |
 | phase-timers | [Phase timers are their own module, apart from the gateway](phase-timers/spec.md) | 1 |

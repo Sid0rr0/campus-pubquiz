@@ -6,7 +6,12 @@ import type { QuestionRepository } from '@/db/repositories/question.repository';
 import type { TeamRepository } from '@/db/repositories/team.repository';
 import { Question } from '@/db/entities/question.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
-import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
+import {
+  regradeAuto,
+  regradeBatch,
+  regradeMatchOrHuman,
+  setupAnswerServiceTest,
+} from '@/answer/__tests__/answer-service-test-utils';
 
 describe('AnswerService (Postgres integration) - manual and closest-guess grading', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
@@ -314,7 +319,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       '2000',
     );
 
-    const graded = await state.answerService.gradeClosestGuess(
+    const graded = await regradeBatch(
+      state.answerService,
       state.session.id,
       guessQuestion,
     );
@@ -350,7 +356,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       '1010',
     );
 
-    const graded = await state.answerService.gradeClosestGuess(
+    const graded = await regradeBatch(
+      state.answerService,
       state.session.id,
       guessQuestion,
     );
@@ -370,7 +377,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     });
     await state.em.flush();
 
-    const graded = await state.answerService.gradeClosestGuess(
+    const graded = await regradeBatch(
+      state.answerService,
       state.session.id,
       guessQuestion,
     );
@@ -403,7 +411,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       '900',
     );
 
-    const graded = await state.answerService.gradeClosestGuess(
+    const graded = await regradeBatch(
+      state.answerService,
       state.session.id,
       guessQuestion,
     );
@@ -430,11 +439,9 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       '900',
     );
 
-    await state.answerService.gradeClosestGuess(
-      state.session.id,
-      guessQuestion,
-    );
-    const second = await state.answerService.gradeClosestGuess(
+    await regradeBatch(state.answerService, state.session.id, guessQuestion);
+    const second = await regradeBatch(
+      state.answerService,
       state.session.id,
       guessQuestion,
     );
@@ -491,10 +498,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       teamB.id,
       '1200',
     );
-    await state.answerService.gradeClosestGuess(
-      state.session.id,
-      guessQuestion,
-    );
+    await regradeBatch(state.answerService, state.session.id, guessQuestion);
 
     await state.answerService.grade(state.session.id, far.answerId, 2);
 
@@ -509,7 +513,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(4);
   });
 
-  it('ensureClosestGuessGraded keeps the stored grades of an already-graded closest_guess question', async () => {
+  it('gradeAtLock keeps the stored grades of an already-graded closest_guess question', async () => {
     const guessQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -533,13 +537,10 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       teamB.id,
       '1200',
     );
-    await state.answerService.ensureClosestGuessGraded(
-      state.session.id,
-      guessQuestion,
-    );
+    await state.answerService.gradeAtLock(state.session.id, guessQuestion);
     await state.answerService.grade(state.session.id, far.answerId, 4);
 
-    const again = await state.answerService.ensureClosestGuessGraded(
+    const again = await state.answerService.gradeAtLock(
       state.session.id,
       guessQuestion,
     );
@@ -587,6 +588,40 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answers.find((a) => a.teamId === team.id)?.pointsAwarded).toBe(3);
   });
 
+  it('rescores a hand-overridden match answer when the team resubmits the same value (override lost)', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america'],
+        matchTargets: ['shield', 'excalibur'],
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('Team A', 'token-a');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 3);
+
+    const resubmitted = await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield',
+    );
+
+    expect(resubmitted.pointsAwarded).toBe(4);
+    expect(resubmitted.gradedAt).not.toBeNull();
+  });
+
   describe('regradeAutoGraded', () => {
     it('re-scores every multiple_choice answer against a corrected answer key', async () => {
       const mcQuestion = state.em.create(Question, {
@@ -614,7 +649,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         'London',
       );
 
-      await state.answerService.regradeAutoGraded(state.session.id, {
+      await regradeAuto(state.answerService, state.session.id, {
         id: mcQuestion.id,
         type: 'multiple_choice',
         answer: 'Paris',
@@ -648,7 +683,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         '1000',
       );
 
-      await state.answerService.regradeAutoGraded(state.session.id, {
+      await regradeAuto(state.answerService, state.session.id, {
         id: guessQuestion.id,
         type: 'closest_guess',
         answer: '1000',
@@ -686,7 +721,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       );
       await state.answerService.grade(state.session.id, submitted.answerId, 4);
 
-      await state.answerService.regradeAutoGraded(state.session.id, {
+      await regradeAuto(state.answerService, state.session.id, {
         id: matchQuestion.id,
         type: 'match',
         answer: 'excalibur|shield',
@@ -725,7 +760,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       );
 
       // Corrected key makes the submission fully correct.
-      await state.answerService.regradeAutoGraded(state.session.id, {
+      await regradeAuto(state.answerService, state.session.id, {
         id: matchQuestion.id,
         type: 'match',
         answer: 'excalibur|shield|web|web',
@@ -767,7 +802,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       await submitAs('A', 'APPLE');
       await submitAs('B', 'pear');
 
-      await state.answerService.regradeMatchOrHuman(
+      await regradeMatchOrHuman(
+        state.answerService,
         state.session.id,
         { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
         previous,
@@ -784,7 +820,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     it('sends an answer that was auto-graded correct under the old key back to ungraded', async () => {
       await submitAs('A', 'Apple');
 
-      await state.answerService.regradeMatchOrHuman(
+      await regradeMatchOrHuman(
+        state.answerService,
         state.session.id,
         { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
         previous,
@@ -801,7 +838,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const { submitted } = await submitAs('A', 'Banana');
       await state.answerService.grade(state.session.id, submitted.answerId, 1);
 
-      await state.answerService.regradeMatchOrHuman(
+      await regradeMatchOrHuman(
+        state.answerService,
         state.session.id,
         { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
         previous,
@@ -817,7 +855,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const { submitted } = await submitAs('A', 'Apple');
       await state.answerService.grade(state.session.id, submitted.answerId, 0);
 
-      await state.answerService.regradeMatchOrHuman(
+      await regradeMatchOrHuman(
+        state.answerService,
         state.session.id,
         { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
         previous,
@@ -832,7 +871,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     it('leaves an ungraded non-matching answer ungraded', async () => {
       await submitAs('A', 'Banana');
 
-      await state.answerService.regradeMatchOrHuman(
+      await regradeMatchOrHuman(
+        state.answerService,
         state.session.id,
         { id: state.question.id, type: 'free_text', answer: 'Pear', points: 1 },
         previous,
@@ -898,7 +938,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -921,7 +961,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         5_000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -953,7 +993,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         10_000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -973,7 +1013,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         0,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         {
           id: question.id,
@@ -998,7 +1038,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         9_000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         null,
@@ -1018,7 +1058,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         null,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1038,7 +1078,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         0,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1066,7 +1106,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1097,7 +1137,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         {
           id: question.id,
@@ -1138,7 +1178,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         points: 10,
       };
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         corrected,
         TIMER_SECONDS,
@@ -1153,7 +1193,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         freshEm.getRepository<Team, TeamRepository>(Team),
         freshEm.getRepository<Question, QuestionRepository>(Question),
       );
-      await freshService.regradeAutoGraded(
+      await regradeAuto(
+        freshService,
         state.session.id,
         corrected,
         TIMER_SECONDS,
@@ -1179,7 +1220,8 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.regradeAutoGraded(
+      await regradeAuto(
+        state.answerService,
         state.session.id,
         {
           id: question.id,
