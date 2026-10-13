@@ -39,7 +39,7 @@ describe('Live edit module — a failing delivery', () => {
     // The first session reloads for real, the second one's reload rejects.
     rejectNthCall(first.seedService, 'loadGame', reloadFailure, 1);
     const deliver = jest
-      .spyOn(first.gateway, 'deliverSessionOutcome')
+      .spyOn(first.broadcaster, 'deliver')
       .mockRejectedValue(new Error('socket down'));
 
     await expect(first.saveQuizEdit()).rejects.toBe(reloadFailure);

@@ -9,7 +9,7 @@ import {
   type SessionState,
 } from '@campus-pubquiz/types';
 import { SeedService } from '@/db/seed.service';
-import { GameGateway } from '@/game/game.gateway';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { quizEditChange } from '@/game/live-edit/quiz-edit-change';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
@@ -63,7 +63,7 @@ export class LiveEditService {
 
   constructor(
     private readonly quizService: QuizService,
-    private readonly gameGateway: GameGateway,
+    private readonly broadcaster: SessionBroadcaster,
     private readonly sessionWrite: SessionWrite,
     private readonly seedService: SeedService,
     private readonly grading: BlockGradingService,
@@ -198,7 +198,7 @@ export class LiveEditService {
     const failures: unknown[] = [];
     for (const { joinCode, outcome } of deliveries) {
       try {
-        await this.gameGateway.deliverSessionOutcome(joinCode, outcome);
+        await this.broadcaster.deliver(joinCode, outcome);
       } catch (error) {
         this.logger.error(
           `Could not deliver the live-edit outcome to ${joinCode}`,

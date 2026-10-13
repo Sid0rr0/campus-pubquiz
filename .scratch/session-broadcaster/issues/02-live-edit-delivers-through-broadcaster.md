@@ -6,7 +6,7 @@ See the parent spec: `.scratch/session-broadcaster/spec.md`.
 
 **Blocked by:** 01 (Session broadcaster owns outcome delivery and phase timers)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Live edit module injects the Session broadcaster and calls its `deliver` for each pending delivery; its swallow-on-failure handling is unchanged
 - [ ] The Live edit module no longer imports the gateway
