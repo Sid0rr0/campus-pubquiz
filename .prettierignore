@@ -1,0 +1,2 @@
+# Applied migrations are history: reformatting one rewrites a file production already ran.
+apps/backend/src/db/migrations/

@@ -17,4 +17,15 @@ Skills under `.claude/skills/` are symlinks into `.agents/skills/`, which is git
 - **Step 11 (new)**: push the integration branch, generate the PR body with the `pr` skill into a scratchpad file, open the PR with `gh pr create --body-file` (or `gh pr edit --body-file` on an existing draft PR), and report the URL.
 - **Step 8 (new)**: on the integration branch, add the spec's row to the top of `.scratch/done.md`, remove it from `.scratch/overview.md`, and commit both as `docs(repo): move <spec> to done`, so the move ships in the PR. Later steps are renumbered 9–11.
 
-Worktree setup (`pnpm install`, building `@campus-pubquiz/types`) is not in the skill: the `WorktreeCreate` hook in `.claude/settings.json` (`scripts/worktree-create.sh`) does it for every worktree. Its input is `{name, cwd, …}`, not the `worktree_name`/`base_path` in the docs example.
+- **Step 4, implementer bullets (2026-10-13 retro)**:
+  - run only the specs it touches while iterating; run the full backend suite as `pnpm --filter backend test --maxWorkers=2`, in the foreground with a long timeout.
+    _Why:_ in live-session-changes, five parallel implementers each started a Postgres container and an unbounded Jest run: 45 suites failed on resource starvation, and one agent spent ~20 minutes in `sleep` waiting on a background run.
+  - write a shell variable before a colon as `${B}:path`.
+    _Why:_ zsh read `git show $B:apps/…` as the `:a` modifier in two runs.
+  - report `pnpm typecheck`, `pnpm lint` and test results with the sha they ran on.
+- **Step 5 (2026-10-13 retro)**: a merger's own `git worktree add` worktree runs `pnpm bootstrap` first; the merger reports checks on the merged sha.
+  _Why:_ every `TS2307 Cannot find module '@campus-pubquiz/types'` in the last five runs came from merger worktrees, which the `WorktreeCreate` hook never sees.
+- **Step 11 (2026-10-13 retro)**: run `pnpm typecheck`, `pnpm lint` and `pnpm test` on the integration tip before pushing, and quote the results and sha.
+  _Why:_ two runs shipped a PR without checks on the final tip.
+
+Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus the `@campus-pubquiz/types` build. The `WorktreeCreate` hook in `.claude/settings.json` (`scripts/worktree-create.sh`) runs it for every subagent worktree; its input is `{name, cwd, …}`, not the `worktree_name`/`base_path` in the docs example. Root `pnpm typecheck` rebuilds the shared types first, so a merge that changes them never typechecks against a stale `dist/`.

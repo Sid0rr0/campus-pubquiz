@@ -12,10 +12,6 @@ repo="${CLAUDE_PROJECT_DIR:-$(jq -er '.cwd' <<<"$input")}"
 worktree_path="$repo/.claude/worktrees/$name"
 
 git -C "$repo" worktree add -b "worktree-$name" "$worktree_path" HEAD >&2
-(
-  cd "$worktree_path"
-  pnpm install --frozen-lockfile >&2
-  pnpm --filter @campus-pubquiz/types build >&2
-)
+(cd "$worktree_path" && pnpm bootstrap >&2)
 
 echo "$worktree_path"
