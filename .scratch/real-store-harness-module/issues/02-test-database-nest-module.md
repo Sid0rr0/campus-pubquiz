@@ -16,10 +16,10 @@ Parent spec: `.scratch/real-store-harness-module/spec.md`
 
 **Blocked by:** None (can start immediately). It can run in parallel with 01.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A spec compiles a small module over the test database module, with a provider that injects one entity repository. That provider writes a row and reads it back through the worker's database.
-- [ ] The same spec closes that module, then uses the worker's ORM directly (for example, a query in the next test), and it is still connected.
-- [ ] Rows written through the module are emptied between tests, like any other row.
-- [ ] The existing test database specs (including the isolation pair) pass unchanged.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] A spec compiles a small module over the test database module, with a provider that injects one entity repository. That provider writes a row and reads it back through the worker's database.
+- [x] The same spec closes that module, then uses the worker's ORM directly (for example, a query in the next test), and it is still connected.
+- [x] Rows written through the module are emptied between tests, like any other row.
+- [x] The existing test database specs (including the isolation pair) pass unchanged.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
