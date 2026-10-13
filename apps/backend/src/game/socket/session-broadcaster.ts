@@ -9,7 +9,7 @@ import {
 import { MikroORM, RequestContext } from '@mikro-orm/core';
 import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/state/game-state.service';
-import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
+import type { GameServer } from '@/game/socket/game-socket.types';
 import {
   deliverOutcome,
   type DeliverFn,
