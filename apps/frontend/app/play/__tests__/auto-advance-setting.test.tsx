@@ -85,6 +85,26 @@ describe('PlayPage — auto-advance setting', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
+  it('keeps the navigation when a new view arrives for the same question with auto-advance off', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
+    const session = {
+      rounds: ROUNDS,
+      progress: { status: 'question_open' as const, questionIndex: 1 },
+    };
+    mockUseTeamLink.mockReturnValue(socketResult({ session, team: TEAM }));
+    const { rerender } = renderWithQuery(<PlayPage />);
+    await userEvent.click(screen.getByRole('button', { name: /prev/i }));
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+
+    mockUseTeamLink.mockReturnValue(socketResult({ session, team: TEAM }));
+    rerender(<PlayPage />);
+
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /prev/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+  });
+
   it('immediately snaps to the newest question when auto-advance is turned back on', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
