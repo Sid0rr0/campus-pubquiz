@@ -17,6 +17,7 @@ import {
   makeQuestion,
   type EditorQuestion,
   type EditorRound,
+  type MoveTargetRound,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 import {
   QuizQuestionEditor,
@@ -28,12 +29,7 @@ export function roundAnchorId(roundId: string): string {
   return `round-${roundId}`;
 }
 
-/** A round another round's question may move to, numbered by its place in the quiz. */
-export interface MoveTargetRound {
-  id: string;
-  label: string;
-  kahootMode: boolean;
-}
+export type { MoveTargetRound };
 
 interface QuizRoundEditorProps {
   round: EditorRound;

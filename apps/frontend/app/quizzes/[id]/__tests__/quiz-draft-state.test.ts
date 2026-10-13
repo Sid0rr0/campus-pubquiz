@@ -24,6 +24,7 @@ import {
   questionToPreview,
   roundFromPreview,
   structureNoteFor,
+  titleAfterImport,
   toSaveRequest,
   updateRound,
   withSyncedQuestionIds,
@@ -857,6 +858,14 @@ describe('moveTargetRounds', () => {
     ]);
   });
 
+  it('labels a blank-titled round "Untitled round" with its number', () => {
+    const labels = moveTargetRounds(rounds, 0, undefined).map(
+      (target) => target.label,
+    );
+
+    expect(labels[0]).toBe('2. Untitled round');
+  });
+
   it('leaves out the round itself', () => {
     expect(
       moveTargetRounds(rounds, 2, undefined).map((target) => target.id),
@@ -1103,5 +1112,17 @@ describe('csvImportTitle', () => {
 
   it('returns the file name without .csv when the title is blank', () => {
     expect(csvImportTitle('  ', 'Pub Night.CSV')).toBe('Pub Night');
+  });
+});
+
+describe('titleAfterImport', () => {
+  it('keeps a title typed while the import was in flight', () => {
+    expect(titleAfterImport('Typed meanwhile', 'From sheet')).toBe(
+      'Typed meanwhile',
+    );
+  });
+
+  it('takes the import title when the current title is blank', () => {
+    expect(titleAfterImport('   ', 'From sheet')).toBe('From sheet');
   });
 });
