@@ -25,6 +25,8 @@ Skills under `.claude/skills/` are symlinks into `.agents/skills/`, which is git
   - report `pnpm typecheck`, `pnpm lint` and test results with the sha they ran on.
 - **Step 5 (2026-10-13 retro)**: a merger's own `git worktree add` worktree runs `pnpm bootstrap` first; the merger reports checks on the merged sha.
   _Why:_ every `TS2307 Cannot find module '@campus-pubquiz/types'` in the last five runs came from merger worktrees, which the `WorktreeCreate` hook never sees.
+- **Step 7 (2026-10-13 retro)**: the review-fix implementer reports like the implementers in step 4.
+  _Why:_ live-edit's fixer report didn't say whether the frontend tests ran.
 - **Step 11 (2026-10-13 retro)**: run `pnpm typecheck`, `pnpm lint` and `pnpm test` on the integration tip before pushing, and quote the results and sha.
   _Why:_ two runs shipped a PR without checks on the final tip.
 
