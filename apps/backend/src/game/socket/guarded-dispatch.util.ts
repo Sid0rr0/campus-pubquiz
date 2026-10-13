@@ -4,6 +4,7 @@ import type { GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
 import { sessionRoom, type AckResult } from '@campus-pubquiz/types';
 import { acknowledge } from '@/game/socket/acknowledge.util';
+import type { DeliverFn } from '@/game/socket/outcome-delivery.util';
 import type { SocketEventDeclaration } from '@/game/socket/socket-event-declarations';
 import { parseSocketPayload } from '@/game/socket/socket-payload.schemas';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
@@ -22,11 +23,7 @@ export type EventResult = SessionOutcome | undefined;
 export interface DispatchDeps {
   logger: Logger;
   /** The Session broadcaster's delivery step. */
-  deliver: (
-    joinCode: string,
-    outcome: SessionOutcome,
-    sender?: Pick<GameSocket, 'emit'>,
-  ) => Promise<void>;
+  deliver: DeliverFn;
 }
 
 function resolveJoinCode(client: GameSocket): string {

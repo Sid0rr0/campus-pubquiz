@@ -10,16 +10,16 @@ import { MikroORM, RequestContext } from '@mikro-orm/core';
 import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
-import { deliverOutcome } from '@/game/socket/outcome-delivery.util';
+import {
+  deliverOutcome,
+  type DeliverFn,
+} from '@/game/socket/outcome-delivery.util';
 import {
   PHASE_TIMER_SCHEDULERS,
   PhaseTimers,
   type PhaseTimerSchedulers,
 } from '@/game/socket/phase-timers';
-import {
-  BROADCAST_STATE_OUTCOME,
-  type SessionOutcome,
-} from '@/game/state/session-outcome';
+import { BROADCAST_STATE_OUTCOME } from '@/game/state/session-outcome';
 import {
   type AuthUser,
   SOCKET_EVENTS,
@@ -53,7 +53,7 @@ export class SessionBroadcaster
       schedulers: timerSchedulers,
       gameState,
       orm,
-      deliver: (joinCode, outcome) => this.deliver(joinCode, outcome),
+      deliver: this.deliver,
       logger: this.logger,
     });
   }
@@ -86,11 +86,7 @@ export class SessionBroadcaster
   }
 
   /** Delivers an outcome (see `deliverOutcome` for the order); `sender` is absent for outcomes no socket sent. */
-  async deliver(
-    joinCode: string,
-    outcome: SessionOutcome,
-    sender?: Pick<GameSocket, 'emit'>,
-  ): Promise<void> {
+  readonly deliver: DeliverFn = async (joinCode, outcome, sender) => {
     await deliverOutcome(
       {
         gameState: this.gameState,
@@ -102,7 +98,7 @@ export class SessionBroadcaster
       outcome,
       sender,
     );
-  }
+  };
 
   /** Rebroadcasts the session state to /display, /control and /rules (after a REST settings change). */
   async broadcastState(joinCode: string): Promise<void> {

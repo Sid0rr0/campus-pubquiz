@@ -15,13 +15,20 @@ import type {
   SocketReply,
 } from '@/game/state/session-outcome';
 
-/** What the delivery step needs: the module, the server, and the gateway's way to re-arm a session's auto-lock timers. */
+/** What the delivery step needs: the module, the server, and the broadcaster's way to re-arm a session's auto-lock timers. */
 export interface OutcomeDeliveryDeps {
   gameState: GameStateService;
   answerService: AnswerService;
   server: GameServer;
   rearmTimers: (joinCode: string, deadlines: DeadlineChange) => void;
 }
+
+/** The delivery step as callers see it: `sender` is absent for outcomes no socket sent. */
+export type DeliverFn = (
+  joinCode: string,
+  outcome: SessionOutcome,
+  sender?: Pick<GameSocket, 'emit'>,
+) => Promise<void>;
 
 /**
  * The one place a SessionOutcome becomes emits. First, the session's
