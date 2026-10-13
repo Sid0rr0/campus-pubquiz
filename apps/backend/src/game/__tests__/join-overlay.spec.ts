@@ -9,6 +9,7 @@ import {
 } from '@/game/__tests__/real-store-test-utils';
 
 const CLOCK_STEP_MS = 10_000;
+const KAHOOT_TIMER_SECONDS = 30;
 const FROZEN_NOW = '2024-01-01T00:00:00.000Z';
 
 describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
@@ -246,5 +247,40 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
       expect(snapshot.progress.isJoinOverlayVisible).toBe(true);
       expect(snapshot.onAirScreen).toEqual({ kind: 'join_overlay' });
     });
+  });
+});
+
+describe('GameGateway — TOGGLE_JOIN_OVERLAY under a kahoot countdown', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  afterEach(() => {
+    restoreClock();
+  });
+
+  it('keeps the kahoot countdown and phase timers running across show and hide', async () => {
+    freezeClockAt(FROZEN_NOW);
+    const game = await harness.createGateway({
+      kahootMode: true,
+      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+    });
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_intro
+    const opened = await game.act('ADVANCE'); // -> question_open q0, countdown armed
+    const readDisplay = () =>
+      game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+    const endsAt = readDisplay().kahootQuestionEndsAt;
+    expect(endsAt).not.toBeNull();
+
+    advanceClockBy(CLOCK_STEP_MS);
+    const shown = await game.act('TOGGLE_JOIN_OVERLAY');
+    expect(readDisplay().kahootQuestionEndsAt).toBe(endsAt);
+    advanceClockBy(CLOCK_STEP_MS);
+    const hidden = await game.act('TOGGLE_JOIN_OVERLAY');
+    expect(readDisplay().kahootQuestionEndsAt).toBe(endsAt);
+
+    for (const after of [shown, hidden]) {
+      expect(after.phaseStartedAt).toBe(opened.phaseStartedAt);
+      expect(after.phaseElapsedMs).toBe(opened.phaseElapsedMs);
+    }
   });
 });

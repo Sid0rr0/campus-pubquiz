@@ -1,5 +1,6 @@
 import {
   getTiedForFirst,
+  isJoinOverlayAllowedStatus,
   isQuestionOnAirStatus,
   type AdminStatePayload,
 } from '@campus-pubquiz/types';
@@ -32,7 +33,7 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
     canEndQuiz: status !== 'ended',
     canCloseSession: status === 'ended',
     // Not in the lobby (it already shows the QR code) or once the quiz has ended.
-    canToggleJoinOverlay: status !== 'lobby' && status !== 'ended',
+    canToggleJoinOverlay: isJoinOverlayAllowedStatus(status),
     // currentQuestion (and with it its own media) is only populated while a
     // question is actually open on /display — see getCurrentQuestion.
     canReplayMedia:

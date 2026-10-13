@@ -63,10 +63,8 @@ export interface GameProgress {
    * big screen — toggled by TOGGLE_JOIN_OVERLAY, legal in every status but
    * lobby and ended, and cleared by any transition that lands on either. Like
    * the leaderboard it is not a status: the quiz carries on underneath.
-   * Optional, like isMediaFullscreen, so existing GameProgress literals
-   * don't all need updating; undefined behaves as false.
    */
-  isJoinOverlayVisible?: boolean;
+  isJoinOverlayVisible: boolean;
   /**
    * Whether the current question's media (image or YouTube) is shown
    * full-viewport on /display — toggled by TOGGLE_MEDIA_FULLSCREEN and

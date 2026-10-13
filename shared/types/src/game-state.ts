@@ -16,6 +16,7 @@ import {
   getBlockPositionForQuestion,
   getBlockQuestionCount,
 } from './game-state-block-position';
+import { isJoinOverlayAllowedStatus } from './game-state-groups';
 import {
   illegal,
   type GameAction,
@@ -41,18 +42,16 @@ export function getNextGameState(
   action: GameAction,
   context: GameContext,
 ): GameProgress {
-  const next = getNextGameStateWithOverlay(progress, action, context);
+  const next = applyTransition(progress, action, context);
   // The join overlay never outlives the lobby or the end of the quiz, however
   // the transition got there (END_QUIZ, an advance into 'ended', a return to
   // the lobby).
-  const landsOnOverlayFreeStatus =
-    next.status === 'lobby' || next.status === 'ended';
-  return next.isJoinOverlayVisible && landsOnOverlayFreeStatus
+  return next.isJoinOverlayVisible && !isJoinOverlayAllowedStatus(next.status)
     ? { ...next, isJoinOverlayVisible: false }
     : next;
 }
 
-function getNextGameStateWithOverlay(
+function applyTransition(
   progress: GameProgress,
   action: GameAction,
   context: GameContext,
@@ -95,7 +94,7 @@ function getNextGameStateWithOverlay(
   }
 
   if (action === 'TOGGLE_JOIN_OVERLAY') {
-    if (progress.status === 'lobby' || progress.status === 'ended') {
+    if (!isJoinOverlayAllowedStatus(progress.status)) {
       illegal(progress.status, action);
     }
     const isJoinOverlayVisible = !progress.isJoinOverlayVisible;

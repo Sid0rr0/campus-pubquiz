@@ -36,7 +36,7 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
           canCloseSession={controls.canCloseSession}
           canToggleJoinOverlay={controls.canToggleJoinOverlay}
           isLeaderboardVisible={progress.isLeaderboardVisible}
-          isJoinOverlayVisible={progress.isJoinOverlayVisible ?? false}
+          isJoinOverlayVisible={progress.isJoinOverlayVisible}
           isMediaFullscreen={progress.isMediaFullscreen ?? false}
           canReplayMedia={controls.canReplayMedia}
           onAction={actions.sendAction}

@@ -14,7 +14,6 @@ export function JoinOverlayScreen({
 }: JoinOverlayScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 text-center">
-      <h1 className="font-display text-display-xl">Join the quiz</h1>
       {joinCode && (
         <JoinDetails
           joinCode={joinCode}

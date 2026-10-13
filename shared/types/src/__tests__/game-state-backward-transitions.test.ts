@@ -51,6 +51,7 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
     });
@@ -68,6 +69,7 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
     });
@@ -85,6 +87,7 @@ describe('getNextGameState — backward (PREVIOUS) transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
     });

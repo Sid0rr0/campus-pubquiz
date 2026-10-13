@@ -53,6 +53,7 @@ function session(
       roundIndex: 1,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
       ...progress,
