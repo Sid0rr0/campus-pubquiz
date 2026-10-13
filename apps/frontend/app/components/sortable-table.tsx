@@ -28,12 +28,6 @@ const TONE_CLASSES: Record<SortableTableTone, ToneClasses> = {
   },
 };
 
-interface SortingColumnApi {
-  getCanSort: () => boolean;
-  getIsSorted: () => false | 'asc' | 'desc';
-  getToggleSortingHandler: () => ((event: unknown) => void) | undefined;
-}
-
 interface SortableTableProps<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -64,9 +58,11 @@ export function SortableTable<
             <tr key={headerGroup.id} className={classes.headerRow}>
               {headerGroup.headers.map((header) => {
                 // Tables built without the sorting feature have no sort API.
-                const column = header.column as Partial<SortingColumnApi>;
-                const isSortable = column.getCanSort?.() ?? false;
-                const sorted = column.getIsSorted?.();
+                const column = header.column;
+                const isSortable =
+                  'getCanSort' in column && column.getCanSort();
+                const sorted =
+                  'getIsSorted' in column ? column.getIsSorted() : false;
                 return (
                   <th
                     key={header.id}
@@ -75,7 +71,7 @@ export function SortableTable<
                     {header.isPlaceholder ? null : isSortable ? (
                       <button
                         type="button"
-                        onClick={column.getToggleSortingHandler?.()}
+                        onClick={column.getToggleSortingHandler()}
                         className="flex items-center gap-1"
                       >
                         <table.FlexRender header={header} />

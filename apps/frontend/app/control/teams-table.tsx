@@ -149,7 +149,7 @@ export function TeamsTable({
   });
 
   return (
-    <div className="overflow-x-auto rounded-xl border-2 border-dark-blue/15">
+    <>
       <SortableTable
         table={table}
         tone="dark-blue"
@@ -218,6 +218,6 @@ export function TeamsTable({
           if (!open) setViewingCodeTeamId(null);
         }}
       />
-    </div>
+    </>
   );
 }
