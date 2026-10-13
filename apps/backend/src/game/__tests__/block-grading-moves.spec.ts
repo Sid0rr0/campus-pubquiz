@@ -120,6 +120,91 @@ describe('GameGateway — Block grading runs its steps in order for a move', () 
       true,
     );
   });
+
+  it('restores the ungraded set and the closest_guess summary after a restart in the break without changing any stored points', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A', 'Team B'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'closest_guess',
+              prompt: 'How many students attend?',
+              points: 5,
+              answer: '1000',
+            },
+            { type: 'free_text', prompt: 'Name a fruit', answer: 'Apple' },
+          ],
+        },
+      ],
+    });
+    const [closestGuessId, freeTextId] = game.rounds[0].questionIds;
+    const admin = await game.connectAdmin();
+    await game.openFirstQuestion(admin);
+    const [teamA, teamB] = game.teams;
+    for (const [team, value] of [
+      [teamA, '900'],
+      [teamB, '2000'],
+    ] as const) {
+      await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+        questionId: closestGuessId,
+        teamId: team.teamId,
+        value,
+      });
+    }
+    await game.act('ADVANCE'); // -> free_text question
+    await game.gateway.handleSubmitAnswer(asSocket(teamA.socket), {
+      questionId: freeTextId,
+      teamId: teamA.teamId,
+      value: 'Pear',
+    });
+    await game.act('ADVANCE'); // -> locking
+    await game.act('ADVANCE'); // -> break_intro, closest_guess graded
+    const inBreak = await game.act('PREVIOUS'); // -> break
+    const storedPoints = (g: RealStoreGateway, questionId: number) =>
+      g.inRequestContext(async () =>
+        (await g.answerService.listForQuestion(g.gameSessionId, questionId))
+          .map((answer) => [answer.teamName, answer.pointsAwarded])
+          .sort(),
+      );
+    const pointsBefore = await storedPoints(game, closestGuessId);
+
+    const restarted = await game.restart();
+    const afterRestart = await restarted.snapshot();
+
+    expect(afterRestart.progress.status).toBe('break');
+    expect(afterRestart.ungradedQuestionIds).toEqual(
+      inBreak.ungradedQuestionIds,
+    );
+    expect(afterRestart.ungradedQuestionIds).toEqual([freeTextId]);
+    expect(await storedPoints(restarted, closestGuessId)).toEqual(pointsBefore);
+    expect(pointsBefore).toEqual([
+      ['Team A', 5],
+      ['Team B', 0],
+    ]);
+
+    const [pearAnswer] = await restarted.inRequestContext(() =>
+      restarted.answerService.listForQuestion(
+        restarted.gameSessionId,
+        freeTextId,
+      ),
+    );
+    await restarted.gateway.handleGradeAnswer(
+      asSocket(await restarted.connectAdmin()),
+      { answerId: pearAnswer.answerId, pointsAwarded: 0 },
+    );
+    await restarted.act('ADVANCE'); // -> reveal_intro
+    const atReveal = await restarted.act('ADVANCE'); // -> reveal
+    expect(atReveal.revealQuestions[0].closestGuess).toEqual({
+      hasSubmissions: true,
+      minGuess: '900',
+      maxGuess: '2000',
+      closestGuesses: [{ teamName: 'Team A', value: '900' }],
+    });
+    expect(await storedPoints(restarted, closestGuessId)).toEqual(pointsBefore);
+  });
 });
 
 const KAHOOT_ANSWER_DELAY_MS = 5_000;
