@@ -16,26 +16,29 @@ import { Team } from '@/db/entities/team.entity';
 import { User } from '@/db/entities/user.entity';
 import config from '@/mikro-orm.config';
 
+/** Every entity the app registers repositories for. */
+export const DB_ENTITIES = [
+  Quiz,
+  Round,
+  Question,
+  GameSession,
+  Team,
+  GameSessionTeam,
+  Answer,
+  BonusAward,
+  RoundRating,
+  SessionFeedback,
+  User,
+  Session,
+  ShowdownRound,
+  ShowdownRoundTeam,
+];
+
 @Global()
 @Module({
   imports: [
     MikroOrmModule.forRoot(config),
-    MikroOrmModule.forFeature([
-      Quiz,
-      Round,
-      Question,
-      GameSession,
-      Team,
-      GameSessionTeam,
-      Answer,
-      BonusAward,
-      RoundRating,
-      SessionFeedback,
-      User,
-      Session,
-      ShowdownRound,
-      ShowdownRoundTeam,
-    ]),
+    MikroOrmModule.forFeature(DB_ENTITIES),
   ],
   exports: [MikroOrmModule],
 })
