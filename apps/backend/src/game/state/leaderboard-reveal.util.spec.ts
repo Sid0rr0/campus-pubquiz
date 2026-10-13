@@ -7,6 +7,7 @@ function progress(overrides: Partial<GameProgress> = {}): GameProgress {
     roundIndex: 0,
     questionIndex: 0,
     isLeaderboardVisible: false,
+    isJoinOverlayVisible: false,
     revealIndex: 0,
     furthestOpenIndex: 0,
     ...overrides,

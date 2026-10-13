@@ -41,6 +41,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     paragraphs: [
       'While teams are joining, the Session Settings panel lets you pick the quiz, edit the rules text, and enable bonus categories before pressing Start Quiz. The big screen shows the join code and QR code until you start.',
       'Starting shows the rules, then an overview of every round, then the first round title card. Each press of Advance moves on.',
+      'Pressed Start Quiz too early? While the rules are showing, Previous takes the session back to the lobby: the big screen shows the join code and QR code again, phones go back to "Waiting for the quiz to start…", and the session settings, quiz import and closing the session work again. There is no confirm dialog, and Start Quiz moves forward again as before. This only works from the rules: from the round overview Previous goes to the rules first, and once the first round title card is up the quiz can no longer go back to the lobby.',
     ],
   },
   {
@@ -85,6 +86,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'The leaderboard',
     paragraphs: [
       'The leaderboard can be shown or hidden at any point without disrupting grading or the flow of the quiz; hiding it resumes exactly where you were. While it is showing, Advance and Previous only work the leaderboard and never move the quiz underneath.',
+    ],
+  },
+  {
+    title: 'The join overlay',
+    paragraphs: [
+      'A team arriving after the quiz has started can still join. Press Join overlay on Control to cover the big screen with the QR code, the join code and the team-size rule, without the team list. The quiz stays exactly where it was: timers keep running and phones are untouched. Press the button again to hide it and the big screen is back where the quiz is. Advance or Previous also hides the overlay first, without moving the quiz; the press after that moves the quiz as normal. Showing the overlay hides the leaderboard, and showing the leaderboard hides the overlay.',
+      "The button isn't offered in the lobby, which already shows the QR code, or once the quiz has ended. Ending the quiz while the overlay is up clears it, and it stays up if the backend restarts.",
     ],
   },
   {

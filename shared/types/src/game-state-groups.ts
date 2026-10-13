@@ -65,3 +65,12 @@ export function isRevealingStatus(status: GameStatus): boolean {
 export function isBlockStartedStatus(status: GameStatus): boolean {
   return BLOCK_STARTED_STATUSES.has(status);
 }
+
+/**
+ * Whether the join overlay may be toggled: after the quiz has started and
+ * before it has ended. The lobby already shows the QR code, and nothing is
+ * left to join once the quiz is over. The single source for that rule.
+ */
+export function isJoinOverlayAllowedStatus(status: GameStatus): boolean {
+  return status !== 'lobby' && status !== 'ended';
+}

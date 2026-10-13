@@ -86,7 +86,9 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
               canStartQuiz={controls.canStartQuiz}
               canEndQuiz={controls.canEndQuiz}
               canCloseSession={controls.canCloseSession}
+              canToggleJoinOverlay={controls.canToggleJoinOverlay}
               isLeaderboardVisible={progress.isLeaderboardVisible}
+              isJoinOverlayVisible={progress.isJoinOverlayVisible}
               isMediaFullscreen={progress.isMediaFullscreen ?? false}
               canReplayMedia={controls.canReplayMedia}
               onAction={handleDrawerAction}

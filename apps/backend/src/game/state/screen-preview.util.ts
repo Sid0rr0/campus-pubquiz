@@ -112,6 +112,8 @@ function describeOnAirScreenText(
       return session.progress.status === 'ended'
         ? { heading: 'Leaderboard', body: 'Final standings' }
         : { heading: 'Leaderboard' };
+    case 'join_overlay':
+      return { heading: 'Join overlay' };
     case 'ended':
       return { heading: 'Quiz complete!' };
     case 'showdown':
@@ -149,6 +151,8 @@ function describePreviewedMove(
       };
     case 'closest_guess_step':
       return { ...describeScreen(session), body: 'Next closest-guess step' };
+    case 'join_overlay_hide':
+      return { ...describeScreen(after), body: 'Hides the join overlay' };
     case 'leaderboard_hide':
     case 'transition':
       return describeScreen(after);

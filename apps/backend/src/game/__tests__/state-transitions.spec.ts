@@ -53,6 +53,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: -1,
       previousStatus: null,
@@ -67,6 +68,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: -1,
       previousStatus: null,
@@ -90,6 +92,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
       previousStatus: null,
@@ -104,6 +107,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 1,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 1, // r1q2 (block position 1) just opened
       previousStatus: null,
@@ -122,6 +126,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 1,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 1, // r1q2 (block position 1) was already opened
       previousStatus: null,
@@ -142,6 +147,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 1,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 2, // r2q1 (block position 2) just opened
       previousStatus: null,
@@ -160,6 +166,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 1, // stepping back with PREVIOUS doesn't shrink it — r1q2 stayed open
       previousStatus: null,
@@ -174,6 +181,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
       previousStatus: null,
@@ -188,16 +196,16 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: -1,
       previousStatus: null,
     });
   });
 
-  it('rejects moving back out of the rules screen', async () => {
-    await game.act('START_QUIZ');
+  it('rejects moving back out of the lobby', async () => {
     await expect(game.act('PREVIOUS')).rejects.toThrow(
-      'Cannot apply action "PREVIOUS" from state "rules"',
+      'Cannot apply action "PREVIOUS" from state "lobby"',
     );
   });
 
@@ -270,6 +278,7 @@ describe('GameGateway — state transitions', () => {
         roundIndex: 1,
         questionIndex: 1,
         isLeaderboardVisible: false,
+        isJoinOverlayVisible: false,
         revealIndex: 3,
         furthestOpenIndex: 3,
         previousStatus: null,
@@ -299,6 +308,7 @@ describe('GameGateway — state transitions', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: 0,
       previousStatus: null,

@@ -30,7 +30,8 @@ export type SettleStep =
         | 'transition'
         | 'grading_pending'
         | 'leaderboard_reveal'
-        | 'leaderboard_hide';
+        | 'leaderboard_hide'
+        | 'join_overlay_hide';
       action: GameAction;
     };
 
@@ -82,11 +83,16 @@ export function settleSession({
     livePhaseKey,
     phaseStartedAt,
     phaseElapsedByKey,
-    questionLockAt: computeQuestionLockAt(
-      progress,
-      settings.lockGraceSeconds * 1000,
-      now,
-    ),
+    // Showing or hiding the join overlay must not hand the room extra time, so
+    // a countdown already running keeps its deadline.
+    questionLockAt:
+      action === 'TOGGLE_JOIN_OVERLAY'
+        ? session.questionLockAt
+        : computeQuestionLockAt(
+            progress,
+            settings.lockGraceSeconds * 1000,
+            now,
+          ),
     kahootQuestionEndsAt: computeKahootQuestionEndsAt(
       progress,
       context,
@@ -106,7 +112,9 @@ export function settleSession({
     // Showing a rank or hiding the board leaves the quiz underneath exactly
     // where it was, including a closest_guess reveal mid-way through.
     closestGuessRevealStep:
-      step.kind === 'leaderboard_reveal' || step.kind === 'leaderboard_hide'
+      step.kind === 'leaderboard_reveal' ||
+      step.kind === 'leaderboard_hide' ||
+      step.kind === 'join_overlay_hide'
         ? session.closestGuessRevealStep
         : computeInitialRevealStep(session, progress, action),
   };

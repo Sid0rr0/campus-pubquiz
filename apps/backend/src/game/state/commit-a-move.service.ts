@@ -46,7 +46,8 @@ type ProgressMoveStep = Extract<
       | 'transition'
       | 'grading_pending'
       | 'leaderboard_reveal'
-      | 'leaderboard_hide';
+      | 'leaderboard_hide'
+      | 'join_overlay_hide';
   }
 >;
 
@@ -99,6 +100,7 @@ export class MoveCommitter {
       case 'grading_pending':
       case 'leaderboard_reveal':
       case 'leaderboard_hide':
+      case 'join_overlay_hide':
         return this.commitProgressMove(session, action, step);
     }
   }
@@ -259,6 +261,7 @@ export function previewMove(
     case 'transition':
     case 'leaderboard_reveal':
     case 'leaderboard_hide':
+    case 'join_overlay_hide':
       return { step, session: settleMove(session, step, action) };
     case 'showdown_step':
     case 'closest_guess_step':

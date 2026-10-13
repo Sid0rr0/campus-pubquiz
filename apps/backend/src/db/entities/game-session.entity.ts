@@ -19,6 +19,7 @@ export class GameSession extends BaseEntity {
     | 'revealIndex'
     | 'furthestOpenIndex'
     | 'isLeaderboardVisible'
+    | 'isJoinOverlayVisible'
     | 'previousStatus'
     | 'settings'
     | 'name'
@@ -50,6 +51,9 @@ export class GameSession extends BaseEntity {
 
   @Property({ default: false })
   isLeaderboardVisible: boolean = false;
+
+  @Property({ default: false })
+  isJoinOverlayVisible: boolean = false;
 
   @Property({ type: 'text', nullable: true })
   previousStatus: GameStatus | null = null;

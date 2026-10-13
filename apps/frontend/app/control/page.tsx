@@ -215,6 +215,7 @@ function AdminPageContent() {
   }
 
   const isLeaderboardVisible = snapshot?.progress.isLeaderboardVisible ?? false;
+  const controls = snapshot ? getAdminControls(snapshot) : undefined;
   // What the Advance slot and Previous do next is decided by the server (the
   // admin view). This hook runs before the null-snapshot early return below,
   // so the fallbacks (including `?? false` below) cover "no view yet", when there is nothing to act on.
@@ -223,6 +224,7 @@ function AdminPageContent() {
     advanceStep: snapshot?.advanceStep ?? 'none',
     previousState: snapshot?.previousState ?? 'unavailable',
     isLeaderboardVisible,
+    canToggleJoinOverlay: controls?.canToggleJoinOverlay ?? false,
     sendAction,
   });
 

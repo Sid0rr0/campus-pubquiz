@@ -16,6 +16,7 @@ import {
   getBlockPositionForQuestion,
   getBlockQuestionCount,
 } from './game-state-block-position';
+import { isJoinOverlayAllowedStatus } from './game-state-groups';
 import {
   illegal,
   type GameAction,
@@ -37,6 +38,20 @@ export {
 export { getTimedPhaseKey } from './game-state-timed-phase';
 
 export function getNextGameState(
+  progress: GameProgress,
+  action: GameAction,
+  context: GameContext,
+): GameProgress {
+  const next = applyTransition(progress, action, context);
+  // The join overlay never outlives the lobby or the end of the quiz, however
+  // the transition got there (END_QUIZ, an advance into 'ended', a return to
+  // the lobby).
+  return next.isJoinOverlayVisible && !isJoinOverlayAllowedStatus(next.status)
+    ? { ...next, isJoinOverlayVisible: false }
+    : next;
+}
+
+function applyTransition(
   progress: GameProgress,
   action: GameAction,
   context: GameContext,
@@ -67,9 +82,27 @@ export function getNextGameState(
   }
 
   if (action === 'TOGGLE_LEADERBOARD') {
+    const isLeaderboardVisible = !progress.isLeaderboardVisible;
+    // Only one thing covers the big screen: showing the board hides the overlay.
     return {
       ...progress,
-      isLeaderboardVisible: !progress.isLeaderboardVisible,
+      isLeaderboardVisible,
+      ...(isLeaderboardVisible && progress.isJoinOverlayVisible
+        ? { isJoinOverlayVisible: false }
+        : {}),
+    };
+  }
+
+  if (action === 'TOGGLE_JOIN_OVERLAY') {
+    if (!isJoinOverlayAllowedStatus(progress.status)) {
+      illegal(progress.status, action);
+    }
+    const isJoinOverlayVisible = !progress.isJoinOverlayVisible;
+    // Showing the overlay hides the leaderboard (the Settle step resets its reveal).
+    return {
+      ...progress,
+      isJoinOverlayVisible,
+      ...(isJoinOverlayVisible ? { isLeaderboardVisible: false } : {}),
     };
   }
 
@@ -178,6 +211,15 @@ export function getNextGameState(
       return illegal(progress.status, action);
 
     case 'PREVIOUS':
+      // Undoes START_QUIZ: no question has opened yet, so nothing is lost.
+      if (progress.status === 'rules')
+        return {
+          ...progress,
+          status: 'lobby',
+          roundIndex: 0,
+          questionIndex: 0,
+          revealIndex: 0,
+        };
       if (progress.status === 'round_overview')
         return {
           ...progress,

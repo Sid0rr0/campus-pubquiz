@@ -22,6 +22,7 @@ function progress(
     roundIndex,
     questionIndex,
     isLeaderboardVisible: false,
+    isJoinOverlayVisible: false,
     revealIndex: 0,
     furthestOpenIndex,
     ...overrides,

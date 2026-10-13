@@ -32,6 +32,9 @@ function getAdvanceSlotLabel(
   if (advanceStep === 'hide_leaderboard') {
     return 'Hide Leaderboard';
   }
+  if (advanceStep === 'hide_join_overlay') {
+    return 'Hide Join Overlay';
+  }
   if (progressStatus === 'rules') {
     return 'Begin Quiz';
   }

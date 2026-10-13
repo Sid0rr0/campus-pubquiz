@@ -71,6 +71,7 @@ describe('GameGateway — persistence and quiz selection', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: -1,
       previousStatus: null,
@@ -138,6 +139,7 @@ describe('GameGateway — persistence and quiz selection', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: -1,
     });
@@ -166,6 +168,7 @@ describe('GameGateway — persistence and quiz selection', () => {
       roundIndex: 0,
       questionIndex: 0,
       isLeaderboardVisible: false,
+      isJoinOverlayVisible: false,
       revealIndex: 0,
       furthestOpenIndex: -1,
     });

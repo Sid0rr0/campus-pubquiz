@@ -116,6 +116,94 @@ describe('getNextGameState — leaderboard visibility', () => {
   });
 });
 
+describe('getNextGameState — join overlay', () => {
+  const open: GameProgress = {
+    status: 'question_open',
+    roundIndex: 0,
+    questionIndex: 0,
+    isLeaderboardVisible: false,
+    revealIndex: 0,
+    furthestOpenIndex: 0,
+  };
+
+  it('shows the join overlay without changing the underlying status', () => {
+    const next = getNextGameState(
+      open,
+      'TOGGLE_JOIN_OVERLAY',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...open, isJoinOverlayVisible: true });
+  });
+
+  it('hides the join overlay again, resuming the status untouched', () => {
+    const next = getNextGameState(
+      { ...open, isJoinOverlayVisible: true },
+      'TOGGLE_JOIN_OVERLAY',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...open, isJoinOverlayVisible: false });
+  });
+
+  it('turns the leaderboard off when the join overlay is shown', () => {
+    const next = getNextGameState(
+      { ...open, isLeaderboardVisible: true },
+      'TOGGLE_JOIN_OVERLAY',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isLeaderboardVisible).toBe(false);
+    expect(next.isJoinOverlayVisible).toBe(true);
+  });
+
+  it('turns the join overlay off when the leaderboard is shown', () => {
+    const next = getNextGameState(
+      { ...open, isJoinOverlayVisible: true },
+      'TOGGLE_LEADERBOARD',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isLeaderboardVisible).toBe(true);
+    expect(next.isJoinOverlayVisible).toBe(false);
+  });
+
+  it.each(['lobby', 'ended'] as const)('refuses the toggle in %s', (status) => {
+    expect(() =>
+      getNextGameState(
+        { ...open, status },
+        'TOGGLE_JOIN_OVERLAY',
+        twoRoundsWithBreakAfterSecond,
+      ),
+    ).toThrow(IllegalGameTransitionError);
+  });
+
+  it('clears the overlay when the quiz is ended', () => {
+    const next = getNextGameState(
+      { ...open, isJoinOverlayVisible: true },
+      'END_QUIZ',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.status).toBe('ended');
+    expect(next.isJoinOverlayVisible).toBe(false);
+  });
+
+  it('clears the overlay when advancing into ended', () => {
+    const lastReveal: GameProgress = {
+      status: 'reveal',
+      roundIndex: 1,
+      questionIndex: 1,
+      isLeaderboardVisible: false,
+      isJoinOverlayVisible: true,
+      revealIndex: 3,
+      furthestOpenIndex: 3,
+    };
+    const next = getNextGameState(
+      lastReveal,
+      'ADVANCE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.status).toBe('ended');
+    expect(next.isJoinOverlayVisible).toBe(false);
+  });
+});
+
 describe('getNextGameState — media fullscreen', () => {
   it('toggles media fullscreen on without changing the underlying status', () => {
     const open: GameProgress = {
