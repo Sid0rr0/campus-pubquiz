@@ -23,9 +23,9 @@ export interface QuestionView {
   options?: string[];
   /** Match only: the right-hand items, in the order shown to players. */
   matchTargets?: string[];
-  /** Match only: undefined behaves as 'partial'. */
+  /** Match only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */
   matchScoringMode?: MatchScoringMode;
-  /** Number only: undefined behaves as DEFAULT_MARGIN. */
+  /** Number only: unset is resolved by the Answer key (answer-key.ts); readers go through it. */
   margin?: Margin;
   mediaUrl?: string;
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */

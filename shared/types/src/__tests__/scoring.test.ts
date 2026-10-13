@@ -437,3 +437,24 @@ describe('batch-graded types are never scored one answer at a time', () => {
     },
   );
 });
+
+describe('scoreSubmission — closest_guess lone submission', () => {
+  const question: ScoredQuestion = {
+    type: 'closest_guess',
+    answer: '100',
+    points: 10,
+  };
+
+  it.each([
+    ['100', 10, 'correct'],
+    ['109', 10, 'correct'],
+    ['91', 10, 'correct'],
+    ['111', 0, 'incorrect'],
+    ['89', 0, 'incorrect'],
+  ] as const)(
+    'reads %s against the default 10% margin',
+    (value, points, verdict) => {
+      expect(scoreSubmission(question, value)).toEqual({ points, verdict });
+    },
+  );
+});

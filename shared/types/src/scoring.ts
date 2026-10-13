@@ -1,14 +1,12 @@
-import { answerKeyOf, type GradingSettingsSource } from './answer-key';
+import { resolvedAnswerKeyOf, type GradingSettingsSource } from './answer-key';
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
 import {
   ANSWER_FORMATS,
   matchesKey,
   resolveAnswerKind,
-  type KeyedQuestion,
   type ScoreResult,
   type Verdict,
 } from './answer-kind';
-import type { Margin } from './margin';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import { halfPoints, nearestHalfPoint } from './score-math';
 
@@ -83,9 +81,6 @@ export function isKahootAllowedType(type: QuestionType): boolean {
   return KAHOOT_ALLOWED_TYPES.includes(type);
 }
 
-/** A number question type that carries no margin accepts the exact key only. */
-const EXACT_MARGIN: Margin = { value: 0, unit: 'absolute' };
-
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
 
 /**
@@ -94,14 +89,12 @@ const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
  * still compared as typed text.
  */
 function scoreBase(question: ScoredQuestion, value: string): ScoreResult {
-  // A format reads only the settings its own types carry, which the key holds.
-  // closest_guess is the one type read as a number without a margin: it
-  // only ever scores in a batch, so a lone submission must match exactly.
-  const key = {
-    margin: EXACT_MARGIN,
-    ...answerKeyOf(question),
-  } as KeyedQuestion;
-  return ANSWER_FORMATS[resolveAnswerKind(question)].score(key, value);
+  // closest_guess is read as a number but carries no margin, so a lone
+  // submission is scored against the default one; the resolved key supplies it.
+  return ANSWER_FORMATS[resolveAnswerKind(question)].score(
+    resolvedAnswerKeyOf(question),
+    value,
+  );
 }
 
 /** Kahoot's `1 - fraction/2`: full points answered instantly, a 50% floor at or past the timer, 1 when speed can't be judged. */

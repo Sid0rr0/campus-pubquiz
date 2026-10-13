@@ -1,7 +1,7 @@
 import { IDK_ANSWER_VALUE } from './answers';
 import { QUESTION_KINDS, type AnswerInputKind } from './question-kind';
 import type { QuestionType } from './question-types';
-import type { AnswerKey } from './answer-key';
+import type { ResolvedAnswerKey } from './answer-key';
 import { isWithinMargin, parseFiniteNumber } from './margin';
 import { halfPoints, nearestHalfPoint } from './score-math';
 import { splitPipeList } from './sort-match';
@@ -44,15 +44,11 @@ export interface ScoreResult {
   verdict: Verdict;
 }
 
-/**
- * What an answer format compares an answer with: the Answer key with its
- * settings required, so a format reads them directly and defaults nothing.
- * Scoring resolves it once at its interface; a format reads only the settings
- * its own types carry.
- */
-export type KeyedQuestion = Required<AnswerKey>;
-
-type ScoreAgainstKey = (question: KeyedQuestion, value: string) => ScoreResult;
+/** A format compares an answer with a resolved Answer key: settings required, so it reads them directly and defaults nothing. */
+type ScoreAgainstKey = (
+  question: ResolvedAnswerKey,
+  value: string,
+) => ScoreResult;
 
 /** One answer kind's stored string: its parts, how to read it and how it is scored. */
 export interface AnswerFormat<Parts> {
@@ -66,7 +62,7 @@ export interface AnswerFormat<Parts> {
 
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
 
-const correct = (question: KeyedQuestion): ScoreResult => ({
+const correct = (question: ResolvedAnswerKey): ScoreResult => ({
   points: question.points,
   verdict: 'correct',
 });
@@ -77,7 +73,7 @@ function normalizeFreeText(value: string): string {
 
 /** Whether a typed (or option-picked) value equals the key: trimmed and case-insensitive. */
 export function matchesKey(
-  question: Pick<KeyedQuestion, 'answer'>,
+  question: Pick<ResolvedAnswerKey, 'answer'>,
   value: string,
 ): boolean {
   return normalizeFreeText(value) === normalizeFreeText(question.answer);

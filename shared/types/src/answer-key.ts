@@ -38,6 +38,20 @@ const DEFAULT_SETTINGS: GradingSettingValues = {
   margin: DEFAULT_MARGIN,
 };
 
+/**
+ * An Answer key with every setting present: the key's own, and for a setting
+ * its type doesn't carry, the default. What Scoring hands an answer format,
+ * which reads only the settings its own types carry.
+ */
+export type ResolvedAnswerKey = Required<AnswerKey>;
+
+/** The key with each setting its type doesn't carry filled in with the default. */
+export function resolvedAnswerKeyOf(
+  question: GradingSettingsSource & { answer: string; points: number },
+): ResolvedAnswerKey {
+  return { ...DEFAULT_SETTINGS, ...answerKeyOf(question) };
+}
+
 /** Copies a margin so a key never shares an object with its question. */
 function resolveSetting<Name extends GradingSettingName>(
   name: Name,
@@ -70,18 +84,24 @@ export function answerKeyOf(
   };
 }
 
-/** A key as comparable data: answer, points and settings by value, whatever the order of a margin's fields. */
-function comparable(key: AnswerKey): unknown[] {
-  return [
-    key.answer,
-    key.points,
-    key.matchScoringMode,
-    key.margin?.value,
-    key.margin?.unit,
-  ];
+/** JSON with object fields sorted by name, so equal values serialise alike whatever their field order. */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_name, field: unknown) =>
+    typeof field === 'object' && field !== null && !Array.isArray(field)
+      ? Object.fromEntries(
+          Object.entries(field).sort(([left], [right]) =>
+            left.localeCompare(right),
+          ),
+        )
+      : field,
+  );
 }
 
-/** Whether two answer keys grade the same: answer, points and settings equal by value. */
+/**
+ * Whether two answer keys grade the same: answer, points and every resolved
+ * setting equal by value. A key holds only the settings its type carries, so
+ * a difference in a setting the type doesn't carry never shows.
+ */
 export function isSameAnswerKey(a: AnswerKey, b: AnswerKey): boolean {
-  return JSON.stringify(comparable(a)) === JSON.stringify(comparable(b));
+  return canonicalJson(a) === canonicalJson(b);
 }
