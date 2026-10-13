@@ -1,4 +1,5 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
+import type { AnswerView, ScoredQuestion } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -9,8 +10,56 @@ import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
-import { AnswerService } from '@/answer/answer.service';
+import { AnswerService, type GradableQuestion } from '@/answer/answer.service';
 import { useTestDatabase } from '@/test-db/test-database';
+
+/** Key-fix regrade of an auto-graded question: `question` is the corrected key, rescored with an optional kahoot timer. */
+export async function regradeAuto(
+  service: AnswerService,
+  gameSessionId: number,
+  question: GradableQuestion,
+  kahootTimerSeconds: number | null = null,
+): Promise<void> {
+  await service.regradeForKeyFix(
+    gameSessionId,
+    question,
+    question,
+    kahootTimerSeconds,
+    false,
+  );
+}
+
+/** Key-fix regrade of a match-or-human question against `previous`, the key before the fix. */
+export async function regradeMatchOrHuman(
+  service: AnswerService,
+  gameSessionId: number,
+  question: GradableQuestion,
+  previous: ScoredQuestion,
+): Promise<void> {
+  await service.regradeForKeyFix(
+    gameSessionId,
+    question,
+    previous,
+    null,
+    false,
+  );
+}
+
+/** Key-fix regrade of a closest_guess question whose batch already ran: re-runs the batch and returns the answers. */
+export async function regradeBatch(
+  service: AnswerService,
+  gameSessionId: number,
+  question: GradableQuestion,
+): Promise<AnswerView[]> {
+  const { answers } = await service.regradeForKeyFix(
+    gameSessionId,
+    question,
+    question,
+    null,
+    true,
+  );
+  return answers;
+}
 
 export interface AnswerServiceTestState {
   em: EntityManager;
