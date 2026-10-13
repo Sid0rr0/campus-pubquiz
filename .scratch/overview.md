@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                      | Title                                                                                                               | Tickets | Blocked by                     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------ |
-| grading-mode-policy       | [One Grading policy per grading mode — every grading event decided in one pure module](grading-mode-policy/spec.md) | 3       | —                              |
 | session-broadcaster       | [Split outbound broadcasting out of the GameGateway](session-broadcaster/spec.md)                                   | 4       | —                              |
 | block-grading-moves       | [Give Block grading one entry point per move](block-grading-moves/spec.md)                                          | 2       | —                              |
 | answer-key                | [One Answer key — what an answer is graded against, defaults filled in once](answer-key/spec.md)                    | 3       | —                              |
