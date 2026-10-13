@@ -182,6 +182,78 @@ export function gradeOnKeyFix(input: KeyFixInput): KeyFixResult {
   return KEY_FIX[QUESTION_KINDS[input.question.type].gradingMode](input);
 }
 
+const GRADES_AT_LOCK: Record<GradingMode, boolean> = {
+  auto: false,
+  'match-or-human': false,
+  batch: true,
+};
+
+/** Whether the question is graded in one batch when its block reaches a graded status. */
+export function gradesAtLock(question: Pick<ScoredQuestion, 'type'>): boolean {
+  return GRADES_AT_LOCK[QUESTION_KINDS[question.type].gradingMode];
+}
+
+/**
+ * The batch writes (one per row, in order) for a question graded at the lock,
+ * or none when any row shows the batch already ran: a restart after the lock
+ * must never re-run the batch over the quiz master's overrides.
+ */
+export function gradeAtLock(
+  question: ScoredQuestion,
+  rows: readonly StoredAnswerGrade[],
+): GradeWrite[] {
+  if (!gradesAtLock(question)) return [];
+  if (rows.some((row) => row.gradedAt !== null)) return [];
+  return gradeClosestGuessBatch(
+    question,
+    rows.map((row) => row.value),
+  ).map(setOf);
+}
+
+const SPEED_SCORE: Record<
+  GradingMode,
+  (
+    question: ScoredQuestion,
+    rows: readonly StoredAnswerRow[],
+    kahootTimerSeconds: number | null,
+  ) => GradeWrite[]
+> = {
+  auto: rescoreAuto,
+  // Never overwrite a moderator's or a batch grade.
+  'match-or-human': () => [],
+  batch: () => [],
+};
+
+/**
+ * Rescored writes (one per row) when a kahoot question locks: auto questions
+ * are recomputed from the stored value and response time, so it is
+ * idempotent; the other modes get no writes.
+ */
+export function speedScore(
+  question: ScoredQuestion,
+  rows: readonly StoredAnswerRow[],
+  kahootTimerSeconds: number | null,
+): GradeWrite[] {
+  return SPEED_SCORE[QUESTION_KINDS[question.type].gradingMode](
+    question,
+    rows,
+    kahootTimerSeconds,
+  );
+}
+
+const CAN_BE_UNGRADED: Record<GradingMode, boolean> = {
+  auto: true,
+  'match-or-human': true,
+  // Graded in one batch at the lock and refused a hand grade until then, so
+  // its answers never leave the quiz master anything to do.
+  batch: false,
+};
+
+/** Whether the question's answers can ever count as ungraded (shared by the grading refresh and the reveal gate). */
+export function canBeUngraded(question: Pick<ScoredQuestion, 'type'>): boolean {
+  return CAN_BE_UNGRADED[QUESTION_KINDS[question.type].gradingMode];
+}
+
 /** Whether the quiz master may hand-grade this stored answer now. */
 export function canGradeByHand(
   question: Pick<ScoredQuestion, 'type'>,
