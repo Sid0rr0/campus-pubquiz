@@ -14,33 +14,23 @@ import {
 } from '@tanstack/react-table';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Dialog, DropdownMenu, Tabs } from 'radix-ui';
+import { DropdownMenu } from 'radix-ui';
 import {
-  ArrowRightIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  Cross2Icon,
   DotsVerticalIcon,
-  ExternalLinkIcon,
   Pencil1Icon,
   PlayIcon,
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
 import {
-  DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS,
-  DEFAULT_SESSION_SETTINGS,
   type ActiveSessionSummary,
   type QuizSummary,
   type QuizzesListedPayload,
-  type SessionSettings,
 } from '@campus-pubquiz/types';
 import { useAuth } from '@/app/lib/use-auth';
 import { deleteQuiz, fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import {
   closeSession,
-  createSession,
   fetchSessions,
   SessionApiError,
 } from '@/app/lib/sessions-api';
@@ -48,9 +38,9 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
-import { RoundsList } from '@/app/components/rounds-list';
-import { SessionSettingsForm } from '@/app/components/session-settings-form';
-import { CopyButton } from '@/app/components/copy-button';
+import { StartSessionDialog } from '@/app/components/start-session-dialog';
+import { RunningSessionsList } from '@/app/components/running-sessions-list';
+import { SortableTable } from '@/app/components/sortable-table';
 
 const quizTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -97,48 +87,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
     apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes');
 
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
-  const [settings, setSettings] = useState<SessionSettings>(
-    DEFAULT_SESSION_SETTINGS,
-  );
-  const [pendingName, setPendingName] = useState('');
-  // Resets the settings form back to defaults whenever a different (or no)
-  // quiz becomes pending — adjusted during render rather than in an Effect,
-  // same pattern AdminPageContent uses for its own pendingQuizId-driven reset.
-  const [prevPendingQuizId, setPrevPendingQuizId] = useState(pendingQuizId);
   const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
-  if (pendingQuizId !== prevPendingQuizId) {
-    setPrevPendingQuizId(pendingQuizId);
-    setSettings({
-      ...DEFAULT_SESSION_SETTINGS,
-      kahootQuestionTimerSeconds: pendingQuiz?.rounds.some(
-        (round) => round.kahootMode,
-      )
-        ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
-        : null,
-    });
-    setPendingName(pendingQuiz?.title ?? '');
-  }
-
-  const createMutation = useMutation({
-    mutationFn: (variables: {
-      quizId: number;
-      settings: SessionSettings;
-      name: string;
-    }) => createSession(variables.quizId, variables.settings, variables.name),
-    onSuccess: (session) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
-      onOpenSession(session.joinCode);
-    },
-    onError: (createError) =>
-      toast.error(
-        apiErrorMessage(
-          createError,
-          SessionApiError,
-          'Could not start session',
-        ) ?? 'Could not start session',
-      ),
-    onSettled: () => setPendingQuizId(null),
-  });
 
   const closeMutation = useMutation({
     mutationFn: (joinCode: string) => closeSession(joinCode),
@@ -178,15 +127,6 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       ),
   });
 
-  function handleConfirmCreate(): void {
-    if (pendingQuizId === null) return;
-    createMutation.mutate({
-      quizId: pendingQuizId,
-      settings,
-      name: pendingName,
-    });
-  }
-
   function handleClose(joinCode: string): void {
     closeMutation.mutate(joinCode);
   }
@@ -224,10 +164,9 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
             return (
               <div className="flex items-center justify-end gap-2">
                 <Button
-                  disabled={createMutation.isPending}
                   variant="solid-flat"
                   onClick={() => setPendingQuizId(quiz.id)}
-                  className="flex min-h-8 items-center gap-1.5 px-4 disabled:opacity-40"
+                  className="flex min-h-8 items-center gap-1.5 px-4"
                 >
                   <PlayIcon aria-hidden="true" />
                   Start
@@ -274,7 +213,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           },
         }),
       ]),
-    [createMutation.isPending, isAdmin],
+    [isAdmin],
   );
 
   const quizTable = useTable({
@@ -303,60 +242,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
         )}
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl">Running Sessions</h2>
-          {sessions.length === 0 && (
-            <p className="text-sm text-foreground/55">
-              No sessions running yet.
-            </p>
-          )}
-          <ul className="flex flex-col gap-2">
-            {sessions.map((session) => (
-              <li
-                key={session.joinCode}
-                className="flex items-center justify-between gap-3 rounded-xl border border-foreground/15 bg-white px-4 py-3"
-              >
-                <div className="flex flex-col">
-                  <span className="font-extrabold">{session.name}</span>
-                  <span className="flex items-center gap-1 text-xs text-foreground/55">
-                    {session.status} · {session.teamCount} teams ·{' '}
-                    {session.joinCode}
-                    <CopyButton value={session.joinCode} />· Started{' '}
-                    {new Date(session.startedAt).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  {session.status === 'ended' && (
-                    <Button
-                      type="button"
-                      variant="outline-muted"
-                      size="md"
-                      onClick={() => handleClose(session.joinCode)}
-                    >
-                      <Cross2Icon aria-hidden="true" />
-                      Close
-                    </Button>
-                  )}
-                  <Link
-                    href={`/remote?code=${session.joinCode}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-10 items-center gap-1.5 rounded-lg border-2 border-foreground/30 px-4 text-sm font-extrabold"
-                  >
-                    <ExternalLinkIcon aria-hidden="true" />
-                    Remote
-                  </Link>
-                  <Button
-                    type="button"
-                    variant="solid-flat"
-                    size="md"
-                    onClick={() => onOpenSession(session.joinCode)}
-                  >
-                    <ArrowRightIcon aria-hidden="true" />
-                    Control
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <RunningSessionsList
+            sessions={sessions}
+            onClose={handleClose}
+            onOpenSession={onOpenSession}
+          />
         </section>
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
@@ -372,130 +262,15 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           {quizzes.length === 0 ? (
             <p className="text-sm text-foreground/55">No quizzes yet.</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-foreground/15">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  {quizTable.getHeaderGroups().map((headerGroup) => (
-                    <tr
-                      key={headerGroup.id}
-                      className="border-b border-foreground/15 bg-foreground/5"
-                    >
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-4 py-2 font-display text-sm text-foreground/70"
-                        >
-                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                            <button
-                              type="button"
-                              onClick={header.column.getToggleSortingHandler()}
-                              className="flex items-center gap-1"
-                            >
-                              <quizTable.FlexRender header={header} />
-                              {header.column.getIsSorted() === 'asc' && (
-                                <ChevronUpIcon aria-hidden="true" />
-                              )}
-                              {header.column.getIsSorted() === 'desc' && (
-                                <ChevronDownIcon aria-hidden="true" />
-                              )}
-                            </button>
-                          ) : (
-                            <quizTable.FlexRender header={header} />
-                          )}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {quizTable.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-foreground/10 last:border-b-0"
-                    >
-                      {row.getAllCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-2">
-                          <quizTable.FlexRender cell={cell} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SortableTable table={quizTable} />
           )}
         </section>
       </div>
-      <Dialog.Root
-        open={pendingQuizId !== null}
-        onOpenChange={(open) => {
-          if (!open && !createMutation.isPending) setPendingQuizId(null);
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex max-h-[85vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl bg-white p-5">
-            <Dialog.Title className="font-display text-xl">
-              Start &quot;{pendingQuiz?.title}&quot;?
-            </Dialog.Title>
-            <label className="flex flex-col gap-1 text-sm font-extrabold">
-              Session name
-              <input
-                type="text"
-                value={pendingName}
-                onChange={(event) => setPendingName(event.target.value)}
-                placeholder={pendingQuiz?.title ?? ''}
-                className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
-              />
-            </label>
-            <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
-              <Tabs.List className="flex gap-1 border-b border-foreground/15">
-                <Tabs.Trigger
-                  value="overview"
-                  className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-                >
-                  Overview
-                </Tabs.Trigger>
-                <Tabs.Trigger
-                  value="settings"
-                  className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-                >
-                  Settings
-                </Tabs.Trigger>
-              </Tabs.List>
-              <Tabs.Content value="overview">
-                {pendingQuiz && <RoundsList rounds={pendingQuiz.rounds} />}
-              </Tabs.Content>
-              <Tabs.Content value="settings">
-                <SessionSettingsForm value={settings} onChange={setSettings} />
-              </Tabs.Content>
-            </Tabs.Root>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                disabled={createMutation.isPending}
-                variant="outline-muted"
-                size="md"
-                onClick={() => setPendingQuizId(null)}
-              >
-                <Cross2Icon aria-hidden="true" />
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={createMutation.isPending}
-                variant="solid-flat"
-                size="md"
-                onClick={() => handleConfirmCreate()}
-                className="disabled:opacity-40"
-              >
-                <CheckIcon aria-hidden="true" />
-                {createMutation.isPending ? 'Starting…' : 'Confirm'}
-              </Button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <StartSessionDialog
+        quiz={pendingQuiz}
+        onClose={() => setPendingQuizId(null)}
+        onCreated={onOpenSession}
+      />
       <ConfirmDialog
         open={deletingQuiz !== null}
         onOpenChange={(open) => {

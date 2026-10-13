@@ -21,6 +21,7 @@ import { BonusAwardForm } from '@/app/control/bonus-award-form';
 import { BonusAwardsListModal } from '@/app/control/bonus-awards-list-modal';
 import { TeamCodeModal } from '@/app/control/team-code-modal';
 import { Button } from '@/app/components/button';
+import { SortableTable } from '@/app/components/sortable-table';
 import { formatBonusAwardConfirmation } from '@/app/lib/bonus-categories';
 import { formatRankLabel } from '@/app/lib/rank-label';
 
@@ -148,53 +149,12 @@ export function TeamsTable({
   });
 
   return (
-    <div className="overflow-x-auto rounded-xl border-2 border-dark-blue/15">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              key={headerGroup.id}
-              className="border-b-2 border-dark-blue/15 bg-dark-blue/5"
-            >
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="px-4 py-2 font-display text-sm text-dark-blue/70"
-                >
-                  {header.isPlaceholder ? null : (
-                    <table.FlexRender header={header} />
-                  )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.length === 0 ? (
-            <tr>
-              <td
-                colSpan={columns.length}
-                className="px-4 py-3 text-center text-dark-blue/50"
-              >
-                No teams have joined yet.
-              </td>
-            </tr>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <tr
-                key={row.id}
-                className="border-b border-dark-blue/10 last:border-b-0"
-              >
-                {row.getAllCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-2">
-                    <table.FlexRender cell={cell} />
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+    <>
+      <SortableTable
+        table={table}
+        tone="dark-blue"
+        emptyMessage="No teams have joined yet."
+      />
       <Dialog.Root
         open={awardingTeamId !== null}
         onOpenChange={(open) => {
@@ -258,6 +218,6 @@ export function TeamsTable({
           if (!open) setViewingCodeTeamId(null);
         }}
       />
-    </div>
+    </>
   );
 }

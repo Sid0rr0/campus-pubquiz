@@ -22,8 +22,6 @@ import { toast } from 'sonner';
 import { Dialog, DropdownMenu } from 'radix-ui';
 import {
   CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   Cross2Icon,
   DotsVerticalIcon,
   Pencil1Icon,
@@ -44,6 +42,7 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useAuth } from '@/app/lib/use-auth';
 import { Button } from '@/app/components/button';
+import { SortableTable } from '@/app/components/sortable-table';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 
 const PAGE_SIZE = 20;
@@ -266,68 +265,7 @@ export function PlayedSessionsPanel() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-foreground/15">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr
-                key={headerGroup.id}
-                className="border-b border-foreground/15 bg-foreground/5"
-              >
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-4 py-2 font-display text-sm text-foreground/70"
-                  >
-                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                      <button
-                        type="button"
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="flex items-center gap-1"
-                      >
-                        <table.FlexRender header={header} />
-                        {header.column.getIsSorted() === 'asc' && (
-                          <ChevronUpIcon aria-hidden="true" />
-                        )}
-                        {header.column.getIsSorted() === 'desc' && (
-                          <ChevronDownIcon aria-hidden="true" />
-                        )}
-                      </button>
-                    ) : (
-                      <table.FlexRender header={header} />
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-3 text-center text-foreground/50"
-                >
-                  No finished sessions yet.
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-foreground/10 last:border-b-0"
-                >
-                  {row.getAllCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-2">
-                      <table.FlexRender cell={cell} />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <SortableTable table={table} emptyMessage="No finished sessions yet." />
 
       <div className="flex items-center gap-3">
         <Button
