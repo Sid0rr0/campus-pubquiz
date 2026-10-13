@@ -26,15 +26,15 @@ Each expiry runs in a fresh request context, presses Advance through the Live se
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The Phase timers module exports the class, the scheduler injection token and the schedulers type. The timer registry stays as its internal per-session building block.
-- [ ] The gateway still reads the optional scheduler token and passes it to the module. The real-store harness builds the gateway with manual schedulers exactly as before, with no harness changes beyond import paths.
-- [ ] The gateway wires the outcome delivery's re-arm step to the module's arm, calls restoreAll at bootstrap and calls clearAll on module destroy.
-- [ ] The gateway's expiry handlers, Advance-from-timer method, arm-timers method and timer registries are deleted. It keeps its socket handlers, connection handling, dispatch and notify methods.
-- [ ] No changes to the Live session, outcome delivery, the Session write, the socket protocol or the shared types.
-- [ ] These pass unchanged:
+- [x] The Phase timers module exports the class, the scheduler injection token and the schedulers type. The timer registry stays as its internal per-session building block.
+- [x] The gateway still reads the optional scheduler token and passes it to the module. The real-store harness builds the gateway with manual schedulers exactly as before, with no harness changes beyond import paths.
+- [x] The gateway wires the outcome delivery's re-arm step to the module's arm, calls restoreAll at bootstrap and calls clearAll on module destroy.
+- [x] The gateway's expiry handlers, Advance-from-timer method, arm-timers method and timer registries are deleted. It keeps its socket handlers, connection handling, dispatch and notify methods.
+- [x] No changes to the Live session, outcome delivery, the Session write, the socket protocol or the shared types.
+- [x] These pass unchanged:
   - the timer gateway specs: phase timer harness, question lock auto-advance, kahoot question auto-advance, question lock timer isolation, outcome delivery and timers, last-second answer, and session write
   - the rest of the gateway specs
   - the timer registry spec
-- [ ] `pnpm --filter backend test` and `pnpm typecheck` pass.
+- [x] `pnpm --filter backend test` and `pnpm typecheck` pass.
