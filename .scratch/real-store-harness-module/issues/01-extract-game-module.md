@@ -15,9 +15,9 @@ Parent spec: `.scratch/real-store-harness-module/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The backend boots (`pnpm dev:backend`) with no Nest dependency-resolution error. On the running app, a quiz can be started from `/control` and a team can join from `/play`.
-- [ ] The app module's provider list no longer contains any live-game provider. Each one is listed once, in the Game module.
-- [ ] The real-store harness is unchanged, and every backend spec passes unchanged.
-- [ ] No behaviour, wire, schema or migration change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] The backend boots (`pnpm dev:backend`) with no Nest dependency-resolution error. On the running app, a quiz can be started from `/control` and a team can join from `/play`.
+- [x] The app module's provider list no longer contains any live-game provider. Each one is listed once, in the Game module.
+- [x] The real-store harness is unchanged, and every backend spec passes unchanged.
+- [x] No behaviour, wire, schema or migration change. `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
