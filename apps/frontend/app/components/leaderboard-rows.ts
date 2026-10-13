@@ -79,7 +79,10 @@ export type RankTrend = 'up' | 'down' | 'same';
 export interface LeaderboardRow {
   /** The entry to draw: the old one in 'old', the new one in 'counting' and 'settled'. */
   entry: LeaderboardEntry;
-  /** 0-based rank, relative to the full standings (or the old pool while animating). */
+  /**
+   * 0-based rank, relative to the full standings (or, while animating, among
+   * the final teams on their old totals).
+   */
   rankIndex: number;
   /** "2." for a clear place, "2.–4." for a tie group. */
   label: string;
@@ -128,22 +131,22 @@ function capToMaxRank<T>(items: T[], maxRank: number | undefined): T[] {
  * a large tied group, and an old-ranking cap could then hold and count up
  * entirely different teams than the ones the board settles into.
  */
-function oldPoolEntries(
+function finalTeamsOnOldTotals(
   entries: LeaderboardEntry[],
   fullOldEntries: LeaderboardEntry[],
   maxRank: number | undefined,
 ): LeaderboardEntry[] {
-  const finalPoolTeamIds = new Set(
+  const finalTeamIds = new Set(
     capToMaxRank(entries, maxRank).map((entry) => entry.teamId),
   );
   const oldTeamIds = new Set(fullOldEntries.map((entry) => entry.teamId));
   const fromOldBoard = fullOldEntries.filter((entry) =>
-    finalPoolTeamIds.has(entry.teamId),
+    finalTeamIds.has(entry.teamId),
   );
   const newcomers = entries
     .filter(
       (entry) =>
-        finalPoolTeamIds.has(entry.teamId) && !oldTeamIds.has(entry.teamId),
+        finalTeamIds.has(entry.teamId) && !oldTeamIds.has(entry.teamId),
     )
     .map(zeroedOutEntry);
   return [...fromOldBoard, ...newcomers];
@@ -162,9 +165,9 @@ function settledRows(
 }
 
 /**
- * The old pool in old order. The pool is a subset of the old board, so its
- * ranks are recomputed with the shared ranking rule rather than read off the
- * old entries. 'counting' swaps in each team's new entry so its total can
+ * The final teams on their old totals, in old order. They are a subset of
+ * the old board, so their ranks are recomputed with the shared ranking rule
+ * rather than read off the old entries. 'counting' swaps in each team's new entry so its total can
  * count up while the row stays put.
  */
 function oldStateRows(
@@ -173,11 +176,13 @@ function oldStateRows(
   maxRank: number | undefined,
   phase: LeaderboardPhase,
 ): LeaderboardRow[] {
-  const pool = rankTeams(oldPoolEntries(entries, fullOldEntries, maxRank));
+  const oldRanking = rankTeams(
+    finalTeamsOnOldTotals(entries, fullOldEntries, maxRank),
+  );
   const entriesByTeamId = new Map(
     entries.map((entry) => [entry.teamId, entry]),
   );
-  return pool.map((oldEntry) => ({
+  return oldRanking.map((oldEntry) => ({
     entry:
       phase === 'counting'
         ? (entriesByTeamId.get(oldEntry.teamId) ?? oldEntry)
@@ -201,9 +206,9 @@ function groupByRank(rows: LeaderboardRow[]): LeaderboardRow[][] {
 }
 
 /**
- * Keeps the bottom `revealCount` rank groups of an already-capped pool, so
- * the walk counts distinct ranks (a tie reveals in one step) and always
- * reaches rank 1 once it covers the pool. Omitted shows every row.
+ * Keeps the bottom `revealCount` rank groups of already-capped rows, so the
+ * walk counts distinct ranks (a tie reveals in one step) and always reaches
+ * rank 1 once it covers every group. Omitted shows every row.
  */
 function revealBottomUp(
   rows: LeaderboardRow[],
@@ -220,11 +225,11 @@ function revealBottomUp(
 
 /**
  * The rows the leaderboard shows, in order. The cap applies first, then the
- * reveal walk inside the capped pool. While the old board is animating
- * ('old'/'counting' with `previousEntries` given) the whole old pool shows:
- * it is already exactly the final pool, and its tie structure over old
- * scores can group differently from the final one, so the reveal walk isn't
- * a meaningful cut there.
+ * reveal walk inside the capped rows. While the old board is animating
+ * ('old'/'counting' with `previousEntries` given) every final team shows on
+ * its old total: they are already exactly the teams the board settles into,
+ * and their tie structure over old scores can group differently from the
+ * final one, so the reveal walk isn't a meaningful cut there.
  */
 export function selectLeaderboardRows(
   input: LeaderboardRowsInput,
@@ -237,6 +242,7 @@ export function selectLeaderboardRows(
   return withTrends(
     revealBottomUp(settledRows(entries, maxRank), revealCount),
     input,
+    fullOldEntries,
   );
 }
 
@@ -256,31 +262,39 @@ function rankIndexByTeamId(entries: LeaderboardEntry[]): Map<number, number> {
   );
 }
 
+/** The board a trend compares against, and whether it is a real prior board. */
+interface TrendBasis {
+  board: LeaderboardEntry[];
+  /** False for the round-backed-out approximation. */
+  isPriorBoard: boolean;
+}
+
 /**
  * The board to compare against for the trend. The board exactly as it stood
  * before this update — from `previousEntries` when it's driving the
- * animation, or `trendBaseline` otherwise — is the more accurate basis
- * whenever one is available (a Kahoot round can hold several questions, so
- * backing this round's points out of the current total would net out
- * earlier questions in the same round too, not just this one). Falls back to
- * the round-backed-out approximation only when neither is given (the
- * non-Kahoot round-end/quiz-end reveal); none when that's missing too.
+ * animation (already resolved by the caller as `fullOldEntries`), or
+ * `trendBaseline` otherwise — is the more accurate basis whenever one is
+ * available (a Kahoot round can hold several questions, so backing this
+ * round's points out of the current total would net out earlier questions
+ * in the same round too, not just this one). Falls back to the
+ * round-backed-out approximation only when neither is given (the non-Kahoot
+ * round-end/quiz-end reveal); none when that's missing too.
  */
-function trendBasis({
-  entries,
-  previousEntries,
-  trendBaseline,
-  currentRoundIndex,
-}: LeaderboardRowsInput): LeaderboardEntry[] | undefined {
+function trendBasis(
+  { entries, trendBaseline, currentRoundIndex }: LeaderboardRowsInput,
+  fullOldEntries: LeaderboardEntry[] | undefined,
+): TrendBasis | undefined {
   const priorBoard =
-    fullPreviousBoard(entries, previousEntries) ??
-    fullPreviousBoard(entries, trendBaseline);
-  if (priorBoard !== undefined) return priorBoard;
+    fullOldEntries ?? fullPreviousBoard(entries, trendBaseline);
+  if (priorBoard !== undefined) {
+    return { board: priorBoard, isPriorBoard: true };
+  }
   if (currentRoundIndex === undefined) return undefined;
-  return entries.map((entry) => ({
+  const board = entries.map((entry) => ({
     ...entry,
     totalPoints: totalBeforeRound(entry, currentRoundIndex),
   }));
+  return { board, isPriorBoard: false };
 }
 
 /**
@@ -290,16 +304,11 @@ function trendBasis({
  * arrow to everyone else, so every team shows as having moved up onto the
  * board instead. The round-backed-out approximation never forces "up".
  */
-function isAllTiedPriorBoard(
-  { previousEntries, trendBaseline }: LeaderboardRowsInput,
-  basis: LeaderboardEntry[],
-): boolean {
-  const isPriorBoard =
-    previousEntries !== undefined || trendBaseline !== undefined;
+function isAllTiedPriorBoard({ board, isPriorBoard }: TrendBasis): boolean {
   return (
     isPriorBoard &&
-    basis.length > 1 &&
-    new Set(basis.map((entry) => entry.totalPoints)).size === 1
+    board.length > 1 &&
+    new Set(board.map((entry) => entry.totalPoints)).size === 1
   );
 }
 
@@ -319,12 +328,13 @@ function rankTrend(
 function withTrends(
   rows: LeaderboardRow[],
   input: LeaderboardRowsInput,
+  fullOldEntries: LeaderboardEntry[] | undefined,
 ): LeaderboardRow[] {
   if (input.phase !== 'settled') return rows;
-  const basis = trendBasis(input);
+  const basis = trendBasis(input, fullOldEntries);
   if (basis === undefined) return rows;
-  const isForcedUp = isAllTiedPriorBoard(input, basis);
-  const previousRankByTeamId = rankIndexByTeamId(basis);
+  const isForcedUp = isAllTiedPriorBoard(basis);
+  const previousRankByTeamId = rankIndexByTeamId(basis.board);
   return rows.map((row) => {
     const previousRankIndex = previousRankByTeamId.get(row.entry.teamId);
     if (previousRankIndex === undefined) return row;

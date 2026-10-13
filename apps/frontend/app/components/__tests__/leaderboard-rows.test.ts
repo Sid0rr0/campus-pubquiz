@@ -143,14 +143,14 @@ describe('selectLeaderboardRows', () => {
         expected: ['Leader 1. 30', 'Tied A 2.–3. 20'],
       },
       {
-        name: 'walks the reveal up from the worst rank inside the capped pool',
+        name: 'walks the reveal up from the worst rank inside the capped rows',
         entries: THREE_TEAMS,
         maxRank: 2,
         revealCount: 1,
         expected: ['Second 2. 20'],
       },
       {
-        name: 'reaches rank 1 once revealCount covers the capped pool',
+        name: 'reaches rank 1 once revealCount covers the capped rows',
         entries: SEVEN_WITH_TIE,
         maxRank: 5,
         revealCount: 5,
@@ -243,9 +243,9 @@ describe('selectLeaderboardRows', () => {
       ]);
     });
 
-    it('picks the old pool by final standing when the old board had no ties', () => {
+    it('holds the final teams on their old totals when the old board had no ties', () => {
       // Before: 8 distinct scores. After: A and B pull ahead, the other six
-      // all collapse to 0. The pool must be the final board's first 5.
+      // all collapse to 0. The held teams must be the final board's first 5.
       const oldBoard = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(
         (name, index) =>
           ranked(
