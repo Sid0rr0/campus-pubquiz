@@ -37,6 +37,10 @@ type SubmitRule = (
   stored: StoredAnswerGrade | null,
 ) => GradeWrite;
 
+function modeOf(question: Pick<ScoredQuestion, 'type'>): GradingMode {
+  return QUESTION_KINDS[question.type].gradingMode;
+}
+
 function setOf(score: ScoreResult): GradeWrite {
   return { kind: 'set', points: score.points, verdict: score.verdict };
 }
@@ -70,8 +74,11 @@ export function gradeOnSubmit(
   value: string,
   stored: StoredAnswerGrade | null,
 ): GradeWrite {
-  const { gradingMode } = QUESTION_KINDS[question.type];
-  return SUBMIT[gradingMode](gradeAtSubmit(question, value), value, stored);
+  return SUBMIT[modeOf(question)](
+    gradeAtSubmit(question, value),
+    value,
+    stored,
+  );
 }
 
 const CAN_GRADE_BY_HAND: Record<
@@ -130,7 +137,7 @@ function isGradedAutomatically(
 }
 
 /** Rescores every row speed-scaled by its stored response time when a timer is given. The auto key-fix and kahoot speed scoring share it. */
-export function rescoreAuto(
+export function rescoreAutoGraded(
   question: ScoredQuestion,
   rows: readonly StoredAnswerRow[],
   kahootTimerSeconds: number | null,
@@ -151,7 +158,7 @@ export function rescoreAuto(
 const KEY_FIX: Record<GradingMode, (input: KeyFixInput) => KeyFixResult> = {
   auto: ({ question, rows, kahootTimerSeconds }) => ({
     rescored: true,
-    writes: rescoreAuto(question, rows, kahootTimerSeconds),
+    writes: rescoreAutoGraded(question, rows, kahootTimerSeconds),
   }),
   // A new match grades correct; a grade the old key gave automatically and
   // the new one no longer gives goes back to ungraded; the rest is the
@@ -179,7 +186,7 @@ const KEY_FIX: Record<GradingMode, (input: KeyFixInput) => KeyFixResult> = {
 
 /** What a live answer-key fix does to the stored grades of the corrected question. */
 export function gradeOnKeyFix(input: KeyFixInput): KeyFixResult {
-  return KEY_FIX[QUESTION_KINDS[input.question.type].gradingMode](input);
+  return KEY_FIX[modeOf(input.question)](input);
 }
 
 const GRADES_AT_LOCK: Record<GradingMode, boolean> = {
@@ -190,7 +197,7 @@ const GRADES_AT_LOCK: Record<GradingMode, boolean> = {
 
 /** Whether the question is graded in one batch when its block reaches a graded status. */
 export function gradesAtLock(question: Pick<ScoredQuestion, 'type'>): boolean {
-  return GRADES_AT_LOCK[QUESTION_KINDS[question.type].gradingMode];
+  return GRADES_AT_LOCK[modeOf(question)];
 }
 
 /**
@@ -198,7 +205,7 @@ export function gradesAtLock(question: Pick<ScoredQuestion, 'type'>): boolean {
  * or none when any row shows the batch already ran: a restart after the lock
  * must never re-run the batch over the quiz master's overrides.
  */
-export function gradeAtLock(
+export function lockBatchWrites(
   question: ScoredQuestion,
   rows: readonly StoredAnswerGrade[],
 ): GradeWrite[] {
@@ -218,7 +225,7 @@ const SPEED_SCORE: Record<
     kahootTimerSeconds: number | null,
   ) => GradeWrite[]
 > = {
-  auto: rescoreAuto,
+  auto: rescoreAutoGraded,
   // Never overwrite a moderator's or a batch grade.
   'match-or-human': () => [],
   batch: () => [],
@@ -234,11 +241,7 @@ export function speedScore(
   rows: readonly StoredAnswerRow[],
   kahootTimerSeconds: number | null,
 ): GradeWrite[] {
-  return SPEED_SCORE[QUESTION_KINDS[question.type].gradingMode](
-    question,
-    rows,
-    kahootTimerSeconds,
-  );
+  return SPEED_SCORE[modeOf(question)](question, rows, kahootTimerSeconds);
 }
 
 const CAN_BE_UNGRADED: Record<GradingMode, boolean> = {
@@ -251,7 +254,7 @@ const CAN_BE_UNGRADED: Record<GradingMode, boolean> = {
 
 /** Whether the question's answers can ever count as ungraded (shared by the grading refresh and the reveal gate). */
 export function canBeUngraded(question: Pick<ScoredQuestion, 'type'>): boolean {
-  return CAN_BE_UNGRADED[QUESTION_KINDS[question.type].gradingMode];
+  return CAN_BE_UNGRADED[modeOf(question)];
 }
 
 /** Whether the quiz master may hand-grade this stored answer now. */
@@ -259,5 +262,5 @@ export function canGradeByHand(
   question: Pick<ScoredQuestion, 'type'>,
   stored: { gradedAt: Date | null },
 ): boolean {
-  return CAN_GRADE_BY_HAND[QUESTION_KINDS[question.type].gradingMode](stored);
+  return CAN_GRADE_BY_HAND[modeOf(question)](stored);
 }

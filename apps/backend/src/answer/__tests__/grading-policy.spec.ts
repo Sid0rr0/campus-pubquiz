@@ -6,7 +6,7 @@ import {
 import {
   canBeUngraded,
   canGradeByHand,
-  gradeAtLock,
+  lockBatchWrites,
   gradeOnKeyFix,
   gradeOnSubmit,
   gradesAtLock,
@@ -290,7 +290,7 @@ describe('Grading policy: grades at the lock', () => {
   });
 
   it('batch-grades the rows when none has been graded yet', () => {
-    expect(gradeAtLock(BATCH, [rowOf('990'), rowOf('500')])).toEqual([
+    expect(lockBatchWrites(BATCH, [rowOf('990'), rowOf('500')])).toEqual([
       { kind: 'set', points: 5, verdict: 'correct' },
       { kind: 'set', points: 0, verdict: 'incorrect' },
     ]);
@@ -298,17 +298,17 @@ describe('Grading policy: grades at the lock', () => {
 
   it('writes nothing when any row shows the batch already ran', () => {
     expect(
-      gradeAtLock(BATCH, [rowOf('990'), rowOf('500', new Date())]),
+      lockBatchWrites(BATCH, [rowOf('990'), rowOf('500', new Date())]),
     ).toEqual([]);
   });
 
   it('writes nothing when nobody answered', () => {
-    expect(gradeAtLock(BATCH, [])).toEqual([]);
+    expect(lockBatchWrites(BATCH, [])).toEqual([]);
   });
 
   it('writes nothing for the modes that do not grade at the lock', () => {
-    expect(gradeAtLock(AUTO, [rowOf('Paris')])).toEqual([]);
-    expect(gradeAtLock(MATCH_OR_HUMAN, [rowOf('apple')])).toEqual([]);
+    expect(lockBatchWrites(AUTO, [rowOf('Paris')])).toEqual([]);
+    expect(lockBatchWrites(MATCH_OR_HUMAN, [rowOf('apple')])).toEqual([]);
   });
 });
 

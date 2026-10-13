@@ -16,9 +16,9 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import {
   canGradeByHand,
-  gradeAtLock,
   gradeOnKeyFix,
   gradeOnSubmit,
+  lockBatchWrites,
   speedScore,
   type GradeWrite,
 } from '@/answer/grading-policy';
@@ -39,6 +39,53 @@ export interface GradedAnswer {
 
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. RevealQuestionView satisfies it. */
 export type GradableQuestion = ScoredQuestion & { id: number };
+
+type MergeField =
+  | 'value'
+  | 'updatedAt'
+  | 'pointsAwarded'
+  | 'gradedAt'
+  | 'verdict'
+  | 'responseMs';
+
+const UNGRADED_MERGE_FIELDS: MergeField[] = [
+  'value',
+  'updatedAt',
+  'responseMs',
+];
+const GRADED_MERGE_FIELDS: MergeField[] = [
+  'value',
+  'updatedAt',
+  'pointsAwarded',
+  'gradedAt',
+  'verdict',
+  'responseMs',
+];
+
+/** The grade columns a submit upserts, and the columns a conflict merges, for the policy's grade write. */
+function upsertGradeOf(write: GradeWrite, now: Date) {
+  switch (write.kind) {
+    case 'set':
+      return {
+        values: {
+          pointsAwarded: write.points,
+          gradedAt: now,
+          verdict: write.verdict,
+        },
+        mergeFields: GRADED_MERGE_FIELDS,
+      };
+    case 'clear':
+      return {
+        values: { pointsAwarded: 0, gradedAt: null, verdict: null },
+        mergeFields: GRADED_MERGE_FIELDS,
+      };
+    case 'keep':
+      return {
+        values: { pointsAwarded: 0 },
+        mergeFields: UNGRADED_MERGE_FIELDS,
+      };
+  }
+}
 
 @Injectable()
 export class AnswerService {
@@ -76,42 +123,26 @@ export class AnswerService {
       { fields: ['value', 'gradedAt'] },
     );
     const write = gradeOnSubmit(question, value, existing);
-    const appliesScore = write.kind === 'set';
-    const resetsGrading = write.kind === 'clear';
-    const pointsAwarded = write.kind === 'set' ? write.points : 0;
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
     const now = new Date();
+    const grade = upsertGradeOf(write, now);
     const answer = await this.answers.upsert(
       {
         gameSession: gameSessionId,
         question: questionId,
         team: teamId,
         value,
-        pointsAwarded,
         responseMs,
-        ...(write.kind === 'set'
-          ? { gradedAt: now, verdict: write.verdict }
-          : {}),
-        ...(resetsGrading ? { gradedAt: null, verdict: null } : {}),
+        ...grade.values,
         createdAt: now,
         updatedAt: now,
       },
       {
         onConflictFields: ['gameSession', 'question', 'team'],
         onConflictAction: 'merge',
-        onConflictMergeFields:
-          appliesScore || resetsGrading
-            ? [
-                'value',
-                'updatedAt',
-                'pointsAwarded',
-                'gradedAt',
-                'verdict',
-                'responseMs',
-              ]
-            : ['value', 'updatedAt', 'responseMs'],
+        onConflictMergeFields: grade.mergeFields,
       },
     );
 
@@ -261,7 +292,7 @@ export class AnswerService {
     question: GradableQuestion,
   ): Promise<AnswerView[]> {
     const rows = await this.findForQuestion(gameSessionId, question.id);
-    await this.applyWrites(rows, gradeAtLock(question, rows));
+    await this.applyWrites(rows, lockBatchWrites(question, rows));
     return rows.map(toAnswerView);
   }
 
