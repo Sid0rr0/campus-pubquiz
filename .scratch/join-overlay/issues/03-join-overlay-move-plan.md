@@ -4,7 +4,7 @@
 
 **Blocked by:** 02: Toggle join overlay
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] With the join overlay up, the Move plan plans a new hide step for Advance and Previous. Its effective action is `TOGGLE_JOIN_OVERLAY`, and it's always pressable.
 - [ ] Backend gateway test against a real database: with the overlay up, Advance hides it without changing the status, Previous hides it rather than being refused, and the next press moves the quiz.

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Session progress has an `isJoinOverlayVisible` flag, defaulting to false. It's saved on the game session (MikroORM migration, non-null boolean defaulting to false) and restored after a restart.
 - [ ] New admin action `TOGGLE_JOIN_OVERLAY`, included in socket payload validation and allowed for the same roles as `TOGGLE_LEADERBOARD`. It flips the flag, is legal from every status except `lobby` and `ended`, and is otherwise refused as an illegal transition.

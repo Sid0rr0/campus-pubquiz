@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The shared transition function accepts `PREVIOUS` on `rules` and returns `lobby` with the round, question and reveal indexes reset. Covered in the existing backward-transition tests.
 - [ ] `PREVIOUS` on `lobby` is still illegal.

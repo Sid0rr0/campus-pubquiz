@@ -1,6 +1,6 @@
 # Spec: Join overlay and Previous back to the lobby
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
