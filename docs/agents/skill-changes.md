@@ -31,3 +31,10 @@ Skills under `.claude/skills/` are symlinks into `.agents/skills/`, which is git
   _Why:_ two runs shipped a PR without checks on the final tip.
 
 Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus the `@campus-pubquiz/types` build. The `WorktreeCreate` hook in `.claude/settings.json` (`scripts/worktree-create.sh`) runs it for every subagent worktree; its input is `{name, cwd, …}`, not the `worktree_name`/`base_path` in the docs example. Root `pnpm typecheck` rebuilds the shared types first, so a merge that changes them never typechecks against a stale `dist/`.
+
+- **implement-spec step 4, implementer bullets (2026-10-14 retro)**: edit every file with Edit/Write (a rename is one `Edit` with `replace_all: true` per file); Bash only for `git`, `pnpm` and read-only `grep`/`ls`, one command per call from the worktree root, globs quoted.
+  _Why:_ across the last seven runs, the worktree sandbox refused ~22 `sed`/`xargs`/heredoc/`cd`-chain edits and ~5 more failed on BSD `sed -i` or zsh globs, although every brief carried the old "sandbox refuses heredoc writes" parenthetical.
+- **implement-spec step 5 (2026-10-14 retro)**: the merger runs `git commit` in the foreground with a long timeout, since the pre-commit hook runs `pnpm typecheck`.
+  _Why:_ mergers polled for the commit with `sleep` and `until git …` loops, which the harness and sandbox block.
+- **code-review step 3 (2026-10-14 retro)**: names `CODING_STANDARDS.md` as this repo's standards source instead of the generic `CODING_STANDARDS.md` or `CONTRIBUTING.md` example.
+  _Why:_ the orchestrator ran `ls CONTRIBUTING.md` on every review and got exit 1.

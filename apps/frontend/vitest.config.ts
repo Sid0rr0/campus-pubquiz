@@ -3,6 +3,10 @@ import { defineConfig } from 'vitest/config';
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
+// Parallel agent runs load the machine enough that unbounded workers time
+// tests out at random; CI keeps Vitest's default.
+const LOCAL_MAX_WORKERS = 2;
+
 export default defineConfig({
   esbuild: {
     jsx: 'automatic',
@@ -15,6 +19,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
+    maxWorkers: process.env.CI ? undefined : LOCAL_MAX_WORKERS,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
