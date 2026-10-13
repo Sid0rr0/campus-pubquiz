@@ -14,10 +14,8 @@ import {
 } from '@tanstack/react-table';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Dialog, DropdownMenu, Tabs } from 'radix-ui';
+import { DropdownMenu } from 'radix-ui';
 import {
-  CheckIcon,
-  Cross2Icon,
   DotsVerticalIcon,
   Pencil1Icon,
   PlayIcon,
@@ -25,18 +23,14 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons';
 import {
-  DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS,
-  DEFAULT_SESSION_SETTINGS,
   type ActiveSessionSummary,
   type QuizSummary,
   type QuizzesListedPayload,
-  type SessionSettings,
 } from '@campus-pubquiz/types';
 import { useAuth } from '@/app/lib/use-auth';
 import { deleteQuiz, fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import {
   closeSession,
-  createSession,
   fetchSessions,
   SessionApiError,
 } from '@/app/lib/sessions-api';
@@ -44,8 +38,7 @@ import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
-import { RoundsList } from '@/app/components/rounds-list';
-import { SessionSettingsForm } from '@/app/components/session-settings-form';
+import { StartSessionDialog } from '@/app/components/start-session-dialog';
 import { RunningSessionsList } from '@/app/components/running-sessions-list';
 import { SortableTable } from '@/app/components/sortable-table';
 
@@ -94,48 +87,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
     apiErrorMessage(quizzesQuery.error, QuizApiError, 'Could not load quizzes');
 
   const [pendingQuizId, setPendingQuizId] = useState<number | null>(null);
-  const [settings, setSettings] = useState<SessionSettings>(
-    DEFAULT_SESSION_SETTINGS,
-  );
-  const [pendingName, setPendingName] = useState('');
-  // Resets the settings form back to defaults whenever a different (or no)
-  // quiz becomes pending — adjusted during render rather than in an Effect,
-  // same pattern AdminPageContent uses for its own pendingQuizId-driven reset.
-  const [prevPendingQuizId, setPrevPendingQuizId] = useState(pendingQuizId);
   const pendingQuiz = quizzes.find((quiz) => quiz.id === pendingQuizId) ?? null;
-  if (pendingQuizId !== prevPendingQuizId) {
-    setPrevPendingQuizId(pendingQuizId);
-    setSettings({
-      ...DEFAULT_SESSION_SETTINGS,
-      kahootQuestionTimerSeconds: pendingQuiz?.rounds.some(
-        (round) => round.kahootMode,
-      )
-        ? DEFAULT_KAHOOT_QUESTION_TIMER_SECONDS
-        : null,
-    });
-    setPendingName(pendingQuiz?.title ?? '');
-  }
-
-  const createMutation = useMutation({
-    mutationFn: (variables: {
-      quizId: number;
-      settings: SessionSettings;
-      name: string;
-    }) => createSession(variables.quizId, variables.settings, variables.name),
-    onSuccess: (session) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
-      onOpenSession(session.joinCode);
-    },
-    onError: (createError) =>
-      toast.error(
-        apiErrorMessage(
-          createError,
-          SessionApiError,
-          'Could not start session',
-        ) ?? 'Could not start session',
-      ),
-    onSettled: () => setPendingQuizId(null),
-  });
 
   const closeMutation = useMutation({
     mutationFn: (joinCode: string) => closeSession(joinCode),
@@ -175,15 +127,6 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
       ),
   });
 
-  function handleConfirmCreate(): void {
-    if (pendingQuizId === null) return;
-    createMutation.mutate({
-      quizId: pendingQuizId,
-      settings,
-      name: pendingName,
-    });
-  }
-
   function handleClose(joinCode: string): void {
     closeMutation.mutate(joinCode);
   }
@@ -221,10 +164,9 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
             return (
               <div className="flex items-center justify-end gap-2">
                 <Button
-                  disabled={createMutation.isPending}
                   variant="solid-flat"
                   onClick={() => setPendingQuizId(quiz.id)}
-                  className="flex min-h-8 items-center gap-1.5 px-4 disabled:opacity-40"
+                  className="flex min-h-8 items-center gap-1.5 px-4"
                 >
                   <PlayIcon aria-hidden="true" />
                   Start
@@ -271,7 +213,7 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           },
         }),
       ]),
-    [createMutation.isPending, isAdmin],
+    [isAdmin],
   );
 
   const quizTable = useTable({
@@ -324,76 +266,11 @@ export function SessionPickerPanel({ onOpenSession }: SessionPickerPanelProps) {
           )}
         </section>
       </div>
-      <Dialog.Root
-        open={pendingQuizId !== null}
-        onOpenChange={(open) => {
-          if (!open && !createMutation.isPending) setPendingQuizId(null);
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-30 bg-black/50" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-40 flex max-h-[85vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl bg-white p-5">
-            <Dialog.Title className="font-display text-xl">
-              Start &quot;{pendingQuiz?.title}&quot;?
-            </Dialog.Title>
-            <label className="flex flex-col gap-1 text-sm font-extrabold">
-              Session name
-              <input
-                type="text"
-                value={pendingName}
-                onChange={(event) => setPendingName(event.target.value)}
-                placeholder={pendingQuiz?.title ?? ''}
-                className="min-h-10 rounded-lg border border-foreground/20 px-3 text-sm font-normal"
-              />
-            </label>
-            <Tabs.Root defaultValue="overview" className="flex flex-col gap-3">
-              <Tabs.List className="flex gap-1 border-b border-foreground/15">
-                <Tabs.Trigger
-                  value="overview"
-                  className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-                >
-                  Overview
-                </Tabs.Trigger>
-                <Tabs.Trigger
-                  value="settings"
-                  className="min-h-10 border-b-2 border-transparent px-3 text-sm font-extrabold text-foreground/55 data-[state=active]:border-magenta data-[state=active]:text-foreground"
-                >
-                  Settings
-                </Tabs.Trigger>
-              </Tabs.List>
-              <Tabs.Content value="overview">
-                {pendingQuiz && <RoundsList rounds={pendingQuiz.rounds} />}
-              </Tabs.Content>
-              <Tabs.Content value="settings">
-                <SessionSettingsForm value={settings} onChange={setSettings} />
-              </Tabs.Content>
-            </Tabs.Root>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                disabled={createMutation.isPending}
-                variant="outline-muted"
-                size="md"
-                onClick={() => setPendingQuizId(null)}
-              >
-                <Cross2Icon aria-hidden="true" />
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={createMutation.isPending}
-                variant="solid-flat"
-                size="md"
-                onClick={() => handleConfirmCreate()}
-                className="disabled:opacity-40"
-              >
-                <CheckIcon aria-hidden="true" />
-                {createMutation.isPending ? 'Starting…' : 'Confirm'}
-              </Button>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <StartSessionDialog
+        quiz={pendingQuiz}
+        onClose={() => setPendingQuizId(null)}
+        onCreated={onOpenSession}
+      />
       <ConfirmDialog
         open={deletingQuiz !== null}
         onOpenChange={(open) => {
