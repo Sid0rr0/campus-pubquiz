@@ -4,13 +4,13 @@
 
 **Blocked by:** 01 (Row selection: cap, reveal walk and old-board pool). Only because 01 creates the module this goes into.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The leaderboard rows module exports the capture function. The display page's inline capture condition is replaced by a call to it.
-- [ ] Table-driven tests cover:
+- [x] The leaderboard rows module exports the capture function. The display page's inline capture condition is replaced by a call to it.
+- [x] Table-driven tests cover:
   - remembers while on air and hidden
   - ignores while the leaderboard is visible
   - ignores in non-on-air statuses (for example reveal)
   - ignores an absent leaderboard
   - returns the same reference when unchanged
-- [ ] The display page's completion-and-leaderboard tests pass unchanged, including the pre-grading-total regression. `pnpm --filter frontend test` and `pnpm typecheck` pass.
+- [x] The display page's completion-and-leaderboard tests pass unchanged, including the pre-grading-total regression. `pnpm --filter frontend test` and `pnpm typecheck` pass.

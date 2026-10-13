@@ -10,7 +10,6 @@ import {
   isShowingLastBreak,
   type LeaderboardEntry,
   type OnAirScreen,
-  isQuestionOnAirStatus,
 } from '@campus-pubquiz/types';
 import { useDisplayGame } from '@/app/lib/use-display-game';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
@@ -21,6 +20,7 @@ import {
   KAHOOT_LEADERBOARD_TOP_N,
   Leaderboard,
 } from '@/app/components/leaderboard';
+import { capturePreviousBoard } from '@/app/components/leaderboard-rows';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
@@ -132,23 +132,17 @@ function DisplayPageContent() {
   // Compares snapshot.leaderboard itself (not the `leaderboard` local above,
   // which falls back to a fresh `[]` literal every render whenever the
   // field is absent — that fresh reference would never match
-  // previousLeaderboard and re-trigger this on every render).
-  //
-  // Only captures while the open question hasn't been graded yet
-  // (question_open/locking), not just "leaderboard hidden" — a kahootMode
-  // question's points land at the locking->reveal transition (see
-  // ensureKahootSpeedScored), before isLeaderboardVisible flips true for
-  // the between-questions board. Capturing on 'reveal' too would grab the
-  // already-updated totals one step early, leaving old === new and nothing
-  // to animate once the board appears.
-  const isBeforeGrading = isQuestionOnAirStatus(progress.status);
-  if (
-    isBeforeGrading &&
-    !progress.isLeaderboardVisible &&
-    snapshot.leaderboard !== undefined &&
-    snapshot.leaderboard !== previousLeaderboard
-  ) {
-    setPreviousLeaderboard(snapshot.leaderboard);
+  // previousLeaderboard and re-trigger this on every render). When to
+  // capture is capturePreviousBoard's rule; it returns the same reference
+  // when nothing changes, so the guard below only fires on a real change.
+  const nextPreviousLeaderboard = capturePreviousBoard({
+    remembered: previousLeaderboard,
+    status: progress.status,
+    isLeaderboardVisible: progress.isLeaderboardVisible,
+    leaderboard: snapshot.leaderboard,
+  });
+  if (nextPreviousLeaderboard !== previousLeaderboard) {
+    setPreviousLeaderboard(nextPreviousLeaderboard);
   }
 
   // The question each break/reveal screen is about was resolved by the
