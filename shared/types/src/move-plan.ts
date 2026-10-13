@@ -28,6 +28,8 @@ export type MoveStep =
     }
   /** ADVANCE under the leaderboard with every rank shown: hides the board, exactly as the Leaderboard toggle does. */
   | { kind: 'leaderboard_hide'; progress: GameProgress }
+  /** ADVANCE or PREVIOUS under the join overlay: hides it, exactly as the toggle does, and nothing else. Always pressable. */
+  | { kind: 'join_overlay_hide'; progress: GameProgress }
   /** A showdown reveal step; `shouldResolve` when it crosses into the final step. */
   | {
       kind: 'showdown_step';
@@ -58,7 +60,8 @@ export type MoveStep =
  * view announces it, and the presenter preview describes it. Any action other
  * than ADVANCE and PREVIOUS is a plain transition through the state machine,
  * or blocked when it is illegal.
- * Precedence for ADVANCE and PREVIOUS: the leaderboard when it is up (it covers the screen, so a press
+ * Precedence for ADVANCE and PREVIOUS: the join overlay when it is up (a press
+ * only hides it), then the leaderboard when it is up (it covers the screen, so a press
  * only ever reveals a rank or hides the board and never moves the quiz
  * underneath), then what is underneath it — see planUnderlyingMove.
  */
@@ -95,6 +98,16 @@ function planTransition(session: SessionState, action: GameAction): MoveStep {
 
 function planMovement(session: SessionState, movement: Movement): MoveStep {
   const { progress } = session;
+  if (progress.isJoinOverlayVisible) {
+    return {
+      kind: 'join_overlay_hide',
+      progress: getNextGameState(
+        progress,
+        'TOGGLE_JOIN_OVERLAY',
+        getGameContext(session),
+      ),
+    };
+  }
   if (!progress.isLeaderboardVisible)
     return planUnderlyingMove(session, movement);
 
@@ -207,11 +220,12 @@ function planShowdownStep(
   }
 }
 
-/** The state-machine action a leaderboard step is carried out as, or `pressed` for any other step. */
+/** The state-machine action a hide step is carried out as, or `pressed` for any other step. */
 export function effectiveActionOf(
   step: MoveStep,
   pressed: GameAction,
 ): GameAction {
+  if (step.kind === 'join_overlay_hide') return 'TOGGLE_JOIN_OVERLAY';
   return step.kind === 'leaderboard_hide' ? 'TOGGLE_LEADERBOARD' : pressed;
 }
 
@@ -229,6 +243,8 @@ export function describeAdvanceStep(session: SessionState): AdvanceSlotStep {
       return 'reveal_next_rank';
     case 'leaderboard_hide':
       return 'hide_leaderboard';
+    case 'join_overlay_hide':
+      return 'hide_join_overlay';
     default:
       return isStepPressable(step) ? 'advance' : 'none';
   }
@@ -236,6 +252,8 @@ export function describeAdvanceStep(session: SessionState): AdvanceSlotStep {
 
 /** Whether Previous works, is covered by the leaderboard, or is unavailable, as the admin view announces it. */
 export function describePreviousState(session: SessionState): PreviousState {
+  // Under the join overlay Previous only hides it, whatever is underneath.
+  if (session.progress.isJoinOverlayVisible) return 'available';
   if (!isUnderlyingMoveAvailable(session, 'PREVIOUS')) return 'unavailable';
   return session.progress.isLeaderboardVisible
     ? 'covered_by_leaderboard'

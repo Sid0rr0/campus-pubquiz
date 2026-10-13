@@ -46,6 +46,10 @@ export function computeLeaderboardRevealCount(
   if (action === 'TOGGLE_LEADERBOARD') {
     return 0;
   }
+  // Showing the join overlay takes the board down, so its reveal starts over.
+  if (action === 'TOGGLE_JOIN_OVERLAY' && wasLeaderboardVisible) {
+    return 0;
+  }
   // Any auto-triggered transition that newly shows the board — ending the
   // quiz, or finishing a mid-quiz reveal block — starts from empty, same as
   // an explicit TOGGLE_LEADERBOARD: it must never inherit a stale or partial

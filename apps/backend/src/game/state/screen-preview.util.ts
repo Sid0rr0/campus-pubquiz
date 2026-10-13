@@ -151,6 +151,8 @@ function describePreviewedMove(
       };
     case 'closest_guess_step':
       return { ...describeScreen(session), body: 'Next closest-guess step' };
+    case 'join_overlay_hide':
+      return { ...describeScreen(after), body: 'Hides the join overlay' };
     case 'leaderboard_hide':
     case 'transition':
       return describeScreen(after);

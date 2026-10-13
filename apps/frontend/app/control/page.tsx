@@ -223,6 +223,11 @@ function AdminPageContent() {
     advanceStep: snapshot?.advanceStep ?? 'none',
     previousState: snapshot?.previousState ?? 'unavailable',
     isLeaderboardVisible,
+    canToggleJoinOverlay:
+      snapshot !== undefined &&
+      snapshot !== null &&
+      snapshot.progress.status !== 'lobby' &&
+      snapshot.progress.status !== 'ended',
     sendAction,
   });
 

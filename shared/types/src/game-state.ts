@@ -83,9 +83,14 @@ function getNextGameStateWithOverlay(
   }
 
   if (action === 'TOGGLE_LEADERBOARD') {
+    const isLeaderboardVisible = !progress.isLeaderboardVisible;
+    // Only one thing covers the big screen: showing the board hides the overlay.
     return {
       ...progress,
-      isLeaderboardVisible: !progress.isLeaderboardVisible,
+      isLeaderboardVisible,
+      ...(isLeaderboardVisible && progress.isJoinOverlayVisible
+        ? { isJoinOverlayVisible: false }
+        : {}),
     };
   }
 
@@ -93,9 +98,12 @@ function getNextGameStateWithOverlay(
     if (progress.status === 'lobby' || progress.status === 'ended') {
       illegal(progress.status, action);
     }
+    const isJoinOverlayVisible = !progress.isJoinOverlayVisible;
+    // Showing the overlay hides the leaderboard (the Settle step resets its reveal).
     return {
       ...progress,
-      isJoinOverlayVisible: !progress.isJoinOverlayVisible,
+      isJoinOverlayVisible,
+      ...(isJoinOverlayVisible ? { isLeaderboardVisible: false } : {}),
     };
   }
 

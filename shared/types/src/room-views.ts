@@ -154,6 +154,7 @@ export interface DisplayStatePayload extends StateSnapshotPayload {
 export type AdvanceSlotStep =
   | 'reveal_next_rank'
   | 'hide_leaderboard'
+  | 'hide_join_overlay'
   | 'advance'
   | 'none';
 

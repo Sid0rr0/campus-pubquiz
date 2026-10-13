@@ -110,6 +110,95 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
     });
   });
 
+  describe('with the Move plan', () => {
+    beforeEach(async () => {
+      await actAll(['START_QUIZ', 'ADVANCE', 'ADVANCE']);
+    });
+
+    function position() {
+      const { status, roundIndex, questionIndex, revealIndex } =
+        adminView().progress;
+      return { status, roundIndex, questionIndex, revealIndex };
+    }
+
+    it('hides the overlay on Advance without moving the quiz, then the next Advance moves it', async () => {
+      const before = position();
+      await game.act('TOGGLE_JOIN_OVERLAY');
+      expect(adminView().advanceStep).toBe('hide_join_overlay');
+
+      await game.act('ADVANCE');
+
+      expect(adminView().progress.isJoinOverlayVisible).toBe(false);
+      expect(position()).toEqual(before);
+      await game.act('ADVANCE');
+      expect(position()).not.toEqual(before);
+    });
+
+    it('hides the overlay on Previous instead of refusing it, then the next Previous moves the quiz', async () => {
+      const before = position();
+      await game.act('TOGGLE_JOIN_OVERLAY');
+      expect(adminView().previousState).toBe('available');
+
+      await game.act('PREVIOUS');
+
+      expect(adminView().progress.isJoinOverlayVisible).toBe(false);
+      expect(position()).toEqual(before);
+      await game.act('PREVIOUS');
+      expect(position()).not.toEqual(before);
+    });
+
+    it('hides the overlay even where the status underneath cannot move', async () => {
+      await game.act('TOGGLE_JOIN_OVERLAY');
+      await game.act('PREVIOUS');
+      await game.act('PREVIOUS');
+      await game.act('PREVIOUS'); // back on the rules
+      expect(adminView().progress.status).toBe('rules');
+      await game.act('TOGGLE_JOIN_OVERLAY');
+
+      await game.act('PREVIOUS');
+
+      expect(adminView().progress.isJoinOverlayVisible).toBe(false);
+      expect(adminView().progress.status).toBe('rules');
+      // Ticket 01 (Previous on the rules goes back to the lobby) has not
+      // landed yet: flip this to expect the lobby once it has.
+      await expect(game.act('PREVIOUS')).rejects.toThrow();
+    });
+
+    it('tells the presenter the next press hides the overlay', async () => {
+      await game.act('TOGGLE_JOIN_OVERLAY');
+
+      const { nextScreen } = game.gameState.getPresenterContext(game.joinCode);
+
+      expect(nextScreen?.body).toBe('Hides the join overlay');
+    });
+  });
+
+  describe('against the leaderboard', () => {
+    beforeEach(async () => {
+      await actAll(['START_QUIZ', 'ADVANCE']);
+    });
+
+    it('turns the leaderboard off and resets its reveal when the overlay is shown', async () => {
+      await actAll(['TOGGLE_LEADERBOARD', 'ADVANCE']);
+      expect(displayView().leaderboardRevealCount).toBe(1);
+
+      await game.act('TOGGLE_JOIN_OVERLAY');
+
+      expect(adminView().progress.isLeaderboardVisible).toBe(false);
+      expect(adminView().progress.isJoinOverlayVisible).toBe(true);
+      expect(displayView().leaderboardRevealCount).toBe(0);
+    });
+
+    it('turns the overlay off when the leaderboard is shown', async () => {
+      await game.act('TOGGLE_JOIN_OVERLAY');
+
+      await game.act('TOGGLE_LEADERBOARD');
+
+      expect(adminView().progress.isLeaderboardVisible).toBe(true);
+      expect(adminView().progress.isJoinOverlayVisible).toBe(false);
+    });
+  });
+
   describe('timers', () => {
     it('keeps an open question lock deadline the same across show and hide', async () => {
       freezeClockAt(FROZEN_NOW);

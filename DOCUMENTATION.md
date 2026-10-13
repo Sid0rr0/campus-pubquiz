@@ -157,7 +157,11 @@ quiz carries on underneath, timers included, and phones are untouched by the
 join overlay. The join overlay shows the QR code, join code and team-size line
 (no roster) on the big screen so a late team can join; it is saved with the
 session, so it survives a restart, and any transition that lands on `lobby` or
-`ended` (including `END_QUIZ`) clears it.
+`ended` (including `END_QUIZ`) clears it. The two are never up together:
+showing either hides the other (showing the join overlay also resets the
+leaderboard's rank reveal). While the join overlay is up, `ADVANCE` or
+`PREVIOUS` only hides it (always pressable, even where Previous would otherwise
+be refused); the press after that moves the quiz.
 
 ### Admin actions
 
