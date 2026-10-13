@@ -147,7 +147,7 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
       expect(position()).not.toEqual(before);
     });
 
-    it('hides the overlay even where the status underneath cannot move', async () => {
+    it('hides the overlay on the rules, and the next Previous lands on the lobby', async () => {
       await game.act('TOGGLE_JOIN_OVERLAY');
       await game.act('PREVIOUS');
       await game.act('PREVIOUS');
@@ -159,9 +159,11 @@ describe('GameGateway — TOGGLE_JOIN_OVERLAY', () => {
 
       expect(adminView().progress.isJoinOverlayVisible).toBe(false);
       expect(adminView().progress.status).toBe('rules');
-      // Ticket 01 (Previous on the rules goes back to the lobby) has not
-      // landed yet: flip this to expect the lobby once it has.
-      await expect(game.act('PREVIOUS')).rejects.toThrow();
+
+      await game.act('PREVIOUS');
+
+      expect(adminView().progress.status).toBe('lobby');
+      expect(adminView().progress.isJoinOverlayVisible).toBe(false);
     });
 
     it('tells the presenter the next press hides the overlay', async () => {
