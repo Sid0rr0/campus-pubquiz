@@ -545,8 +545,12 @@ grading behavior:
   accepted"; just the key when the margin is 0). The text comes from one
   shared formatter (`formatMarginText`/`formatNumberReveal` in
   `shared/types/src/margin.ts`), numbers show at most 2 decimals with trailing
-  zeros dropped, and grading always uses the exact range. Only a Number
-  question's `QuestionView` carries `margin`.
+  zeros dropped, and grading always uses the exact range. A question view (the
+  open question, the block questions and the reveal questions) carries `margin`
+  if and only if its type has one, already resolved from the Answer key: a
+  Number question with no stored margin is sent with the default, and
+  `closest_guess` and every other type are sent without one. The screens show
+  margin text from the view alone and never ask the question type registry.
 
 `multiple_choice`/`sort`/`match`/`number` are auto-graded the instant a team
 submits, and the admin can still override any of them per answer;

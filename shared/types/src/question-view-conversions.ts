@@ -1,10 +1,24 @@
+import type { GradingSettingsSource } from './answer-key';
+import type { Margin } from './margin';
 import type {
   BlockQuestionView,
   BlockRevealQuestionView,
   QuestionView,
   RevealQuestionView,
 } from './question-views';
-import { hasMarginType } from './scoring';
+import { gradingSettingsOf } from './answer-key';
+
+/**
+ * The question's margin, resolved by the Answer key, for a type that has one;
+ * nothing for every other type, whatever was left on the stored question. A
+ * view carries a margin if and only if its type has one.
+ */
+export function marginOf(
+  question: GradingSettingsSource,
+): { margin: Margin } | Record<string, never> {
+  const { margin } = gradingSettingsOf(question);
+  return margin ? { margin } : {};
+}
 
 // Strips the correct answer: this projection is what leaves the process via
 // currentQuestion/blockQuestions, broadcast to every phone and the big screen.
@@ -18,9 +32,7 @@ export function toQuestionView(question: RevealQuestionView): QuestionView {
     ...(question.matchTargets !== undefined
       ? { matchTargets: question.matchTargets }
       : {}),
-    ...(hasMarginType(question.type) && question.margin !== undefined
-      ? { margin: question.margin }
-      : {}),
+    ...marginOf(question),
     ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),
     ...(question.mediaStartSeconds !== undefined
       ? { mediaStartSeconds: question.mediaStartSeconds }

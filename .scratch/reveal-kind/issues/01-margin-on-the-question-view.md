@@ -14,7 +14,7 @@ Parent spec: `.scratch/reveal-kind/spec.md`
 
 **Blocked by:** answer-key 01 (the Answer key module, `.scratch/answer-key/issues/01-answer-key-and-live-edit-guard.md`). Not blocked by any reveal-kind ticket, so it can run in parallel with 02.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A backend projection spec asserts that a Number question's view carries its stored margin, and the default margin when none is stored, both while the question is open and on its reveal view.
 - [ ] The same spec asserts that closest_guess and at least one other type never carry a margin, even if one was left on the stored question.

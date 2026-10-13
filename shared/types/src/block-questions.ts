@@ -11,6 +11,7 @@ import {
   isRevealingStatus,
 } from './game-state-groups';
 import {
+  marginOf,
   toBlockQuestionView,
   toQuestionView,
 } from './question-view-conversions';
@@ -36,20 +37,24 @@ function toRevealQuestionViews(
   roundTitle: string,
   session: SessionState,
 ): BlockRevealQuestionView[] {
-  return entries.map(({ question, questionIndexInRound }) => ({
-    ...question,
-    ...(isBatchGradedType(question.type)
-      ? {
-          closestGuess: session.closestGuessSummaries[question.id] ?? {
-            hasSubmissions: false,
-            closestGuesses: [],
-          },
-        }
-      : {}),
-    roundNumber,
-    questionNumberInRound: questionIndexInRound + 1,
-    roundTitle,
-  }));
+  return entries.map(({ question: stored, questionIndexInRound }) => {
+    const { margin: _stored, ...question } = stored;
+    return {
+      ...question,
+      ...marginOf(stored),
+      ...(isBatchGradedType(question.type)
+        ? {
+            closestGuess: session.closestGuessSummaries[question.id] ?? {
+              hasSubmissions: false,
+              closestGuesses: [],
+            },
+          }
+        : {}),
+      roundNumber,
+      questionNumberInRound: questionIndexInRound + 1,
+      roundTitle,
+    };
+  });
 }
 
 export function getCurrentRoundTitle(session: SessionState): string {
