@@ -171,6 +171,10 @@ Key seams:
   lasts.
 - **`MoveCommitter`** is the only place a press (admin action, timer expiry,
   session creation, restart restore) is planned, graded, settled and saved.
+  A press grades through `BlockGradingService.gradeForMove`; placing a session
+  (creation, restart restore) grades through `gradeForPlacement`, which only
+  rebuilds the closest_guess summaries and the ungraded set and re-scores
+  nothing.
 - **`projectScreen`** builds each room's view, so nothing a room hasn't been
   shown ever leaves the server. It lives in `shared/types` with the Move plan
   and the other pure rules it reads; the backend calls it, and the frontend's
