@@ -4,10 +4,6 @@ import type { GameSocket } from '@/game/socket/game-socket.types';
 import type { z } from 'zod';
 import { sessionRoom, type AckResult } from '@campus-pubquiz/types';
 import { acknowledge } from '@/game/socket/acknowledge.util';
-import {
-  deliverOutcome,
-  type OutcomeDeliveryDeps,
-} from '@/game/socket/outcome-delivery.util';
 import type { SocketEventDeclaration } from '@/game/socket/socket-event-declarations';
 import { parseSocketPayload } from '@/game/socket/socket-payload.schemas';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
@@ -23,8 +19,14 @@ export interface EventContext<P> {
 /** What an event body hands back for delivery: its outcome, or nothing when it is only acknowledged. */
 export type EventResult = SessionOutcome | undefined;
 
-export interface DispatchDeps extends OutcomeDeliveryDeps {
+export interface DispatchDeps {
   logger: Logger;
+  /** The Session broadcaster's delivery step. */
+  deliver: (
+    joinCode: string,
+    outcome: SessionOutcome,
+    sender?: Pick<GameSocket, 'emit'>,
+  ) => Promise<void>;
 }
 
 function resolveJoinCode(client: GameSocket): string {
@@ -79,6 +81,6 @@ export async function dispatchSocketEvent<S extends z.ZodType>(
       },
     );
     if (!result) return;
-    await deliverOutcome(deps, joinCode, result, client);
+    await deps.deliver(joinCode, result, client);
   });
 }

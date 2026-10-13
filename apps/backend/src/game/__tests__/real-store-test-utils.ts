@@ -30,6 +30,7 @@ import { createTestDatabaseModule } from '@/test-db/test-database.module';
 import { SessionService } from '@/auth/session.service';
 import { SeedService } from '@/db/seed.service';
 import { GameGateway } from '@/game/game.gateway';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { GameModule } from '@/game/game.module';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
 import { QuizService } from '@/quiz/quiz.service';
@@ -175,6 +176,8 @@ export interface PhaseTimerControl {
 
 export interface RealStoreGateway extends PlayableQuiz {
   gateway: GameGateway;
+  /** Everything pushed to clients goes through it; the mock server is attached to it. */
+  broadcaster: SessionBroadcaster;
   server: MockServer;
   answerService: AnswerService;
   standingsService: StandingsService;
@@ -509,6 +512,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
     modules.push(moduleRef);
     await moduleRef.init();
     const gateway = moduleRef.get(GameGateway);
+    const broadcaster = moduleRef.get(SessionBroadcaster);
     const gameState = moduleRef.get(GameStateService);
     const liveEdit = moduleRef.get(LiveEditService);
     const services = {
@@ -536,7 +540,9 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         });
       });
     const server = createMockServer();
+    // Nest hands the server to the gateway, then calls its init hook.
     gateway.server = asServer(server);
+    gateway.afterInit(gateway.server);
     const emits = captureRoomEmits(server);
 
     let socketCount = 0;
@@ -670,6 +676,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       ...quiz,
       ...services,
       gateway,
+      broadcaster,
       liveEdit,
       saveQuizEdit,
       saveAnswerKeyFix: (questionId, fix) =>

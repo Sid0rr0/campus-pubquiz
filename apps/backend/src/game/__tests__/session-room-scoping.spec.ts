@@ -140,7 +140,7 @@ describe('GameGateway — session room scoping', () => {
       true,
     ]);
 
-    armed.gateway.onModuleDestroy();
+    armed.broadcaster.onModuleDestroy();
 
     expect(joinCodes.map((code) => armed.timers(code).lock.isArmed())).toEqual([
       false,

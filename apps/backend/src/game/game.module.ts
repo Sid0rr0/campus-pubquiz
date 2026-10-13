@@ -6,6 +6,7 @@ import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
 import { GameGateway } from '@/game/game.gateway';
 import { LiveEditService } from '@/game/live-edit/live-edit.service';
+import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
@@ -37,6 +38,7 @@ import { TeamService } from '@/team/team.service';
     SessionWrite,
     BlockGradingService,
     GameStateService,
+    SessionBroadcaster,
     GameGateway,
     LiveEditService,
   ],

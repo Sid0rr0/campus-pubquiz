@@ -9,10 +9,6 @@ import {
 } from '@campus-pubquiz/types';
 import { extractSessionCookie } from '@/auth/session-cookie';
 import type { SessionService } from '@/auth/session.service';
-import {
-  deliverOutcome,
-  type OutcomeDeliveryDeps,
-} from '@/game/socket/outcome-delivery.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
 
@@ -112,7 +108,11 @@ function syncState<R extends SocketRoomName>(
 }
 
 export async function disconnectClient(
-  deps: OutcomeDeliveryDeps & { logger: Logger },
+  deps: {
+    gameState: GameStateService;
+    logger: Logger;
+    deliver: (joinCode: string, outcome: SessionOutcome) => Promise<void>;
+  },
   client: GameSocket,
 ): Promise<void> {
   const joinCode = (client.data as { joinCode?: string }).joinCode;
@@ -133,5 +133,5 @@ export async function disconnectClient(
   if (!outcome) return;
 
   deps.logger.log(`Client ${client.id} disconnected, freeing its team`);
-  await deliverOutcome(deps, joinCode, outcome);
+  await deps.deliver(joinCode, outcome);
 }
