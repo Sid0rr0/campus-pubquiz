@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, mockFetchPublicSessions, searchParamsRef, routerRef } =
   vi.hoisted(() => ({
@@ -62,7 +62,7 @@ describe('PlayPage — join and reconnect', () => {
     searchParamsRef.current = new URLSearchParams();
     routerRef.push.mockReset();
     routerRef.replace.mockReset();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);
   });
@@ -86,7 +86,7 @@ describe('PlayPage — join and reconnect', () => {
     const setCodeInput = vi.fn();
     const handleJoin = vi.fn((event) => event.preventDefault());
     mockUseTeamLink.mockReturnValue(
-      socketResult({ setNameInput, setCodeInput, handleJoin }),
+      teamLinkResult({ join: { setNameInput, setCodeInput, handleJoin } }),
     );
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
     renderWithQuery(<PlayPage />);
@@ -105,7 +105,9 @@ describe('PlayPage — join and reconnect', () => {
 
   it('prefills the game code from the Team link (QR scan)', async () => {
     mockFetchPublicSessions.mockResolvedValue([LIVE_SESSION]);
-    mockUseTeamLink.mockReturnValue(socketResult({ codeInput: 'ABCDEF' }));
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ join: { codeInput: 'ABCDEF' } }),
+    );
     renderWithQuery(<PlayPage />);
 
     // The combobox exists (with a placeholder) before the session list
@@ -133,7 +135,9 @@ describe('PlayPage — join and reconnect', () => {
 
   it('shows the connecting screen while the link has a name and game but no snapshot yet (reconnect)', () => {
     mockUseTeamLink.mockReturnValue(
-      socketResult({ teamName: 'Returning Team', activeJoinCode: 'ABCDEF' }),
+      teamLinkResult({
+        join: { teamName: 'Returning Team', activeJoinCode: 'ABCDEF' },
+      }),
     );
     renderWithQuery(<PlayPage />);
 
@@ -151,10 +155,12 @@ describe('PlayPage — join and reconnect', () => {
     // skip straight past the join form to the "Connecting…" screen and hang
     // there forever, since there is no join code left to open a socket with.
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        teamName: 'Returning Team',
-        activeJoinCode: null,
-        nameInput: 'Returning Team',
+      teamLinkResult({
+        join: {
+          teamName: 'Returning Team',
+          activeJoinCode: null,
+          nameInput: 'Returning Team',
+        },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -167,9 +173,11 @@ describe('PlayPage — join and reconnect', () => {
 
   it('shows the kick notice on the join form, with the name and team code emptied', () => {
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        connectionError: 'You were removed from this team by the quiz master',
-        teamName: null,
+      teamLinkResult({
+        join: {
+          connectionError: 'You were removed from this team by the quiz master',
+          teamName: null,
+        },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -190,7 +198,7 @@ describe('PlayPage — join and reconnect', () => {
       progress: { status: 'question_open' as const },
     };
     mockUseTeamLink.mockReturnValue(
-      socketResult({ teamName: null, session: staleSession }),
+      teamLinkResult({ session: staleSession, join: { teamName: null } }),
     );
     searchParamsRef.current = new URLSearchParams();
     renderWithQuery(<PlayPage />);
@@ -200,11 +208,11 @@ describe('PlayPage — join and reconnect', () => {
 
   it('keeps ?code= in the address bar in sync with the session the team landed on', () => {
     mockUseTeamLink.mockReturnValue(
-      socketResult({
-        teamName: 'Returning Team',
+      teamLinkResult({
         session: {
           progress: { status: 'question_open' },
         },
+        join: { teamName: 'Returning Team' },
       }),
     );
     renderWithQuery(<PlayPage />);

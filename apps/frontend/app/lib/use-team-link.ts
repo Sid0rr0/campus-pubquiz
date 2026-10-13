@@ -71,38 +71,9 @@ type PlayerConnection = Pick<
   'emitWithAck' | 'forceReconnect'
 >;
 
-export interface UseTeamLinkResult {
-  snapshot: StateViewByRoom['players'] | null;
+/** Who the team is and how it gets in. */
+export interface TeamLinkJoin {
   team: JoinAcceptedPayload | null;
-  /** The team's own saved answers by question id. */
-  myAnswers: Record<number, string>;
-  /** The team's own points awarded by question id, present only once that question's answer is graded. */
-  myAnswerGrades: Record<number, MyAnswerGrade>;
-  /** Every bonus award this team has received so far this session, in award order. */
-  myBonusAwards: TeamBonusAwardView[];
-  /** The team's saved round ratings by round id: what the join payload last carried plus every rating the server has acknowledged since (a tap that never reached the server is not in it). */
-  myRoundRatings: Record<number, number>;
-  /** The team's saved comment and topics, kept the same way as the ratings. */
-  myFeedback: TeamFeedbackView;
-  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
-  roundRatingsEpoch: number;
-  /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the snapshot only ever covers the current block. */
-  seenQuestions: SeenQuestions;
-  /** Refuses with a "not connected" toast while unlinked; otherwise keeps the answer pending (and resends it after a rejoin) until the server acknowledges it. */
-  submitAnswer: (
-    questionId: number,
-    teamId: number,
-    value: string,
-  ) => Promise<AckResult>;
-  /** Resolves to the server's verdict on one round rating; the rating card shows it, so nothing is toasted here. */
-  rateRound: (roundId: number, stars: number) => Promise<AckResult>;
-  /** Resolves to the server's verdict on the comment and topics; the final form shows it, so nothing is toasted here. */
-  sendFeedback: (feedback: SendFeedbackPayload) => Promise<AckResult>;
-  submitShowdownGuess: (
-    showdownRoundId: number,
-    teamId: number,
-    value: string,
-  ) => Promise<AckResult>;
   /** What the join screen shows: a rejected join's reason, the kick notice, or a connection problem — in that order. */
   connectionError: string | null;
   teamName: string | null;
@@ -119,6 +90,46 @@ export interface UseTeamLinkResult {
   activeJoinCode: string | null;
   handleJoin: (event: SubmitEvent<HTMLFormElement>) => void;
   handleLogOut: () => void;
+}
+
+/** What a joined phone plays with; present once a view has arrived. */
+export interface TeamLinkGame {
+  view: StateViewByRoom['players'];
+  /** The team's own saved answers by question id. */
+  myAnswers: Record<number, string>;
+  /** The team's own points awarded by question id, present only once that question's answer is graded. */
+  myAnswerGrades: Record<number, MyAnswerGrade>;
+  /** Every bonus award this team has received so far this session, in award order. */
+  myBonusAwards: TeamBonusAwardView[];
+  /** The team's saved round ratings by round id: what the join payload last carried plus every rating the server has acknowledged since (a tap that never reached the server is not in it). */
+  myRoundRatings: Record<number, number>;
+  /** The team's saved comment and topics, kept the same way as the ratings. */
+  myFeedback: TeamFeedbackView;
+  /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale and anything drawn from older taps is out of date. */
+  roundRatingsEpoch: number;
+  /** Every question this socket has seen open or revealed so far, keyed by id — accumulated across blocks/rounds, since the view only ever covers the current block. */
+  seenQuestions: SeenQuestions;
+  /** Refuses with a "not connected" toast while unlinked; otherwise keeps the answer pending (and resends it after a rejoin) until the server acknowledges it. */
+  submitAnswer: (
+    questionId: number,
+    teamId: number,
+    value: string,
+  ) => Promise<AckResult>;
+  /** Resolves to the server's verdict on one round rating; the rating card shows it, so nothing is toasted here. */
+  rateRound: (roundId: number, stars: number) => Promise<AckResult>;
+  /** Resolves to the server's verdict on the comment and topics; the final form shows it, so nothing is toasted here. */
+  sendFeedback: (feedback: SendFeedbackPayload) => Promise<AckResult>;
+  submitShowdownGuess: (
+    showdownRoundId: number,
+    teamId: number,
+    value: string,
+  ) => Promise<AckResult>;
+}
+
+export interface UseTeamLinkResult {
+  join: TeamLinkJoin;
+  /** Absent until the first view arrives. */
+  game: TeamLinkGame | undefined;
 }
 
 function writeIdentity(
@@ -442,37 +453,43 @@ export function useTeamLink(
     link.joinError ?? link.kickNotice ?? socketConnectionError;
 
   return {
-    snapshot,
-    team: link.team,
-    needsJoinForm: needsJoinForm({
-      teamName: link.teamName,
-      activeJoinCode: link.activeJoinCode,
-      hasView: Boolean(snapshot),
+    join: {
+      team: link.team,
+      needsJoinForm: needsJoinForm({
+        teamName: link.teamName,
+        activeJoinCode: link.activeJoinCode,
+        hasView: Boolean(snapshot),
+        connectionError,
+        hasTeam: Boolean(link.team),
+      }),
       connectionError,
-      hasTeam: Boolean(link.team),
-    }),
-    myAnswers: link.myAnswers,
-    myAnswerGrades: link.myAnswerGrades,
-    myBonusAwards: link.myBonusAwards,
-    myRoundRatings: link.myRoundRatings,
-    myFeedback: link.myFeedback,
-    roundRatingsEpoch: link.roundRatingsEpoch,
-    seenQuestions,
-    submitAnswer,
-    rateRound,
-    sendFeedback,
-    submitShowdownGuess,
-    connectionError,
-    teamName: link.teamName,
-    nameInput: link.nameInput,
-    setNameInput,
-    codeInput: link.codeInput,
-    setCodeInput,
-    teamCodeInput: link.teamCodeInput,
-    setTeamCodeInput,
-    hasStoredIdentity: link.hasStoredIdentity,
-    activeJoinCode: link.activeJoinCode,
-    handleJoin,
-    handleLogOut,
+      teamName: link.teamName,
+      nameInput: link.nameInput,
+      setNameInput,
+      codeInput: link.codeInput,
+      setCodeInput,
+      teamCodeInput: link.teamCodeInput,
+      setTeamCodeInput,
+      hasStoredIdentity: link.hasStoredIdentity,
+      activeJoinCode: link.activeJoinCode,
+      handleJoin,
+      handleLogOut,
+    },
+    game: snapshot
+      ? {
+          view: snapshot,
+          myAnswers: link.myAnswers,
+          myAnswerGrades: link.myAnswerGrades,
+          myBonusAwards: link.myBonusAwards,
+          myRoundRatings: link.myRoundRatings,
+          myFeedback: link.myFeedback,
+          roundRatingsEpoch: link.roundRatingsEpoch,
+          seenQuestions,
+          submitAnswer,
+          rateRound,
+          sendFeedback,
+          submitShowdownGuess,
+        }
+      : undefined,
   };
 }

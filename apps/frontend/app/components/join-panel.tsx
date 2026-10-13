@@ -11,6 +11,7 @@ interface JoinPanelProps {
 
 export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
   const router = useRouter();
+  const { join, game } = useTeamLink(codeFromUrl);
   const {
     teamName,
     nameInput,
@@ -21,12 +22,12 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     setTeamCodeInput,
     connectionError,
     team,
-    snapshot,
     needsJoinForm,
     handleJoin,
-  } = useTeamLink(codeFromUrl);
+  } = join;
 
   const isJoined = !needsJoinForm && Boolean(team);
+  const joinCode = game?.view.joinCode;
   const isConnecting = !needsJoinForm && !team;
 
   useEffect(() => {
@@ -34,10 +35,10 @@ export function JoinPanel({ codeFromUrl }: JoinPanelProps) {
     // straight to /play, which already reads the identity this just stored.
     // Carries ?code= along so the URL identifies this game from the first
     // paint instead of relying on /play's own localStorage-restore sync.
-    if (isJoined && snapshot) {
-      router.push(`/play?code=${snapshot.joinCode}`);
+    if (isJoined && joinCode) {
+      router.push(`/play?code=${joinCode}`);
     }
-  }, [isJoined, snapshot, router]);
+  }, [isJoined, joinCode, router]);
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     handleJoin(event);

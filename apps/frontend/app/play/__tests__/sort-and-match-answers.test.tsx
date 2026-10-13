@@ -3,7 +3,7 @@ import { renderWithQuery } from '@/test-utils/query';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
-import { socketResult } from './test-utils';
+import { teamLinkResult } from './test-utils';
 
 const { mockUseTeamLink, searchParamsRef } = vi.hoisted(() => ({
   mockUseTeamLink: vi.fn(),
@@ -23,14 +23,14 @@ describe('PlayPage — sort and match answers', () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
-    mockUseTeamLink.mockReturnValue(socketResult());
+    mockUseTeamLink.mockReturnValue(teamLinkResult());
   });
 
   it('reorders on move without submitting, then submits the reordered list on Submit click', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -46,12 +46,14 @@ describe('PlayPage — sort and match answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -79,7 +81,7 @@ describe('PlayPage — sort and match answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -96,12 +98,14 @@ describe('PlayPage — sort and match answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -128,7 +132,7 @@ describe('PlayPage — sort and match answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -144,13 +148,14 @@ describe('PlayPage — sort and match answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        myAnswers: { 1: 'Venus|Mercury|Earth' },
-        submitAnswer,
+        game: { myAnswers: { 1: 'Venus|Mercury|Earth' }, submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -172,7 +177,7 @@ describe('PlayPage — sort and match answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -188,12 +193,14 @@ describe('PlayPage — sort and match answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);
@@ -209,7 +216,7 @@ describe('PlayPage — sort and match answers', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();
     mockUseTeamLink.mockReturnValue(
-      socketResult({
+      teamLinkResult({
         session: {
           rounds: [
             {
@@ -226,12 +233,14 @@ describe('PlayPage — sort and match answers', () => {
           ],
           progress: { status: 'question_open' },
         },
-        team: {
-          teamId: 'team-1',
-          teamName: 'Returning Team',
-          teamToken: 'team-token-1',
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'Returning Team',
+            teamToken: 'team-token-1',
+          },
         },
-        submitAnswer,
+        game: { submitAnswer },
       }),
     );
     renderWithQuery(<PlayPage />);

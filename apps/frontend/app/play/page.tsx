@@ -21,14 +21,13 @@ import { usePhoneQuestionBrowser } from '@/app/play/use-phone-question-browser';
 import { useTeamLink } from '@/app/lib/use-team-link';
 import { usePublishPlayerMenu } from '@/app/lib/player-menu-context';
 
-const NO_FEEDBACK = { comment: '', topics: [] };
-
 function PlayPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get('code') ?? '';
   const teamCodeFromUrl = searchParams.get('teamCode') ?? '';
   const nameFromUrl = searchParams.get('name') ?? '';
+  const { join, game } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
   const {
     teamName,
     nameInput,
@@ -39,23 +38,11 @@ function PlayPageContent() {
     setTeamCodeInput,
     hasStoredIdentity,
     connectionError,
-    snapshot,
     team,
     needsJoinForm,
-    submitAnswer,
-    submitShowdownGuess,
-    myAnswers = {},
-    myAnswerGrades = {},
-    myBonusAwards = [],
-    myRoundRatings = {},
-    roundRatingsEpoch = 0,
-    rateRound,
-    myFeedback = NO_FEEDBACK,
-    sendFeedback,
-    seenQuestions = {},
     handleJoin,
     handleLogOut,
-  } = useTeamLink(codeFromUrl, teamCodeFromUrl, nameFromUrl);
+  } = join;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Stable reference (like handleLogOut) so the publish effect below doesn't
   // re-fire on every unrelated re-render.
@@ -75,8 +62,9 @@ function PlayPageContent() {
     selectQuestion,
     autoAdvanceEnabled,
     setAutoAdvance,
-  } = usePhoneQuestionBrowser(snapshot);
+  } = usePhoneQuestionBrowser(game?.view ?? null);
 
+  const joinCode = game?.view.joinCode;
   useEffect(() => {
     // Keeps ?code= in the address bar in sync with whichever session this
     // socket actually landed on — covers arriving here without a code (e.g.
@@ -87,10 +75,10 @@ function PlayPageContent() {
     // socket's own snapshot (disabled, not torn down) still holds the old
     // joinCode — without this guard, this effect would re-append that stale
     // code right after the redirect back to a bare /play clears it.
-    if (teamName && snapshot?.joinCode && snapshot.joinCode !== codeFromUrl) {
-      router.replace(`/play?code=${snapshot.joinCode}`);
+    if (teamName && joinCode && joinCode !== codeFromUrl) {
+      router.replace(`/play?code=${joinCode}`);
     }
-  }, [teamName, snapshot, codeFromUrl, router]);
+  }, [teamName, joinCode, codeFromUrl, router]);
 
   if (needsJoinForm) {
     return (
@@ -128,7 +116,7 @@ function PlayPageContent() {
     );
   }
 
-  if (!snapshot) {
+  if (!game) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background text-foreground">
         <p className="text-sm font-extrabold tracking-wide text-foreground/55">
@@ -149,6 +137,20 @@ function PlayPageContent() {
   }
 
   const {
+    view,
+    myAnswers,
+    myAnswerGrades,
+    myBonusAwards,
+    myRoundRatings,
+    roundRatingsEpoch,
+    rateRound,
+    myFeedback,
+    sendFeedback,
+    seenQuestions,
+    submitAnswer,
+    submitShowdownGuess,
+  } = game;
+  const {
     progress,
     blockQuestions,
     upcomingQuestions,
@@ -161,7 +163,7 @@ function PlayPageContent() {
     isAnswerable,
     phoneScreen,
     feedback,
-  } = snapshot;
+  } = view;
   const myTeamId = team?.teamId ?? null;
   const pickerRounds = buildPickerRounds(blockQuestions, upcomingQuestions);
   const totalPickerSlots = blockQuestions.length + upcomingQuestions.length;
@@ -251,7 +253,7 @@ function PlayPageContent() {
         <GameStatusScreens
           phoneScreen={phoneScreen}
           quizStructure={quizStructure}
-          joinCode={snapshot.joinCode}
+          joinCode={view.joinCode}
           settings={settings}
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
