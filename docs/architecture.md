@@ -236,7 +236,7 @@ sequenceDiagram
   GS->>Q: write(joinCode, change) — queued per join code
   Q->>MC: commit(session, action)
   MC->>MC: planMove — legal transition?
-  MC->>BG: ungraded answers in block? (refuses leaving the break)
+  MC->>BG: gradeForMove(session, progress) — reveal gate (refuses leaving the break), speed scoring, closest_guess batch, break refresh
   MC->>PR: save progress row
   MC-->>Q: {session, outcome}
   Q->>ST: leaderboard
