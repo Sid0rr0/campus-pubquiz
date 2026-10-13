@@ -29,6 +29,7 @@ const GRADING_QUESTION_FIELDS: (keyof ImportQuestionPreview)[] = [
   'answer',
   'points',
   'matchScoringMode',
+  'margin',
 ];
 
 /** The last round always breaks (QuizService forces it at save), so its stored value never reflects the draft's. */

@@ -18,6 +18,7 @@ const EXPECTED = {
     inputKind: 'number',
     requiresMedia: false,
   },
+  number: { label: 'Number', inputKind: 'number', requiresMedia: false },
 } as const;
 
 describe('question kind presentation', () => {

@@ -59,11 +59,13 @@ export class AnswerService {
     const row = await this.questions.findOneOrFail(questionId, {
       fields: ['type', 'answer', 'points', 'payload'],
     });
+    const payload = readQuestionPayload(row);
     const question: ScoredQuestion = {
       type: row.type,
       answer: row.answer,
       points: row.points,
-      matchScoringMode: readQuestionPayload(row).matchScoringMode,
+      matchScoringMode: payload.matchScoringMode,
+      margin: payload.margin,
     };
     // Whether a submission is graded the instant it lands, and how, is
     // Scoring's concern (gradeAtSubmit): auto types always, free_text/audio/

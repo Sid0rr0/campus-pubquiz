@@ -1,4 +1,5 @@
 import type { QuestionType } from './question-types';
+import type { Margin } from './margin';
 import type { MatchScoringMode } from './question-views';
 
 /**
@@ -47,6 +48,8 @@ export interface ImportQuestionPreview {
   matchTargets?: string[];
   /** Match only: undefined behaves as 'partial'. Never CSV-settable — like RoundConfig.kahootMode, only settable through the manual quiz editor. */
   matchScoringMode?: MatchScoringMode;
+  /** Number only: undefined behaves as DEFAULT_MARGIN. Never CSV-settable, like matchScoringMode: only the manual quiz editor sets it. */
+  margin?: Margin;
   mediaUrl?: string;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;

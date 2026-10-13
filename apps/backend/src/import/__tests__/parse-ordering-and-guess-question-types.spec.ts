@@ -215,4 +215,41 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
 
     expect(result.ok).toBe(false);
   });
+
+  it('accepts a number row and gives it the default 10% margin', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'number',
+        question: 'In what year did the Berlin Wall fall?',
+        answer: '1989',
+        points: '2',
+      }),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      question: {
+        type: 'number',
+        answer: '1989',
+        points: 2,
+        margin: { value: 10, unit: 'percent' },
+      },
+    });
+  });
+
+  it('rejects a number row with a non-numeric answer, like closest_guess', () => {
+    const result = parseQuestionRow(
+      makeRow({ type: 'number', answer: 'a lot' }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          field: 'answer',
+          message: 'Answer must be a number',
+        }),
+      );
+    }
+  });
 });

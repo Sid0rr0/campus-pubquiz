@@ -1,3 +1,4 @@
+import type { Margin } from './margin';
 import type { QuestionType } from './question-types';
 
 /**
@@ -24,6 +25,8 @@ export interface QuestionView {
   matchTargets?: string[];
   /** Match only: undefined behaves as 'partial'. */
   matchScoringMode?: MatchScoringMode;
+  /** Number only: undefined behaves as DEFAULT_MARGIN. */
+  margin?: Margin;
   mediaUrl?: string;
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */
   mediaStartSeconds?: number;

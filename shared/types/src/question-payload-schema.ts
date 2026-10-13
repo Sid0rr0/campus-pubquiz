@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MARGIN_UNITS, type Margin } from './margin';
 
 /**
  * Payload codecs: one Zod schema per question type over the JSON stored in
@@ -44,11 +45,19 @@ export const matchPayloadSchema = z.object({
 
 export const closestGuessPayloadSchema = z.object(media);
 
+export const numberPayloadSchema = z.object({
+  ...media,
+  margin: z
+    .object({ value: z.number(), unit: z.enum(MARGIN_UNITS) })
+    .optional(),
+});
+
 /** What any stored payload decodes to: every field a type may carry, optional. */
 export interface QuestionPayload {
   options?: string[];
   matchTargets?: string[];
   matchScoringMode?: 'partial' | 'all_or_nothing';
+  margin?: Margin;
   mediaUrl?: string;
   answerMediaUrl?: string;
   mediaStartSeconds?: number;

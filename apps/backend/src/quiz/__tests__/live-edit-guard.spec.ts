@@ -1095,6 +1095,16 @@ describe('findRegradeQuestionIds', () => {
     ).toEqual([1]);
   });
 
+  it('returns an opened question whose margin changed', () => {
+    expect(
+      findRegradeQuestionIds(
+        [round()],
+        withFirstQuestion({ margin: { value: 5, unit: 'absolute' } }),
+        [1],
+      ),
+    ).toEqual([1]);
+  });
+
   it('ignores an opened question whose grading inputs are unchanged', () => {
     expect(
       findRegradeQuestionIds(

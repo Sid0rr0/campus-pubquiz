@@ -6,6 +6,7 @@ import {
   freeTextPreviewSchema,
   matchPreviewSchema,
   multipleChoicePreviewSchema,
+  numberPreviewSchema,
   sortPreviewSchema,
   youtubePreviewSchema,
 } from './question-preview-schema';
@@ -15,6 +16,7 @@ import {
   freeTextPayloadSchema,
   matchPayloadSchema,
   multipleChoicePayloadSchema,
+  numberPayloadSchema,
   sortPayloadSchema,
   youtubePayloadSchema,
   type QuestionPayload,
@@ -170,6 +172,20 @@ export const QUESTION_KINDS: {
     csv: answerOnlyCsv,
     gradingMode: 'batch',
     kahootAllowed: false,
+  },
+  number: {
+    type: 'number',
+    label: 'Number',
+    moderatorNote:
+      'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',
+    inputKind: 'number',
+    requiresMedia: false,
+    choices: 'none',
+    schema: numberPreviewSchema,
+    payload: numberPayloadSchema,
+    csv: answerOnlyCsv,
+    gradingMode: 'auto',
+    kahootAllowed: true,
   },
 };
 

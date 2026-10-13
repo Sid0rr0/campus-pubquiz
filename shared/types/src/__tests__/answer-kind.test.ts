@@ -118,7 +118,6 @@ describe('every question type scores through its answer format', () => {
       expect(gradeClosestGuessBatch(question, [answer])).toEqual([
         { points: 10, verdict: 'correct' },
       ]);
-      expect(ANSWER_FORMATS[kind].score).toBeNull();
     } else {
       expect(scoreSubmission(question, answer)).toEqual({
         points: 10,
@@ -127,11 +126,9 @@ describe('every question type scores through its answer format', () => {
     }
   });
 
-  it('only batch-graded types resolve to a kind without a score', () => {
-    for (const type of QUESTION_TYPES) {
-      const hasScore =
-        ANSWER_FORMATS[resolveAnswerKind({ type })].score !== null;
-      expect(hasScore).toBe(QUESTION_KINDS[type].gradingMode !== 'batch');
+  it('gives every answer kind a per-answer score', () => {
+    for (const format of Object.values(ANSWER_FORMATS)) {
+      expect(typeof format.score).toBe('function');
     }
   });
 });

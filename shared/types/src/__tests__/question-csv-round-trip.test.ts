@@ -78,6 +78,15 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     points: 1,
     mediaUrl: 'https://example.com/tower.jpg',
   },
+  number: {
+    type: 'number',
+    prompt: 'In what year did the Berlin Wall fall?',
+    answer: '1989',
+    points: 2,
+    mediaUrl: 'https://example.com/wall.jpg',
+    // CSV carries no margin: an imported Number question gets the default.
+    margin: { value: 10, unit: 'percent' },
+  },
 };
 
 const ROUND: ImportRoundPreview = {

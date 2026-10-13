@@ -162,6 +162,18 @@ const CASES: ParityCase[] = [
     verdict: 'invalid',
   },
 
+  // number
+  {
+    name: 'number with a numeric answer',
+    question: q({ type: 'number', answer: '-3.5' }),
+    verdict: 'valid',
+  },
+  {
+    name: 'number with a non-numeric answer',
+    question: q({ type: 'number', answer: 'lots' }),
+    verdict: 'invalid',
+  },
+
   // sort
   {
     name: 'sort whose answer reorders the options',
@@ -260,6 +272,7 @@ const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
     gradingMode: 'batch',
     kahootAllowed: false,
   },
+  number: { gradingMode: 'auto', kahootAllowed: true },
 };
 
 /** Issue messages the import path produces for `question` (empty when valid). */
@@ -291,13 +304,14 @@ describe('question kind registry', () => {
     }
   });
 
-  it('lists the seven known question types once each', () => {
+  it('lists the eight known question types once each', () => {
     expect([...QUESTION_TYPES].sort()).toEqual([
       'audio',
       'closest_guess',
       'free_text',
       'match',
       'multiple_choice',
+      'number',
       'sort',
       'youtube',
     ]);

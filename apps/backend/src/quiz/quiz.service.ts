@@ -42,6 +42,7 @@ function toQuestionPreview(question: Question): ImportQuestionPreview {
     ...(payload.matchScoringMode
       ? { matchScoringMode: payload.matchScoringMode }
       : {}),
+    ...(payload.margin ? { margin: payload.margin } : {}),
     ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}),
     ...(payload.answerMediaUrl
       ? { answerMediaUrl: payload.answerMediaUrl }
@@ -292,6 +293,7 @@ export class QuizService {
           ...(question.matchScoringMode
             ? { matchScoringMode: question.matchScoringMode }
             : {}),
+          ...(question.margin ? { margin: question.margin } : {}),
           ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
           ...(question.answerMediaUrl
             ? { answerMediaUrl: question.answerMediaUrl }
