@@ -7,35 +7,22 @@ import { AppService } from '@/app.service';
 import { AuthController } from '@/auth/auth.controller';
 import { AuthModule } from '@/auth/auth.module';
 import { UsersController } from '@/auth/users.controller';
+import { GameModule } from '@/game/game.module';
 import { DbModule } from '@/db/db.module';
-import { SeedService } from '@/db/seed.service';
-import { GameGateway } from '@/game/game.gateway';
-import { LiveEditService } from '@/game/live-edit/live-edit.service';
-import { GameProgressRepository } from '@/game/state/game-progress.repository';
-import { SessionWrite } from '@/game/state/session-write';
-import { BlockGradingService } from '@/game/state/block-grading.service';
-import { GameStateService } from '@/game/state/game-state.service';
-import { TeamService } from '@/team/team.service';
 import { TeamsController } from '@/team/teams.controller';
 import { AnswerController } from '@/answer/answer.controller';
-import { AnswerService } from '@/answer/answer.service';
-import { StandingsService } from '@/standings/standings.service';
 import {
   BonusAwardMutationsController,
   BonusAwardsController,
 } from '@/bonus/bonus-awards.controller';
-import { BonusService } from '@/bonus/bonus.service';
-import { QuizService } from '@/quiz/quiz.service';
 import { QuizController } from '@/quiz/quiz.controller';
 import { ImportController } from '@/import/import.controller';
 import { ImportService } from '@/import/import.service';
 import { createMediaStorage } from '@/media/create-media-storage';
 import { MEDIA_STORAGE } from '@/media/media-storage';
-import { FeedbackService } from '@/feedback/feedback.service';
 import { MediaController } from '@/media/media.controller';
 import { MediaService } from '@/media/media.service';
 import { SessionsController } from '@/session/sessions.controller';
-import { ShowdownService } from '@/showdown/showdown.service';
 import { StatsController } from '@/stats/stats.controller';
 import { StatsService } from '@/stats/stats.service';
 
@@ -50,6 +37,7 @@ import { StatsService } from '@/stats/stats.service';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
     DbModule,
     AuthModule,
+    GameModule,
   ],
   controllers: [
     AppController,
@@ -70,23 +58,9 @@ import { StatsService } from '@/stats/stats.service';
     // unhandled errors before a custom filter can swallow them.
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
     AppService,
-    SeedService,
-    TeamService,
-    AnswerService,
-    StandingsService,
-    BonusService,
-    FeedbackService,
-    QuizService,
-    GameProgressRepository,
-    SessionWrite,
-    BlockGradingService,
-    GameStateService,
-    GameGateway,
-    LiveEditService,
     ImportService,
     { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
     MediaService,
-    ShowdownService,
     StatsService,
   ],
 })

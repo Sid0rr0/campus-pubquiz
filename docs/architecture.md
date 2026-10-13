@@ -142,6 +142,14 @@ flowchart TD
   repos --> db
 ```
 
+The live game is one Nest module, `game/game.module.ts` (the Game module): the
+gateway, the Live session module (`GameStateService`, `SessionWrite`,
+`BlockGradingService`, `GameProgressRepository`), the Live edit module and the
+domain services they depend on (seed, team, answer, standings, bonus, feedback,
+showdown, quiz). The app module imports it and keeps the controllers, import,
+media, stats, Sentry and the throttler; the Game module imports `AuthModule`
+and uses the global database module for repositories.
+
 Key seams:
 
 - **`dispatchSocketEvent`** is the single template every client-to-server
