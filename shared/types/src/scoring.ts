@@ -156,23 +156,35 @@ export function verdictForManualGrade(
 }
 
 /**
- * Grades every closest_guess submission together: all teams tied for the
- * smallest distance get full points, everyone else zero. Non-numeric guesses
- * are infinitely far and never win. Results line up with `values`.
+ * Which of `values` are the closest guesses to the numeric `answer`: every
+ * guess tied for the smallest distance. Non-numeric guesses are infinitely
+ * far and never closest. Results line up with `values`.
  */
-export function gradeClosestGuessBatch(
-  question: ScoredQuestion,
+export function findClosestGuesses(
+  answer: string,
   values: readonly string[],
-): ScoreResult[] {
-  const target = Number(question.answer);
+): boolean[] {
+  const target = Number(answer);
   const distances = values.map((value) => {
     const guess = Number(value);
     return Number.isFinite(guess) ? Math.abs(guess - target) : Infinity;
   });
   const closest = Math.min(...distances);
-  return distances.map((distance) =>
-    Number.isFinite(distance) && distance === closest
-      ? { points: question.points, verdict: 'correct' }
-      : INCORRECT,
+  return distances.map(
+    (distance) => Number.isFinite(distance) && distance === closest,
+  );
+}
+
+/**
+ * Grades every closest_guess submission together: the closest guesses (see
+ * findClosestGuesses) get full points, everyone else zero. Results line up
+ * with `values`.
+ */
+export function gradeClosestGuessBatch(
+  question: ScoredQuestion,
+  values: readonly string[],
+): ScoreResult[] {
+  return findClosestGuesses(question.answer, values).map((isClosest) =>
+    isClosest ? { points: question.points, verdict: 'correct' } : INCORRECT,
   );
 }

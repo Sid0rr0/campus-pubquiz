@@ -60,12 +60,21 @@ function applyGradingRefresh(
 export class BlockGradingService {
   constructor(private readonly answerService: AnswerService) {}
 
-  /** Batch-grades every closest_guess question in the block once it reaches a graded status, caching the result — safe to call every applyAction since it skips questions already in closestGuessSummaries. */
+  /**
+   * Batch-grades every closest_guess question in the block once it reaches a
+   * graded status, caching its reveal summary — safe to call every move since
+   * it skips questions already in closestGuessSummaries, and after a restart
+   * (summaries are in memory only) it rebuilds a summary from the stored
+   * grades without re-scoring them. Returns the session and the questions it
+   * graded or summarized, whose admin answer lists are now out of date.
+   */
   async ensureBlockGraded(
     session: SessionState,
     newProgress: GameProgress,
-  ): Promise<SessionState> {
-    if (!isGradedStatus(newProgress.status)) return session;
+  ): Promise<{ session: SessionState; gradedQuestionIds: number[] }> {
+    if (!isGradedStatus(newProgress.status)) {
+      return { session, gradedQuestionIds: [] };
+    }
 
     const blockQuestions = getBlockInPlay(
       session.seededGame.rounds,
@@ -74,36 +83,40 @@ export class BlockGradingService {
       ({ roundIndex, questionIndex }) =>
         session.seededGame.rounds[roundIndex].questions[questionIndex],
     );
-    const ungraded = blockQuestions.filter(
+    const unsummarized = blockQuestions.filter(
       (question) =>
         isBatchGradedType(question.type) &&
         session.closestGuessSummaries[question.id] === undefined,
     );
-    if (ungraded.length === 0) return session;
+    if (unsummarized.length === 0) return { session, gradedQuestionIds: [] };
 
     let summaries = session.closestGuessSummaries;
-    for (const question of ungraded) {
-      const graded = await this.answerService.gradeClosestGuess(
+    for (const question of unsummarized) {
+      const graded = await this.answerService.ensureClosestGuessGraded(
         session.seededGame.gameSessionId,
         question,
       );
       summaries = {
         ...summaries,
-        [question.id]: summarizeClosestGuess(graded),
+        [question.id]: summarizeClosestGuess(question.answer, graded),
       };
     }
 
     // The batch scored these questions; closest_guess can never be ungraded,
     // so the refresh has nothing to change in the ungraded set.
+    const gradedQuestionIds = unsummarized.map((question) => question.id);
     const refresh = await this.readGradingRefresh(
       session,
       newProgress,
-      ungraded.map((question) => question.id),
+      gradedQuestionIds,
     );
-    return applyGradingRefresh(
-      { ...session, closestGuessSummaries: summaries },
-      refresh,
-    );
+    return {
+      session: applyGradingRefresh(
+        { ...session, closestGuessSummaries: summaries },
+        refresh,
+      ),
+      gradedQuestionIds,
+    };
   }
 
   /**
@@ -259,7 +272,7 @@ export class BlockGradingService {
         );
         summaries = {
           ...summaries,
-          [question.id]: summarizeClosestGuess(graded),
+          [question.id]: summarizeClosestGuess(question.answer, graded),
         };
         regradedQuestionIds.push(question.id);
       }

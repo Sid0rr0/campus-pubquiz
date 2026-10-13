@@ -1,4 +1,10 @@
-import type { GameAction, StateSnapshotPayload } from '@campus-pubquiz/types';
+import {
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+  type AnswersUpdatedPayload,
+  type GameAction,
+  type StateSnapshotPayload,
+} from '@campus-pubquiz/types';
 import { asSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
@@ -206,5 +212,125 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     // A single ADVANCE moves straight to the next question — no gated steps.
     const nextQuestion = await game.act('ADVANCE');
     expect(nextQuestion.progress.revealIndex).toBe(1);
+  });
+
+  it('keeps the 5-step reveal walk when the backend restarts mid-reveal', async () => {
+    const game = await startWithGuesses(GUESSES);
+    await actAll(game, TO_REVEAL);
+
+    const restarted = await game.restart();
+    const afterRestart = await restarted.snapshot();
+    const step1 = await restarted.act('ADVANCE');
+
+    expect(
+      afterRestart.revealQuestions[0].closestGuess?.closestGuesses,
+    ).toEqual([{ teamName: 'Team B', value: '950' }]);
+    expect(step1.progress.revealIndex).toBe(0);
+    expect(step1.closestGuessRevealStep).toBe(1);
+  });
+
+  describe('grading by hand', () => {
+    async function answerIdOf(
+      game: RealStoreGateway,
+      teamName: string,
+    ): Promise<number> {
+      const answers = await game.inRequestContext(() =>
+        game.answerService.listForQuestion(
+          game.gameSessionId,
+          game.rounds[0].questionIds[0],
+        ),
+      );
+      return answers.find((answer) => answer.teamName === teamName)!.answerId;
+    }
+
+    async function grade(
+      game: RealStoreGateway,
+      teamName: string,
+      pointsAwarded: number,
+    ) {
+      const admin = await game.connectAdmin();
+      return game.gateway.handleGradeAnswer(asSocket(admin), {
+        answerId: await answerIdOf(game, teamName),
+        pointsAwarded,
+      });
+    }
+
+    it('sends the quiz master the graded answer list when the block locks', async () => {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, ['ADVANCE', 'ADVANCE']); // -> locking
+      game.clearEmits();
+
+      await game.act('ADVANCE'); // -> break_intro, grading runs
+
+      const lists = game
+        .payloadsTo<AnswersUpdatedPayload>(
+          SOCKET_ROOMS.ADMIN,
+          SOCKET_EVENTS.ANSWERS_UPDATED,
+        )
+        .filter(
+          (payload) => payload.questionId === game.rounds[0].questionIds[0],
+        );
+      expect(lists).toHaveLength(1);
+      expect(
+        Object.fromEntries(
+          lists[0].answers.map((answer) => [
+            answer.teamName,
+            answer.pointsAwarded,
+          ]),
+        ),
+      ).toEqual({ 'Team A': 0, 'Team B': 5, 'Team C': 0 });
+      expect(lists[0].answers.every((answer) => answer.gradedAt !== null)).toBe(
+        true,
+      );
+    });
+
+    it('refuses a manual grade while the question is still open', async () => {
+      const game = await startWithGuesses(GUESSES);
+
+      await expect(grade(game, 'Team C', 5)).resolves.toEqual({
+        success: false,
+        error: expect.stringContaining(
+          'can only be graded by hand once the block locks',
+        ) as string,
+      });
+    });
+
+    it('lets the quiz master override any team in the break without changing the closest team on the reveal', async () => {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, TO_BREAK_INTRO);
+
+      await grade(game, 'Team C', 5);
+      const atReveal = await actAll(game, ['ADVANCE', 'ADVANCE']);
+
+      expect(pointsByTeam(atReveal)).toEqual({
+        'Team A': 0,
+        'Team B': 5,
+        'Team C': 5,
+      });
+      expect(atReveal.revealQuestions[0].closestGuess?.closestGuesses).toEqual([
+        { teamName: 'Team B', value: '950' },
+      ]);
+    });
+
+    it('keeps a manual grade across a backend restart', async () => {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, TO_BREAK_INTRO);
+      await grade(game, 'Team C', 5);
+
+      const restarted = await game.restart();
+      const atReveal = await actAll(restarted, ['ADVANCE', 'ADVANCE']);
+
+      expect(pointsByTeam(atReveal)).toEqual({
+        'Team A': 0,
+        'Team B': 5,
+        'Team C': 5,
+      });
+      expect(atReveal.revealQuestions[0].closestGuess).toEqual({
+        hasSubmissions: true,
+        minGuess: '900',
+        maxGuess: '2000',
+        closestGuesses: [{ teamName: 'Team B', value: '950' }],
+      });
+    });
   });
 });

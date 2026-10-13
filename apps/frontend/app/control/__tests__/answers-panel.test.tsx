@@ -566,43 +566,87 @@ describe('AnswersPanel', () => {
     expect(onGrade).toHaveBeenCalledWith(41, 0);
   });
 
-  it('shows a read-only auto-graded badge instead of grade buttons for closest_guess', () => {
-    render(
-      <AnswersPanel
-        liveAnswers={liveAnswers({
-          question: {
-            type: 'closest_guess',
-            prompt: 'How many students attend this university?',
-            points: 5,
-            correctAnswer: '1000',
-            roundTitle: 'Estimates',
-            roundNumber: 1,
-            questionNumberInRound: 1,
-            totalQuestionsInRound: 1,
-          },
-          answers: [
-            {
-              answerId: 41,
-              teamId: 1,
-              teamName: 'The Quizzards',
-              value: '950',
-              pointsAwarded: 5,
-              gradedAt: '2026-01-01T00:00:00.000Z',
-              verdict: 'correct',
-            },
-          ],
-        })}
-        teams={TEAMS}
-        onGrade={vi.fn()}
-      />,
-    );
+  describe('closest_guess', () => {
+    const CLOSEST_GUESS_QUESTION: AnswersUpdatedPayload['question'] = {
+      type: 'closest_guess',
+      prompt: 'How many students attend this university?',
+      points: 5,
+      correctAnswer: '1000',
+      roundTitle: 'Estimates',
+      roundNumber: 1,
+      questionNumberInRound: 1,
+      totalQuestionsInRound: 1,
+    };
 
-    expect(screen.getByText('5 pts (auto-graded)')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', {
-        name: /grade the quizzards full points/i,
-      }),
-    ).not.toBeInTheDocument();
+    it('lets the quiz master override any team once the batch has graded it', async () => {
+      const user = userEvent.setup();
+      const onGrade = vi.fn();
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            question: CLOSEST_GUESS_QUESTION,
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: '1200',
+                pointsAwarded: 0,
+                gradedAt: '2026-01-01T00:00:00.000Z',
+                verdict: 'incorrect',
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={onGrade}
+        />,
+      );
+
+      expect(
+        screen.getByRole('button', { name: /grade the quizzards 0 points/i }),
+      ).toHaveTextContent('✓ 0');
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /grade the quizzards full points/i,
+        }),
+      );
+
+      expect(onGrade).toHaveBeenCalledWith(41, 5);
+    });
+
+    it('shows a guess as graded at the lock, with no grade buttons, until the batch has graded it', () => {
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            question: CLOSEST_GUESS_QUESTION,
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: '950',
+                pointsAwarded: 0,
+                gradedAt: null,
+                verdict: null,
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.getByText('Graded when the block locks'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/auto-graded/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', {
+          name: /grade the quizzards full points/i,
+        }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('lets the quiz master override the auto-graded score of a match answer', async () => {

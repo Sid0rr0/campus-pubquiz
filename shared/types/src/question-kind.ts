@@ -169,7 +169,7 @@ export const QUESTION_KINDS: {
     type: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
-      'The answer is a number. Graded in one batch when the break starts: every team tied for the closest guess gets full points and everyone else gets zero. It cannot be overridden by hand.',
+      'The answer is a number. Graded in one batch when the break starts: every team tied for the closest guess gets full points and everyone else gets zero. Once the block locks you can override any mark by hand.',
     inputKind: 'number',
     requiresMedia: false,
     choices: 'none',
@@ -177,7 +177,7 @@ export const QUESTION_KINDS: {
     payload: closestGuessPayloadSchema,
     csv: answerOnlyCsv,
     gradingMode: 'batch',
-    overridable: false,
+    overridable: true,
     kahootAllowed: false,
   },
 };

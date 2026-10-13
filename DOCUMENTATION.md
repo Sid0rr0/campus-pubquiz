@@ -165,14 +165,14 @@ be refused); the press after that moves the quiz.
 
 ### Admin actions
 
-| Action                | Legal from                              | Effect                                                                                          |
-| --------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `START_QUIZ`          | `lobby`                                 | → `rules`                                                                                       |
-| `ADVANCE`             | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                      |
+| Action                | Legal from                              | Effect                                                                                                                         |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `START_QUIZ`          | `lobby`                                 | → `rules`                                                                                                                      |
+| `ADVANCE`             | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                     |
 | `PREVIOUS`            | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby` |
-| `END_QUIZ`            | any except `ended`                      | Force-end                                                                                       |
-| `TOGGLE_LEADERBOARD`  | any                                     | Flips `isLeaderboardVisible`, status untouched                                                  |
-| `TOGGLE_JOIN_OVERLAY` | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere      |
+| `END_QUIZ`            | any except `ended`                      | Force-end                                                                                                                      |
+| `TOGGLE_LEADERBOARD`  | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                 |
+| `TOGGLE_JOIN_OVERLAY` | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                     |
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
@@ -383,7 +383,7 @@ itself — the display and other players just see counts.
    changes a hand-graded (`audio`/`youtube`) answer, its grade is cleared,
    since it belonged to the old value. Grades are written to the answer row;
    grading an answer twice is prevented in the UI. Exception: `closest_guess` answers are graded automatically once the
-   block locks and reject a manual `GRADE_ANSWER` — see
+   block locks and reject a manual `GRADE_ANSWER` until then — see
    [Question Types](#question-types).
 5. **Bonus points** — separately from per-question grading, the admin can
    award ad-hoc bonus points (`AWARD_BONUS`; categories like `shot`, `selfie`,
@@ -492,11 +492,18 @@ grading behavior:
   a number); players type a guess in a `type="number"` input. It is
   **auto-graded**, but not at submit time like
   `multiple_choice`/`sort`/`match` — `AnswerService` rejects a manual
-  `GRADE_ANSWER` on one of these with an error. Once the block locks,
-  `GameStateService` batch-grades every submission, awarding full points to
-  whichever team(s) are numerically closest to the answer (ties share full
-  points) and 0 to everyone else, caching the result per question
-  (`closestGuessSummaries`) since it only needs computing once. During
+  `GRADE_ANSWER` on one of these until the batch has graded it. Once the
+  block locks, `BlockGradingService` batch-grades every submission, awarding
+  full points to whichever team(s) are numerically closest to the answer
+  (ties share full points) and 0 to everyone else, caching the reveal summary
+  per question (`closestGuessSummaries`) since it only needs computing once.
+  The press that locks the block sends `/control` the graded answer list
+  (`ANSWERS_UPDATED`). From then on the admin can override any team's grade
+  like any other type. The summary lives in memory only: after a backend
+  restart it is rebuilt from the stored guesses without re-scoring, so
+  overrides survive; "already graded" is read from the stored answers. The
+  reveal's closest team(s) are always the numerically closest guesses, even
+  when an override gave another team points. During
   `reveal`, a `closest_guess` question with at least one submission gets a
   5-step cumulative walk instead of the usual single-shot reveal —
   `ADVANCE`/`PREVIOUS` step through smallest guess → highest guess → correct
@@ -518,8 +525,8 @@ graded correct (replacing any earlier grade); a revision that doesn't match
 and differs from the previous value goes back to ungraded, even if the admin
 had graded the previous value; resubmitting the same value leaves its grade
 alone. `closest_guess` is auto-graded
-but deferred to a single batch pass once the block locks, and is the one type
-that can't be overridden. Which list each type is in (auto-graded,
+but deferred to a single batch pass once the block locks, and can be
+overridden only after that pass. Which list each type is in (auto-graded,
 overridable, kahoot-allowed) is defined once per type in the question type
 registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`).
 
@@ -646,7 +653,8 @@ manual override, e.g. adjusted `match` partial credit — and re-apply kahoot
 speed scaling (kept to the nearest half point, so a half-credit match never
 rounds back up to full points) from the response time stored on each answer at submit (so it
 survives a backend restart, and a correction made before the question locks is
-speed-scaled like any other); an already-graded `closest_guess` re-runs its batch;
+speed-scaled like any other); an already-graded `closest_guess` re-runs its batch,
+overwriting any override like the auto-graded types;
 `match-or-human` types (`free_text`/`audio`/`youtube`) grade answers that
 match the corrected key correct, keep the admin's grade on a non-matching
 answer, and send any other non-matching answer back to ungraded — including

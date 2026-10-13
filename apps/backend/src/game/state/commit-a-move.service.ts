@@ -107,8 +107,9 @@ export class MoveCommitter {
 
   /**
    * Places a session at a starting point — the lobby for a new session, the
-   * saved progress and phase timer for a restart restore. Refreshes the
-   * ungraded set inside the break, settles and ends with the standings read
+   * saved progress and phase timer for a restart restore. Rebuilds the
+   * closest_guess summaries and refreshes the ungraded set inside the break,
+   * settles and ends with the standings read
    * (the same last step a session write takes), so the first snapshot a
    * client receives already has its leaderboard. Nothing is saved.
    */
@@ -117,10 +118,16 @@ export class MoveCommitter {
     progress: GameProgress,
     saved?: SavedPlacement,
   ): Promise<SessionState> {
-    // The ungraded cache lives in memory only; inside the break it must be
-    // rebuilt so /control and showdown eligibility are right straight away.
-    const refreshed = await this.grading.refreshUngradedQuestionIds(
+    // The ungraded cache and the closest_guess summaries live in memory
+    // only; they must be rebuilt so /control, showdown eligibility and a
+    // closest_guess reveal walk are right straight away. Rebuilding a
+    // summary never re-scores a question the batch already graded.
+    const { session: summarized } = await this.grading.ensureBlockGraded(
       session,
+      progress,
+    );
+    const refreshed = await this.grading.refreshUngradedQuestionIds(
+      summarized,
       progress,
     );
     // A saved phase timer is restored exactly (unlike the auto-lock
@@ -158,7 +165,8 @@ export class MoveCommitter {
       session,
       progress,
     );
-    const graded = await this.grading.ensureBlockGraded(speedScored, progress);
+    const { session: graded, gradedQuestionIds } =
+      await this.grading.ensureBlockGraded(speedScored, progress);
     const refreshed = await this.grading.refreshUngradedQuestionIds(
       graded,
       progress,
@@ -177,6 +185,9 @@ export class MoveCommitter {
       session: committed,
       outcome: {
         ...BROADCAST_STATE_OUTCOME,
+        // The batch just graded these: /control's answer list for them still
+        // shows the ungraded rows it was sent while they were open.
+        answerListQuestionIds: gradedQuestionIds,
         teamSyncs: isRevealEntry(session.progress.status, progress.status)
           ? connectedTeamSyncs(
               committed,

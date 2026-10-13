@@ -343,11 +343,11 @@ describe('category lists', () => {
     expect(KAHOOT_ALLOWED_TYPES).not.toContain('free_text');
   });
 
-  it('lets everything but closest_guess be overridden by hand', () => {
-    expect(OVERRIDABLE_TYPES).not.toContain('closest_guess');
+  it('lets every type be overridden by hand', () => {
     expect([...OVERRIDABLE_TYPES].sort()).toEqual(
       [
         'audio',
+        'closest_guess',
         'free_text',
         'match',
         'multiple_choice',

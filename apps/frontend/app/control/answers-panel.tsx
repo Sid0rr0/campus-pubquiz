@@ -52,8 +52,6 @@ interface AnswerRowProps {
   /** match only: the left-hand items, so the team's right-hand picks can be paired back to them for display. */
   questionOptions?: string[];
   maxPoints: number;
-  /** closest_guess is graded automatically in one batch across all teams, so a single answer can't be overridden — show the computed result instead of grade buttons, and never call onGrade. (match is also auto-graded, but its per-pair partial credit stays editable through the normal grade controls.) */
-  readOnly: boolean;
   onGrade: (answerId: number, points: number) => void;
 }
 
@@ -63,11 +61,14 @@ function AnswerRow({
   questionType,
   questionOptions,
   maxPoints,
-  readOnly,
   onGrade,
 }: AnswerRowProps) {
   const hasAnswered = answer !== null;
   const isGraded = hasAnswered && answer.gradedAt !== null;
+  // A closest_guess answer is graded in one batch when the block locks (who's
+  // closest depends on every guess); until then there's nothing to override.
+  const isAwaitingBatch =
+    hasAnswered && !isGraded && isBatchGradedType(questionType);
   const options = gradeOptions(maxPoints);
   const matchesAGradeOption =
     hasAnswered &&
@@ -89,9 +90,9 @@ function AnswerRow({
           ? formatAnswerValue(answer.value, questionType, questionOptions)
           : 'No answer yet'}
       </span>
-      {readOnly ? (
+      {isAwaitingBatch ? (
         <span className="text-sm font-extrabold text-foreground/55">
-          {hasAnswered ? `${answer.pointsAwarded} pts (auto-graded)` : ''}
+          Graded when the block locks
         </span>
       ) : (
         <>
@@ -161,7 +162,6 @@ export function AnswersPanel({
   const answersByTeamId = new Map(
     answers.map((answer) => [answer.teamId, answer]),
   );
-  const readOnly = isBatchGradedType(question.type);
   const correctCount = countCorrectAnswers(liveAnswers);
   const answeredCount = answers.length;
   const sortedTeams = [...teams].sort(
@@ -229,7 +229,6 @@ export function AnswersPanel({
             questionType={question.type}
             questionOptions={question.options}
             maxPoints={question.points}
-            readOnly={readOnly}
             onGrade={onGrade}
           />
         ))}

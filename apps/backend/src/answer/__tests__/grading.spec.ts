@@ -442,7 +442,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(second.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(5);
   });
 
-  it('rejects manually grading a closest_guess answer via grade()', async () => {
+  it('refuses grading a closest_guess answer by hand before its batch has graded it', async () => {
     const guessQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -463,8 +463,89 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     await expect(
       state.answerService.grade(state.session.id, submitted.answerId, 5),
     ).rejects.toThrow(
-      'closest_guess answers are graded automatically and cannot be graded manually',
+      'closest_guess answers can only be graded by hand once the block locks',
     );
+  });
+
+  it('lets the admin override a batch-graded closest_guess answer via grade()', async () => {
+    const guessQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many?',
+      answer: '1000',
+      points: 4,
+    });
+    await state.em.flush();
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    await state.answerService.submit(
+      state.session.id,
+      guessQuestion.id,
+      teamA.id,
+      '990',
+    );
+    const far = await state.answerService.submit(
+      state.session.id,
+      guessQuestion.id,
+      teamB.id,
+      '1200',
+    );
+    await state.answerService.gradeClosestGuess(
+      state.session.id,
+      guessQuestion,
+    );
+
+    await state.answerService.grade(state.session.id, far.answerId, 2);
+
+    const answers = await state.answerService.listForQuestion(
+      state.session.id,
+      guessQuestion.id,
+    );
+    expect(answers.find((a) => a.teamId === teamB.id)).toMatchObject({
+      pointsAwarded: 2,
+      verdict: 'partial',
+    });
+    expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(4);
+  });
+
+  it('ensureClosestGuessGraded keeps the stored grades of an already-graded closest_guess question', async () => {
+    const guessQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'closest_guess',
+      prompt: 'How many?',
+      answer: '1000',
+      points: 4,
+    });
+    await state.em.flush();
+    const teamA = await insertTeam('Team A', 'token-a');
+    const teamB = await insertTeam('Team B', 'token-b');
+    await state.answerService.submit(
+      state.session.id,
+      guessQuestion.id,
+      teamA.id,
+      '990',
+    );
+    const far = await state.answerService.submit(
+      state.session.id,
+      guessQuestion.id,
+      teamB.id,
+      '1200',
+    );
+    await state.answerService.ensureClosestGuessGraded(
+      state.session.id,
+      guessQuestion,
+    );
+    await state.answerService.grade(state.session.id, far.answerId, 4);
+
+    const again = await state.answerService.ensureClosestGuessGraded(
+      state.session.id,
+      guessQuestion,
+    );
+
+    expect(again.find((a) => a.teamId === teamB.id)?.pointsAwarded).toBe(4);
+    expect(again.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(4);
   });
 
   it('lets the admin override the auto-graded points of a match answer via grade()', async () => {

@@ -8,11 +8,17 @@ import type {
   ClosestGuessRevealData,
   RevealQuestionView,
 } from './question-views';
-import { isBatchGradedType } from './scoring';
+import { findClosestGuesses, isBatchGradedType } from './scoring';
 import { getGameContext, type SessionState } from './session-state';
 
-/** Summarizes a graded closest_guess question's answers into the display/play-facing reveal shape — pointsAwarded > 0 reliably identifies the tied-closest rows, since gradeClosestGuess awards full points to exactly those rows and 0 to everyone else. */
+/**
+ * Summarizes a closest_guess question's answers into the display/play-facing
+ * reveal shape. The closest team(s) are the numerically closest guesses to
+ * `correctAnswer` — not the rows with points, since the quiz master may override a
+ * grade without changing who was actually closest.
+ */
 export function summarizeClosestGuess(
+  correctAnswer: string,
   answers: AnswerView[],
 ): ClosestGuessRevealData {
   const numeric = answers
@@ -22,13 +28,17 @@ export function summarizeClosestGuess(
     return { hasSubmissions: false, closestGuesses: [] };
   const min = numeric.reduce((m, a) => (a.parsed < m.parsed ? a : m));
   const max = numeric.reduce((m, a) => (a.parsed > m.parsed ? a : m));
+  const isClosest = findClosestGuesses(
+    correctAnswer,
+    answers.map(({ value }) => value),
+  );
   return {
     hasSubmissions: true,
     minGuess: min.value,
     maxGuess: max.value,
     closestGuesses: answers
-      .filter((answer) => answer.pointsAwarded > 0)
-      .map((answer) => ({ teamName: answer.teamName, value: answer.value })),
+      .filter((_, index) => isClosest[index])
+      .map(({ teamName, value }) => ({ teamName, value })),
   };
 }
 

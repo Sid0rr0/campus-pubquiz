@@ -264,7 +264,7 @@ const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
   match: { gradingMode: 'auto', overridable: true, kahootAllowed: true },
   closest_guess: {
     gradingMode: 'batch',
-    overridable: false,
+    overridable: true,
     kahootAllowed: false,
   },
 };
