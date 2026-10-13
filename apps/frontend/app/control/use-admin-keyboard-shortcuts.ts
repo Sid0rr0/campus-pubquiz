@@ -10,6 +10,8 @@ export interface UseAdminKeyboardShortcutsOptions {
   advanceStep: AdvanceSlotStep;
   previousState: PreviousState;
   isLeaderboardVisible: boolean;
+  /** Whether the join overlay can be toggled now: after the lobby and before the quiz ends. */
+  canToggleJoinOverlay: boolean;
   sendAction: (action: GameAction) => void;
 }
 
@@ -35,6 +37,7 @@ export function useAdminKeyboardShortcuts({
   advanceStep,
   previousState,
   isLeaderboardVisible,
+  canToggleJoinOverlay,
   sendAction,
 }: UseAdminKeyboardShortcutsOptions): void {
   useEffect(() => {
@@ -71,6 +74,13 @@ export function useAdminKeyboardShortcuts({
         sendAction('TOGGLE_LEADERBOARD');
         return;
       }
+      if (event.key === ADMIN_SHORTCUTS.toggleJoinOverlay.key) {
+        if (canToggleJoinOverlay) {
+          event.preventDefault();
+          sendAction('TOGGLE_JOIN_OVERLAY');
+        }
+        return;
+      }
       if (event.key === ADMIN_SHORTCUTS.toggleMedia.key) {
         event.preventDefault();
         sendAction('TOGGLE_MEDIA_FULLSCREEN');
@@ -79,5 +89,11 @@ export function useAdminKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [advanceStep, previousState, isLeaderboardVisible, sendAction]);
+  }, [
+    advanceStep,
+    previousState,
+    isLeaderboardVisible,
+    canToggleJoinOverlay,
+    sendAction,
+  ]);
 }

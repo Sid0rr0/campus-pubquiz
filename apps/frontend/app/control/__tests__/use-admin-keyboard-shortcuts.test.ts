@@ -14,6 +14,7 @@ function renderShortcuts(
     advanceStep: 'none',
     previousState: 'unavailable',
     isLeaderboardVisible: false,
+    canToggleJoinOverlay: true,
     sendAction,
     ...overrides,
   };
@@ -100,6 +101,33 @@ describe('useAdminKeyboardShortcuts', () => {
     expect(sendAction).not.toHaveBeenCalled();
   });
 
+  it('sends TOGGLE_JOIN_OVERLAY on J whether or not the overlay is up', async () => {
+    const { sendAction } = renderShortcuts();
+
+    await userEvent.keyboard('j');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_JOIN_OVERLAY');
+  });
+
+  it('ignores J where the overlay cannot be toggled (lobby, ended)', async () => {
+    const { sendAction } = renderShortcuts({ canToggleJoinOverlay: false });
+
+    await userEvent.keyboard('j');
+
+    expect(sendAction).not.toHaveBeenCalled();
+  });
+
+  it('ignores J while an editable field is focused', async () => {
+    document.body.innerHTML = '<input id="target" />';
+    (document.getElementById('target') as HTMLInputElement).focus();
+    const { sendAction } = renderShortcuts();
+
+    await userEvent.keyboard('j');
+
+    expect(sendAction).not.toHaveBeenCalled();
+    document.body.innerHTML = '';
+  });
+
   it('ignores arrow keys while an editable field is focused', async () => {
     document.body.innerHTML = '<input id="target" />';
     const input = document.getElementById('target') as HTMLInputElement;
@@ -148,6 +176,7 @@ describe('useAdminKeyboardShortcuts', () => {
       advanceStep: 'advance',
       previousState: 'unavailable',
       isLeaderboardVisible: false,
+      canToggleJoinOverlay: true,
       sendAction,
     });
     await userEvent.keyboard('{ArrowRight}');

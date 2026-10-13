@@ -3,6 +3,7 @@ export type AdminShortcutId =
   | 'advance'
   | 'showLeaderboard'
   | 'hideLeaderboard'
+  | 'toggleJoinOverlay'
   | 'toggleMedia';
 
 export interface AdminShortcut {
@@ -38,6 +39,12 @@ export const ADMIN_SHORTCUTS: Readonly<Record<AdminShortcutId, AdminShortcut>> =
       key: 'ArrowDown',
       keyName: 'Down arrow',
       description: 'Hide the leaderboard.',
+    },
+    toggleJoinOverlay: {
+      key: 'j',
+      keyName: 'J',
+      description:
+        'Show or hide the join code and QR code over the big screen, once the quiz has started and until it ends.',
     },
     toggleMedia: {
       key: ' ',

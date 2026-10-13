@@ -90,7 +90,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'The join overlay',
     paragraphs: [
-      'A team arriving after the quiz has started can still join. Press Join overlay on Control to cover the big screen with the QR code, the join code and the team-size rule, without the team list. The quiz stays exactly where it was: timers keep running and phones are untouched. Press the button again to hide it and the big screen is back where the quiz is.',
+      'A team arriving after the quiz has started can still join. Press Join overlay on Control to cover the big screen with the QR code, the join code and the team-size rule, without the team list. The quiz stays exactly where it was: timers keep running and phones are untouched. Press the button again to hide it and the big screen is back where the quiz is. Advance or Previous also hides the overlay first, without moving the quiz; the press after that moves the quiz as normal. Showing the overlay hides the leaderboard, and showing the leaderboard hides the overlay.',
       "The button isn't offered in the lobby, which already shows the QR code, or once the quiz has ended. Ending the quiz while the overlay is up clears it, and it stays up if the backend restarts.",
     ],
   },

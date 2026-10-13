@@ -144,6 +144,26 @@ describe('getNextGameState — join overlay', () => {
     expect(next).toEqual({ ...open, isJoinOverlayVisible: false });
   });
 
+  it('turns the leaderboard off when the join overlay is shown', () => {
+    const next = getNextGameState(
+      { ...open, isLeaderboardVisible: true },
+      'TOGGLE_JOIN_OVERLAY',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isLeaderboardVisible).toBe(false);
+    expect(next.isJoinOverlayVisible).toBe(true);
+  });
+
+  it('turns the join overlay off when the leaderboard is shown', () => {
+    const next = getNextGameState(
+      { ...open, isJoinOverlayVisible: true },
+      'TOGGLE_LEADERBOARD',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isLeaderboardVisible).toBe(true);
+    expect(next.isJoinOverlayVisible).toBe(false);
+  });
+
   it.each(['lobby', 'ended'] as const)('refuses the toggle in %s', (status) => {
     expect(() =>
       getNextGameState(

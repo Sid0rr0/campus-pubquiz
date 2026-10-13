@@ -95,4 +95,22 @@ describe('AdminPage — join overlay button', () => {
       }),
     ).not.toBeInTheDocument();
   });
+
+  it('labels the Advance slot "Hide Join Overlay" and sends ADVANCE while the overlay is up', async () => {
+    const sendAction = vi.fn();
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'question_open', isJoinOverlayVisible: true },
+        advanceStep: 'hide_join_overlay',
+        previousState: 'available',
+      },
+      connectionError: null,
+      sendAction,
+    });
+    renderWithQuery(<AdminPage />);
+
+    await userEvent.click(getDesktopButton(/hide join overlay/i));
+
+    expect(sendAction).toHaveBeenCalledWith('ADVANCE');
+  });
 });

@@ -92,6 +92,22 @@ describe('AdminPage — keyboard shortcuts', () => {
     expect(sendAction).toHaveBeenCalledWith('TOGGLE_LEADERBOARD');
   });
 
+  it('sends TOGGLE_JOIN_OVERLAY when J is pressed mid-quiz', async () => {
+    const sendAction = vi.fn();
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'question_open' },
+      },
+      connectionError: null,
+      sendAction,
+    });
+    renderWithQuery(<AdminPage />);
+
+    await userEvent.keyboard('j');
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_JOIN_OVERLAY');
+  });
+
   it('sends TOGGLE_LEADERBOARD when ArrowDown is pressed and the leaderboard is visible', async () => {
     const sendAction = vi.fn();
     mockUseAdminGame.mockReturnValue({
