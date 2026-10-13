@@ -9,7 +9,7 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-describe('GameGateway — notifySessionClosed', () => {
+describe('SessionBroadcaster — notifySessionClosed', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
@@ -18,7 +18,7 @@ describe('GameGateway — notifySessionClosed', () => {
   });
 
   it("emits SESSION_CLOSED to the session's players room", () => {
-    game.gateway.notifySessionClosed(game.joinCode);
+    game.broadcaster.notifySessionClosed(game.joinCode);
 
     expect(game.roomEmits()).toEqual([
       {
@@ -30,7 +30,7 @@ describe('GameGateway — notifySessionClosed', () => {
   });
 
   it('does not target the display or admin rooms', () => {
-    game.gateway.notifySessionClosed(game.joinCode);
+    game.broadcaster.notifySessionClosed(game.joinCode);
 
     const rooms = game.roomEmits().flatMap((emit) => emit.rooms);
     expect(rooms).not.toContain(

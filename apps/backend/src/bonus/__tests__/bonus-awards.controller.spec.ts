@@ -11,7 +11,8 @@ import {
   BonusService,
   InvalidBonusAwardError,
 } from '@/bonus/bonus.service';
-import type { GameGateway } from '@/game/game.gateway';
+import type { SessionBroadcaster } from '@/game/socket/session-broadcaster';
+import type { SessionOutcome } from '@/game/state/session-outcome';
 import type { GameStateService } from '@/game/state/game-state.service';
 
 function makeListController() {
@@ -24,18 +25,24 @@ function makeListController() {
   return { controller, bonusService, gameState };
 }
 
+const BONUS_CHANGED_OUTCOME = {
+  marker: 'bonus-changed',
+} as unknown as SessionOutcome;
+
 function makeMutationsController() {
   const bonusService = { update: jest.fn(), remove: jest.fn() };
-  const gameState = { hasSession: jest.fn(), getGameSessionId: jest.fn() };
-  const gameGateway = {
-    notifyBonusAwardsChanged: jest.fn().mockResolvedValue(undefined),
+  const gameState = {
+    hasSession: jest.fn(),
+    getGameSessionId: jest.fn(),
+    bonusChanged: jest.fn().mockResolvedValue(BONUS_CHANGED_OUTCOME),
   };
+  const broadcaster = { deliver: jest.fn().mockResolvedValue(undefined) };
   const controller = new BonusAwardMutationsController(
     bonusService as unknown as BonusService,
     gameState as unknown as GameStateService,
-    gameGateway as unknown as GameGateway,
+    broadcaster as unknown as SessionBroadcaster,
   );
-  return { controller, bonusService, gameState, gameGateway };
+  return { controller, bonusService, gameState, broadcaster };
 }
 
 const award: BonusAwardAdminView = {
@@ -91,8 +98,8 @@ describe('BonusAwardMutationsController', () => {
   });
 
   describe('update', () => {
-    it('updates the award and notifies the gateway', async () => {
-      const { controller, bonusService, gameState, gameGateway } =
+    it('updates the award and runs the bonus-changed write and delivers its outcome', async () => {
+      const { controller, bonusService, gameState, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(true);
       gameState.getGameSessionId.mockReturnValue(101);
@@ -104,14 +111,16 @@ describe('BonusAwardMutationsController', () => {
       });
 
       expect(bonusService.update).toHaveBeenCalledWith(101, 9, 3, undefined);
-      expect(gameGateway.notifyBonusAwardsChanged).toHaveBeenCalledWith(
+      expect(gameState.bonusChanged).toHaveBeenCalledWith('ABCDEF');
+      expect(broadcaster.deliver).toHaveBeenCalledWith(
         'ABCDEF',
+        BONUS_CHANGED_OUTCOME,
       );
       expect(result).toEqual(award);
     });
 
     it('404s for an unknown join code', async () => {
-      const { controller, gameState, bonusService, gameGateway } =
+      const { controller, gameState, bonusService, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(false);
 
@@ -119,11 +128,12 @@ describe('BonusAwardMutationsController', () => {
         controller.update('NOPE12', 9, { points: 3 }),
       ).rejects.toThrow(NotFoundException);
       expect(bonusService.update).not.toHaveBeenCalled();
-      expect(gameGateway.notifyBonusAwardsChanged).not.toHaveBeenCalled();
+      expect(gameState.bonusChanged).not.toHaveBeenCalled();
+      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
 
     it('maps BonusAwardNotFoundError to a 404', async () => {
-      const { controller, gameState, bonusService, gameGateway } =
+      const { controller, gameState, bonusService, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(true);
       gameState.getGameSessionId.mockReturnValue(101);
@@ -134,11 +144,12 @@ describe('BonusAwardMutationsController', () => {
       await expect(
         controller.update('ABCDEF', 999, { points: 3 }),
       ).rejects.toThrow(NotFoundException);
-      expect(gameGateway.notifyBonusAwardsChanged).not.toHaveBeenCalled();
+      expect(gameState.bonusChanged).not.toHaveBeenCalled();
+      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
 
     it('maps InvalidBonusAwardError to a 400', async () => {
-      const { controller, gameState, bonusService, gameGateway } =
+      const { controller, gameState, bonusService, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(true);
       gameState.getGameSessionId.mockReturnValue(101);
@@ -149,13 +160,14 @@ describe('BonusAwardMutationsController', () => {
       await expect(
         controller.update('ABCDEF', 9, { points: 0 }),
       ).rejects.toThrow(BadRequestException);
-      expect(gameGateway.notifyBonusAwardsChanged).not.toHaveBeenCalled();
+      expect(gameState.bonusChanged).not.toHaveBeenCalled();
+      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
   });
 
   describe('remove', () => {
-    it('deletes the award and notifies the gateway', async () => {
-      const { controller, bonusService, gameState, gameGateway } =
+    it('deletes the award and runs the bonus-changed write and delivers its outcome', async () => {
+      const { controller, bonusService, gameState, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(true);
       gameState.getGameSessionId.mockReturnValue(101);
@@ -164,13 +176,15 @@ describe('BonusAwardMutationsController', () => {
       await controller.remove('ABCDEF', 9);
 
       expect(bonusService.remove).toHaveBeenCalledWith(101, 9);
-      expect(gameGateway.notifyBonusAwardsChanged).toHaveBeenCalledWith(
+      expect(gameState.bonusChanged).toHaveBeenCalledWith('ABCDEF');
+      expect(broadcaster.deliver).toHaveBeenCalledWith(
         'ABCDEF',
+        BONUS_CHANGED_OUTCOME,
       );
     });
 
     it('404s for an unknown join code', async () => {
-      const { controller, gameState, bonusService, gameGateway } =
+      const { controller, gameState, bonusService, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(false);
 
@@ -178,11 +192,12 @@ describe('BonusAwardMutationsController', () => {
         NotFoundException,
       );
       expect(bonusService.remove).not.toHaveBeenCalled();
-      expect(gameGateway.notifyBonusAwardsChanged).not.toHaveBeenCalled();
+      expect(gameState.bonusChanged).not.toHaveBeenCalled();
+      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
 
     it('maps BonusAwardNotFoundError to a 404', async () => {
-      const { controller, gameState, bonusService, gameGateway } =
+      const { controller, gameState, bonusService, broadcaster } =
         makeMutationsController();
       gameState.hasSession.mockReturnValue(true);
       gameState.getGameSessionId.mockReturnValue(101);
@@ -193,7 +208,8 @@ describe('BonusAwardMutationsController', () => {
       await expect(controller.remove('ABCDEF', 999)).rejects.toThrow(
         NotFoundException,
       );
-      expect(gameGateway.notifyBonusAwardsChanged).not.toHaveBeenCalled();
+      expect(gameState.bonusChanged).not.toHaveBeenCalled();
+      expect(broadcaster.deliver).not.toHaveBeenCalled();
     });
   });
 });

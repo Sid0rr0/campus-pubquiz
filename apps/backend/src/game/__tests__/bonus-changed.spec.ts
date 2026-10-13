@@ -82,7 +82,10 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
       game.bonusService.update(game.gameSessionId, awardId, 3, undefined),
     );
 
-    await game.gateway.notifyBonusAwardsChanged(game.joinCode);
+    await game.broadcaster.deliver(
+      game.joinCode,
+      await game.gameState.bonusChanged(game.joinCode),
+    );
 
     expect(bonusOf(scorer.teamId)).toBe(3);
   });
@@ -93,7 +96,10 @@ describe('GameGateway — bonus changed and leaderboard toggle', () => {
       game.bonusService.remove(game.gameSessionId, awardId),
     );
 
-    await game.gateway.notifyBonusAwardsChanged(game.joinCode);
+    await game.broadcaster.deliver(
+      game.joinCode,
+      await game.gameState.bonusChanged(game.joinCode),
+    );
 
     expect(bonusOf(scorer.teamId)).toBe(0);
   });
