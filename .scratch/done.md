@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| block-grading-moves | [Give Block grading one entry point per move](block-grading-moves/spec.md) | 2 |
 | session-broadcaster | [Split outbound broadcasting out of the GameGateway](session-broadcaster/spec.md) | 4 |
 | real-store-harness-module | [Build the real-store harness from a Game module, not by hand](real-store-harness-module/spec.md) | 3 |
 | answer-key | [One Answer key — what an answer is graded against, defaults filled in once](answer-key/spec.md) | 3 |

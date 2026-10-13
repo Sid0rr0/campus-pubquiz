@@ -13,13 +13,13 @@ See the parent spec: `.scratch/block-grading-moves/spec.md`.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Block grading exposes `gradeForMove(session, to)`, returning the graded session and `staleAnswerListIds`
-- [ ] The reveal gate moves into Block grading unchanged: same condition, same ungraded-answers error naming the questions, run before any grading write
-- [ ] Commit a move's progress-move path makes one `gradeForMove` call, then settles, saves and builds its outcome as today; its own reveal-gate method is removed
-- [ ] New harness case (test-first): leaving `break` for the reveal with an ungraded question is refused, and the session stays in `break` with its ungraded set unchanged
-- [ ] New harness case: a block ending on a closest_guess question enters its break with that question absent from the ungraded set and its admin answer list re-sent
-- [ ] New harness case: a kahoot block whose last question leaves `locking` into its break shows speed-scaled points in the answer lists and a correct ungraded set
-- [ ] Grading gate, ungraded agreement, kahoot answer speed, kahoot question auto-advance, closest_guess reveal, question lock auto-advance and previous-to-lobby specs pass with unchanged assertions
-- [ ] Backend suite and `pnpm typecheck` pass
+- [x] Block grading exposes `gradeForMove(session, to)`, returning the graded session and `staleAnswerListIds`
+- [x] The reveal gate moves into Block grading unchanged: same condition, same ungraded-answers error naming the questions, run before any grading write
+- [x] Commit a move's progress-move path makes one `gradeForMove` call, then settles, saves and builds its outcome as today; its own reveal-gate method is removed
+- [x] New harness case (test-first): leaving `break` for the reveal with an ungraded question is refused, and the session stays in `break` with its ungraded set unchanged
+- [x] New harness case: a block ending on a closest_guess question enters its break with that question absent from the ungraded set and its admin answer list re-sent
+- [x] New harness case: a kahoot block whose last question leaves `locking` into its break shows speed-scaled points in the answer lists and a correct ungraded set
+- [x] Grading gate, ungraded agreement, kahoot answer speed, kahoot question auto-advance, closest_guess reveal, question lock auto-advance and previous-to-lobby specs pass with unchanged assertions
+- [x] Backend suite and `pnpm typecheck` pass
