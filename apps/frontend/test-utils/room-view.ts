@@ -98,6 +98,8 @@ function describeQuestions(
   return rounds.map((round) => {
     const notes: Record<number, string | null> = {};
     const questions = (round.questions ?? []).map((description) => {
+      // The stats become the session's summary (closestGuessSummariesOf), not a seeded field.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { note, closestGuess: _stats, ...view } = description;
       const id = view.id ?? nextId;
       nextId = Math.max(nextId, id) + 1;
