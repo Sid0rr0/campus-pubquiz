@@ -281,3 +281,249 @@ describe('selectLeaderboardRows', () => {
     });
   });
 });
+
+/** An entry with its points for round 0, for the "round backed out" basis. */
+function withRound(entry: LeaderboardEntry, points?: number): LeaderboardEntry {
+  return {
+    ...entry,
+    roundPoints:
+      points === undefined ? [] : [{ roundTitle: 'Round 1', points }],
+  };
+}
+
+/** Each row as `name trend`, with `none` for a row that carries no trend. */
+function trends(rows: LeaderboardRow[]): string[] {
+  return rows.map(({ entry, trend }) => `${entry.teamName} ${trend ?? 'none'}`);
+}
+
+describe('selectLeaderboardRows trend', () => {
+  it('gives no trend without a basis', () => {
+    const rows = selectLeaderboardRows({
+      entries: THREE_TEAMS,
+      phase: 'settled',
+    });
+
+    expect(trends(rows)).toEqual(['First none', 'Second none', 'Third none']);
+  });
+
+  it.each<{ name: string; entries: LeaderboardEntry[]; expected: string[] }>([
+    {
+      // Overtaker trailed 10 to 20 before the round, scored 15 to Leader's 0.
+      name: 'up and down for an overtake',
+      entries: [
+        withRound(ranked(1, 'Overtaker', 25, 1), 15),
+        withRound(ranked(2, 'Leader', 20, 2), 0),
+      ],
+      expected: ['Overtaker up', 'Leader down'],
+    },
+    {
+      name: 'same for teams that keep their rank',
+      entries: [
+        withRound(ranked(1, 'Steady Leader', 30, 1), 10),
+        withRound(ranked(2, 'Steady Second', 20, 2), 5),
+      ],
+      expected: ['Steady Leader same', 'Steady Second same'],
+    },
+    {
+      // Both on 0 before the round: Scorer stays top, No Data drops to 2nd.
+      name: 'a team with no points recorded for the round as scoring 0',
+      entries: [
+        withRound(ranked(1, 'Only Scorer', 10, 1), 10),
+        withRound(ranked(2, 'No Data', 0, 2)),
+      ],
+      expected: ['Only Scorer same', 'No Data down'],
+    },
+    {
+      // Alpha and Bravo tied on 30, Climber on 10; Climber +15, Bravo -10.
+      name: 'up for a team that overtakes a fallen tied leader',
+      entries: [
+        withRound(ranked(1, 'Alpha', 30, 1), 0),
+        withRound(ranked(3, 'Climber', 25, 2), 15),
+        withRound(ranked(2, 'Bravo', 20, 3), -10),
+      ],
+      expected: ['Alpha same', 'Climber up', 'Bravo down'],
+    },
+  ])(
+    'compares against this round backed out: $name',
+    ({ entries, expected }) => {
+      const rows = selectLeaderboardRows({
+        entries,
+        currentRoundIndex: 0,
+        phase: 'settled',
+      });
+
+      expect(trends(rows)).toEqual(expected);
+    },
+  );
+
+  it.each<{
+    name: string;
+    entries: LeaderboardEntry[];
+    trendBaseline: LeaderboardEntry[];
+    expected: string[];
+  }>([
+    {
+      name: 'same for teams that stay tied',
+      entries: [
+        ranked(1, 'Leader', 30, 1),
+        ranked(2, 'Amy', 20, 2, 3),
+        ranked(3, 'Zed', 20, 2, 3),
+      ],
+      trendBaseline: [
+        ranked(1, 'Leader', 25, 1),
+        ranked(2, 'Amy', 15, 2, 3),
+        ranked(3, 'Zed', 15, 2, 3),
+      ],
+      expected: ['Leader same', 'Amy same', 'Zed same'],
+    },
+    {
+      name: 'up for the team that pulled level, same for the one it caught',
+      entries: [
+        ranked(1, 'Leader', 30, 1),
+        ranked(2, 'Amy', 20, 2, 3),
+        ranked(3, 'Zed', 20, 2, 3),
+      ],
+      trendBaseline: [
+        ranked(1, 'Leader', 30, 1),
+        ranked(2, 'Amy', 20, 2),
+        ranked(3, 'Zed', 10, 3),
+      ],
+      expected: ['Leader same', 'Amy same', 'Zed up'],
+    },
+    {
+      name: 'a split tie: the team that pulled ahead stays, the other drops',
+      entries: [
+        ranked(1, 'Leader', 30, 1),
+        ranked(3, 'Zed', 25, 2),
+        ranked(2, 'Amy', 20, 3),
+      ],
+      trendBaseline: [
+        ranked(1, 'Leader', 30, 1),
+        ranked(2, 'Amy', 20, 2, 3),
+        ranked(3, 'Zed', 20, 2, 3),
+      ],
+      expected: ['Leader same', 'Zed same', 'Amy down'],
+    },
+  ])(
+    'compares ties against the trend baseline: $name',
+    ({ entries, trendBaseline, expected }) => {
+      const rows = selectLeaderboardRows({
+        entries,
+        trendBaseline,
+        phase: 'settled',
+      });
+
+      expect(trends(rows)).toEqual(expected);
+    },
+  );
+
+  it('prefers the trend baseline over the round backed out', () => {
+    // A Kahoot round holding every point so far: backing the round out
+    // would tie everyone on 0. The baseline is the board before the last
+    // question, so Second overtaking First reads as a real swap.
+    const entries = [
+      withRound(ranked(2, 'Second', 40, 1), 40),
+      withRound(ranked(1, 'First', 30, 2), 30),
+      withRound(ranked(3, 'Third', 10, 3), 10),
+    ];
+    const trendBaseline = [
+      ranked(1, 'First', 30, 1),
+      ranked(2, 'Second', 20, 2),
+      ranked(3, 'Third', 10, 3),
+    ];
+
+    const rows = selectLeaderboardRows({
+      entries,
+      trendBaseline,
+      currentRoundIndex: 0,
+      phase: 'settled',
+    });
+
+    expect(trends(rows)).toEqual(['Second up', 'First down', 'Third same']);
+  });
+
+  it('prefers the previous entries over the trend baseline and the round', () => {
+    const entries = [
+      withRound(ranked(2, 'Second', 40, 1), 40),
+      withRound(ranked(1, 'First', 30, 2), 30),
+    ];
+    const previousEntries = [
+      ranked(1, 'First', 30, 1),
+      ranked(2, 'Second', 20, 2),
+    ];
+    // The opposite order, so following it would give the opposite arrows.
+    const trendBaseline = [
+      ranked(2, 'Second', 30, 1),
+      ranked(1, 'First', 20, 2),
+    ];
+
+    const rows = selectLeaderboardRows({
+      entries,
+      previousEntries,
+      trendBaseline,
+      currentRoundIndex: 0,
+      phase: 'settled',
+    });
+
+    expect(trends(rows)).toEqual(['Second up', 'First down']);
+  });
+
+  describe('forced up on an all-tied old board', () => {
+    const NEW = [
+      ranked(1, 'Alpha', 30, 1),
+      ranked(2, 'Bravo', 10, 2),
+      ranked(3, 'Charlie', 0, 3),
+    ];
+
+    it('gives every team up when every team was tied beforehand', () => {
+      const rows = selectLeaderboardRows({
+        entries: NEW,
+        previousEntries: [
+          ranked(1, 'Alpha', 0, 1, 3),
+          ranked(2, 'Bravo', 0, 1, 3),
+          ranked(3, 'Charlie', 0, 1, 3),
+        ],
+        currentRoundIndex: 0,
+        phase: 'settled',
+      });
+
+      expect(trends(rows)).toEqual(['Alpha up', 'Bravo up', 'Charlie up']);
+    });
+
+    it.each<[string, Partial<LeaderboardRowsInput>]>([
+      ['previous entries', { previousEntries: [] }],
+      ['trend baseline', { trendBaseline: [] }],
+    ])(
+      'gives every team up on the first-ever Kahoot board (empty %s)',
+      (_name, basis) => {
+        const rows = selectLeaderboardRows({
+          entries: NEW,
+          ...basis,
+          phase: 'settled',
+        });
+
+        expect(trends(rows)).toEqual(['Alpha up', 'Bravo up', 'Charlie up']);
+      },
+    );
+  });
+
+  it.each<LeaderboardRowsInput['phase']>(['old', 'counting'])(
+    'gives no trend in the %s phase',
+    (phase) => {
+      const rows = selectLeaderboardRows({
+        entries: [
+          ranked(1, 'Challenger', 40, 1),
+          ranked(2, 'Runner Up', 15, 2),
+        ],
+        previousEntries: [
+          ranked(2, 'Runner Up', 15, 1),
+          ranked(1, 'Challenger', 10, 2),
+        ],
+        currentRoundIndex: 0,
+        phase,
+      });
+
+      expect(trends(rows)).toEqual(['Runner Up none', 'Challenger none']);
+    },
+  );
+});

@@ -43,7 +43,33 @@ export interface LeaderboardRowsInput {
   previousEntries?: LeaderboardEntry[];
   /** Where the old-state animation is: which board the rows are drawn from. */
   phase: LeaderboardPhase;
+  /**
+   * Real prior standings to compare against for the trend, for a view that
+   * shouldn't animate from them (unlike `previousEntries`) — the
+   * round-end/quiz-end reveal for a Kahoot round, which keeps its normal
+   * one-team-at-a-time suspense walk rather than the between-questions
+   * view's animated hold-then-settle. Superseded by `previousEntries` when
+   * that's also given; falls back to `currentRoundIndex`'s approximation
+   * when neither is. Same `[]`-means-no-board-yet handling as
+   * `previousEntries`.
+   */
+  trendBaseline?: LeaderboardEntry[];
+  /**
+   * 0-indexed round (progress.roundIndex) this leaderboard reflects. Drives
+   * the per-team trend as a last resort, comparing current standings to
+   * standings with just this round's points backed out, when neither
+   * `previousEntries` nor `trendBaseline` supplies a real prior snapshot to
+   * compare against instead (for a Kahoot round this approximation is
+   * normally superseded, since "this round" can span several questions and
+   * back out far more than just the last one). Omit entirely to give no
+   * trend (e.g. the admin's always-visible preview, shown outside round
+   * context).
+   */
+  currentRoundIndex?: number;
 }
+
+/** How a team's rank moved against the trend basis. */
+export type RankTrend = 'up' | 'down' | 'same';
 
 export interface LeaderboardRow {
   /** The entry to draw: the old one in 'old', the new one in 'counting' and 'settled'. */
@@ -52,6 +78,8 @@ export interface LeaderboardRow {
   rankIndex: number;
   /** "2." for a clear place, "2.–4." for a tie group. */
   label: string;
+  /** Rank movement against the trend basis; only in 'settled', and only with a basis. */
+  trend?: RankTrend;
 }
 
 function zeroedOutEntry(entry: LeaderboardEntry): LeaderboardEntry {
@@ -72,7 +100,7 @@ function zeroedOutEntry(entry: LeaderboardEntry): LeaderboardEntry {
  * full roster, never capped to `maxRank`, so a trend comparison ranks a team
  * among every team, not just the on-screen top N.
  */
-export function fullPreviousBoard(
+function fullPreviousBoard(
   entries: LeaderboardEntry[],
   previousEntries: LeaderboardEntry[] | undefined,
 ): LeaderboardEntry[] | undefined {
@@ -193,16 +221,107 @@ function revealBottomUp(
  * scores can group differently from the final one, so the reveal walk isn't
  * a meaningful cut there.
  */
-export function selectLeaderboardRows({
-  entries,
-  revealCount,
-  maxRank,
-  previousEntries,
-  phase,
-}: LeaderboardRowsInput): LeaderboardRow[] {
+export function selectLeaderboardRows(
+  input: LeaderboardRowsInput,
+): LeaderboardRow[] {
+  const { entries, revealCount, maxRank, previousEntries, phase } = input;
   const fullOldEntries = fullPreviousBoard(entries, previousEntries);
   if (phase !== 'settled' && fullOldEntries !== undefined) {
     return oldStateRows(entries, fullOldEntries, maxRank, phase);
   }
-  return revealBottomUp(settledRows(entries, maxRank), revealCount);
+  return withTrends(
+    revealBottomUp(settledRows(entries, maxRank), revealCount),
+    input,
+  );
+}
+
+/** This team's cumulative total with just `roundIndex`'s points removed — the standing an "up/down since last round" comparison needs. */
+function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
+  return entry.totalPoints - (entry.roundPoints[roundIndex]?.points ?? 0);
+}
+
+/**
+ * Competition rank (0-indexed) per team on a board, from the shared ranking
+ * rule — the same one the server ranks live standings with — so a trend
+ * comparison against a previous board never mismatches over a tie.
+ */
+function rankIndexByTeamId(entries: LeaderboardEntry[]): Map<number, number> {
+  return new Map(
+    rankTeams(entries).map((team) => [team.teamId, team.rank - 1]),
+  );
+}
+
+/**
+ * The board to compare against for the trend. The board exactly as it stood
+ * before this update — from `previousEntries` when it's driving the
+ * animation, or `trendBaseline` otherwise — is the more accurate basis
+ * whenever one is available (a Kahoot round can hold several questions, so
+ * backing this round's points out of the current total would net out
+ * earlier questions in the same round too, not just this one). Falls back to
+ * the round-backed-out approximation only when neither is given (the
+ * non-Kahoot round-end/quiz-end reveal); none when that's missing too.
+ */
+function trendBasis({
+  entries,
+  previousEntries,
+  trendBaseline,
+  currentRoundIndex,
+}: LeaderboardRowsInput): LeaderboardEntry[] | undefined {
+  const priorBoard =
+    fullPreviousBoard(entries, previousEntries) ??
+    fullPreviousBoard(entries, trendBaseline);
+  if (priorBoard !== undefined) return priorBoard;
+  if (currentRoundIndex === undefined) return undefined;
+  return entries.map((entry) => ({
+    ...entry,
+    totalPoints: totalBeforeRound(entry, currentRoundIndex),
+  }));
+}
+
+/**
+ * True while a real prior board (more than one team) has every team still
+ * tied, e.g. everyone on 0 before the game's first Kahoot question. Comparing
+ * ranks against that tie would hand a dash to the new leader and a down
+ * arrow to everyone else, so every team shows as having moved up onto the
+ * board instead. The round-backed-out approximation never forces "up".
+ */
+function isAllTiedPriorBoard(
+  { previousEntries, trendBaseline }: LeaderboardRowsInput,
+  basis: LeaderboardEntry[],
+): boolean {
+  const isPriorBoard =
+    previousEntries !== undefined || trendBaseline !== undefined;
+  return (
+    isPriorBoard &&
+    basis.length > 1 &&
+    new Set(basis.map((entry) => entry.totalPoints)).size === 1
+  );
+}
+
+function rankTrend(
+  currentRankIndex: number,
+  previousRankIndex: number,
+): RankTrend {
+  if (currentRankIndex < previousRankIndex) return 'up';
+  if (currentRankIndex > previousRankIndex) return 'down';
+  return 'same';
+}
+
+/** Settled rows with their trend against the trend basis, where one exists. */
+function withTrends(
+  rows: LeaderboardRow[],
+  input: LeaderboardRowsInput,
+): LeaderboardRow[] {
+  const basis = trendBasis(input);
+  if (basis === undefined) return rows;
+  const isForcedUp = isAllTiedPriorBoard(input, basis);
+  const previousRankByTeamId = rankIndexByTeamId(basis);
+  return rows.map((row) => {
+    const previousRankIndex = previousRankByTeamId.get(row.entry.teamId);
+    if (previousRankIndex === undefined) return row;
+    const trend = isForcedUp
+      ? 'up'
+      : rankTrend(row.rankIndex, previousRankIndex);
+    return { ...row, trend };
+  });
 }

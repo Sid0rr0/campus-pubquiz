@@ -1,51 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { animate, motion } from 'motion/react';
+import { KAHOOT_LEADERBOARD_TOP_N } from '@campus-pubquiz/types';
 import {
-  KAHOOT_LEADERBOARD_TOP_N,
-  rankTeams,
-  type LeaderboardEntry,
-} from '@campus-pubquiz/types';
-import {
-  fullPreviousBoard,
   selectLeaderboardRows,
   type LeaderboardPhase,
   type LeaderboardRowsInput,
+  type RankTrend,
 } from '@/app/components/leaderboard-rows';
 
 /** `maxRank` for a Kahoot round — at most N teams are shown. Re-exported here (from shared/types) so existing imports of this constant from this module keep working. */
 export { KAHOOT_LEADERBOARD_TOP_N };
 
 /**
- * `entries`, `revealCount`, `maxRank` and `previousEntries` mean what
- * {@link LeaderboardRowsInput} documents; the view supplies the phase itself.
+ * Every prop means what {@link LeaderboardRowsInput} documents; the view
+ * supplies the phase itself.
  */
-interface LeaderboardProps extends Omit<LeaderboardRowsInput, 'phase'> {
-  /**
-   * 0-indexed round (progress.roundIndex) this leaderboard reflects. Drives
-   * the per-team rank-trend icon as a last resort, comparing current
-   * standings to standings with just this round's points backed out, when
-   * neither `previousEntries` nor `trendBaseline` supplies a real prior
-   * snapshot to compare against instead (see those below — for a Kahoot
-   * round this approximation is normally superseded, since "this round"
-   * can span several questions and back out far more than just the last
-   * one). Omit entirely to hide trend icons (e.g. the admin's always-visible
-   * preview, shown outside round context).
-   */
-  currentRoundIndex?: number;
-  /**
-   * Real prior standings to compare against for the trend icon, for a view
-   * that shouldn't animate from them (unlike `previousEntries`) — the
-   * round-end/quiz-end reveal for a Kahoot round, which keeps its normal
-   * one-team-at-a-time suspense walk rather than the between-questions
-   * view's animated hold-then-settle. Superseded by `previousEntries` when
-   * that's also given; falls back to `currentRoundIndex`'s approximation
-   * when neither is. Same `[]`-means-no-board-yet handling as
-   * `previousEntries`.
-   */
-  trendBaseline?: LeaderboardEntry[];
-}
-
-type RankTrend = 'up' | 'down' | 'same';
+type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'>;
 
 const RANK_TREND_LABELS: Record<RankTrend, string> = {
   up: 'moved up',
@@ -65,15 +35,6 @@ const RANK_TREND_COLOR_CLASSES: Record<RankTrend, string> = {
   same: 'text-dark-blue/40',
 };
 
-function rankTrend(
-  currentRankIndex: number,
-  previousRankIndex: number,
-): RankTrend {
-  if (currentRankIndex < previousRankIndex) return 'up';
-  if (currentRankIndex > previousRankIndex) return 'down';
-  return 'same';
-}
-
 function RankTrendIcon({ trend }: { trend: RankTrend }) {
   return (
     <span
@@ -83,37 +44,6 @@ function RankTrendIcon({ trend }: { trend: RankTrend }) {
       {RANK_TREND_GLYPHS[trend]}
     </span>
   );
-}
-
-/** This team's cumulative total with just `roundIndex`'s points removed — the standing an "up/down since last round" comparison needs. */
-function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
-  return entry.totalPoints - (entry.roundPoints[roundIndex]?.points ?? 0);
-}
-
-/**
- * Competition rank (0-indexed) per team by a score selector, from the shared
- * ranking rule — the same one the server ranks live standings with — so a
- * trend comparison against a previous board never mismatches over a tie.
- */
-function rankIndexByScore(
-  entries: LeaderboardEntry[],
-  scoreOf: (entry: LeaderboardEntry) => number,
-): Map<number, number> {
-  const ranked = rankTeams(
-    entries.map((entry) => ({ ...entry, totalPoints: scoreOf(entry) })),
-  );
-  return new Map(ranked.map((team) => [team.teamId, team.rank - 1]));
-}
-
-/**
- * True once at least two teams have pulled apart in score — false while
- * every team is still tied (e.g. everyone on 0 before the game's first
- * Kahoot question). A board with no established order yet has nothing for a
- * team to have fallen from, so every team shows as having moved up onto it
- * rather than some landing on a misleading dash/down arrow relative to a tie.
- */
-function hasEstablishedOrder(entries: LeaderboardEntry[]): boolean {
-  return new Set(entries.map((entry) => entry.totalPoints)).size > 1;
 }
 
 const RANK_ACCENT_CLASSES = ['text-magenta', 'text-cyan', 'text-green'];
@@ -254,49 +184,14 @@ export function Leaderboard({
     revealCount,
     maxRank,
     previousEntries,
+    trendBaseline,
+    currentRoundIndex,
     phase,
   });
-  // The board exactly as it stood before this update — from previousEntries
-  // when it's driving the animation, or trendBaseline otherwise — is the
-  // more accurate trend basis whenever one is available (a Kahoot round can
-  // hold several questions, so backing this round's points out of the
-  // current total would net out earlier questions in the same round too,
-  // not just this one). Falls back to the round-backed-out approximation
-  // only when neither is given (the non-Kahoot round-end/quiz-end reveal,
-  // which has no old snapshot to compare against).
-  const trendOldEntries =
-    fullPreviousBoard(entries, previousEntries) ??
-    fullPreviousBoard(entries, trendBaseline);
-  const previousRankByTeamId =
-    trendOldEntries !== undefined
-      ? rankIndexByScore(trendOldEntries, (entry) => entry.totalPoints)
-      : currentRoundIndex === undefined
-        ? undefined
-        : rankIndexByScore(entries, (entry) =>
-            totalBeforeRound(entry, currentRoundIndex),
-          );
-  // Once teams have actually pulled apart, a shared start (everyone tied,
-  // usually at 0) can't tell a team that took the lead from one that merely
-  // held its ground — comparing ranks against that tie would wrongly hand
-  // out a dash to the new leader and a down arrow to everyone else. Forcing
-  // "up" for the whole board sidesteps that until a real order exists to
-  // compare against.
-  const forceUpTrend =
-    trendOldEntries !== undefined &&
-    trendOldEntries.length > 1 &&
-    !hasEstablishedOrder(trendOldEntries);
 
   return (
     <ol className="flex flex-col gap-2">
-      {visibleRows.map(({ entry, rankIndex, label }) => {
-        // Only compares against the pre-round trend once standings have
-        // settled into their final order — during 'old'/'counting' the row
-        // is still sitting at its old rank, which would compare against the
-        // wrong basis and show a misleading arrow.
-        const previousRankIndex =
-          phase === 'settled'
-            ? previousRankByTeamId?.get(entry.teamId)
-            : undefined;
+      {visibleRows.map(({ entry, rankIndex, label, trend }) => {
         const totalPointsClassName = 'font-display text-display-3xl';
         return (
           <motion.li
@@ -307,13 +202,7 @@ export function Leaderboard({
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className={rowClasses(rankIndex)}
           >
-            {previousRankIndex !== undefined && (
-              <RankTrendIcon
-                trend={
-                  forceUpTrend ? 'up' : rankTrend(rankIndex, previousRankIndex)
-                }
-              />
-            )}
+            {trend !== undefined && <RankTrendIcon trend={trend} />}
             <span
               className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
             >
