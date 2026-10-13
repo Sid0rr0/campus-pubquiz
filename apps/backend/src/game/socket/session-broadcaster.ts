@@ -6,7 +6,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
-import { MikroORM } from '@mikro-orm/core';
+import { MikroORM, RequestContext } from '@mikro-orm/core';
 import { AnswerService } from '@/answer/answer.service';
 import { GameStateService } from '@/game/state/game-state.service';
 import type { GameServer, GameSocket } from '@/game/socket/game-socket.types';
@@ -44,7 +44,7 @@ export class SessionBroadcaster
   constructor(
     private readonly gameState: GameStateService,
     private readonly answerService: AnswerService,
-    orm: MikroORM,
+    private readonly orm: MikroORM,
     @Optional()
     @Inject(PHASE_TIMER_SCHEDULERS)
     timerSchedulers?: PhaseTimerSchedulers,
@@ -69,6 +69,15 @@ export class SessionBroadcaster
 
   onModuleDestroy(): void {
     this.phaseTimers.clearAll();
+  }
+
+  /**
+   * Runs `work` in a fresh MikroORM request context. Socket.IO events aren't
+   * covered by @mikro-orm/nestjs's HTTP-only middleware, so the inbound
+   * gateway forks one per event through here (same fork `@CreateRequestContext()` makes).
+   */
+  runInRequestContext<T>(work: () => Promise<T>): Promise<T> {
+    return RequestContext.create(this.orm.em, work);
   }
 
   /** Called by the gateway's init hook once the Socket.IO server exists. */
