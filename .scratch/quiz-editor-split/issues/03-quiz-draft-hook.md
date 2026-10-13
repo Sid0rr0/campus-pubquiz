@@ -24,7 +24,7 @@ It keeps the current hydration rule (copy once per quiz id, then only backfill q
 
 **Blocked by:** 01 (Pure round edits and frontier notes), 02 (The import is written once)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The quiz draft hook owns:
   - the draft query

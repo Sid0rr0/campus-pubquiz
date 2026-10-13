@@ -1,21 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import type {
+  ImportPreview,
   ImportQuestionPreview,
   ImportRoundPreview,
   LiveEditFrontier,
+  RoundEditingDescription,
 } from '@campus-pubquiz/types';
 import {
+  addRound,
+  deleteRound,
+  csvImportTitle,
   describeEditorRounds,
+  importOutcome,
   makeMatchPair,
   makeOption,
   makeQuestion,
   makeRound,
   mergeRoundsFromPreview,
   moveQuestionToRound,
+  moveRound,
+  moveTargetRounds,
   questionFromPreview,
   questionToPreview,
   roundFromPreview,
+  structureNoteFor,
+  titleAfterImport,
   toSaveRequest,
+  updateRound,
   withSyncedQuestionIds,
 } from '@/app/quizzes/[id]/quiz-draft-state';
 
@@ -770,5 +781,348 @@ describe('describeEditorRounds', () => {
     expect(
       pinnedCounts(frontier({ hasCurrentBlockStartedLocking: true })),
     ).toEqual([4, 4, 0]);
+  });
+});
+
+describe('round edits', () => {
+  const rounds = [makeRound('a', 'One'), makeRound('b', 'Two'), makeRound('c')];
+  const ids = (list: { id: string }[]) => list.map((round) => round.id);
+
+  it('adds a round at the end named after its position', () => {
+    const result = addRound(rounds, 'd');
+
+    expect(result.map((round) => round.title)).toEqual([
+      'One',
+      'Two',
+      '',
+      'Round 4',
+    ]);
+    expect(result[3].id).toBe('d');
+    expect(rounds).toHaveLength(3);
+  });
+
+  it('updates only the round with the given id', () => {
+    const result = updateRound(rounds, 'b', {
+      title: 'Renamed',
+      breakAfter: true,
+    });
+
+    expect(result[1]).toMatchObject({
+      id: 'b',
+      title: 'Renamed',
+      breakAfter: true,
+    });
+    expect(result[0]).toBe(rounds[0]);
+    expect(rounds[1].title).toBe('Two');
+  });
+
+  it('deletes the round with the given id', () => {
+    expect(ids(deleteRound(rounds, 'b'))).toEqual(['a', 'c']);
+    expect(rounds).toHaveLength(3);
+  });
+
+  it('moves a round up and down one place', () => {
+    expect(ids(moveRound(rounds, 'b', -1))).toEqual(['b', 'a', 'c']);
+    expect(ids(moveRound(rounds, 'b', 1))).toEqual(['a', 'c', 'b']);
+    expect(ids(rounds)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('returns the same rounds when moving past either end', () => {
+    expect(moveRound(rounds, 'a', -1)).toBe(rounds);
+    expect(moveRound(rounds, 'c', 1)).toBe(rounds);
+  });
+
+  it('returns the same rounds when the id is unknown', () => {
+    expect(moveRound(rounds, 'zzz', 1)).toBe(rounds);
+  });
+});
+
+describe('moveTargetRounds', () => {
+  const rounds = [
+    makeRound('a', 'One'),
+    makeRound('b', '  '),
+    makeRound('c', 'Three'),
+  ];
+  const described = (canTake: boolean): RoundEditingDescription => ({
+    isReached: false,
+    structureEditing: canTake ? 'free' : 'frozen',
+    pinnedQuestionCount: 0,
+    canTakeMovedQuestion: canTake,
+    lockReason: null,
+  });
+
+  it('offers every other round when nothing is live', () => {
+    expect(moveTargetRounds(rounds, 0, undefined)).toEqual([
+      { id: 'b', label: '2. Untitled round', kahootMode: false },
+      { id: 'c', label: '3. Three', kahootMode: false },
+    ]);
+  });
+
+  it('labels a blank-titled round "Untitled round" with its number', () => {
+    const labels = moveTargetRounds(rounds, 0, undefined).map(
+      (target) => target.label,
+    );
+
+    expect(labels[0]).toBe('2. Untitled round');
+  });
+
+  it('leaves out the round itself', () => {
+    expect(
+      moveTargetRounds(rounds, 2, undefined).map((target) => target.id),
+    ).toEqual(['a', 'b']);
+  });
+
+  it('leaves out rounds that cannot take a moved question', () => {
+    const result = moveTargetRounds(rounds, 0, [
+      described(true),
+      described(false),
+      described(true),
+    ]);
+
+    expect(result.map((target) => target.id)).toEqual(['c']);
+  });
+
+  it('carries the kahoot flag', () => {
+    const kahoot = [
+      makeRound('a', 'One'),
+      { ...makeRound('b', 'Two'), kahootMode: true },
+    ];
+
+    expect(moveTargetRounds(kahoot, 0, undefined)[0].kahootMode).toBe(true);
+  });
+});
+
+describe('structureNoteFor', () => {
+  const base: RoundEditingDescription = {
+    isReached: false,
+    structureEditing: 'free',
+    pinnedQuestionCount: 0,
+    canTakeMovedQuestion: true,
+    lockReason: null,
+  };
+
+  it('has no note for a free round', () => {
+    expect(structureNoteFor(base)).toBeUndefined();
+  });
+
+  it('has no note when nothing is pinned yet', () => {
+    expect(
+      structureNoteFor({ ...base, structureEditing: 'after-opened' }),
+    ).toBeUndefined();
+  });
+
+  it('explains pinned opened questions', () => {
+    expect(
+      structureNoteFor({
+        ...base,
+        structureEditing: 'after-opened',
+        pinnedQuestionCount: 2,
+      }),
+    ).toBe(
+      'The opened questions stay at the start of this round. The questions after them can still be added, reordered, deleted or moved to a later round.',
+    );
+  });
+
+  it('explains a block that has started locking', () => {
+    expect(
+      structureNoteFor({
+        ...base,
+        structureEditing: 'frozen',
+        lockReason: 'block-locking',
+      }),
+    ).toBe(
+      "This round's block has started locking, so its questions can't be added, removed or reordered until the quiz moves on. Add new questions to a later round instead.",
+    );
+  });
+
+  it('explains a round a session has reached', () => {
+    expect(
+      structureNoteFor({
+        ...base,
+        structureEditing: 'frozen',
+        lockReason: 'reached',
+      }),
+    ).toBe(
+      "A live session has already reached this round, so its questions can't be added, removed or reordered.",
+    );
+  });
+});
+
+describe('importOutcome', () => {
+  const ids = () => {
+    let next = 0;
+    return () => `id-${next++}`;
+  };
+  const previewQuestion = (prompt: string): ImportQuestionPreview => ({
+    type: 'free_text',
+    prompt,
+    points: 1,
+    answer: 'a',
+  });
+  const previewRound = (
+    title: string,
+    prompts: string[],
+  ): ImportRoundPreview => ({
+    title,
+    breakAfter: false,
+    questions: prompts.map(previewQuestion),
+  });
+  const preview = (
+    rounds: ImportRoundPreview[],
+    overrides: Partial<ImportPreview> = {},
+  ): ImportPreview => ({
+    quizTitle: 'From file',
+    rounds,
+    issues: [],
+    isImportable: true,
+    ...overrides,
+  });
+  const input = (overrides: Partial<Parameters<typeof importOutcome>[0]>) => ({
+    rounds: [] as ReturnType<typeof makeRound>[],
+    title: '',
+    preview: preview([previewRound('A', ['q1'])]),
+    shouldAdd: false,
+    makeId: ids(),
+    ...overrides,
+  });
+
+  it('replaces the current rounds with the preview rounds', () => {
+    const outcome = importOutcome(
+      input({
+        rounds: [makeRound('old', 'Old')],
+        preview: preview([
+          previewRound('A', ['q1']),
+          previewRound('B', ['q2']),
+        ]),
+      }),
+    );
+
+    expect(outcome.rounds.map((round) => round.title)).toEqual(['A', 'B']);
+  });
+
+  it('adds a preview round with a new title after the current rounds', () => {
+    const outcome = importOutcome(
+      input({
+        rounds: [makeRound('old', 'Old')],
+        shouldAdd: true,
+      }),
+    );
+
+    expect(outcome.rounds.map((round) => round.title)).toEqual(['Old', 'A']);
+  });
+
+  it('merges into a current round with the same title when adding', () => {
+    const existing = {
+      ...makeRound('old', ' a '),
+      questions: [makeQuestion('q0')],
+    };
+    const outcome = importOutcome(
+      input({
+        rounds: [existing],
+        shouldAdd: true,
+        preview: preview([previewRound('A', ['q1', 'q2'])]),
+      }),
+    );
+
+    expect(outcome.rounds).toHaveLength(1);
+    expect(outcome.rounds[0].questions).toHaveLength(3);
+  });
+
+  it('keeps the current title when there is one', () => {
+    expect(importOutcome(input({ title: 'Mine' })).title).toBe('Mine');
+  });
+
+  it('takes the preview title when the current title is blank', () => {
+    expect(importOutcome(input({ title: '  ' })).title).toBe('From file');
+  });
+
+  it('summarises a replace with singular wording', () => {
+    expect(importOutcome(input({})).result).toEqual({
+      kind: 'summary',
+      message: 'Imported 1 round and 1 question — review and edit below.',
+    });
+  });
+
+  it('summarises a replace with plural wording', () => {
+    const outcome = importOutcome(
+      input({
+        preview: preview([
+          previewRound('A', ['q1', 'q2']),
+          previewRound('B', []),
+        ]),
+      }),
+    );
+
+    expect(outcome.result).toEqual({
+      kind: 'summary',
+      message: 'Imported 2 rounds and 2 questions — review and edit below.',
+    });
+  });
+
+  it('summarises an add with singular wording', () => {
+    expect(importOutcome(input({ shouldAdd: true })).result).toEqual({
+      kind: 'summary',
+      message:
+        'Added 1 question from 1 round to the quiz — review and edit below.',
+    });
+  });
+
+  it('summarises an add with plural wording', () => {
+    const outcome = importOutcome(
+      input({
+        shouldAdd: true,
+        preview: preview([
+          previewRound('A', ['q1', 'q2']),
+          previewRound('B', []),
+        ]),
+      }),
+    );
+
+    expect(outcome.result).toEqual({
+      kind: 'summary',
+      message:
+        'Added 2 questions from 2 rounds to the quiz — review and edit below.',
+    });
+  });
+
+  it('lists each issue by row and field instead of a summary', () => {
+    const outcome = importOutcome(
+      input({
+        preview: preview([previewRound('A', ['q1'])], {
+          issues: [
+            { rowNumber: 2, field: 'answer', message: 'missing' },
+            { rowNumber: 5, field: 'points', message: 'bad' },
+          ],
+        }),
+      }),
+    );
+
+    expect(outcome.result).toEqual({
+      kind: 'issues',
+      message:
+        'Imported with 2 issue(s) to fix before saving — row 2 (answer): missing; row 5 (points): bad',
+    });
+  });
+});
+
+describe('csvImportTitle', () => {
+  it('returns the current title when there is one', () => {
+    expect(csvImportTitle('  Mine ', 'quiz.csv')).toBe('Mine');
+  });
+
+  it('returns the file name without .csv when the title is blank', () => {
+    expect(csvImportTitle('  ', 'Pub Night.CSV')).toBe('Pub Night');
+  });
+});
+
+describe('titleAfterImport', () => {
+  it('keeps a title typed while the import was in flight', () => {
+    expect(titleAfterImport('Typed meanwhile', 'From sheet')).toBe(
+      'Typed meanwhile',
+    );
+  });
+
+  it('takes the import title when the current title is blank', () => {
+    expect(titleAfterImport('   ', 'From sheet')).toBe('From sheet');
   });
 });

@@ -9,7 +9,7 @@
 
 **Blocked by:** None (can start immediately). It runs in parallel with 01, and whichever lands second rebases its panel edits.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The draft state module exports the import outcome and the CSV title rule.
 - [ ] The panel no longer contains import state, import mutations or either copy of the import form. It renders the import controls in both places.

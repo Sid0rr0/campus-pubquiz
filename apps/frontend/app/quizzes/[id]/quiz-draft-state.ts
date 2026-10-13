@@ -1,5 +1,6 @@
 import {
   describeLiveEditRounds,
+  type ImportPreview,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type LiveEditFrontier,
@@ -181,6 +182,84 @@ export function mergeRoundsFromPreview(
   return merged;
 }
 
+export interface ImportOutcomeInput {
+  rounds: EditorRound[];
+  title: string;
+  preview: ImportPreview;
+  /** Add to the current rounds instead of replacing them. */
+  shouldAdd: boolean;
+  makeId: () => string;
+}
+
+export interface ImportOutcome {
+  rounds: EditorRound[];
+  title: string;
+  /** A summary to toast, or an issue message to show as the import error. */
+  result: { kind: 'summary' | 'issues'; message: string };
+}
+
+/** "1 round" / "2 rounds" — the count with its noun, pluralised. */
+export function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+/** What an import preview does to the draft: the new rounds, the title to use (the current one unless blank), and the message to show. */
+export function importOutcome({
+  rounds,
+  title,
+  preview,
+  shouldAdd,
+  makeId,
+}: ImportOutcomeInput): ImportOutcome {
+  const newRounds = shouldAdd
+    ? mergeRoundsFromPreview(rounds, preview.rounds, makeId)
+    : preview.rounds.map((round) =>
+        roundFromPreview(makeId(), round, () => makeId()),
+      );
+  const questionCount = preview.rounds.reduce(
+    (total, round) => total + round.questions.length,
+    0,
+  );
+  const newTitle = title.trim() ? title : preview.quizTitle;
+
+  if (preview.issues.length > 0) {
+    const listed = preview.issues
+      .map(
+        (issue) => `row ${issue.rowNumber} (${issue.field}): ${issue.message}`,
+      )
+      .join('; ');
+    return {
+      rounds: newRounds,
+      title: newTitle,
+      result: {
+        kind: 'issues',
+        message: `Imported with ${preview.issues.length} issue(s) to fix before saving — ${listed}`,
+      },
+    };
+  }
+  const message = shouldAdd
+    ? `Added ${plural(questionCount, 'question')} from ${plural(preview.rounds.length, 'round')} to the quiz — review and edit below.`
+    : `Imported ${plural(newRounds.length, 'round')} and ${plural(questionCount, 'question')} — review and edit below.`;
+  return {
+    rounds: newRounds,
+    title: newTitle,
+    result: { kind: 'summary', message },
+  };
+}
+
+/** The title after an import lands: the latest title if it isn't blank, otherwise the import's. Decided against the latest state so an edit made during an in-flight fetch isn't overwritten. */
+export function titleAfterImport(
+  currentTitle: string,
+  importedTitle: string,
+): string {
+  return currentTitle.trim() ? currentTitle : importedTitle;
+}
+
+/** The title to send with a CSV import: the current title, or the file name without ".csv" when the title is blank. */
+export function csvImportTitle(title: string, fileName: string): string {
+  return title.trim() || fileName.replace(/\.csv$/i, '');
+}
+
 /** Converts editable state back into the API shape — derives `answer` from whichever option is marked correct, trims text, and drops blank optional fields. */
 export function questionToPreview(
   question: EditorQuestion,
@@ -213,6 +292,92 @@ export function describeEditorRounds(
       questionIds: round.questions.map((question) => question.dbId),
     })),
   );
+}
+
+/** A round another round's question may move to, numbered by its place in the quiz. */
+export interface MoveTargetRound {
+  id: string;
+  label: string;
+  kahootMode: boolean;
+}
+
+/** The rounds a question in round `fromIndex` may move to: every other round that can take a moved question. */
+export function moveTargetRounds(
+  rounds: readonly EditorRound[],
+  fromIndex: number,
+  described: readonly RoundEditingDescription[] | undefined,
+): MoveTargetRound[] {
+  return rounds.flatMap((round, index) =>
+    index === fromIndex || described?.[index].canTakeMovedQuestion === false
+      ? []
+      : [
+          {
+            id: round.id,
+            label: `${index + 1}. ${round.title.trim() || 'Untitled round'}`,
+            kahootMode: round.kahootMode,
+          },
+        ],
+  );
+}
+
+/** Tells the editor why a round's questions are restricted while a session is live — and what to do instead — or nothing when they aren't. */
+export function structureNoteFor(
+  round: RoundEditingDescription,
+): string | undefined {
+  switch (round.structureEditing) {
+    case 'free':
+      return undefined;
+    case 'after-opened':
+      return round.pinnedQuestionCount > 0
+        ? 'The opened questions stay at the start of this round. The questions after them can still be added, reordered, deleted or moved to a later round.'
+        : undefined;
+    case 'frozen':
+      return round.lockReason === 'block-locking'
+        ? "This round's block has started locking, so its questions can't be added, removed or reordered until the quiz moves on. Add new questions to a later round instead."
+        : "A live session has already reached this round, so its questions can't be added, removed or reordered.";
+  }
+}
+
+/** Adds a round at the end, titled "Round N" for the new count. */
+export function addRound(
+  rounds: readonly EditorRound[],
+  id: string,
+): EditorRound[] {
+  return [...rounds, makeRound(id, `Round ${rounds.length + 1}`)];
+}
+
+/** Applies a partial patch to the round with this id. */
+export function updateRound(
+  rounds: readonly EditorRound[],
+  roundId: string,
+  patch: Partial<EditorRound>,
+): EditorRound[] {
+  return rounds.map((round) =>
+    round.id === roundId ? { ...round, ...patch } : round,
+  );
+}
+
+/** Removes the round with this id. */
+export function deleteRound(
+  rounds: readonly EditorRound[],
+  roundId: string,
+): EditorRound[] {
+  return rounds.filter((round) => round.id !== roundId);
+}
+
+/** Moves a round one place up (-1) or down (1). Returns `rounds` itself at either end or for an unknown id. */
+export function moveRound<Rounds extends readonly EditorRound[]>(
+  rounds: Rounds,
+  roundId: string,
+  direction: -1 | 1,
+): Rounds | EditorRound[] {
+  const index = rounds.findIndex((round) => round.id === roundId);
+  const targetIndex = index + direction;
+  if (index === -1 || targetIndex < 0 || targetIndex >= rounds.length)
+    return rounds;
+  const copy = rounds.slice();
+  [copy[index], copy[targetIndex]] = [copy[targetIndex], copy[index]];
+  return copy;
 }
 
 /** Moves a question to the end of another round — the draft's way of changing which round a question plays in. Returns `rounds` itself when there is nothing to move. */
