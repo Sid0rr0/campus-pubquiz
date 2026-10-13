@@ -10,8 +10,6 @@ import {
   gradeAtSubmit,
   gradeClosestGuessBatch,
   isAutoGradedType,
-  isBatchGradedType,
-  isMatchOrHumanType,
   scoreSubmission,
   verdictForManualGrade,
 } from '@campus-pubquiz/types';
@@ -22,6 +20,7 @@ import { readQuestionPayload } from '@/db/question-payload';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
 import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
+import { canGradeByHand, gradeOnSubmit } from '@/answer/grading-policy';
 
 export interface SubmittedAnswer {
   answerId: number;
@@ -67,33 +66,18 @@ export class AnswerService {
       matchScoringMode: payload.matchScoringMode,
       margin: payload.margin,
     };
-    // Whether a submission is graded the instant it lands, and how, is
-    // Scoring's concern (gradeAtSubmit): auto types always, free_text/audio/
-    // youtube only when it matches the key, closest_guess never. A null
-    // score leaves the answer for the moderator (or the lock-time batch).
-    const score = gradeAtSubmit(question, value);
-    const pointsAwarded = score?.points ?? 0;
-
-    // The admin can grade an answer as soon as it lands (grade() has no
-    // status gate — see control's "Grade Questions" panel), well before the
-    // block locks. A team can then revise its answer (last-write-wins,
-    // allowed until lock) — if that revision changes the value, any manual
-    // grade already given belongs to the *old* value and must not silently
-    // carry over onto the new one, so a revision with no automatic grade
-    // goes back to ungraded. Resubmitting the same value to a
-    // match-or-human question leaves its grade alone, so the moderator's
-    // survives.
+    // Whether this submission sets, clears or keeps the stored grade is the
+    // Grading policy's call. The admin can grade an answer as soon as it
+    // lands, well before the block locks, and a team can then revise it
+    // (last-write-wins until lock): the policy decides what survives.
     const existing = await this.answers.findOne(
       { gameSession: gameSessionId, question: questionId, team: teamId },
       { fields: ['value', 'gradedAt'] },
     );
-    const isSameValue = existing !== null && existing.value === value;
-    const keepsGrade =
-      isMatchOrHumanType(question.type) &&
-      isSameValue &&
-      existing.gradedAt !== null;
-    const appliesScore = score !== null && !keepsGrade;
-    const resetsGrading = score === null && existing !== null && !isSameValue;
+    const write = gradeOnSubmit(question, value, existing);
+    const appliesScore = write.kind === 'set';
+    const resetsGrading = write.kind === 'clear';
+    const pointsAwarded = write.kind === 'set' ? write.points : 0;
 
     // upsert() bypasses the @Property({ onCreate/onUpdate }) hooks — set the
     // timestamps explicitly (see TeamService.addToRoster for the same fix).
@@ -106,7 +90,9 @@ export class AnswerService {
         value,
         pointsAwarded,
         responseMs,
-        ...(appliesScore ? { gradedAt: now, verdict: score.verdict } : {}),
+        ...(write.kind === 'set'
+          ? { gradedAt: now, verdict: write.verdict }
+          : {}),
         ...(resetsGrading ? { gradedAt: null, verdict: null } : {}),
         createdAt: now,
         updatedAt: now,
@@ -196,14 +182,9 @@ export class AnswerService {
       { id: answerId, gameSession: gameSessionId },
       { populate: ['question'] },
     );
-    // Automatic grades (match's per-pair partial credit, a free_text
-    // synonym the exact match missed) are only a starting point — the quiz
-    // master may override any of them here. A batch-graded answer only once
-    // its batch has graded it at the lock: before then nobody knows who's
-    // closest, and the batch would overwrite the grade anyway. That refusal
-    // is also what lets ensureClosestGuessGraded read "any row graded" as
-    // "the batch ran".
-    if (isBatchGradedType(answer.question.type) && answer.gradedAt === null) {
+    // Whether this answer may be hand-graded yet is the Grading policy's
+    // call (a batch answer only once its batch has run).
+    if (!canGradeByHand(answer.question, answer)) {
       throw new Error(
         `${answer.question.type} answers can only be graded by hand once the block locks`,
       );

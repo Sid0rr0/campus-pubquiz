@@ -587,6 +587,40 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answers.find((a) => a.teamId === team.id)?.pointsAwarded).toBe(3);
   });
 
+  it('rescores a hand-overridden match answer when the team resubmits the same value (override lost)', async () => {
+    const matchQuestion = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'match',
+      prompt: 'Match the hero to their weapon.',
+      answer: 'excalibur|shield',
+      points: 4,
+      payload: {
+        options: ['arthur', 'captain america'],
+        matchTargets: ['shield', 'excalibur'],
+      },
+    });
+    await state.em.flush();
+    const team = await insertTeam('Team A', 'token-a');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield',
+    );
+    await state.answerService.grade(state.session.id, submitted.answerId, 3);
+
+    const resubmitted = await state.answerService.submit(
+      state.session.id,
+      matchQuestion.id,
+      team.id,
+      'excalibur|shield',
+    );
+
+    expect(resubmitted.pointsAwarded).toBe(4);
+    expect(resubmitted.gradedAt).not.toBeNull();
+  });
+
   describe('regradeAutoGraded', () => {
     it('re-scores every multiple_choice answer against a corrected answer key', async () => {
       const mcQuestion = state.em.create(Question, {
