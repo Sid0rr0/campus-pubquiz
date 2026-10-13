@@ -3,12 +3,11 @@ import type { ImportQuestionPreview } from '../import';
 import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { isWithinMargin } from '../margin';
 import { QUESTION_TYPES } from '../question-types';
+import { hasMarginType } from '../scoring';
 
 describe('which question types carry a margin', () => {
   it('is Number alone', () => {
-    const withMargin = QUESTION_TYPES.filter(
-      (type) => QUESTION_KINDS[type].hasMargin,
-    );
+    const withMargin = QUESTION_TYPES.filter((type) => hasMarginType(type));
 
     expect(withMargin).toEqual(['number']);
   });

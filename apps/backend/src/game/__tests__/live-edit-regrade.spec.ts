@@ -64,6 +64,38 @@ const NUMBER_QUIZ: CreateGatewayOptions['rounds'] = [
   },
 ];
 
+/** A match question as CSV import leaves it (no stored scoring mode), with a later round to edit. */
+const MATCH_QUIZ: CreateGatewayOptions['rounds'] = [
+  {
+    title: 'Capitals',
+    breakAfter: true,
+    questions: [
+      {
+        type: 'match',
+        prompt: 'Match countries to capitals',
+        answer: 'Paris|Rome',
+        points: 4,
+        payload: {
+          options: ['France', 'Italy'],
+          matchTargets: ['Rome', 'Paris'],
+        },
+      },
+    ],
+  },
+  {
+    title: 'Later',
+    breakAfter: true,
+    questions: [
+      {
+        type: 'free_text',
+        prompt: 'Largest planet?',
+        answer: 'Jupiter',
+        points: 1,
+      },
+    ],
+  },
+];
+
 const KAHOOT_QUIZ: CreateGatewayOptions['rounds'] = [
   {
     title: 'Speed Round',
@@ -299,5 +331,44 @@ describe('GameGateway — live answer-key fix regrades by question type', () => 
     await game.saveAnswerKeyFix(questionId, { answer: '650' });
 
     expect(await storedPoints(game, questionId)).toEqual({ Near: 0, Far: 3 });
+  });
+
+  it('keeps a moderator override on an opened CSV-shaped match question when only a later round is saved', async () => {
+    const { game, admin } = await start({
+      teamNames: ['Pairs'],
+      rounds: MATCH_QUIZ,
+    });
+    const [team] = game.teams;
+    const [questionId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(admin);
+    await submit(game, team, questionId, 'Paris|Milan'); // one pair right: half of 4
+    const [answer] = await game.inRequestContext(() =>
+      game.answerService.listForQuestion(game.gameSessionId, questionId),
+    );
+    await game.gateway.handleGradeAnswer(asSocket(admin), {
+      answerId: answer.answerId,
+      pointsAwarded: 3,
+    });
+    expect(await storedPoints(game, questionId)).toEqual({ Pairs: 3 });
+    const leaderboardBefore = lastAdminLeaderboard(game);
+    game.clearEmits();
+
+    // The editor always saves the scoring mode explicitly; only round 2 changes.
+    await game.saveQuizEdit((rounds) =>
+      rounds.map((round, roundIndex) => ({
+        ...round,
+        questions: round.questions.map((question) =>
+          roundIndex === 0
+            ? { ...question, matchScoringMode: 'partial' as const }
+            : { ...question, prompt: 'Which planet is largest?' },
+        ),
+      })),
+    );
+
+    expect(await storedPoints(game, questionId)).toEqual({ Pairs: 3 });
+    const events = game.roomEmits().map((emit) => emit.event);
+    expect(events).not.toContain(SOCKET_EVENTS.ANSWERS_UPDATED);
+    expect(events).not.toContain(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED);
+    expect(lastAdminLeaderboard(game)).toEqual(leaderboardBefore);
   });
 });

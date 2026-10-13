@@ -48,6 +48,10 @@ _Avoid_: tiebreaker round, sudden death
 The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then revises an answer into something that doesn't match the key, its mark is cleared and must be given again. A typed answer (free text, audio, YouTube) that matches the key is graded correct automatically; only the others wait for the quiz master.
 _Avoid_: scoring, marking
 
+**Answer key**:
+What an answer is graded against: the correct answer, the points, and the question type's grading settings (a match question's scoring mode, a Number question's margin), with any setting left unset filled in with its default. A key fix is a change to an opened question's answer key.
+_Avoid_: grading fields, key fields
+
 **Grading policy**:
 The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, kahoot speed scoring, key fix.
 _Avoid_: grading rules, grading service

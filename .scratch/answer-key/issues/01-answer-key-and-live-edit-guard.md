@@ -19,7 +19,7 @@ Parent spec: `.scratch/answer-key/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Both reproducers fail against today's code, and pass after the change.
 - [ ] A new Answer key table spec (Vitest, in shared), built from the registry so a new question type needs no new row. It covers each type's resolved settings with none stored, with each setting stored, and with a setting the type doesn't carry (dropped).
