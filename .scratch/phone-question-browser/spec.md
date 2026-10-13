@@ -1,6 +1,6 @@
 # Spec: Move phone question browsing out of /play, and narrow the Team link hook
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-13, candidate 06 ("Worth exploring", in-process with a localStorage adapter).
 

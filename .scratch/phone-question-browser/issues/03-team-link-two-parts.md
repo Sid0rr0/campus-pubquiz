@@ -11,7 +11,7 @@ See the parent spec: `.scratch/phone-question-browser/spec.md`.
 
 **Blocked by:** 01 (Phone question browser hook), 02 (Join gate defined once in the Team link)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The hook returns the join part and the joined game part; its commands, pending answer, confirmation timer, storage, toasts and reconnect paths are unchanged
 - [ ] /play uses the join part for the join form, "Connecting…" and the header identity; it uses the joined game for everything after and passes its view to the phone question browser; its defaults for missing answers, grades, ratings and feedback are removed

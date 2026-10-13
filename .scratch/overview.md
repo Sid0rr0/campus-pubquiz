@@ -7,7 +7,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | Spec                      | Title                                                                                                               | Tickets | Blocked by                     |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------ |
 | reveal-kind               | [Let the reveal view say what kind of reveal it is](reveal-kind/spec.md)                                            | 2       | answer-key 01 (ticket 01 only) |
-| phone-question-browser    | [Move phone question browsing out of /play, and narrow the Team link hook](phone-question-browser/spec.md)          | 3       | —                              |
 
 ## Won't do
 

@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| phone-question-browser | [Move phone question browsing out of /play, and narrow the Team link hook](phone-question-browser/spec.md) | 3 |
 | block-grading-moves | [Give Block grading one entry point per move](block-grading-moves/spec.md) | 2 |
 | session-broadcaster | [Split outbound broadcasting out of the GameGateway](session-broadcaster/spec.md) | 4 |
 | real-store-harness-module | [Build the real-store harness from a Game module, not by hand](real-store-harness-module/spec.md) | 3 |
