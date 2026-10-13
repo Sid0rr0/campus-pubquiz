@@ -1,7 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SubmitEvent } from 'react';
-import { SOCKET_EVENTS } from '@campus-pubquiz/types';
+import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { roomView } from '@/test-utils/room-view';
 import { useTeamLink } from '@/app/lib/use-team-link';
 import {
   createFakeSocket,
@@ -81,6 +82,61 @@ describe('useTeamLink', () => {
     );
     expect(result.current.teamCodeInput).toBe('QUICK-JADE-FOX');
     expect(result.current.connectionError).toBeNull();
+  });
+
+  describe('the join form gate', () => {
+    it('needs the join form when the phone has no team name', () => {
+      const { result } = renderHook(() => useTeamLink(''));
+
+      expect(result.current.needsJoinForm).toBe(true);
+    });
+
+    it('needs the join form for a restored team name with no game to reconnect to and no view', () => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+
+      const { result } = renderHook(() => useTeamLink(''));
+
+      expect(result.current.teamName).toBe('The Quizzards');
+      expect(result.current.activeJoinCode).toBeNull();
+      expect(result.current.needsJoinForm).toBe(true);
+    });
+
+    it('needs the join form when the join is refused and there is no team', async () => {
+      const { result } = renderHook(() => useTeamLink(''));
+      act(() => {
+        result.current.setNameInput('The Quizzards');
+        result.current.setCodeInput('abcdef');
+      });
+      act(() => result.current.handleJoin(fakeSubmitEvent()));
+      const socket = latestSocket();
+      act(() => socket.serverConnects());
+
+      await act(async () =>
+        socket.reject(SOCKET_EVENTS.JOIN_PLAYERS, 'Unknown game'),
+      );
+
+      expect(result.current.connectionError).toBe('Unknown game');
+      expect(result.current.team).toBeNull();
+      expect(result.current.needsJoinForm).toBe(true);
+    });
+
+    it('no longer needs the join form once a view has arrived', () => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+      window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+      const { result } = renderHook(() => useTeamLink(''));
+      const socket = latestSocket();
+      act(() => socket.serverConnects());
+
+      act(() =>
+        socket.trigger(
+          SOCKET_EVENTS.STATE_SYNC,
+          roomView(SOCKET_ROOMS.PLAYERS, {}),
+        ),
+      );
+
+      expect(result.current.snapshot).not.toBeNull();
+      expect(result.current.needsJoinForm).toBe(false);
+    });
   });
 
   describe('leaving a session', () => {

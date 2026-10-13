@@ -25,6 +25,7 @@ import {
   NOT_CONNECTED_MESSAGE,
   isNotDelivered,
 } from '@/app/lib/connection-messages';
+import { needsJoinForm } from '@/app/lib/join-gate';
 import {
   mergeSeenQuestions,
   type SeenQuestions,
@@ -112,6 +113,8 @@ export interface UseTeamLinkResult {
   teamCodeInput: string;
   setTeamCodeInput: (value: string) => void;
   hasStoredIdentity: boolean;
+  /** Whether the phone should show the join form: no team name, nothing to reconnect to, or an unrecovered connection error. The one gate /play and the home page's join panel share. */
+  needsJoinForm: boolean;
   /** The game code the connection is opened for, or null when none is known yet — tells "genuinely mid-connection" apart from "no session to reconnect to" even while teamName is already restored from storage. */
   activeJoinCode: string | null;
   handleJoin: (event: SubmitEvent<HTMLFormElement>) => void;
@@ -435,9 +438,19 @@ export function useTeamLink(
     [dispatch],
   );
 
+  const connectionError =
+    link.joinError ?? link.kickNotice ?? socketConnectionError;
+
   return {
     snapshot,
     team: link.team,
+    needsJoinForm: needsJoinForm({
+      teamName: link.teamName,
+      activeJoinCode: link.activeJoinCode,
+      hasView: Boolean(snapshot),
+      connectionError,
+      hasTeam: Boolean(link.team),
+    }),
     myAnswers: link.myAnswers,
     myAnswerGrades: link.myAnswerGrades,
     myBonusAwards: link.myBonusAwards,
@@ -449,7 +462,7 @@ export function useTeamLink(
     rateRound,
     sendFeedback,
     submitShowdownGuess,
-    connectionError: link.joinError ?? link.kickNotice ?? socketConnectionError,
+    connectionError,
     teamName: link.teamName,
     nameInput: link.nameInput,
     setNameInput,

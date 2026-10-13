@@ -48,7 +48,7 @@ function PlayPageContent() {
     connectionError,
     snapshot,
     team,
-    activeJoinCode,
+    needsJoinForm,
     submitAnswer,
     submitShowdownGuess,
     myAnswers = {},
@@ -120,16 +120,7 @@ function PlayPageContent() {
     }
   }, [teamName, snapshot, codeFromUrl, router]);
 
-  // A stored team name alone doesn't mean a reconnect is actually possible —
-  // a closed session deliberately keeps the team name in storage (see
-  // clearStoredSession) but clears its join code, so a refresh can restore
-  // teamName with nothing left to connect to. Without this, the checks below
-  // would fall through to the "Connecting…" screen and hang there forever
-  // since the socket never has a join code to open. Once a snapshot has
-  // actually arrived it proves a connection did happen, so that alone is
-  // also enough even if activeJoinCode was cleared in the meantime.
-  const canReachSnapshot = Boolean(activeJoinCode) || Boolean(snapshot);
-  if (!teamName || !canReachSnapshot || (connectionError && !team)) {
+  if (needsJoinForm) {
     return (
       <main className="flex min-h-screen flex-col justify-center gap-4 bg-background px-7 py-10 text-foreground">
         <h1 className="text-center font-display text-3xl text-magenta">

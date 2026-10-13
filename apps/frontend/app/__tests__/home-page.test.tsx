@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import HomePage from '@/app/page';
 import { renderWithQuery } from '@/test-utils/query';
-import { socketResult } from './test-utils';
+import { socketResult } from '@/app/play/__tests__/test-utils';
 
 const {
   mockUseTeamLink,
