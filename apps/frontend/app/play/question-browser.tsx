@@ -62,25 +62,24 @@ function RevealBody({
 }: RevealBodyProps) {
   switch (revealQuestion.revealKind) {
     case 'closest_guess':
-      return (
-        <ClosestGuessRevealScreen
-          prompt={revealQuestion.prompt}
-          step={closestGuessRevealStep}
-          correctAnswer={revealQuestion.answer}
-          answerMediaUrl={revealQuestion.answerMediaUrl}
-          closestGuess={revealQuestion.closestGuess}
-          mediaTestIdPrefix="play-reveal"
-        />
-      );
-    case 'closest_guess_pending':
+    case 'closest_guess_pending': {
+      const answerProps =
+        revealQuestion.revealKind === 'closest_guess'
+          ? {
+              correctAnswer: revealQuestion.answer,
+              answerMediaUrl: revealQuestion.answerMediaUrl,
+            }
+          : {};
       return (
         <ClosestGuessRevealScreen
           prompt={revealQuestion.prompt}
           step={closestGuessRevealStep}
           closestGuess={revealQuestion.closestGuess}
           mediaTestIdPrefix="play-reveal"
+          {...answerProps}
         />
       );
+    }
     case 'answer':
       return (
         <QuestionDisplay

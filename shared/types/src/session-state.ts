@@ -24,8 +24,9 @@ export interface SeededRound {
   questions: SeededQuestion[];
   // Host-only notes, keyed by question id — deliberately a sibling of
   // `questions` rather than a field on each question object. Every
-  // SeededQuestion flows through toRevealQuestionViews' blind `{...question}`
-  // spread into the broadcast snapshot; notes must never ride along. Optional
+  // SeededQuestion is spread whole into the reveal views built by
+  // toRevealQuestionViews, which go into the broadcast snapshot; notes must
+  // never ride along. Optional
   // (like GameProgress.isMediaFullscreen) so callers building a SeededRound
   // needn't set it; undefined behaves as "no notes for any question in this
   // round".

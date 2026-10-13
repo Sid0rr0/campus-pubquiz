@@ -16,10 +16,10 @@ Parent spec: `.scratch/reveal-kind/spec.md`
 
 **Status:** done
 
-- [ ] A backend projection spec asserts that a Number question's view carries its stored margin, and the default margin when none is stored, both while the question is open and on its reveal view.
-- [ ] The same spec asserts that closest_guess and at least one other type never carry a margin, even if one was left on the stored question.
-- [ ] Display tests: margin text appears on the big screen's question and the range on its reveal exactly when the fixture view has a margin. A closest_guess reveal shows the plain answer.
-- [ ] Play tests: margin text appears on the phone's open prompt exactly when the fixture view has a margin.
-- [ ] No file under the /display or /play screens imports `hasMarginType`.
-- [ ] DOCUMENTATION.md says the question view carries a margin exactly for types that have one, wherever it describes the view.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] A backend projection spec asserts that a Number question's view carries its stored margin, and the default margin when none is stored, both while the question is open and on its reveal view.
+- [x] The same spec asserts that closest_guess and at least one other type never carry a margin, even if one was left on the stored question.
+- [x] Display tests: margin text appears on the big screen's question and the range on its reveal exactly when the fixture view has a margin. A closest_guess reveal shows the plain answer.
+- [x] Play tests: margin text appears on the phone's open prompt exactly when the fixture view has a margin.
+- [x] No file under the /display or /play screens imports `hasMarginType`.
+- [x] DOCUMENTATION.md says the question view carries a margin exactly for types that have one, wherever it describes the view.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.

@@ -40,7 +40,8 @@ function toRevealQuestionViews(
   return entries.map(
     ({ question: stored, questionIndexInRound }): BlockRevealQuestionView => {
       const { margin: _stored, ...rest } = stored;
-      const question = { ...rest, ...marginOf(stored) };
+      const margin = marginOf(stored);
+      const question = margin !== undefined ? { ...rest, margin } : rest;
       const placement = {
         roundNumber,
         questionNumberInRound: questionIndexInRound + 1,

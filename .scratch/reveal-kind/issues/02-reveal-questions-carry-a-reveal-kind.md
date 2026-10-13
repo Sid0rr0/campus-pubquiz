@@ -22,15 +22,15 @@ Parent spec: `.scratch/reveal-kind/spec.md`
 
 **Status:** done
 
-- [ ] Backend projection specs (closest-guess reveal, players reveal redaction, reveal paging, session snapshot leak) assert:
+- [x] Backend projection specs (closest-guess reveal, players reveal redaction, reveal paging, session snapshot leak) assert:
   - every non-closest_guess reveal question is `answer` with no stats
   - a closest_guess question is `closest_guess` in the display and admin views at every step
   - the players view has `closest_guess_pending` with no answer or answer media before the answer step, and `closest_guess` with trimmed stats from it on
   - a closest_guess question nobody guessed on is `closest_guess` at step 0
   - past blocks' revealed questions and the `ended` reveal walk carry the right kinds
-- [ ] Display tests render fixtures of each block reveal kind: the closest-guess sequence for `closest_guess`, the question with its answer for `answer`.
-- [ ] Play tests render fixtures of all three kinds. `closest_guess_pending` shows the closest-guess sequence with no correct answer, and `closest_guess` shows it with the answer.
-- [ ] No file under the /display or /play screens imports `isBatchGradedType` or tests whether a reveal field exists with `in`.
-- [ ] The screens' switches on the reveal kind are exhaustive, so a new kind fails typecheck until each screen handles it.
-- [ ] GLOSSARY.md and DOCUMENTATION.md are updated.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
+- [x] Display tests render fixtures of each block reveal kind: the closest-guess sequence for `closest_guess`, the question with its answer for `answer`.
+- [x] Play tests render fixtures of all three kinds. `closest_guess_pending` shows the closest-guess sequence with no correct answer, and `closest_guess` shows it with the answer.
+- [x] No file under the /display or /play screens imports `isBatchGradedType` or tests whether a reveal field exists with `in`.
+- [x] The screens' switches on the reveal kind are exhaustive, so a new kind fails typecheck until each screen handles it.
+- [x] GLOSSARY.md and DOCUMENTATION.md are updated.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm test` are green.
