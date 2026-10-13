@@ -1,4 +1,9 @@
-import { rankTeams, type LeaderboardEntry } from '@campus-pubquiz/types';
+import {
+  isQuestionOnAirStatus,
+  rankTeams,
+  type GameStatus,
+  type LeaderboardEntry,
+} from '@campus-pubquiz/types';
 import { formatRankLabel } from '@/app/lib/rank-label';
 
 /**
@@ -324,4 +329,39 @@ function withTrends(
       : rankTrend(row.rankIndex, previousRankIndex);
     return { ...row, trend };
   });
+}
+
+export interface PreviousBoardCaptureInput {
+  /** The board currently remembered as "the board before this update". */
+  remembered: LeaderboardEntry[];
+  /** The latest snapshot's game status. */
+  status: GameStatus;
+  /** Whether the latest snapshot shows the leaderboard. */
+  isLeaderboardVisible: boolean;
+  /** The latest snapshot's leaderboard, absent when the server sent none. */
+  leaderboard: LeaderboardEntry[] | undefined;
+}
+
+/**
+ * The board to remember as the previous board: the board the Kahoot
+ * between-questions animation and the trend arrows compare against.
+ *
+ * Captures only while the question is still on air (question_open/locking)
+ * and the leaderboard is hidden. A Kahoot question's points land at the
+ * locking->reveal transition, before the between-questions board appears,
+ * so capturing on 'reveal' would grab the already-updated totals and leave
+ * nothing to animate. Returns `remembered` itself when nothing changes, so
+ * the display page can call this during render without an extra render.
+ */
+export function capturePreviousBoard({
+  remembered,
+  status,
+  isLeaderboardVisible,
+  leaderboard,
+}: PreviousBoardCaptureInput): LeaderboardEntry[] {
+  const shouldCapture =
+    isQuestionOnAirStatus(status) &&
+    !isLeaderboardVisible &&
+    leaderboard !== undefined;
+  return shouldCapture ? leaderboard : remembered;
 }
