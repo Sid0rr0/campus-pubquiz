@@ -71,6 +71,31 @@ describe('DisplayPage — reveal', () => {
     expect(screen.queryByText('Largest planet?')).not.toBeInTheDocument();
   });
 
+  it('shows the key and the accepted range for a Number question on reveal', () => {
+    mockUseGame.mockReturnValue({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        rounds: [
+          {
+            questions: [
+              {
+                type: 'number',
+                prompt: 'How many bones?',
+                answer: '200',
+                margin: { value: 10, unit: 'percent' },
+              },
+            ],
+          },
+        ],
+        progress: { status: 'reveal', revealIndex: 0 },
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+    render(<DisplayPage />);
+
+    expect(screen.getByText('200 · 180–220 accepted')).toBeInTheDocument();
+  });
+
   it('shows the correct order for a sort question on reveal', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {

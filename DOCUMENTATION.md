@@ -530,8 +530,14 @@ grading behavior:
   accepts only an exact 0, and a margin of 0 accepts only the exact key. There
   is no partial credit, a Number answer is never ungraded, and the admin can
   override any grade. Allowed in kahoot rounds, where a correct answer is
-  scaled by the speed multiplier. Reveal shows the key like other types (the
-  margin and accepted range are not yet shown on screen).
+  scaled by the speed multiplier. While the question is open, the phone (under
+  the prompt) and the big screen show the margin ("within 10%", "within 5");
+  on reveal both show the key and the accepted range ("200 · 180–220
+  accepted"; just the key when the margin is 0). The text comes from one
+  shared formatter (`formatMarginText`/`formatNumberReveal` in
+  `shared/types/src/margin.ts`), numbers show at most 2 decimals with trailing
+  zeros dropped, and grading always uses the exact range. Only a Number
+  question's `QuestionView` carries `margin`.
 
 `multiple_choice`/`sort`/`match`/`number` are auto-graded the instant a team
 submits, and the admin can still override any of them per answer;

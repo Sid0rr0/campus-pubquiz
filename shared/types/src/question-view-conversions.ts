@@ -17,6 +17,9 @@ export function toQuestionView(question: RevealQuestionView): QuestionView {
     ...(question.matchTargets !== undefined
       ? { matchTargets: question.matchTargets }
       : {}),
+    ...(question.type === 'number' && question.margin !== undefined
+      ? { margin: question.margin }
+      : {}),
     ...(question.mediaUrl !== undefined ? { mediaUrl: question.mediaUrl } : {}),
     ...(question.mediaStartSeconds !== undefined
       ? { mediaStartSeconds: question.mediaStartSeconds }

@@ -122,6 +122,7 @@ export type QuestionDisplayQuestion = Pick<
   | 'mediaEndSeconds'
   | 'options'
   | 'matchTargets'
+  | 'margin'
 > &
   Partial<Pick<RevealQuestionView, 'answer' | 'answerMediaUrl'>>;
 

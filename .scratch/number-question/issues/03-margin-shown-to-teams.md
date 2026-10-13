@@ -6,7 +6,7 @@ This works with the 10% default margin from 01, and shows custom margins once 02
 
 **Blocked by:** 01 (Number question type with a fixed 10% margin)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A shared formatter turns a key and margin into the margin text and the accepted range:
   - "within 10%", "within 2.5%", "within 5";

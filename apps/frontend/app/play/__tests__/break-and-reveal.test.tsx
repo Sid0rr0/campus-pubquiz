@@ -61,6 +61,26 @@ describe('PlayPage — break and reveal', () => {
     return renderWithQuery(<PlayPage />);
   }
 
+  it('shows the key and the accepted range for a Number question on reveal', () => {
+    renderPhone({
+      rounds: [
+        {
+          questions: [
+            {
+              type: 'number',
+              prompt: 'How many bones?',
+              answer: '200',
+              margin: { value: 10, unit: 'percent' },
+            },
+          ],
+        },
+      ],
+      progress: { status: 'reveal', revealIndex: 0 },
+    });
+
+    expect(screen.getByText('200 · 180–220 accepted')).toBeInTheDocument();
+  });
+
   it('tells the team answering is locked during the grading break', () => {
     renderPhone({
       rounds: [{ questions: [{ prompt: 'Name a fruit' }] }],

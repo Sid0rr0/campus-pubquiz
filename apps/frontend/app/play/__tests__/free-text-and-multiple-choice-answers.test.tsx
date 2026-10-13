@@ -132,6 +132,37 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
     expect(input).toHaveAttribute('inputmode', 'decimal');
   });
 
+  it('shows the margin under the prompt of an open Number question', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    mockUseTeamLink.mockReturnValue(
+      socketResult({
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'number',
+                  prompt: 'How tall is Everest?',
+                  points: 1,
+                  margin: { value: 5, unit: 'absolute' },
+                },
+              ],
+            },
+          ],
+          progress: { status: 'question_open' },
+        },
+        team: {
+          teamId: 'team-1',
+          teamName: 'Returning Team',
+          teamToken: 'team-token-1',
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('within 5')).toBeInTheDocument();
+  });
+
   it('submits the typed free-text answer with the question and team id', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     const submitAnswer = vi.fn();

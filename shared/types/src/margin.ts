@@ -50,3 +50,34 @@ export function parseFiniteNumber(text: string): number | null {
   const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : null;
 }
+
+const DISPLAY_DECIMALS = 2;
+
+/** At most 2 decimal places, trailing zeros dropped. Display only: grading uses the exact range. */
+function formatNumber(value: number): string {
+  return String(Number(value.toFixed(DISPLAY_DECIMALS)));
+}
+
+/** What teams are told about how precise they must be: "within 10%", "within 5". */
+export function formatMarginText(margin: Margin): string {
+  const suffix = margin.unit === 'percent' ? '%' : '';
+  return `within ${formatNumber(margin.value)}${suffix}`;
+}
+
+/** The accepted range as "low–high", or the single value when the margin is 0. */
+export function formatAcceptedRange(key: number, margin: Margin): string {
+  const distance = allowedDistance(key, margin);
+  const low = formatNumber(key - distance);
+  const high = formatNumber(key + distance);
+  return low === high ? low : `${low}–${high}`;
+}
+
+/** The reveal line: the key followed by the accepted range, e.g. "200 · 180–220 accepted". */
+export function formatNumberReveal(answer: string, margin: Margin): string {
+  const key = parseFiniteNumber(answer);
+  if (key === null) return answer;
+  const range = formatAcceptedRange(key, margin);
+  return range === formatNumber(key)
+    ? range
+    : `${formatNumber(key)} · ${range} accepted`;
+}
