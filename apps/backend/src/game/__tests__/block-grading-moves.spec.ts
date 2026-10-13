@@ -26,10 +26,32 @@ function adminAnswerLists(
     .filter((payload) => payload.questionId === questionId);
 }
 
+/** What a refused move must leave untouched: every answer's stored grade for the questions, plus the progress row on disk. */
+async function storedGradingState(
+  game: RealStoreGateway,
+  questionIds: number[],
+) {
+  return game.inRequestContext(async () => {
+    const answers = await Promise.all(
+      questionIds.map((questionId) =>
+        game.answerService.listForQuestion(game.gameSessionId, questionId),
+      ),
+    );
+    return {
+      answers: answers.flat().map((answer) => ({
+        answerId: answer.answerId,
+        pointsAwarded: answer.pointsAwarded,
+        gradedAt: answer.gradedAt,
+      })),
+      progress: await game.progressRepository.load(game.gameSessionId),
+    };
+  });
+}
+
 describe('GameGateway — Block grading runs its steps in order for a move', () => {
   const harness = setupRealStoreGatewayTest();
 
-  it('refuses leaving the break for the reveal with an ungraded question and leaves the session as it was', async () => {
+  async function createBlockWithUngradedAnswer() {
     const game = await harness.createGateway({
       teamNames: ['The Quizzards'],
       rounds: [
@@ -47,26 +69,50 @@ describe('GameGateway — Block grading runs its steps in order for a move', () 
         },
       ],
     });
-    const [questionId] = game.rounds[0].questionIds;
+    const questionIds = game.rounds[0].questionIds;
     await game.openFirstQuestion(await game.connectAdmin());
     const [{ socket, teamId }] = game.teams;
     await game.gateway.handleSubmitAnswer(asSocket(socket), {
-      questionId,
+      questionId: questionIds[0],
       teamId,
       value: 'Saturn',
     });
     await game.act('ADVANCE'); // -> second question
     await game.act('ADVANCE'); // -> locking
-    await game.act('ADVANCE'); // -> break_intro
+    const inBreakIntro = await game.act('ADVANCE'); // -> break_intro
+    return { game, questionIds, inBreakIntro };
+  }
+
+  it('refuses leaving the break for the reveal with an ungraded question and leaves the session as it was', async () => {
+    const { game, questionIds } = await createBlockWithUngradedAnswer();
+    const [questionId] = questionIds;
     const inBreak = await game.act('PREVIOUS'); // -> break
     expect(inBreak.progress.status).toBe('break');
     expect(inBreak.ungradedQuestionIds).toEqual([questionId]);
+    const storedBefore = await storedGradingState(game, questionIds);
 
     await expect(game.act('ADVANCE')).rejects.toThrow(WsException);
 
     const after = await game.snapshot();
     expect(after.progress).toEqual(inBreak.progress);
     expect(after.ungradedQuestionIds).toEqual([questionId]);
+    expect(await storedGradingState(game, questionIds)).toEqual(storedBefore);
+  });
+
+  it('refuses leaving the break intro for the reveal intro with an ungraded question and writes nothing', async () => {
+    const { game, questionIds, inBreakIntro } =
+      await createBlockWithUngradedAnswer();
+    const [questionId] = questionIds;
+    expect(inBreakIntro.progress.status).toBe('break_intro');
+    expect(inBreakIntro.ungradedQuestionIds).toEqual([questionId]);
+    const storedBefore = await storedGradingState(game, questionIds);
+
+    await expect(game.act('ADVANCE')).rejects.toThrow(WsException);
+
+    const after = await game.snapshot();
+    expect(after.progress).toEqual(inBreakIntro.progress);
+    expect(after.ungradedQuestionIds).toEqual([questionId]);
+    expect(await storedGradingState(game, questionIds)).toEqual(storedBefore);
   });
 
   it('enters a break with a closest_guess question graded, off the ungraded set, and its answer list re-sent', async () => {
@@ -220,6 +266,11 @@ describe('GameGateway — kahoot speed scoring when a question leaves locking', 
     restoreClock();
   });
 
+  // Scenario choice: a kahoot round leaves 'locking' straight for 'reveal' and
+  // never takes a break in between, so the reveal follows the speed scoring
+  // directly. This pins that the scoring runs on that move and its points
+  // reach the leaderboard and the ungraded set; it does not pin the ordering
+  // against the other steps, which have nothing to do for this question.
   it('scales the points by answer speed and puts them on the leaderboard with a correct ungraded set', async () => {
     const game = await harness.createGateway({
       teamNames: ['Team A'],

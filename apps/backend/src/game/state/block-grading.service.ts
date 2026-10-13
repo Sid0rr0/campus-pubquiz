@@ -50,28 +50,28 @@ export class BlockGradingService {
 
   /**
    * Grades what a move implies. `session` is the session as it stood before
-   * the press (its progress is where the move starts), `to` the progress the
-   * move leads to. The steps run in this order, because each reads what the
+   * the press (its progress is where the move starts), `toProgress` the
+   * progress the move leads to. The steps run in this order, because each reads what the
    * one before wrote:
    *   1. the reveal gate — refuses leaving a break for the reveal while any
    *      question in the block is ungraded; runs before any grading write, so
    *      a refused move writes nothing
    *   2. the kahoot speed scoring, when a kahoot question leaves 'locking'
-   *   3. the closest_guess batch, when `to` is a graded status
-   *   4. the whole-block grading refresh, when `to` is a break status
+   *   3. the closest_guess batch, when `toProgress` is a graded status
+   *   4. the whole-block grading refresh, when `toProgress` is a break status
    * Returns the graded session and the questions whose admin answer list is
    * now stale.
    */
   async gradeForMove(
     session: SessionState,
-    to: GameProgress,
+    toProgress: GameProgress,
   ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
-    await this.assertNothingUngradedLeavingBreak(session, to);
-    const speedScored = await this.ensureKahootSpeedScored(session, to);
+    await this.assertNothingUngradedLeavingBreak(session, toProgress);
+    const speedScored = await this.ensureKahootSpeedScored(session, toProgress);
     const { session: graded, staleAnswerListIds } =
-      await this.ensureBlockGraded(speedScored, to);
+      await this.ensureBlockGraded(speedScored, toProgress);
     return {
-      session: await this.refreshUngradedQuestionIds(graded, to),
+      session: await this.refreshUngradedQuestionIds(graded, toProgress),
       staleAnswerListIds,
     };
   }
@@ -96,17 +96,17 @@ export class BlockGradingService {
   }
 
   /**
-   * The reveal gate: leaving the break/grading screens for the reveal is the
+   * The reveal gate, step 1 of gradeForMove: leaving the break/grading screens for the reveal is the
    * one moment the ungraded set must be DB-authoritative rather than the
    * (possibly stale, e.g. post-restart) cached set.
    */
   private async assertNothingUngradedLeavingBreak(
     session: SessionState,
-    to: GameProgress,
+    toProgress: GameProgress,
   ): Promise<void> {
     const { status } = session.progress;
     const isLeavingBreak = status === 'break_intro' || status === 'break';
-    if (!isLeavingBreak || to.status !== 'reveal_intro') return;
+    if (!isLeavingBreak || toProgress.status !== 'reveal_intro') return;
 
     const ungradedQuestionIds = await this.getUngradedBlockQuestionIds(session);
     if (ungradedQuestionIds.length > 0) {
@@ -115,7 +115,8 @@ export class BlockGradingService {
   }
 
   /**
-   * Batch-grades every closest_guess question in the block once it reaches a
+   * Step 3 of gradeForMove (also run by gradeForPlacement). Batch-grades every
+   * closest_guess question in the block once it reaches a
    * graded status, caching its reveal summary — safe to call every move since
    * it skips questions already in closestGuessSummaries, and after a restart
    * (summaries are in memory only) it rebuilds a summary from the stored
@@ -179,11 +180,13 @@ export class BlockGradingService {
    * when leaving 'locking' for a kahootMode round — covers both the
    * collapsed locking->reveal path and the ordinary locking->break_intro
    * path (irrelevant there since a kahootMode round never takes it, but
-   * cheap to check generically). The scoring reads each answer's response
+   * cheap to check generically). Step 2 of gradeForMove, not called from
+   * outside. The scoring reads each answer's response
    * time as stored at submit, so a redundant re-run (e.g. PREVIOUS from
    * 'reveal' back into 'locking' followed by another ADVANCE) recomputes the
-   * same points — the status transition is the only guard needed. Recomputes
-   * the leaderboard afterward, same as ensureBlockGraded (both end through the grading refresh).
+   * same points — the status transition is the only guard needed. Refreshes the
+   * ungraded entry for the scored question through the grading refresh, like
+   * the other steps; the leaderboard is read afterward by the session write.
    */
   private async ensureKahootSpeedScored(
     session: SessionState,
@@ -394,7 +397,7 @@ export class BlockGradingService {
   }
 
   /**
-   * Bulk-refreshes the block through the grading refresh (the ungraded set
+   * Step 4 of gradeForMove (also run by gradeForPlacement). Bulk-refreshes the block through the grading refresh (the ungraded set
    * from the DB) whenever the block just entered (or is still within) a break status — the authoritative
    * baseline the grading refresh in GameStateService.submitAnswer/gradeAnswer
    * build on between these recomputes. A no-op outside the break statuses,
