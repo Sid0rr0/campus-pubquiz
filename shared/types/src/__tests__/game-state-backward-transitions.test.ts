@@ -12,10 +12,30 @@ import {
 } from './game-state-fixtures';
 
 describe('getNextGameState — backward (PREVIOUS) transitions', () => {
-  it('rejects moving back from the rules screen', () => {
-    const rules: GameProgress = { ...lobby, status: 'rules' };
+  it('steps back from the rules screen to the lobby, resetting the indexes', () => {
+    const rules: GameProgress = {
+      ...lobby,
+      status: 'rules',
+      roundIndex: 2,
+      questionIndex: 3,
+      revealIndex: 1,
+    };
+    const next = getNextGameState(
+      rules,
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toMatchObject({
+      status: 'lobby',
+      roundIndex: 0,
+      questionIndex: 0,
+      revealIndex: 0,
+    });
+  });
+
+  it('rejects moving back from the lobby', () => {
     expect(() =>
-      getNextGameState(rules, 'PREVIOUS', twoRoundsWithBreakAfterSecond),
+      getNextGameState(lobby, 'PREVIOUS', twoRoundsWithBreakAfterSecond),
     ).toThrow(IllegalGameTransitionError);
   });
 
