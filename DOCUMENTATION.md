@@ -526,8 +526,8 @@ and differs from the previous value goes back to ungraded, even if the admin
 had graded the previous value; resubmitting the same value leaves its grade
 alone. `closest_guess` is auto-graded
 but deferred to a single batch pass once the block locks, and can be
-overridden only after that pass. Which list each type is in (auto-graded,
-overridable, kahoot-allowed) is defined once per type in the question type
+overridden only after that pass; every other type can be overridden at any
+time. Which list each type is in (auto-graded, kahoot-allowed) is defined once per type in the question type
 registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`).
 
 Every question also has one **answer kind** — `text`, `number`, `choice`,

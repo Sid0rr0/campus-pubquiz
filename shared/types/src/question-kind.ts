@@ -62,8 +62,6 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   /** How the question's options and answer map to and from the sheet's `options`/`answer` cells. */
   csv: QuestionCsvCodec;
   gradingMode: GradingMode;
-  /** Whether the admin can regrade a single answer. */
-  overridable: boolean;
   /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
   kahootAllowed: boolean;
 }
@@ -86,7 +84,6 @@ export const QUESTION_KINDS: {
     payload: freeTextPayloadSchema,
     csv: answerOnlyCsv,
     gradingMode: 'match-or-human',
-    overridable: true,
     kahootAllowed: false,
   },
   multiple_choice: {
@@ -101,7 +98,6 @@ export const QUESTION_KINDS: {
     payload: multipleChoicePayloadSchema,
     csv: choicesCsv,
     gradingMode: 'auto',
-    overridable: true,
     kahootAllowed: true,
   },
   audio: {
@@ -116,7 +112,6 @@ export const QUESTION_KINDS: {
     payload: audioPayloadSchema,
     csv: choicesCsv,
     gradingMode: 'match-or-human',
-    overridable: true,
     kahootAllowed: false,
   },
   youtube: {
@@ -132,7 +127,6 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     clipNotes: youtubeClipNotes,
     gradingMode: 'match-or-human',
-    overridable: true,
     kahootAllowed: false,
   },
   sort: {
@@ -147,7 +141,6 @@ export const QUESTION_KINDS: {
     payload: sortPayloadSchema,
     csv: sortCsv,
     gradingMode: 'auto',
-    overridable: true,
     kahootAllowed: true,
   },
   match: {
@@ -162,14 +155,13 @@ export const QUESTION_KINDS: {
     payload: matchPayloadSchema,
     csv: matchCsv,
     gradingMode: 'auto',
-    overridable: true,
     kahootAllowed: true,
   },
   closest_guess: {
     type: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
-      'The answer is a number. Graded in one batch when the break starts: every team tied for the closest guess gets full points and everyone else gets zero. Once the block locks you can override any mark by hand.',
+      'The answer is a number. Graded in one batch once the block locks: every team tied for the closest guess gets full points and everyone else gets zero. From then on you can override any mark by hand.',
     inputKind: 'number',
     requiresMedia: false,
     choices: 'none',
@@ -177,7 +169,6 @@ export const QUESTION_KINDS: {
     payload: closestGuessPayloadSchema,
     csv: answerOnlyCsv,
     gradingMode: 'batch',
-    overridable: true,
     kahootAllowed: false,
   },
 };

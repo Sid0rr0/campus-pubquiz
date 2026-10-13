@@ -121,7 +121,9 @@ export class MoveCommitter {
     // The ungraded cache and the closest_guess summaries live in memory
     // only; they must be rebuilt so /control, showdown eligibility and a
     // closest_guess reveal walk are right straight away. Rebuilding a
-    // summary never re-scores a question the batch already graded.
+    // summary never re-scores a question the batch already graded. Its stale
+    // answer lists need no push: no socket is connected yet, and /control
+    // reads its answer list fresh when it connects.
     const { session: summarized } = await this.grading.ensureBlockGraded(
       session,
       progress,
@@ -165,7 +167,7 @@ export class MoveCommitter {
       session,
       progress,
     );
-    const { session: graded, gradedQuestionIds } =
+    const { session: graded, staleAnswerListIds } =
       await this.grading.ensureBlockGraded(speedScored, progress);
     const refreshed = await this.grading.refreshUngradedQuestionIds(
       graded,
@@ -187,7 +189,7 @@ export class MoveCommitter {
         ...BROADCAST_STATE_OUTCOME,
         // The batch just graded these: /control's answer list for them still
         // shows the ungraded rows it was sent while they were open.
-        answerListQuestionIds: gradedQuestionIds,
+        answerListQuestionIds: staleAnswerListIds,
         teamSyncs: isRevealEntry(session.progress.status, progress.status)
           ? connectedTeamSyncs(
               committed,

@@ -12,7 +12,6 @@ import {
   isAutoGradedType,
   isBatchGradedType,
   isMatchOrHumanType,
-  isOverridableType,
   scoreSubmission,
   verdictForManualGrade,
 } from '@campus-pubquiz/types';
@@ -144,19 +143,8 @@ export class AnswerService {
     gameSessionId: number,
     questionId: number,
   ): Promise<AnswerView[]> {
-    const rows = await this.answers.find(
-      { gameSession: gameSessionId, question: questionId },
-      { populate: ['team'], orderBy: { team: { name: 'asc' } } },
-    );
-    return rows.map((row) => ({
-      answerId: row.id,
-      teamId: row.team.id,
-      teamName: row.team.name,
-      value: row.value,
-      pointsAwarded: row.pointsAwarded,
-      gradedAt: row.gradedAt?.toISOString() ?? null,
-      verdict: row.verdict,
-    }));
+    const rows = await this.findForQuestion(gameSessionId, questionId);
+    return rows.map(toAnswerView);
   }
 
   /**
@@ -206,19 +194,16 @@ export class AnswerService {
       { id: answerId, gameSession: gameSessionId },
       { populate: ['question'] },
     );
-    // Auto-graded types (match's per-pair partial credit, a free_text
+    // Automatic grades (match's per-pair partial credit, a free_text
     // synonym the exact match missed) are only a starting point — the quiz
-    // master may override them here. A closest_guess answer only once its
-    // batch has graded it at the lock: before then nobody knows who's
-    // closest, and the batch would overwrite the grade anyway.
-    if (!isOverridableType(answer.question.type)) {
-      throw new Error(
-        `${answer.question.type} answers cannot be graded manually`,
-      );
-    }
+    // master may override any of them here. A batch-graded answer only once
+    // its batch has graded it at the lock: before then nobody knows who's
+    // closest, and the batch would overwrite the grade anyway. That refusal
+    // is also what lets ensureClosestGuessGraded read "any row graded" as
+    // "the batch ran".
     if (isBatchGradedType(answer.question.type) && answer.gradedAt === null) {
       throw new Error(
-        'closest_guess answers can only be graded by hand once the block locks',
+        `${answer.question.type} answers can only be graded by hand once the block locks`,
       );
     }
     answer.pointsAwarded = pointsAwarded;
@@ -323,7 +308,15 @@ export class AnswerService {
     gameSessionId: number,
     question: GradableQuestion,
   ): Promise<AnswerView[]> {
-    const rows = await this.findWithTeams(gameSessionId, question.id);
+    const rows = await this.findForQuestion(gameSessionId, question.id);
+    return this.gradeClosestGuessRows(question, rows);
+  }
+
+  /** gradeClosestGuess over rows already read, so a caller that read them first needn't read them twice. */
+  private async gradeClosestGuessRows(
+    question: GradableQuestion,
+    rows: Answer[],
+  ): Promise<AnswerView[]> {
     if (rows.length === 0) return [];
 
     const results = gradeClosestGuessBatch(
@@ -337,34 +330,35 @@ export class AnswerService {
       row.gradedAt = now;
     });
     await this.answers.getEntityManager().flush();
-    return toSortedAnswerViews(rows);
+    return rows.map(toAnswerView);
   }
 
   /**
    * Batch-grades a closest_guess question unless its stored answers show the
-   * batch already ran (it grades every row at once, and no answer can arrive
-   * after the lock) — so a backend restart, which forgets the in-memory
-   * summaries, never wipes the quiz master's overrides. Returns the answers
-   * either way.
+   * batch already ran (it grades every row at once, no answer can arrive
+   * after the lock, and grade() refuses a hand grade before the batch) — so
+   * a backend restart, which forgets the in-memory summaries, never wipes
+   * the quiz master's overrides. Returns the answers either way.
    */
   async ensureClosestGuessGraded(
     gameSessionId: number,
     question: GradableQuestion,
   ): Promise<AnswerView[]> {
-    const rows = await this.findWithTeams(gameSessionId, question.id);
+    const rows = await this.findForQuestion(gameSessionId, question.id);
     if (rows.some((row) => row.gradedAt !== null)) {
-      return toSortedAnswerViews(rows);
+      return rows.map(toAnswerView);
     }
-    return this.gradeClosestGuess(gameSessionId, question);
+    return this.gradeClosestGuessRows(question, rows);
   }
 
-  private findWithTeams(
+  /** Every answer to one question, with its team, ordered by team name. */
+  private findForQuestion(
     gameSessionId: number,
     questionId: number,
   ): Promise<Answer[]> {
     return this.answers.find(
       { gameSession: gameSessionId, question: questionId },
-      { populate: ['team'] },
+      { populate: ['team'], orderBy: { team: { name: 'asc' } } },
     );
   }
 
@@ -394,17 +388,15 @@ export class AnswerService {
   }
 }
 
-/** Answer rows as the admin's answer list shows them, ordered by team name. */
-function toSortedAnswerViews(rows: readonly Answer[]): AnswerView[] {
-  return rows
-    .map((row) => ({
-      answerId: row.id,
-      teamId: row.team.id,
-      teamName: row.team.name,
-      value: row.value,
-      pointsAwarded: row.pointsAwarded,
-      gradedAt: row.gradedAt?.toISOString() ?? null,
-      verdict: row.verdict,
-    }))
-    .sort((a, b) => a.teamName.localeCompare(b.teamName));
+/** An answer row as the admin's answer list shows it. */
+function toAnswerView(row: Answer): AnswerView {
+  return {
+    answerId: row.id,
+    teamId: row.team.id,
+    teamName: row.team.name,
+    value: row.value,
+    pointsAwarded: row.pointsAwarded,
+    gradedAt: row.gradedAt?.toISOString() ?? null,
+    verdict: row.verdict,
+  };
 }

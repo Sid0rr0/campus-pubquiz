@@ -4,7 +4,6 @@ import {
   BATCH_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
   MATCH_OR_HUMAN_TYPES,
-  OVERRIDABLE_TYPES,
   gradeAtSubmit,
   gradeClosestGuessBatch,
   halfPoints,
@@ -341,20 +340,6 @@ describe('category lists', () => {
 
   it('keeps free_text out of kahoot rounds', () => {
     expect(KAHOOT_ALLOWED_TYPES).not.toContain('free_text');
-  });
-
-  it('lets every type be overridden by hand', () => {
-    expect([...OVERRIDABLE_TYPES].sort()).toEqual(
-      [
-        'audio',
-        'closest_guess',
-        'free_text',
-        'match',
-        'multiple_choice',
-        'sort',
-        'youtube',
-      ].sort(),
-    );
   });
 });
 

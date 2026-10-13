@@ -65,15 +65,16 @@ export class BlockGradingService {
    * graded status, caching its reveal summary — safe to call every move since
    * it skips questions already in closestGuessSummaries, and after a restart
    * (summaries are in memory only) it rebuilds a summary from the stored
-   * grades without re-scoring them. Returns the session and the questions it
-   * graded or summarized, whose admin answer lists are now out of date.
+   * grades without re-scoring them. Returns the session and the questions
+   * whose admin answer list may now be out of date (graded just now, or
+   * summarized after a restart).
    */
   async ensureBlockGraded(
     session: SessionState,
     newProgress: GameProgress,
-  ): Promise<{ session: SessionState; gradedQuestionIds: number[] }> {
+  ): Promise<{ session: SessionState; staleAnswerListIds: number[] }> {
     if (!isGradedStatus(newProgress.status)) {
-      return { session, gradedQuestionIds: [] };
+      return { session, staleAnswerListIds: [] };
     }
 
     const blockQuestions = getBlockInPlay(
@@ -88,7 +89,7 @@ export class BlockGradingService {
         isBatchGradedType(question.type) &&
         session.closestGuessSummaries[question.id] === undefined,
     );
-    if (unsummarized.length === 0) return { session, gradedQuestionIds: [] };
+    if (unsummarized.length === 0) return { session, staleAnswerListIds: [] };
 
     let summaries = session.closestGuessSummaries;
     for (const question of unsummarized) {
@@ -102,20 +103,20 @@ export class BlockGradingService {
       };
     }
 
-    // The batch scored these questions; closest_guess can never be ungraded,
-    // so the refresh has nothing to change in the ungraded set.
-    const gradedQuestionIds = unsummarized.map((question) => question.id);
+    // closest_guess can never be ungraded, so the refresh has nothing to
+    // change in the ungraded set whether the batch ran just now or before.
+    const staleAnswerListIds = unsummarized.map((question) => question.id);
     const refresh = await this.readGradingRefresh(
       session,
       newProgress,
-      gradedQuestionIds,
+      staleAnswerListIds,
     );
     return {
       session: applyGradingRefresh(
         { ...session, closestGuessSummaries: summaries },
         refresh,
       ),
-      gradedQuestionIds,
+      staleAnswerListIds,
     };
   }
 

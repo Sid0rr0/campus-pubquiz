@@ -8,7 +8,6 @@ import {
   BATCH_GRADED_TYPES,
   MATCH_OR_HUMAN_TYPES,
   KAHOOT_ALLOWED_TYPES,
-  OVERRIDABLE_TYPES,
 } from '../scoring';
 
 type Verdict = 'valid' | 'invalid';
@@ -235,36 +234,30 @@ const CASES: ParityCase[] = [
 
 interface GradingFlags {
   gradingMode: 'auto' | 'batch' | 'match-or-human';
-  overridable: boolean;
   kahootAllowed: boolean;
 }
 
 const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
   free_text: {
     gradingMode: 'match-or-human',
-    overridable: true,
     kahootAllowed: false,
   },
   multiple_choice: {
     gradingMode: 'auto',
-    overridable: true,
     kahootAllowed: true,
   },
   audio: {
     gradingMode: 'match-or-human',
-    overridable: true,
     kahootAllowed: false,
   },
   youtube: {
     gradingMode: 'match-or-human',
-    overridable: true,
     kahootAllowed: false,
   },
-  sort: { gradingMode: 'auto', overridable: true, kahootAllowed: true },
-  match: { gradingMode: 'auto', overridable: true, kahootAllowed: true },
+  sort: { gradingMode: 'auto', kahootAllowed: true },
+  match: { gradingMode: 'auto', kahootAllowed: true },
   closest_guess: {
     gradingMode: 'batch',
-    overridable: true,
     kahootAllowed: false,
   },
 };
@@ -313,12 +306,10 @@ describe('question kind registry', () => {
 
 describe('question kind grading flags', () => {
   it.each(QUESTION_TYPES)(
-    "%s matches today's grading mode, overridable and kahoot-allowed",
+    "%s matches today's grading mode and kahoot-allowed",
     (type) => {
-      const { gradingMode, overridable, kahootAllowed } = QUESTION_KINDS[type];
-      expect({ gradingMode, overridable, kahootAllowed }).toEqual(
-        EXPECTED_FLAGS[type],
-      );
+      const { gradingMode, kahootAllowed } = QUESTION_KINDS[type];
+      expect({ gradingMode, kahootAllowed }).toEqual(EXPECTED_FLAGS[type]);
     },
   );
 
@@ -334,7 +325,6 @@ describe('question kind grading flags', () => {
       expect(MATCH_OR_HUMAN_TYPES.includes(type)).toBe(
         kind.gradingMode === 'match-or-human',
       );
-      expect(OVERRIDABLE_TYPES.includes(type)).toBe(kind.overridable);
       expect(KAHOOT_ALLOWED_TYPES.includes(type)).toBe(kind.kahootAllowed);
     }
   });

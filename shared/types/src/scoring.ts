@@ -63,9 +63,6 @@ export const MATCH_OR_HUMAN_TYPES = typesWhere(
  */
 export const KAHOOT_ALLOWED_TYPES = typesWhere((kind) => kind.kahootAllowed);
 
-/** Types the admin can regrade per answer — closest_guess is recomputed as a batch. */
-export const OVERRIDABLE_TYPES = typesWhere((kind) => kind.overridable);
-
 export function isAutoGradedType(type: QuestionType): boolean {
   return AUTO_GRADED_TYPES.includes(type);
 }
@@ -80,10 +77,6 @@ export function isBatchGradedType(type: QuestionType): boolean {
 
 export function isKahootAllowedType(type: QuestionType): boolean {
   return KAHOOT_ALLOWED_TYPES.includes(type);
-}
-
-export function isOverridableType(type: QuestionType): boolean {
-  return OVERRIDABLE_TYPES.includes(type);
 }
 
 const INCORRECT: ScoreResult = { points: 0, verdict: 'incorrect' };
