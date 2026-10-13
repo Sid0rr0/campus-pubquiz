@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   type GameProgress,
-  isBatchGradedType,
   isBreakStatus,
   isGradedStatus,
-  type QuestionType,
   type ScoredQuestion,
   type SessionState,
   summarizeClosestGuess,
@@ -12,16 +10,7 @@ import {
   getBlockInPlayIds,
 } from '@campus-pubquiz/types';
 import { AnswerService } from '@/answer/answer.service';
-
-/**
- * The one rule for which questions can ever count as "ungraded": closest_guess
- * is graded in a single batch once the question locks and can't be graded by
- * hand, so its answers never leave the admin anything to do. Shared by the
- * grading refresh and the reveal gate so they can't diverge.
- */
-export function canBeUngraded(question: { type: QuestionType }): boolean {
-  return !isBatchGradedType(question.type);
-}
+import { canBeUngraded, gradesAtLock } from '@/answer/grading-policy';
 
 /**
  * What the grading refresh hands back for the caller to apply to the session
@@ -84,14 +73,14 @@ export class BlockGradingService {
     );
     const unsummarized = blockQuestions.filter(
       (question) =>
-        isBatchGradedType(question.type) &&
+        gradesAtLock(question) &&
         session.closestGuessSummaries[question.id] === undefined,
     );
     if (unsummarized.length === 0) return { session, staleAnswerListIds: [] };
 
     let summaries = session.closestGuessSummaries;
     for (const question of unsummarized) {
-      const graded = await this.answerService.ensureClosestGuessGraded(
+      const graded = await this.answerService.gradeAtLock(
         session.seededGame.gameSessionId,
         question,
       );
@@ -143,7 +132,7 @@ export class BlockGradingService {
     if (!round?.kahootMode) return session;
 
     const question = round.questions[session.progress.questionIndex];
-    await this.answerService.applyKahootSpeedScoring(
+    await this.answerService.speedScoreAtLock(
       session.seededGame.gameSessionId,
       question,
       session.seededGame.settings.kahootQuestionTimerSeconds,
@@ -307,7 +296,7 @@ export class BlockGradingService {
 
   /**
    * The one reader for "which of these questions are ungraded": drops the
-   * questions that can't be (closest_guess, via canBeUngraded) and asks the
+   * questions that can't be (closest_guess, via the Grading policy) and asks the
    * database which of the rest have an answer with no grading time. Used by
    * the reveal gate and the grading refresh.
    */

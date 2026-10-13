@@ -6,11 +6,7 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import {
-  gradeClosestGuessBatch,
-  isAutoGradedType,
-  verdictForManualGrade,
-} from '@campus-pubquiz/types';
+import { verdictForManualGrade } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
@@ -20,9 +16,10 @@ import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import {
   canGradeByHand,
+  gradeAtLock,
   gradeOnKeyFix,
   gradeOnSubmit,
-  rescoreAuto,
+  speedScore,
   type GradeWrite,
 } from '@/answer/grading-policy';
 
@@ -253,46 +250,19 @@ export class AnswerService {
   }
 
   /**
-   * Batch-grades the rows of a closest_guess question (see Scoring's
-   * gradeClosestGuessBatch for the rule) from the stored guesses and
-   * overwrites; returns them as views.
+   * Grade at the lock: applies the Grading policy's batch for a question
+   * graded when its block locks (the policy writes nothing once the stored
+   * answers show the batch already ran, so a backend restart, which forgets
+   * the in-memory summaries, never wipes the quiz master's overrides).
+   * Returns the answers either way.
    */
-  private async gradeClosestGuessRows(
-    question: GradableQuestion,
-    rows: Answer[],
-  ): Promise<AnswerView[]> {
-    if (rows.length === 0) return [];
-
-    const results = gradeClosestGuessBatch(
-      question,
-      rows.map((row) => row.value),
-    );
-    const now = new Date();
-    rows.forEach((row, index) => {
-      row.pointsAwarded = results[index].points;
-      row.verdict = results[index].verdict;
-      row.gradedAt = now;
-    });
-    await this.answers.getEntityManager().flush();
-    return rows.map(toAnswerView);
-  }
-
-  /**
-   * Batch-grades a closest_guess question unless its stored answers show the
-   * batch already ran (it grades every row at once, no answer can arrive
-   * after the lock, and grade() refuses a hand grade before the batch) — so
-   * a backend restart, which forgets the in-memory summaries, never wipes
-   * the quiz master's overrides. Returns the answers either way.
-   */
-  async ensureClosestGuessGraded(
+  async gradeAtLock(
     gameSessionId: number,
     question: GradableQuestion,
   ): Promise<AnswerView[]> {
     const rows = await this.findForQuestion(gameSessionId, question.id);
-    if (rows.some((row) => row.gradedAt !== null)) {
-      return rows.map(toAnswerView);
-    }
-    return this.gradeClosestGuessRows(question, rows);
+    await this.applyWrites(rows, gradeAtLock(question, rows));
+    return rows.map(toAnswerView);
   }
 
   /** Every answer to one question, with its team, ordered by team name. */
@@ -320,21 +290,15 @@ export class AnswerService {
    * recomputed from the stored value and response time, never from the
    * current pointsAwarded, so a redundant re-run can't compound the scaling.
    */
-  async applyKahootSpeedScoring(
+  async speedScoreAtLock(
     gameSessionId: number,
     question: GradableQuestion,
     questionTimerSeconds: number | null,
   ): Promise<void> {
-    // Kahoot rounds only hold auto-graded types (Scoring's
-    // KAHOOT_ALLOWED_TYPES); never overwrite a human or batch grade.
-    if (!isAutoGradedType(question.type)) return;
-    const rows = await this.answers.find({
-      gameSession: gameSessionId,
-      question: question.id,
-    });
+    const rows = await this.findForQuestion(gameSessionId, question.id);
     await this.applyWrites(
       rows,
-      rescoreAuto(question, rows, questionTimerSeconds),
+      speedScore(question, rows, questionTimerSeconds),
     );
   }
 }

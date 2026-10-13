@@ -157,11 +157,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
       10_000,
     );
 
-    await state.answerService.applyKahootSpeedScoring(
-      state.session.id,
-      question,
-      10,
-    );
+    await state.answerService.speedScoreAtLock(state.session.id, question, 10);
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,

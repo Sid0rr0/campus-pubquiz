@@ -513,7 +513,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     expect(answers.find((a) => a.teamId === teamA.id)?.pointsAwarded).toBe(4);
   });
 
-  it('ensureClosestGuessGraded keeps the stored grades of an already-graded closest_guess question', async () => {
+  it('gradeAtLock keeps the stored grades of an already-graded closest_guess question', async () => {
     const guessQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
@@ -537,13 +537,10 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       teamB.id,
       '1200',
     );
-    await state.answerService.ensureClosestGuessGraded(
-      state.session.id,
-      guessQuestion,
-    );
+    await state.answerService.gradeAtLock(state.session.id, guessQuestion);
     await state.answerService.grade(state.session.id, far.answerId, 4);
 
-    const again = await state.answerService.ensureClosestGuessGraded(
+    const again = await state.answerService.gradeAtLock(
       state.session.id,
       guessQuestion,
     );
@@ -941,7 +938,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -964,7 +961,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         5_000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -996,7 +993,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         10_000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1016,7 +1013,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         0,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         {
           id: question.id,
@@ -1041,7 +1038,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         9_000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         null,
@@ -1061,7 +1058,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         null,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1081,7 +1078,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         0,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1109,7 +1106,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         question,
         TIMER_SECONDS,
@@ -1140,7 +1137,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         TIMER_SECONDS * 1000,
       );
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         {
           id: question.id,
@@ -1181,7 +1178,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
         points: 10,
       };
 
-      await state.answerService.applyKahootSpeedScoring(
+      await state.answerService.speedScoreAtLock(
         state.session.id,
         corrected,
         TIMER_SECONDS,

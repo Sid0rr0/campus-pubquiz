@@ -1,8 +1,16 @@
-import type { ScoredQuestion } from '@campus-pubquiz/types';
 import {
+  QUESTION_KINDS,
+  type QuestionType,
+  type ScoredQuestion,
+} from '@campus-pubquiz/types';
+import {
+  canBeUngraded,
   canGradeByHand,
+  gradeAtLock,
   gradeOnKeyFix,
   gradeOnSubmit,
+  gradesAtLock,
+  speedScore,
   type StoredAnswerRow,
 } from '@/answer/grading-policy';
 
@@ -264,4 +272,92 @@ describe('Grading policy: key fix', () => {
       });
     });
   });
+});
+
+describe('Grading policy: grades at the lock', () => {
+  const rowOf = (value: string, gradedAt: Date | null = null) => ({
+    value,
+    gradedAt,
+    responseMs: null,
+    verdict: null,
+    pointsAwarded: 0,
+  });
+
+  it('is true only for a batch question', () => {
+    expect(gradesAtLock(BATCH)).toBe(true);
+    expect(gradesAtLock(AUTO)).toBe(false);
+    expect(gradesAtLock(MATCH_OR_HUMAN)).toBe(false);
+  });
+
+  it('batch-grades the rows when none has been graded yet', () => {
+    expect(gradeAtLock(BATCH, [rowOf('990'), rowOf('500')])).toEqual([
+      { kind: 'set', points: 5, verdict: 'correct' },
+      { kind: 'set', points: 0, verdict: 'incorrect' },
+    ]);
+  });
+
+  it('writes nothing when any row shows the batch already ran', () => {
+    expect(
+      gradeAtLock(BATCH, [rowOf('990'), rowOf('500', new Date())]),
+    ).toEqual([]);
+  });
+
+  it('writes nothing when nobody answered', () => {
+    expect(gradeAtLock(BATCH, [])).toEqual([]);
+  });
+
+  it('writes nothing for the modes that do not grade at the lock', () => {
+    expect(gradeAtLock(AUTO, [rowOf('Paris')])).toEqual([]);
+    expect(gradeAtLock(MATCH_OR_HUMAN, [rowOf('apple')])).toEqual([]);
+  });
+});
+
+describe('Grading policy: speed score', () => {
+  const rowOf = (value: string, responseMs: number | null) => ({
+    value,
+    gradedAt: null,
+    responseMs,
+    verdict: null,
+    pointsAwarded: 0,
+  });
+
+  it('scales an auto question by response time when a timer is given', () => {
+    const [write] = speedScore(AUTO, [rowOf('Paris', 5000)], 10);
+    expect(write).toMatchObject({ kind: 'set', verdict: 'correct' });
+    if (write.kind !== 'set') throw new Error('expected a set write');
+    expect(write.points).toBeGreaterThan(0);
+    expect(write.points).toBeLessThan(2);
+  });
+
+  it('gives full points for an auto question without a timer', () => {
+    expect(speedScore(AUTO, [rowOf('Paris', 5000)], null)).toEqual([
+      { kind: 'set', points: 2, verdict: 'correct' },
+    ]);
+  });
+
+  it('is idempotent', () => {
+    const rows = [rowOf('Paris', 5000)];
+    expect(speedScore(AUTO, rows, 10)).toEqual(speedScore(AUTO, rows, 10));
+  });
+
+  it('leaves match-or-human and batch questions untouched', () => {
+    expect(speedScore(MATCH_OR_HUMAN, [rowOf('apple', 1)], 10)).toEqual([]);
+    expect(speedScore(BATCH, [rowOf('1000', 1)], 10)).toEqual([]);
+  });
+});
+
+describe('Grading policy: can be ungraded', () => {
+  it('is false for batch and true otherwise', () => {
+    expect(canBeUngraded(BATCH)).toBe(false);
+    expect(canBeUngraded(AUTO)).toBe(true);
+    expect(canBeUngraded(MATCH_OR_HUMAN)).toBe(true);
+  });
+
+  it.each(Object.keys(QUESTION_KINDS) as QuestionType[])(
+    'agrees with the registry grading mode for %s',
+    (type) => {
+      const expected = QUESTION_KINDS[type].gradingMode !== 'batch';
+      expect(canBeUngraded({ type })).toBe(expected);
+    },
+  );
 });
