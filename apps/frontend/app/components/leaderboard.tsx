@@ -260,11 +260,6 @@ function LeaderboardRowItem({
       style={{ opacity, y }}
       className={`relative isolate ${rowClasses(rankIndex)}`}
     >
-      {rankIndex === 0 && (
-        <RankOneSpotlight
-          delaySeconds={isAnimatedIn ? entrance.durationSeconds : 0}
-        />
-      )}
       {trend !== undefined && <RankTrendIcon trend={trend} />}
       <span
         className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
@@ -287,19 +282,5 @@ function LeaderboardRowItem({
         <span className={totalPointsClassName}>{entry.totalPoints}</span>
       )}
     </motion.li>
-  );
-}
-
-/** A glow behind the leader's row that fades in once the row has landed (opacity only, no animated shadow). */
-function RankOneSpotlight({ delaySeconds }: { delaySeconds: number }) {
-  return (
-    <motion.span
-      aria-hidden="true"
-      data-testid="rank-one-spotlight"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: delaySeconds, duration: 0.6, ease: 'easeOut' }}
-      className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-[radial-gradient(ellipse_at_center,rgba(255,214,0,0.55),transparent_70%)]"
-    />
   );
 }

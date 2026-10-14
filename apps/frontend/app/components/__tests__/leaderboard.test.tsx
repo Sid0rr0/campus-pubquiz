@@ -286,22 +286,12 @@ describe('Leaderboard', () => {
       expect(mockPlaySound).not.toHaveBeenCalled();
     });
 
-    it('spotlights rank 1 once it is revealed and no other rank', () => {
-      const { rerender } = render(
-        <Leaderboard board={described(FIVE)} revealCount={4} />,
-      );
+    it('puts no highlight behind rank 1', () => {
+      render(<Leaderboard board={described(FIVE)} revealCount={5} />);
+
       expect(
         screen.queryByTestId('rank-one-spotlight'),
       ).not.toBeInTheDocument();
-
-      rerender(<Leaderboard board={described(FIVE)} revealCount={5} />);
-
-      expect(screen.getAllByTestId('rank-one-spotlight')).toHaveLength(1);
-      expect(
-        within(screen.getAllByRole('listitem')[0]).getByTestId(
-          'rank-one-spotlight',
-        ),
-      ).toBeInTheDocument();
     });
 
     it('keeps every revealed rank on screen when an Advance arrives mid-entrance', () => {

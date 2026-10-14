@@ -108,7 +108,7 @@ behaviour of each status.
 | `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                      | "Look at the screen" + round title                                                                                                                                                                                                                                   | `PREVIOUS` across the start of a round during break review                                                                         | Back into `break` on the same question                                                                                 |
 | `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                       | "Look at the screen" + round title                                                                                                                                                                                                                                   | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                      | `reveal` on that round's first question                                                                                |
 | `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                | Block browser with the team's answer, the correct answer and points                                                                                                                                                                                                  | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                         | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
-| `ended`             | Final screen ("Quiz complete!", a podium of the top three, and "Tell us what you thought — on your phone" when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                      | —                                                                                                                      |
+| `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with an invitation to rate the rounds when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                      | —                                                                                                                      |
 
 `PREVIOUS` walks the same path backward, symmetrically, including back
 across a block boundary into the previous block's `reveal`. During the
@@ -293,8 +293,9 @@ itself.
 The display view's `onAirScreen` carries the same setting for the big screen: the
 `break_intro` and `ended` screens have an `isFeedbackPromptShown` flag (true when
 `collectFeedback` is on). `/display` draws "Rate the rounds on your phone ★" and
-"Tell us what you thought — on your phone" from it and nothing otherwise. The `ended`
-screen is not on air while a showdown is being played, so the line never shows then.
+the invitation to rate the rounds in the final thank-you from it, and nothing otherwise.
+The `ended` screen is not on air while a showdown is being played, so the thank-you
+never shows then.
 
 The final placing is drawn from the snapshot's `leaderboard` (the server's
 competition ranks): `/display` shows the top three on a podium, and each phone
@@ -367,8 +368,8 @@ from the session, so a reloaded or second big screen draws the same thing):
 counting up from last place, are revealed.
 
 On the big screen the ranks reveal one per Advance as always; ranks 1 to 3
-come in slower (a drumroll sound on the display, if sound is enabled) and
-rank 1 gets a spotlight. Pressing Advance during an entrance cuts it to its end.
+come in slower (a drumroll sound on the display, if sound is enabled).
+Pressing Advance during an entrance cuts it to its end.
 
 **The phone's leaderboard (`phoneLeaderboard`).** The players view carries the
 same `leaderboardBoard` description plus the reveal count (`{ board,

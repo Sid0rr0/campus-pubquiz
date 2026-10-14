@@ -11,6 +11,14 @@ const BAR_HEIGHT_BY_RANK: Record<number, string> = {
 };
 const FALLBACK_BAR_HEIGHT = 'h-28';
 
+/** One colour per step so the three places read apart at a glance. */
+const BAR_COLOR_BY_RANK: Record<number, string> = {
+  1: 'bg-magenta',
+  2: 'bg-cyan',
+  3: 'bg-green',
+};
+const FALLBACK_BAR_COLOR = 'bg-orange';
+
 /** Left-to-right order of a classic podium: 2nd, 1st, 3rd. */
 function podiumOrder(entries: readonly LeaderboardEntry[]): LeaderboardEntry[] {
   const [first, second, third] = entries;
@@ -19,12 +27,19 @@ function podiumOrder(entries: readonly LeaderboardEntry[]): LeaderboardEntry[] {
   );
 }
 
+/** The entries standing on the podium: the top three places, at most three teams. */
+export function podiumEntries(
+  entries: readonly LeaderboardEntry[],
+): LeaderboardEntry[] {
+  return entries
+    .filter((entry) => entry.rank <= PODIUM_SIZE)
+    .slice(0, PODIUM_SIZE);
+}
+
 /** The top three teams (ties share a step) standing on a podium. Animates transform and opacity only. */
 export function Podium({ entries }: { entries: readonly LeaderboardEntry[] }) {
   const isReducedMotion = useReducedMotion();
-  const topThree = entries
-    .filter((entry) => entry.rank <= PODIUM_SIZE)
-    .slice(0, PODIUM_SIZE);
+  const topThree = podiumEntries(entries);
   return (
     <ol
       aria-label="Podium"
@@ -46,9 +61,10 @@ export function Podium({ entries }: { entries: readonly LeaderboardEntry[] }) {
             {entry.totalPoints} pts
           </span>
           <div
-            className={`flex w-full items-start justify-center rounded-t-lg bg-magenta pt-3 font-display text-display-2xl text-background ${
-              BAR_HEIGHT_BY_RANK[entry.rank] ?? FALLBACK_BAR_HEIGHT
-            }`}
+            data-testid="podium-step"
+            className={`flex w-full items-start justify-center rounded-t-lg pt-3 font-display text-display-2xl text-background ${
+              BAR_COLOR_BY_RANK[entry.rank] ?? FALLBACK_BAR_COLOR
+            } ${BAR_HEIGHT_BY_RANK[entry.rank] ?? FALLBACK_BAR_HEIGHT}`}
           >
             {formatRankLabel(entry)}
           </div>

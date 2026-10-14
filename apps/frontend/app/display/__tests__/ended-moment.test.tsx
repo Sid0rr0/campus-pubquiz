@@ -78,6 +78,50 @@ describe('DisplayPage — the ended moment', () => {
     expect(podium.queryByText('Fourth Team')).not.toBeInTheDocument();
   });
 
+  it('puts the podium above the "Quiz complete!" heading', () => {
+    showDisplay(ENDED);
+    render(<DisplayPage />);
+
+    const podium = screen.getByTestId('podium');
+    const heading = screen.getByRole('heading', { name: 'Quiz complete!' });
+
+    expect(
+      podium.compareDocumentPosition(heading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('gives each podium step its own colour', () => {
+    showDisplay(ENDED);
+    render(<DisplayPage />);
+
+    const steps = within(screen.getByTestId('podium'))
+      .getAllByTestId('podium-step')
+      .map((step) => step.className.match(/bg-\w+/)?.[0]);
+
+    expect(new Set(steps).size).toBe(3);
+  });
+
+  it('lists every team below the podium with its place', () => {
+    showDisplay({
+      ...ENDED,
+      leaderboard: [...STANDINGS, { teamName: 'Fifth Team', totalPoints: 5 }],
+    });
+    render(<DisplayPage />);
+
+    const rest = within(screen.getByLabelText('Other teams'));
+    expect(rest.getByText('4. Fourth Team')).toBeInTheDocument();
+    expect(rest.getByText('5. Fifth Team')).toBeInTheDocument();
+    expect(rest.queryByText(/Gold Team/)).not.toBeInTheDocument();
+  });
+
+  it('shows no other-teams row when the podium holds every team', () => {
+    showDisplay({ ...ENDED, leaderboard: STANDINGS.slice(0, 3) });
+    render(<DisplayPage />);
+
+    expect(screen.queryByLabelText('Other teams')).not.toBeInTheDocument();
+  });
+
   it('fires no confetti or fanfare on a display loaded straight into the ended screen', () => {
     showDisplay(ENDED);
     render(<DisplayPage />);

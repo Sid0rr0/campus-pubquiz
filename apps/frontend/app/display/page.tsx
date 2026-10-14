@@ -15,7 +15,7 @@ import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { useDisplayGame } from '@/app/lib/use-display-game';
 import { revealPosition } from '@/app/lib/reveal-position';
 import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
-import { Podium } from '@/app/components/podium';
+import { EndedScreen } from '@/app/display/ended-screen';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { useRoundTitleSting } from '@/app/lib/use-round-title-sting';
 import {
@@ -334,17 +334,10 @@ function DisplayPageContent() {
         }
       case 'ended':
         return (
-          <div className="flex flex-1 items-center justify-center px-16 text-center">
-            <div className="flex flex-col items-center gap-10">
-              <h1 className="font-display text-display-4xl">Quiz complete!</h1>
-              <Podium entries={leaderboard} />
-              {screen.isFeedbackPromptShown && (
-                <p className="font-display text-display-2xl text-magenta">
-                  Tell us what you thought — on your phone
-                </p>
-              )}
-            </div>
-          </div>
+          <EndedScreen
+            leaderboard={leaderboard}
+            isFeedbackPromptShown={screen.isFeedbackPromptShown}
+          />
         );
       case 'showdown':
         if (!activeShowdown) return null;
