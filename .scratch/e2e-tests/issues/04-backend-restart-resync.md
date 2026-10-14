@@ -15,9 +15,9 @@ Parent spec: `.scratch/e2e-tests/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The backend helper's stop and start leave no orphaned process, including when a test fails.
-- [ ] The mid-block restart case passes.
-- [ ] The restart-during-locking case passes.
-- [ ] Both pass `--repeat-each=5`.
+- [x] The backend helper's stop and start leave no orphaned process, including when a test fails.
+- [x] The mid-block restart case passes.
+- [x] The restart-during-locking case passes.
+- [x] Both pass `--repeat-each=5`.

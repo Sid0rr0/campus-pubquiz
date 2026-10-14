@@ -20,6 +20,13 @@ export class DisplayScreen {
     ).toBeVisible();
   }
 
+  /** The big screen has lost its connection: it drops the pinned session and offers the session picker. */
+  async expectDisconnected(): Promise<void> {
+    await expect(
+      this.page.getByRole('heading', { name: 'Pick a game to display' }),
+    ).toBeVisible();
+  }
+
   /** The lobby counts and lists exactly these teams (the roster repeats names for its marquee, so the first is checked). */
   async expectLobbyTeams(teamNames: readonly string[]): Promise<void> {
     const label = teamNames.length === 1 ? 'TEAM' : 'TEAMS';

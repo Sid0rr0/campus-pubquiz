@@ -90,6 +90,12 @@ export class ManagedServer {
     }
   }
 
+  /** Whether the pid file names a live process of ours. */
+  isRunning(): boolean {
+    const pid = this.readPid();
+    return pid !== null && isProcessAlive(pid) && this.isOurProcess(pid);
+  }
+
   async restart(): Promise<void> {
     await this.stop();
     await this.start();
