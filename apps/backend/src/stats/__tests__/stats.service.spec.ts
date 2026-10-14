@@ -383,6 +383,39 @@ describe('StatsService (Postgres integration)', () => {
       ).toEqual(new Set([departedHigh.id, penalty.id]));
       expect(desc.total).toBe(4);
     });
+
+    it.each(['teamCount', 'winner'] as const)(
+      'pages and totals correctly while sorting by %s',
+      async (sortBy) => {
+        const { departedHigh, penalty, empty, bonusOnly } =
+          await seedDriftSessions();
+        const pageOf = (pageNumber: number) =>
+          statsService.listPlayedSessions({
+            page: pageNumber,
+            pageSize: 3,
+            sortBy,
+            sortOrder: 'asc',
+          });
+
+        const first = await pageOf(1);
+        const second = await pageOf(2);
+
+        // Ascending ties (two teams each in departedHigh/penalty by count) fall back to newest id first.
+        const expectedOrder =
+          sortBy === 'winner'
+            ? [empty.id, penalty.id, departedHigh.id, bonusOnly.id]
+            : [empty.id, bonusOnly.id, penalty.id, departedHigh.id];
+        expect(first.items.map((i) => i.gameSessionId)).toEqual(
+          expectedOrder.slice(0, 3),
+        );
+        expect(second.items.map((i) => i.gameSessionId)).toEqual(
+          expectedOrder.slice(3),
+        );
+        expect([first.total, second.total]).toEqual([4, 4]);
+        expect([first.page, second.page]).toEqual([1, 2]);
+        expect([first.pageSize, second.pageSize]).toEqual([3, 3]);
+      },
+    );
   });
 
   it('orders sessions by playedAt (createdAt) descending by default', async () => {
