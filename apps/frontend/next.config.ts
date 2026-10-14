@@ -18,8 +18,14 @@ function getLanAddresses(): string[] {
   return addresses;
 }
 
+// Browser end-to-end tests build into their own folder (`.next-e2e`) so they
+// never touch the `.next` a running dev server owns. Unset keeps Next's
+// default, so dev and production builds are unchanged.
+const distDir = process.env.NEXT_DIST_DIR || undefined;
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: [...getLanAddresses()],
+  ...(distDir ? { distDir } : {}),
 };
 
 export default withSentryConfig(nextConfig, {
