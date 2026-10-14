@@ -1,4 +1,7 @@
-import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import {
+  isCurrentRoundKahoot,
+  isQuestionHiddenBehindKahootLeaderboard,
+} from './kahoot-visibility';
 import { capLeaderboard } from './leaderboard-tiebreak';
 import { rankTeams } from './ranking-rule';
 import type {
@@ -64,8 +67,7 @@ function totalBeforeRound(entry: LeaderboardEntry, roundIndex: number): number {
  */
 function describeTrendBasis(session: SessionState): TrendBasis {
   const { roundIndex } = session.progress;
-  const isKahootRound = session.seededGame.rounds[roundIndex]?.kahootMode;
-  if (isKahootRound && session.priorStandings.length > 0) {
+  if (isCurrentRoundKahoot(session) && session.priorStandings.length > 0) {
     return { board: session.priorStandings, isPriorBoard: true };
   }
   return {
@@ -127,12 +129,12 @@ function describeTrends(
 export function describeLeaderboardBoard(
   session: SessionState,
 ): LeaderboardBoard {
-  const { roundIndex, status } = session.progress;
-  const isKahootRound =
-    session.seededGame.rounds[roundIndex]?.kahootMode ?? false;
-  const entries = capLeaderboard(session.leaderboard, isKahootRound);
+  const entries = capLeaderboard(
+    session.leaderboard,
+    isCurrentRoundKahoot(session),
+  );
   const isBetweenKahootQuestions =
-    status === 'question_open' &&
+    session.progress.status === 'question_open' &&
     isQuestionHiddenBehindKahootLeaderboard(session);
   const countUpBoard = isBetweenKahootQuestions
     ? describeCountUpBoard(session, entries)

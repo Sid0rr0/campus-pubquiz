@@ -190,6 +190,52 @@ describe('GameGateway — the leaderboard description on the display view', () =
     });
   });
 
+  describe('at the end of a kahoot round (also the quiz end) with an untouched prior board', () => {
+    /** Plays both questions with nothing scored before the last one, then awards `bonuses` at its reveal and advances to the end. */
+    async function reachEndAwarding(
+      teamNames: string[],
+      bonuses: number[],
+    ): Promise<void> {
+      await openKahootRound(teamNames);
+      await actAll(['ADVANCE', 'ADVANCE', 'ADVANCE']); // -> q1 behind the board
+      await game.act('TOGGLE_LEADERBOARD');
+      await actAll(['ADVANCE', 'ADVANCE']); // -> reveal
+      for (const [teamIndex, points] of bonuses.entries()) {
+        await awardBonus(teamIndex, points);
+      }
+      await game.act('ADVANCE'); // -> ended, leaderboard up
+    }
+
+    it('gives every team up when everyone was tied before the last question', async () => {
+      await reachEndAwarding(['First', 'Second'], [BONUS_POINTS]);
+
+      expect(board().trends).toEqual({
+        [game.teams[0].teamId]: 'up',
+        [game.teams[1].teamId]: 'up',
+      });
+    });
+
+    it('caps the board at the top five, splitting the tie at the cutoff, and reveals one rank at a time', async () => {
+      await reachEndAwarding(
+        Array.from({ length: TEAM_COUNT }, (_, index) => `Team ${index}`),
+        [7, 6, 5, 4, 3, 3], // teams 4 and 5 tie for fifth; team 6 stays on 0
+      );
+
+      const { entries, countUpBoard } = board();
+      expect(entries).toHaveLength(KAHOOT_LEADERBOARD_TOP_N);
+      expect(entries.map((entry) => entry.rank)).toEqual([1, 2, 3, 4, 5]);
+      expect(entries.map((entry) => entry.teamId)).not.toContain(
+        game.teams[TEAM_COUNT - 1].teamId,
+      );
+      expect(countUpBoard).toBeUndefined();
+      expect(revealCount()).toBe(0);
+      await game.act('ADVANCE');
+      expect(revealCount()).toBe(1);
+      await game.act('ADVANCE');
+      expect(revealCount()).toBe(2);
+    });
+  });
+
   describe('in an ordinary round', () => {
     it('sends every team, no count-up board, and trends against the round backed out', async () => {
       game = await harness.createGateway({ teamNames: ['First', 'Second'] });

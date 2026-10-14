@@ -229,12 +229,15 @@ export class SessionWrite {
   private async commit<T>(
     joinCode: string,
     started: SessionState,
-    { session: changed, outcome }: SessionChange<T>,
+    { session: changedSession, outcome }: SessionChange<T>,
     refreshStandings: boolean,
   ): Promise<T> {
-    const session = withPriorStandings(started, changed);
-    if (refreshStandings) await this.storeWithStandings(joinCode, session);
-    else this.sessions.set(joinCode, session);
+    const sessionToStore = withPriorStandings(started, changedSession);
+    if (refreshStandings) {
+      await this.storeWithStandings(joinCode, sessionToStore);
+    } else {
+      this.sessions.set(joinCode, sessionToStore);
+    }
     return reportDeadlineChange(started, this.read(joinCode), outcome);
   }
 
