@@ -16,7 +16,7 @@ import {
   closestGuessAnswerProps,
 } from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
-import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
+import { DisplayShowdown } from '@/app/display/display-showdown';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
@@ -290,7 +290,7 @@ function DisplayPageContent() {
         if (!activeShowdown) return null;
         return (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-            <ShowdownRevealScreen
+            <DisplayShowdown
               activeShowdown={activeShowdown}
               step={showdownRevealStep}
             />

@@ -1,3 +1,5 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import type {
   ActiveShowdownView,
@@ -8,6 +10,8 @@ import {
   RulesContent,
   type RulesSettings,
 } from '@/app/components/rules-content';
+import { useOnLiveForwardMove } from '@/app/lib/live-change';
+import { vibrate } from '@/app/lib/vibrate';
 import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
@@ -58,6 +62,17 @@ export function GameStatusScreens({
   myTeamId,
   onSubmitShowdownGuess,
 }: GameStatusScreensProps) {
+  const isMyTurn =
+    phoneScreen.kind === 'showdown_guessing' &&
+    myTeamId !== null &&
+    activeShowdown?.participants.some(
+      (participant) =>
+        participant.teamId === myTeamId && !participant.hasGuessed,
+    ) === true;
+  // Snapshots only arrive while connected, and the first one after a load or
+  // reconnect is silent, so the buzz fires only when the turn comes live.
+  useOnLiveForwardMove(isMyTurn ? 1 : 0, true, () => vibrate('turn'));
+
   switch (phoneScreen.kind) {
     case 'block':
       return null;
@@ -114,7 +129,11 @@ export function GameStatusScreens({
             )
           : undefined;
       if (!activeShowdown || myTeamId === null || !participant) {
-        return <LookAtTheScreen>Tiebreaker in progress</LookAtTheScreen>;
+        return (
+          <LookAtTheScreen className="animate-pulse motion-reduce:animate-none">
+            Tiebreaker in progress
+          </LookAtTheScreen>
+        );
       }
       return (
         <ShowdownGuessForm

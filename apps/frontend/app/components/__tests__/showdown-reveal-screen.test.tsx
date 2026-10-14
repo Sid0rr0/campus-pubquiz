@@ -52,6 +52,33 @@ describe('ShowdownRevealScreen', () => {
     expect(screen.getAllByText('Answered')).toHaveLength(1);
   });
 
+  it('spotlights only the team whose guess is being revealed, and nobody once the answer is up', () => {
+    const round: ActiveShowdownView = {
+      ...TWO_TEAM_ROUND,
+      participants: [
+        { ...TWO_TEAM_ROUND.participants[0], guess: '40' },
+        { ...TWO_TEAM_ROUND.participants[1], guess: '50' },
+      ],
+    };
+    const { rerender } = render(
+      <ShowdownRevealScreen activeShowdown={round} step={2} />,
+    );
+
+    const spotlit = document.querySelectorAll('[data-spotlight="true"]');
+    expect(spotlit).toHaveLength(1);
+    expect(spotlit[0]).toHaveTextContent('Team B');
+
+    rerender(
+      <ShowdownRevealScreen
+        activeShowdown={{ ...round, answer: '42', winnerTeamId: 31 }}
+        step={3}
+      />,
+    );
+    expect(document.querySelectorAll('[data-spotlight="true"]')).toHaveLength(
+      0,
+    );
+  });
+
   it('reveals both guesses at step 2, before the answer', () => {
     const round: ActiveShowdownView = {
       ...TWO_TEAM_ROUND,

@@ -35,6 +35,9 @@ export function ShowdownGuessForm({
       <p className="text-sm font-extrabold tracking-wide text-foreground/55">
         SHOWDOWN TIEBREAKER
       </p>
+      {!isSubmitted && (
+        <p className="font-display text-3xl text-magenta">Your turn!</p>
+      )}
       <h1 className="text-balance font-display text-2xl">{question}</h1>
       {isSubmitted ? (
         <div className="flex flex-col items-center gap-1">
