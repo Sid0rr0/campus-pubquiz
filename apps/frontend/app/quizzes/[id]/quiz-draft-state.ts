@@ -1,6 +1,5 @@
 import {
   DEFAULT_MARGIN,
-  gradingSettingsOf,
   describeLiveEditRounds,
   parseFiniteNumber,
   hasMarginType,
@@ -18,6 +17,10 @@ import {
   loadAnswerDraft,
   saveAnswerDraft,
 } from '@/app/quizzes/[id]/answer-kind-drafts';
+import {
+  loadGradingDrafts,
+  saveGradingDrafts,
+} from '@/app/quizzes/[id]/grading-setting-drafts';
 
 interface EditorOption {
   text: string;
@@ -114,28 +117,6 @@ export function makeRound(id: string, title = ''): EditorRound {
   };
 }
 
-/** A Number question's margin as the editor holds it; any other type leaves the draft's defaults. */
-function loadMarginDraft(
-  question: ImportQuestionPreview,
-): Partial<Pick<EditorQuestion, 'marginValue' | 'marginUnit'>> {
-  const { margin } = gradingSettingsOf(question);
-  if (!margin) return {};
-  return { marginValue: String(margin.value), marginUnit: margin.unit };
-}
-
-/** A Number question saves its margin. An unreadable value saves as NaN (null on the wire) so the server refuses it instead of quietly defaulting. */
-function saveMarginDraft(
-  question: EditorQuestion,
-): Pick<ImportQuestionPreview, 'margin'> | Record<string, never> {
-  if (!hasMarginType(question.type)) return {};
-  return {
-    margin: {
-      value: parseFiniteNumber(question.marginValue) ?? Number.NaN,
-      unit: question.marginUnit,
-    },
-  };
-}
-
 /** Switches a question's type. Moving to Number keeps the prompt, and the answer only if it reads as a number, since a Number key must be one. */
 export function changeQuestionType(
   question: EditorQuestion,
@@ -184,7 +165,7 @@ export function questionFromPreview(
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
     ...loadAnswerDraft(question),
-    ...loadMarginDraft(question),
+    ...loadGradingDrafts(question),
   };
 }
 
@@ -337,7 +318,7 @@ export function questionToPreview(
     points: question.points,
     ...(notes ? { notes } : {}),
     ...saveAnswerDraft(question),
-    ...saveMarginDraft(question),
+    ...saveGradingDrafts(question),
     ...(mediaUrl ? { mediaUrl } : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
   };
