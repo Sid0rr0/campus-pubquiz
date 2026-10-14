@@ -6,12 +6,12 @@ Parent spec: `.scratch/question-record-codec/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The editor's grading-setting draft table is a record over every grading setting name, each entry loading its editor fields from a preview and saving them back.
-- [ ] The match scoring mode moves out of the match answer-kind draft into its entry; the margin load/save helpers become its entry.
-- [ ] Only the settings the type's registry entry lists are saved; a type without a setting saves none.
-- [ ] Today's behaviour is kept: defaults shown for a new question, NaN saved for an unreadable margin so the server refuses it, and changing a question's type keeps or drops the answer as today.
-- [ ] The draft-state suite gains a preview → editor question → preview round trip for every question type, asserting the scoring mode and margin survive, a type without a setting saves none, and an unreadable margin still saves as NaN.
-- [ ] The existing quiz editor tests pass unchanged.
-- [ ] `pnpm typecheck`, `pnpm lint` and the frontend tests pass.
+- [x] The editor's grading-setting draft table is a record over every grading setting name, each entry loading its editor fields from a preview and saving them back.
+- [x] The match scoring mode moves out of the match answer-kind draft into its entry; the margin load/save helpers become its entry.
+- [x] Only the settings the type's registry entry lists are saved; a type without a setting saves none.
+- [x] Today's behaviour is kept: defaults shown for a new question, NaN saved for an unreadable margin so the server refuses it, and changing a question's type keeps or drops the answer as today.
+- [x] The draft-state suite gains a preview → editor question → preview round trip for every question type, asserting the scoring mode and margin survive, a type without a setting saves none, and an unreadable margin still saves as NaN.
+- [x] The existing quiz editor tests pass unchanged.
+- [x] `pnpm typecheck`, `pnpm lint` and the frontend tests pass.
