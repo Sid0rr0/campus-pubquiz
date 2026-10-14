@@ -1,7 +1,6 @@
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { AdminActions } from '@/app/control/admin-actions';
 import { BreakEndTimeControl } from '@/app/control/break-end-time-control';
-import { DisplaySoundMuteControl } from '@/app/control/display-sound-mute-control';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
 import { EditQuizLink } from '@/app/control/edit-quiz-link';
 import { ShowdownPanel } from '@/app/control/showdown-panel';
@@ -40,6 +39,8 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
           isJoinOverlayVisible={progress.isJoinOverlayVisible}
           isMediaFullscreen={progress.isMediaFullscreen ?? false}
           canReplayMedia={controls.canReplayMedia}
+          isDisplaySoundMuted={view.isDisplaySoundMuted}
+          onSetDisplaySoundMuted={actions.setDisplaySoundMuted}
           onAction={actions.sendAction}
           onCloseSession={actions.closeSession}
         />
@@ -52,10 +53,6 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
         <DisplayTextScaleControl
           displayTextScale={view.displayTextScale}
           onSetDisplayTextScale={actions.setDisplayTextScale}
-        />
-        <DisplaySoundMuteControl
-          isMuted={view.isDisplaySoundMuted}
-          onSetMuted={actions.setDisplaySoundMuted}
         />
         <EditQuizLink quizId={quiz.id} />
         <ShowdownPanel

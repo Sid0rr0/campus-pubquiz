@@ -11,6 +11,7 @@ import {
 import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
+import { DisplaySoundMuteControl } from '@/app/control/display-sound-mute-control';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
 
@@ -23,12 +24,14 @@ interface AdminActionsProps {
   isJoinOverlayVisible: boolean;
   isMediaFullscreen: boolean;
   canReplayMedia: boolean;
+  isDisplaySoundMuted: boolean;
+  onSetDisplaySoundMuted: (isMuted: boolean) => void;
   onAction: (action: GameAction) => void;
   onCloseSession: () => void;
   className?: string;
 }
 
-/** Start Quiz, Leaderboard and Join overlay toggles (+ fullscreen/replay media controls), End Quiz, Close Session — everything but Previous/Advance. */
+/** Start Quiz, Leaderboard toggle (+ fullscreen/replay media controls), Display sound and Join overlay, End Quiz, Close Session — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canEndQuiz,
@@ -38,6 +41,8 @@ export function AdminActions({
   isJoinOverlayVisible,
   isMediaFullscreen,
   canReplayMedia,
+  isDisplaySoundMuted,
+  onSetDisplaySoundMuted,
   onAction,
   onCloseSession,
   className = '',
@@ -68,6 +73,22 @@ export function AdminActions({
           )}
           Leaderboard
         </Button>
+        <MediaFullscreenToggle
+          isMediaFullscreen={isMediaFullscreen}
+          onAction={onAction}
+          tone="dark"
+        />
+        <ReplayMediaButton
+          canReplay={canReplayMedia}
+          onAction={onAction}
+          tone="dark"
+        />
+      </div>
+      <div className="flex items-end gap-2">
+        <DisplaySoundMuteControl
+          isMuted={isDisplaySoundMuted}
+          onSetMuted={onSetDisplaySoundMuted}
+        />
         {canToggleJoinOverlay && (
           <Button
             variant="outline"
@@ -80,16 +101,6 @@ export function AdminActions({
             Join overlay
           </Button>
         )}
-        <MediaFullscreenToggle
-          isMediaFullscreen={isMediaFullscreen}
-          onAction={onAction}
-          tone="dark"
-        />
-        <ReplayMediaButton
-          canReplay={canReplayMedia}
-          onAction={onAction}
-          tone="dark"
-        />
       </div>
       {canEndQuiz && (
         <ConfirmDialog

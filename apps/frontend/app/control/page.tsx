@@ -5,20 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  DEFAULT_SESSION_SETTINGS,
   type AdminIndicators,
   type GameStatus,
   type QuizSummaryRound,
 } from '@campus-pubquiz/types';
 import { useAdminSession } from '@/app/lib/use-admin-session';
-import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import { fetchAnswers, AnswerApiError } from '@/app/lib/answer-api';
 import { fetchQuizzes, QuizApiError } from '@/app/lib/quiz-api';
 import { closeSession, SessionApiError } from '@/app/lib/sessions-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { useToastOnError } from '@/app/lib/use-toast-on-error';
-import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { TeamsTable } from '@/app/control/teams-table';
 import { DesktopSidebar } from '@/app/control/desktop-sidebar';
 import { QuestionBrowserPanel } from '@/app/control/question-browser-panel';
@@ -61,14 +58,6 @@ function AdminPageContent() {
     auth,
     isLoading,
   } = useAdminSession('/control');
-  const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
-    useLockCountdownSound({
-      lockAt: snapshot?.questionLockAt ?? null,
-      enabled:
-        snapshot?.settings.playLockCountdownSound ??
-        DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
-      isMuted: snapshot?.isDisplaySoundMuted ?? false,
-    });
   const connectedJoinCode = snapshot?.joinCode;
 
   const gameStatus = snapshot?.progress.status;
@@ -284,7 +273,6 @@ function AdminPageContent() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground md:flex-row">
-      {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
       <MobileAdminBar panel={panel} user={auth.user} onLogout={handleLogout} />
       <DesktopSidebar panel={panel} />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
