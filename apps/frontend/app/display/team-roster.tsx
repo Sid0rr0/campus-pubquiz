@@ -1,7 +1,9 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { TeamView } from '@campus-pubquiz/types';
+import { useLobbyChime } from '@/app/lib/use-lobby-chime';
 
 const TEAM_CHIP_TEXT_CLASSES = [
   'text-cyan',
@@ -75,13 +77,24 @@ export function TeamRoster({ teams }: TeamRosterProps) {
     teams,
   ]);
 
+  const teamIdsAtLoad = useLobbyChime(teams);
+  const isReducedMotion = useReducedMotion();
+
+  // Teams that joined after the roster appeared pop in; reduced motion fades.
   const renderTeamName = (team: TeamView, index: number) => (
-    <span
+    <motion.span
       key={team.teamId}
+      initial={
+        teamIdsAtLoad.has(team.teamId)
+          ? false
+          : { opacity: 0, scale: isReducedMotion ? 1 : 0.4 }
+      }
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 18 }}
       className={`font-display text-display-2xl whitespace-nowrap ${TEAM_CHIP_TEXT_CLASSES[index % TEAM_CHIP_TEXT_CLASSES.length]}`}
     >
       {team.teamName}
-    </span>
+    </motion.span>
   );
 
   const marqueeDurationSeconds = Math.max(

@@ -24,6 +24,7 @@ interface GameStatusScreensProps {
   phoneLeaderboard: PlayersStatePayload['phoneLeaderboard'];
   /** Whether the phone's connection is live; one-off effects stay silent otherwise. */
   isConnected: boolean;
+  teamName: string | null;
   onSubmitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -63,6 +64,7 @@ export function GameStatusScreens({
   myTeamId,
   phoneLeaderboard,
   isConnected,
+  teamName,
   onSubmitShowdownGuess,
 }: GameStatusScreensProps) {
   switch (phoneScreen.kind) {
@@ -80,9 +82,13 @@ export function GameStatusScreens({
     case 'lobby':
       return (
         <div className="mt-16 flex flex-col items-center gap-3">
-          <h1 className="text-center font-display text-2xl">
-            Waiting for the quiz to start…
+          <h1 className="text-center font-display text-2xl text-green">
+            You&apos;re in!
           </h1>
+          <p className="text-center">Look for {teamName} on the big screen</p>
+          <p className="text-center text-sm text-foreground/65">
+            Waiting for the quiz to start…
+          </p>
           <a
             href={`/rules?code=${joinCode}`}
             className="text-sm font-extrabold text-cyan underline"

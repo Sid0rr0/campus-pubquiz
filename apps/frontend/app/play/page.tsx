@@ -260,6 +260,7 @@ function PlayPageContent() {
           myTeamId={myTeamId}
           phoneLeaderboard={phoneLeaderboard}
           isConnected={connectionError === null}
+          teamName={teamName}
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (
