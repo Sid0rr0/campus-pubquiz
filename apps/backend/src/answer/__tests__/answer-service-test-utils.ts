@@ -1,5 +1,7 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
 import type { AnswerView, ScoredQuestion } from '@campus-pubquiz/types';
+import { answerKeyOf } from '@campus-pubquiz/types';
+import { readQuestionPayload } from '@/db/question-payload';
 import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -8,10 +10,23 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
-import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { AnswerService, type GradableQuestion } from '@/answer/answer.service';
 import { useTestDatabase } from '@/test-db/test-database';
+
+/** A seeded question row as the session holds it: its type and resolved Answer key, the shape submit and hand grade are given. */
+export function gradable(row: Question): GradableQuestion {
+  return {
+    id: row.id,
+    type: row.type,
+    ...answerKeyOf({
+      type: row.type,
+      answer: row.answer,
+      points: row.points,
+      ...readQuestionPayload(row),
+    }),
+  };
+}
 
 /** Key-fix regrade of an auto-graded question: `question` is the corrected key, rescored with an optional kahoot timer. */
 export async function regradeAuto(
@@ -94,7 +109,6 @@ export function setupAnswerServiceTest(): AnswerServiceTestContext {
     state.answerService = new AnswerService(
       state.em.getRepository<Answer, AnswerRepository>(Answer),
       state.em.getRepository<Team, TeamRepository>(Team),
-      state.em.getRepository<Question, QuestionRepository>(Question),
     );
     const quiz = state.em.create(Quiz, { title: 'Answer Test Quiz' });
     state.round = state.em.create(Round, {
