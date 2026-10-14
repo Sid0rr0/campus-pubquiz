@@ -1,6 +1,6 @@
 # 01: The question type registry says how each type is revealed
 
-Status: ready-for-agent
+Status: done
 
 Spec: [One Closest-guess reveal module owns the reveal steps](../spec.md)
 
