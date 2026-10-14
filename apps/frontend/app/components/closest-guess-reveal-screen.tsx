@@ -35,7 +35,8 @@ export function ClosestGuessRevealScreen({
   // GameStateService.getRevealStepCount) rather than waiting on a step that
   // will never arrive.
   const showCorrect = !hasSubmissions || step >= 3;
-  const showClosest = hasSubmissions && step >= 4;
+  const closestGuesses = closestGuess.closestGuesses ?? [];
+  const showClosest = hasSubmissions && step >= 4 && closestGuesses.length > 0;
 
   return (
     <>
@@ -75,7 +76,7 @@ export function ClosestGuessRevealScreen({
       )}
       {showClosest && (
         <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
-          {closestGuess.closestGuesses.map((guess, index) => (
+          {closestGuesses.map((guess, index) => (
             <li
               key={index}
               className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-display-xl font-bold text-foreground"

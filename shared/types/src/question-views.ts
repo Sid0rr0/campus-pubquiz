@@ -64,9 +64,10 @@ export interface ClosestGuessRevealData {
    * Team(s) tied for closest (step 4), each with their OWN guessed value —
    * ties can be asymmetric (e.g. correct=100, guesses of 90 and 110 are
    * equally close but not equal), so this is not a single shared value.
-   * Empty when !hasSubmissions.
+   * Empty when !hasSubmissions. Absent on a question mid-reveal until the
+   * closest-teams step is on air.
    */
-  closestGuesses: { teamName: string; value: string }[];
+  closestGuesses?: { teamName: string; value: string }[];
 }
 
 /** Where a question sits in the quiz, for headers on the block/reveal/break screens. */
@@ -98,16 +99,16 @@ export type ClosestGuessRevealView = SeededQuestion &
     closestGuess: ClosestGuessRevealData;
   };
 
-/** What /display and the admin views receive for each revealed question. */
+/** What the admin view receives for each revealed question, untrimmed. */
 export type BlockRevealQuestionView = AnswerRevealView | ClosestGuessRevealView;
 
-/** The `closest_guess_pending` reveal kind: a closest_guess question the big screen is revealing before its correct-answer step (3) is on air. No `answer` or `answerMediaUrl`; `closestGuess` carries only the stats shown so far. Only the players view sends one. */
+/** The `closest_guess_pending` reveal kind: a closest_guess question the big screen is revealing before its correct-answer step (3) is on air. No `answer` or `answerMediaUrl`; `closestGuess` carries only the stats shown so far. The display and players views send one for the on-air question. */
 export type PendingClosestGuessRevealView = BlockQuestionView & {
   revealKind: 'closest_guess_pending';
   closestGuess: ClosestGuessRevealData;
 };
 
-/** What the players view receives for each revealed question. */
+/** What the display and players views receive for each revealed question. */
 export type PlayersRevealQuestionView =
   | BlockRevealQuestionView
   | PendingClosestGuessRevealView;

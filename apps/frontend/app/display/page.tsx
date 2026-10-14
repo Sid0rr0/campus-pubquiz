@@ -296,19 +296,27 @@ function DisplayPageContent() {
         if (!revealQuestion) return null;
         switch (revealQuestion.revealKind) {
           case 'closest_guess':
+          case 'closest_guess_pending': {
+            const answerProps =
+              revealQuestion.revealKind === 'closest_guess'
+                ? {
+                    correctAnswer: revealQuestion.answer,
+                    answerMediaUrl: revealQuestion.answerMediaUrl,
+                  }
+                : {};
             return (
               <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                 <ClosestGuessRevealScreen
                   prompt={revealQuestion.prompt}
                   step={closestGuessRevealStep}
-                  correctAnswer={revealQuestion.answer}
-                  answerMediaUrl={revealQuestion.answerMediaUrl}
                   closestGuess={revealQuestion.closestGuess}
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}
+                  {...answerProps}
                 />
               </div>
             );
+          }
           case 'answer':
             return (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">

@@ -221,6 +221,126 @@ describe('GameGateway — closest_guess reveal-step gating', () => {
     expect(nextQuestion.progress.revealIndex).toBe(1);
   });
 
+  describe('what each room is sent', () => {
+    const STATS_BY_STEP = [
+      { hasSubmissions: true },
+      { hasSubmissions: true, minGuess: '900' },
+      { hasSubmissions: true, minGuess: '900', maxGuess: '2000' },
+      { hasSubmissions: true, minGuess: '900', maxGuess: '2000' },
+      {
+        hasSubmissions: true,
+        minGuess: '900',
+        maxGuess: '2000',
+        closestGuesses: [{ teamName: 'Team B', value: '950' }],
+      },
+    ];
+
+    async function onAirIn(
+      game: RealStoreGateway,
+      room: typeof SOCKET_ROOMS.DISPLAY | typeof SOCKET_ROOMS.PLAYERS,
+    ) {
+      const view = await game.resync(room);
+      return view.revealQuestions[view.progress.revealIndex];
+    }
+
+    it.each([SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.PLAYERS])(
+      'adds one line per Advance to the %s view, and the answer only from the answer step',
+      async (room) => {
+        const game = await startWithGuesses(GUESSES);
+        await actAll(game, TO_REVEAL);
+
+        for (const [step, stats] of STATS_BY_STEP.entries()) {
+          const onAir = await onAirIn(game, room);
+          expect(onAir).toHaveProperty('closestGuess', stats);
+          if (step < 3) {
+            expect(onAir).toMatchObject({
+              revealKind: 'closest_guess_pending',
+            });
+            expect(onAir).not.toHaveProperty('answer');
+          } else {
+            expect(onAir).toMatchObject({
+              revealKind: 'closest_guess',
+              answer: '1000',
+            });
+          }
+          if (step < 4) await game.act('ADVANCE');
+        }
+      },
+    );
+
+    it('removes the last line from both views on Previous', async () => {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, [...TO_REVEAL, 'ADVANCE', 'ADVANCE', 'ADVANCE']);
+
+      await game.act('PREVIOUS');
+
+      for (const room of [
+        SOCKET_ROOMS.DISPLAY,
+        SOCKET_ROOMS.PLAYERS,
+      ] as const) {
+        expect(await onAirIn(game, room)).toHaveProperty(
+          'closestGuess',
+          STATS_BY_STEP[2],
+        );
+      }
+    });
+
+    it('shows the question fully revealed in both views when Previous arrives back at it', async () => {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, [
+        ...TO_REVEAL,
+        'ADVANCE',
+        'ADVANCE',
+        'ADVANCE',
+        'ADVANCE',
+      ]);
+      await game.act('ADVANCE'); // -> revealIndex 1
+
+      await game.act('PREVIOUS');
+
+      for (const room of [
+        SOCKET_ROOMS.DISPLAY,
+        SOCKET_ROOMS.PLAYERS,
+      ] as const) {
+        expect(await onAirIn(game, room)).toMatchObject({
+          revealKind: 'closest_guess',
+          answer: '1000',
+          closestGuess: STATS_BY_STEP[4],
+        });
+      }
+    });
+
+    it('sends the answer at once in both views for a question nobody guessed on', async () => {
+      const game = await startWithGuesses([]);
+      await actAll(game, TO_REVEAL);
+
+      for (const room of [
+        SOCKET_ROOMS.DISPLAY,
+        SOCKET_ROOMS.PLAYERS,
+      ] as const) {
+        expect(await onAirIn(game, room)).toMatchObject({
+          revealKind: 'closest_guess',
+          answer: '1000',
+        });
+      }
+    });
+
+    it('keeps the admin view untrimmed at every step', async () => {
+      const game = await startWithGuesses(GUESSES);
+      await actAll(game, TO_REVEAL);
+
+      for (let step = 0; step < 5; step += 1) {
+        const view = await game.snapshot();
+        expect(view.revealQuestions[0]).toMatchObject({
+          revealKind: 'closest_guess',
+          answer: '1000',
+          closestGuess: STATS_BY_STEP[4],
+        });
+        if (step < 4) await game.act('ADVANCE');
+      }
+    });
+  });
+
   it('keeps the 5-step reveal walk when the backend restarts mid-reveal', async () => {
     const game = await startWithGuesses(GUESSES);
     await actAll(game, TO_REVEAL);

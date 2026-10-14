@@ -122,7 +122,8 @@ describe('Screen projection — players view reveal redaction', () => {
         room,
       );
 
-      expect(view.revealQuestions.map((q) => q.id)).toEqual([10, 11, 20, 21]);
+      const revealed: readonly { id: number }[] = view.revealQuestions;
+      expect(revealed.map((q) => q.id)).toEqual([10, 11, 20, 21]);
     },
   );
 
@@ -254,10 +255,7 @@ describe('Screen projection — players view closest-guess steps', () => {
     expect(q).not.toHaveProperty('answer');
     expect(q).not.toHaveProperty('answerMediaUrl');
     expect(q).toMatchObject({ revealKind: 'closest_guess_pending' });
-    expect(q).toHaveProperty('closestGuess', {
-      hasSubmissions: true,
-      closestGuesses: [],
-    });
+    expect(q).toHaveProperty('closestGuess', { hasSubmissions: true });
   });
 
   it('carries the lowest guess only at step 1', () => {
@@ -268,7 +266,6 @@ describe('Screen projection — players view closest-guess steps', () => {
     expect(q).toHaveProperty('closestGuess', {
       hasSubmissions: true,
       minGuess: '10',
-      closestGuesses: [],
     });
   });
 
@@ -281,7 +278,6 @@ describe('Screen projection — players view closest-guess steps', () => {
       hasSubmissions: true,
       minGuess: '10',
       maxGuess: '90',
-      closestGuesses: [],
     });
   });
 
@@ -293,7 +289,7 @@ describe('Screen projection — players view closest-guess steps', () => {
       answer: '55',
       answerMediaUrl: 'https://example.com/answer.png',
     });
-    expect(q).toHaveProperty('closestGuess.closestGuesses', []);
+    expect(q).not.toHaveProperty('closestGuess.closestGuesses');
   });
 
   it('carries everything at step 4', () => {
@@ -344,18 +340,48 @@ describe('Screen projection — players view closest-guess steps', () => {
     expect(view.revealQuestions[1]).not.toHaveProperty('answer');
   });
 
-  it.each([SOCKET_ROOMS.DISPLAY, SOCKET_ROOMS.ADMIN])(
-    'keeps the full data at step 0 in the %s view',
-    (room) => {
-      const view = projectScreen(closestGuessSession(0), room);
+  it('keeps the full data at step 0 in the admin view', () => {
+    const view = projectScreen(closestGuessSession(0), SOCKET_ROOMS.ADMIN);
 
-      expect(view.revealQuestions[0]).toMatchObject({
-        revealKind: 'closest_guess',
-        answer: '55',
-        closestGuess: SUMMARY,
-      });
-    },
-  );
+    expect(view.revealQuestions[0]).toMatchObject({
+      revealKind: 'closest_guess',
+      answer: '55',
+      closestGuess: SUMMARY,
+    });
+  });
+
+  it('trims only the on-air question in the display view, like the players view', () => {
+    const view = projectScreen(
+      closestGuessSession(0, SUMMARY, { revealIndex: 1 }),
+      SOCKET_ROOMS.DISPLAY,
+    );
+
+    expect(view.revealQuestions[0]).toMatchObject({
+      revealKind: 'closest_guess',
+      closestGuess: SUMMARY,
+    });
+    expect(view.revealQuestions[1]).toMatchObject({
+      revealKind: 'closest_guess_pending',
+    });
+    expect(view.revealQuestions[1]).not.toHaveProperty('answer');
+  });
+
+  it('carries the ended walk fully revealed in the players view', () => {
+    const state = {
+      ...closestGuessSession(0),
+      progress: {
+        ...closestGuessSession(0).progress,
+        status: 'ended' as const,
+        previousStatus: 'reveal' as const,
+      },
+    };
+
+    expect(onAir(state)).toMatchObject({
+      revealKind: 'closest_guess',
+      answer: '55',
+      closestGuess: SUMMARY,
+    });
+  });
 });
 
 describe('Screen projection — players view reveal kind', () => {
