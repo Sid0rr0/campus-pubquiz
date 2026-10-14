@@ -1,5 +1,4 @@
 import {
-  resolveAnswerKind,
   BONUS_CATEGORIES,
   type BonusCategory,
   type QuestionType,
@@ -111,6 +110,18 @@ function getDifficultyLabel(averagePercent: number): QuizDifficultyLabel {
  * counts while partial `match` credit and ungraded answers (null) don't. */
 function isCorrect(answer: SessionDetailAnswerInputRow): boolean {
   return answer.verdict === 'correct';
+}
+
+/** How much of a question one answer counts toward its correct rate, read
+ * from the verdict alone: `correct` in full, `partial` as its points' share
+ * of the question's points (0–1), anything else (incorrect, ungraded) none. */
+function answerCredit(
+  answer: SessionDetailAnswerInputRow,
+  questionPoints: number,
+): number {
+  if (answer.verdict === 'correct') return 1;
+  if (answer.verdict !== 'partial' || questionPoints <= 0) return 0;
+  return Math.min(1, Math.max(0, answer.pointsAwarded / questionPoints));
 }
 
 /** First row achieving the min/max of `getValue` — ties keep the earlier
@@ -302,10 +313,10 @@ export function computeSessionDetail(
       const timedResponses = questionAnswers
         .map((a) => a.responseMs)
         .filter((ms): ms is number => ms !== null);
-      // `match` awards partial credit per pair, so a binary correct/incorrect
-      // rate hides how close teams got — use points earned ÷ points
-      // achievable instead, same idea as a round's pointsPercent.
-      const achievableQuestionPoints = teamCount * question.points;
+      const credit = questionAnswers.reduce(
+        (sum, a) => sum + answerCredit(a, question.points),
+        0,
+      );
       return {
         questionId: question.questionId,
         roundTitle: roundTitleById.get(question.roundId) ?? '',
@@ -315,15 +326,7 @@ export function computeSessionDetail(
         points: question.points,
         answeredCount: questionAnswers.length,
         correctCount: questionAnswers.filter(isCorrect).length,
-        correctRate:
-          resolveAnswerKind(question) === 'match'
-            ? achievableQuestionPoints > 0
-              ? questionAnswers.reduce((sum, a) => sum + a.pointsAwarded, 0) /
-                achievableQuestionPoints
-              : 0
-            : teamCount > 0
-              ? questionAnswers.filter(isCorrect).length / teamCount
-              : 0,
+        correctRate: teamCount > 0 ? credit / teamCount : 0,
         fastestResponseMs:
           timedResponses.length > 0 ? Math.min(...timedResponses) : null,
       };

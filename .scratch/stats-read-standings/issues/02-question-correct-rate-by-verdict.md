@@ -1,6 +1,6 @@
 # 02: A question's correct rate credits each answer by its verdict
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Stats take totals from the Standings module and credit answers by verdict](../spec.md)
 
