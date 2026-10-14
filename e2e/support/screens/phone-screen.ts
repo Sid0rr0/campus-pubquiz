@@ -1,5 +1,9 @@
 import { expect, type Page } from '@playwright/test';
 
+/** What a kicked phone is told (`KICK_NOTICE` in the frontend). */
+const KICK_NOTICE = 'You were removed from this team by the quiz master';
+const TEAM_CODE_LABEL = /^Team code/;
+
 /** A team's phone: `/play` in a mobile-emulated context with its own localStorage. */
 export class PhoneScreen {
   constructor(
@@ -17,6 +21,55 @@ export class PhoneScreen {
     await expect(
       this.page.getByText(`Look for ${this.teamName} on the big screen`),
     ).toBeVisible();
+  }
+
+  /** Opens the join link on a phone that has no team yet and submits the form with the team's recovery code, without waiting for the outcome (the join may be refused, or land mid-game). */
+  async joinWithTeamCode(teamCode: string): Promise<void> {
+    await this.page.goto(`/play?code=${this.joinCode}`);
+    await this.page.getByLabel('Team name').fill(this.teamName);
+    await this.page.getByLabel(TEAM_CODE_LABEL).fill(teamCode);
+    await this.pressJoin();
+  }
+
+  async pressJoin(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Join the quiz' }).click();
+  }
+
+  /** The join was refused with a message matching `reason`, and the phone stays on the join form. */
+  async expectJoinRefused(reason: RegExp): Promise<void> {
+    await expect(
+      this.page.getByRole('alert').filter({ hasText: reason }),
+    ).toBeVisible();
+    await expect(this.page.getByLabel('Team name')).toBeVisible();
+  }
+
+  /** The kicked phone is back on the bare join screen with the removal notice and nothing prefilled. */
+  async expectKicked(): Promise<void> {
+    await expect(this.page.getByText(KICK_NOTICE)).toBeVisible();
+    await expect(this.page).toHaveURL(/\/play(\?|$)/);
+    await expect(this.page.getByLabel('Team name')).toHaveValue('');
+    await expect(this.page.getByLabel(TEAM_CODE_LABEL)).toHaveValue('');
+  }
+
+  /** Makes sure the join form's select shows the running quiz, picking it if the phone did not arrive with its join code. */
+  async pickQuiz(quizTitle: string): Promise<void> {
+    const select = this.page.getByRole('combobox', { name: 'Pick the quiz' });
+    await expect(select).toBeEnabled();
+    if ((await select.innerText()).includes(quizTitle)) return;
+    await select.click();
+    await this.page.getByRole('option', { name: quizTitle }).click();
+  }
+
+  /** Types the team name (and the recovery code, when given) into the join form and presses Join. */
+  async rejoin(teamCode?: string): Promise<void> {
+    await this.page.getByLabel('Team name').fill(this.teamName);
+    if (teamCode) await this.page.getByLabel(TEAM_CODE_LABEL).fill(teamCode);
+    await this.pressJoin();
+  }
+
+  /** The phone's browser closes: its socket drops, the page is gone. */
+  async close(): Promise<void> {
+    await this.page.close();
   }
 
   /** Reloads the page; the context and its localStorage stay, as when a phone's browser refreshes. */

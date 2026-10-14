@@ -4,6 +4,9 @@ import { expect, type Locator, type Page } from '@playwright/test';
 const ADVANCE_SLOT_LABEL =
   /^(Advance|Begin Quiz|Continue|Start Round|Show Next Team|Hide Leaderboard|Hide Join Overlay)$/;
 
+/** A team's recovery code: three upper-case words, such as QUICK-JADE-FOX. */
+const TEAM_CODE_PATTERN = /^[A-Z]+(-[A-Z]+){2}$/;
+
 export type GradeSize = '0 points' | 'half points' | 'full points';
 
 /** The quiz master's laptop: `/control` for one session. Acts and reads through role and visible text, like the quiz master. */
@@ -60,6 +63,39 @@ export class ControlScreen {
         .filter({ hasText: teamName })
         .getByText(isConnected ? 'Connected' : 'Disconnected', { exact: true }),
     ).toHaveCount(1);
+  }
+
+  /** The Teams panel no longer lists the team. */
+  async expectTeamGone(teamName: string): Promise<void> {
+    await expect(this.sidebar.getByText(teamName)).toHaveCount(0);
+  }
+
+  /** Presses Kick on the team's row in the Teams panel and confirms the dialog. */
+  async kickTeam(teamName: string): Promise<void> {
+    await this.sidebar
+      .getByRole('listitem')
+      .filter({ hasText: teamName })
+      .getByRole('button', { name: 'Kick' })
+      .click();
+    await this.page
+      .getByRole('alertdialog', { name: `Kick ${teamName}?` })
+      .getByRole('button', { name: 'Kick', exact: true })
+      .click();
+  }
+
+  /** Opens the team's code dialog from the Teams table, reads the recovery code and closes it. The table appears once the quiz has started. */
+  async readTeamCode(teamName: string): Promise<string> {
+    await this.page
+      .getByRole('button', { name: `Actions for ${teamName}` })
+      .click();
+    await this.page.getByRole('menuitem', { name: 'Show team code' }).click();
+    const dialog = this.page.getByRole('dialog', {
+      name: `Team code — ${teamName}`,
+    });
+    const code = await dialog.getByText(TEAM_CODE_PATTERN).innerText();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    return code;
   }
 
   async startQuiz(): Promise<void> {
