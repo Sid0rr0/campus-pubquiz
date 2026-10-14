@@ -112,9 +112,8 @@ export interface SessionDetailQuestionRow {
   points: number;
   answeredCount: number;
   correctCount: number;
-  // correctCount / teamCount — except for `match`, where partial credit makes
-  // a binary rate misleading, so it's points earned / points achievable
-  // (teamCount * points) instead.
+  // Credit per answer by verdict ÷ teamCount: `correct` counts 1, `partial`
+  // counts its points' share of the question's points, anything else 0.
   correctRate: number;
   fastestResponseMs: number | null;
 }

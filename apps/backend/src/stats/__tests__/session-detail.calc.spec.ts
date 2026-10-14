@@ -316,6 +316,157 @@ describe('computeSessionDetail', () => {
     expect(result.questions[0].correctRate).toBeCloseTo(0.5);
   });
 
+  it('rates a free_text question at the summed shares of hand-graded partial marks', () => {
+    const answer = (teamId: number, pointsAwarded: number) => ({
+      questionId: 10,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict: 'partial' as const,
+      responseMs: null,
+    });
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team 1' },
+          { teamId: 2, teamName: 'Team 2' },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Q',
+            type: 'free_text',
+            points: 4,
+          },
+        ],
+        answers: [answer(1, 1), answer(2, 3)],
+      }),
+    );
+
+    // Shares 1/4 + 3/4 over 2 teams = 50%; nobody is fully correct.
+    expect(result.questions[0].correctRate).toBeCloseTo(0.5);
+    expect(result.questions[0].correctCount).toBe(0);
+  });
+
+  it('rates a kahoot match question at 1 when every team was correct with speed-scaled points', () => {
+    const answer = (teamId: number, pointsAwarded: number) => ({
+      questionId: 10,
+      teamId,
+      teamName: `Team ${teamId}`,
+      pointsAwarded,
+      gradedAt: '2026-01-01T00:00:01.000Z',
+      verdict: 'correct' as const,
+      responseMs: null,
+    });
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [
+          { teamId: 1, teamName: 'Team 1' },
+          { teamId: 2, teamName: 'Team 2' },
+        ],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Kahoot match',
+            type: 'match',
+            points: 1000,
+          },
+        ],
+        answers: [answer(1, 870), answer(2, 510)],
+      }),
+    );
+
+    expect(result.questions[0].correctRate).toBe(1);
+  });
+
+  it('counts ungraded answers as 0 in a question correct rate', () => {
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [{ teamId: 1, teamName: 'Team A' }],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Q',
+            type: 'audio',
+            points: 5,
+          },
+        ],
+        answers: [
+          {
+            questionId: 10,
+            teamId: 1,
+            teamName: 'Team A',
+            pointsAwarded: 0,
+            gradedAt: null,
+            verdict: null,
+            responseMs: null,
+          },
+        ],
+      }),
+    );
+
+    expect(result.questions[0].correctRate).toBe(0);
+  });
+
+  it('names a question with no credit the hardest over one with partial credit', () => {
+    const result = computeSessionDetail(
+      buildInput({
+        teams: [{ teamId: 1, teamName: 'Team A' }],
+        questions: [
+          {
+            questionId: 10,
+            roundId: 100,
+            orderIndex: 0,
+            prompt: 'Partial',
+            type: 'free_text',
+            points: 4,
+          },
+          {
+            questionId: 11,
+            roundId: 100,
+            orderIndex: 1,
+            prompt: 'Nothing',
+            type: 'free_text',
+            points: 4,
+          },
+        ],
+        rounds: [
+          { roundId: 100, title: 'Round 1', category: null, orderIndex: 0 },
+        ],
+        answers: [
+          {
+            questionId: 10,
+            teamId: 1,
+            teamName: 'Team A',
+            pointsAwarded: 2,
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'partial',
+            responseMs: null,
+          },
+          {
+            questionId: 11,
+            teamId: 1,
+            teamName: 'Team A',
+            pointsAwarded: 0,
+            gradedAt: '2026-01-01T00:00:01.000Z',
+            verdict: 'incorrect',
+            responseMs: null,
+          },
+        ],
+      }),
+    );
+
+    expect(result.highlights.hardestQuestionId).toBe(11);
+    expect(result.highlights.easiestQuestionId).toBe(10);
+  });
+
   it('breaks correctRate ties for hardest/easiest toward the earlier question', () => {
     const result = computeSessionDetail(
       buildInput({
