@@ -12,6 +12,7 @@ import {
 } from '@/app/components/rules-content';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { vibrate } from '@/app/lib/vibrate';
+import { EntranceLine } from '@/app/components/round-title-entrance';
 import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
@@ -109,7 +110,21 @@ export function GameStatusScreens({
     case 'round_overview':
       return <LookAtTheScreen className="text-magenta">Rounds</LookAtTheScreen>;
     case 'round_title':
-      return <LookAtTheScreen>{phoneScreen.title}</LookAtTheScreen>;
+      return (
+        <div
+          key={phoneScreen.title}
+          className="mt-16 flex flex-col items-center gap-2 text-center"
+        >
+          <EntranceLine line="kicker">
+            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+          </EntranceLine>
+          <EntranceLine line="title">
+            <h1 className="font-display text-2xl">{phoneScreen.title}</h1>
+          </EntranceLine>
+        </div>
+      );
     case 'ended':
       return (
         <h1 className="mt-16 text-center font-display text-2xl">

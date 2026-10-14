@@ -34,6 +34,7 @@ function renderScreens(
       settings={{} as never}
       activeShowdown={showdown}
       showdownRevealStep={0}
+      teamName="Team A"
       myTeamId={myTeamId}
       onSubmitShowdownGuess={vi.fn()}
     />
