@@ -4,10 +4,10 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Ten joins within a second play at most two chimes (Vitest, test first)
-- [ ] Teams present at first snapshot don't pop or chime
-- [ ] Phone join confirmation names the team
+- [x] Ten joins within a second play at most two chimes (Vitest, test first)
+- [x] Teams present at first snapshot don't pop or chime
+- [x] Phone join confirmation names the team
 
 ## Comments
