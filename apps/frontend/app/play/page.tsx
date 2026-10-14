@@ -273,6 +273,7 @@ function PlayPageContent() {
           phoneLeaderboard={phoneLeaderboard}
           isConnected={connectionError === null}
           teamName={teamName}
+          leaderboard={view.leaderboard}
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (

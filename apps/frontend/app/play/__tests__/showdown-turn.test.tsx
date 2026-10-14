@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ActiveShowdownView,
+  LeaderboardBoard,
   PhoneScreen,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
@@ -36,6 +37,9 @@ function renderScreens(
       showdownRevealStep={0}
       teamName="Team A"
       myTeamId={myTeamId}
+      phoneLeaderboard={{ board: {} as LeaderboardBoard, revealCount: 0 }}
+      isConnected
+      leaderboard={[]}
       onSubmitShowdownGuess={vi.fn()}
     />
   );
