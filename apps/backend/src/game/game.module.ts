@@ -45,6 +45,7 @@ import { TeamService } from '@/team/team.service';
   exports: [
     GameStateService,
     GameGateway,
+    SessionBroadcaster,
     LiveEditService,
     AnswerService,
     BonusService,
