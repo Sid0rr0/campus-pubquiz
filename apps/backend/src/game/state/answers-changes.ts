@@ -1,5 +1,5 @@
 import {
-  isQuestionOpenForAnswering,
+  findQuestionOpenForAnswering,
   SOCKET_EVENTS,
   type SessionState,
   type SubmitAnswerPayload,
@@ -38,7 +38,8 @@ export class AnswersChanges {
     { teamId, questionId, value }: SubmitAnswerPayload,
     socketId: string,
   ): Promise<SessionChange<SessionOutcome>> {
-    if (!isQuestionOpenForAnswering(session, questionId)) {
+    const question = findQuestionOpenForAnswering(session, questionId);
+    if (question === undefined) {
       throw new SessionRefusal('Answers are locked for this question');
     }
     if (session.connectedTeamSockets[teamId] !== socketId) {
@@ -51,7 +52,7 @@ export class AnswersChanges {
         : Date.now() - session.phaseStartedAt;
     const submitted = await this.answerService.submit(
       session.seededGame.gameSessionId,
-      questionId,
+      question,
       teamId,
       value,
       responseMs,
@@ -90,13 +91,25 @@ export class AnswersChanges {
     answerId: number,
     pointsAwarded: number,
   ): Promise<SessionChange<SessionOutcome>> {
+    const { gameSessionId, rounds } = session.seededGame;
     let questionId: number;
     try {
-      ({ questionId } = await this.answerService.grade(
-        session.seededGame.gameSessionId,
+      questionId = await this.answerService.questionIdOf(
+        gameSessionId,
         answerId,
+      );
+      const question = rounds
+        .flatMap((round) => round.questions)
+        .find(({ id }) => id === questionId);
+      if (question === undefined) {
+        throw new Error('This answer is not to a question in the session');
+      }
+      await this.answerService.grade(
+        gameSessionId,
+        answerId,
+        question,
         pointsAwarded,
-      ));
+      );
     } catch (error) {
       throw new SessionRefusal(
         error instanceof Error ? error.message : 'Unable to grade answer',

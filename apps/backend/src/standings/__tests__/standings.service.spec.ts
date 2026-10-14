@@ -5,7 +5,10 @@ import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
 import { Round } from '@/db/entities/round.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
-import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
+import {
+  gradable,
+  setupAnswerServiceTest,
+} from '@/answer/__tests__/answer-service-test-utils';
 import { StandingsService } from '@/standings/standings.service';
 
 describe('StandingsService (Postgres integration)', () => {
@@ -34,17 +37,22 @@ describe('StandingsService (Postgres integration)', () => {
   }
 
   async function scoreAnswer(
-    questionId: number,
+    question: Question,
     teamId: number,
     points: number,
   ) {
     const { answerId } = await state.answerService.submit(
       state.session.id,
-      questionId,
+      gradable(question),
       teamId,
       'guess',
     );
-    await state.answerService.grade(state.session.id, answerId, points);
+    await state.answerService.grade(
+      state.session.id,
+      answerId,
+      gradable(question),
+      points,
+    );
   }
 
   async function awardBonus(
@@ -84,7 +92,7 @@ describe('StandingsService (Postgres integration)', () => {
   it('ranks a team with answers only above a team with a bonus only', async () => {
     const answerer = await insertTeam('Answerer', 'token-a');
     const bonusTeam = await insertTeam('Bonus Team', 'token-b');
-    await scoreAnswer(state.question.id, answerer.id, 3);
+    await scoreAnswer(state.question, answerer.id, 3);
     await awardBonus(bonusTeam, 2);
 
     const { leaderboard } = await standings.forSession(state.session.id);
@@ -112,7 +120,7 @@ describe('StandingsService (Postgres integration)', () => {
 
   it('nets a penalty into the total but reports positive and negative bonuses separately', async () => {
     const team = await insertTeam('Team A', 'token-a');
-    await scoreAnswer(state.question.id, team.id, 5);
+    await scoreAnswer(state.question, team.id, 5);
     await awardBonus(team, 3);
     await awardBonus(team, -4);
 
@@ -133,10 +141,10 @@ describe('StandingsService (Postgres integration)', () => {
     const amy = await insertTeam('Amy', 'token-a');
     const leader = await insertTeam('Leader', 'token-l');
     const last = await insertTeam('Last', 'token-x');
-    await scoreAnswer(state.question.id, leader.id, 5);
-    await scoreAnswer(state.question.id, zed.id, 2);
-    await scoreAnswer(state.question.id, amy.id, 2);
-    await scoreAnswer(state.question.id, last.id, 1);
+    await scoreAnswer(state.question, leader.id, 5);
+    await scoreAnswer(state.question, zed.id, 2);
+    await scoreAnswer(state.question, amy.id, 2);
+    await scoreAnswer(state.question, last.id, 1);
 
     const { leaderboard } = await standings.forSession(state.session.id);
 
@@ -151,8 +159,8 @@ describe('StandingsService (Postgres integration)', () => {
   it('names one winner when a showdown bonus breaks a tie for first', async () => {
     const amy = await insertTeam('Amy', 'token-a');
     const zed = await insertTeam('Zed', 'token-z');
-    await scoreAnswer(state.question.id, amy.id, 4);
-    await scoreAnswer(state.question.id, zed.id, 4);
+    await scoreAnswer(state.question, amy.id, 4);
+    await scoreAnswer(state.question, zed.id, 4);
     await awardBonus(zed, 1);
 
     const { leaderboard, winner } = await standings.forSession(
@@ -193,8 +201,8 @@ describe('StandingsService (Postgres integration)', () => {
     });
     const question2 = await addQuestion(0, round2);
     const team = await insertTeam('Team A', 'token-a');
-    await scoreAnswer(state.question.id, team.id, 2);
-    await scoreAnswer(question2.id, team.id, 3);
+    await scoreAnswer(state.question, team.id, 2);
+    await scoreAnswer(question2, team.id, 3);
 
     const { leaderboard } = await standings.forSession(state.session.id);
 
@@ -208,8 +216,8 @@ describe('StandingsService (Postgres integration)', () => {
   it('does not fan out when a team has several answers and several bonus awards', async () => {
     const question2 = await addQuestion(1);
     const team = await insertTeam('Team A', 'token-a');
-    await scoreAnswer(state.question.id, team.id, 2);
-    await scoreAnswer(question2.id, team.id, 3);
+    await scoreAnswer(state.question, team.id, 2);
+    await scoreAnswer(question2, team.id, 3);
     await awardBonus(team, 1);
     await awardBonus(team, 4);
     await awardBonus(team, -2);
@@ -239,8 +247,8 @@ describe('StandingsService (Postgres integration)', () => {
   it('lists a kicked team with graded answers as departed: unranked, counted, never the winner', async () => {
     const kicked = await insertTeam('Kicked High Scorer', 'token-k');
     const best = await insertTeam('Best Roster Team', 'token-b');
-    await scoreAnswer(state.question.id, kicked.id, 9);
-    await scoreAnswer(state.question.id, best.id, 2);
+    await scoreAnswer(state.question, kicked.id, 9);
+    await scoreAnswer(state.question, best.id, 2);
     await removeFromRoster(kicked);
 
     const standings_ = await standings.forSession(state.session.id);
@@ -284,8 +292,8 @@ describe('StandingsService (Postgres integration)', () => {
   it('orders departed teams by total, highest first', async () => {
     const low = await insertTeam('Low', 'token-1');
     const high = await insertTeam('High', 'token-2');
-    await scoreAnswer(state.question.id, low.id, 1);
-    await scoreAnswer(state.question.id, high.id, 4);
+    await scoreAnswer(state.question, low.id, 1);
+    await scoreAnswer(state.question, high.id, 4);
     await removeFromRoster(low);
     await removeFromRoster(high);
 
@@ -312,10 +320,10 @@ describe('StandingsService (Postgres integration)', () => {
       team: there,
     });
     await state.em.flush();
-    await scoreAnswer(state.question.id, here.id, 2);
+    await scoreAnswer(state.question, here.id, 2);
     await state.answerService.submit(
       otherSession.id,
-      state.question.id,
+      gradable(state.question),
       there.id,
       'guess',
     );

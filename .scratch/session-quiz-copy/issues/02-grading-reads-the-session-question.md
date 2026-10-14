@@ -1,6 +1,6 @@
 # 02: Submit and hand grading grade against the session's question
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 01
 

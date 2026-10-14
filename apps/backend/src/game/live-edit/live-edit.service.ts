@@ -13,7 +13,7 @@ import { SessionBroadcaster } from '@/game/socket/session-broadcaster';
 import { quizEditChange } from '@/game/live-edit/quiz-edit-change';
 import { BlockGradingService } from '@/game/state/block-grading.service';
 import type { SessionOutcome } from '@/game/state/session-outcome';
-import { SessionWrite } from '@/game/state/session-write';
+import { SessionWrite, type HeldWriter } from '@/game/state/session-write';
 import {
   findLiveEditViolations,
   findRegradeQuestionIds,
@@ -38,8 +38,9 @@ export interface LiveEditSaveStrategy {
 
 export interface LiveEditSaveOptions {
   /**
-   * A session that is not live (a re-import's lobby or ended session) whose
-   * screens should also be sent the saved rounds, once the save has landed.
+   * A session a re-import wants reloaded and broadcast after the save has
+   * landed. A lobby session is already reloaded by every save, so this only
+   * adds an ended session; a join code already reloaded is skipped.
    */
   reloadJoinCode?: string;
   strategy?: LiveEditSaveStrategy;
@@ -52,10 +53,13 @@ interface PendingDelivery {
 
 /**
  * Saves a quiz's title and rounds while sessions may be playing it. With no
- * live session on the quiz it is a plain save. Otherwise the save is checked
- * and applied while every live session is held, so the game can't move past
- * the live-edit frontier the save was checked against: the save either lands
- * with each session still behind that frontier, or is refused.
+ * running session on the quiz it is a plain save. Otherwise the save is
+ * checked and applied while every unfinished session is held, so the game
+ * can't move past the live-edit frontier the save was checked against: the
+ * save either lands with each running session still behind that frontier, or
+ * is refused. Either way, once the rounds are saved every unfinished session,
+ * lobby ones included, is reloaded and broadcast; only running sessions are
+ * regraded.
  */
 @Injectable()
 export class LiveEditService {
@@ -129,7 +133,11 @@ export class LiveEditService {
         this.unfinishedJoinCodes(quizId),
         async (held) => {
           const liveSessions = this.listLiveSessions(quizId);
-          if (liveSessions.length === 0) return persist(requestedRounds);
+          if (liveSessions.length === 0) {
+            const saved = await persist(requestedRounds);
+            await this.reloadLobbySessions(quizId, held, deliveries);
+            return saved;
+          }
 
           const currentDraft = await this.quizService.findDraftById(quizId);
           if (!currentDraft) throw new QuizNotFoundError(quizId);
@@ -165,11 +173,13 @@ export class LiveEditService {
               ),
             });
           }
+          await this.reloadLobbySessions(quizId, held, deliveries);
           return result;
         },
       );
       if (
         reloadJoinCode !== undefined &&
+        !deliveries.some((delivery) => delivery.joinCode === reloadJoinCode) &&
         this.sessionWrite.read(reloadJoinCode).seededGame.quizId === quizId
       ) {
         deliveries.push({
@@ -188,6 +198,26 @@ export class LiveEditService {
     }
     await this.deliverAll(deliveries, { swallowErrors: false });
     return result;
+  }
+
+  /** Inside the hold, once the rounds are saved: reloads each lobby session on the quiz, with no regrade (it has no answers). Its outcome is queued for broadcast. */
+  private async reloadLobbySessions(
+    quizId: number,
+    held: HeldWriter,
+    deliveries: PendingDelivery[],
+  ): Promise<void> {
+    const lobbySessions = this.listUnfinishedSessions(quizId).filter(
+      (session) => session.progress.status === 'lobby',
+    );
+    for (const { seededGame } of lobbySessions) {
+      deliveries.push({
+        joinCode: seededGame.joinCode,
+        outcome: await held.write(
+          seededGame.joinCode,
+          quizEditChange(this.seedService, this.grading, []),
+        ),
+      });
+    }
   }
 
   /** After the hold is released, as with every session write. Every delivery is tried; the first failure is rethrown unless errors are swallowed (logged). */
