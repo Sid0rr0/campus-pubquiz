@@ -13,3 +13,8 @@ export interface SetBreakEndTimePayload {
 export interface SetDisplayTextScalePayload {
   displayTextScale: number;
 }
+
+/** Admin-set mute for the big screen's sounds. */
+export interface SetDisplaySoundMutedPayload {
+  isDisplaySoundMuted: boolean;
+}

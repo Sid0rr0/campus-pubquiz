@@ -317,8 +317,9 @@ view for a room.
 | `teams`           | Connected/registered teams                                                                                                             |
 
 The base also holds the other fields two or more rooms read (round titles,
-quiz structure, `questionLockAt`, `breakEndsAt`, `displayTextScale`, settings,
-showdown state, the closest_guess reveal step, `revealQuestions`).
+quiz structure, `questionLockAt`, `breakEndsAt`, `displayTextScale`,
+`isDisplaySoundMuted` (the big-screen mute; ephemeral like `displayTextScale`,
+and `/display` hands it to its sound registry), settings, showdown state, the closest_guess reveal step, `revealQuestions`).
 
 **Fields that belong to one room's view:**
 
@@ -369,8 +370,8 @@ Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED
 payload), plus the connection's `exception` message.
 
 Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `AWARD_BONUS`,
-`SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE` and `CREATE_SHOWDOWN_ROUND`
-(admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
+`SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
+(`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
 `SEND_FEEDBACK` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
 acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise

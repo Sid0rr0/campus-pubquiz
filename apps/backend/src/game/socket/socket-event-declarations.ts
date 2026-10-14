@@ -17,6 +17,7 @@ import {
   rateRoundPayloadSchema,
   sendFeedbackPayloadSchema,
   setBreakEndTimePayloadSchema,
+  setDisplaySoundMutedPayloadSchema,
   setDisplayTextScalePayloadSchema,
   submitAnswerPayloadSchema,
   submitShowdownGuessPayloadSchema,
@@ -129,6 +130,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.ADMIN,
     rejection: 'Only admin clients may set the display text scale',
     logFields: ['displayTextScale'],
+  }),
+  setDisplaySoundMuted: declareSocketEvent({
+    event: SOCKET_EVENTS.SET_DISPLAY_SOUND_MUTED,
+    schema: setDisplaySoundMutedPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.ADMIN,
+    rejection: 'Only admin clients may mute the display sound',
+    logFields: ['isDisplaySoundMuted'],
   }),
   awardBonus: declareSocketEvent({
     event: SOCKET_EVENTS.AWARD_BONUS,

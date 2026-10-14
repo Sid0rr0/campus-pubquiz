@@ -10,6 +10,7 @@ import {
   type OnAirScreen,
 } from '@campus-pubquiz/types';
 import { useDisplayGame } from '@/app/lib/use-display-game';
+import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import {
   ClosestGuessRevealScreen,
@@ -53,6 +54,8 @@ function DisplayPageContent() {
         snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
+
+  useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) silently falls back to the plain picker rather than surfacing a
