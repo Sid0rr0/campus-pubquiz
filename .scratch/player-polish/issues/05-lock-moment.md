@@ -4,10 +4,10 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Bar reflects the remaining time to the lock deadline (Vitest, test first)
-- [ ] Locked stamp and vibration on a live lock; not on reconnect into a locked block
-- [ ] "Saved ✓" shows after an accepted submit, not after a refused one
+- [x] Bar reflects the remaining time to the lock deadline (Vitest, test first)
+- [x] Locked stamp and vibration on a live lock; not on reconnect into a locked block
+- [x] "Saved ✓" shows after an accepted submit, not after a refused one
 
 ## Comments
