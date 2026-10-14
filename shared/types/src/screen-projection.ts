@@ -140,6 +140,10 @@ export function projectScreen(
       const view = {
         ...snapshot,
         ...buildPlayersFields(session),
+        phoneLeaderboard: {
+          board: describeLeaderboardBoard(session),
+          revealCount: session.leaderboardRevealCount,
+        },
         ...describePlayersScreen({
           ...snapshot,
           isAnswerable,

@@ -1,7 +1,13 @@
 import { act, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardBoard, LeaderboardEntry } from '@campus-pubquiz/types';
 import { Leaderboard } from '@/app/components/leaderboard';
+
+const { mockPlaySound } = vi.hoisted(() => ({ mockPlaySound: vi.fn() }));
+
+vi.mock('@/app/lib/display-sounds', () => ({
+  displaySounds: { play: mockPlaySound },
+}));
 
 // Which teams show, in what order, with which label and trend is row
 // selection's job (leaderboard-rows.test.ts). These tests cover only what
@@ -201,6 +207,76 @@ describe('Leaderboard', () => {
       expect(within(settledRows[0]).getByLabelText('moved up')).toHaveClass(
         'text-green',
       );
+    });
+  });
+
+  describe('top-three drama', () => {
+    const FIVE = [
+      ranked(1, 'One', 50, 1),
+      ranked(2, 'Two', 40, 2),
+      ranked(3, 'Three', 30, 3),
+      ranked(4, 'Four', 20, 4),
+      ranked(5, 'Five', 10, 5),
+    ];
+
+    beforeEach(() => {
+      mockPlaySound.mockReset();
+    });
+
+    it('plays the drumroll when an Advance reveals a top-three rank', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={2} />,
+      );
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={3} />);
+
+      expect(mockPlaySound).toHaveBeenCalledTimes(1);
+      expect(mockPlaySound).toHaveBeenCalledWith('drumroll');
+    });
+
+    it('stays silent while ranks below the top three are revealed', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={0} />,
+      );
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={1} />);
+      rerender(<Leaderboard board={described(FIVE)} revealCount={2} />);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when the board loads with the top three already revealed', () => {
+      render(<Leaderboard board={described(FIVE)} revealCount={5} />);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+    });
+
+    it('spotlights rank 1 once it is revealed and no other rank', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={4} />,
+      );
+      expect(
+        screen.queryByTestId('rank-one-spotlight'),
+      ).not.toBeInTheDocument();
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={5} />);
+
+      expect(screen.getAllByTestId('rank-one-spotlight')).toHaveLength(1);
+      expect(
+        within(screen.getAllByRole('listitem')[0]).getByTestId(
+          'rank-one-spotlight',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('keeps every revealed rank on screen when an Advance arrives mid-entrance', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={3} />,
+      );
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={4} />);
+
+      expect(screen.getAllByRole('listitem')).toHaveLength(4);
     });
   });
 });

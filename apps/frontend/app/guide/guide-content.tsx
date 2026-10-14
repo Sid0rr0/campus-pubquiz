@@ -87,6 +87,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'The leaderboard',
     paragraphs: [
       'The leaderboard can be shown or hidden at any point without disrupting grading or the flow of the quiz; hiding it resumes exactly where you were. While it is showing, Advance and Previous only work the leaderboard and never move the quiz underneath.',
+      'Each Advance reveals one more rank on the big screen, from last place up. The top three come in slower, with a drumroll if sound is enabled, and first place is spotlit. Pressing Advance during that entrance cuts straight to the next rank. Each phone shows its own team\'s placing ("You\'re 4th", or "Joint 2nd" for a tie) once the big screen has revealed it, and buzzes if the team moved up.',
     ],
   },
   {

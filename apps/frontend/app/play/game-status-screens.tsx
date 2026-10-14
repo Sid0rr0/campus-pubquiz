@@ -4,8 +4,10 @@ import type { ReactNode } from 'react';
 import type {
   ActiveShowdownView,
   PhoneScreen,
+  PlayersStatePayload,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
+import { LeaderboardScreen } from '@/app/play/leaderboard-screen';
 import {
   RulesContent,
   type RulesSettings,
@@ -24,6 +26,9 @@ interface GameStatusScreensProps {
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
+  phoneLeaderboard: PlayersStatePayload['phoneLeaderboard'];
+  /** Whether the phone's connection is live; one-off effects stay silent otherwise. */
+  isConnected: boolean;
   teamName: string | null;
   onSubmitShowdownGuess: (
     showdownRoundId: number,
@@ -62,6 +67,8 @@ export function GameStatusScreens({
   activeShowdown,
   showdownRevealStep,
   myTeamId,
+  phoneLeaderboard,
+  isConnected,
   teamName,
   onSubmitShowdownGuess,
 }: GameStatusScreensProps) {
@@ -81,7 +88,12 @@ export function GameStatusScreens({
       return null;
     case 'leaderboard':
       return (
-        <LookAtTheScreen className="text-magenta">Leaderboard</LookAtTheScreen>
+        <LeaderboardScreen
+          board={phoneLeaderboard.board}
+          revealCount={phoneLeaderboard.revealCount}
+          myTeamId={myTeamId}
+          isConnected={isConnected}
+        />
       );
     case 'lobby':
       return (
