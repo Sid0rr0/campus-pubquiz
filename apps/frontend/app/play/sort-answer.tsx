@@ -41,7 +41,7 @@ interface SortItemProps {
   animatePositionChange: boolean;
 }
 
-/** Tracks whether the referenced element's content has wrapped onto more than one line, e.g. a long sort/match option on a narrow phone screen. `ResizeObserver` is unavailable in the jsdom test environment, so it degrades to always-false there rather than throwing. */
+/** Tracks whether the referenced element's content has wrapped onto more than one line, e.g. a long sort/match option on a narrow phone screen. Guarded for environments without `ResizeObserver` (older browsers), where it degrades to always-false rather than throwing. */
 function useIsMultiline<T extends HTMLElement>(): [
   React.RefObject<T | null>,
   boolean,

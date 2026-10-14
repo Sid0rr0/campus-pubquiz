@@ -2,8 +2,9 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 
-// jsdom implements HTMLMediaElement.play/pause as stubs that throw
-// "not implemented" — stub them so the hook's calls resolve instead.
+// The specs assert on the hook's HTMLMediaElement play/pause calls (offset,
+// pause on disable), so spy on them; the stubbed `play` also resolves
+// immediately instead of attempting real media playback.
 let playSpy: ReturnType<typeof vi.spyOn>;
 let pauseSpy: ReturnType<typeof vi.spyOn>;
 

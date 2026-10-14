@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LiveSessionSelect } from '@/app/components/live-session-select';
 import { renderWithQuery } from '@/test-utils/query';
 
@@ -15,15 +15,6 @@ vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
 });
 
 describe('LiveSessionSelect', () => {
-  beforeAll(() => {
-    // jsdom doesn't implement these, but Radix Select's pointer-based
-    // interactions call them unconditionally.
-    window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
-    window.HTMLElement.prototype.setPointerCapture = vi.fn();
-    window.HTMLElement.prototype.releasePointerCapture = vi.fn();
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
-  });
-
   beforeEach(() => {
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JoinForm } from '@/app/components/join-form';
 import { renderWithQuery } from '@/test-utils/query';
 
@@ -43,13 +43,6 @@ function ControlledJoinForm({
 }
 
 describe('JoinForm', () => {
-  beforeAll(() => {
-    window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
-    window.HTMLElement.prototype.setPointerCapture = vi.fn();
-    window.HTMLElement.prototype.releasePointerCapture = vi.fn();
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
-  });
-
   beforeEach(() => {
     mockFetchPublicSessions.mockReset();
     mockFetchPublicSessions.mockResolvedValue([]);

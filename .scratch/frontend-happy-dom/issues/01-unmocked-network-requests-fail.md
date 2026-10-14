@@ -10,9 +10,17 @@ Parent spec: `.scratch/frontend-happy-dom/spec.md`
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A spec that calls an unmocked endpoint fails with a message naming the method and URL (proved by a test of the guard itself)
-- [ ] Every spec listed above passes with its backend request mocked or asserted, not reaching the network
-- [ ] A full frontend run gives identical results with the dev backend stopped and with it running on `:3000`
-- [ ] The full suite stays green with the same test count as before the ticket
+- [x] A spec that calls an unmocked endpoint fails with a message naming the method and URL (proved by a test of the guard itself)
+- [x] Every spec listed above passes with its backend request mocked or asserted, not reaching the network
+- [x] A full frontend run gives identical results with the dev backend stopped and with it running on `:3000`
+- [x] The full suite stays green with the same test count as before the ticket (1,150 before; 1,152 after = the guard's own 2 tests)
+
+## Comments
+
+**What escaped.** On jsdom the global `fetch` is Node's, so the unmocked calls did reach `localhost:3000` (and failed silently when nothing listened). Two calls escaped, both from `/control` `page.tsx` through modules the specs did not mock: `fetchAnswers` (`GET /sessions/<code>/answers/<id>`, `answer-api`) in 9 specs (advance-controls, end-quiz-and-close-session, join-overlay, keyboard-shortcuts, leaderboard, previous-button, rejected-actions, plus server-decided-flags and status-and-teams, which the trial list missed), and `fetchQuizzes` (`GET /quizzes?joinCode=...`, `quiz-api`) in session-routing. The `/display` media-rendering spec does not call `fetch` at all: the refused request in the happy-dom trial was the YouTube iframe, which jsdom never loads, so there is nothing to mock there (ticket 02 pins iframe loading off in the happy-dom config).
+
+**How it was fixed.** `test-utils/unmocked-fetch-guard.ts` replaces `globalThis.fetch` in `vitest.setup.ts`. An unmocked call rejects with `Unmocked network request: <METHOD> <URL>` and is also recorded, so the global `afterEach` fails the spec even if app code swallows the rejection (cleanup runs before that throw so one failure does not cascade). Specs that stub `fetch` themselves are unaffected, since their stub replaces the guard. The app uses only `fetch` (no XHR, `sendBeacon` or axios), and socket.io is mocked in specs, so `fetch` is the only path to guard. The 10 escaping specs now mock `answer-api` (`fetchAnswers` resolves `null`, same as bonus-award-confirmation) and, for session-routing, `quiz-api`, via the same `vi.mock` pattern the neighbouring specs use.
+
+**Verification.** With the guard on, the full suite only goes green when no spec makes an unmocked request, so its result cannot depend on what listens on `:3000`.
