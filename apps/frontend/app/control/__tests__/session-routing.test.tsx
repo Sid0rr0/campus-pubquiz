@@ -21,6 +21,22 @@ vi.mock('@/app/lib/use-admin-game', async () => {
   };
 });
 
+// The page loads the quiz list and the open question's answers; keep both off
+// the network.
+vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/quiz-api')>();
+  return {
+    ...actual,
+    fetchQuizzes: vi
+      .fn()
+      .mockResolvedValue({ activeQuizId: null, quizzes: [] }),
+  };
+});
+vi.mock('@/app/lib/answer-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/lib/answer-api')>();
+  return { ...actual, fetchAnswers: vi.fn().mockResolvedValue(null) };
+});
+
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
 vi.mock('next/navigation', () => ({
