@@ -64,6 +64,10 @@ _Avoid_: grading rules, grading service
 A property of an answer in the admin answer list: `graded` (it has a grade), `ungraded` (no grade yet and the quiz master can grade it now) or `awaiting_batch` (no grade yet; its question's batch grades it when the block locks, so it can't be hand-graded until then). Worked out by the Grading policy; /control renders it and never asks the question type. Not the same as **Ungraded**, but they agree: an `ungraded` answer is one of those, an `awaiting_batch` answer is not.
 _Avoid_: grade status
 
+**Verdict**:
+How one graded answer was judged: `correct`, `partial` or `incorrect`. It is separate from the points the answer earned, which speed scoring and rounding can scale, so a correct answer can earn less than full points. Teams see their own verdicts on their phones during the reveal.
+_Avoid_: result, mark, outcome
+
 **Half points**:
 Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a kahoot speed score) are kept to the nearest half point.
 _Avoid_: partial points (a partial answer can earn any share, not just half)
