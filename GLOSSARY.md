@@ -53,8 +53,12 @@ What an answer is graded against: the correct answer, the points, and the questi
 _Avoid_: grading fields, key fields
 
 **Grading policy**:
-The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, kahoot speed scoring, key fix.
+The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, kahoot speed scoring, key fix. It also decides what a client may grade now: it works out each answer's grading state, and the clients are sent the result.
 _Avoid_: grading rules, grading service
+
+**Grading state**:
+A property of an answer in the admin answer list: `graded` (it has a grade), `ungraded` (no grade yet and the quiz master can grade it now) or `awaiting_batch` (no grade yet; its question's batch grades it when the block locks, so it can't be hand-graded until then). Worked out by the Grading policy; /control renders it and never asks the question type. Not the same as **Ungraded**, but they agree: an `ungraded` answer is one of those, an `awaiting_batch` answer is not.
+_Avoid_: grade status
 
 **Half points**:
 Exactly half a question's points, so half of a 1-point question is 0.5 and half of 3 is 1.5. Points the app works out itself (a part-right match, a kahoot speed score) are kept to the nearest half point.

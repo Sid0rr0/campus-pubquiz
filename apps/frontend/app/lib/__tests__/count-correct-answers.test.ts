@@ -33,6 +33,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 2,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          gradingState: 'graded',
           verdict: 'correct',
         },
         {
@@ -42,6 +43,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 1,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          gradingState: 'graded',
           verdict: 'partial',
         },
         {
@@ -51,6 +53,7 @@ describe('countCorrectAnswers', () => {
           value: 'London',
           pointsAwarded: 0,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          gradingState: 'graded',
           verdict: 'incorrect',
         },
       ],
@@ -70,6 +73,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 640,
           gradedAt: '2026-01-01T00:00:00.000Z',
+          gradingState: 'graded',
           verdict: 'correct',
         },
       ],
@@ -86,6 +90,7 @@ describe('countCorrectAnswers', () => {
       value: 'Pariss',
       pointsAwarded: 0,
       gradedAt: '2026-01-01T00:00:00.000Z',
+      gradingState: 'graded' as const,
     };
     const before = liveAnswers({
       answers: [{ ...answer, verdict: 'incorrect' }],
@@ -109,6 +114,7 @@ describe('countCorrectAnswers', () => {
           value: 'Paris',
           pointsAwarded: 0,
           gradedAt: null,
+          gradingState: 'ungraded',
           verdict: null,
         },
       ],

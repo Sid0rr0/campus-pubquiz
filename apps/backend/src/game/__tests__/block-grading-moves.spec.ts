@@ -165,6 +165,61 @@ describe('GameGateway — Block grading runs its steps in order for a move', () 
     expect(lists[0].answers.every((answer) => answer.gradedAt !== null)).toBe(
       true,
     );
+    expect(lists[0].answers.map((answer) => answer.gradingState)).toEqual([
+      'graded',
+      'graded',
+    ]);
+  });
+
+  it('sends a closest_guess answer as awaiting its batch before the lock and a missed free_text answer as ungraded, the same as the REST list', async () => {
+    const game = await harness.createGateway({
+      teamNames: ['Team A'],
+      rounds: [
+        {
+          title: 'Round 1',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'closest_guess',
+              prompt: 'How many students attend?',
+              points: 5,
+              answer: '1000',
+            },
+            { type: 'free_text', prompt: 'Name a fruit', answer: 'Apple' },
+          ],
+        },
+      ],
+    });
+    const [closestGuessId, freeTextId] = game.rounds[0].questionIds;
+    await game.openFirstQuestion(await game.connectAdmin());
+    const [team] = game.teams;
+    game.clearEmits();
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: closestGuessId,
+      teamId: team.teamId,
+      value: '900',
+    });
+    await game.act('ADVANCE'); // -> free_text question
+    await game.gateway.handleSubmitAnswer(asSocket(team.socket), {
+      questionId: freeTextId,
+      teamId: team.teamId,
+      value: 'Pear',
+    });
+
+    const sentGuess = adminAnswerLists(game, closestGuessId).at(-1);
+    const sentFruit = adminAnswerLists(game, freeTextId).at(-1);
+    expect(sentGuess?.answers.map((a) => a.gradingState)).toEqual([
+      'awaiting_batch',
+    ]);
+    expect(sentFruit?.answers.map((a) => a.gradingState)).toEqual(['ungraded']);
+    const [restGuess, restFruit] = await game.inRequestContext(() =>
+      Promise.all([
+        game.answerService.listForQuestion(game.gameSessionId, closestGuessId),
+        game.answerService.listForQuestion(game.gameSessionId, freeTextId),
+      ]),
+    );
+    expect(restGuess.map((a) => a.gradingState)).toEqual(['awaiting_batch']);
+    expect(restFruit.map((a) => a.gradingState)).toEqual(['ungraded']);
   });
 
   it('restores the ungraded set and the closest_guess summary after a restart in the break without changing any stored points', async () => {
@@ -226,6 +281,15 @@ describe('GameGateway — Block grading runs its steps in order for a move', () 
     );
     expect(afterRestart.ungradedQuestionIds).toEqual([freeTextId]);
     expect(await storedPoints(restarted, closestGuessId)).toEqual(pointsBefore);
+    const statesAfterRestart = await restarted.inRequestContext(async () =>
+      (
+        await restarted.answerService.listForQuestion(
+          restarted.gameSessionId,
+          closestGuessId,
+        )
+      ).map((answer) => answer.gradingState),
+    );
+    expect(statesAfterRestart).toEqual(['graded', 'graded']);
     expect(pointsBefore).toEqual([
       ['Team A', 5],
       ['Team B', 0],

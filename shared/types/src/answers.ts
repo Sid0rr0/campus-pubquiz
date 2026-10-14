@@ -44,12 +44,22 @@ export interface TeamAnswerView {
   verdict: Verdict | null;
 }
 
+/**
+ * Whether the quiz master can grade an answer now: `graded` (it has a grade),
+ * `ungraded` (no grade yet, the quiz master can grade it) or `awaiting_batch`
+ * (no grade yet, graded by its question's batch when the block locks and
+ * refused a hand grade until then). Decided by the server's Grading policy.
+ */
+export type GradingState = 'graded' | 'ungraded' | 'awaiting_batch';
+
 export interface AnswerView {
   answerId: number;
   teamId: number;
   teamName: string;
   value: string;
   pointsAwarded: number;
+  /** Whether the quiz master can grade this answer now; `graded` exactly when gradedAt is set. */
+  gradingState: GradingState;
   /** Set once the admin grades this answer — the source of truth for "is this graded", since pointsAwarded defaults to 0 before grading. */
   gradedAt: string | null;
   /** Set together with gradedAt — what "correct" means everywhere (a speed-scaled kahoot answer is still correct). Null until graded. */
