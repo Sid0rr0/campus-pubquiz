@@ -1,6 +1,5 @@
 import { placingText } from '@/app/lib/placing-text';
-
-const PODIUM_SIZE = 3;
+import { PODIUM_SIZE } from '@/app/lib/podium-size';
 
 interface RankedTeam {
   teamId: number;

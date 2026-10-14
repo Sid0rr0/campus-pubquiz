@@ -1,7 +1,6 @@
 import type { LeaderboardRow } from '@/app/components/leaderboard-rows';
+import { PODIUM_SIZE } from '@/app/lib/podium-size';
 
-/** Ranks 1 to 3 (0-based indexes 0 to 2) get the slow, dramatic entrance. */
-const TOP_THREE_COUNT = 3;
 const REGULAR_DURATION_SECONDS = 0.5;
 const TOP_THREE_DURATION_SECONDS = 1.1;
 const REGULAR_OFFSET_Y = 32;
@@ -21,7 +20,7 @@ export function rankEntrance(
   if (isReducedMotion) {
     return { durationSeconds: REGULAR_DURATION_SECONDS, offsetY: 0 };
   }
-  return rankIndex < TOP_THREE_COUNT
+  return rankIndex < PODIUM_SIZE
     ? {
         durationSeconds: TOP_THREE_DURATION_SECONDS,
         offsetY: TOP_THREE_OFFSET_Y,
@@ -38,5 +37,5 @@ export function rankEntrance(
  */
 export function isTopThreeReveal(visibleRows: LeaderboardRow[]): boolean {
   const newest = visibleRows[0];
-  return newest !== undefined && newest.rankIndex < TOP_THREE_COUNT;
+  return newest !== undefined && newest.rankIndex < PODIUM_SIZE;
 }

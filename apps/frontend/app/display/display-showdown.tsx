@@ -8,6 +8,8 @@ import { useOnLiveForwardMove } from '@/app/lib/live-change';
 interface DisplayShowdownProps {
   activeShowdown: ActiveShowdownView;
   step: number;
+  /** Whether the display's connection is live; sounds stay silent otherwise. */
+  isConnected: boolean;
 }
 
 /**
@@ -20,8 +22,9 @@ interface DisplayShowdownProps {
 export function DisplayShowdown({
   activeShowdown,
   step,
+  isConnected,
 }: DisplayShowdownProps) {
-  useOnLiveForwardMove(step, true, () =>
+  useOnLiveForwardMove(step, isConnected, () =>
     displaySounds.play(activeShowdown.answer === undefined ? 'slam' : 'burst'),
   );
   return <ShowdownRevealScreen activeShowdown={activeShowdown} step={step} />;

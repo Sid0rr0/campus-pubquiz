@@ -16,6 +16,7 @@ import {
  */
 export function useLobbyChime(
   teams: readonly { teamId: number }[],
+  isConnected: boolean,
 ): ReadonlySet<number> {
   const [initialTeamIds] = useState(
     () => new Set(teams.map((team) => team.teamId)),
@@ -25,12 +26,18 @@ export function useLobbyChime(
 
   useEffect(() => {
     limiterRef.current ??= createChimeLimiter(LOBBY_CHIME_MIN_GAP_MS);
+    if (!isConnected) {
+      // Same rule as useOnLiveForwardMove: the first snapshot after a
+      // reconnect is a load, so teams that joined while offline stay silent.
+      previousIdsRef.current = null;
+      return;
+    }
     const newIds = findNewTeamIds(previousIdsRef.current, teams);
     previousIdsRef.current = new Set(teams.map((team) => team.teamId));
     if (newIds.length > 0 && limiterRef.current.shouldChime()) {
       displaySounds.play('chime');
     }
-  }, [teams]);
+  }, [teams, isConnected]);
 
   return initialTeamIds;
 }

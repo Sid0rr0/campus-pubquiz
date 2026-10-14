@@ -84,14 +84,14 @@ export function GameStatusScreens({
       (participant) =>
         participant.teamId === myTeamId && !participant.hasGuessed,
     ) === true;
-  // Snapshots only arrive while connected, and the first one after a load or
-  // reconnect is silent, so the buzz fires only when the turn comes live.
-  useOnLiveForwardMove(isMyTurn ? 1 : 0, true, () => vibrate('turn'));
+  // The first snapshot after a load or reconnect is silent, so the buzz fires
+  // only when the turn comes live.
+  useOnLiveForwardMove(isMyTurn ? 1 : 0, isConnected, () => vibrate('turn'));
   const isEnded = phoneScreen.kind === 'ended';
   const placing = isEnded ? describeFinalPlacing(leaderboard, myTeamId) : null;
   // Confetti for the podium only, and only when the quiz is seen ending live:
   // the phone screen is `ended` once any showdown is decided, not before.
-  useOnLiveForwardMove(isEnded ? 1 : 0, true, () => {
+  useOnLiveForwardMove(isEnded ? 1 : 0, isConnected, () => {
     if (placing && isPodiumRank(placing.rank)) {
       fireConfetti();
     }

@@ -27,7 +27,11 @@ function renderScreens(
   myTeamId: number | null,
   activeShowdown: ActiveShowdownView | null = SHOWDOWN,
 ) {
-  const ui = (screen: PhoneScreen, showdown: ActiveShowdownView | null) => (
+  const ui = (
+    screen: PhoneScreen,
+    showdown: ActiveShowdownView | null,
+    isConnected = true,
+  ) => (
     <GameStatusScreens
       phoneScreen={screen}
       quizStructure={{} as QuizStructureSummary}
@@ -41,15 +45,18 @@ function renderScreens(
         board: { entries: [], trends: {} } satisfies LeaderboardBoard,
         revealCount: 0,
       }}
-      isConnected
+      isConnected={isConnected}
       leaderboard={[]}
       onSubmitShowdownGuess={vi.fn()}
     />
   );
   const view = render(ui(phoneScreen, activeShowdown));
   return {
-    moveTo: (screenKind: PhoneScreen, showdown = activeShowdown) =>
-      view.rerender(ui(screenKind, showdown)),
+    moveTo: (
+      screenKind: PhoneScreen,
+      showdown = activeShowdown,
+      isConnected = true,
+    ) => view.rerender(ui(screenKind, showdown, isConnected)),
   };
 }
 
@@ -72,6 +79,15 @@ describe('showdown turn on the phone', () => {
     renderScreens(GUESSING, 31);
 
     expect(screen.getByText('Your turn!')).toBeInTheDocument();
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it('does not vibrate for a turn that arrived while disconnected', () => {
+    const { moveTo } = renderScreens(LEADERBOARD, 31, null);
+
+    moveTo(GUESSING, SHOWDOWN, false);
+    moveTo(GUESSING, SHOWDOWN, true);
+
     expect(vibrate).not.toHaveBeenCalled();
   });
 

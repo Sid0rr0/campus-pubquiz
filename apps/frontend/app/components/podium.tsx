@@ -1,8 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react';
 import type { LeaderboardEntry } from '@campus-pubquiz/types';
+import { PODIUM_SIZE } from '@/app/lib/podium-size';
 import { formatRankLabel } from '@/app/lib/rank-label';
-
-const PODIUM_SIZE = 3;
 
 /** Bar height per competition rank, so the winner stands tallest. */
 const BAR_HEIGHT_BY_RANK: Record<number, string> = {

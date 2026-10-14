@@ -55,18 +55,21 @@ function DisplayPageContent() {
     Boolean(codeFromUrl),
     codeFromUrl,
   );
+  const isConnected = snapshot !== null && !connectionError;
   const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
     useLockCountdownSound({
       lockAt: snapshot?.questionLockAt ?? null,
       enabled:
         snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
+      isMuted: snapshot?.isDisplaySoundMuted ?? false,
+      isRegistryInUse: true,
     });
   // Confetti and the fanfare only when the quiz is seen ending live: not on a
   // reloaded display, not on Previous.
   useOnLiveForwardMove(
     snapshot?.onAirScreen.kind === 'ended' ? 1 : 0,
-    snapshot !== null,
+    isConnected,
     () => {
       fireConfetti();
       displaySounds.play('fanfare');
@@ -78,7 +81,7 @@ function DisplayPageContent() {
   const isRevealOnAir = snapshot?.progress.status === 'reveal';
   useOnLiveForwardMove(
     snapshot ? revealPosition(snapshot.progress) : 0,
-    snapshot !== null && !connectionError,
+    isConnected,
     () => {
       if (isRevealOnAir) displaySounds.play('reveal');
     },
@@ -92,7 +95,7 @@ function DisplayPageContent() {
           screenKind: snapshot.onAirScreen.kind,
         }
       : null,
-    !connectionError,
+    isConnected,
   );
 
   useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
@@ -180,6 +183,7 @@ function DisplayPageContent() {
             <Leaderboard
               board={leaderboardBoard}
               revealCount={leaderboardRevealCount}
+              isConnected={isConnected}
             />
           </div>
         );
@@ -187,6 +191,7 @@ function DisplayPageContent() {
         return (
           <LobbyScreen
             teams={teams}
+            isConnected={isConnected}
             joinCode={codeFromUrl}
             maxPlayersPerTeam={settings.maxPlayersPerTeam}
             extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
@@ -348,6 +353,7 @@ function DisplayPageContent() {
             <DisplayShowdown
               activeShowdown={activeShowdown}
               step={showdownRevealStep}
+              isConnected={isConnected}
             />
           </div>
         );
