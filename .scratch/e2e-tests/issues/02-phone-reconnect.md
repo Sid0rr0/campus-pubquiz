@@ -14,8 +14,8 @@ Parent spec: `.scratch/e2e-tests/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The reload case passes.
-- [ ] The offline-then-online case passes.
-- [ ] Both pass `--repeat-each=5`.
+- [x] The reload case passes.
+- [x] The offline-then-online case passes.
+- [x] Both pass `--repeat-each=5`.

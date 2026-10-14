@@ -49,6 +49,19 @@ export class ControlScreen {
     ).toBeVisible();
   }
 
+  /** The Teams panel shows the team's phone as connected (or not). */
+  async expectTeamConnected(
+    teamName: string,
+    isConnected = true,
+  ): Promise<void> {
+    await expect(
+      this.sidebar
+        .getByRole('listitem')
+        .filter({ hasText: teamName })
+        .getByText(isConnected ? 'Connected' : 'Disconnected', { exact: true }),
+    ).toHaveCount(1);
+  }
+
   async startQuiz(): Promise<void> {
     await this.sidebar.getByRole('button', { name: 'Start Quiz' }).click();
     await this.expectStatus('rules');

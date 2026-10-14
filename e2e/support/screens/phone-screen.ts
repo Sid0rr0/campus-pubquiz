@@ -19,6 +19,16 @@ export class PhoneScreen {
     ).toBeVisible();
   }
 
+  /** Reloads the page; the context and its localStorage stay, as when a phone's browser refreshes. */
+  async reload(): Promise<void> {
+    await this.page.reload();
+  }
+
+  /** The phone goes offline (or comes back online) while its page stays open. */
+  async setOffline(isOffline: boolean): Promise<void> {
+    await this.page.context().setOffline(isOffline);
+  }
+
   /** The phone shows a text (a house rule, a round title). */
   async expectText(text: string): Promise<void> {
     await expect(this.page.getByText(text).first()).toBeVisible();
