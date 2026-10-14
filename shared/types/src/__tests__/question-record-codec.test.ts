@@ -6,6 +6,7 @@ import { QUESTION_TYPES, type QuestionType } from '../question-types';
 import {
   previewToStoredFields,
   rowToPreview,
+  rowToSeededQuestion,
   type StoredQuestionRow,
 } from '../question-record-codec';
 
@@ -133,6 +134,52 @@ describe('question record codec', () => {
         const isListed = listed.includes(name);
         expect(name in preview).toBe(isListed);
         expect(name in stored.payload).toBe(isListed);
+      }
+    },
+  );
+
+  it.each(QUESTION_TYPES)(
+    '%s: row to seeded question carries every payload field the type allows',
+    (type) => {
+      const payload = FULL_PAYLOAD[type];
+
+      expect(rowToSeededQuestion(rowOf(type, 'Hint'), payload)).toEqual({
+        id: 7,
+        type,
+        prompt: 'Q?',
+        answer: 'A',
+        points: 3,
+        ...payload,
+      });
+    },
+  );
+
+  it.each(QUESTION_TYPES)(
+    '%s: row to seeded question leaves unset fields and settings unset',
+    (type) => {
+      expect(rowToSeededQuestion(rowOf(type, null), {})).toEqual({
+        id: 7,
+        type,
+        prompt: 'Q?',
+        answer: 'A',
+        points: 3,
+      });
+    },
+  );
+
+  it.each(QUESTION_TYPES)(
+    '%s: row to seeded question drops a setting the type does not list',
+    (type) => {
+      const stray: QuestionPayload = {
+        matchScoringMode: 'all_or_nothing',
+        margin: { value: 1, unit: 'percent' },
+      };
+      const listed = QUESTION_KINDS[type].gradingSettings;
+
+      const seeded = rowToSeededQuestion(rowOf(type, null), stray);
+
+      for (const name of ['matchScoringMode', 'margin'] as const) {
+        expect(name in seeded).toBe(listed.includes(name));
       }
     },
   );

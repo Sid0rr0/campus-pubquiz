@@ -2,6 +2,7 @@ import type { ImportQuestionPreview } from './import';
 import { QUESTION_KINDS } from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
+import type { SeededQuestion } from './question-views';
 import { extractYoutubeVideoId, parseYoutubeClipFromNotes } from './youtube';
 
 /**
@@ -74,6 +75,34 @@ export function rowToPreview(
     ...(row.notes ? { notes: row.notes } : {}),
     ...sharedFieldsFrom(payload),
     ...gradingSettingsFrom(row.type, payload),
+  };
+}
+
+/**
+ * A stored row and its parsed payload as the question a session holds. Only the
+ * payload fields named here reach the seeded game: imported questions also
+ * carry the correct answer in their payload, which must never reach a
+ * QuestionView (snapshots go to every connected phone and the big screen). A
+ * grading setting the type doesn't list never crosses either.
+ */
+export function rowToSeededQuestion(
+  row: StoredQuestionRow,
+  payload: QuestionPayload,
+): SeededQuestion {
+  return {
+    id: row.id,
+    type: row.type,
+    prompt: row.prompt,
+    points: row.points,
+    answer: row.answer,
+    ...sharedFieldsFrom(payload),
+    ...gradingSettingsFrom(row.type, payload),
+    ...(payload.mediaStartSeconds !== undefined
+      ? { mediaStartSeconds: payload.mediaStartSeconds }
+      : {}),
+    ...(payload.mediaEndSeconds !== undefined
+      ? { mediaEndSeconds: payload.mediaEndSeconds }
+      : {}),
   };
 }
 
