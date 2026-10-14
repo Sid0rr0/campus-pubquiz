@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| `e2e-tests` | Browser end-to-end tests for a quiz night | 5 | none |
 
 ## Won't do
 

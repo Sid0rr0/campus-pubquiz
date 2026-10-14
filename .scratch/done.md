@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| e2e-tests | [Browser end-to-end tests for a quiz night](e2e-tests/spec.md) | 5 |
 | player-polish | [Player polish — motion, sound and haptics for the big moments](player-polish/spec.md) | 9 |
 | stats-read-standings | [Stats take totals from the Standings module and credit answers by verdict](stats-read-standings/spec.md) | 2 |
 | question-record-codec | [One stored-question codec — a question crosses storage, preview and the seeded game in one place](question-record-codec/spec.md) | 3 |
