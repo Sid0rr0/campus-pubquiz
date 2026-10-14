@@ -43,6 +43,65 @@ interface RoundTotalRow {
   total: string | number;
 }
 
+type Knex = ReturnType<GameSessionTeamRepository['getKnex']>;
+
+/** Narrows a query to the given sessions; every session when no ids are given. */
+function inSessions<Q extends { whereIn(column: string, ids: number[]): Q }>(
+  query: Q,
+  gameSessionIds: readonly number[] | undefined,
+): Q {
+  return gameSessionIds
+    ? query.whereIn('game_session_id', [...gameSessionIds])
+    : query;
+}
+
+/**
+ * A team took part if it is on the roster or left a mark on the session:
+ * kicking or leaving hard-deletes the roster row, but graded answers and
+ * bonus awards stay.
+ */
+function participantsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
+  return inSessions(knex('game_session_teams'), gameSessionIds)
+    .select('game_session_id', 'team_id')
+    .union([
+      inSessions(knex('answers'), gameSessionIds).select(
+        'game_session_id',
+        'team_id',
+      ),
+      inSessions(knex('bonus_awards'), gameSessionIds).select(
+        'game_session_id',
+        'team_id',
+      ),
+    ]);
+}
+
+// The two totals are pre-aggregated as subqueries (rather than two leftJoins
+// straight off the participants) so a team with several answers *and* several
+// bonus awards doesn't fan out into a cross product that inflates both sums.
+function answerTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
+  return inSessions(knex('answers'), gameSessionIds)
+    .groupBy('game_session_id', 'team_id')
+    .select('game_session_id', 'team_id')
+    .select(knex.raw('sum(points_awarded) as total'));
+}
+
+function bonusTotalsQuery(knex: Knex, gameSessionIds?: readonly number[]) {
+  return inSessions(knex('bonus_awards'), gameSessionIds)
+    .groupBy('game_session_id', 'team_id')
+    .select('game_session_id', 'team_id')
+    .select(knex.raw('sum(points) as total'))
+    .select(
+      knex.raw(
+        'sum(case when points > 0 then points else 0 end) as positive_total',
+      ),
+    )
+    .select(
+      knex.raw(
+        'sum(case when points < 0 then points else 0 end) as negative_total',
+      ),
+    );
+}
+
 /**
  * Owns who took part in a session, how teams are ordered and how ties are
  * ranked. A team took part if it is on the roster *or* has an answer or
@@ -131,49 +190,64 @@ export class StandingsService {
     return result;
   }
 
+  /**
+   * Per-session totals as a query to join and order by, for every session:
+   * `game_session_id`, `participant_count` and `winner_total` (the highest
+   * roster team total, null for an empty roster). Built from the same
+   * participant and team-total subqueries as the standings, so a list sorted
+   * by these numbers agrees with the standings it shows. A session nobody took
+   * part in has no row.
+   */
+  sessionTotalsQuery() {
+    const knex = this.gameSessionTeams.getKnex();
+    const answerTotals = answerTotalsQuery(knex);
+    const bonusTotals = bonusTotalsQuery(knex);
+
+    const participantCounts = knex
+      .from(participantsQuery(knex).as('p'))
+      .groupBy('p.game_session_id')
+      .select('p.game_session_id as game_session_id')
+      .select(knex.raw('count(*) as participant_count'));
+
+    // Roster teams only: a departed team can't win.
+    const winnerTotals = knex('game_session_teams as gst')
+      .leftJoin(answerTotals.as('ans'), function joinAnswers() {
+        this.on('ans.game_session_id', 'gst.game_session_id').andOn(
+          'ans.team_id',
+          'gst.team_id',
+        );
+      })
+      .leftJoin(bonusTotals.as('bonus'), function joinBonus() {
+        this.on('bonus.game_session_id', 'gst.game_session_id').andOn(
+          'bonus.team_id',
+          'gst.team_id',
+        );
+      })
+      .groupBy('gst.game_session_id')
+      .select('gst.game_session_id as game_session_id')
+      .select(
+        knex.raw(
+          'max(coalesce(ans.total, 0) + coalesce(bonus.total, 0)) as winner_total',
+        ),
+      );
+
+    return knex
+      .from(participantCounts.as('pc'))
+      .leftJoin(winnerTotals.as('w'), 'w.game_session_id', 'pc.game_session_id')
+      .select('pc.game_session_id as game_session_id')
+      .select('pc.participant_count as participant_count')
+      .select('w.winner_total as winner_total');
+  }
+
   private async loadTeamTotals(
     gameSessionIds: readonly number[],
   ): Promise<TeamTotalsRow[]> {
     if (gameSessionIds.length === 0) return [];
     const knex = this.gameSessionTeams.getKnex();
     const ids = [...gameSessionIds];
-    // A team took part if it is on the roster or left a mark on the session:
-    // kicking or leaving hard-deletes the roster row, but graded answers and
-    // bonus awards stay.
-    const participants = knex('game_session_teams')
-      .whereIn('game_session_id', ids)
-      .select('game_session_id', 'team_id')
-      .union([
-        knex('answers')
-          .whereIn('game_session_id', ids)
-          .select('game_session_id', 'team_id'),
-        knex('bonus_awards')
-          .whereIn('game_session_id', ids)
-          .select('game_session_id', 'team_id'),
-      ]);
-    // Pre-aggregated as subqueries (rather than two leftJoins straight off
-    // the participants) so a team with several answers *and* several bonus
-    // awards doesn't fan out into a cross product that inflates both sums.
-    const answerTotals = knex('answers')
-      .whereIn('game_session_id', ids)
-      .groupBy('game_session_id', 'team_id')
-      .select('game_session_id', 'team_id')
-      .select(knex.raw('sum(points_awarded) as total'));
-    const bonusTotals = knex('bonus_awards')
-      .whereIn('game_session_id', ids)
-      .groupBy('game_session_id', 'team_id')
-      .select('game_session_id', 'team_id')
-      .select(knex.raw('sum(points) as total'))
-      .select(
-        knex.raw(
-          'sum(case when points > 0 then points else 0 end) as positive_total',
-        ),
-      )
-      .select(
-        knex.raw(
-          'sum(case when points < 0 then points else 0 end) as negative_total',
-        ),
-      );
+    const participants = participantsQuery(knex, ids);
+    const answerTotals = answerTotalsQuery(knex, ids);
+    const bonusTotals = bonusTotalsQuery(knex, ids);
 
     return (await knex
       .from(participants.as('p'))
