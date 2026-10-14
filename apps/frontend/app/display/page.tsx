@@ -111,7 +111,6 @@ function DisplayPageContent() {
     roundAuthors,
     questionLockAt,
     kahootQuestionEndsAt,
-    closestGuessRevealStep,
     breakEndsAt,
     displayTextScale,
     settings,
@@ -308,7 +307,6 @@ function DisplayPageContent() {
               <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                 <ClosestGuessRevealScreen
                   prompt={revealQuestion.prompt}
-                  step={closestGuessRevealStep}
                   closestGuess={revealQuestion.closestGuess}
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}

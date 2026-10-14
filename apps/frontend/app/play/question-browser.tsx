@@ -30,8 +30,6 @@ interface QuestionBrowserProps {
   selectedQuestion: QuestionView | BlockQuestionView;
   /** selectedQuestion as the reveal has shown it so far — set only while reveal is showing this question; a closest_guess question has no answer until its answer step. */
   revealQuestion?: PlayersRevealQuestionView;
-  /** closest_guess only — which reveal sub-step to show, 0 for every other type. */
-  closestGuessRevealStep: number;
   /** Active round's Kahoot-style speed scoring flag — tap-to-submit, single shot, for multiple_choice only. */
   isKahootMode: boolean;
   myAnswers: Record<number, string>;
@@ -49,16 +47,11 @@ interface QuestionBrowserProps {
 
 interface RevealBodyProps {
   revealQuestion: PlayersRevealQuestionView;
-  closestGuessRevealStep: number;
   myAnswer: string;
 }
 
 /** The revealed question as its reveal kind lays it out; both closest-guess kinds draw the closest-guess sequence, but only `closest_guess` carries the correct answer. */
-function RevealBody({
-  revealQuestion,
-  closestGuessRevealStep,
-  myAnswer,
-}: RevealBodyProps) {
+function RevealBody({ revealQuestion, myAnswer }: RevealBodyProps) {
   switch (revealQuestion.revealKind) {
     case 'closest_guess':
     case 'closest_guess_pending': {
@@ -72,7 +65,6 @@ function RevealBody({
       return (
         <ClosestGuessRevealScreen
           prompt={revealQuestion.prompt}
-          step={closestGuessRevealStep}
           closestGuess={revealQuestion.closestGuess}
           mediaTestIdPrefix="play-reveal"
           {...answerProps}
@@ -105,7 +97,6 @@ export function QuestionBrowser({
   totalPickerSlots,
   selectedQuestion,
   revealQuestion,
-  closestGuessRevealStep,
   isKahootMode,
   myAnswers,
   myAnswerPoints,
@@ -153,7 +144,6 @@ export function QuestionBrowser({
         <div className="flex flex-col items-center gap-6 text-center">
           <RevealBody
             revealQuestion={revealQuestion}
-            closestGuessRevealStep={closestGuessRevealStep}
             myAnswer={myAnswer ?? ''}
           />
           <p

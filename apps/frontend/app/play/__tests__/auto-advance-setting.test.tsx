@@ -109,6 +109,47 @@ describe('PlayPage — auto-advance setting', () => {
     expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
   });
 
+  it('shows a browsed-back closest_guess question fully revealed while a later question is on air', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: {
+          rounds: [
+            {
+              questions: [
+                {
+                  type: 'closest_guess',
+                  prompt: 'How tall is the tower?',
+                  answer: '55',
+                  closestGuess: {
+                    hasSubmissions: true,
+                    minGuess: '10',
+                    maxGuess: '90',
+                    closestGuesses: [{ teamName: 'Team B', value: '50' }],
+                  },
+                },
+                { prompt: 'Name a planet' },
+              ],
+            },
+          ],
+          progress: { status: 'reveal', revealIndex: 1, questionIndex: 1 },
+          closestGuessRevealStep: 0,
+        },
+        join: { team: TEAM },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /prev/i }));
+
+    expect(screen.getByText('How tall is the tower?')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('90')).toBeInTheDocument();
+    expect(screen.getByText('55')).toBeInTheDocument();
+    expect(screen.getByText('Team B')).toBeInTheDocument();
+  });
+
   it('immediately snaps to the newest question when auto-advance is turned back on', async () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
     mockUseTeamLink.mockReturnValue(
