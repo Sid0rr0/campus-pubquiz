@@ -684,14 +684,21 @@ editor's disabled controls:
   edited round just before it — and the quiz master reloads (the "Refresh lock
   state" button). A save waits for a press already in flight on a session of
   the quiz; sessions on other quizzes aren't held. The quiz controller only
-  maps the module's errors to `409`, `422` and `404`. A re-import (CSV or
+  maps the module's errors to `409`, `422` and `404`. Only running sessions
+  are checked against the frontier and regraded. Every save, with or without
+  a running session, also reloads each session still in the `lobby` and
+  broadcasts it to every room, so Start quiz plays exactly what the editor
+  shows (corrected answers, added and deleted questions, renamed or
+  reordered rounds); a lobby session has opened nothing, so it never causes
+  a refusal and needs no regrade. Ended sessions are not reloaded. A re-import (CSV or
   Google Sheets link) onto a quiz another session is playing is checked the
   same way: it saves through the Live edit module, matching each sheet row to
   the stored question at the same round and position, so it is refused with
   a `409` and the same issue list when it would change what that session has
   reached, and otherwise applied under its held writes. The importing
   session's own lobby-or-ended rule stays, and its screens are sent the new
-  rounds after the save.
+  rounds after the save (a lobby session once, by the general lobby reload;
+  an ended session by the re-import's explicit reload).
 - **Opened questions keep their type and choices** (`type`, `options`,
   `matchTargets`) — that's what teams answered against, and auto-grading is
   exact-match, so e.g. fixing an option's spelling would zero every team that
