@@ -7,6 +7,9 @@ const ADVANCE_SLOT_LABEL =
 /** A team's recovery code: three upper-case words, such as QUICK-JADE-FOX. */
 const TEAM_CODE_PATTERN = /^[A-Z]+(-[A-Z]+){2}$/;
 
+/** The banner shown while the socket is down (`RECONNECTING_MESSAGE` in the frontend). */
+const CONNECTION_LOST = 'Connection lost — reconnecting…';
+
 export type GradeSize = '0 points' | 'half points' | 'full points';
 
 /** The quiz master's laptop: `/control` for one session. Acts and reads through role and visible text, like the quiz master. */
@@ -31,6 +34,18 @@ export class ControlScreen {
     await expect(
       this.sidebar.getByText(`Status: ${status}`, { exact: true }),
     ).toBeVisible();
+  }
+
+  /** The sidebar warns that the connection to the backend is lost. */
+  async expectReconnecting(): Promise<void> {
+    await expect(
+      this.sidebar.getByRole('alert').filter({ hasText: CONNECTION_LOST }),
+    ).toBeVisible();
+  }
+
+  /** The connection warning is gone: the laptop is talking to the backend again. */
+  async expectNoConnectionWarning(): Promise<void> {
+    await expect(this.sidebar.getByRole('alert')).toHaveCount(0);
   }
 
   /** The Teams panel lists exactly these teams. */

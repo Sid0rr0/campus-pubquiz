@@ -127,8 +127,15 @@ E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when 
 pnpm e2e tests/happy-path.spec.ts          # one file
 pnpm e2e --project=journeys                # one project
 pnpm e2e --repeat-each=5                   # flakiness check
+pnpm e2e --project=backend-restart --no-deps --workers=1 --repeat-each=5   # flakiness check for the restart journey
 pnpm --filter e2e e2e:report               # open the last HTML report
 ```
+
+There are two Playwright projects. `journeys` holds every journey that shares
+the backend. `backend-restart` holds the one journey that stops and restarts
+that backend; it depends on `journeys`, so it runs last, on one worker. When you
+repeat it with `--repeat-each`, pass `--workers=1` too, or the repeats restart
+the backend under each other.
 
 **What it uses** (separate from `pnpm dev`, so both can run at once and E2E
 never touches your dev servers, `.next` or `campus_pubquiz`):

@@ -3,6 +3,8 @@ import { expect, type Page } from '@playwright/test';
 /** What a kicked phone is told (`KICK_NOTICE` in the frontend). */
 const KICK_NOTICE = 'You were removed from this team by the quiz master';
 const TEAM_CODE_LABEL = /^Team code/;
+/** The banner shown while the socket is down (`RECONNECTING_MESSAGE` in the frontend). */
+const CONNECTION_LOST = 'Connection lost — reconnecting…';
 
 /** A team's phone: `/play` in a mobile-emulated context with its own localStorage. */
 export class PhoneScreen {
@@ -80,6 +82,13 @@ export class PhoneScreen {
   /** The phone goes offline (or comes back online) while its page stays open. */
   async setOffline(isOffline: boolean): Promise<void> {
     await this.page.context().setOffline(isOffline);
+  }
+
+  /** The phone warns that the connection is lost and it is trying again. */
+  async expectReconnecting(): Promise<void> {
+    await expect(
+      this.page.getByRole('alert').filter({ hasText: CONNECTION_LOST }),
+    ).toBeVisible();
   }
 
   /** The phone shows a text (a house rule, a round title). */
