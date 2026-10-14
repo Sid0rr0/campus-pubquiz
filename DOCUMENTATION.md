@@ -936,6 +936,14 @@ for the rest of the flow.
 a questions table and highlight tiles. All of it is computed per request from
 the stored rows, never cached.
 
+A question's **correct rate** credits each answer by its verdict, never by the
+question type: `correct` counts in full (a speed-scaled kahoot answer too),
+`partial` counts as its points' share of the question's points (between 0 and 1),
+and `incorrect` or ungraded counts nothing. The rate is the summed credit divided
+by the participant count, and the hardest and easiest question highlights use it.
+The question's correct count (fully correct answers) and a round's correct rate
+count only `correct` verdicts.
+
 The rounds table carries each round's **rating**: `rating: { average, count } | null`
 on the session detail's round rows, shown as "★ 4.2 · 9 teams", or "—" when no
 team rated the round. It is aggregated in SQL from the round ratings of that one

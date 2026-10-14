@@ -292,6 +292,132 @@ describe('StatsService (Postgres integration)', () => {
     });
   });
 
+  describe('sort agrees with the numbers the rows show', () => {
+    async function seedDriftSessions() {
+      // Departed team holds the highest total; the roster winner has 10.
+      const quizA = await createQuiz('Drift A', [[100]]);
+      const departedHigh = await createSession(quizA.quiz, 'DRIFTA', 'ended');
+      const gone = await joinTeam(departedHigh, 'GoneA');
+      const stayA = await joinTeam(departedHigh, 'StayA');
+      await grade(departedHigh, quizA.questions[0][0], gone, 100);
+      await grade(departedHigh, quizA.questions[0][0], stayA, 10);
+      await em.nativeDelete(GameSessionTeam, {
+        gameSession: departedHigh,
+        team: gone,
+      });
+
+      // A penalty drops the answer leader (20 - 15) below the other team (8).
+      const quizB = await createQuiz('Drift B', [[100]]);
+      const penalty = await createSession(quizB.quiz, 'DRIFTB', 'ended');
+      const leader = await joinTeam(penalty, 'LeaderB');
+      const other = await joinTeam(penalty, 'OtherB');
+      await grade(penalty, quizB.questions[0][0], leader, 20);
+      await grade(penalty, quizB.questions[0][0], other, 8);
+      await awardBonus(penalty, leader, -15);
+
+      // No roster teams at all.
+      const quizC = await createQuiz('Drift C', [[100]]);
+      const empty = await createSession(quizC.quiz, 'DRIFTC', 'ended');
+
+      // A single team whose whole total is a bonus award.
+      const quizD = await createQuiz('Drift D', [[100]]);
+      const bonusOnly = await createSession(quizD.quiz, 'DRIFTD', 'ended');
+      const lucky = await joinTeam(bonusOnly, 'LuckyD');
+      await awardBonus(bonusOnly, lucky, 12);
+
+      return { departedHigh, penalty, empty, bonusOnly };
+    }
+
+    const allByWinner = (sortOrder: 'asc' | 'desc') =>
+      statsService.listPlayedSessions({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'winner',
+        sortOrder,
+      });
+
+    it('orders by the winning points shown, empty roster first ascending and last descending', async () => {
+      const { departedHigh, penalty, empty, bonusOnly } =
+        await seedDriftSessions();
+
+      const asc = await allByWinner('asc');
+      const desc = await allByWinner('desc');
+
+      expect(asc.items.map((i) => i.gameSessionId)).toEqual([
+        empty.id,
+        penalty.id,
+        departedHigh.id,
+        bonusOnly.id,
+      ]);
+      expect(asc.items.map((i) => i.winnerPoints)).toEqual([null, 8, 10, 12]);
+      expect(desc.items.map((i) => i.gameSessionId)).toEqual([
+        bonusOnly.id,
+        departedHigh.id,
+        penalty.id,
+        empty.id,
+      ]);
+    });
+
+    it('orders by the team count shown, counting a departed team and a bonus-only team', async () => {
+      const { departedHigh, penalty, empty, bonusOnly } =
+        await seedDriftSessions();
+
+      const sorted = (sortOrder: 'asc' | 'desc') =>
+        statsService.listPlayedSessions({
+          page: 1,
+          pageSize: 20,
+          sortBy: 'teamCount',
+          sortOrder,
+        });
+      const asc = await sorted('asc');
+      const desc = await sorted('desc');
+
+      expect(asc.items.map((i) => i.teamCount)).toEqual([0, 1, 2, 2]);
+      expect(asc.items.slice(0, 2).map((i) => i.gameSessionId)).toEqual([
+        empty.id,
+        bonusOnly.id,
+      ]);
+      expect(desc.items.map((i) => i.teamCount)).toEqual([2, 2, 1, 0]);
+      expect(
+        new Set(desc.items.slice(0, 2).map((i) => i.gameSessionId)),
+      ).toEqual(new Set([departedHigh.id, penalty.id]));
+      expect(desc.total).toBe(4);
+    });
+
+    it.each(['teamCount', 'winner'] as const)(
+      'pages and totals correctly while sorting by %s',
+      async (sortBy) => {
+        const { departedHigh, penalty, empty, bonusOnly } =
+          await seedDriftSessions();
+        const pageOf = (pageNumber: number) =>
+          statsService.listPlayedSessions({
+            page: pageNumber,
+            pageSize: 3,
+            sortBy,
+            sortOrder: 'asc',
+          });
+
+        const first = await pageOf(1);
+        const second = await pageOf(2);
+
+        // Ascending ties (two teams each in departedHigh/penalty by count) fall back to newest id first.
+        const expectedOrder =
+          sortBy === 'winner'
+            ? [empty.id, penalty.id, departedHigh.id, bonusOnly.id]
+            : [empty.id, bonusOnly.id, penalty.id, departedHigh.id];
+        expect(first.items.map((i) => i.gameSessionId)).toEqual(
+          expectedOrder.slice(0, 3),
+        );
+        expect(second.items.map((i) => i.gameSessionId)).toEqual(
+          expectedOrder.slice(3),
+        );
+        expect([first.total, second.total]).toEqual([4, 4]);
+        expect([first.page, second.page]).toEqual([1, 2]);
+        expect([first.pageSize, second.pageSize]).toEqual([3, 3]);
+      },
+    );
+  });
+
   it('orders sessions by playedAt (createdAt) descending by default', async () => {
     const { quiz } = await createQuiz('Quiz E', [[1]]);
     const older = await createSession(quiz, 'OLDER1', 'ended');
