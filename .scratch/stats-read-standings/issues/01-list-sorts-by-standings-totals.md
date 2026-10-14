@@ -1,6 +1,6 @@
 # 01: The played-sessions list sorts by the Standings module's totals
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Stats take totals from the Standings module and credit answers by verdict](../spec.md)
 

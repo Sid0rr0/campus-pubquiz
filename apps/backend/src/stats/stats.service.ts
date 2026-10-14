@@ -97,68 +97,21 @@ export class StatsService {
     const knex = this.gameSessions.getKnex();
     const offset = (page - 1) * pageSize;
 
-    // Counted over everyone who took part (roster, answers or bonus awards),
-    // so the sortable number is the same participant count Standings reports.
-    const participants = knex('game_session_teams')
-      .select('game_session_id', 'team_id')
-      .union([
-        knex('answers').select('game_session_id', 'team_id'),
-        knex('bonus_awards').select('game_session_id', 'team_id'),
-      ]);
-    const participantCounts = knex
-      .from(participants.as('p'))
-      .groupBy('p.game_session_id')
-      .select('p.game_session_id as game_session_id')
-      .select(knex.raw('count(*) as count'));
-
     const maxPoints = knex('rounds as r')
       .join('questions as q', 'q.round_id', 'r.id')
       .groupBy('r.quiz_id')
       .select('r.quiz_id as quizId')
       .select(knex.raw('sum(q.points) as total'));
 
-    // Pre-aggregated per (session, team), same reasoning as the Standings
-    // service — joining straight off game_session_teams would fan out a team
-    // with several answers *and* several bonus awards.
-    const answerTotals = knex('answers')
-      .groupBy(['game_session_id', 'team_id'])
-      .select('game_session_id', 'team_id')
-      .select(knex.raw('sum(points_awarded) as total'));
-
-    const bonusTotals = knex('bonus_awards')
-      .groupBy(['game_session_id', 'team_id'])
-      .select('game_session_id', 'team_id')
-      .select(knex.raw('sum(points) as total'));
-
-    // The highest roster-team total per session — the winner's total, which
-    // doesn't depend on how ties are ordered, so sorting and pagination stay
-    // in SQL. Who the winner *is* comes from Standings, for the page only.
-    const winnerTotals = knex('game_session_teams as gst')
-      .leftJoin(answerTotals.as('ans'), function joinAnswers() {
-        this.on('ans.game_session_id', 'gst.game_session_id').andOn(
-          'ans.team_id',
-          'gst.team_id',
-        );
-      })
-      .leftJoin(bonusTotals.as('bonus'), function joinBonus() {
-        this.on('bonus.game_session_id', 'gst.game_session_id').andOn(
-          'bonus.team_id',
-          'gst.team_id',
-        );
-      })
-      .groupBy('gst.game_session_id')
-      .select('gst.game_session_id as game_session_id')
-      .select(
-        knex.raw(
-          'max(coalesce(ans.total, 0) + coalesce(bonus.total, 0)) as total',
-        ),
-      );
+    // Team count and winner's total to sort by come from Standings, so the
+    // sort uses the same participation and total rules as the numbers shown.
+    // Who the winner *is* comes from Standings too, for the page only.
+    const sessionTotals = this.standings.sessionTotalsQuery();
 
     const baseQuery = knex('game_sessions as gs')
       .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
-      .leftJoin(participantCounts.as('pc'), 'pc.game_session_id', 'gs.id')
+      .leftJoin(sessionTotals.as('st'), 'st.game_session_id', 'gs.id')
       .leftJoin(maxPoints.as('mp'), 'mp.quizId', 'gs.quiz_id')
-      .leftJoin(winnerTotals.as('w'), 'w.game_session_id', 'gs.id')
       .where('gs.status', 'ended');
 
     // `winner` sorts on the winning total, with a session that has no
@@ -169,9 +122,9 @@ export class StatsService {
     const orderColumn = {
       quizTitle: knex.raw('coalesce(gs.name, qz.title)'),
       playedAt: 'gs.created_at',
-      teamCount: knex.raw('coalesce(pc.count, 0)'),
+      teamCount: knex.raw('coalesce(st.participant_count, 0)'),
       maxPoints: knex.raw('coalesce(mp.total, 0)'),
-      winner: knex.raw('coalesce(w.total, -1)'),
+      winner: knex.raw('coalesce(st.winner_total, -1)'),
     } satisfies Record<PlayedSessionsQuery['sortBy'], unknown>;
 
     const [rows, [{ count: total }]] = await Promise.all([
