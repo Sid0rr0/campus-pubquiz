@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { LeaderboardEntry, SessionState } from '@campus-pubquiz/types';
+import type { SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
 import {
   withLeaderboard,
   withPriorStandings,
+  withVerdictTallies,
 } from '@/game/state/session-updates.util';
 import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
 
@@ -252,20 +253,40 @@ export class SessionWrite {
     joinCode: string,
     session: SessionState,
   ): Promise<void> {
-    let leaderboard: LeaderboardEntry[] | undefined;
-    try {
-      leaderboard = await this.standingsService.leaderboard(
-        session.seededGame.gameSessionId,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Standings read failed for session ${joinCode}; keeping the earlier leaderboard until the next write`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
+    const { gameSessionId } = session.seededGame;
+    const [leaderboard, verdictTallies] = await Promise.all([
+      this.readOrKeep(joinCode, 'Standings', () =>
+        this.standingsService.leaderboard(gameSessionId),
+      ),
+      this.readOrKeep(joinCode, 'Verdict tally', () =>
+        this.standingsService.verdictTallies(gameSessionId),
+      ),
+    ]);
+    const withStandings = leaderboard
+      ? withLeaderboard(session, leaderboard)
+      : session;
     this.sessions.set(
       joinCode,
-      leaderboard ? withLeaderboard(session, leaderboard) : session,
+      verdictTallies
+        ? withVerdictTallies(withStandings, verdictTallies)
+        : withStandings,
     );
+  }
+
+  /** The value `read` returns, or undefined (logged) when it fails, so the session keeps what it had until the next write. */
+  private async readOrKeep<R>(
+    joinCode: string,
+    what: string,
+    read: () => Promise<R>,
+  ): Promise<R | undefined> {
+    try {
+      return await read();
+    } catch (error) {
+      this.logger.error(
+        `${what} read failed for session ${joinCode}; keeping the earlier value until the next write`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return undefined;
+    }
   }
 }

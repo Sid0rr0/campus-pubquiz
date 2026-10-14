@@ -18,6 +18,7 @@ const SINGLE_ROOM_FIELDS: Record<SocketRoomName, readonly string[]> = {
     'leaderboardRevealCount',
     'leaderboardBoard',
     'kahootQuestionEndsAt',
+    'teamsCorrect',
   ],
   admin: ['ungradedQuestionIds', 'phaseStartedAt', 'phaseElapsedMs'],
   players: ['upcomingQuestions', 'pastRevealedQuestions', 'phoneLeaderboard'],

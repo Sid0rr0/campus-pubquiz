@@ -13,6 +13,7 @@ import { fireConfetti } from '@/app/lib/confetti';
 import { displaySounds } from '@/app/lib/display-sounds';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { useDisplayGame } from '@/app/lib/use-display-game';
+import { revealPosition } from '@/app/lib/reveal-position';
 import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
 import { Podium } from '@/app/components/podium';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
@@ -37,7 +38,9 @@ import {
 } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RoundTitleCard } from '@/app/display/round-title-card';
+import { RevealEntranceConfig } from '@/app/display/reveal-entrance';
 import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
+import { TeamsCorrectCount } from '@/app/display/teams-correct-count';
 import { TriviaHeader } from '@/app/display/trivia-header';
 
 function DisplayPageContent() {
@@ -67,6 +70,17 @@ function DisplayPageContent() {
     () => {
       fireConfetti();
       displaySounds.play('fanfare');
+    },
+  );
+
+  // The sting plays when the quiz moves forward onto a revealed answer,
+  // never for a reloaded screen or a Previous.
+  const isRevealOnAir = snapshot?.progress.status === 'reveal';
+  useOnLiveForwardMove(
+    snapshot ? revealPosition(snapshot.progress) : 0,
+    snapshot !== null && !connectionError,
+    () => {
+      if (isRevealOnAir) displaySounds.play('reveal');
     },
   );
 
@@ -130,6 +144,7 @@ function DisplayPageContent() {
     roundAuthors,
     questionLockAt,
     kahootQuestionEndsAt,
+    teamsCorrect,
     breakEndsAt,
     displayTextScale,
     settings,
@@ -277,25 +292,34 @@ function DisplayPageContent() {
           case 'closest_guess_pending': {
             return (
               <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                <ClosestGuessRevealScreen
-                  prompt={revealQuestion.prompt}
-                  closestGuess={revealQuestion.closestGuess}
-                  mediaTestIdPrefix="reveal"
-                  autoplayMedia={settings.autoplayMedia}
-                  {...closestGuessAnswerProps(revealQuestion)}
-                />
+                <RevealEntranceConfig>
+                  <ClosestGuessRevealScreen
+                    prompt={revealQuestion.prompt}
+                    closestGuess={revealQuestion.closestGuess}
+                    mediaTestIdPrefix="reveal"
+                    autoplayMedia={settings.autoplayMedia}
+                    hasEntrance
+                    {...closestGuessAnswerProps(revealQuestion)}
+                  />
+                </RevealEntranceConfig>
               </div>
             );
           }
           case 'answer':
             return (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                <QuestionDisplay
-                  question={revealQuestion}
-                  mediaTestIdPrefix="reveal"
-                  autoplayMedia={settings.autoplayMedia}
-                  isFullscreen={progress.isMediaFullscreen}
-                />
+                <RevealEntranceConfig>
+                  <QuestionDisplay
+                    question={revealQuestion}
+                    mediaTestIdPrefix="reveal"
+                    autoplayMedia={settings.autoplayMedia}
+                    isFullscreen={progress.isMediaFullscreen}
+                    hasRevealEntrance
+                  />
+                </RevealEntranceConfig>
+                {teamsCorrect && teamsCorrect.teamCount > 0 && (
+                  <TeamsCorrectCount {...teamsCorrect} />
+                )}
               </div>
             );
           default: {
