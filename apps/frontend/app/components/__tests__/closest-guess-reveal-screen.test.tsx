@@ -3,75 +3,52 @@ import { describe, expect, it } from 'vitest';
 import type { ClosestGuessRevealData } from '@campus-pubquiz/types';
 import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
 
-const WITH_SUBMISSIONS: ClosestGuessRevealData = {
-  hasSubmissions: true,
-  minGuess: '900',
-  maxGuess: '2000',
-  closestGuesses: [{ teamName: 'Team B', value: '950' }],
-};
+const PROMPT = 'How many students attend this university?';
+
+function renderScreen(
+  closestGuess: ClosestGuessRevealData,
+  correctAnswer?: string,
+): void {
+  render(
+    <ClosestGuessRevealScreen
+      prompt={PROMPT}
+      correctAnswer={correctAnswer}
+      closestGuess={closestGuess}
+      mediaTestIdPrefix="reveal"
+    />,
+  );
+}
 
 describe('ClosestGuessRevealScreen', () => {
-  it('shows only the question at step 0', () => {
-    render(
-      <ClosestGuessRevealScreen
-        prompt="How many students attend this university?"
-        step={0}
-        correctAnswer="1000"
-        closestGuess={WITH_SUBMISSIONS}
-        mediaTestIdPrefix="reveal"
-      />,
-    );
+  it('shows only the question when it is sent no stats and no answer', () => {
+    renderScreen({ hasSubmissions: true });
 
-    expect(
-      screen.getByText('How many students attend this university?'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('900')).not.toBeInTheDocument();
-    expect(screen.queryByText('2000')).not.toBeInTheDocument();
-    expect(screen.queryByText('1000')).not.toBeInTheDocument();
-    expect(screen.queryByText('Team B')).not.toBeInTheDocument();
+    expect(screen.getByText(PROMPT)).toBeInTheDocument();
+    expect(screen.queryByText(/SMALLEST GUESS/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/HIGHEST GUESS/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ANSWER/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
-  it('adds the smallest guess, anonymously, at step 1, keeping the question visible', () => {
-    render(
-      <ClosestGuessRevealScreen
-        prompt="How many students attend this university?"
-        step={1}
-        correctAnswer="1000"
-        closestGuess={WITH_SUBMISSIONS}
-        mediaTestIdPrefix="reveal"
-      />,
-    );
+  it('shows the smallest guess alone when only it is sent', () => {
+    renderScreen({ hasSubmissions: true, minGuess: '900' });
 
     expect(screen.getByText('900')).toBeInTheDocument();
-    expect(screen.queryByText('2000')).not.toBeInTheDocument();
-    expect(screen.queryByText('1000')).not.toBeInTheDocument();
+    expect(screen.queryByText(/HIGHEST GUESS/)).not.toBeInTheDocument();
   });
 
-  it('adds the highest guess at step 2, keeping the smallest guess visible', () => {
-    render(
-      <ClosestGuessRevealScreen
-        prompt="How many students attend this university?"
-        step={2}
-        correctAnswer="1000"
-        closestGuess={WITH_SUBMISSIONS}
-        mediaTestIdPrefix="reveal"
-      />,
-    );
+  it('shows both guesses, still without the answer, when the pending view has them', () => {
+    renderScreen({ hasSubmissions: true, minGuess: '900', maxGuess: '2000' });
 
     expect(screen.getByText('900')).toBeInTheDocument();
     expect(screen.getByText('2000')).toBeInTheDocument();
-    expect(screen.queryByText('1000')).not.toBeInTheDocument();
+    expect(screen.queryByText(/ANSWER/)).not.toBeInTheDocument();
   });
 
-  it('adds the correct answer at step 3, keeping the guesses visible', () => {
-    render(
-      <ClosestGuessRevealScreen
-        prompt="How many students attend this university?"
-        step={3}
-        correctAnswer="1000"
-        closestGuess={WITH_SUBMISSIONS}
-        mediaTestIdPrefix="reveal"
-      />,
+  it('adds the correct answer when it is sent, keeping the guesses', () => {
+    renderScreen(
+      { hasSubmissions: true, minGuess: '900', maxGuess: '2000' },
+      '1000',
     );
 
     expect(screen.getByText('900')).toBeInTheDocument();
@@ -80,38 +57,27 @@ describe('ClosestGuessRevealScreen', () => {
     expect(screen.queryByText('Team B')).not.toBeInTheDocument();
   });
 
-  it('adds the closest team(s) at step 4, keeping everything else visible', () => {
-    render(
-      <ClosestGuessRevealScreen
-        prompt="How many students attend this university?"
-        step={4}
-        correctAnswer="1000"
-        closestGuess={WITH_SUBMISSIONS}
-        mediaTestIdPrefix="reveal"
-      />,
+  it('shows the closest teams when the full view has them', () => {
+    renderScreen(
+      {
+        hasSubmissions: true,
+        minGuess: '900',
+        maxGuess: '2000',
+        closestGuesses: [{ teamName: 'Team B', value: '950' }],
+      },
+      '1000',
     );
 
-    expect(screen.getByText('900')).toBeInTheDocument();
-    expect(screen.getByText('2000')).toBeInTheDocument();
     expect(screen.getByText('1000')).toBeInTheDocument();
     expect(screen.getByText('Team B')).toBeInTheDocument();
     expect(screen.getByText('950')).toBeInTheDocument();
   });
 
-  it('shows the question + correct answer together immediately when nobody submitted a guess, regardless of step', () => {
-    render(
-      <ClosestGuessRevealScreen
-        prompt="How many students attend this university?"
-        step={0}
-        correctAnswer="1000"
-        closestGuess={{ hasSubmissions: false, closestGuesses: [] }}
-        mediaTestIdPrefix="reveal"
-      />,
-    );
+  it('shows the question and answer together when nobody guessed', () => {
+    renderScreen({ hasSubmissions: false, closestGuesses: [] }, '1000');
 
-    expect(
-      screen.getByText('How many students attend this university?'),
-    ).toBeInTheDocument();
+    expect(screen.getByText(PROMPT)).toBeInTheDocument();
     expect(screen.getByText('1000')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 });

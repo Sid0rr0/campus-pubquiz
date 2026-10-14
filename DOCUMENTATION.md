@@ -251,7 +251,9 @@ question at the reveal position is trimmed; earlier reveal questions are sent
 whole. A closest_guess question nobody guessed on is sent whole as
 `closest_guess`, and so is the `ended` reveal walk. The seeded question has no
 reveal kind or stats; they are added when the block's questions are dressed as
-reveal views. Both closest-guess kinds draw `ClosestGuessRevealScreen`, but only
+reveal views. Both closest-guess kinds draw `ClosestGuessRevealScreen`, which takes
+no step: it draws the prompt and whichever stats lines it is sent, so a phone
+browsing back to an earlier closest_guess question shows it fully revealed. Only
 `closest_guess` passes the correct answer and answer media; the screens' switches
 are exhaustive, so a new kind fails typecheck until each handles it. At `ended` the players view keeps the final block's walk as it stood
 when the quiz ended (trimmed by `previousStatus`, so a reconnecting phone keeps

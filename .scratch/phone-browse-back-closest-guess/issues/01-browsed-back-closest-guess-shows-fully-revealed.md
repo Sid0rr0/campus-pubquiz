@@ -1,6 +1,6 @@
 # 01: A closest_guess question browsed back to on the phone shows fully revealed
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Blocked by:** None (can start immediately)
 

@@ -84,6 +84,9 @@ The screen a team's phone shows, named by the server in the players view as a `p
 How the screens reveal a revealed question: `answer` (the question with its correct answer, laid out by its answer kind), `closest_guess` (the step-by-step closest-guess reveal) or `closest_guess_pending` (display and players views: a `closest_guess` question whose answer step isn't on air yet, so no answer). Decided once by the Screen projection from the question type registry.
 _Avoid_: reveal type, reveal mode
 
+**Closest-guess reveal**:
+The step-by-step reveal of a closest_guess question: the question; then the smallest guess, the highest guess, the correct answer and the closest teams, one more line per Advance (one step when nobody guessed). Owned by one module and sent to each screen already trimmed to the step on air, so the reveal screen draws what it is sent and never sees a step number.
+
 **Auto-advance**:
 A phone setting, on by default and remembered on that phone. On, the block browser follows the big screen's current question and reveal step; off, the team browses the block freely with previous/next.
 
