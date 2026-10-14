@@ -1,6 +1,5 @@
 import {
-  getBlockInPlay,
-  isQuestionOpenForAnswering,
+  findQuestionOpenForAnswering,
   SOCKET_EVENTS,
   type SessionState,
   type SubmitAnswerPayload,
@@ -14,17 +13,6 @@ import {
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 import { withAnsweredTeamIds } from '@/game/state/session-updates.util';
-
-/** The session's copy of a question in the block in play, found by the same lookup the answering gate makes. */
-function questionInPlay(session: SessionState, questionId: number) {
-  const { rounds } = session.seededGame;
-  const position = getBlockInPlay(rounds, session.progress).find(
-    (inPlay) => inPlay.questionId === questionId,
-  );
-  return position === undefined
-    ? undefined
-    : rounds[position.roundIndex].questions[position.questionIndex];
-}
 
 /**
  * The answers change module: builds the changes for a team submitting an
@@ -50,16 +38,12 @@ export class AnswersChanges {
     { teamId, questionId, value }: SubmitAnswerPayload,
     socketId: string,
   ): Promise<SessionChange<SessionOutcome>> {
-    if (!isQuestionOpenForAnswering(session, questionId)) {
+    const question = findQuestionOpenForAnswering(session, questionId);
+    if (question === undefined) {
       throw new SessionRefusal('Answers are locked for this question');
     }
     if (session.connectedTeamSockets[teamId] !== socketId) {
       throw new SessionRefusal('You may only submit answers for your own team');
-    }
-
-    const question = questionInPlay(session, questionId);
-    if (question === undefined) {
-      throw new SessionRefusal('Answers are locked for this question');
     }
 
     const responseMs =

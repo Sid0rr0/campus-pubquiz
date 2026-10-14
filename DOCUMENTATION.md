@@ -694,9 +694,9 @@ editor's disabled controls:
   broadcasts it to every room, so Start quiz plays exactly what the editor
   shows (corrected answers, added and deleted questions, renamed or
   reordered rounds); a lobby session has opened nothing, so it never causes
-  a refusal and needs no regrade. Ended sessions are not reloaded. A re-import (CSV or
-  Google Sheets link) onto a quiz another session is playing is checked the
-  same way: it saves through the Live edit module, matching each sheet row to
+  a refusal and needs no regrade. Ended sessions are not reloaded. A re-import
+  (CSV or Google Sheets link) onto a quiz another session is playing is
+  checked the same way: it saves through the Live edit module, matching each sheet row to
   the stored question at the same round and position, so it is refused with
   a `409` and the same issue list when it would change what that session has
   reached, and otherwise applied under its held writes. The importing
