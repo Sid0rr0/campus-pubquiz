@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { displaySounds } from '@/app/lib/display-sounds';
 
 const LOCK_COUNTDOWN_TRACK_SECONDS = 60;
 const LOCK_COUNTDOWN_SOUND_SRC = '/sounds/lock-countdown.mp3';
@@ -55,6 +56,7 @@ export function useLockCountdownSound({
       .play()
       .then(() => primer.pause())
       .catch(() => {});
+    displaySounds.unlock();
     setUnlocked(true);
   }, []);
 
