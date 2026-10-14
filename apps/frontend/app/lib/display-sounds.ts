@@ -7,6 +7,7 @@ export const DISPLAY_SOUNDS = {
   slam: '/sounds/slam.mp3',
   burst: '/sounds/burst.mp3',
   fanfare: '/sounds/fanfare.mp3',
+  timeUp: '/sounds/time-up.mp3',
 } as const;
 
 export type DisplaySoundName = keyof typeof DISPLAY_SOUNDS;

@@ -122,6 +122,33 @@ describe('DisplayPage — the ended moment', () => {
     expect(screen.queryByLabelText('Other teams')).not.toBeInTheDocument();
   });
 
+  it('stands the top three on a podium on the leaderboard shown at the end', () => {
+    showDisplay({
+      progress: { status: 'ended', isLeaderboardVisible: true },
+      leaderboard: STANDINGS,
+      leaderboardRevealCount: 4,
+    });
+    render(<DisplayPage />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Leaderboard' }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('podium')).getByText('Gold Team'),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps plain rows on a leaderboard shown mid-quiz', () => {
+    showDisplay({
+      progress: { status: 'question_open', isLeaderboardVisible: true },
+      leaderboard: STANDINGS,
+      leaderboardRevealCount: 4,
+    });
+    render(<DisplayPage />);
+
+    expect(screen.queryByTestId('podium')).not.toBeInTheDocument();
+  });
+
   it('fires no confetti or fanfare on a display loaded straight into the ended screen', () => {
     showDisplay(ENDED);
     render(<DisplayPage />);
@@ -139,6 +166,30 @@ describe('DisplayPage — the ended moment', () => {
 
     expect(mockFireConfetti).toHaveBeenCalledTimes(1);
     expect(mockPlay).toHaveBeenCalledWith('fanfare');
+  });
+
+  it('does not celebrate again on Quiz complete after the final leaderboard did', () => {
+    {
+      const finalBoard = (leaderboardRevealCount: number) =>
+        showDisplay({
+          progress: { status: 'ended', isLeaderboardVisible: true },
+          leaderboard: STANDINGS,
+          leaderboardRevealCount,
+        });
+      finalBoard(3);
+      const { rerender } = render(<DisplayPage />);
+      finalBoard(4);
+      rerender(<DisplayPage />);
+      expect(mockFireConfetti).toHaveBeenCalledTimes(1);
+
+      showDisplay(ENDED);
+      rerender(<DisplayPage />);
+
+      expect(mockFireConfetti).toHaveBeenCalledTimes(1);
+      expect(
+        mockPlay.mock.calls.filter(([name]) => name === 'fanfare'),
+      ).toHaveLength(1);
+    }
   });
 
   it('stays silent when Previous leaves the ended screen', () => {

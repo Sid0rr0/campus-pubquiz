@@ -17,6 +17,8 @@ import {
   isTopThreeReveal,
   rankEntrance,
 } from '@/app/components/leaderboard-entrance';
+import { Podium, podiumEntries } from '@/app/components/podium';
+import { fireConfetti } from '@/app/lib/confetti';
 import { displaySounds } from '@/app/lib/display-sounds';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 
@@ -27,6 +29,10 @@ import { useOnLiveForwardMove } from '@/app/lib/live-change';
 type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'> & {
   /** Whether the client's connection is live; the drumroll stays silent otherwise. */
   isConnected: boolean;
+  /** The last leaderboard of the quiz: the top three stand on a podium and the winner is celebrated. */
+  isFinal?: boolean;
+  /** Called once the winner's fanfare and confetti have gone off, so the Quiz complete screen can skip its own. */
+  onWinnerCelebrated?: () => void;
 };
 
 const RANK_TREND_LABELS: Record<RankTrend, string> = {
@@ -163,6 +169,8 @@ export function Leaderboard({
   board,
   revealCount,
   isConnected,
+  isFinal = false,
+  onWinnerCelebrated,
 }: LeaderboardProps) {
   const hasOldState = board.countUpBoard !== undefined;
   const [phase, setPhase] = useState<LeaderboardPhase>(
@@ -194,23 +202,52 @@ export function Leaderboard({
   // Rank reveal stays one rank per Advance; the drumroll marks the three that
   // matter. A reload or reconnect remounts the board, so it stays silent.
   useOnLiveForwardMove(revealCount ?? 0, isConnected, () => {
+    if (isFinal && visibleRows[0]?.rankIndex === 0) {
+      // The winner appears with its own fanfare, so no drumroll over it.
+      displaySounds.play('fanfare');
+      fireConfetti();
+      onWinnerCelebrated?.();
+      return;
+    }
     if (isTopThreeReveal(visibleRows)) {
       displaySounds.play('drumroll');
     }
   });
 
+  const isPodiumMode = isFinal && phase === 'settled';
+  const podiumTeamIds = new Set(
+    podiumEntries(board.entries).map((entry) => entry.teamId),
+  );
+  const listRows = isPodiumMode
+    ? visibleRows.filter((row) => !podiumTeamIds.has(row.entry.teamId))
+    : visibleRows;
+  const standingTeamIds = new Set(
+    visibleRows
+      .filter((row) => podiumTeamIds.has(row.entry.teamId))
+      .map((row) => row.entry.teamId),
+  );
+
   return (
-    <ol className="flex flex-col gap-2">
-      {visibleRows.map((row) => (
-        <LeaderboardRowItem
-          key={row.entry.teamId}
-          row={row}
-          isAnimatedIn={revealCount !== undefined}
-          isNewest={row.rankIndex === newestRankIndex}
-          hasOldState={hasOldState}
+    <div className="flex flex-col gap-6">
+      {isPodiumMode && standingTeamIds.size > 0 && (
+        <Podium
+          entries={board.entries}
+          visibleTeamIds={standingTeamIds}
+          isStaggered={false}
         />
-      ))}
-    </ol>
+      )}
+      <ol className="flex flex-col gap-2" data-testid="leaderboard-rows">
+        {listRows.map((row) => (
+          <LeaderboardRowItem
+            key={row.entry.teamId}
+            row={row}
+            isAnimatedIn={revealCount !== undefined}
+            isNewest={row.rankIndex === newestRankIndex}
+            hasOldState={hasOldState}
+          />
+        ))}
+      </ol>
+    </div>
   );
 }
 

@@ -370,6 +370,10 @@ counting up from last place, are revealed.
 On the big screen the ranks reveal one per Advance as always; ranks 1 to 3
 come in slower (a drumroll sound on the display, if sound is enabled).
 Pressing Advance during an entrance cuts it to its end.
+On the last leaderboard (shown once the quiz has ended, or during its last break)
+ranks 1 to 3 stand on a coloured podium instead of in rows, one step per Advance;
+once the winner's step has landed the display plays the fanfare and shoots
+confetti. A reloaded display or a reconnect stays silent, as everywhere else.
 
 **The phone's leaderboard (`phoneLeaderboard`).** The players view carries the
 same `leaderboardBoard` description plus the reveal count (`{ board,

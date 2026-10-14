@@ -36,8 +36,20 @@ export function podiumEntries(
     .slice(0, PODIUM_SIZE);
 }
 
+interface PodiumProps {
+  entries: readonly LeaderboardEntry[];
+  /** Teams already standing on the podium; the others leave their step empty. Omit to show all. */
+  visibleTeamIds?: ReadonlySet<number>;
+  /** Whether the steps rise one after another (the ended screen) or each appears on its own (a live reveal). */
+  isStaggered?: boolean;
+}
+
 /** The top three teams (ties share a step) standing on a podium. Animates transform and opacity only. */
-export function Podium({ entries }: { entries: readonly LeaderboardEntry[] }) {
+export function Podium({
+  entries,
+  visibleTeamIds,
+  isStaggered = true,
+}: PodiumProps) {
   const isReducedMotion = useReducedMotion();
   const topThree = podiumEntries(entries);
   return (
@@ -46,30 +58,38 @@ export function Podium({ entries }: { entries: readonly LeaderboardEntry[] }) {
       className="flex items-end justify-center gap-6"
       data-testid="podium"
     >
-      {podiumOrder(topThree).map((entry) => (
-        <motion.li
-          key={entry.teamId}
-          initial={{ opacity: 0, y: isReducedMotion ? 0 : 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: (4 - entry.rank) * 0.3 }}
-          className="flex w-64 flex-col items-center gap-2"
-        >
-          <span className="font-display text-display-2xl">
-            {entry.teamName}
-          </span>
-          <span className="text-display-xl font-extrabold text-foreground/70">
-            {entry.totalPoints} pts
-          </span>
-          <div
-            data-testid="podium-step"
-            className={`flex w-full items-start justify-center rounded-t-lg pt-3 font-display text-display-2xl text-background ${
-              BAR_COLOR_BY_RANK[entry.rank] ?? FALLBACK_BAR_COLOR
-            } ${BAR_HEIGHT_BY_RANK[entry.rank] ?? FALLBACK_BAR_HEIGHT}`}
+      {podiumOrder(topThree).map((entry) => {
+        if (visibleTeamIds && !visibleTeamIds.has(entry.teamId)) {
+          return <li key={entry.teamId} aria-hidden="true" className="w-64" />;
+        }
+        return (
+          <motion.li
+            key={entry.teamId}
+            initial={{ opacity: 0, y: isReducedMotion ? 0 : 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.5,
+              delay: isStaggered ? (4 - entry.rank) * 0.3 : 0,
+            }}
+            className="flex w-64 flex-col items-center gap-2"
           >
-            {formatRankLabel(entry)}
-          </div>
-        </motion.li>
-      ))}
+            <span className="font-display text-display-2xl">
+              {entry.teamName}
+            </span>
+            <span className="text-display-xl font-extrabold text-foreground/70">
+              {entry.totalPoints} pts
+            </span>
+            <div
+              data-testid="podium-step"
+              className={`flex w-full items-start justify-center rounded-t-lg pt-3 font-display text-display-2xl text-background ${
+                BAR_COLOR_BY_RANK[entry.rank] ?? FALLBACK_BAR_COLOR
+              } ${BAR_HEIGHT_BY_RANK[entry.rank] ?? FALLBACK_BAR_HEIGHT}`}
+            >
+              {formatRankLabel(entry)}
+            </div>
+          </motion.li>
+        );
+      })}
     </ol>
   );
 }

@@ -1,11 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
+  isGradedStatus,
   isShowingLastBreak,
   type OnAirScreen,
 } from '@campus-pubquiz/types';
@@ -65,12 +66,16 @@ function DisplayPageContent() {
       isMuted: snapshot?.isDisplaySoundMuted ?? false,
       isRegistryInUse: true,
     });
+  // Set once the final leaderboard has crowned the winner, so Quiz complete
+  // doesn't play the same fanfare and confetti a second time.
+  const hasWinnerBeenCelebratedRef = useRef(false);
   // Confetti and the fanfare only when the quiz is seen ending live: not on a
   // reloaded display, not on Previous.
   useOnLiveForwardMove(
     snapshot?.onAirScreen.kind === 'ended' ? 1 : 0,
     isConnected,
     () => {
+      if (hasWinnerBeenCelebratedRef.current) return;
       fireConfetti();
       displaySounds.play('fanfare');
     },
@@ -85,6 +90,14 @@ function DisplayPageContent() {
     () => {
       if (isRevealOnAir) displaySounds.play('reveal');
     },
+  );
+
+  // The block locking is the end of the countdown: one hit when it is seen
+  // live, never for a reloaded screen or a Previous.
+  useOnLiveForwardMove(
+    snapshot && isGradedStatus(snapshot.progress.status) ? 1 : 0,
+    isConnected,
+    () => displaySounds.play('timeUp'),
   );
 
   useRoundTitleSting(
@@ -171,6 +184,9 @@ function DisplayPageContent() {
   );
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
+  // The board shown once the quiz is over, or during its last break, crowns the winners.
+  const isFinalLeaderboard =
+    progress.status === 'ended' || isShowingLastBreak(progress, quizStructure);
 
   function renderScreen(screen: OnAirScreen): ReactNode {
     switch (screen.kind) {
@@ -184,6 +200,10 @@ function DisplayPageContent() {
               board={leaderboardBoard}
               revealCount={leaderboardRevealCount}
               isConnected={isConnected}
+              isFinal={isFinalLeaderboard}
+              onWinnerCelebrated={() => {
+                hasWinnerBeenCelebratedRef.current = true;
+              }}
             />
           </div>
         );
