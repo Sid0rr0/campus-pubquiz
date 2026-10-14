@@ -1,3 +1,5 @@
+import { placingText } from '@/app/lib/placing-text';
+
 const PODIUM_SIZE = 3;
 
 interface RankedTeam {
@@ -9,24 +11,6 @@ interface RankedTeam {
 export interface FinalPlacing {
   text: string;
   rank: number;
-}
-
-/** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th, 21st. */
-function ordinal(n: number): string {
-  const lastTwo = n % 100;
-  if (lastTwo >= 11 && lastTwo <= 13) {
-    return `${n}th`;
-  }
-  switch (n % 10) {
-    case 1:
-      return `${n}st`;
-    case 2:
-      return `${n}nd`;
-    case 3:
-      return `${n}rd`;
-    default:
-      return `${n}th`;
-  }
 }
 
 /** Whether a (competition) rank gets confetti on the phone. */
@@ -46,9 +30,8 @@ export function describeFinalPlacing(
   if (!mine) {
     return null;
   }
-  const joint = mine.rank === mine.rankTo ? '' : 'Joint ';
   return {
-    text: `You finished ${joint}${ordinal(mine.rank)} of ${board.length}`,
+    text: `You finished ${placingText(mine, (place) => place)} of ${board.length}`,
     rank: mine.rank,
   };
 }
