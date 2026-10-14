@@ -9,7 +9,11 @@ import {
   isShowingLastBreak,
   type OnAirScreen,
 } from '@campus-pubquiz/types';
+import { fireConfetti } from '@/app/lib/confetti';
+import { displaySounds } from '@/app/lib/display-sounds';
+import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { useDisplayGame } from '@/app/lib/use-display-game';
+import { Podium } from '@/app/components/podium';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
 import {
   ClosestGuessRevealScreen,
@@ -53,6 +57,16 @@ function DisplayPageContent() {
         snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
+  // Confetti and the fanfare only when the quiz is seen ending live: not on a
+  // reloaded display, not on Previous.
+  useOnLiveForwardMove(
+    snapshot?.onAirScreen.kind === 'ended' ? 1 : 0,
+    snapshot !== null,
+    () => {
+      fireConfetti();
+      displaySounds.play('fanfare');
+    },
+  );
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) silently falls back to the plain picker rather than surfacing a
@@ -86,6 +100,7 @@ function DisplayPageContent() {
     progress,
     currentQuestion,
     quizStructure,
+    leaderboard,
     leaderboardBoard,
     leaderboardRevealCount,
     teams,
@@ -276,8 +291,9 @@ function DisplayPageContent() {
       case 'ended':
         return (
           <div className="flex flex-1 items-center justify-center px-16 text-center">
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-10">
               <h1 className="font-display text-display-4xl">Quiz complete!</h1>
+              <Podium entries={leaderboard} />
               {screen.isFeedbackPromptShown && (
                 <p className="font-display text-display-2xl text-magenta">
                   Tell us what you thought — on your phone

@@ -1,6 +1,9 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import type {
   ActiveShowdownView,
+  LeaderboardEntry,
   PhoneScreen,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
@@ -8,6 +11,9 @@ import {
   RulesContent,
   type RulesSettings,
 } from '@/app/components/rules-content';
+import { fireConfetti } from '@/app/lib/confetti';
+import { describeFinalPlacing, isPodiumRank } from '@/app/lib/final-placing';
+import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
@@ -19,6 +25,7 @@ interface GameStatusScreensProps {
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
+  leaderboard: readonly LeaderboardEntry[];
   onSubmitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -57,7 +64,18 @@ export function GameStatusScreens({
   showdownRevealStep,
   myTeamId,
   onSubmitShowdownGuess,
+  leaderboard,
 }: GameStatusScreensProps) {
+  const isEnded = phoneScreen.kind === 'ended';
+  const placing = isEnded ? describeFinalPlacing(leaderboard, myTeamId) : null;
+  // Confetti for the podium only, and only when the quiz is seen ending live:
+  // the phone screen is `ended` once any showdown is decided, not before.
+  useOnLiveForwardMove(isEnded ? 1 : 0, true, () => {
+    if (placing && isPodiumRank(placing.rank)) {
+      fireConfetti();
+    }
+  });
+
   switch (phoneScreen.kind) {
     case 'block':
       return null;
@@ -91,9 +109,12 @@ export function GameStatusScreens({
       return <LookAtTheScreen>{phoneScreen.title}</LookAtTheScreen>;
     case 'ended':
       return (
-        <h1 className="mt-16 text-center font-display text-2xl">
-          Quiz complete!
-        </h1>
+        <div className="mt-16 flex flex-col items-center gap-3 text-center">
+          <h1 className="font-display text-2xl">Quiz complete!</h1>
+          {placing && (
+            <p className="font-display text-xl text-magenta">{placing.text}</p>
+          )}
+        </div>
       );
     case 'showdown_reveal':
       return activeShowdown ? (
