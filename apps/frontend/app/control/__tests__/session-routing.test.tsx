@@ -32,10 +32,9 @@ vi.mock('@/app/lib/quiz-api', async (importOriginal) => {
       .mockResolvedValue({ activeQuizId: null, quizzes: [] }),
   };
 });
-vi.mock('@/app/lib/answer-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/app/lib/answer-api')>();
-  return { ...actual, fetchAnswers: vi.fn().mockResolvedValue(null) };
-});
+vi.mock('@/app/lib/answer-api', async () =>
+  (await import('@/test-utils/answer-api-offline')).createOfflineAnswerApi(),
+);
 
 vi.mock('@/app/lib/use-auth', () => ({ useAuth: mockUseAuth }));
 
