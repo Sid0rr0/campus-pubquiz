@@ -69,6 +69,10 @@ function buildApps(): void {
   run('pnpm', ['--filter', '@campus-pubquiz/types', 'build'], {
     cwd: PATHS.repoRoot,
   });
+  // The incremental build cache outlives dist/: with a deleted dist it says "up to date" and emits nothing.
+  fs.rmSync(path.join(PATHS.backendDir, 'tsconfig.build.tsbuildinfo'), {
+    force: true,
+  });
   run('pnpm', ['--filter', 'backend', 'build'], { cwd: PATHS.repoRoot });
   run('pnpm', ['--filter', 'frontend', 'build'], {
     cwd: PATHS.repoRoot,
