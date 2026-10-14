@@ -343,6 +343,12 @@ describe('question kind grading flags', () => {
     }
   });
 
+  it.each(QUESTION_TYPES)('%s declares how it is revealed', (type) => {
+    expect(QUESTION_KINDS[type].revealKind).toBe(
+      type === 'closest_guess' ? 'closest_guess' : 'answer',
+    );
+  });
+
   it('keeps free_text out of kahoot rounds although it grades itself on a match (ADR 0001)', () => {
     expect(QUESTION_KINDS.free_text.gradingMode).toBe('match-or-human');
     expect(QUESTION_KINDS.free_text.kahootAllowed).toBe(false);

@@ -5,7 +5,8 @@ import {
 } from './game-state-block-position';
 import type { GameAction, GameProgress } from './game-state-types';
 import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
-import { findClosestGuesses, isBatchGradedType } from './scoring';
+import { QUESTION_KINDS } from './question-kind';
+import { findClosestGuesses } from './scoring';
 import { getGameContext, type SessionState } from './session-state';
 
 /**
@@ -66,7 +67,8 @@ function getRevealStepCount(
   question: SeededQuestion | undefined,
   session: SessionState,
 ): number {
-  if (!question || !isBatchGradedType(question.type)) return 1;
+  if (!question || QUESTION_KINDS[question.type].revealKind !== 'closest_guess')
+    return 1;
   const summary = session.closestGuessSummaries[question.id];
   return summary?.hasSubmissions ? 5 : 1;
 }

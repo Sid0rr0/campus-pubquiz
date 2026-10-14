@@ -22,7 +22,7 @@ import type {
   SeededQuestion,
   UpcomingQuestionPosition,
 } from './question-views';
-import { isBatchGradedType } from './scoring';
+import { QUESTION_KINDS } from './question-kind';
 import { getGameContext, type SessionState } from './session-state';
 
 interface RoundQuestionEntry {
@@ -47,7 +47,7 @@ function toRevealQuestionViews(
         questionNumberInRound: questionIndexInRound + 1,
         roundTitle,
       };
-      if (!isBatchGradedType(question.type)) {
+      if (QUESTION_KINDS[question.type].revealKind === 'answer') {
         return { ...question, ...placement, revealKind: 'answer' };
       }
       return {
