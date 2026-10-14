@@ -6,6 +6,7 @@ import {
   type QuestionView,
 } from '@campus-pubquiz/types';
 import { NumberMarginText } from '@/app/components/number-margin-text';
+import { EntranceItem, EntranceLine } from '@/app/display/reveal-entrance';
 import {
   getLowerOptionLetter,
   getOptionLetter,
@@ -26,6 +27,8 @@ interface RevealBodyProps {
   correctAnswer: string;
   /** Present (even when empty) once the team's own answer is shown instead of the answer key. */
   playerAnswer?: string;
+  /** The big screen's reveal: the answer comes in with its own entrance. The phone leaves it off. */
+  hasEntrance?: boolean;
 }
 
 /** A reveal split in two so the answer line sits above the media and the laid-out answer below it. */
@@ -38,6 +41,8 @@ const ITEM_CLASS =
   'flex items-center gap-3 rounded-xl border-2 border-foreground/30 bg-white px-5 py-3 text-display-xl font-bold';
 
 interface MatchRevealRowProps {
+  hasEntrance?: boolean;
+  index: number;
   isCorrect: boolean;
   leftLabel: string;
   left: string;
@@ -47,6 +52,8 @@ interface MatchRevealRowProps {
 
 /** One matched pair on reveal. A fixed three-column grid keeps every arrow on the same vertical line regardless of text length. */
 function MatchRevealRow({
+  hasEntrance,
+  index,
   isCorrect,
   leftLabel,
   left,
@@ -55,7 +62,10 @@ function MatchRevealRow({
 }: MatchRevealRowProps) {
   const accentClass = isCorrect ? 'text-green' : 'text-magenta';
   return (
-    <li
+    <EntranceItem
+      hasEntrance={hasEntrance}
+      kind="settle"
+      index={index}
       className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold text-foreground ${
         isCorrect ? 'border-green' : 'border-magenta'
       }`}
@@ -71,25 +81,37 @@ function MatchRevealRow({
         <span className={`font-display ${accentClass}`}>{rightLabel}</span>
         <span>{right}</span>
       </span>
-    </li>
+    </EntranceItem>
   );
 }
 
-function AnswerLine({ answer }: { answer: string }) {
+function AnswerLine({
+  answer,
+  hasEntrance,
+}: {
+  answer: string;
+  hasEntrance?: boolean;
+}) {
   return (
-    <p className="font-extrabold text-display-3xl">
+    <EntranceLine
+      hasEntrance={hasEntrance}
+      kind="pop"
+      className="font-extrabold text-display-3xl"
+    >
       <span className="font-body text-foreground/55">Answer{': '}</span>
       {answer}
-    </p>
+    </EntranceLine>
   );
 }
 
 function ChoiceList({
   options,
   correctAnswer,
+  hasEntrance,
 }: {
   options: readonly string[];
   correctAnswer?: string;
+  hasEntrance?: boolean;
 }) {
   return (
     <ul className="grid w-full max-w-3xl grid-cols-2 gap-4">
@@ -97,8 +119,10 @@ function ChoiceList({
         const isCorrect =
           correctAnswer !== undefined && option === correctAnswer;
         return (
-          <li
+          <EntranceItem
             key={index}
+            hasEntrance={hasEntrance}
+            kind={isCorrect ? 'light' : 'dim'}
             className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-left text-display-xl font-bold ${
               isCorrect ? 'border-green' : 'border-foreground/30'
             }`}
@@ -114,7 +138,7 @@ function ChoiceList({
                 ✓
               </span>
             )}
-          </li>
+          </EntranceItem>
         );
       })}
     </ul>
@@ -124,17 +148,22 @@ function ChoiceList({
 function SortList({
   items,
   correctOrder,
+  hasEntrance,
 }: {
   items: readonly string[];
   correctOrder: readonly string[];
+  hasEntrance?: boolean;
 }) {
   return (
     <ol className="flex w-full max-w-xl flex-col gap-3 text-left">
       {items.map((item, index) => {
         const isCorrect = item === correctOrder[index];
         return (
-          <li
+          <EntranceItem
             key={index}
+            hasEntrance={hasEntrance}
+            kind="slide"
+            index={index}
             className={`flex items-center gap-3 rounded-xl border-2 bg-white px-5 py-3 text-display-xl font-bold ${
               isCorrect ? 'border-green' : 'border-magenta'
             }`}
@@ -151,7 +180,7 @@ function SortList({
             >
               {isCorrect ? '✓' : '✗'}
             </span>
-          </li>
+          </EntranceItem>
         );
       })}
     </ol>
@@ -230,6 +259,7 @@ export const QUESTION_BODIES = {
 function sortRevealBody({
   correctAnswer,
   playerAnswer,
+  hasEntrance,
 }: RevealBodyProps): RevealBody {
   // An empty key means there is nothing to show, for the key and for a team's answer alike.
   if (!correctAnswer) return {};
@@ -239,13 +269,22 @@ function sortRevealBody({
       ? correctOrder
       : ANSWER_FORMATS.sort.decode(playerAnswer);
   if (shownOrder.length !== correctOrder.length) return {};
-  return { body: <SortList items={shownOrder} correctOrder={correctOrder} /> };
+  return {
+    body: (
+      <SortList
+        items={shownOrder}
+        correctOrder={correctOrder}
+        hasEntrance={hasEntrance}
+      />
+    ),
+  };
 }
 
 function matchRevealBody({
   question: { options, matchTargets },
   correctAnswer,
   playerAnswer,
+  hasEntrance,
 }: RevealBodyProps): RevealBody {
   if (!options || !correctAnswer) return {};
   const correctRights = ANSWER_FORMATS.match.decode(correctAnswer);
@@ -265,6 +304,8 @@ function matchRevealBody({
           return (
             <MatchRevealRow
               key={index}
+              hasEntrance={hasEntrance}
+              index={index}
               isCorrect={right === correctRights[index]}
               leftLabel={String(index + 1)}
               left={left}
@@ -280,17 +321,25 @@ function matchRevealBody({
   };
 }
 
-function typedRevealBody({ correctAnswer }: RevealBodyProps): RevealBody {
-  return { lead: <AnswerLine answer={correctAnswer} /> };
+function typedRevealBody({
+  correctAnswer,
+  hasEntrance,
+}: RevealBodyProps): RevealBody {
+  return {
+    lead: <AnswerLine answer={correctAnswer} hasEntrance={hasEntrance} />,
+  };
 }
 
 /** A view with a margin shows the key with its accepted range; without one (closest-guess shares the kind) it keeps the plain key. */
 function numberRevealBody(props: RevealBodyProps): RevealBody {
-  const { question, correctAnswer } = props;
+  const { question, correctAnswer, hasEntrance } = props;
   if (!question.margin) return typedRevealBody(props);
   return {
     lead: (
-      <AnswerLine answer={formatNumberReveal(correctAnswer, question.margin)} />
+      <AnswerLine
+        answer={formatNumberReveal(correctAnswer, question.margin)}
+        hasEntrance={hasEntrance}
+      />
     ),
   };
 }
@@ -298,11 +347,16 @@ function numberRevealBody(props: RevealBodyProps): RevealBody {
 function choiceRevealBody({
   question: { options },
   correctAnswer,
+  hasEntrance,
 }: RevealBodyProps): RevealBody {
   return {
-    lead: <AnswerLine answer={correctAnswer} />,
+    lead: <AnswerLine answer={correctAnswer} hasEntrance={hasEntrance} />,
     body: options && (
-      <ChoiceList options={options} correctAnswer={correctAnswer} />
+      <ChoiceList
+        options={options}
+        correctAnswer={correctAnswer}
+        hasEntrance={hasEntrance}
+      />
     ),
   };
 }

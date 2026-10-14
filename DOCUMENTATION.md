@@ -324,7 +324,7 @@ showdown state, the closest_guess reveal step, `revealQuestions`).
 
 | View                            | Fields                                                                                                                                  |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt` |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect` |
 | Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                            |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                                            |
 
@@ -350,6 +350,26 @@ from the session, so a reloaded or second big screen draws the same thing):
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.
+
+**The reveal's teams-correct count (`teamsCorrect`).** While a question's
+`reveal` step is on air, the display view carries `{ correct, partial,
+teamCount }` for that question, and `/display` draws it as a count-up "7 of 12
+teams" with "+2 close" when `partial` is above 0. `correct` and `partial` count
+the roster teams whose answer has that verdict (see Verdict in the glossary);
+`teamCount` is every roster team, so teams that did not answer are in the
+total. It is `null` outside a reveal and on a closest_guess question, whose
+reveal already names the closest teams. The session holds the per-question
+tallies and re-reads them with the standings at the end of every session write
+and when a session is placed (creation, restart), so they follow hand grades,
+lock grading and key fixes.
+
+**The phone's verdict card.** When the big screen lands on a revealed question
+(a live forward move: not on connect or reconnect, not on Previous), every
+phone shows a card for about three seconds that never blocks input: "✓ Correct
++2", "Close! +3" (a `partial` verdict, with the actual points), "✗ +0", or
+"No answer". It does not depend on the phone's auto-advance setting and is
+built from the team's own answer data; only a `correct` verdict vibrates. For a
+closest_guess question it appears when the answer step comes on air.
 
 ### Events
 

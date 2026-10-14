@@ -81,6 +81,8 @@ export interface SessionDescription {
   priorStandings?: LeaderboardDescription[];
   /** The closest_guess reveal sub-step on air (0-indexed); the phone is sent each step's stats and answer only once it is reached. */
   closestGuessRevealStep?: number;
+  /** Teams with a correct / partial verdict, by question id (the teams-correct count of the reveal). */
+  verdictTallies?: SessionState['verdictTallies'];
   timers?: Partial<
     Pick<
       SessionState,
@@ -246,6 +248,7 @@ export function buildSessionState(
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
     priorStandings: buildLeaderboard(description.priorStandings ?? []),
     closestGuessRevealStep: description.closestGuessRevealStep ?? 0,
+    verdictTallies: description.verdictTallies ?? {},
     closestGuessSummaries: closestGuessSummariesOf(roundDescriptions, rounds),
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},
     activeShowdownRound: description.showdown?.round ?? null,

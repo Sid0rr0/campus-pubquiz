@@ -14,6 +14,7 @@ import { RoundRatingCard } from '@/app/play/round-rating-card';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
+import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
@@ -324,6 +325,12 @@ function PlayPageContent() {
               }
             : null
         }
+      />
+      <RevealVerdictCard
+        view={view}
+        myAnswers={myAnswers}
+        myAnswerGrades={myAnswerGrades}
+        isConnected={connectionError === null}
       />
       <SettingsModal
         isOpen={isSettingsOpen}

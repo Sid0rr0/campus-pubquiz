@@ -141,6 +141,8 @@ interface QuestionDisplayProps {
   isFullscreen?: boolean;
   /** GameProgress.mediaReplayToken — bumped by REPLAY_MEDIA. Folded into the YouTube iframe's `key` so incrementing it remounts the iframe and restarts playback; left out of the key the rest of the time so fullscreen toggling (which doesn't change this) keeps the same iframe per the comment below. */
   mediaReplayToken?: number;
+  /** The big screen's reveal: the answer comes in with its own entrance. Left off on the phone. */
+  hasRevealEntrance?: boolean;
 }
 
 // Shared by question_open and reveal so the big screen shows each question
@@ -154,6 +156,7 @@ export function QuestionDisplay({
   promptClassName = 'text-balance font-display text-display-4xl leading-snug',
   isFullscreen = false,
   mediaReplayToken = 0,
+  hasRevealEntrance = false,
 }: QuestionDisplayProps) {
   const {
     prompt,
@@ -178,6 +181,7 @@ export function QuestionDisplay({
         question,
         correctAnswer,
         playerAnswer,
+        hasEntrance: hasRevealEntrance,
       })
     : undefined;
   const QuestionBody = QUESTION_BODIES[answerKind];

@@ -20,6 +20,13 @@ export function withLeaderboard(
   return { ...session, leaderboard };
 }
 
+export function withVerdictTallies(
+  session: SessionState,
+  verdictTallies: SessionState['verdictTallies'],
+): SessionState {
+  return { ...session, verdictTallies };
+}
+
 /**
  * The session a write ends with, its prior standings brought up to date: when
  * the write started from a session whose question was on air with the

@@ -170,6 +170,15 @@ export interface DisplayStatePayload extends Omit<
   leaderboardRevealCount: number;
   /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
   kahootQuestionEndsAt: number | null;
+  /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
+  teamsCorrect: TeamsCorrect | null;
+}
+
+/** How many teams got the revealed question right (`correct`), partly right (`partial`), out of every team in the session (no-answers included). */
+export interface TeamsCorrect {
+  correct: number;
+  partial: number;
+  teamCount: number;
 }
 /** What the admin's Advance slot does on its next press, decided by the server: reveal the next leaderboard rank, hide the leaderboard, advance the quiz (a transition, a showdown or closest_guess step), or nothing. */
 export type AdvanceSlotStep =

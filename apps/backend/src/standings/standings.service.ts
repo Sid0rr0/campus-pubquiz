@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type { LeaderboardEntry } from '@campus-pubquiz/types';
+import type { LeaderboardEntry, VerdictTally } from '@campus-pubquiz/types';
 import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -118,6 +118,40 @@ export class StandingsService {
   /** Just the ranked roster — what every live-leaderboard refresh needs. */
   async leaderboard(gameSessionId: number): Promise<LeaderboardEntry[]> {
     return (await this.forSession(gameSessionId)).leaderboard;
+  }
+
+  /**
+   * How many roster teams got each question right or partly right, by
+   * question id. A question with neither has no entry. A team that has left
+   * the roster is not counted, so the numbers stay within the roster total.
+   */
+  async verdictTallies(
+    gameSessionId: number,
+  ): Promise<Record<number, VerdictTally>> {
+    const knex = this.gameSessionTeams.getKnex();
+    const rows = (await knex('answers as a')
+      .join('game_session_teams as gst', function joinRoster() {
+        this.on('gst.game_session_id', 'a.game_session_id').andOn(
+          'gst.team_id',
+          'a.team_id',
+        );
+      })
+      .where('a.game_session_id', gameSessionId)
+      .whereIn('a.verdict', ['correct', 'partial'])
+      .groupBy('a.question_id', 'a.verdict')
+      .select('a.question_id as questionId', 'a.verdict as verdict')
+      .select(knex.raw('count(*) as count'))) as {
+      questionId: number;
+      verdict: 'correct' | 'partial';
+      count: string | number;
+    }[];
+
+    const tallies: Record<number, VerdictTally> = {};
+    for (const { questionId, verdict, count } of rows) {
+      const tally = tallies[questionId] ?? { correct: 0, partial: 0 };
+      tallies[questionId] = { ...tally, [verdict]: Number(count) };
+    }
+    return tallies;
   }
 
   async forSession(gameSessionId: number): Promise<SessionStandings> {

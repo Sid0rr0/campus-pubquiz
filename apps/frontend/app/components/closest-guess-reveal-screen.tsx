@@ -4,6 +4,7 @@ import type {
   PendingClosestGuessRevealView,
 } from '@campus-pubquiz/types';
 import { AnswerMedia } from '@/app/display/question-display';
+import { EntranceItem, EntranceLine } from '@/app/display/reveal-entrance';
 
 interface ClosestGuessRevealScreenProps {
   prompt: string;
@@ -13,6 +14,8 @@ interface ClosestGuessRevealScreenProps {
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
   autoplayMedia?: boolean;
+  /** The big screen's reveal: each step line slides in as it arrives. Left off on the phone. */
+  hasEntrance?: boolean;
 }
 
 /** The answer props for a closest-guess reveal question: only the `closest_guess` kind carries the answer; `closest_guess_pending` has none yet. */
@@ -37,6 +40,7 @@ export function ClosestGuessRevealScreen({
   closestGuess,
   mediaTestIdPrefix,
   autoplayMedia,
+  hasEntrance,
 }: ClosestGuessRevealScreenProps) {
   const { minGuess, maxGuess, closestGuesses } = closestGuess;
   const showCorrect = correctAnswer !== undefined;
@@ -47,29 +51,41 @@ export function ClosestGuessRevealScreen({
         {prompt}
       </h1>
       {minGuess !== undefined && (
-        <p className="font-display text-display-lg text-cyan">
+        <EntranceLine
+          hasEntrance={hasEntrance}
+          kind="arrive"
+          className="font-display text-display-lg text-cyan"
+        >
           <span className="font-body text-display-sm font-extrabold text-foreground/55">
             SMALLEST GUESS{' '}
           </span>
           {minGuess}
-        </p>
+        </EntranceLine>
       )}
       {maxGuess !== undefined && (
-        <p className="font-display text-display-lg text-cyan">
+        <EntranceLine
+          hasEntrance={hasEntrance}
+          kind="arrive"
+          className="font-display text-display-lg text-cyan"
+        >
           <span className="font-body text-display-sm font-extrabold text-foreground/55">
             HIGHEST GUESS{' '}
           </span>
           {maxGuess}
-        </p>
+        </EntranceLine>
       )}
       {showCorrect && (
         <>
-          <p className="font-display text-display-lg text-green">
+          <EntranceLine
+            hasEntrance={hasEntrance}
+            kind="arrive"
+            className="font-display text-display-lg text-green"
+          >
             <span className="font-body text-display-sm font-extrabold text-foreground/55">
               ANSWER{' '}
             </span>
             {correctAnswer}
-          </p>
+          </EntranceLine>
           <AnswerMedia
             url={answerMediaUrl}
             mediaTestIdPrefix={mediaTestIdPrefix}
@@ -80,8 +96,10 @@ export function ClosestGuessRevealScreen({
       {closestGuesses !== undefined && closestGuesses.length > 0 && (
         <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
           {closestGuesses.map((guess, index) => (
-            <li
+            <EntranceItem
               key={index}
+              hasEntrance={hasEntrance}
+              kind="arrive"
               className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-display-xl font-bold text-foreground"
             >
               <span>{guess.teamName}</span>
@@ -89,7 +107,7 @@ export function ClosestGuessRevealScreen({
                 ✓
               </span>
               <span>{guess.value}</span>
-            </li>
+            </EntranceItem>
           ))}
         </ul>
       )}
