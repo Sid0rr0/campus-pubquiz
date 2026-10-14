@@ -16,6 +16,7 @@ const SINGLE_ROOM_FIELDS: Record<SocketRoomName, readonly string[]> = {
     'roundCategories',
     'roundAuthors',
     'leaderboardRevealCount',
+    'leaderboardBoard',
     'kahootQuestionEndsAt',
   ],
   admin: ['ungradedQuestionIds', 'phaseStartedAt', 'phaseElapsedMs'],

@@ -13,6 +13,7 @@ export * from './admin-actions';
 export * from './rest';
 export * from './ranking-rule';
 export * from './leaderboard-tiebreak';
+export * from './leaderboard-board';
 export * from './import';
 export * from './auth';
 export * from './team';

@@ -46,6 +46,22 @@ export interface LeaderboardEntry {
   roundPoints: RoundPoints[];
 }
 
+/** How a team's rank moved against the trend basis. */
+export type RankTrend = 'up' | 'down' | 'same';
+
+/**
+ * The leaderboard /display draws, described once by the server (see
+ * describeLeaderboardBoard) so every big screen draws the same thing.
+ */
+export interface LeaderboardBoard {
+  /** The standings to draw, already capped (a kahoot round keeps its top five). */
+  entries: LeaderboardEntry[];
+  /** The board to hold and count up from, then reorder into `entries` — present only for the between-questions kahoot board. */
+  countUpBoard?: LeaderboardEntry[];
+  /** Rank movement per team id, shown once the board settles; a team with no previous standing has none. */
+  trends: Record<number, RankTrend>;
+}
+
 export interface TeamView {
   teamId: number;
   teamName: string;
@@ -57,7 +73,7 @@ export interface StateSnapshotPayload {
   quizStructure: QuizStructureSummary;
   /** Title of the round at `progress.roundIndex` — shown big on the round_intro screen. */
   roundTitle: string;
-  /** Whether the round at `progress.roundIndex` has kahootMode set — drives /display's top-5-only leaderboard while it's active. */
+  /** Whether the round at `progress.roundIndex` has kahootMode set. */
   isCurrentRoundKahoot: boolean;
   /** Title of every round in the quiz, in order — always populated (like `quizStructure`), used by the `round_overview` screen. */
   roundTitles: string[];
@@ -136,8 +152,8 @@ export interface DisplayStatePayload extends Omit<
   screenKey: string;
   /** Header label/title/badge for the screen on air. */
   header: HeaderContent;
-  /** True while the between-questions leaderboard covers a kahoot question that is already open underneath. */
-  isBetweenKahootQuestions: boolean;
+  /** The leaderboard to draw: capped entries, the count-up board when there is one, and each team's trend. */
+  leaderboardBoard: LeaderboardBoard;
   /** Category/topic of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
   roundCategory: string;
   /** Author of the round at `progress.roundIndex`, or '' when unset — shown on the round_intro screen alongside the title. */
@@ -152,8 +168,6 @@ export interface DisplayStatePayload extends Omit<
    * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
    */
   leaderboardRevealCount: number;
-  /** The standings before the latest scoring landed, which the between-questions count-up and the kahoot trends compare against. Empty when the session has none yet (before the first board, or after a backend restart). */
-  priorStandings: LeaderboardEntry[];
   /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
   kahootQuestionEndsAt: number | null;
 }

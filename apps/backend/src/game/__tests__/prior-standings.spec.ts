@@ -10,7 +10,7 @@ import {
 const KAHOOT_TIMER_SECONDS = 10;
 const BONUS_POINTS = 3;
 
-describe('GameGateway — prior standings on the display view', () => {
+describe('GameGateway — prior standings behind the display count-up board', () => {
   const harness = setupRealStoreGatewayTest();
   let game: RealStoreGateway;
 
@@ -49,6 +49,13 @@ describe('GameGateway — prior standings on the display view', () => {
     return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
   }
 
+  /** The board the big screen counts up from between kahoot questions. */
+  function countUpBoard() {
+    const { countUpBoard: board } = displayView().leaderboardBoard;
+    if (board === undefined) throw new Error('no count-up board was sent');
+    return board;
+  }
+
   function totals(
     board: { teamId: number; totalPoints: number }[],
   ): Record<number, number> {
@@ -79,46 +86,47 @@ describe('GameGateway — prior standings on the display view', () => {
     const [first, second] = game.teams;
     expect(view.progress.isLeaderboardVisible).toBe(true);
     expect(totals(view.leaderboard)[first.teamId]).toBeGreaterThan(0);
-    expect(totals(view.priorStandings)).toEqual({
+    expect(totals(countUpBoard())).toEqual({
       [first.teamId]: 0,
       [second.teamId]: 0,
     });
   });
 
-  it('sends a resyncing big screen the same prior standings', async () => {
+  it('sends a resyncing big screen the same count-up board', async () => {
     await landFirstQuestionPoints();
 
     const resynced = await game.resync('display');
 
-    expect(resynced.priorStandings).toEqual(displayView().priorStandings);
-    expect(resynced.priorStandings).not.toEqual([]);
+    expect(resynced.leaderboardBoard).toEqual(displayView().leaderboardBoard);
+    expect(resynced.leaderboardBoard.countUpBoard).toBeDefined();
   });
 
-  it('counts a bonus awarded while the question is on air into the prior standings', async () => {
+  it('counts a bonus awarded while the question is on air into the count-up board', async () => {
     await awardBonus(1);
     await landFirstQuestionPoints();
 
-    const prior = totals(displayView().priorStandings);
+    const prior = totals(countUpBoard());
 
     expect(prior[game.teams[1].teamId]).toBe(BONUS_POINTS);
     expect(prior[game.teams[0].teamId]).toBe(0);
   });
 
-  it('leaves the prior standings untouched while the leaderboard is shown', async () => {
+  it('leaves the count-up board untouched while the leaderboard is shown', async () => {
     await landFirstQuestionPoints();
-    const before = displayView().priorStandings;
+    const before = countUpBoard();
 
-    await awardBonus(1);
-    await game.act('ADVANCE'); // reveals a rank, board still up
+    await awardBonus(1); // lands while the board is up
 
-    expect(displayView().priorStandings).toEqual(before);
+    expect(countUpBoard()).toEqual(before);
   });
 
-  it('has no prior standings after a backend restart', async () => {
+  it('sends no count-up board on the first board after a backend restart', async () => {
     await landFirstQuestionPoints();
 
     const restarted = await game.restart();
 
-    expect((await restarted.resync('display')).priorStandings).toEqual([]);
+    const { leaderboardBoard } = await restarted.resync('display');
+    expect(leaderboardBoard.countUpBoard).toBeUndefined();
+    expect(leaderboardBoard.entries).toHaveLength(2);
   });
 });

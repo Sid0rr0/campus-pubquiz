@@ -17,10 +17,7 @@ import {
 } from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
-import {
-  KAHOOT_LEADERBOARD_TOP_N,
-  Leaderboard,
-} from '@/app/components/leaderboard';
+import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
@@ -89,9 +86,8 @@ function DisplayPageContent() {
     progress,
     currentQuestion,
     quizStructure,
-    leaderboard,
+    leaderboardBoard,
     leaderboardRevealCount,
-    priorStandings,
     teams,
     answeredTeamIds,
     blockQuestions,
@@ -99,7 +95,6 @@ function DisplayPageContent() {
     roundTitle,
     roundCategory,
     roundAuthor,
-    isCurrentRoundKahoot,
     roundTitles,
     roundCategories,
     roundAuthors,
@@ -113,7 +108,6 @@ function DisplayPageContent() {
     onAirScreen,
     screenKey,
     header: headerContent,
-    isBetweenKahootQuestions,
   } = snapshot;
 
   // The question each break/reveal screen is about was resolved by the
@@ -139,24 +133,8 @@ function DisplayPageContent() {
               <span className="text-magenta">Leaderboard</span>
             </h1>
             <Leaderboard
-              entries={leaderboard}
-              previousEntries={
-                isBetweenKahootQuestions ? priorStandings : undefined
-              }
-              // For a Kahoot round's own round-end/quiz-end reveal (not
-              // caught by isBetweenKahootQuestions above, so it keeps its
-              // one-by-one suspense walk rather than animating), the trend
-              // icon still needs the real prior standings — comparing
-              // to "this round's points backed out" via currentRoundIndex
-              // would net out every question in the round, not just the
-              // last one, producing a bogus shared baseline whenever the
-              // round is the quiz's first (see currentRoundIndex's docs).
-              trendBaseline={isCurrentRoundKahoot ? priorStandings : undefined}
+              board={leaderboardBoard}
               revealCount={leaderboardRevealCount}
-              maxRank={
-                isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined
-              }
-              currentRoundIndex={progress.roundIndex}
             />
           </div>
         );

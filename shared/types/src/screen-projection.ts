@@ -8,6 +8,7 @@ import { getFeedbackField } from './feedback-rounds';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import { describeLeaderboardBoard } from './leaderboard-board';
 import { FULLY_REVEALED_STEP, shownAtStep } from './closest-guess-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
@@ -117,10 +118,7 @@ export function projectScreen(
         onAirScreen: screen,
         screenKey,
         header,
-        // The next kahoot question is already open underneath the board.
-        isBetweenKahootQuestions:
-          session.progress.status === 'question_open' &&
-          isQuestionHiddenBehindKahootLeaderboard(session),
+        leaderboardBoard: describeLeaderboardBoard(session),
       };
     case SOCKET_ROOMS.ADMIN:
       return {

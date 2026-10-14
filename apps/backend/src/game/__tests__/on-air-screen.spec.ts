@@ -308,17 +308,20 @@ describe('Screen projection — the named on-air screen', () => {
 
   describe('a kahoot round', () => {
     beforeEach(async () => {
-      game = await harness.createGateway({ kahootMode: true });
+      game = await harness.createGateway({
+        kahootMode: true,
+        teamNames: ['First', 'Second'],
+      });
       await game.act('START_QUIZ');
       await game.act('ADVANCE'); // round_intro
       await game.act('ADVANCE'); // q1
     });
 
     it('is not between questions while a question is simply open', () => {
-      expect(displayView().isBetweenKahootQuestions).toBe(false);
+      expect(displayView().leaderboardBoard.countUpBoard).toBeUndefined();
     });
 
-    it('shows the leaderboard over the next, already-open question and flags it as between kahoot questions', async () => {
+    it('shows the leaderboard over the next, already-open question and counts it up between kahoot questions', async () => {
       await game.act('ADVANCE'); // locking
       await game.act('ADVANCE'); // reveal
       await game.act('ADVANCE'); // q2 behind the leaderboard
@@ -328,10 +331,10 @@ describe('Screen projection — the named on-air screen', () => {
       expect(view.progress.status).toBe('question_open');
       expect(view.onAirScreen).toEqual({ kind: 'leaderboard' });
       expect(view.screenKey).toBe('leaderboard');
-      expect(view.isBetweenKahootQuestions).toBe(true);
+      expect(view.leaderboardBoard.countUpBoard).toBeDefined();
     });
 
-    it('brings the question on air and clears the flag once the leaderboard is dismissed', async () => {
+    it('brings the question on air and drops the count-up board once the leaderboard is dismissed', async () => {
       await game.act('ADVANCE'); // locking
       await game.act('ADVANCE'); // reveal
       await game.act('ADVANCE'); // q2 behind the leaderboard
@@ -343,7 +346,7 @@ describe('Screen projection — the named on-air screen', () => {
         kind: 'question',
         questionIndex: 1,
       });
-      expect(view.isBetweenKahootQuestions).toBe(false);
+      expect(view.leaderboardBoard.countUpBoard).toBeUndefined();
     });
 
     it('is not between questions when the leaderboard is shown over a reveal', async () => {
@@ -352,7 +355,7 @@ describe('Screen projection — the named on-air screen', () => {
 
       await game.act('TOGGLE_LEADERBOARD');
 
-      expect(displayView().isBetweenKahootQuestions).toBe(false);
+      expect(displayView().leaderboardBoard.countUpBoard).toBeUndefined();
     });
   });
 
