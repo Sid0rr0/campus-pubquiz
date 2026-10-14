@@ -16,7 +16,7 @@ Parent spec: `.scratch/e2e-tests/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] All three files are updated.
-- [ ] The README steps work as written from a clean checkout.
+- [x] All three files are updated.
+- [x] The README steps work as written from a clean checkout. (Checked by reading `playwright.config.ts`, `support/env.ts`, `support/servers.ts`, `global-setup.ts` and the package scripts, not by running E2E.)

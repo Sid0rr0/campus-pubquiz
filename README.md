@@ -109,6 +109,52 @@ pnpm build
 cd apps/backend && pnpm test:cov   # coverage (Testcontainers needs Docker)
 ```
 
+## Running E2E
+
+Browser end-to-end tests (Playwright, Chromium) drive `/control`, `/display`
+and `/play` together against production builds of both apps. They run locally
+only: not in `pnpm test`, the pre-commit hook or CI.
+
+**Needs:** the docker-compose Postgres running (`docker compose up -d postgres`). If it
+isn't, the run fails straight away with a message saying so. Nothing else has
+to be set up; `pnpm install` is enough, plus a one-time
+`pnpm --filter e2e exec playwright install chromium` if Chromium isn't
+installed yet.
+
+```bash
+pnpm e2e                                   # build both apps, reset the DB, run every journey
+E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when only specs changed)
+pnpm e2e tests/happy-path.spec.ts          # one file
+pnpm e2e --project=journeys                # one project
+pnpm e2e --repeat-each=5                   # flakiness check
+pnpm --filter e2e e2e:report               # open the last HTML report
+```
+
+**What it uses** (separate from `pnpm dev`, so both can run at once and E2E
+never touches your dev servers, `.next` or `campus_pubquiz`):
+
+| Thing    | Dev                  | E2E                                              |
+| -------- | -------------------- | ------------------------------------------------ |
+| Frontend | :8888, `.next`       | :8889 (`next start`), built into `.next-e2e`     |
+| Backend  | :3000                | :3001 (`node dist/main`)                         |
+| Database | `campus_pubquiz`     | `campus_pubquiz_e2e` in the same Postgres server |
+
+Every run drops and recreates `campus_pubquiz_e2e` and applies the migrations.
+If your Postgres isn't the docker-compose one, set `E2E_POSTGRES_URL` to a URL
+for the server's maintenance database (default
+`postgres://postgres:postgres@localhost:5432/postgres`); the E2E database name
+is substituted in.
+
+**Report:** the HTML report is written to `e2e/playwright-report/`. Failed
+tests also keep a trace, screenshot and video in `e2e/test-results/`. Nothing is
+retried, and both folders are gitignored.
+
+**Login throttle:** `POST /auth/login` allows 5 attempts per minute. Global
+setup logs the admin in once and every test reuses that saved login, and the one
+test that logs in through the UI waits for a free slot first, so
+`--repeat-each` does not trip the limit. If you add a test that logs in, take a
+slot with `takeLoginSlot()` (`e2e/support/login-budget.ts`) first.
+
 ## Docs
 
 Each file has one job; link to it rather than repeating it elsewhere.

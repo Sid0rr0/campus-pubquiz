@@ -528,8 +528,11 @@ table (`GameSessionTeam`).
   recovery `code`, since a bare name match isn't proof of identity.
 - **Kick** — the admin can remove a team from the _current session's roster_
   (`KICK_TEAM`) without touching the underlying `Team` entity or its answer
-  history; a kicked team's persistent identity and past scores survive.
-  Available only for disconnected teams in the admin UI.
+  history; a kicked team's persistent identity and past scores survive. The
+  Teams panel on `/control` offers Kick for every team, connected or not. A
+  connected team's socket gets `TEAM_KICKED` and is closed; its phone then
+  forgets its stored token, name and team code, so it can rejoin under the
+  same name only with the team's recovery code.
 
 ## Question Types
 
@@ -1034,6 +1037,9 @@ The session detail also carries a `feedback` section, shown on the page as
   `@campus-pubquiz/types` resolves via its `dist/`, so frontend/backend type
   checking needs it built; `pnpm -r` runs workspaces in topological order, so
   `pnpm build` alone handles that.
+- **Browser E2E** (Playwright, `e2e/`) runs locally only (`pnpm e2e`): it is
+  not part of CI, `pnpm test` or the pre-commit hook. See the README's
+  "Running E2E".
 - The backend's Postgres specs share one real `postgres:16-alpine` container
   per test run (`@testcontainers/postgresql`). Jest's global set-up
   (`apps/backend/src/test-db/`) starts it and runs the real migrations on a
