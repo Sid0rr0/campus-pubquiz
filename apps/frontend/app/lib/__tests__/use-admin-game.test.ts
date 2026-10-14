@@ -86,6 +86,12 @@ describe('useAdminGame', () => {
         call: (game) => game.setDisplayTextScale(1.5),
       },
       {
+        name: 'setDisplaySoundMuted',
+        event: SOCKET_EVENTS.SET_DISPLAY_SOUND_MUTED,
+        payload: { isDisplaySoundMuted: true },
+        call: (game) => game.setDisplaySoundMuted(true),
+      },
+      {
         name: 'createShowdownRound',
         event: SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND,
         payload: { question: 'How many?', answer: '42', points: 1 },

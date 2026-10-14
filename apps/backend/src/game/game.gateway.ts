@@ -236,6 +236,23 @@ export class GameGateway
     );
   }
 
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setDisplaySoundMuted.event)
+  async handleSetDisplaySoundMuted(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.setDisplaySoundMuted,
+      rawPayload,
+      client,
+      ({ joinCode, payload }) =>
+        this.gameState.displaySoundMutedSet(
+          joinCode,
+          payload.isDisplaySoundMuted,
+        ),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.awardBonus.event)
   async handleAwardBonus(
     @ConnectedSocket() client: GameSocket,

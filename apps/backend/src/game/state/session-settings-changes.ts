@@ -4,6 +4,7 @@ import { SessionSettingsUpdateBlockedError } from '@/game/state/errors/session-s
 import type { SessionChange } from '@/game/state/session-write';
 import {
   withBreakEndTime,
+  withDisplaySoundMuted,
   withDisplayTextScale,
 } from '@/game/state/session-updates.util';
 import {
@@ -46,6 +47,17 @@ export class SessionSettingsChanges {
   ): Promise<SessionChange<SessionOutcome>> {
     return Promise.resolve({
       session: withDisplayTextScale(session, displayTextScale),
+      outcome: BROADCAST_STATE_OUTCOME,
+    });
+  }
+
+  /** Mutes or unmutes the big screen's sounds. */
+  displaySoundMuted(
+    session: SessionState,
+    isDisplaySoundMuted: boolean,
+  ): Promise<SessionChange<SessionOutcome>> {
+    return Promise.resolve({
+      session: withDisplaySoundMuted(session, isDisplaySoundMuted),
       outcome: BROADCAST_STATE_OUTCOME,
     });
   }

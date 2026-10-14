@@ -18,6 +18,7 @@ import {
   type KickTeamPayload,
   type PresenterContextPayload,
   type SetBreakEndTimePayload,
+  type SetDisplaySoundMutedPayload,
   type SetDisplayTextScalePayload,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
@@ -51,6 +52,8 @@ export interface UseAdminGameResult {
   /** Sets/clears the epoch-ms "back at HH:MM" time on the display's break screen — null clears it. */
   setBreakEndTime: (breakEndsAt: number | null) => Promise<AckResult>;
   setDisplayTextScale: (displayTextScale: number) => Promise<AckResult>;
+  /** Mutes or unmutes the big screen's sounds. */
+  setDisplaySoundMuted: (isDisplaySoundMuted: boolean) => Promise<AckResult>;
   createShowdownRound: (
     question: string,
     answer: string,
@@ -175,6 +178,14 @@ export function useAdminGame(
     [emitAction],
   );
 
+  const setDisplaySoundMuted = useCallback(
+    (isDisplaySoundMuted: boolean) => {
+      const payload: SetDisplaySoundMutedPayload = { isDisplaySoundMuted };
+      return emitAction(SOCKET_EVENTS.SET_DISPLAY_SOUND_MUTED, payload);
+    },
+    [emitAction],
+  );
+
   const createShowdownRound = useCallback(
     (question: string, answer: string, points: number) => {
       const payload: CreateShowdownRoundPayload = { question, answer, points };
@@ -201,6 +212,7 @@ export function useAdminGame(
     awardBonus,
     setBreakEndTime,
     setDisplayTextScale,
+    setDisplaySoundMuted,
     createShowdownRound,
   };
 }

@@ -81,6 +81,7 @@ function snapshot(
     closestGuessRevealStep: 0,
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
+    isDisplaySoundMuted: false,
     settings: DEFAULT_SESSION_SETTINGS,
     activeShowdown: null,
     showdownRevealStep: 0,

@@ -60,6 +60,7 @@ export type LeaderboardDescription = Pick<
 export interface SessionDescription {
   joinCode?: string;
   displayTextScale?: number;
+  isDisplaySoundMuted?: boolean;
   /** Ids of teams whose phone is connected (the roster's `isConnected`). */
   connectedTeamIds?: number[];
   rounds?: RoundDescription[];
@@ -237,6 +238,9 @@ export function buildSessionState(
     ...(description.displayTextScale === undefined
       ? {}
       : { displayTextScale: description.displayTextScale }),
+    ...(description.isDisplaySoundMuted === undefined
+      ? {}
+      : { isDisplaySoundMuted: description.isDisplaySoundMuted }),
     connectedTeamSockets: Object.fromEntries(
       (description.connectedTeamIds ?? []).map((id) => [id, `socket-${id}`]),
     ),
