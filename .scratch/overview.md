@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| stats-read-standings            | [Stats take totals from the Standings module and credit answers by verdict](stats-read-standings/spec.md)                                                                  | 2       | —          |
 
 ## Won't do
 
