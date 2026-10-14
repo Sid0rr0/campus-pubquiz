@@ -2,7 +2,6 @@ import { resolvedAnswerKeyOf, type GradingSettingsSource } from './answer-key';
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
 import {
   ANSWER_FORMATS,
-  matchesKey,
   resolveAnswerKind,
   type ScoreResult,
   type Verdict,
@@ -116,23 +115,6 @@ export function scoreSubmission(
     points: nearestHalfPoint(base.points * speedMultiplier(speed)),
     verdict: base.verdict,
   };
-}
-
-/**
- * The grade a submission gets the moment it lands, or null when it gets none
- * and waits for the quiz master: every submission to an auto type is graded,
- * a match-or-human type only when it matches the key, and a batch type never.
- */
-export function gradeAtSubmit(
-  question: ScoredQuestion,
-  value: string,
-): ScoreResult | null {
-  const { gradingMode } = QUESTION_KINDS[question.type];
-  if (gradingMode === 'auto') return scoreSubmission(question, value);
-  if (gradingMode === 'match-or-human' && matchesKey(question, value)) {
-    return scoreSubmission(question, value);
-  }
-  return null;
 }
 
 /** The verdict for points the admin typed in: full (or more) is correct, zero (or less) incorrect, anything between partial. */
