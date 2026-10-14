@@ -18,7 +18,18 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
+    // Keep the suite offline even if a happy-dom upgrade changes a default
+    // (the /display media spec renders a YouTube embed).
+    environmentOptions: {
+      happyDOM: {
+        settings: {
+          disableIframePageLoading: true,
+          disableJavaScriptFileLoading: true,
+          disableCSSFileLoading: true,
+        },
+      },
+    },
     setupFiles: ['./vitest.setup.ts'],
     maxWorkers: process.env.CI ? undefined : LOCAL_MAX_WORKERS,
     coverage: {
