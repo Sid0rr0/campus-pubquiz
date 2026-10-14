@@ -37,7 +37,10 @@ function renderScreens(
       showdownRevealStep={0}
       teamName="Team A"
       myTeamId={myTeamId}
-      phoneLeaderboard={{ board: {} as LeaderboardBoard, revealCount: 0 }}
+      phoneLeaderboard={{
+        board: { entries: [], trends: {} } satisfies LeaderboardBoard,
+        revealCount: 0,
+      }}
       isConnected
       leaderboard={[]}
       onSubmitShowdownGuess={vi.fn()}
