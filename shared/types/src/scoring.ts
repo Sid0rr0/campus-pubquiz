@@ -2,7 +2,6 @@ import { resolvedAnswerKeyOf, type GradingSettingsSource } from './answer-key';
 import { QUESTION_KINDS, type QuestionKind } from './question-kind';
 import {
   ANSWER_FORMATS,
-  matchesKey,
   resolveAnswerKind,
   type ScoreResult,
   type Verdict,
@@ -38,19 +37,9 @@ function typesWhere(
   return QUESTION_TYPES.filter((type) => matches(QUESTION_KINDS[type]));
 }
 
-/** Graded the instant they're submitted. */
-export const AUTO_GRADED_TYPES = typesWhere(
-  (kind) => kind.gradingMode === 'auto',
-);
-
 /** Graded in one pass once the question locks, comparing every guess. */
 export const BATCH_GRADED_TYPES = typesWhere(
   (kind) => kind.gradingMode === 'batch',
-);
-
-/** Graded correct at submit when they match the key; any other answer needs the quiz master's judgement. */
-export const MATCH_OR_HUMAN_TYPES = typesWhere(
-  (kind) => kind.gradingMode === 'match-or-human',
 );
 
 /**
@@ -59,14 +48,6 @@ export const MATCH_OR_HUMAN_TYPES = typesWhere(
  * the speed race into typing speed and spelling (see ADR 0001).
  */
 export const KAHOOT_ALLOWED_TYPES = typesWhere((kind) => kind.kahootAllowed);
-
-export function isAutoGradedType(type: QuestionType): boolean {
-  return AUTO_GRADED_TYPES.includes(type);
-}
-
-export function isMatchOrHumanType(type: QuestionType): boolean {
-  return QUESTION_KINDS[type].gradingMode === 'match-or-human';
-}
 
 export function isBatchGradedType(type: QuestionType): boolean {
   return QUESTION_KINDS[type].gradingMode === 'batch';
@@ -116,23 +97,6 @@ export function scoreSubmission(
     points: nearestHalfPoint(base.points * speedMultiplier(speed)),
     verdict: base.verdict,
   };
-}
-
-/**
- * The grade a submission gets the moment it lands, or null when it gets none
- * and waits for the quiz master: every submission to an auto type is graded,
- * a match-or-human type only when it matches the key, and a batch type never.
- */
-export function gradeAtSubmit(
-  question: ScoredQuestion,
-  value: string,
-): ScoreResult | null {
-  const { gradingMode } = QUESTION_KINDS[question.type];
-  if (gradingMode === 'auto') return scoreSubmission(question, value);
-  if (gradingMode === 'match-or-human' && matchesKey(question, value)) {
-    return scoreSubmission(question, value);
-  }
-  return null;
 }
 
 /** The verdict for points the admin typed in: full (or more) is correct, zero (or less) incorrect, anything between partial. */

@@ -32,6 +32,7 @@ function liveAnswers(
         value: 'Paris',
         pointsAwarded: 0,
         gradedAt: null,
+        gradingState: 'ungraded',
         verdict: null,
       },
     ],
@@ -52,6 +53,7 @@ describe('AnswersPanel', () => {
               value: 'Paris',
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              gradingState: 'graded',
               verdict: 'correct',
             },
             {
@@ -61,6 +63,7 @@ describe('AnswersPanel', () => {
               value: 'London',
               pointsAwarded: 0,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              gradingState: 'graded',
               verdict: 'incorrect',
             },
           ],
@@ -112,6 +115,7 @@ describe('AnswersPanel', () => {
               value: 'Earth|Venus|Mercury',
               pointsAwarded: 0,
               gradedAt: new Date().toISOString(),
+              gradingState: 'graded',
               verdict: 'incorrect',
             },
           ],
@@ -150,6 +154,7 @@ describe('AnswersPanel', () => {
               value: 'shield|excalibur',
               pointsAwarded: 0,
               gradedAt: new Date().toISOString(),
+              gradingState: 'graded',
               verdict: 'incorrect',
             },
           ],
@@ -181,6 +186,7 @@ describe('AnswersPanel', () => {
               value: '__idk__',
               pointsAwarded: 0,
               gradedAt: null,
+              gradingState: 'ungraded',
               verdict: null,
             },
           ],
@@ -275,6 +281,7 @@ describe('AnswersPanel', () => {
               value: 'Paris',
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              gradingState: 'graded',
               verdict: 'correct',
             },
           ],
@@ -349,6 +356,7 @@ describe('AnswersPanel', () => {
               ...base.answers[0],
               pointsAwarded: 0.5,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              gradingState: 'graded',
               verdict: 'partial',
             },
           ],
@@ -502,6 +510,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 1.5,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'partial',
               },
             ],
@@ -550,6 +559,7 @@ describe('AnswersPanel', () => {
               value: 'Paris',
               pointsAwarded: 2,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              gradingState: 'graded',
               verdict: 'correct',
             },
           ],
@@ -593,6 +603,7 @@ describe('AnswersPanel', () => {
                 value: '1200',
                 pointsAwarded: 0,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'incorrect',
               },
             ],
@@ -628,6 +639,7 @@ describe('AnswersPanel', () => {
                 value: '950',
                 pointsAwarded: 0,
                 gradedAt: null,
+                gradingState: 'awaiting_batch',
                 verdict: null,
               },
             ],
@@ -647,6 +659,69 @@ describe('AnswersPanel', () => {
         }),
       ).not.toBeInTheDocument();
     });
+
+    it('shows grade buttons for an ungraded answer to a closest_guess question, following the state and not the type', () => {
+      render(
+        <AnswersPanel
+          liveAnswers={liveAnswers({
+            question: CLOSEST_GUESS_QUESTION,
+            answers: [
+              {
+                answerId: 41,
+                teamId: 1,
+                teamName: 'The Quizzards',
+                value: '950',
+                pointsAwarded: 0,
+                gradedAt: null,
+                gradingState: 'ungraded',
+                verdict: null,
+              },
+            ],
+          })}
+          teams={TEAMS}
+          onGrade={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.queryByText('Graded when the block locks'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {
+          name: /grade the quizzards full points/i,
+        }),
+      ).toBeEnabled();
+    });
+  });
+
+  it('shows "Graded when the block locks" for an awaiting_batch answer whatever the question type', () => {
+    render(
+      <AnswersPanel
+        liveAnswers={liveAnswers({
+          answers: [
+            {
+              answerId: 41,
+              teamId: 1,
+              teamName: 'The Quizzards',
+              value: 'Paris',
+              pointsAwarded: 0,
+              gradedAt: null,
+              gradingState: 'awaiting_batch',
+              verdict: null,
+            },
+          ],
+        })}
+        teams={TEAMS}
+        onGrade={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Graded when the block locks')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: /grade the quizzards full points/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it('lets the quiz master override the auto-graded score of a match answer', async () => {
@@ -674,6 +749,7 @@ describe('AnswersPanel', () => {
               value: 'excalibur|excalibur',
               pointsAwarded: 1,
               gradedAt: '2026-01-01T00:00:00.000Z',
+              gradingState: 'graded',
               verdict: 'partial',
             },
           ],
@@ -717,6 +793,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'correct',
               },
             ],
@@ -744,6 +821,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 0,
                 gradedAt: null,
+                gradingState: 'ungraded',
                 verdict: null,
               },
             ],
@@ -771,6 +849,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 0,
                 gradedAt: null,
+                gradingState: 'ungraded',
                 verdict: null,
               },
               {
@@ -780,6 +859,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 0,
                 gradedAt: null,
+                gradingState: 'ungraded',
                 verdict: null,
               },
             ],
@@ -804,6 +884,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'correct',
               },
               {
@@ -813,6 +894,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 0,
                 gradedAt: null,
+                gradingState: 'ungraded',
                 verdict: null,
               },
             ],
@@ -840,6 +922,7 @@ describe('AnswersPanel', () => {
                 value: 'Paris',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'correct',
               },
               {
@@ -849,6 +932,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'correct',
               },
             ],
@@ -874,6 +958,7 @@ describe('AnswersPanel', () => {
                 value: 'Rome',
                 pointsAwarded: 0,
                 gradedAt: null,
+                gradingState: 'ungraded',
                 verdict: null,
               },
               {
@@ -883,6 +968,7 @@ describe('AnswersPanel', () => {
                 value: 'London',
                 pointsAwarded: 2,
                 gradedAt: '2026-01-01T00:00:00.000Z',
+                gradingState: 'graded',
                 verdict: 'correct',
               },
             ],

@@ -1,6 +1,6 @@
 # Spec: The Grading policy decides whether an answer can be graded now, for the clients too
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

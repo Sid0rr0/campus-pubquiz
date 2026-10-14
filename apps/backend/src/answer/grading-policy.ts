@@ -1,9 +1,10 @@
 import {
-  gradeAtSubmit,
   gradeClosestGuessBatch,
+  matchesKey,
   QUESTION_KINDS,
   scoreSubmission,
   type GradingMode,
+  type GradingState,
   type ScoredQuestion,
   type ScoreResult,
 } from '@campus-pubquiz/types';
@@ -53,6 +54,30 @@ function clearsRevision(
   return stored !== null && stored.value !== value ? CLEAR : KEEP;
 }
 
+const SUBMIT_GRADE: Record<
+  GradingMode,
+  (question: ScoredQuestion, value: string) => ScoreResult | null
+> = {
+  // Every submission is scored.
+  auto: (question, value) => scoreSubmission(question, value),
+  // Graded correct only when it matches the key; the rest waits for the quiz master.
+  'match-or-human': (question, value) =>
+    matchesKey(question, value) ? scoreSubmission(question, value) : null,
+  // Never graded at submit: the lock-time batch grades it.
+  batch: () => null,
+};
+
+/**
+ * The grade a submission gets the moment it lands, or null when it gets none
+ * and waits for the quiz master (or, for a batch type, for the lock).
+ */
+export function gradeAtSubmit(
+  question: ScoredQuestion,
+  value: string,
+): ScoreResult | null {
+  return SUBMIT_GRADE[modeOf(question)](question, value);
+}
+
 const SUBMIT: Record<GradingMode, SubmitRule> = {
   // Every submission is scored, so a hand override is replaced on resubmit.
   auto: (score, value, stored) =>
@@ -92,6 +117,19 @@ const CAN_GRADE_BY_HAND: Record<
   // "any row graded" as "the batch ran".
   batch: (stored) => stored.gradedAt !== null,
 };
+
+/**
+ * The grading state of a stored answer, as sent to the quiz master's views: an
+ * answer with a grade is graded; without one it can be graded now or waits for
+ * its batch, by the same hand-grade rule that refuses a grade.
+ */
+export function gradingStateOf(
+  question: Pick<ScoredQuestion, 'type'>,
+  stored: { gradedAt: Date | null },
+): GradingState {
+  if (stored.gradedAt !== null) return 'graded';
+  return canGradeByHand(question, stored) ? 'ungraded' : 'awaiting_batch';
+}
 
 /** A stored answer as the key-fix event reads it. */
 export interface StoredAnswerRow extends StoredAnswerGrade {

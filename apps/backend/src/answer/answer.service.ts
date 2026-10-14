@@ -15,6 +15,7 @@ import {
   canGradeByHand,
   gradeOnKeyFix,
   gradeOnSubmit,
+  gradingStateOf,
   lockBatchWrites,
   speedScore,
   type GradeWrite,
@@ -289,14 +290,14 @@ export class AnswerService {
     return rows.map(toAnswerView);
   }
 
-  /** Every answer to one question, with its team, ordered by team name. */
+  /** Every answer to one question, with its team and the question (one extra query, not one per answer), ordered by team name. */
   private findForQuestion(
     gameSessionId: number,
     questionId: number,
   ): Promise<Answer[]> {
     return this.answers.find(
       { gameSession: gameSessionId, question: questionId },
-      { populate: ['team'], orderBy: { team: { name: 'asc' } } },
+      { populate: ['team', 'question'], orderBy: { team: { name: 'asc' } } },
     );
   }
 
@@ -327,7 +328,7 @@ export class AnswerService {
   }
 }
 
-/** An answer row as the admin's answer list shows it. */
+/** An answer row as the admin's answer list shows it; the one place a stored answer becomes an admin answer view, its grading state asked of the Grading policy. */
 function toAnswerView(row: Answer): AnswerView {
   return {
     answerId: row.id,
@@ -335,6 +336,7 @@ function toAnswerView(row: Answer): AnswerView {
     teamName: row.team.name,
     value: row.value,
     pointsAwarded: row.pointsAwarded,
+    gradingState: gradingStateOf(row.question, row),
     gradedAt: row.gradedAt?.toISOString() ?? null,
     verdict: row.verdict,
   };

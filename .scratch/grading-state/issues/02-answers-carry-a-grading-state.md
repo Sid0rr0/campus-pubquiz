@@ -6,7 +6,7 @@ Parent spec: `.scratch/grading-state/spec.md`
 
 **Blocked by:** None (can start immediately). Touches the same policy module as ticket 01, so run them in order to avoid a rebase.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Grading policy exposes one function from a question and a stored answer to a grading state, driven by a table keyed by grading mode so a new mode fails typecheck until it answers. An answer with a grade is `graded`; without one it is `ungraded` or `awaiting_batch` according to the hand-grade rule.
 - [ ] The answer service maps stored answers to admin answer views in one place that asks the policy; every path returning an admin answer list (question list, key-fix regrade, lock batch, hand-grade refresh) goes through it, without adding a query per answer.

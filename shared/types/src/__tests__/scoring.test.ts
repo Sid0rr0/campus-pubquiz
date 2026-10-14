@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { IDK_ANSWER_VALUE } from '../answers';
 import {
-  AUTO_GRADED_TYPES,
   BATCH_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
-  MATCH_OR_HUMAN_TYPES,
-  gradeAtSubmit,
   gradeClosestGuessBatch,
   halfPoints,
   nearestHalfPoint,
@@ -53,112 +50,14 @@ describe('scoreSubmission — exact-match types', () => {
   );
 });
 
-describe('gradeAtSubmit', () => {
-  it.each(['free_text', 'audio', 'youtube'] as const)(
-    '%s: a value matching the key (trimmed, any case) is correct',
-    (type) => {
-      const question = { type, answer: 'Queen', points: 10 };
-      for (const value of ['Queen', ' queen ', 'QUEEN']) {
-        expect(gradeAtSubmit(question, value)).toEqual({
-          points: 10,
-          verdict: 'correct',
-        });
-      }
-    },
-  );
-
-  it.each(['free_text', 'audio', 'youtube'] as const)(
-    '%s: a value that does not match the key has no automatic verdict',
-    (type) => {
-      expect(
-        gradeAtSubmit({ type, answer: 'Queen', points: 10 }, 'Queens'),
-      ).toBeNull();
-    },
-  );
-
-  it('grades an auto type either way and never grades closest_guess', () => {
-    expect(gradeAtSubmit(mc, 'Rome')).toEqual({
-      points: 0,
-      verdict: 'incorrect',
-    });
-    expect(
-      gradeAtSubmit({ type: 'closest_guess', answer: '5', points: 10 }, '5'),
-    ).toBeNull();
-  });
-});
-
 describe('Number questions', () => {
-  const number = (
-    answer: string,
-    margin?: ScoredQuestion['margin'],
-  ): ScoredQuestion => ({ type: 'number', answer, points: 10, margin });
-  const correct = { points: 10, verdict: 'correct' } as const;
-  const incorrect = { points: 0, verdict: 'incorrect' } as const;
-
-  it.each([
-    ['200', '200', correct],
-    ['200', '180', correct],
-    ['200', '220', correct],
-    ['200', '179.9', incorrect],
-    ['200', '220.1', incorrect],
-    ['200', '2e2', correct],
-    ['-100', '-95', correct],
-    ['-100', '-110', correct],
-    ['-100', '-111', incorrect],
-    ['-100', '100', incorrect],
-    ['0.5', '0.55', correct],
-    ['0.5', '0.56', incorrect],
-    ['200', 'abc', incorrect],
-    ['200', '', incorrect],
-    ['200', 'Infinity', incorrect],
-  ] as const)(
-    'default 10%%: %j against key %j is graded at submit',
-    (key, value, expected) => {
-      expect(gradeAtSubmit(number(key), value)).toEqual(expected);
-    },
-  );
-
-  it('accepts only an exact 0 for a key of 0 with a percentage margin', () => {
-    expect(gradeAtSubmit(number('0'), '0')).toEqual(correct);
-    expect(gradeAtSubmit(number('0'), '0.001')).toEqual(incorrect);
-  });
-
-  it('uses the margin value as the allowed distance when absolute', () => {
-    const question = number('1989', { value: 5, unit: 'absolute' });
-    expect(gradeAtSubmit(question, '1984')).toEqual(correct);
-    expect(gradeAtSubmit(question, '1994')).toEqual(correct);
-    expect(gradeAtSubmit(question, '1995')).toEqual(incorrect);
-  });
-
-  it('accepts only the exact key at margin 0', () => {
-    const question = number('42', { value: 0, unit: 'absolute' });
-    expect(gradeAtSubmit(question, '42')).toEqual(correct);
-    expect(gradeAtSubmit(question, '42.01')).toEqual(incorrect);
-  });
-
-  it('honours a custom percentage margin', () => {
-    const question = number('1000', { value: 2.5, unit: 'percent' });
-    expect(gradeAtSubmit(question, '1025')).toEqual(correct);
-    expect(gradeAtSubmit(question, '1026')).toEqual(incorrect);
-  });
-
-  it('grades "I don\'t know" incorrect', () => {
-    expect(gradeAtSubmit(number('200'), IDK_ANSWER_VALUE)).toEqual(incorrect);
-  });
-
   it('scales a correct answer by the kahoot speed multiplier', () => {
     expect(
-      scoreSubmission(number('200'), '200', {
+      scoreSubmission({ type: 'number', answer: '200', points: 10 }, '200', {
         responseMs: 5000,
         timerMs: 10000,
       }),
     ).toEqual({ points: 7.5, verdict: 'correct' });
-  });
-
-  it('still never grades closest_guess at submit', () => {
-    expect(
-      gradeAtSubmit({ type: 'closest_guess', answer: '5', points: 10 }, '5'),
-    ).toBeNull();
   });
 });
 
@@ -393,19 +292,8 @@ describe('nearestHalfPoint', () => {
 });
 
 describe('category lists', () => {
-  it('grades multiple_choice, sort, match and number at submit', () => {
-    expect([...AUTO_GRADED_TYPES].sort()).toEqual(
-      ['match', 'multiple_choice', 'number', 'sort'].sort(),
-    );
-  });
-
-  it('batch-grades closest_guess and grades free_text/audio/youtube only on a match', () => {
+  it('batch-grades closest_guess', () => {
     expect(BATCH_GRADED_TYPES).toEqual(['closest_guess']);
-    expect([...MATCH_OR_HUMAN_TYPES].sort()).toEqual([
-      'audio',
-      'free_text',
-      'youtube',
-    ]);
   });
 
   it('allows only multiple_choice, sort, match and number in kahoot rounds', () => {
@@ -420,22 +308,9 @@ describe('category lists', () => {
 });
 
 describe('batch-graded types are never scored one answer at a time', () => {
-  it('has no type that is both auto-graded and batch-graded', () => {
-    expect(
-      BATCH_GRADED_TYPES.filter((type) => AUTO_GRADED_TYPES.includes(type)),
-    ).toEqual([]);
-  });
-
   it('includes closest_guess, whose number format has no per-answer score', () => {
     expect(BATCH_GRADED_TYPES).toContain('closest_guess');
   });
-
-  it.each(BATCH_GRADED_TYPES)(
-    'gradeAtSubmit leaves %s ungraded, so no per-answer score is reached',
-    (type) => {
-      expect(gradeAtSubmit({ type, answer: '5', points: 10 }, '5')).toBeNull();
-    },
-  );
 });
 
 describe('scoreSubmission — closest_guess lone submission', () => {

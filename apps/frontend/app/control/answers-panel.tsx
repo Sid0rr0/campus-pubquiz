@@ -5,7 +5,6 @@ import { motion } from 'motion/react';
 import {
   formatAnswer,
   halfPoints,
-  isBatchGradedType,
   type AnswerView,
   type AnswersUpdatedPayload,
   type QuestionType,
@@ -25,7 +24,13 @@ interface GradeOption {
 // then already-graded answers.
 function gradingSortRank(answer: AnswerView | null): number {
   if (answer === null) return 1;
-  return answer.gradedAt === null ? 0 : 2;
+  switch (answer.gradingState) {
+    case 'ungraded':
+    case 'awaiting_batch':
+      return 0;
+    case 'graded':
+      return 2;
+  }
 }
 
 function gradeOptions(maxPoints: number): GradeOption[] {
@@ -64,11 +69,11 @@ function AnswerRow({
   onGrade,
 }: AnswerRowProps) {
   const hasAnswered = answer !== null;
-  const isGraded = hasAnswered && answer.gradedAt !== null;
-  // A closest_guess answer is graded in one batch when the block locks (who's
-  // closest depends on every guess); until then there's nothing to override.
+  const isGraded = hasAnswered && answer.gradingState === 'graded';
+  // The server says when an answer is graded in one batch at the lock (such as
+  // a closest_guess answer); until then there's nothing to override.
   const isAwaitingBatch =
-    hasAnswered && !isGraded && isBatchGradedType(questionType);
+    hasAnswered && answer.gradingState === 'awaiting_batch';
   const options = gradeOptions(maxPoints);
   const matchesAGradeOption =
     hasAnswered &&
