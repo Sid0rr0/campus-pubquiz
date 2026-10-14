@@ -1,6 +1,6 @@
 # 01: Every quiz save reloads the sessions waiting in the lobby
 
-Status: ready-for-agent
+Status: done
 
 Spec: [Every session holds the current quiz, and grading reads only that copy](../spec.md)
 

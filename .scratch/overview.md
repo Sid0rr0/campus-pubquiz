@@ -11,7 +11,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | leaderboard-before-board        | [The server sends the leaderboard's "before" board](leaderboard-before-board/spec.md)                                                                                      | 2       | —          |
 | phone-browse-back-closest-guess | [A closest_guess question browsed back to on the phone shows fully revealed](phone-browse-back-closest-guess/issues/01-browsed-back-closest-guess-shows-fully-revealed.md) | 1       | —          |
 | question-record-codec           | [One stored-question codec — a question crosses storage, preview and the seeded game in one place](question-record-codec/spec.md)                                          | 3       | —          |
-| session-quiz-copy               | [Every session holds the current quiz, and grading reads only that copy](session-quiz-copy/spec.md)                                                                        | 2       | —          |
 | stats-read-standings            | [Stats take totals from the Standings module and credit answers by verdict](stats-read-standings/spec.md)                                                                  | 2       | —          |
 
 ## Won't do

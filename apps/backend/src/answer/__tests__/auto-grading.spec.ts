@@ -1,6 +1,7 @@
 import { IDK_ANSWER_VALUE } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import {
+  gradable,
   regradeAuto,
   setupAnswerServiceTest,
 } from '@/answer/__tests__/answer-service-test-utils';
@@ -22,7 +23,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      mcQuestion.id,
+      gradable(mcQuestion),
       team.id,
       'Paris',
     );
@@ -49,7 +50,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      mcQuestion.id,
+      gradable(mcQuestion),
       team.id,
       'London',
     );
@@ -76,13 +77,13 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      mcQuestion.id,
+      gradable(mcQuestion),
       team.id,
       'London',
     );
     await state.answerService.submit(
       state.session.id,
-      mcQuestion.id,
+      gradable(mcQuestion),
       team.id,
       'Paris',
     );
@@ -109,7 +110,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      sortQuestion.id,
+      gradable(sortQuestion),
       team.id,
       'Mercury|Venus|Earth',
     );
@@ -137,7 +138,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      sortQuestion.id,
+      gradable(sortQuestion),
       team.id,
       ' Mercury | Venus ||Earth|',
     );
@@ -165,7 +166,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      sortQuestion.id,
+      gradable(sortQuestion),
       team.id,
       'Earth|Venus|Mercury',
     );
@@ -196,7 +197,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield',
     );
@@ -227,7 +228,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'shield|excalibur',
     );
@@ -258,7 +259,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|excalibur|excalibur|excalibur',
     );
@@ -290,7 +291,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield|web|hammer',
     );
@@ -322,7 +323,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     // Only the last pair (hammer) is wrong — 3 of 4 correct, exactly one miss.
     await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield|web|web',
     );
@@ -354,7 +355,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
     // Two pairs wrong (web/hammer swapped).
     await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield|hammer|web',
     );
@@ -371,7 +372,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Apple',
     );
@@ -389,7 +390,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'aPPLE',
     );
@@ -407,7 +408,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       '  Apple  ',
     );
@@ -425,7 +426,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
@@ -444,13 +445,13 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Apple',
     );
@@ -491,7 +492,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         value,
       );
@@ -511,7 +512,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         '380',
       );
@@ -529,7 +530,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
 
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         IDK_ANSWER_VALUE,
       );
@@ -547,7 +548,7 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
       const team = await insertTeam('The Quizzards', 'token-1');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         '400',
       );
@@ -555,7 +556,12 @@ describe('AnswerService (Postgres integration) - auto-grading on submit', () => 
         state.session.id,
         question.id,
       );
-      await state.answerService.grade(state.session.id, submitted.answerId, 1);
+      await state.answerService.grade(
+        state.session.id,
+        submitted.answerId,
+        gradable(question),
+        1,
+      );
 
       await regradeAuto(state.answerService, state.session.id, {
         id: question.id,

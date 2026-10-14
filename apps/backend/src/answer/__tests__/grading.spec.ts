@@ -2,11 +2,11 @@ import { Answer } from '@/db/entities/answer.entity';
 import { Team } from '@/db/entities/team.entity';
 import { AnswerService } from '@/answer/answer.service';
 import type { AnswerRepository } from '@/db/repositories/answer.repository';
-import type { QuestionRepository } from '@/db/repositories/question.repository';
 import type { TeamRepository } from '@/db/repositories/team.repository';
 import { Question } from '@/db/entities/question.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import {
+  gradable,
   regradeAuto,
   regradeBatch,
   regradeMatchOrHuman,
@@ -16,21 +16,85 @@ import {
 describe('AnswerService (Postgres integration) - manual and closest-guess grading', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
 
-  it('grades an answer, returning the questionId it belongs to', async () => {
+  it('names the question a stored answer is for', async () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
 
-    const graded = await state.answerService.grade(
+    const questionId = await state.answerService.questionIdOf(
       state.session.id,
       submitted.answerId,
+    );
+
+    expect(questionId).toBe(state.question.id);
+  });
+
+  it('refuses to name the question of an answer from another game session', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      gradable(state.question),
+      team.id,
+      'Banana',
+    );
+    const otherSession = state.em.create(GameSession, {
+      quiz: state.session.quiz,
+      joinCode: 'YYYYYY',
+    });
+    await state.em.flush();
+
+    await expect(
+      state.answerService.questionIdOf(otherSession.id, submitted.answerId),
+    ).rejects.toThrow();
+  });
+
+  it('refuses to grade an answer against a question it is not to', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      gradable(state.question),
+      team.id,
+      'Banana',
+    );
+    const elsewhere = state.em.create(Question, {
+      round: state.round,
+      orderIndex: 1,
+      type: 'free_text',
+      prompt: 'Name a vegetable',
+      answer: 'Leek',
+      points: 1,
+    });
+    await state.em.flush();
+
+    await expect(
+      state.answerService.grade(
+        state.session.id,
+        submitted.answerId,
+        gradable(elsewhere),
+        1,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('grades an answer against the given question', async () => {
+    const team = await insertTeam('The Quizzards', 'token-1');
+    const submitted = await state.answerService.submit(
+      state.session.id,
+      gradable(state.question),
+      team.id,
+      'Banana',
+    );
+
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
       2,
     );
-    expect(graded.questionId).toBe(state.question.id);
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
@@ -44,7 +108,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
@@ -55,7 +119,12 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     await state.em.flush();
 
     await expect(
-      state.answerService.grade(otherSession.id, submitted.answerId, 2),
+      state.answerService.grade(
+        otherSession.id,
+        submitted.answerId,
+        gradable(state.question),
+        2,
+      ),
     ).rejects.toThrow();
 
     const [answer] = await state.answerService.listForQuestion(
@@ -70,12 +139,17 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
 
-    await state.answerService.grade(state.session.id, submitted.answerId, 0.5);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      0.5,
+    );
 
     const [answer] = await state.answerService.listForQuestion(
       state.session.id,
@@ -88,18 +162,28 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
 
-    await state.answerService.grade(state.session.id, submitted.answerId, 2);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      2,
+    );
     const [firstGrade] = await state.answerService.listForQuestion(
       state.session.id,
       state.question.id,
     );
 
-    await state.answerService.grade(state.session.id, submitted.answerId, 0);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      0,
+    );
     const [secondGrade] = await state.answerService.listForQuestion(
       state.session.id,
       state.question.id,
@@ -122,15 +206,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      audioQuestion.id,
+      gradable(audioQuestion),
       team.id,
       'Banana',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(audioQuestion),
+      1,
+    );
 
     await state.answerService.submit(
       state.session.id,
-      audioQuestion.id,
+      gradable(audioQuestion),
       team.id,
       'Mango',
     );
@@ -157,15 +246,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      audioQuestion.id,
+      gradable(audioQuestion),
       team.id,
       'Banana',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(audioQuestion),
+      1,
+    );
 
     await state.answerService.submit(
       state.session.id,
-      audioQuestion.id,
+      gradable(audioQuestion),
       team.id,
       'Banana',
     );
@@ -182,15 +276,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      1,
+    );
 
     const ack = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
@@ -209,15 +308,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 1);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      1,
+    );
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Mango',
     );
@@ -236,15 +340,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('The Quizzards', 'token-1');
     const submitted = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 0);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(state.question),
+      0,
+    );
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Apple',
     );
@@ -273,7 +382,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     await state.answerService.submit(
       state.session.id,
-      audioQuestion.id,
+      gradable(audioQuestion),
       team.id,
       ' queen ',
     );
@@ -302,19 +411,19 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const teamC = await insertTeam('Team C', 'token-c');
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamA.id,
       '900',
     );
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamB.id,
       '950',
     );
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamC.id,
       '2000',
     );
@@ -345,13 +454,13 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const teamB = await insertTeam('Team B', 'token-b');
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamA.id,
       '990',
     );
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamB.id,
       '1010',
     );
@@ -400,13 +509,13 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const teamB = await insertTeam('Team B', 'token-b');
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamA.id,
       'not a number',
     );
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamB.id,
       '900',
     );
@@ -434,7 +543,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const teamA = await insertTeam('Team A', 'token-a');
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamA.id,
       '900',
     );
@@ -462,13 +571,18 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('Team A', 'token-a');
     const submitted = await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       team.id,
       '900',
     );
 
     await expect(
-      state.answerService.grade(state.session.id, submitted.answerId, 5),
+      state.answerService.grade(
+        state.session.id,
+        submitted.answerId,
+        gradable(guessQuestion),
+        5,
+      ),
     ).rejects.toThrow(
       'closest_guess answers can only be graded by hand once the block locks',
     );
@@ -488,19 +602,24 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const teamB = await insertTeam('Team B', 'token-b');
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamA.id,
       '990',
     );
     const far = await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamB.id,
       '1200',
     );
     await regradeBatch(state.answerService, state.session.id, guessQuestion);
 
-    await state.answerService.grade(state.session.id, far.answerId, 2);
+    await state.answerService.grade(
+      state.session.id,
+      far.answerId,
+      gradable(guessQuestion),
+      2,
+    );
 
     const answers = await state.answerService.listForQuestion(
       state.session.id,
@@ -527,18 +646,23 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const teamB = await insertTeam('Team B', 'token-b');
     await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamA.id,
       '990',
     );
     const far = await state.answerService.submit(
       state.session.id,
-      guessQuestion.id,
+      gradable(guessQuestion),
       teamB.id,
       '1200',
     );
     await state.answerService.gradeAtLock(state.session.id, guessQuestion);
-    await state.answerService.grade(state.session.id, far.answerId, 4);
+    await state.answerService.grade(
+      state.session.id,
+      far.answerId,
+      gradable(guessQuestion),
+      4,
+    );
 
     const again = await state.answerService.gradeAtLock(
       state.session.id,
@@ -566,7 +690,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('Team A', 'token-a');
     const submitted = await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield',
     );
@@ -574,13 +698,13 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     // Submitted answer is fully correct (4/4), auto-graded at submit time;
     // the quiz master then knocks it down to 3.
     expect(submitted.pointsAwarded).toBe(4);
-    const graded = await state.answerService.grade(
+    await state.answerService.grade(
       state.session.id,
       submitted.answerId,
+      gradable(matchQuestion),
       3,
     );
 
-    expect(graded).toEqual({ questionId: matchQuestion.id });
     const answers = await state.answerService.listForQuestion(
       state.session.id,
       matchQuestion.id,
@@ -605,15 +729,20 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const team = await insertTeam('Team A', 'token-a');
     const submitted = await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield',
     );
-    await state.answerService.grade(state.session.id, submitted.answerId, 3);
+    await state.answerService.grade(
+      state.session.id,
+      submitted.answerId,
+      gradable(matchQuestion),
+      3,
+    );
 
     const resubmitted = await state.answerService.submit(
       state.session.id,
-      matchQuestion.id,
+      gradable(matchQuestion),
       team.id,
       'excalibur|shield',
     );
@@ -638,13 +767,13 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const teamB = await insertTeam('Team B', 'token-b');
       await state.answerService.submit(
         state.session.id,
-        mcQuestion.id,
+        gradable(mcQuestion),
         teamA.id,
         'Paris',
       );
       await state.answerService.submit(
         state.session.id,
-        mcQuestion.id,
+        gradable(mcQuestion),
         teamB.id,
         'London',
       );
@@ -678,7 +807,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('Team A', 'token-a');
       await state.answerService.submit(
         state.session.id,
-        guessQuestion.id,
+        gradable(guessQuestion),
         team.id,
         '1000',
       );
@@ -715,11 +844,16 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('Team A', 'token-a');
       const submitted = await state.answerService.submit(
         state.session.id,
-        matchQuestion.id,
+        gradable(matchQuestion),
         team.id,
         'excalibur|excalibur',
       );
-      await state.answerService.grade(state.session.id, submitted.answerId, 4);
+      await state.answerService.grade(
+        state.session.id,
+        submitted.answerId,
+        gradable(matchQuestion),
+        4,
+      );
 
       await regradeAuto(state.answerService, state.session.id, {
         id: matchQuestion.id,
@@ -754,7 +888,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       // Submitted against the original key: 3 of 4 correct (hammer wrong).
       await state.answerService.submit(
         state.session.id,
-        matchQuestion.id,
+        gradable(matchQuestion),
         team.id,
         'excalibur|shield|web|web',
       );
@@ -783,7 +917,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam(teamName, `token-${teamName}`);
       const submitted = await state.answerService.submit(
         state.session.id,
-        state.question.id,
+        gradable(state.question),
         team.id,
         value,
       );
@@ -836,7 +970,12 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     it("keeps the moderator's grade on an answer that matches neither key", async () => {
       const { submitted } = await submitAs('A', 'Banana');
-      await state.answerService.grade(state.session.id, submitted.answerId, 1);
+      await state.answerService.grade(
+        state.session.id,
+        submitted.answerId,
+        gradable(state.question),
+        1,
+      );
 
       await regradeMatchOrHuman(
         state.answerService,
@@ -853,7 +992,12 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
 
     it("keeps a moderator's zero on an answer the old key matched", async () => {
       const { submitted } = await submitAs('A', 'Apple');
-      await state.answerService.grade(state.session.id, submitted.answerId, 0);
+      await state.answerService.grade(
+        state.session.id,
+        submitted.answerId,
+        gradable(state.question),
+        0,
+      );
 
       await regradeMatchOrHuman(
         state.answerService,
@@ -925,14 +1069,14 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const slow = await insertTeam('Slow Team', 'token-slow');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         fast.id,
         'Paris',
         0,
       );
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         slow.id,
         'Paris',
         TIMER_SECONDS * 1000,
@@ -955,7 +1099,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('Mid Team', 'token-mid');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'Paris',
         5_000,
@@ -980,14 +1124,14 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('Reviser', 'token-rev');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'London',
         500,
       );
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'Paris',
         10_000,
@@ -1007,7 +1151,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('Fast Team', 'token-fast');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'Paris',
         0,
@@ -1032,7 +1176,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const slow = await insertTeam('Slow Team', 'token-slow');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         slow.id,
         'Paris',
         9_000,
@@ -1052,7 +1196,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const legacy = await insertTeam('Legacy Team', 'token-legacy');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         legacy.id,
         'Paris',
         null,
@@ -1072,7 +1216,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const wrong = await insertTeam('Wrong Team', 'token-wrong');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         wrong.id,
         'London',
         0,
@@ -1100,7 +1244,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('The Quizzards', 'token-1');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'excalibur|shield|excalibur|excalibur',
         TIMER_SECONDS * 1000,
@@ -1131,7 +1275,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       // Exactly one pair wrong (hammer) -> 2 points base (round(4 / 2)).
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'excalibur|shield|web|web',
         TIMER_SECONDS * 1000,
@@ -1159,14 +1303,14 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const slow = await insertTeam('Slow Team', 'token-slow');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         fast.id,
         'Paris',
         0,
       );
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         slow.id,
         'Paris',
         7_000,
@@ -1191,7 +1335,6 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const freshService = new AnswerService(
         freshEm.getRepository<Answer, AnswerRepository>(Answer),
         freshEm.getRepository<Team, TeamRepository>(Team),
-        freshEm.getRepository<Question, QuestionRepository>(Question),
       );
       await regradeAuto(
         freshService,
@@ -1214,7 +1357,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
       const team = await insertTeam('Team', 'token-1');
       await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'Paris',
         TIMER_SECONDS * 1000,

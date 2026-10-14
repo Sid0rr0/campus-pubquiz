@@ -67,6 +67,19 @@ describe('Re-importing the quiz behind a session', () => {
       expect(snapshots.at(-1)?.roundTitles).toEqual(['Picture Round']);
     }
   });
+
+  it('reloads and broadcasts the importing lobby session exactly once', async () => {
+    await reimportActiveQuiz(REIMPORTED_CSV);
+
+    for (const room of [SOCKET_ROOMS.ADMIN, SOCKET_ROOMS.DISPLAY]) {
+      expect(
+        game.payloadsTo<StateSnapshotPayload>(
+          room,
+          SOCKET_EVENTS.STATE_UPDATED,
+        ),
+      ).toHaveLength(1);
+    }
+  });
 });
 
 describe('Re-importing onto a quiz another session is playing', () => {
