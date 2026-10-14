@@ -6,13 +6,10 @@ import type {
   TeamAnswerView,
   Verdict,
 } from '@campus-pubquiz/types';
-import { answerKeyOf, verdictForManualGrade } from '@campus-pubquiz/types';
+import { verdictForManualGrade } from '@campus-pubquiz/types';
 import { Answer } from '@/db/entities/answer.entity';
-import { Question } from '@/db/entities/question.entity';
 import { Team } from '@/db/entities/team.entity';
-import { readQuestionPayload } from '@/db/question-payload';
 import { AnswerRepository } from '@/db/repositories/answer.repository';
-import { QuestionRepository } from '@/db/repositories/question.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import {
   canGradeByHand,
@@ -31,10 +28,6 @@ export interface SubmittedAnswer {
   pointsAwarded: number;
   gradedAt: string | null;
   verdict: Verdict | null;
-}
-
-export interface GradedAnswer {
-  questionId: number;
 }
 
 /** A question as grading sees it: the scoring inputs plus the id its answers hang off. SeededQuestion satisfies it. */
@@ -92,30 +85,17 @@ export class AnswerService {
   constructor(
     @InjectRepository(Answer) private readonly answers: AnswerRepository,
     @InjectRepository(Team) private readonly teams: TeamRepository,
-    @InjectRepository(Question)
-    private readonly questions: QuestionRepository,
   ) {}
 
+  /** Stores a team's answer to `question` (the session's copy) and grades it as the Grading policy decides. */
   async submit(
     gameSessionId: number,
-    questionId: number,
+    question: GradableQuestion,
     teamId: number,
     value: string,
     responseMs: number | null = null,
   ): Promise<SubmittedAnswer> {
-    const row = await this.questions.findOneOrFail(questionId, {
-      fields: ['type', 'answer', 'points', 'payload'],
-    });
-    const payload = readQuestionPayload(row);
-    const question: ScoredQuestion = {
-      type: row.type,
-      ...answerKeyOf({
-        type: row.type,
-        answer: row.answer,
-        points: row.points,
-        ...payload,
-      }),
-    };
+    const questionId = question.id;
     // Whether this submission sets, clears or keeps the stored grade is the
     // Grading policy's call. The admin can grade an answer as soon as it
     // lands, well before the block locks, and a team can then revise it
@@ -207,27 +187,38 @@ export class AnswerService {
     }));
   }
 
+  /** The id of the question a stored answer in this session is for; throws for an unknown answer. */
+  async questionIdOf(gameSessionId: number, answerId: number): Promise<number> {
+    const answer = await this.answers.findOneOrFail({
+      id: answerId,
+      gameSession: gameSessionId,
+    });
+    return answer.question.id;
+  }
+
+  /** Hand-grades a stored answer against `question`, the session's copy of the question it answers; throws if the answer is not to that question. */
   async grade(
     gameSessionId: number,
     answerId: number,
+    question: GradableQuestion,
     pointsAwarded: number,
-  ): Promise<GradedAnswer> {
-    const answer = await this.answers.findOneOrFail(
-      { id: answerId, gameSession: gameSessionId },
-      { populate: ['question'] },
-    );
+  ): Promise<void> {
+    const answer = await this.answers.findOneOrFail({
+      id: answerId,
+      gameSession: gameSessionId,
+      question: question.id,
+    });
     // Whether this answer may be hand-graded yet is the Grading policy's
     // call (a batch answer only once its batch has run).
-    if (!canGradeByHand(answer.question, answer)) {
+    if (!canGradeByHand(question, answer)) {
       throw new Error(
-        `${answer.question.type} answers can only be graded by hand once the block locks`,
+        `${question.type} answers can only be graded by hand once the block locks`,
       );
     }
     answer.pointsAwarded = pointsAwarded;
-    answer.verdict = verdictForManualGrade(answer.question, pointsAwarded);
+    answer.verdict = verdictForManualGrade(question, pointsAwarded);
     answer.gradedAt = new Date();
     await this.answers.getEntityManager().flush();
-    return { questionId: answer.question.id };
   }
 
   /**

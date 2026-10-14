@@ -1,4 +1,5 @@
 import {
+  getBlockInPlay,
   isQuestionOpenForAnswering,
   SOCKET_EVENTS,
   type SessionState,
@@ -13,6 +14,17 @@ import {
 } from '@/game/state/session-outcome';
 import type { SessionChange } from '@/game/state/session-write';
 import { withAnsweredTeamIds } from '@/game/state/session-updates.util';
+
+/** The session's copy of a question in the block in play, found by the same lookup the answering gate makes. */
+function questionInPlay(session: SessionState, questionId: number) {
+  const { rounds } = session.seededGame;
+  const position = getBlockInPlay(rounds, session.progress).find(
+    (inPlay) => inPlay.questionId === questionId,
+  );
+  return position === undefined
+    ? undefined
+    : rounds[position.roundIndex].questions[position.questionIndex];
+}
 
 /**
  * The answers change module: builds the changes for a team submitting an
@@ -45,13 +57,18 @@ export class AnswersChanges {
       throw new SessionRefusal('You may only submit answers for your own team');
     }
 
+    const question = questionInPlay(session, questionId);
+    if (question === undefined) {
+      throw new SessionRefusal('Answers are locked for this question');
+    }
+
     const responseMs =
       session.phaseStartedAt === null
         ? null
         : Date.now() - session.phaseStartedAt;
     const submitted = await this.answerService.submit(
       session.seededGame.gameSessionId,
-      questionId,
+      question,
       teamId,
       value,
       responseMs,
@@ -90,13 +107,25 @@ export class AnswersChanges {
     answerId: number,
     pointsAwarded: number,
   ): Promise<SessionChange<SessionOutcome>> {
+    const { gameSessionId, rounds } = session.seededGame;
     let questionId: number;
     try {
-      ({ questionId } = await this.answerService.grade(
-        session.seededGame.gameSessionId,
+      questionId = await this.answerService.questionIdOf(
+        gameSessionId,
         answerId,
+      );
+      const question = rounds
+        .flatMap((round) => round.questions)
+        .find(({ id }) => id === questionId);
+      if (question === undefined) {
+        throw new Error('This answer is not to a question in the session');
+      }
+      await this.answerService.grade(
+        gameSessionId,
+        answerId,
+        question,
         pointsAwarded,
-      ));
+      );
     } catch (error) {
       throw new SessionRefusal(
         error instanceof Error ? error.message : 'Unable to grade answer',

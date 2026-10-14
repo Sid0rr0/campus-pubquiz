@@ -1,6 +1,7 @@
 import type { Verdict } from '@campus-pubquiz/types';
 import { Question } from '@/db/entities/question.entity';
 import {
+  gradable,
   regradeAuto,
   regradeBatch,
   setupAnswerServiceTest,
@@ -47,13 +48,13 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
 
     const ack = await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       right.id,
       'Paris',
     );
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       wrong.id,
       'London',
     );
@@ -74,7 +75,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
 
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'a|b|x|x',
     );
@@ -87,18 +88,23 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     const team = await insertTeam('Team', 'token-1');
     const ack = await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'Freddie',
     );
     expect(ack.verdict).toBeNull();
 
-    await state.answerService.grade(state.session.id, ack.answerId, 2);
+    await state.answerService.grade(
+      state.session.id,
+      ack.answerId,
+      gradable(question),
+      2,
+    );
     expect(await verdictsByTeam(question.id)).toEqual({ [team.id]: 'correct' });
 
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'Bowie',
     );
@@ -117,12 +123,17 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
       const team = await insertTeam('Team', 'token-1');
       const ack = await state.answerService.submit(
         state.session.id,
-        question.id,
+        gradable(question),
         team.id,
         'Freddie',
       );
 
-      await state.answerService.grade(state.session.id, ack.answerId, points);
+      await state.answerService.grade(
+        state.session.id,
+        ack.answerId,
+        gradable(question),
+        points,
+      );
 
       expect(await verdictsByTeam(question.id)).toEqual({ [team.id]: verdict });
     },
@@ -133,13 +144,18 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     const team = await insertTeam('Team', 'token-1');
     const ack = await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'Parris',
     );
     expect(ack.verdict).toBeNull();
 
-    await state.answerService.grade(state.session.id, ack.answerId, 4);
+    await state.answerService.grade(
+      state.session.id,
+      ack.answerId,
+      gradable(question),
+      4,
+    );
 
     expect(await verdictsByTeam(question.id)).toEqual({ [team.id]: 'correct' });
   });
@@ -151,7 +167,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     const team = await insertTeam('Slow', 'token-slow');
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'Paris',
       10_000,
@@ -174,7 +190,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     const team = await insertTeam('Team', 'token-1');
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'Paris',
     );
@@ -198,13 +214,13 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     const far = await insertTeam('Far', 'token-far');
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       near.id,
       '99',
     );
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       far.id,
       '10',
     );
@@ -232,7 +248,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
     const team = await insertTeam('Team', 'token-1');
     await state.answerService.submit(
       state.session.id,
-      question.id,
+      gradable(question),
       team.id,
       'Paris',
     );

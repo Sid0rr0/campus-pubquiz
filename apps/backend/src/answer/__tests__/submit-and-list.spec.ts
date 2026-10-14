@@ -1,6 +1,9 @@
 import { Answer } from '@/db/entities/answer.entity';
 import { Question } from '@/db/entities/question.entity';
-import { setupAnswerServiceTest } from '@/answer/__tests__/answer-service-test-utils';
+import {
+  gradable,
+  setupAnswerServiceTest,
+} from '@/answer/__tests__/answer-service-test-utils';
 
 describe('AnswerService (Postgres integration) - submit and list', () => {
   const { state, insertTeam } = setupAnswerServiceTest();
@@ -10,7 +13,7 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     const result = await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
@@ -25,13 +28,13 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Apple',
     );
@@ -50,13 +53,13 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       teamA.id,
       'Banana',
     );
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       teamB.id,
       'Mango',
     );
@@ -85,19 +88,19 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
     await state.answerService.submit(
       state.session.id,
-      question2.id,
+      gradable(question2),
       team.id,
       'Carrot',
     );
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       other.id,
       'Apple',
     );
@@ -139,7 +142,7 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
       4200,
@@ -157,7 +160,7 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
     );
@@ -174,14 +177,14 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
 
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Banana',
       4200,
     );
     await state.answerService.submit(
       state.session.id,
-      state.question.id,
+      gradable(state.question),
       team.id,
       'Apple',
       1000,
@@ -207,7 +210,7 @@ describe('AnswerService (Postgres integration) - submit and list', () => {
     const team = await insertTeam('The Quizzards', 'token-1');
     await state.answerService.submit(
       state.session.id,
-      audioQuestion.id,
+      gradable(audioQuestion),
       team.id,
       'Banana',
     );

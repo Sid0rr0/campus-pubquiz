@@ -391,7 +391,11 @@ itself — the display and other players just see counts.
 1. **Submit** — a player sends `SUBMIT_ANSWER` for any question in
    `blockQuestions`. The server rejects submissions for questions outside the
    open block ("Answers are locked for this question") — locking is enforced
-   server-side, not just hidden in the UI.
+   server-side, not just hidden in the UI. The answer is graded against the
+   question as the session holds it (the same copy the big screen, lock-time
+   grading and key fixes use), never re-read from the question table; hand
+   grading likewise looks the answer's question up in the session and refuses an
+   answer to a question the session doesn't hold.
 2. **Upsert** — answers are keyed `(gameSession, question, team)`;
    re-submitting overwrites (last-write-wins is the desired pub-quiz behavior).
 3. **Acknowledge** — the submitter gets `ANSWER_RECEIVED`, which the phone
