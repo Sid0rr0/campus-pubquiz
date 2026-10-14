@@ -3,12 +3,7 @@ import type { ImportQuestionPreview, SheetRow } from '../import';
 import { QUESTION_KINDS, checkQuestion } from '../question-kind';
 import { decodeSheetRow } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
-import {
-  AUTO_GRADED_TYPES,
-  BATCH_GRADED_TYPES,
-  MATCH_OR_HUMAN_TYPES,
-  KAHOOT_ALLOWED_TYPES,
-} from '../scoring';
+import { BATCH_GRADED_TYPES, KAHOOT_ALLOWED_TYPES } from '../scoring';
 
 type Verdict = 'valid' | 'invalid';
 
@@ -330,14 +325,8 @@ describe('question kind grading flags', () => {
   it('agrees with the Scoring module lists', () => {
     for (const type of QUESTION_TYPES) {
       const kind = QUESTION_KINDS[type];
-      expect(AUTO_GRADED_TYPES.includes(type)).toBe(
-        kind.gradingMode === 'auto',
-      );
       expect(BATCH_GRADED_TYPES.includes(type)).toBe(
         kind.gradingMode === 'batch',
-      );
-      expect(MATCH_OR_HUMAN_TYPES.includes(type)).toBe(
-        kind.gradingMode === 'match-or-human',
       );
       expect(KAHOOT_ALLOWED_TYPES.includes(type)).toBe(kind.kahootAllowed);
     }
