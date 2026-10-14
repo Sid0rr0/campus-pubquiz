@@ -255,6 +255,12 @@ export interface PlayersStatePayload
    * played so far, not just the current block.
    */
   pastRevealedQuestions: BlockRevealQuestionView[];
+  /**
+   * The leaderboard as the big screen draws it, plus how many ranks it has
+   * revealed so far, so a phone shows its own team's placing (and trend) only
+   * once the big screen has revealed that rank.
+   */
+  phoneLeaderboard: { board: LeaderboardBoard; revealCount: number };
 }
 
 /** The view type each socket room is sent. */

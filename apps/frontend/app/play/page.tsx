@@ -161,6 +161,7 @@ function PlayPageContent() {
     showdownRevealStep,
     isAnswerable,
     phoneScreen,
+    phoneLeaderboard,
     feedback,
   } = view;
   const myTeamId = team?.teamId ?? null;
@@ -257,6 +258,8 @@ function PlayPageContent() {
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
           myTeamId={myTeamId}
+          phoneLeaderboard={phoneLeaderboard}
+          isConnected={connectionError === null}
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (

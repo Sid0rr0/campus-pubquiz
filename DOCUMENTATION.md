@@ -326,7 +326,7 @@ showdown state, the closest_guess reveal step, `revealQuestions`).
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt` |
 | Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                            |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                                            |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                        |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -350,6 +350,20 @@ from the session, so a reloaded or second big screen draws the same thing):
 
 `leaderboardRevealCount` stays a separate display field: how many ranks,
 counting up from last place, are revealed.
+
+On the big screen the ranks reveal one per Advance as always; ranks 1 to 3
+come in slower (a drumroll sound on the display, if sound is enabled) and
+rank 1 gets a spotlight. Pressing Advance during an entrance cuts it to its end.
+
+**The phone's leaderboard (`phoneLeaderboard`).** The players view carries the
+same `leaderboardBoard` description plus the reveal count (`{ board,
+revealCount }`). The phone's leaderboard screen shows only the team's own row,
+and only once the big screen has revealed that rank, so the phone never gives
+away what the big screen is still building up to: "You're 4th", or "Joint 2nd"
+for a tie group (from the competition rank). The phone vibrates once when that
+row is revealed live and the team's trend is `up`; never on a first snapshot,
+reconnect or Previous (the live-change rule), and never for a team with no
+trend. A team outside a capped kahoot board has no row.
 
 ### Events
 
