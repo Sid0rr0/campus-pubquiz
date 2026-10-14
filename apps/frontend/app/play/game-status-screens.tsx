@@ -1,3 +1,5 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import type {
   ActiveShowdownView,
@@ -8,6 +10,9 @@ import {
   RulesContent,
   type RulesSettings,
 } from '@/app/components/rules-content';
+import { useOnLiveForwardMove } from '@/app/lib/live-change';
+import { vibrate } from '@/app/lib/vibrate';
+import { EntranceLine } from '@/app/components/round-title-entrance';
 import { ShowdownGuessForm } from '@/app/play/showdown-guess-form';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 
@@ -19,6 +24,7 @@ interface GameStatusScreensProps {
   activeShowdown: ActiveShowdownView | null;
   showdownRevealStep: number;
   myTeamId: number | null;
+  teamName: string | null;
   onSubmitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -56,8 +62,20 @@ export function GameStatusScreens({
   activeShowdown,
   showdownRevealStep,
   myTeamId,
+  teamName,
   onSubmitShowdownGuess,
 }: GameStatusScreensProps) {
+  const isMyTurn =
+    phoneScreen.kind === 'showdown_guessing' &&
+    myTeamId !== null &&
+    activeShowdown?.participants.some(
+      (participant) =>
+        participant.teamId === myTeamId && !participant.hasGuessed,
+    ) === true;
+  // Snapshots only arrive while connected, and the first one after a load or
+  // reconnect is silent, so the buzz fires only when the turn comes live.
+  useOnLiveForwardMove(isMyTurn ? 1 : 0, true, () => vibrate('turn'));
+
   switch (phoneScreen.kind) {
     case 'block':
       return null;
@@ -68,9 +86,13 @@ export function GameStatusScreens({
     case 'lobby':
       return (
         <div className="mt-16 flex flex-col items-center gap-3">
-          <h1 className="text-center font-display text-2xl">
-            Waiting for the quiz to start…
+          <h1 className="text-center font-display text-2xl text-green">
+            You&apos;re in!
           </h1>
+          <p className="text-center">Look for {teamName} on the big screen</p>
+          <p className="text-center text-sm text-foreground/65">
+            Waiting for the quiz to start…
+          </p>
           <a
             href={`/rules?code=${joinCode}`}
             className="text-sm font-extrabold text-cyan underline"
@@ -88,7 +110,21 @@ export function GameStatusScreens({
     case 'round_overview':
       return <LookAtTheScreen className="text-magenta">Rounds</LookAtTheScreen>;
     case 'round_title':
-      return <LookAtTheScreen>{phoneScreen.title}</LookAtTheScreen>;
+      return (
+        <div
+          key={phoneScreen.title}
+          className="mt-16 flex flex-col items-center gap-2 text-center"
+        >
+          <EntranceLine line="kicker">
+            <p className="text-sm font-extrabold tracking-wide text-foreground/55">
+              👀 Look at the screen
+            </p>
+          </EntranceLine>
+          <EntranceLine line="title">
+            <h1 className="font-display text-2xl">{phoneScreen.title}</h1>
+          </EntranceLine>
+        </div>
+      );
     case 'ended':
       return (
         <h1 className="mt-16 text-center font-display text-2xl">
@@ -114,7 +150,11 @@ export function GameStatusScreens({
             )
           : undefined;
       if (!activeShowdown || myTeamId === null || !participant) {
-        return <LookAtTheScreen>Tiebreaker in progress</LookAtTheScreen>;
+        return (
+          <LookAtTheScreen className="animate-pulse motion-reduce:animate-none">
+            Tiebreaker in progress
+          </LookAtTheScreen>
+        );
       }
       return (
         <ShowdownGuessForm

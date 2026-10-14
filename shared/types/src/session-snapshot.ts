@@ -154,6 +154,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
     displayTextScale: session.displayTextScale,
+    isDisplaySoundMuted: session.isDisplaySoundMuted,
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,

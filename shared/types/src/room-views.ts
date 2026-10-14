@@ -114,6 +114,11 @@ export interface StateSnapshotPayload {
    * DEFAULT_DISPLAY_TEXT_SCALE.
    */
   displayTextScale: number;
+  /**
+   * Whether the big screen plays no sounds, admin-editable via
+   * SET_DISPLAY_SOUND_MUTED. Ephemeral (not persisted), defaults to false.
+   */
+  isDisplaySoundMuted: boolean;
   /** This session's configurable settings — see SessionSettings. */
   settings: SessionSettings;
   /**

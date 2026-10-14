@@ -120,6 +120,13 @@ export function withDisplayTextScale(
   return { ...session, displayTextScale };
 }
 
+export function withDisplaySoundMuted(
+  session: SessionState,
+  isDisplaySoundMuted: boolean,
+): SessionState {
+  return { ...session, isDisplaySoundMuted };
+}
+
 /** Sets/replaces the in-progress showdown round and resets the reveal step to 0 — including sudden death's fresh round. */
 export function withActiveShowdownRound(
   session: SessionState,

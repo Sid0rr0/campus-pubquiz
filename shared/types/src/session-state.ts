@@ -75,6 +75,8 @@ export interface SessionState {
   breakEndsAt: number | null;
   /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
   displayTextScale: number;
+  /** Whether the big screen's sounds are muted — see StateSnapshotPayload.isDisplaySoundMuted. */
+  isDisplaySoundMuted: boolean;
   /**
    * The timed-phase key currently "live" — the most recent genuinely-new
    * question or grading block to open — or null before any timed phase has
@@ -179,6 +181,7 @@ export function freshSessionState(
     kahootQuestionEndsAt: null,
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
+    isDisplaySoundMuted: false,
     livePhaseKey: null,
     phaseStartedAt: null,
     phaseElapsedByKey: {},

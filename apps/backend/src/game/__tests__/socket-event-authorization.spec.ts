@@ -94,6 +94,11 @@ const SENDERS: Record<keyof typeof D, EventSender> = {
       gateway.handleSetDisplayTextScale(asSocket(socket), payload),
     payload: () => ({ displayTextScale: DISPLAY_TEXT_SCALE_STEPS[0] }),
   },
+  setDisplaySoundMuted: {
+    send: (gateway, socket, payload) =>
+      gateway.handleSetDisplaySoundMuted(asSocket(socket), payload),
+    payload: () => ({ isDisplaySoundMuted: true }),
+  },
   awardBonus: {
     send: (gateway, socket, payload) =>
       gateway.handleAwardBonus(asSocket(socket), payload),

@@ -33,6 +33,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Before the night',
     paragraphs: [
       'Build the quiz ahead of time (see "Creating a quiz" below) and open it once from the Sessions page to check every round and question. Have the big screen open on /display and your own laptop on /control; teams join from their phones with the join code.',
+      "The Display sound toggle in the Control panel, next to the display text size, mutes or unmutes the big screen's sounds for everyone at once, for example during a speech. It starts unmuted. Phones never play sound.",
       'The quiz is split into blocks: a run of rounds that is graded and revealed together, ending at a round you marked to break after it. The last round always ends a block.',
     ],
   },

@@ -13,13 +13,15 @@ import { useDisplayGame } from '@/app/lib/use-display-game';
 import { displaySounds } from '@/app/lib/display-sounds';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { revealPosition } from '@/app/lib/reveal-position';
+import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
+import { useRoundTitleSting } from '@/app/lib/use-round-title-sting';
 import {
   ClosestGuessRevealScreen,
   closestGuessAnswerProps,
 } from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
-import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
+import { DisplayShowdown } from '@/app/display/display-showdown';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
@@ -69,6 +71,19 @@ function DisplayPageContent() {
       if (isRevealOnAir) displaySounds.play('reveal');
     },
   );
+
+  useRoundTitleSting(
+    snapshot
+      ? {
+          status: snapshot.progress.status,
+          roundIndex: snapshot.progress.roundIndex,
+          screenKind: snapshot.onAirScreen.kind,
+        }
+      : null,
+    !connectionError,
+  );
+
+  useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) silently falls back to the plain picker rather than surfacing a
@@ -316,7 +331,7 @@ function DisplayPageContent() {
         if (!activeShowdown) return null;
         return (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-            <ShowdownRevealScreen
+            <DisplayShowdown
               activeShowdown={activeShowdown}
               step={showdownRevealStep}
             />
