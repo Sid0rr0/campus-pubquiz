@@ -1,6 +1,5 @@
 import {
   ANSWER_FORMATS,
-  gradingSettingsOf,
   resolveAnswerKind,
   type AnswerKind,
   type ImportQuestionPreview,
@@ -9,9 +8,7 @@ import type { EditorQuestion } from '@/app/quizzes/[id]/quiz-draft-state';
 
 /** The answer fields a question saves: its stored `answer` plus whichever of the choice-shaped fields its answer kind uses. */
 export type SavedAnswer = Pick<ImportQuestionPreview, 'answer'> &
-  Partial<
-    Pick<ImportQuestionPreview, 'options' | 'matchTargets' | 'matchScoringMode'>
-  >;
+  Partial<Pick<ImportQuestionPreview, 'options' | 'matchTargets'>>;
 
 /** One answer kind's conversion between a stored question and the editor's draft, through that kind's answer format. */
 interface AnswerKindDraft {
@@ -94,7 +91,6 @@ const matchDraft: AnswerKindDraft = {
     const rights = ANSWER_FORMATS.match.decode(question.answer);
     const lefts = question.options ?? [];
     return {
-      matchScoringMode: gradingSettingsOf(question).matchScoringMode,
       ...(lefts.length > 0
         ? {
             matchPairs: lefts.map((left, index) => ({
@@ -119,7 +115,6 @@ const matchDraft: AnswerKindDraft = {
         pairs.map((pair) => pair.right),
         question.savedDisplayOrder,
       ),
-      matchScoringMode: question.matchScoringMode,
     };
   },
 };

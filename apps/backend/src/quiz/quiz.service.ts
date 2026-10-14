@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
-  extractYoutubeVideoId,
-  parseYoutubeClipFromNotes,
+  previewToStoredFields,
+  rowToPreview,
   type ImportQuestionPreview,
   type ImportRoundPreview,
   type QuestionPayload,
@@ -25,28 +25,6 @@ function toSummaryPayload(question: Question): QuestionPayload {
   return {
     ...(options !== undefined ? { options } : {}),
     ...(matchTargets !== undefined ? { matchTargets } : {}),
-  };
-}
-
-function toQuestionPreview(question: Question): ImportQuestionPreview {
-  const payload = readQuestionPayload(question);
-  return {
-    questionId: question.id,
-    type: question.type,
-    prompt: question.prompt,
-    answer: question.answer,
-    points: question.points,
-    ...(question.notes ? { notes: question.notes } : {}),
-    ...(payload.options ? { options: payload.options } : {}),
-    ...(payload.matchTargets ? { matchTargets: payload.matchTargets } : {}),
-    ...(payload.matchScoringMode
-      ? { matchScoringMode: payload.matchScoringMode }
-      : {}),
-    ...(payload.margin ? { margin: payload.margin } : {}),
-    ...(payload.mediaUrl ? { mediaUrl: payload.mediaUrl } : {}),
-    ...(payload.answerMediaUrl
-      ? { answerMediaUrl: payload.answerMediaUrl }
-      : {}),
   };
 }
 
@@ -164,7 +142,11 @@ export class QuizService {
         kahootMode: round.kahootMode,
         ...(round.category ? { category: round.category } : {}),
         ...(round.author ? { author: round.author } : {}),
-        questions: round.questions.getItems().map(toQuestionPreview),
+        questions: round.questions
+          .getItems()
+          .map((question) =>
+            rowToPreview(question, readQuestionPayload(question)),
+          ),
       })),
     };
   }
@@ -282,40 +264,11 @@ export class QuizService {
       );
 
       for (const [questionIndex, question] of round.questions.entries()) {
-        const youtubeClip =
-          question.mediaUrl && extractYoutubeVideoId(question.mediaUrl)
-            ? parseYoutubeClipFromNotes(question.notes)
-            : undefined;
-        const payload = {
-          ...(question.options ? { options: question.options } : {}),
-          ...(question.matchTargets
-            ? { matchTargets: question.matchTargets }
-            : {}),
-          ...(question.matchScoringMode
-            ? { matchScoringMode: question.matchScoringMode }
-            : {}),
-          ...(question.margin ? { margin: question.margin } : {}),
-          ...(question.mediaUrl ? { mediaUrl: question.mediaUrl } : {}),
-          ...(question.answerMediaUrl
-            ? { answerMediaUrl: question.answerMediaUrl }
-            : {}),
-          ...(youtubeClip?.startSeconds !== undefined
-            ? { mediaStartSeconds: youtubeClip.startSeconds }
-            : {}),
-          ...(youtubeClip?.endSeconds !== undefined
-            ? { mediaEndSeconds: youtubeClip.endSeconds }
-            : {}),
-        };
         const questionNow = new Date();
         const questionData = {
           round: roundRow.id,
           orderIndex: questionIndex,
-          type: question.type,
-          prompt: question.prompt,
-          answer: question.answer,
-          notes: question.notes ?? null,
-          payload,
-          points: question.points,
+          ...previewToStoredFields(question),
           createdAt: questionNow,
           updatedAt: questionNow,
         };

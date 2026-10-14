@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import {
   DEFAULT_SESSION_SETTINGS,
+  rowToSeededQuestion,
   type SeededGame,
   type SeededRound,
   type SessionSettings,
@@ -119,17 +120,9 @@ export class SeedService {
         kahootMode: roundRow.kahootMode,
         category: roundRow.category ?? undefined,
         author: roundRow.author ?? undefined,
-        questions: questionRows.map((row) => ({
-          id: row.id,
-          type: row.type,
-          prompt: row.prompt,
-          points: row.points,
-          answer: row.answer,
-          // The codec keeps only the player-safe payload fields: imported questions
-          // also carry the correct answer in their payload, which must never reach a
-          // QuestionView (snapshots go to every connected phone and the big screen).
-          ...readQuestionPayload(row),
-        })),
+        questions: questionRows.map((row) =>
+          rowToSeededQuestion(row, readQuestionPayload(row)),
+        ),
         questionNotesById: Object.fromEntries(
           questionRows.map((row) => [row.id, row.notes ?? null]),
         ),
@@ -181,14 +174,9 @@ export class SeedService {
         });
         await this.questions.getEntityManager().persistAndFlush(questionRow);
 
-        questions.push({
-          id: questionRow.id,
-          type: questionRow.type,
-          prompt: questionRow.prompt,
-          points: questionRow.points,
-          answer: questionRow.answer,
-          ...readQuestionPayload(questionRow),
-        });
+        questions.push(
+          rowToSeededQuestion(questionRow, readQuestionPayload(questionRow)),
+        );
       }
 
       rounds.push({

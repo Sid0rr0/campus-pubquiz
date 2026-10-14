@@ -6,11 +6,11 @@ Parent spec: `.scratch/question-record-codec/spec.md`
 
 **Blocked by:** 01 (the codec module)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The codec gains row → seeded question; the seed service uses it for real sessions and for the hard-coded fixture, and the comment explaining why only player-safe payload fields reach the seeded game moves with it.
-- [ ] A seeded question never carries a grading setting its type's registry entry doesn't list, even when the stored payload has one.
-- [ ] The block reveal views add the resolved margin (from the Answer key, as today) without removing a stored margin first; the question view conversion still resolves the margin the same way.
-- [ ] The codec round-trip test gains seeded-question cases per type: every allowed payload field survives, a stray setting is dropped, unset stays unset.
-- [ ] The existing seed service, live-edit and reveal/projection specs pass unchanged, including the Number margin and closest_guess no-margin assertions.
-- [ ] `pnpm typecheck` and the backend and shared-types tests pass.
+- [x] The codec gains row → seeded question; the seed service uses it for real sessions and for the hard-coded fixture, and the comment explaining why only player-safe payload fields reach the seeded game moves with it.
+- [x] A seeded question never carries a grading setting its type's registry entry doesn't list, even when the stored payload has one.
+- [x] The block reveal views add the resolved margin (from the Answer key, as today) without removing a stored margin first; the question view conversion still resolves the margin the same way.
+- [x] The codec round-trip test gains seeded-question cases per type: every allowed payload field survives, a stray setting is dropped, unset stays unset.
+- [x] The existing seed service, live-edit and reveal/projection specs pass unchanged, including the Number margin and closest_guess no-margin assertions.
+- [x] `pnpm typecheck` and the backend and shared-types tests pass.

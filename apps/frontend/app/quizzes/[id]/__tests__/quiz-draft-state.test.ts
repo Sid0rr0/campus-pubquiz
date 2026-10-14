@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  ImportPreview,
-  ImportQuestionPreview,
-  ImportRoundPreview,
-  LiveEditFrontier,
-  RoundEditingDescription,
+import {
+  QUESTION_KINDS,
+  type ImportPreview,
+  type ImportQuestionPreview,
+  type ImportRoundPreview,
+  type LiveEditFrontier,
+  type QuestionType,
+  type RoundEditingDescription,
 } from '@campus-pubquiz/types';
 import {
   addRound,
@@ -1246,5 +1248,57 @@ describe('titleAfterImport', () => {
 
   it('takes the import title when the current title is blank', () => {
     expect(titleAfterImport('   ', 'From sheet')).toBe('From sheet');
+  });
+});
+
+describe('grading settings round-trip through the editor, per question type', () => {
+  const stored: Pick<ImportQuestionPreview, 'matchScoringMode' | 'margin'> = {
+    matchScoringMode: 'all_or_nothing',
+    margin: { value: 2.5, unit: 'absolute' },
+  };
+
+  function previewOf(type: QuestionType): ImportQuestionPreview {
+    const base = { type, prompt: 'Q?', points: 1 };
+    if (type === 'match') {
+      return {
+        ...base,
+        answer: 'b|a',
+        options: ['x', 'y'],
+        matchTargets: ['a', 'b'],
+        ...stored,
+      };
+    }
+    return { ...base, answer: '7', ...stored };
+  }
+
+  it.each(Object.keys(QUESTION_KINDS) as QuestionType[])(
+    'keeps exactly the %s type settings from preview to editor and back',
+    (type) => {
+      const listed = QUESTION_KINDS[type].gradingSettings;
+
+      const saved = questionToPreview(
+        questionFromPreview('q1', previewOf(type)),
+      );
+
+      expect('matchScoringMode' in saved).toBe(
+        listed.includes('matchScoringMode'),
+      );
+      expect('margin' in saved).toBe(listed.includes('margin'));
+      if (listed.includes('matchScoringMode')) {
+        expect(saved.matchScoringMode).toBe('all_or_nothing');
+      }
+      if (listed.includes('margin')) {
+        expect(saved.margin).toEqual({ value: 2.5, unit: 'absolute' });
+      }
+    },
+  );
+
+  it('still saves an unreadable margin as not-a-number', () => {
+    const question = {
+      ...questionFromPreview('q1', previewOf('number')),
+      marginValue: 'abc',
+    };
+
+    expect(questionToPreview(question).margin?.value).toBeNaN();
   });
 });

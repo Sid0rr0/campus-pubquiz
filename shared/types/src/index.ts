@@ -41,6 +41,7 @@ export * from './question-csv-codec';
 export * from './question-preview-schema';
 export * from './question-kind';
 export * from './question-payload-schema';
+export * from './question-record-codec';
 export * from './answer-kind';
 export * from './margin';
 export * from './answer-key';

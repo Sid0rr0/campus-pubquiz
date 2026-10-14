@@ -5,6 +5,7 @@ import {
   type GameProgress,
   type Margin,
   projectScreen,
+  rowToSeededQuestion,
   type SeededQuestion,
   type SessionState,
   SOCKET_ROOMS,
@@ -17,14 +18,12 @@ function question(
   type: SeededQuestion['type'],
   margin?: Margin,
 ): SeededQuestion {
-  return {
-    id,
-    type,
-    prompt: `Question ${id}`,
-    points: 1,
-    answer: '100',
-    ...(margin ? { margin } : {}),
-  };
+  // Seeded through the codec, as a session is: a margin stored on a type
+  // that has none never reaches the seeded question.
+  return rowToSeededQuestion(
+    { id, type, prompt: `Question ${id}`, points: 1, answer: '100' },
+    margin ? { margin } : {},
+  );
 }
 
 // Number with a stored margin, an older Number with none, and two types that

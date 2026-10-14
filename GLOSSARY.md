@@ -52,6 +52,10 @@ _Avoid_: scoring, marking
 What an answer is graded against: the correct answer, the points, and the question type's grading settings (a match question's scoring mode, a Number question's margin), with any setting left unset filled in with its default. A key fix is a change to an opened question's answer key.
 _Avoid_: grading fields, key fields
 
+**Question record codec**:
+The one place a question is converted between its stored row (columns plus a parsed payload) and its preview, the shape the quiz editor and import work with. It copies options, match targets, media and clip bounds once, and copies grading settings by spreading the ones the question type registry lists for the type, dropping any other. Unset stays unset; the Answer key owns defaults.
+_Avoid_: question mapper, payload mapper
+
 **Grading policy**:
 The one rule set for what each grading mode does on each grading event: submit, hand grade, lock, kahoot speed scoring, key fix. It also decides what a client may grade now: it works out each answer's grading state, and the clients are sent the result.
 _Avoid_: grading rules, grading service
