@@ -4,8 +4,9 @@ import { defineConfig } from 'vitest/config';
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
 // Parallel agent runs load the machine enough that unbounded workers time
-// tests out at random; CI keeps Vitest's default.
-const LOCAL_MAX_WORKERS = 2;
+// tests out at random; half the cores keeps most of the speed. CI keeps
+// Vitest's default.
+const LOCAL_MAX_WORKERS = '50%';
 
 export default defineConfig({
   esbuild: {

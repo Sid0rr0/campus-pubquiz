@@ -12,6 +12,20 @@ const execFileAsync = promisify(execFile);
 const BACKEND_DIR = `${__dirname}/../..`;
 const CONTAINER_START_TIMEOUT_MS = 120_000;
 
+/**
+ * The container is thrown away after the run, so durability buys nothing:
+ * skipping disk syncs stops every worker's per-test TRUNCATE (and each
+ * CREATE/DROP DATABASE checkpoint) queueing on the Docker VM's disk.
+ */
+const THROWAWAY_DB_FLAGS = [
+  '-c',
+  'fsync=off',
+  '-c',
+  'synchronous_commit=off',
+  '-c',
+  'full_page_writes=off',
+];
+
 /** Thrown by testcontainers when no Docker socket answers. */
 const NO_RUNTIME_ERROR = 'Could not find a working container runtime strategy';
 
@@ -21,6 +35,7 @@ const DOCKER_REQUIRED_MESSAGE =
 async function startContainer() {
   try {
     return await new PostgreSqlContainer('postgres:16-alpine')
+      .withCommand(['postgres', ...THROWAWAY_DB_FLAGS])
       .withStartupTimeout(CONTAINER_START_TIMEOUT_MS)
       .start();
   } catch (error) {
