@@ -322,11 +322,11 @@ showdown state, the closest_guess reveal step, `revealQuestions`).
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| View                            | Fields                                                                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt` |
-| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                        |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                        |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                            |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                                            |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -613,6 +613,14 @@ overridden only after that pass; every other type can be overridden at any
 time. Which list each type is in (auto-graded, kahoot-allowed) is defined once per type in the question type
 registry (`QUESTION_KINDS`, `shared/types/src/question-kind.ts`).
 
+Every answer in the admin answer list (the `ANSWERS_UPDATED` payload and the
+REST answer list) carries a **grading state** the Grading policy works out from
+the same rule that refuses a hand grade: `graded` (it has a grade), `ungraded`
+(no grade yet and the quiz master can grade it now) or `awaiting_batch` (no
+grade yet and graded by its question's batch when the block locks, so it can't
+be hand-graded before then). `/control` renders the state it is sent and never
+asks the question type. The team's own answer view carries no grading state.
+
 Every question also has one **answer kind** — `text`, `number`, `choice`,
 `sort` or `match` — resolved by `resolveAnswerKind`
 (`shared/types/src/answer-kind.ts`). A type whose choices are `required`
@@ -623,8 +631,8 @@ choices are all blank is `text`. Every other type takes its registry input
 kind. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
 encodes, formats and scores a stored answer, and Scoring takes its base score
 from it. `closest_guess` shares the `number` kind but is never scored one
-answer at a time: the Grading policy's `gradeAtSubmit` skips batch types and the batch grader
-decides its result. Any type can
+answer at a time: the Grading policy's `gradeAtSubmit` gives a batch type no
+grade at submit and the batch grader decides its result. Any type can
 carry `media_url`/`answer_media_url` — image vs. audio vs. YouTube is inferred
 from the URL, so there is deliberately no dedicated `picture` type.
 

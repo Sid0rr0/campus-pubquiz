@@ -4,6 +4,7 @@ import {
   QUESTION_KINDS,
   scoreSubmission,
   type GradingMode,
+  type GradingState,
   type ScoredQuestion,
   type ScoreResult,
 } from '@campus-pubquiz/types';
@@ -116,6 +117,19 @@ const CAN_GRADE_BY_HAND: Record<
   // "any row graded" as "the batch ran".
   batch: (stored) => stored.gradedAt !== null,
 };
+
+/**
+ * The grading state of a stored answer, as sent to the quiz master's views: an
+ * answer with a grade is graded; without one it can be graded now or waits for
+ * its batch, by the same hand-grade rule that refuses a grade.
+ */
+export function gradingStateOf(
+  question: Pick<ScoredQuestion, 'type'>,
+  stored: { gradedAt: Date | null },
+): GradingState {
+  if (stored.gradedAt !== null) return 'graded';
+  return canGradeByHand(question, stored) ? 'ungraded' : 'awaiting_batch';
+}
 
 /** A stored answer as the key-fix event reads it. */
 export interface StoredAnswerRow extends StoredAnswerGrade {

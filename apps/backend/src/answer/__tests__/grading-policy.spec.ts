@@ -13,6 +13,7 @@ import {
   gradeOnKeyFix,
   gradeOnSubmit,
   gradesAtLock,
+  gradingStateOf,
   speedScore,
   type StoredAnswerRow,
 } from '@/answer/grading-policy';
@@ -245,6 +246,36 @@ describe('Grading policy: can grade by hand', () => {
 
   it('allows a batch answer once graded', () => {
     expect(canGradeByHand(BATCH, { gradedAt: new Date() })).toBe(true);
+  });
+});
+
+describe('Grading policy: grading state', () => {
+  const GRADED_ROW = { gradedAt: new Date('2026-01-01') };
+  const UNGRADED_ROW = { gradedAt: null };
+
+  it.each(QUESTION_TYPES)('%s: an answer with a grade is graded', (type) => {
+    expect(gradingStateOf({ type }, GRADED_ROW)).toBe('graded');
+  });
+
+  it.each(
+    QUESTION_TYPES.filter(
+      (type) => QUESTION_KINDS[type].gradingMode !== 'batch',
+    ),
+  )('%s: an answer with no grade can be graded now', (type) => {
+    expect(gradingStateOf({ type }, UNGRADED_ROW)).toBe('ungraded');
+  });
+
+  it.each(
+    QUESTION_TYPES.filter(
+      (type) => QUESTION_KINDS[type].gradingMode === 'batch',
+    ),
+  )('%s: an answer with no grade awaits its batch', (type) => {
+    expect(gradingStateOf({ type }, UNGRADED_ROW)).toBe('awaiting_batch');
+  });
+
+  it('a batch answer is graded once its batch ran, never ungraded', () => {
+    expect(gradingStateOf(BATCH, UNGRADED_ROW)).toBe('awaiting_batch');
+    expect(gradingStateOf(BATCH, GRADED_ROW)).toBe('graded');
   });
 });
 

@@ -117,6 +117,7 @@ describe('AdminPage — grading question browsing', () => {
             value: 'Banana',
             pointsAwarded: 0,
             gradedAt: null,
+            gradingState: 'ungraded',
           },
         ],
       },
