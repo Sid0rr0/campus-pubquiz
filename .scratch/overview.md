@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| frontend-happy-dom              | [The frontend suite runs on happy-dom instead of jsdom](frontend-happy-dom/spec.md)                                                                                        | 3       | —          |
 | grading-state                   | [The Grading policy decides whether an answer can be graded now, for the clients too](grading-state/spec.md)                                                               | 3       | —          |
 | leaderboard-before-board        | [The server sends the leaderboard's "before" board](leaderboard-before-board/spec.md)                                                                                      | 2       | —          |
 | phone-browse-back-closest-guess | [A closest_guess question browsed back to on the phone shows fully revealed](phone-browse-back-closest-guess/issues/01-browsed-back-closest-guess-shows-fully-revealed.md) | 1       | —          |

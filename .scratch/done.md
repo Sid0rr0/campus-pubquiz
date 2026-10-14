@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| frontend-happy-dom | [The frontend suite runs on happy-dom instead of jsdom](frontend-happy-dom/spec.md) | 3 |
 | session-quiz-copy | [Every session holds the current quiz, and grading reads only that copy](session-quiz-copy/spec.md) | 2 |
 | closest-guess-reveal-module | [One Closest-guess reveal module owns the reveal steps](closest-guess-reveal-module/spec.md) | 3 |
 | reveal-kind | [Let the reveal view say what kind of reveal it is](reveal-kind/spec.md) | 2 |
