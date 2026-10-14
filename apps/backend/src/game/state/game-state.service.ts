@@ -326,6 +326,19 @@ export class GameStateService implements OnModuleInit {
     );
   }
 
+  /** Admin-set mute for the big screen's sounds — see StateSnapshotPayload.isDisplaySoundMuted. */
+  displaySoundMutedSet(
+    joinCode: string,
+    isDisplaySoundMuted: boolean,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(
+      joinCode,
+      (session) =>
+        this.settingsChanges.displaySoundMuted(session, isDisplaySoundMuted),
+      NOT_TOUCHING_SCORES,
+    );
+  }
+
   /** A showdown guess from `socketId`; checked against the session the write holds, so a guess sent as the reveal starts is counted or refused. */
   submitShowdownGuess(
     joinCode: string,

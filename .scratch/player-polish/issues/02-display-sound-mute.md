@@ -4,11 +4,11 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Backend: setting the mute is validated, saved, and reaches the display view (Jest, test first)
-- [ ] Display: muted → registry plays nothing; unmuted → plays as before (Vitest)
-- [ ] `/control` shows the toggle and reflects the current value
-- [ ] `DOCUMENTATION.md` and `/guide` updated
+- [x] Backend: setting the mute is validated, saved, and reaches the display view (Jest, test first)
+- [x] Display: muted → registry plays nothing; unmuted → plays as before (Vitest)
+- [x] `/control` shows the toggle and reflects the current value
+- [x] `DOCUMENTATION.md` and `/guide` updated
 
 ## Comments

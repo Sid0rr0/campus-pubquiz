@@ -91,6 +91,8 @@ export function MobileAdminBar({ panel, user, onLogout }: MobileAdminBarProps) {
               isJoinOverlayVisible={progress.isJoinOverlayVisible}
               isMediaFullscreen={progress.isMediaFullscreen ?? false}
               canReplayMedia={controls.canReplayMedia}
+              isDisplaySoundMuted={view.isDisplaySoundMuted}
+              onSetDisplaySoundMuted={actions.setDisplaySoundMuted}
               onAction={handleDrawerAction}
               onCloseSession={handleDrawerCloseSession}
             />

@@ -6,6 +6,7 @@ import {
 import type {
   AdminActionPayload,
   SetBreakEndTimePayload,
+  SetDisplaySoundMutedPayload,
   SetDisplayTextScalePayload,
 } from './admin-actions';
 import type {
@@ -51,6 +52,10 @@ export interface ClientToServerProtocol {
   };
   [SOCKET_EVENTS.SET_DISPLAY_TEXT_SCALE]: {
     payload: SetDisplayTextScalePayload;
+    ack: void;
+  };
+  [SOCKET_EVENTS.SET_DISPLAY_SOUND_MUTED]: {
+    payload: SetDisplaySoundMutedPayload;
     ack: void;
   };
   [SOCKET_EVENTS.CREATE_SHOWDOWN_ROUND]: {

@@ -1,17 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
-import { animate, motion } from 'motion/react';
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  type AnimationPlaybackControls,
+} from 'motion/react';
 import type { RankTrend } from '@campus-pubquiz/types';
 import {
   selectLeaderboardRows,
   type LeaderboardPhase,
+  type LeaderboardRow,
   type LeaderboardRowsInput,
 } from '@/app/components/leaderboard-rows';
+import {
+  isTopThreeReveal,
+  rankEntrance,
+} from '@/app/components/leaderboard-entrance';
+import { Podium, podiumEntries } from '@/app/components/podium';
+import { fireConfetti } from '@/app/lib/confetti';
+import { displaySounds } from '@/app/lib/display-sounds';
+import { useOnLiveForwardMove } from '@/app/lib/live-change';
 
 /**
  * Every prop means what {@link LeaderboardRowsInput} documents; the view
  * supplies the phase itself.
  */
-type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'>;
+type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'> & {
+  /** Whether the client's connection is live; the drumroll stays silent otherwise. */
+  isConnected: boolean;
+  /** The last leaderboard of the quiz: the top three stand on a podium and the winner is celebrated. */
+  isFinal?: boolean;
+  /** Called once the winner's fanfare and confetti have gone off, so the Quiz complete screen can skip its own. */
+  onWinnerCelebrated?: () => void;
+};
 
 const RANK_TREND_LABELS: Record<RankTrend, string> = {
   up: 'moved up',
@@ -143,7 +165,13 @@ function AnimatedTotal({
   return <span className={className}>{displayValue}</span>;
 }
 
-export function Leaderboard({ board, revealCount }: LeaderboardProps) {
+export function Leaderboard({
+  board,
+  revealCount,
+  isConnected,
+  isFinal = false,
+  onWinnerCelebrated,
+}: LeaderboardProps) {
   const hasOldState = board.countUpBoard !== undefined;
   const [phase, setPhase] = useState<LeaderboardPhase>(
     hasOldState ? 'old' : 'settled',
@@ -169,44 +197,127 @@ export function Leaderboard({ board, revealCount }: LeaderboardProps) {
   }, [hasOldState]);
 
   const visibleRows = selectLeaderboardRows({ board, revealCount, phase });
+  const newestRankIndex = visibleRows[0]?.rankIndex;
+
+  // Rank reveal stays one rank per Advance; the drumroll marks the three that
+  // matter. A reload or reconnect remounts the board, so it stays silent.
+  useOnLiveForwardMove(revealCount ?? 0, isConnected, () => {
+    if (isFinal && visibleRows[0]?.rankIndex === 0) {
+      // The winner appears with its own fanfare, so no drumroll over it.
+      displaySounds.play('fanfare');
+      fireConfetti();
+      onWinnerCelebrated?.();
+      return;
+    }
+    if (isTopThreeReveal(visibleRows)) {
+      displaySounds.play('drumroll');
+    }
+  });
+
+  const isPodiumMode = isFinal && phase === 'settled';
+  const podiumTeamIds = new Set(
+    podiumEntries(board.entries).map((entry) => entry.teamId),
+  );
+  const listRows = isPodiumMode
+    ? visibleRows.filter((row) => !podiumTeamIds.has(row.entry.teamId))
+    : visibleRows;
+  const standingTeamIds = new Set(
+    visibleRows
+      .filter((row) => podiumTeamIds.has(row.entry.teamId))
+      .map((row) => row.entry.teamId),
+  );
 
   return (
-    <ol className="flex flex-col gap-2">
-      {visibleRows.map(({ entry, rankIndex, label, trend }) => {
-        const totalPointsClassName = 'font-display text-display-3xl';
-        return (
-          <motion.li
-            key={entry.teamId}
-            layout
-            initial={revealCount === undefined ? false : { opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className={rowClasses(rankIndex)}
-          >
-            {trend !== undefined && <RankTrendIcon trend={trend} />}
-            <span
-              className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
-            >
-              {label}
-            </span>
-            <span className="flex-1 font-bold text-display-3xl">
-              {entry.teamName}
-            </span>
-            <BonusIndicator
-              positiveBonusPoints={entry.positiveBonusPoints}
-              negativeBonusPoints={entry.negativeBonusPoints}
-            />
-            {hasOldState ? (
-              <AnimatedTotal
-                value={entry.totalPoints}
-                className={totalPointsClassName}
-              />
-            ) : (
-              <span className={totalPointsClassName}>{entry.totalPoints}</span>
-            )}
-          </motion.li>
-        );
-      })}
-    </ol>
+    <div className="flex flex-col gap-6">
+      {isPodiumMode && standingTeamIds.size > 0 && (
+        <Podium
+          entries={board.entries}
+          visibleTeamIds={standingTeamIds}
+          isStaggered={false}
+        />
+      )}
+      <ol className="flex flex-col gap-2" data-testid="leaderboard-rows">
+        {listRows.map((row) => (
+          <LeaderboardRowItem
+            key={row.entry.teamId}
+            row={row}
+            isAnimatedIn={revealCount !== undefined}
+            isNewest={row.rankIndex === newestRankIndex}
+            hasOldState={hasOldState}
+          />
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+interface LeaderboardRowItemProps {
+  row: LeaderboardRow;
+  /** Whether the row enters with an animation (the reveal walk) or just appears (the plain preview). */
+  isAnimatedIn: boolean;
+  /** Whether this row holds the most recently revealed rank. */
+  isNewest: boolean;
+  hasOldState: boolean;
+}
+
+/** One row. Its entrance runs once on mount and is cut straight to its end as soon as a newer rank is revealed, so an Advance never waits for it. */
+function LeaderboardRowItem({
+  row: { entry, rankIndex, label, trend },
+  isAnimatedIn,
+  isNewest,
+  hasOldState,
+}: LeaderboardRowItemProps) {
+  const isReducedMotion = useReducedMotion() ?? false;
+  const [entrance] = useState(() => rankEntrance(rankIndex, isReducedMotion));
+  const opacity = useMotionValue(isAnimatedIn ? 0 : 1);
+  const y = useMotionValue(isAnimatedIn ? entrance.offsetY : 0);
+  const playbacksRef = useRef<AnimationPlaybackControls[]>([]);
+
+  useEffect(() => {
+    if (!isAnimatedIn) return undefined;
+    const options = {
+      duration: entrance.durationSeconds,
+      ease: 'easeOut',
+    } as const;
+    const playbacks = [animate(opacity, 1, options), animate(y, 0, options)];
+    playbacksRef.current = playbacks;
+    return () => playbacks.forEach((playback) => playback.stop());
+  }, [isAnimatedIn, entrance, opacity, y]);
+
+  useEffect(() => {
+    if (!isNewest) {
+      playbacksRef.current.forEach((playback) => playback.complete());
+    }
+  }, [isNewest]);
+
+  const totalPointsClassName = 'font-display text-display-3xl';
+  return (
+    <motion.li
+      layout
+      style={{ opacity, y }}
+      className={`relative isolate ${rowClasses(rankIndex)}`}
+    >
+      {trend !== undefined && <RankTrendIcon trend={trend} />}
+      <span
+        className={`font-display w-[4em] shrink-0 whitespace-nowrap text-display-3xl ${RANK_ACCENT_CLASSES[rankIndex] ?? 'text-dark-blue/50'}`}
+      >
+        {label}
+      </span>
+      <span className="flex-1 font-bold text-display-3xl">
+        {entry.teamName}
+      </span>
+      <BonusIndicator
+        positiveBonusPoints={entry.positiveBonusPoints}
+        negativeBonusPoints={entry.negativeBonusPoints}
+      />
+      {hasOldState ? (
+        <AnimatedTotal
+          value={entry.totalPoints}
+          className={totalPointsClassName}
+        />
+      ) : (
+        <span className={totalPointsClassName}>{entry.totalPoints}</span>
+      )}
+    </motion.li>
   );
 }

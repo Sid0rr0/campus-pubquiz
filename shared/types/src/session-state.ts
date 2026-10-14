@@ -41,6 +41,12 @@ export interface SeededGame {
   settings: SessionSettings;
 }
 
+/** The teams whose answer to one question got a `correct` and a `partial` verdict. */
+export interface VerdictTally {
+  correct: number;
+  partial: number;
+}
+
 /** DB-only roster shape — live connection state is layered on by the backend. */
 export interface TeamRosterEntry {
   teamId: number;
@@ -69,6 +75,8 @@ export interface SessionState {
   breakEndsAt: number | null;
   /** Text-size multiplier for every /display screen except the header — see StateSnapshotPayload.displayTextScale. */
   displayTextScale: number;
+  /** Whether the big screen's sounds are muted — see StateSnapshotPayload.isDisplaySoundMuted. */
+  isDisplaySoundMuted: boolean;
   /**
    * The timed-phase key currently "live" — the most recent genuinely-new
    * question or grading block to open — or null before any timed phase has
@@ -107,6 +115,13 @@ export interface SessionState {
    * (and after a restart). Ephemeral like leaderboardRevealCount.
    */
   priorStandings: LeaderboardEntry[];
+  /**
+   * How many teams got each question right or partly right, keyed by
+   * questionId (a question nobody got right or partly right has no entry).
+   * Read with the standings at the end of every session write and on
+   * placement, so it always matches the stored verdicts. Ephemeral.
+   */
+  verdictTallies: Record<number, VerdictTally>;
   teams: TeamRosterEntry[];
   answeredTeamIdsByQuestion: Record<number, number[]>;
   /** teamId -> socket.id of the one device currently connected as that team. */
@@ -166,6 +181,7 @@ export function freshSessionState(
     kahootQuestionEndsAt: null,
     breakEndsAt: null,
     displayTextScale: DEFAULT_DISPLAY_TEXT_SCALE,
+    isDisplaySoundMuted: false,
     livePhaseKey: null,
     phaseStartedAt: null,
     phaseElapsedByKey: {},
@@ -173,6 +189,7 @@ export function freshSessionState(
     leaderboard: [],
     leaderboardRevealCount: 0,
     priorStandings: [],
+    verdictTallies: {},
     teams: [],
     answeredTeamIdsByQuestion: {},
     connectedTeamSockets: {},

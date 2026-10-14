@@ -1,6 +1,6 @@
 # Spec: Player polish — motion, sound and haptics for the big moments
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None. Ticket 01 lays the shared rules every other ticket uses; tickets 03–09 are delivered in order (reveal first, ended last) but each is shippable on its own once 01 is in.
 

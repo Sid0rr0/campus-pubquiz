@@ -132,7 +132,7 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
       expect(screen.queryByText(/on your phone/i)).not.toBeInTheDocument();
     });
 
-    it('shows "Tell us what you thought" on the final screen when feedback is collected', () => {
+    it('shows the thank-you and rate-the-rounds message on the final screen when feedback is collected', () => {
       showDisplay({
         progress: { status: 'ended' },
         settings: { collectFeedback: true },
@@ -140,7 +140,23 @@ describe('DisplayPage — renders by the on-air screen kind', () => {
       render(<DisplayPage />);
 
       expect(
-        screen.getByText('Tell us what you thought — on your phone'),
+        screen.getByText(
+          "Thank you for playing today's pub quiz! Rate the rounds and help us make the quiz better - on your phones or talk to us. See you next week!",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('shows only the thank-you on the final screen when feedback is not collected', () => {
+      showDisplay({
+        progress: { status: 'ended' },
+        settings: { collectFeedback: false },
+      });
+      render(<DisplayPage />);
+
+      expect(
+        screen.getByText(
+          "Thank you for playing today's pub quiz! See you next week!",
+        ),
       ).toBeInTheDocument();
     });
 

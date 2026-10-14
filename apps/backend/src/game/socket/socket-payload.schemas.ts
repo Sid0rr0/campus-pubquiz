@@ -107,6 +107,10 @@ export const setDisplayTextScalePayloadSchema = z.object({
   ),
 });
 
+export const setDisplaySoundMutedPayloadSchema = z.object({
+  isDisplaySoundMuted: z.boolean(),
+});
+
 export const awardBonusPayloadSchema = z.object({
   teamId: positiveInt,
   category: z.enum(BONUS_CATEGORIES as [BonusCategory, ...BonusCategory[]]),

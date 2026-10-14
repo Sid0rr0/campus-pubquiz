@@ -33,6 +33,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Before the night',
     paragraphs: [
       'Build the quiz ahead of time (see "Creating a quiz" below) and open it once from the Sessions page to check every round and question. Have the big screen open on /display and your own laptop on /control; teams join from their phones with the join code.',
+      "The Display sound toggle in the Control panel, next to the display text size, mutes or unmutes the big screen's sounds for everyone at once, for example during a speech. It starts unmuted. Phones never play sound.",
       'The quiz is split into blocks: a run of rounds that is graded and revealed together, ending at a round you marked to break after it. The last round always ends a block.',
     ],
   },
@@ -78,7 +79,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'Feedback from teams',
     paragraphs: [
       'The "Collect feedback" switch in the Session Settings panel is on by default and can only be changed in the lobby, like every other setting. While it is on, teams can rate the rounds from their phones, and it is always optional.',
-      'In each break, a "Rate these rounds" card sits above the block browser on the phone, with 1–5 stars for each round of the block that just ended. When the quiz ends, and any showdown is decided, the phone shows "Quiz complete!" followed by a final form: every round with its stars (kahoot rounds are only rated here), an "Anything else?" box and topic suggestions for future rounds.',
+      'In each break, a "Rate these rounds" card sits above the block browser on the phone, with 1–5 stars for each round of the block that just ended. When the quiz ends, and any showdown is decided, the phone shows "Quiz complete!" and the team\'s final placing ("You finished 4th of 12", or "Joint 2nd" for a tie) followed by a final form: every round with its stars (kahoot rounds are only rated here), an "Anything else?" box and topic suggestions for future rounds.',
       'With the switch off, phones show no rating card and no final form — the end screen is just "Quiz complete!" — and ratings and comments are refused. Results are anonymous and appear only on the session stats page, never on Control: each round\'s average rating in the rounds table, then a Comments section (newest first) and a Topic suggestions section (grouped and sorted by how many teams gave them). A session run with the switch off shows "Feedback was off for this session" there instead.',
     ],
   },
@@ -86,6 +87,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     title: 'The leaderboard',
     paragraphs: [
       'The leaderboard can be shown or hidden at any point without disrupting grading or the flow of the quiz; hiding it resumes exactly where you were. While it is showing, Advance and Previous only work the leaderboard and never move the quiz underneath.',
+      'Each Advance reveals one more rank on the big screen, from last place up. The top three come in slower, with a drumroll if sound is enabled, and first place is spotlit. Pressing Advance during that entrance cuts straight to the next rank. Each phone shows its own team\'s placing ("You\'re 4th", or "Joint 2nd" for a tie) once the big screen has revealed it, and buzzes if the team moved up.',
     ],
   },
   {

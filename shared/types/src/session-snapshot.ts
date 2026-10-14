@@ -1,5 +1,6 @@
 import { getBlockInPlay, getBlockInPlayIds } from './block-in-play';
 import {
+  getBlockSeededQuestions,
   getAnsweredTeamIds,
   getBlockQuestions,
   getCurrentQuestion,
@@ -19,6 +20,7 @@ import type {
   DisplayStatePayload,
   PlayersStatePayload,
   StateSnapshotPayload,
+  TeamsCorrect,
   TeamView,
 } from './room-views';
 import {
@@ -57,6 +59,26 @@ function resolveCurrentPhaseTimerView(session: SessionState): {
   };
 }
 
+/**
+ * The teams-correct count for the question on air in 'reveal'. Null outside a
+ * reveal and for a closest_guess question (its reveal names the closest teams).
+ * Teams that gave no answer count in the total.
+ */
+function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
+  if (session.progress.status !== 'reveal') return null;
+  const question =
+    getBlockSeededQuestions(session)[session.progress.revealIndex];
+  if (!question || question.revealKind === 'closest_guess') return null;
+  const tally = session.verdictTallies[question.id];
+  return {
+    correct: tally?.correct ?? 0,
+    partial: tally?.partial ?? 0,
+    // The leaderboard lists every roster team (re-read with each write and on
+    // restore); `session.teams` is only filled as teams join.
+    teamCount: session.leaderboard.length,
+  };
+}
+
 /** The fields only /display reads — added to its view alone by the Screen projection. */
 export function buildDisplayFields(
   session: SessionState,
@@ -68,6 +90,7 @@ export function buildDisplayFields(
   | 'roundAuthors'
   | 'leaderboardRevealCount'
   | 'kahootQuestionEndsAt'
+  | 'teamsCorrect'
 > {
   const { rounds } = session.seededGame;
   const currentRound = rounds[session.progress.roundIndex];
@@ -78,6 +101,7 @@ export function buildDisplayFields(
     roundAuthors: rounds.map((round) => round.author ?? ''),
     leaderboardRevealCount: session.leaderboardRevealCount,
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
+    teamsCorrect: describeTeamsCorrect(session),
   };
 }
 
@@ -130,6 +154,7 @@ export function buildSnapshot(session: SessionState): StateSnapshotPayload {
     closestGuessRevealStep: session.closestGuessRevealStep,
     breakEndsAt: session.breakEndsAt,
     displayTextScale: session.displayTextScale,
+    isDisplaySoundMuted: session.isDisplaySoundMuted,
     settings: session.seededGame.settings,
     activeShowdown: buildActiveShowdownView(
       session.activeShowdownRound,

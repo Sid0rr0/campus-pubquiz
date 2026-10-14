@@ -1,7 +1,26 @@
+import type { ComponentProps } from 'react';
 import { act, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardBoard, LeaderboardEntry } from '@campus-pubquiz/types';
-import { Leaderboard } from '@/app/components/leaderboard';
+import { Leaderboard as ConnectionAwareLeaderboard } from '@/app/components/leaderboard';
+
+const { mockPlaySound, mockFireConfetti } = vi.hoisted(() => ({
+  mockPlaySound: vi.fn(),
+  mockFireConfetti: vi.fn(),
+}));
+
+vi.mock('@/app/lib/confetti', () => ({ fireConfetti: mockFireConfetti }));
+
+vi.mock('@/app/lib/display-sounds', () => ({
+  displaySounds: { play: mockPlaySound },
+}));
+
+/** The board as seen by a connected client unless a test says otherwise. */
+function Leaderboard(
+  props: Omit<ComponentProps<typeof ConnectionAwareLeaderboard>, 'isConnected'>,
+) {
+  return <ConnectionAwareLeaderboard {...props} isConnected />;
+}
 
 // Which teams show, in what order, with which label and trend is row
 // selection's job (leaderboard-rows.test.ts). These tests cover only what
@@ -159,10 +178,6 @@ describe('Leaderboard', () => {
     const HOLD_MS = 900;
     const COUNT_UP_MS = 900;
 
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
     function rowTexts(): string[] {
       return screen
         .getAllByRole('listitem')
@@ -201,6 +216,203 @@ describe('Leaderboard', () => {
       expect(within(settledRows[0]).getByLabelText('moved up')).toHaveClass(
         'text-green',
       );
+    });
+  });
+
+  describe('top-three drama', () => {
+    const FIVE = [
+      ranked(1, 'One', 50, 1),
+      ranked(2, 'Two', 40, 2),
+      ranked(3, 'Three', 30, 3),
+      ranked(4, 'Four', 20, 4),
+      ranked(5, 'Five', 10, 5),
+    ];
+
+    beforeEach(() => {
+      mockPlaySound.mockReset();
+    });
+
+    it('plays the drumroll when an Advance reveals a top-three rank', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={2} />,
+      );
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={3} />);
+
+      expect(mockPlaySound).toHaveBeenCalledTimes(1);
+      expect(mockPlaySound).toHaveBeenCalledWith('drumroll');
+    });
+
+    it('stays silent while ranks below the top three are revealed', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={0} />,
+      );
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={1} />);
+      rerender(<Leaderboard board={described(FIVE)} revealCount={2} />);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when the board loads with the top three already revealed', () => {
+      render(<Leaderboard board={described(FIVE)} revealCount={5} />);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+    });
+
+    it('stays silent for a rank revealed while the client was disconnected', () => {
+      const { rerender } = render(
+        <ConnectionAwareLeaderboard
+          board={described(FIVE)}
+          revealCount={2}
+          isConnected
+        />,
+      );
+
+      rerender(
+        <ConnectionAwareLeaderboard
+          board={described(FIVE)}
+          revealCount={3}
+          isConnected={false}
+        />,
+      );
+      rerender(
+        <ConnectionAwareLeaderboard
+          board={described(FIVE)}
+          revealCount={3}
+          isConnected
+        />,
+      );
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+    });
+
+    it('puts no highlight behind rank 1', () => {
+      render(<Leaderboard board={described(FIVE)} revealCount={5} />);
+
+      expect(
+        screen.queryByTestId('rank-one-spotlight'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps every revealed rank on screen when an Advance arrives mid-entrance', () => {
+      const { rerender } = render(
+        <Leaderboard board={described(FIVE)} revealCount={3} />,
+      );
+
+      rerender(<Leaderboard board={described(FIVE)} revealCount={4} />);
+
+      expect(screen.getAllByRole('listitem')).toHaveLength(4);
+    });
+  });
+  describe('final leaderboard', () => {
+    const SIX = [
+      ranked(1, 'One', 60, 1),
+      ranked(2, 'Two', 50, 2),
+      ranked(3, 'Three', 40, 3),
+      ranked(4, 'Four', 30, 4),
+      ranked(5, 'Five', 20, 5),
+      ranked(6, 'Six', 10, 6),
+    ];
+
+    beforeEach(() => {
+      mockPlaySound.mockReset();
+      mockFireConfetti.mockReset();
+    });
+
+    function renderFinal(revealCount: number) {
+      return render(
+        <Leaderboard
+          board={described(SIX)}
+          revealCount={revealCount}
+          isFinal
+        />,
+      );
+    }
+
+    it('stands the revealed top three on a podium instead of in rows', () => {
+      renderFinal(5);
+
+      const podium = within(screen.getByTestId('podium'));
+      expect(podium.getByText('Three')).toBeInTheDocument();
+      expect(podium.getByText('Two')).toBeInTheDocument();
+      expect(podium.queryByText('One')).not.toBeInTheDocument();
+      const rows = within(screen.getByTestId('leaderboard-rows')).getAllByRole(
+        'listitem',
+      );
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveTextContent('4.Four');
+    });
+
+    it('shows no podium until rank 3 is revealed', () => {
+      renderFinal(2);
+
+      expect(screen.queryByTestId('podium')).not.toBeInTheDocument();
+    });
+
+    it('keeps the plain rows when the board is not the final one', () => {
+      render(<Leaderboard board={described(SIX)} revealCount={6} />);
+
+      expect(screen.queryByTestId('podium')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    });
+
+    it('plays the fanfare and shoots confetti the moment the winner appears', () => {
+      const { rerender } = renderFinal(5);
+      expect(mockFireConfetti).not.toHaveBeenCalled();
+
+      rerender(<Leaderboard board={described(SIX)} revealCount={6} isFinal />);
+
+      expect(mockFireConfetti).toHaveBeenCalledTimes(1);
+      expect(mockPlaySound).toHaveBeenCalledWith('fanfare');
+    });
+
+    it("does not roll the drumroll over the winner's fanfare", () => {
+      const { rerender } = renderFinal(5);
+      mockPlaySound.mockClear();
+
+      rerender(<Leaderboard board={described(SIX)} revealCount={6} isFinal />);
+
+      expect(mockPlaySound).not.toHaveBeenCalledWith('drumroll');
+    });
+
+    it('reports the celebration once it has gone off', () => {
+      const onWinnerCelebrated = vi.fn();
+      const { rerender } = render(
+        <Leaderboard
+          board={described(SIX)}
+          revealCount={5}
+          isFinal
+          onWinnerCelebrated={onWinnerCelebrated}
+        />,
+      );
+
+      rerender(
+        <Leaderboard
+          board={described(SIX)}
+          revealCount={6}
+          isFinal
+          onWinnerCelebrated={onWinnerCelebrated}
+        />,
+      );
+
+      expect(onWinnerCelebrated).toHaveBeenCalledTimes(1);
+    });
+
+    it('celebrates nothing for a runner-up', () => {
+      const { rerender } = renderFinal(4);
+
+      rerender(<Leaderboard board={described(SIX)} revealCount={5} isFinal />);
+
+      expect(mockFireConfetti).not.toHaveBeenCalled();
+      expect(mockPlaySound).not.toHaveBeenCalledWith('fanfare');
+    });
+
+    it('stays silent when the board loads with the winner already revealed', () => {
+      renderFinal(6);
+
+      expect(mockFireConfetti).not.toHaveBeenCalled();
+      expect(mockPlaySound).not.toHaveBeenCalled();
     });
   });
 });

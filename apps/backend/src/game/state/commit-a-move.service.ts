@@ -23,7 +23,10 @@ import {
   settleSession,
   type SavedPhaseTimer,
 } from '@/game/state/session-settle.util';
-import { withLeaderboard } from '@/game/state/session-updates.util';
+import {
+  withLeaderboard,
+  withVerdictTallies,
+} from '@/game/state/session-updates.util';
 import type { StandingsService } from '@/standings/standings.service';
 import type { ShowdownService } from '@/showdown/showdown.service';
 
@@ -137,10 +140,15 @@ export class MoveCommitter {
       now: Date.now(),
       savedPhaseTimer: saved,
     });
-    const leaderboard = await this.standingsService.leaderboard(
-      placed.seededGame.gameSessionId,
+    const { gameSessionId } = placed.seededGame;
+    const [leaderboard, verdictTallies] = await Promise.all([
+      this.standingsService.leaderboard(gameSessionId),
+      this.standingsService.verdictTallies(gameSessionId),
+    ]);
+    return withVerdictTallies(
+      withLeaderboard(placed, leaderboard),
+      verdictTallies,
     );
-    return withLeaderboard(placed, leaderboard);
   }
 
   private async commitProgressMove(

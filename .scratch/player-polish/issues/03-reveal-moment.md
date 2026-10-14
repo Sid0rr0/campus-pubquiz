@@ -4,13 +4,18 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Backend: count counts correct and partial verdicts separately, totals all teams in the session (no-answers included), and is absent on closest_guess (Jest, test first)
-- [ ] Phone: card picks the right text for correct, partial, incorrect and no answer (Vitest)
-- [ ] Phone: card shows with auto-advance off
-- [ ] Phone: no card or vibration on reconnect into a reveal, or on Previous
-- [ ] Display: entrance per answer kind; reduced motion falls back to crossfade
-- [ ] `DOCUMENTATION.md` updated
+- [x] Backend: count counts correct and partial verdicts separately, totals all teams in the session (no-answers included), and is absent on closest_guess (Jest, test first)
+- [x] Phone: card picks the right text for correct, partial, incorrect and no answer (Vitest)
+- [x] Phone: card shows with auto-advance off
+- [x] Phone: no card or vibration on reconnect into a reveal, or on Previous
+- [x] Display: entrance per answer kind; reduced motion falls back to crossfade
+- [x] `DOCUMENTATION.md` updated
 
 ## Comments
+
+- The reveal sting plays through `displaySounds.play('reveal')`; `reveal.mp3` is still a human TODO (ticket 01), a missing file fails silently.
+- The teams-correct count comes from a new ephemeral `SessionState.verdictTallies`, re-read with the standings at the end of every session write and on placement. `teamCount` is the leaderboard length (roster teams), because `session.teams` is only filled as teams join and is empty after a restart.
+- Entrances are `motion` components inside `MotionConfig reducedMotion="user"`: transforms are skipped under reduced motion and what remains is an opacity fade. The look is not covered by tests; check it by hand (frontend :8888).
+- The display's forward-move position is `revealPosition(progress)` (`app/lib/reveal-position.ts`); the phone's is the count of fully revealed questions in its own view.

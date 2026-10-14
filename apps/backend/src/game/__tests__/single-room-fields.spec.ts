@@ -18,9 +18,10 @@ const SINGLE_ROOM_FIELDS: Record<SocketRoomName, readonly string[]> = {
     'leaderboardRevealCount',
     'leaderboardBoard',
     'kahootQuestionEndsAt',
+    'teamsCorrect',
   ],
   admin: ['ungradedQuestionIds', 'phaseStartedAt', 'phaseElapsedMs'],
-  players: ['upcomingQuestions', 'pastRevealedQuestions'],
+  players: ['upcomingQuestions', 'pastRevealedQuestions', 'phoneLeaderboard'],
 };
 
 describe('Screen projection — fields only one room reads', () => {

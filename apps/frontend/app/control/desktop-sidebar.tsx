@@ -39,6 +39,8 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
           isJoinOverlayVisible={progress.isJoinOverlayVisible}
           isMediaFullscreen={progress.isMediaFullscreen ?? false}
           canReplayMedia={controls.canReplayMedia}
+          isDisplaySoundMuted={view.isDisplaySoundMuted}
+          onSetDisplaySoundMuted={actions.setDisplaySoundMuted}
           onAction={actions.sendAction}
           onCloseSession={actions.closeSession}
         />

@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| player-polish | [Player polish — motion, sound and haptics for the big moments](player-polish/spec.md) | 9 |
 | stats-read-standings | [Stats take totals from the Standings module and credit answers by verdict](stats-read-standings/spec.md) | 2 |
 | question-record-codec | [One stored-question codec — a question crosses storage, preview and the seeded game in one place](question-record-codec/spec.md) | 3 |
 | phone-browse-back-closest-guess | [A closest_guess question browsed back to on the phone shows fully revealed](phone-browse-back-closest-guess/issues/01-browsed-back-closest-guess-shows-fully-revealed.md) | 1 |

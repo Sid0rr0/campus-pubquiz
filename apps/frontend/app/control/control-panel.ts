@@ -11,6 +11,7 @@ export type ControlPanelView = Pick<
   | 'answeredTeamIds'
   | 'breakEndsAt'
   | 'displayTextScale'
+  | 'isDisplaySoundMuted'
   | 'activeShowdown'
   | 'advanceStep'
   | 'previousState'
@@ -25,6 +26,7 @@ export type ControlPanelActions = Pick<
   | 'kickTeam'
   | 'setBreakEndTime'
   | 'setDisplayTextScale'
+  | 'setDisplaySoundMuted'
   | 'createShowdownRound'
 > & { closeSession: () => void };
 

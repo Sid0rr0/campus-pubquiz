@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| `player-polish`                 | Motion, sound and haptics for the big moments: reveal, leaderboard, lock, round title, lobby, showdown, ended                                                              | 01–09   | —          |
 
 ## Won't do
 

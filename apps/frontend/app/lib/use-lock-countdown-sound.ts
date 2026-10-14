@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { displaySounds } from '@/app/lib/display-sounds';
 
 const LOCK_COUNTDOWN_TRACK_SECONDS = 60;
 const LOCK_COUNTDOWN_SOUND_SRC = '/sounds/lock-countdown.mp3';
@@ -10,6 +11,13 @@ interface UseLockCountdownSoundOptions {
   lockAt: number | null;
   /** SessionSettings.playLockCountdownSound — sound never plays or primes when false. */
   enabled: boolean;
+  /** The session's display-sound-muted setting; the countdown stays silent while true. */
+  isMuted?: boolean;
+  /**
+   * True on a tab whose other sounds play through the display sound registry:
+   * its "Enable sound" gesture is then needed even with the countdown setting off.
+   */
+  isRegistryInUse?: boolean;
 }
 
 interface UseLockCountdownSoundResult {
@@ -30,6 +38,8 @@ interface UseLockCountdownSoundResult {
 export function useLockCountdownSound({
   lockAt,
   enabled,
+  isMuted = false,
+  isRegistryInUse = false,
 }: UseLockCountdownSoundOptions): UseLockCountdownSoundResult {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [unlocked, setUnlocked] = useState(false);
@@ -55,11 +65,12 @@ export function useLockCountdownSound({
       .play()
       .then(() => primer.pause())
       .catch(() => {});
+    displaySounds.unlock();
     setUnlocked(true);
   }, []);
 
   useEffect(() => {
-    if (!enabled || !unlocked || lockAt === null) {
+    if (!enabled || isMuted || !unlocked || lockAt === null) {
       return;
     }
     const audio = getAudio();
@@ -76,7 +87,8 @@ export function useLockCountdownSound({
       audio.pause();
       audio.currentTime = 0;
     };
-  }, [lockAt, enabled, unlocked]);
+  }, [lockAt, enabled, isMuted, unlocked]);
 
-  return { needsUnlock: enabled && !unlocked, unlock };
+  const canSound = (enabled || isRegistryInUse) && !isMuted;
+  return { needsUnlock: canSound && !unlocked, unlock };
 }

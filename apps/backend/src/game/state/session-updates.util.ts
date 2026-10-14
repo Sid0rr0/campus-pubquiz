@@ -20,6 +20,13 @@ export function withLeaderboard(
   return { ...session, leaderboard };
 }
 
+export function withVerdictTallies(
+  session: SessionState,
+  verdictTallies: SessionState['verdictTallies'],
+): SessionState {
+  return { ...session, verdictTallies };
+}
+
 /**
  * The session a write ends with, its prior standings brought up to date: when
  * the write started from a session whose question was on air with the
@@ -111,6 +118,13 @@ export function withDisplayTextScale(
   displayTextScale: number,
 ): SessionState {
   return { ...session, displayTextScale };
+}
+
+export function withDisplaySoundMuted(
+  session: SessionState,
+  isDisplaySoundMuted: boolean,
+): SessionState {
+  return { ...session, isDisplaySoundMuted };
 }
 
 /** Sets/replaces the in-progress showdown round and resets the reveal step to 0 — including sudden death's fresh round. */

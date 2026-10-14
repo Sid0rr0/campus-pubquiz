@@ -64,6 +64,7 @@ export function adminGameResult(
     awardBonus: vi.fn(ok),
     setBreakEndTime: vi.fn(ok),
     setDisplayTextScale: vi.fn(ok),
+    setDisplaySoundMuted: vi.fn(ok),
     createShowdownRound: vi.fn(ok),
     ...hookOverrides,
   };

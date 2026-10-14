@@ -4,9 +4,9 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Sting plays on the round intro and not on the break round intro or reveal intro (Vitest, test first)
-- [ ] Phone `round_title` uses the same entrance; reduced motion crossfades
+- [x] Sting plays on the round intro and not on the break round intro or reveal intro (Vitest, test first)
+- [x] Phone `round_title` uses the same entrance; reduced motion crossfades
 
 ## Comments

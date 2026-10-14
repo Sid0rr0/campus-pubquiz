@@ -4,11 +4,11 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Phone placing card text for a plain rank and a tie, shown before the feedback form (Vitest, test first)
-- [ ] Phone confetti for ranks 1–3 only
-- [ ] Card waits while a showdown is being played
-- [ ] No confetti or fanfare on a reloaded display or a reconnected phone
+- [x] Phone placing card text for a plain rank and a tie, shown before the feedback form (Vitest, test first)
+- [x] Phone confetti for ranks 1–3 only
+- [x] Card waits while a showdown is being played
+- [x] No confetti or fanfare on a reloaded display or a reconnected phone
 
 ## Comments

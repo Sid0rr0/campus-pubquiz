@@ -1,22 +1,30 @@
 'use client';
 
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
+  isGradedStatus,
   isShowingLastBreak,
   type OnAirScreen,
 } from '@campus-pubquiz/types';
+import { fireConfetti } from '@/app/lib/confetti';
+import { displaySounds } from '@/app/lib/display-sounds';
+import { useOnLiveForwardMove } from '@/app/lib/live-change';
 import { useDisplayGame } from '@/app/lib/use-display-game';
+import { revealPosition } from '@/app/lib/reveal-position';
+import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
+import { EndedScreen } from '@/app/display/ended-screen';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
+import { useRoundTitleSting } from '@/app/lib/use-round-title-sting';
 import {
   ClosestGuessRevealScreen,
   closestGuessAnswerProps,
 } from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
-import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
+import { DisplayShowdown } from '@/app/display/display-showdown';
 import { Leaderboard } from '@/app/components/leaderboard';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
@@ -31,7 +39,9 @@ import {
 } from '@/app/display/question-lock-countdown';
 import { QuestionOpenScreen } from '@/app/display/question-open-screen';
 import { RoundTitleCard } from '@/app/display/round-title-card';
+import { RevealEntranceConfig } from '@/app/display/reveal-entrance';
 import { RoundOverviewScreen } from '@/app/display/round-overview-screen';
+import { TeamsCorrectCount } from '@/app/display/teams-correct-count';
 import { TriviaHeader } from '@/app/display/trivia-header';
 
 function DisplayPageContent() {
@@ -46,13 +56,62 @@ function DisplayPageContent() {
     Boolean(codeFromUrl),
     codeFromUrl,
   );
+  const isConnected = snapshot !== null && !connectionError;
   const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
     useLockCountdownSound({
       lockAt: snapshot?.questionLockAt ?? null,
       enabled:
         snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
+      isMuted: snapshot?.isDisplaySoundMuted ?? false,
+      isRegistryInUse: true,
     });
+  // Set once the final leaderboard has crowned the winner, so Quiz complete
+  // doesn't play the same fanfare and confetti a second time.
+  const hasWinnerBeenCelebratedRef = useRef(false);
+  // Confetti and the fanfare only when the quiz is seen ending live: not on a
+  // reloaded display, not on Previous.
+  useOnLiveForwardMove(
+    snapshot?.onAirScreen.kind === 'ended' ? 1 : 0,
+    isConnected,
+    () => {
+      if (hasWinnerBeenCelebratedRef.current) return;
+      fireConfetti();
+      displaySounds.play('fanfare');
+    },
+  );
+
+  // The sting plays when the quiz moves forward onto a revealed answer,
+  // never for a reloaded screen or a Previous.
+  const isRevealOnAir = snapshot?.progress.status === 'reveal';
+  useOnLiveForwardMove(
+    snapshot ? revealPosition(snapshot.progress) : 0,
+    isConnected,
+    () => {
+      if (isRevealOnAir) displaySounds.play('reveal');
+    },
+  );
+
+  // The block locking is the end of the countdown: one hit when it is seen
+  // live, never for a reloaded screen or a Previous.
+  useOnLiveForwardMove(
+    snapshot && isGradedStatus(snapshot.progress.status) ? 1 : 0,
+    isConnected,
+    () => displaySounds.play('timeUp'),
+  );
+
+  useRoundTitleSting(
+    snapshot
+      ? {
+          status: snapshot.progress.status,
+          roundIndex: snapshot.progress.roundIndex,
+          screenKind: snapshot.onAirScreen.kind,
+        }
+      : null,
+    isConnected,
+  );
+
+  useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
 
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) silently falls back to the plain picker rather than surfacing a
@@ -86,6 +145,7 @@ function DisplayPageContent() {
     progress,
     currentQuestion,
     quizStructure,
+    leaderboard,
     leaderboardBoard,
     leaderboardRevealCount,
     teams,
@@ -100,6 +160,7 @@ function DisplayPageContent() {
     roundAuthors,
     questionLockAt,
     kahootQuestionEndsAt,
+    teamsCorrect,
     breakEndsAt,
     displayTextScale,
     settings,
@@ -123,6 +184,9 @@ function DisplayPageContent() {
   );
   const breakNumber = getBreakNumber(progress.roundIndex, quizStructure);
   const showBonusList = !isShowingLastBreak(progress, quizStructure);
+  // The board shown once the quiz is over, or during its last break, crowns the winners.
+  const isFinalLeaderboard =
+    progress.status === 'ended' || isShowingLastBreak(progress, quizStructure);
 
   function renderScreen(screen: OnAirScreen): ReactNode {
     switch (screen.kind) {
@@ -135,6 +199,11 @@ function DisplayPageContent() {
             <Leaderboard
               board={leaderboardBoard}
               revealCount={leaderboardRevealCount}
+              isConnected={isConnected}
+              isFinal={isFinalLeaderboard}
+              onWinnerCelebrated={() => {
+                hasWinnerBeenCelebratedRef.current = true;
+              }}
             />
           </div>
         );
@@ -142,6 +211,7 @@ function DisplayPageContent() {
         return (
           <LobbyScreen
             teams={teams}
+            isConnected={isConnected}
             joinCode={codeFromUrl}
             maxPlayersPerTeam={settings.maxPlayersPerTeam}
             extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
@@ -247,25 +317,34 @@ function DisplayPageContent() {
           case 'closest_guess_pending': {
             return (
               <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                <ClosestGuessRevealScreen
-                  prompt={revealQuestion.prompt}
-                  closestGuess={revealQuestion.closestGuess}
-                  mediaTestIdPrefix="reveal"
-                  autoplayMedia={settings.autoplayMedia}
-                  {...closestGuessAnswerProps(revealQuestion)}
-                />
+                <RevealEntranceConfig>
+                  <ClosestGuessRevealScreen
+                    prompt={revealQuestion.prompt}
+                    closestGuess={revealQuestion.closestGuess}
+                    mediaTestIdPrefix="reveal"
+                    autoplayMedia={settings.autoplayMedia}
+                    hasEntrance
+                    {...closestGuessAnswerProps(revealQuestion)}
+                  />
+                </RevealEntranceConfig>
               </div>
             );
           }
           case 'answer':
             return (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
-                <QuestionDisplay
-                  question={revealQuestion}
-                  mediaTestIdPrefix="reveal"
-                  autoplayMedia={settings.autoplayMedia}
-                  isFullscreen={progress.isMediaFullscreen}
-                />
+                <RevealEntranceConfig>
+                  <QuestionDisplay
+                    question={revealQuestion}
+                    mediaTestIdPrefix="reveal"
+                    autoplayMedia={settings.autoplayMedia}
+                    isFullscreen={progress.isMediaFullscreen}
+                    hasRevealEntrance
+                  />
+                </RevealEntranceConfig>
+                {teamsCorrect && teamsCorrect.teamCount > 0 && (
+                  <TeamsCorrectCount {...teamsCorrect} />
+                )}
               </div>
             );
           default: {
@@ -275,24 +354,19 @@ function DisplayPageContent() {
         }
       case 'ended':
         return (
-          <div className="flex flex-1 items-center justify-center px-16 text-center">
-            <div className="flex flex-col items-center gap-6">
-              <h1 className="font-display text-display-4xl">Quiz complete!</h1>
-              {screen.isFeedbackPromptShown && (
-                <p className="font-display text-display-2xl text-magenta">
-                  Tell us what you thought — on your phone
-                </p>
-              )}
-            </div>
-          </div>
+          <EndedScreen
+            leaderboard={leaderboard}
+            isFeedbackPromptShown={screen.isFeedbackPromptShown}
+          />
         );
       case 'showdown':
         if (!activeShowdown) return null;
         return (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-8 text-center">
-            <ShowdownRevealScreen
+            <DisplayShowdown
               activeShowdown={activeShowdown}
               step={showdownRevealStep}
+              isConnected={isConnected}
             />
           </div>
         );
