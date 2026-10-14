@@ -12,7 +12,10 @@ import {
 } from '@campus-pubquiz/types';
 import { useDisplayGame } from '@/app/lib/use-display-game';
 import { useLockCountdownSound } from '@/app/lib/use-lock-countdown-sound';
-import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
+import {
+  ClosestGuessRevealScreen,
+  closestGuessAnswerProps,
+} from '@/app/components/closest-guess-reveal-screen';
 import { EnableSoundButton } from '@/app/components/enable-sound-button';
 import { ShowdownRevealScreen } from '@/app/components/showdown-reveal-screen';
 import {
@@ -296,13 +299,6 @@ function DisplayPageContent() {
         switch (revealQuestion.revealKind) {
           case 'closest_guess':
           case 'closest_guess_pending': {
-            const answerProps =
-              revealQuestion.revealKind === 'closest_guess'
-                ? {
-                    correctAnswer: revealQuestion.answer,
-                    answerMediaUrl: revealQuestion.answerMediaUrl,
-                  }
-                : {};
             return (
               <div className="flex flex-1 flex-col items-center justify-center gap-8 px-16 py-8 text-center">
                 <ClosestGuessRevealScreen
@@ -310,7 +306,7 @@ function DisplayPageContent() {
                   closestGuess={revealQuestion.closestGuess}
                   mediaTestIdPrefix="reveal"
                   autoplayMedia={settings.autoplayMedia}
-                  {...answerProps}
+                  {...closestGuessAnswerProps(revealQuestion)}
                 />
               </div>
             );

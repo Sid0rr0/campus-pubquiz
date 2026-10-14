@@ -36,6 +36,30 @@ const ROUNDS = [
   },
 ];
 
+const TOWER_QUESTION = {
+  type: 'closest_guess' as const,
+  prompt: 'How tall is the tower?',
+  answer: '55',
+  closestGuess: {
+    hasSubmissions: true,
+    minGuess: '10',
+    maxGuess: '90',
+    closestGuesses: [{ teamName: 'Team B', value: '50' }],
+  },
+};
+
+const BRIDGE_QUESTION = {
+  type: 'closest_guess' as const,
+  prompt: 'How long is the bridge?',
+  answer: '300',
+  closestGuess: {
+    hasSubmissions: true,
+    minGuess: '100',
+    maxGuess: '900',
+    closestGuesses: [{ teamName: 'Team D', value: '310' }],
+  },
+};
+
 describe('PlayPage — auto-advance setting', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -148,6 +172,69 @@ describe('PlayPage — auto-advance setting', () => {
     expect(screen.getByText('90')).toBeInTheDocument();
     expect(screen.getByText('55')).toBeInTheDocument();
     expect(screen.getByText('Team B')).toBeInTheDocument();
+  });
+
+  it('shows a browsed-back closest_guess question fully revealed while the on-air closest_guess is at an early step', async () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    window.localStorage.setItem(AUTO_ADVANCE_STORAGE_KEY, '0');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: {
+          rounds: [{ questions: [TOWER_QUESTION, BRIDGE_QUESTION] }],
+          progress: { status: 'reveal', revealIndex: 1, questionIndex: 1 },
+          closestGuessRevealStep: 2,
+        },
+        join: { team: TEAM },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    // On air: the bridge question, only as far as its highest guess.
+    expect(screen.getByText('How long is the bridge?')).toBeInTheDocument();
+    expect(screen.queryByText('Team D')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /prev/i }));
+
+    expect(screen.getByText('How tall is the tower?')).toBeInTheDocument();
+    expect(screen.getByText('55')).toBeInTheDocument();
+    expect(screen.getByText('Team B')).toBeInTheDocument();
+  });
+
+  it('builds the on-air closest_guess question up one line per step with auto-advance on', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+    const viewAtStep = (closestGuessRevealStep: number) =>
+      teamLinkResult({
+        session: {
+          rounds: [{ questions: [BRIDGE_QUESTION] }],
+          progress: { status: 'reveal', revealIndex: 0, questionIndex: 0 },
+          closestGuessRevealStep,
+        },
+        join: { team: TEAM },
+      });
+    mockUseTeamLink.mockReturnValue(viewAtStep(0));
+    const { rerender } = renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText('How long is the bridge?')).toBeInTheDocument();
+    expect(screen.queryByText('SMALLEST GUESS')).not.toBeInTheDocument();
+
+    mockUseTeamLink.mockReturnValue(viewAtStep(1));
+    rerender(<PlayPage />);
+    expect(screen.getByText(/SMALLEST GUESS/)).toBeInTheDocument();
+    expect(screen.queryByText(/HIGHEST GUESS/)).not.toBeInTheDocument();
+
+    mockUseTeamLink.mockReturnValue(viewAtStep(2));
+    rerender(<PlayPage />);
+    expect(screen.getByText(/HIGHEST GUESS/)).toBeInTheDocument();
+    expect(screen.queryByText(/ANSWER/)).not.toBeInTheDocument();
+
+    mockUseTeamLink.mockReturnValue(viewAtStep(3));
+    rerender(<PlayPage />);
+    expect(screen.getByText(/ANSWER/)).toBeInTheDocument();
+    expect(screen.queryByText('Team D')).not.toBeInTheDocument();
+
+    mockUseTeamLink.mockReturnValue(viewAtStep(4));
+    rerender(<PlayPage />);
+    expect(screen.getByText('Team D')).toBeInTheDocument();
   });
 
   it('immediately snaps to the newest question when auto-advance is turned back on', async () => {

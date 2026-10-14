@@ -8,7 +8,10 @@ import type {
 } from '@campus-pubquiz/types';
 import { NumberMarginText } from '@/app/components/number-margin-text';
 import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
-import { ClosestGuessRevealScreen } from '@/app/components/closest-guess-reveal-screen';
+import {
+  ClosestGuessRevealScreen,
+  closestGuessAnswerProps,
+} from '@/app/components/closest-guess-reveal-screen';
 import { Button } from '@/app/components/button';
 import { AnswerForm } from '@/app/play/answer-form';
 import { QuestionPicker } from '@/app/play/question-picker';
@@ -54,23 +57,15 @@ interface RevealBodyProps {
 function RevealBody({ revealQuestion, myAnswer }: RevealBodyProps) {
   switch (revealQuestion.revealKind) {
     case 'closest_guess':
-    case 'closest_guess_pending': {
-      const answerProps =
-        revealQuestion.revealKind === 'closest_guess'
-          ? {
-              correctAnswer: revealQuestion.answer,
-              answerMediaUrl: revealQuestion.answerMediaUrl,
-            }
-          : {};
+    case 'closest_guess_pending':
       return (
         <ClosestGuessRevealScreen
           prompt={revealQuestion.prompt}
           closestGuess={revealQuestion.closestGuess}
           mediaTestIdPrefix="play-reveal"
-          {...answerProps}
+          {...closestGuessAnswerProps(revealQuestion)}
         />
       );
-    }
     case 'answer':
       return (
         <QuestionDisplay

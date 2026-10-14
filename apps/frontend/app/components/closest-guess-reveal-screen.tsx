@@ -1,4 +1,8 @@
-import type { ClosestGuessRevealData } from '@campus-pubquiz/types';
+import type {
+  ClosestGuessRevealData,
+  ClosestGuessRevealView,
+  PendingClosestGuessRevealView,
+} from '@campus-pubquiz/types';
 import { AnswerMedia } from '@/app/display/question-display';
 
 interface ClosestGuessRevealScreenProps {
@@ -9,6 +13,18 @@ interface ClosestGuessRevealScreenProps {
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
   autoplayMedia?: boolean;
+}
+
+/** The answer props for a closest-guess reveal question: only the `closest_guess` kind carries the answer; `closest_guess_pending` has none yet. */
+export function closestGuessAnswerProps(
+  question: ClosestGuessRevealView | PendingClosestGuessRevealView,
+): Pick<ClosestGuessRevealScreenProps, 'correctAnswer' | 'answerMediaUrl'> {
+  return question.revealKind === 'closest_guess'
+    ? {
+        correctAnswer: question.answer,
+        answerMediaUrl: question.answerMediaUrl,
+      }
+    : {};
 }
 
 // Shared by /display and /play. Draws exactly the lines it is sent: the
