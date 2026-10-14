@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayPage from '@/app/play/page';
 import { renderWithQuery } from '@/test-utils/query';
 import { teamLinkResult } from './test-utils';
@@ -28,14 +28,6 @@ vi.mock('@/app/lib/sessions-api', async (importOriginal) => {
 });
 
 describe('PlayPage — logout and errors', () => {
-  beforeAll(() => {
-    // Radix Select needs these pointer-capture APIs stubbed under jsdom.
-    window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
-    window.HTMLElement.prototype.setPointerCapture = vi.fn();
-    window.HTMLElement.prototype.releasePointerCapture = vi.fn();
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
-  });
-
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();

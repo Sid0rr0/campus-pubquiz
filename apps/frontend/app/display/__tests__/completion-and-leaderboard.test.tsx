@@ -15,11 +15,13 @@ vi.mock('@/app/lib/use-display-game', () => ({
 }));
 
 // AnimatePresence's exit transition never resolves synchronously across
-// rapid rerender() calls in jsdom (it waits on real animation-frame timing).
-// Only one test in this file rerenders through several screens in a row to
-// simulate a live socket update sequence; replacing AnimatePresence with a
-// passthrough there swaps content on key change immediately, same as every
-// other test in this file already gets from a single static render.
+// rapid rerender() calls under happy-dom (it waits on real animation-frame
+// timing; without this mock the outgoing screen lingers as an empty,
+// opacity-0 wrapper). Only one test in this file rerenders through several
+// screens in a row to simulate a live socket update sequence; replacing
+// AnimatePresence with a passthrough there swaps content on key change
+// immediately, same as every other test in this file already gets from a
+// single static render.
 vi.mock('motion/react', async (importOriginal) => {
   const actual = await importOriginal<typeof import('motion/react')>();
   return {

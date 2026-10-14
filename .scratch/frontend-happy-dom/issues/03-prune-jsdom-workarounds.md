@@ -17,8 +17,20 @@ Parent spec: `.scratch/frontend-happy-dom/spec.md`
 
 **Blocked by:** 02 (The frontend suite runs on happy-dom)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each stub listed above is either removed with its spec still green, or kept with a comment giving the current reason
-- [ ] No comment in the frontend (specs, test helpers or app code) names jsdom as the reason for anything
-- [ ] No production behaviour changes; the full suite is green with the same test count
+- [x] Each stub listed above is either removed with its spec still green, or kept with a comment giving the current reason
+- [x] No comment in the frontend (specs, test helpers or app code) names jsdom as the reason for anything
+- [x] No production behaviour changes; the full suite is green with the same test count
+
+## Comments
+
+**Removed.** The Radix Select pointer-capture (`hasPointerCapture`, `setPointerCapture`, `releasePointerCapture`) and `scrollIntoView` stubs, with their `beforeAll` and import, in the live-session-select, home-page, `/play` join-and-reconnect and `/play` logout-and-errors specs. The `join-form` spec carried the same unlabelled stub block and went too. Each spec passed without them on repeated runs.
+
+**Kept.** The `AnimatePresence` passthrough in the display completion-and-leaderboard spec. Without it the between-questions leaderboard test fails (the outgoing screen lingers as an empty opacity-0 wrapper), so the comment now gives the happy-dom reason. The same passthrough in `screen-kind` was not in scope and is untouched. The `quiz-outline` `scrollIntoView` stubs stay, since that spec asserts on the calls.
+
+**Reworded.** `use-lock-countdown-sound` (spies exist because the spec asserts on play/pause), the `/control` `getDesktopButton` helper (happy-dom does not evaluate media queries either), and the `ResizeObserver` guard in `play/sort-answer.tsx` (comment only: guard is for environments without `ResizeObserver`). `grep -ri jsdom` over `apps/` now finds nothing.
+
+**Extra: iframe noise.** The `/display` media-rendering spec now spies on `console.error` in `beforeEach`, drops only messages containing "Iframe page loading is disabled", forwards everything else, and restores in `afterEach`. A full run's output has no happy-dom iframe lines.
+
+**Verification.** Full frontend suite: 117 files, 1,152 tests, green. `pnpm typecheck` and `pnpm lint` clean.

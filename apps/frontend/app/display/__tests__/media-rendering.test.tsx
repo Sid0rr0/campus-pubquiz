@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
@@ -29,9 +29,30 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
+// The vitest config turns iframe page loading off, so happy-dom logs a
+// NotSupportedError each time the YouTube embed mounts. That is expected here
+// (the specs only inspect the iframe element), so drop exactly that message
+// and let every other console.error through.
+const IFRAME_LOADING_DISABLED = 'Iframe page loading is disabled';
+
+function isIframeLoadingDisabledError(args: readonly unknown[]): boolean {
+  const [first] = args;
+  const message = first instanceof Error ? first.message : String(first);
+  return message.includes(IFRAME_LOADING_DISABLED);
+}
+
 describe('DisplayPage — media rendering', () => {
   beforeEach(() => {
     searchParamsRef.current = new URLSearchParams('code=ABCDEF');
+    const originalConsoleError = console.error.bind(console);
+    vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      if (isIframeLoadingDisabledError(args)) return;
+      originalConsoleError(...args);
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders a question with an image mediaUrl as an image', () => {

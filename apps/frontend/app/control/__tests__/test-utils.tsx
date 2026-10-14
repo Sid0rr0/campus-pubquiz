@@ -29,7 +29,7 @@ export function authenticatedAuthResult(
 
 // Advance/Previous render in both the always-mounted mobile sticky bar and
 // the desktop sidebar (each hidden from the other via a CSS media query that
-// jsdom doesn't evaluate) — scope to the desktop <aside> (the "complementary"
+// happy-dom doesn't evaluate) — scope to the desktop <aside> (the "complementary"
 // landmark) so these queries match exactly one button.
 export function getDesktopButton(name: RegExp): HTMLElement {
   return within(screen.getByRole('complementary')).getByRole('button', {

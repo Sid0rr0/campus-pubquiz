@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import HomePage from '@/app/page';
 import { renderWithQuery } from '@/test-utils/query';
 import { teamLinkResult } from '@/app/play/__tests__/test-utils';
@@ -53,14 +53,6 @@ async function pickLiveSession() {
 }
 
 describe('HomePage', () => {
-  beforeAll(() => {
-    // Radix Select needs these pointer-capture APIs stubbed under jsdom.
-    window.HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
-    window.HTMLElement.prototype.setPointerCapture = vi.fn();
-    window.HTMLElement.prototype.releasePointerCapture = vi.fn();
-    window.HTMLElement.prototype.scrollIntoView = vi.fn();
-  });
-
   beforeEach(() => {
     window.localStorage.clear();
     searchParamsRef.current = new URLSearchParams();
