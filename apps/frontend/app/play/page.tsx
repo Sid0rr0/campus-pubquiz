@@ -257,6 +257,7 @@ function PlayPageContent() {
           activeShowdown={activeShowdown}
           showdownRevealStep={showdownRevealStep}
           myTeamId={myTeamId}
+          teamName={teamName}
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (

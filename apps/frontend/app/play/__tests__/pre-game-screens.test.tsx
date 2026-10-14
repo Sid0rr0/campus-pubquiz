@@ -133,6 +133,28 @@ describe('PlayPage — pre-game screens', () => {
     expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
+  it('confirms the join in the lobby and names the team to look for on the big screen', () => {
+    window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: { progress: { status: 'lobby' } },
+        join: {
+          team: {
+            teamId: 'team-1',
+            teamName: 'The Quizzards',
+            teamToken: 'token-1',
+          },
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByText(/you're in!/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/look for The Quizzards on the big screen/i),
+    ).toBeInTheDocument();
+  });
+
   it('shows a link to the rules page while waiting in the lobby', () => {
     window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
     mockUseTeamLink.mockReturnValue(

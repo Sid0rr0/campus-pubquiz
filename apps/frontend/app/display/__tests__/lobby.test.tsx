@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
+import { displaySounds } from '@/app/lib/display-sounds';
 
 const { mockUseGame, searchParamsRef } = vi.hoisted(() => ({
   mockUseGame: vi.fn(),
@@ -180,6 +181,51 @@ describe('DisplayPage — lobby', () => {
     render(<DisplayPage />);
 
     expect(screen.getByText('1 TEAM JOINED')).toBeInTheDocument();
+  });
+
+  describe('join chime', () => {
+    const lobbyWith = (teams: { teamId: number; teamName: string }[]) => ({
+      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+        progress: { status: 'lobby' },
+        teams,
+      }),
+      connectionError: null,
+      sendAction: vi.fn(),
+    });
+
+    it('does not chime for teams present at the first snapshot', () => {
+      const playSpy = vi.spyOn(displaySounds, 'play');
+      mockUseGame.mockReturnValue(
+        lobbyWith([{ teamId: 1, teamName: 'The Quizzards' }]),
+      );
+
+      render(<DisplayPage />);
+
+      expect(playSpy).not.toHaveBeenCalledWith('chime');
+      playSpy.mockRestore();
+    });
+
+    it('chimes once when teams join after the first snapshot', () => {
+      const playSpy = vi.spyOn(displaySounds, 'play');
+      mockUseGame.mockReturnValue(
+        lobbyWith([{ teamId: 1, teamName: 'The Quizzards' }]),
+      );
+      const { rerender } = render(<DisplayPage />);
+
+      mockUseGame.mockReturnValue(
+        lobbyWith([
+          { teamId: 1, teamName: 'The Quizzards' },
+          { teamId: 2, teamName: 'Beer Necessities' },
+          { teamId: 3, teamName: 'Pub Crawlers' },
+        ]),
+      );
+      rerender(<DisplayPage />);
+
+      expect(
+        playSpy.mock.calls.filter(([name]) => name === 'chime'),
+      ).toHaveLength(1);
+      playSpy.mockRestore();
+    });
   });
 
   it('does not show the connected team names outside the lobby', () => {
