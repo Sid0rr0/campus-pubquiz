@@ -127,6 +127,7 @@ E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when 
 pnpm e2e tests/happy-path.spec.ts          # one file
 pnpm e2e --project=journeys                # one project
 pnpm e2e --repeat-each=5                   # flakiness check
+pnpm e2e:ui                                # Playwright UI mode: pick, run and time-travel through tests
 pnpm e2e --project=backend-restart --no-deps --workers=1 --repeat-each=5   # flakiness check for the restart journey
 pnpm --filter e2e e2e:report               # open the last HTML report
 ```

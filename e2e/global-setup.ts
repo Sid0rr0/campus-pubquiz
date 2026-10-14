@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 import { request } from '@playwright/test';
 import { saveAdminStorageState } from './support/api';
 import { recreateE2eDatabase } from './support/database';
@@ -42,8 +43,25 @@ function run(command: string, args: string[], options: RunOptions): void {
   }
 }
 
+/** E2E_SKIP_BUILD reuses earlier builds; stop with a clear message when one is gone. */
+function assertEarlierBuildsExist(): void {
+  const builds = [
+    path.join(PATHS.backendDir, 'dist', 'scripts', 'migrate.js'),
+    path.join(PATHS.backendDir, 'dist', 'main.js'),
+    path.join(PATHS.frontendDir, NEXT_DIST_DIR),
+  ];
+  const missing = builds.filter((build) => !fs.existsSync(build));
+  if (missing.length > 0) {
+    throw new Error(
+      `E2E_SKIP_BUILD=1 but there is no earlier build (missing: ${missing.join(', ')}).\n` +
+        'Run without E2E_SKIP_BUILD to build both apps first.',
+    );
+  }
+}
+
 function buildApps(): void {
   if (SHOULD_SKIP_BUILD) {
+    assertEarlierBuildsExist();
     console.log('[e2e] E2E_SKIP_BUILD=1: using the earlier builds.');
     return;
   }
