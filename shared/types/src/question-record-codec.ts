@@ -1,5 +1,5 @@
 import type { ImportQuestionPreview } from './import';
-import { QUESTION_KINDS } from './question-kind';
+import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
@@ -34,20 +34,19 @@ export interface StoredQuestionFields {
   payload: QuestionPayload;
 }
 
-type GradingSettingFields = Pick<
-  QuestionPayload,
-  'matchScoringMode' | 'margin'
->;
+type GradingSettingFields = Pick<QuestionPayload, GradingSettingName>;
 
 /** The grading settings the type's registry entry lists, copied from the source; unset ones are left out. */
 function gradingSettingsFrom(
   type: QuestionType,
   source: GradingSettingFields,
 ): GradingSettingFields {
-  return Object.fromEntries(
-    QUESTION_KINDS[type].gradingSettings.flatMap((name) =>
-      source[name] ? [[name, source[name]]] : [],
-    ),
+  return QUESTION_KINDS[type].gradingSettings.reduce<GradingSettingFields>(
+    (settings, name) =>
+      source[name] === undefined
+        ? settings
+        : { ...settings, [name]: source[name] },
+    {},
   );
 }
 

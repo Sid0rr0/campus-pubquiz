@@ -138,6 +138,16 @@ describe('question record codec', () => {
     },
   );
 
+  it('keeps a set margin whose value is zero', () => {
+    const payload: QuestionPayload = {
+      margin: { value: 0, unit: 'absolute' },
+    };
+
+    const preview = rowToPreview(rowOf('number', null), payload);
+
+    expect(preview.margin).toEqual({ value: 0, unit: 'absolute' });
+  });
+
   it.each(QUESTION_TYPES)(
     '%s: row to seeded question carries every payload field the type allows',
     (type) => {

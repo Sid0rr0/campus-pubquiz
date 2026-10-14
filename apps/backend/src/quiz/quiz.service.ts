@@ -28,10 +28,6 @@ function toSummaryPayload(question: Question): QuestionPayload {
   };
 }
 
-function toQuestionPreview(question: Question): ImportQuestionPreview {
-  return rowToPreview(question, readQuestionPayload(question));
-}
-
 export class QuizDraftInvalidError extends Error {
   constructor(public readonly issues: QuizDraftIssue[]) {
     super(
@@ -146,7 +142,11 @@ export class QuizService {
         kahootMode: round.kahootMode,
         ...(round.category ? { category: round.category } : {}),
         ...(round.author ? { author: round.author } : {}),
-        questions: round.questions.getItems().map(toQuestionPreview),
+        questions: round.questions
+          .getItems()
+          .map((question) =>
+            rowToPreview(question, readQuestionPayload(question)),
+          ),
       })),
     };
   }
