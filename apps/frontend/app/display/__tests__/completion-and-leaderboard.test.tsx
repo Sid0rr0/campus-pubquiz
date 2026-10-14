@@ -165,14 +165,9 @@ describe('DisplayPage — completion and leaderboard', () => {
   });
 
   it('opens the between-questions leaderboard on the pre-grading total, not the already-graded one, so the count-up has something to animate', () => {
-    // Regression test: a kahootMode question's points land at the
-    // locking->reveal transition (ensureKahootSpeedScored on the backend),
-    // before isLeaderboardVisible flips true for the between-questions
-    // board. If the frontend captured "the last snapshot while hidden" as
-    // its old-state baseline, it would grab the *already-graded* totals
-    // from the 'reveal' screen instead of the true pre-grading ones — old
-    // and new would be identical, and the animation would have nothing to
-    // count up.
+    // The server sends the standings from before the points landed (which
+    // are captured on the backend), so a freshly loaded big screen has them
+    // too.
     const PRE_GRADING_LEADERBOARD = [
       { teamName: 'The Quizzards', totalPoints: 10 },
     ];
@@ -180,31 +175,6 @@ describe('DisplayPage — completion and leaderboard', () => {
       { teamName: 'The Quizzards', totalPoints: 30 },
     ];
 
-    mockUseGame.mockReturnValue({
-      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [kahootRound],
-        progress: { status: 'locking' },
-        leaderboard: PRE_GRADING_LEADERBOARD,
-      }),
-      connectionError: null,
-      sendAction: vi.fn(),
-    });
-    const { rerender } = render(<DisplayPage />);
-
-    // Grading happens here, on the 'reveal' screen — leaderboard already
-    // updated, but isLeaderboardVisible is still false.
-    mockUseGame.mockReturnValue({
-      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [kahootRound],
-        progress: { status: 'reveal' },
-        leaderboard: POST_GRADING_LEADERBOARD,
-      }),
-      connectionError: null,
-      sendAction: vi.fn(),
-    });
-    rerender(<DisplayPage />);
-
-    // The next question opens behind the between-questions leaderboard.
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
         rounds: [kahootRound],
@@ -216,12 +186,13 @@ describe('DisplayPage — completion and leaderboard', () => {
           isLeaderboardVisible: true,
         },
         leaderboard: POST_GRADING_LEADERBOARD,
+        priorStandings: PRE_GRADING_LEADERBOARD,
         leaderboardRevealCount: 1,
       }),
       connectionError: null,
       sendAction: vi.fn(),
     });
-    rerender(<DisplayPage />);
+    render(<DisplayPage />);
 
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.queryByText('30')).not.toBeInTheDocument();
