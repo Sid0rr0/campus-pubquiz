@@ -67,6 +67,7 @@ function AdminPageContent() {
       enabled:
         snapshot?.settings.playLockCountdownSound ??
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
+      isMuted: snapshot?.isDisplaySoundMuted ?? false,
     });
   const connectedJoinCode = snapshot?.joinCode;
 

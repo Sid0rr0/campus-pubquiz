@@ -23,6 +23,7 @@ const REDUCED_MOTION_FALLBACK_CLASSES =
 
 interface TeamRosterProps {
   teams: TeamView[];
+  isConnected: boolean;
 }
 
 /**
@@ -70,14 +71,14 @@ function useIsOverflowing(
   return { isOverflowing, rowWidthPx };
 }
 
-export function TeamRoster({ teams }: TeamRosterProps) {
+export function TeamRoster({ teams, isConnected }: TeamRosterProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const { isOverflowing, rowWidthPx } = useIsOverflowing(viewportRef, rowRef, [
     teams,
   ]);
 
-  const teamIdsAtLoad = useLobbyChime(teams);
+  const teamIdsAtLoad = useLobbyChime(teams, isConnected);
   const isReducedMotion = useReducedMotion();
 
   // Teams that joined after the roster appeared pop in; reduced motion fades.

@@ -4,6 +4,7 @@ import { TeamRoster } from '@/app/display/team-roster';
 
 interface LobbyScreenProps {
   teams: TeamView[];
+  isConnected: boolean;
   joinCode: string | null | undefined;
   maxPlayersPerTeam: number;
   extraPlayerPenaltyPoints: number;
@@ -11,6 +12,7 @@ interface LobbyScreenProps {
 
 export function LobbyScreen({
   teams,
+  isConnected,
   joinCode,
   maxPlayersPerTeam,
   extraPlayerPenaltyPoints,
@@ -29,7 +31,7 @@ export function LobbyScreen({
           />
         )}
       </div>
-      <TeamRoster teams={teams} />
+      <TeamRoster teams={teams} isConnected={isConnected} />
     </div>
   );
 }

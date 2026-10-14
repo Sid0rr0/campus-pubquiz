@@ -330,6 +330,11 @@ quiz structure, `questionLockAt`, `breakEndsAt`, `displayTextScale`,
 `isDisplaySoundMuted` (the big-screen mute; ephemeral like `displayTextScale`,
 and `/display` hands it to its sound registry), settings, showdown state, the closest_guess reveal step, `revealQuestions`).
 
+Browsers block audio until a tap, so `/display` shows an "Enable sound" button
+until it is tapped, whenever any display sound can play (that is, unless the
+big-screen mute is on), whatever the lock-countdown setting says. The mute also
+silences the lock-countdown track.
+
 **Fields that belong to one room's view:**
 
 | View                            | Fields                                                                                                                                  |

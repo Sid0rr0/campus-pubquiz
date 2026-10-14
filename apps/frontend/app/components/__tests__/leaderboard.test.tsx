@@ -1,13 +1,21 @@
+import type { ComponentProps } from 'react';
 import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LeaderboardBoard, LeaderboardEntry } from '@campus-pubquiz/types';
-import { Leaderboard } from '@/app/components/leaderboard';
+import { Leaderboard as ConnectionAwareLeaderboard } from '@/app/components/leaderboard';
 
 const { mockPlaySound } = vi.hoisted(() => ({ mockPlaySound: vi.fn() }));
 
 vi.mock('@/app/lib/display-sounds', () => ({
   displaySounds: { play: mockPlaySound },
 }));
+
+/** The board as seen by a connected client unless a test says otherwise. */
+function Leaderboard(
+  props: Omit<ComponentProps<typeof ConnectionAwareLeaderboard>, 'isConnected'>,
+) {
+  return <ConnectionAwareLeaderboard {...props} isConnected />;
+}
 
 // Which teams show, in what order, with which label and trend is row
 // selection's job (leaderboard-rows.test.ts). These tests cover only what
@@ -247,6 +255,33 @@ describe('Leaderboard', () => {
 
     it('stays silent when the board loads with the top three already revealed', () => {
       render(<Leaderboard board={described(FIVE)} revealCount={5} />);
+
+      expect(mockPlaySound).not.toHaveBeenCalled();
+    });
+
+    it('stays silent for a rank revealed while the client was disconnected', () => {
+      const { rerender } = render(
+        <ConnectionAwareLeaderboard
+          board={described(FIVE)}
+          revealCount={2}
+          isConnected
+        />,
+      );
+
+      rerender(
+        <ConnectionAwareLeaderboard
+          board={described(FIVE)}
+          revealCount={3}
+          isConnected={false}
+        />,
+      );
+      rerender(
+        <ConnectionAwareLeaderboard
+          board={described(FIVE)}
+          revealCount={3}
+          isConnected
+        />,
+      );
 
       expect(mockPlaySound).not.toHaveBeenCalled();
     });

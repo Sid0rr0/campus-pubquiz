@@ -114,6 +114,76 @@ describe('useLockCountdownSound', () => {
     expect(playSpy).not.toHaveBeenCalled();
   });
 
+  it('never plays the countdown while the display sound is muted', () => {
+    const { result } = renderHook(() =>
+      useLockCountdownSound({ lockAt: 10_000, enabled: true, isMuted: true }),
+    );
+
+    act(() => result.current.unlock());
+
+    // Only the unlock primer plays; the countdown element never starts.
+    expect(playSpy.mock.calls.length).toBe(1);
+  });
+
+  it('stops the countdown when muted mid-lock and resumes on unmute', () => {
+    const { result, rerender } = renderHook(
+      ({ isMuted }: { isMuted: boolean }) =>
+        useLockCountdownSound({ lockAt: 30_000, enabled: true, isMuted }),
+      { initialProps: { isMuted: false } },
+    );
+    act(() => result.current.unlock());
+    const callsAfterUnlock = playSpy.mock.calls.length;
+
+    rerender({ isMuted: true });
+    expect(pauseSpy).toHaveBeenCalled();
+    expect(playSpy.mock.calls.length).toBe(callsAfterUnlock);
+
+    rerender({ isMuted: false });
+    expect(playSpy.mock.calls.length).toBe(callsAfterUnlock + 1);
+  });
+
+  describe('needsUnlock', () => {
+    it('is false when the setting is off and the registry is not in use', () => {
+      const { result } = renderHook(() =>
+        useLockCountdownSound({ lockAt: null, enabled: false }),
+      );
+      expect(result.current.needsUnlock).toBe(false);
+    });
+
+    it('is true when the setting is off but the registry is in use', () => {
+      const { result } = renderHook(() =>
+        useLockCountdownSound({
+          lockAt: null,
+          enabled: false,
+          isRegistryInUse: true,
+        }),
+      );
+      expect(result.current.needsUnlock).toBe(true);
+    });
+
+    it('is false once unlocked, and while muted', () => {
+      const unlocked = renderHook(() =>
+        useLockCountdownSound({
+          lockAt: null,
+          enabled: false,
+          isRegistryInUse: true,
+        }),
+      );
+      act(() => unlocked.result.current.unlock());
+      expect(unlocked.result.current.needsUnlock).toBe(false);
+
+      const muted = renderHook(() =>
+        useLockCountdownSound({
+          lockAt: null,
+          enabled: true,
+          isRegistryInUse: true,
+          isMuted: true,
+        }),
+      );
+      expect(muted.result.current.needsUnlock).toBe(false);
+    });
+  });
+
   it('stops and never resumes the countdown sound once disabled', () => {
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) =>

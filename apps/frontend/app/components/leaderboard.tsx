@@ -24,7 +24,10 @@ import { useOnLiveForwardMove } from '@/app/lib/live-change';
  * Every prop means what {@link LeaderboardRowsInput} documents; the view
  * supplies the phase itself.
  */
-type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'>;
+type LeaderboardProps = Omit<LeaderboardRowsInput, 'phase'> & {
+  /** Whether the client's connection is live; the drumroll stays silent otherwise. */
+  isConnected: boolean;
+};
 
 const RANK_TREND_LABELS: Record<RankTrend, string> = {
   up: 'moved up',
@@ -156,7 +159,11 @@ function AnimatedTotal({
   return <span className={className}>{displayValue}</span>;
 }
 
-export function Leaderboard({ board, revealCount }: LeaderboardProps) {
+export function Leaderboard({
+  board,
+  revealCount,
+  isConnected,
+}: LeaderboardProps) {
   const hasOldState = board.countUpBoard !== undefined;
   const [phase, setPhase] = useState<LeaderboardPhase>(
     hasOldState ? 'old' : 'settled',
@@ -186,7 +193,7 @@ export function Leaderboard({ board, revealCount }: LeaderboardProps) {
 
   // Rank reveal stays one rank per Advance; the drumroll marks the three that
   // matter. A reload or reconnect remounts the board, so it stays silent.
-  useOnLiveForwardMove(revealCount ?? 0, true, () => {
+  useOnLiveForwardMove(revealCount ?? 0, isConnected, () => {
     if (isTopThreeReveal(visibleRows)) {
       displaySounds.play('drumroll');
     }

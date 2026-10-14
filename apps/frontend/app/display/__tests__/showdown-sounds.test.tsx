@@ -36,11 +36,17 @@ const DECIDED: ActiveShowdownView = {
 };
 
 function renderAt(step: number, round = ROUND) {
-  const view = render(<DisplayShowdown activeShowdown={round} step={step} />);
+  const view = render(
+    <DisplayShowdown activeShowdown={round} step={step} isConnected />,
+  );
   return {
-    moveTo: (nextStep: number, nextRound = round) =>
+    moveTo: (nextStep: number, nextRound = round, isConnected = true) =>
       view.rerender(
-        <DisplayShowdown activeShowdown={nextRound} step={nextStep} />,
+        <DisplayShowdown
+          activeShowdown={nextRound}
+          step={nextStep}
+          isConnected={isConnected}
+        />,
       ),
   };
 }
@@ -71,6 +77,15 @@ describe('DisplayShowdown sounds', () => {
 
   it('is silent when loaded mid-reveal (reload or reconnect)', () => {
     renderAt(2);
+
+    expect(displaySounds.play).not.toHaveBeenCalled();
+  });
+
+  it('is silent for a step taken while the connection was down', () => {
+    const { moveTo } = renderAt(0);
+
+    moveTo(1, ROUND, false);
+    moveTo(1, ROUND, true);
 
     expect(displaySounds.play).not.toHaveBeenCalled();
   });
