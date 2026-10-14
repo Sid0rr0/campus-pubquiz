@@ -15,6 +15,11 @@ import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { SettingsModal } from '@/app/play/settings-modal';
+import { LockMoment } from '@/app/play/lock-moment';
+import {
+  SavedConfirmation,
+  useSavedConfirmation,
+} from '@/app/play/saved-confirmation';
 import { buildOpenedQuestions } from '@/app/play/opened-questions';
 import { buildPickerRounds } from '@/app/play/question-picker-slots';
 import { usePhoneQuestionBrowser } from '@/app/play/use-phone-question-browser';
@@ -54,6 +59,9 @@ function PlayPageContent() {
   // header so its mobile hamburger can surface them — see
   // player-menu-context.tsx.
   usePublishPlayerMenu(teamName, team, handleLogOut, openSettings);
+  const { isSaved, submitAndConfirm } = useSavedConfirmation(
+    game?.submitAnswer,
+  );
   const {
     selectedQuestion,
     revealQuestion,
@@ -147,7 +155,6 @@ function PlayPageContent() {
     myFeedback,
     sendFeedback,
     seenQuestions,
-    submitAnswer,
     submitShowdownGuess,
   } = game;
   const {
@@ -238,6 +245,11 @@ function PlayPageContent() {
         </p>
       )}
       <div className="order-2 md:order-3">
+        <LockMoment
+          status={progress.status}
+          lockAt={view.questionLockAt}
+          isConnected={connectionError === null}
+        />
         {feedback?.kind === 'break_card' && (
           // A join payload replaces the saved ratings, so a reconnect starts
           // the card afresh: a tap still waiting on the old connection's ack
@@ -286,7 +298,7 @@ function PlayPageContent() {
               myAnswers={myAnswers}
               myAnswerPoints={selectedQuestionPoints}
               onSelectQuestion={selectQuestion}
-              onSubmitAnswer={submitAnswer}
+              onSubmitAnswer={submitAndConfirm}
               navigation={navigation}
             />
           </div>
@@ -326,6 +338,7 @@ function PlayPageContent() {
             : null
         }
       />
+      <SavedConfirmation isVisible={isSaved} />
       <SettingsModal
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
