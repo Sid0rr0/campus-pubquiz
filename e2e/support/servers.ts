@@ -28,8 +28,7 @@ function resolveNextBin(): string {
  * NODE_ENV stays unset on purpose: production would make the session cookie
  * Secure (this stack is plain HTTP) and force SSL on the database connection.
  *
- * Specs that need a backend restart call `backend.stop()` and `backend.start()`
- * (or `backend.restart()`); the process is shared by every worker.
+ * Specs that need a backend restart call `backend.stop()` and `backend.start()`; the process is shared by every worker.
  */
 export const backend = new ManagedServer({
   name: 'backend',

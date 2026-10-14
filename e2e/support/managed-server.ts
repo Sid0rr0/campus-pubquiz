@@ -96,11 +96,6 @@ export class ManagedServer {
     return pid !== null && isProcessAlive(pid) && this.isOurProcess(pid);
   }
 
-  async restart(): Promise<void> {
-    await this.stop();
-    await this.start();
-  }
-
   /** Guards against a pid file left by a crashed run whose pid now belongs to an unrelated process. */
   private isOurProcess(pid: number): boolean {
     try {

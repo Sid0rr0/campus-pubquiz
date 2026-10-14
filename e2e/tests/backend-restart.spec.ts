@@ -1,10 +1,12 @@
 import { expect, test } from '../fixtures/restartable-backend';
 import { QUIZ_NIGHT } from '../support/quiz-night';
+import { startWithTwoTeams } from '../support/two-team-quiz';
 
 const { freeText, choice } = QUIZ_NIGHT;
 const WRONG_CAPITAL = 'Lyon';
 const HALF_CREDIT_ANSWER = 'Marseille';
-// Long enough that the backend is still counting down when it goes away and comes back.
+// Longer than the 1-2 seconds the other journeys use: stopping the backend, waiting for every screen to notice
+// and starting it again takes several seconds, and the test asserts the block is still locking once it is back.
 const RESTART_LOCK_GRACE_SECONDS = 10;
 
 // Team A: the key (changed from a wrong answer) and the right planet. Team B: a half-credit answer and the wrong planet.
@@ -18,12 +20,7 @@ test('a backend restart mid-block leaves every screen resynced, answers intact, 
   joinPhone,
 }) => {
   // 1. Two teams join; the quiz master opens two questions and both teams answer both.
-  const phoneA = await joinPhone('Team A');
-  const phoneB = await joinPhone('Team B');
-  await control.expectTeams([phoneA.teamName, phoneB.teamName]);
-  await control.startQuiz();
-  await control.advance('round_intro');
-  await control.advance('question_open');
+  const { phoneA, phoneB } = await startWithTwoTeams(control, joinPhone);
   await phoneA.submitText(WRONG_CAPITAL);
   await phoneB.submitText(HALF_CREDIT_ANSWER);
   await control.advance('question_open');
@@ -103,12 +100,7 @@ test.describe('restart while the block is locking', () => {
     joinPhone,
   }) => {
     // 1. Both teams answer the first question; the quiz master opens the last one and starts locking.
-    const phoneA = await joinPhone('Team A');
-    const phoneB = await joinPhone('Team B');
-    await control.expectTeams([phoneA.teamName, phoneB.teamName]);
-    await control.startQuiz();
-    await control.advance('round_intro');
-    await control.advance('question_open');
+    const { phoneA, phoneB } = await startWithTwoTeams(control, joinPhone);
     await phoneA.submitText(freeText.key);
     await phoneB.submitText(HALF_CREDIT_ANSWER);
     await control.advance('question_open');
@@ -124,9 +116,13 @@ test.describe('restart while the block is locking', () => {
     await display.expectDisconnected();
     await restartableBackend.start();
 
-    // 3. The block still locks: the break starts without anyone pressing a button.
-    await control.expectStatus('break_intro');
+    // 3. The restart finished inside the grace window: the game is still locking and the countdown still runs.
     await control.expectNoConnectionWarning();
+    await control.expectStatus('locking');
+    await display.expectLockCountdown();
+
+    // 4. The block still locks: the break starts without anyone pressing a button.
+    await control.expectStatus('break_intro');
     await phoneA.openQuestion(1, 1);
     await phoneA.expectAnswersLocked();
     await phoneA.expectSubmitted(freeText.key);
@@ -134,12 +130,17 @@ test.describe('restart while the block is locking', () => {
     await phoneB.expectAnswersLocked();
     await phoneB.expectSubmitted(HALF_CREDIT_ANSWER);
 
-    // 4. Grading and the reveal work after the restart.
+    // 5. Grading, the reveal and the standings work after the restart.
     await control.selectQuestion(QUIZ_NIGHT.roundOneTitle, 1);
     await control.grade(phoneB.teamName, 'half points');
     await control.advance('reveal_intro');
     await control.advance('reveal');
     await phoneA.expectRevealedPoints(freeText.points, freeText.points);
     await phoneB.expectRevealedPoints(freeText.halfPoints, freeText.points);
+    await control.toggleLeaderboard();
+    await control.pressAdvanceSlot();
+    await display.expectLeaderboardRow(phoneB.teamName, freeText.halfPoints);
+    await control.pressAdvanceSlot();
+    await display.expectLeaderboardRow(phoneA.teamName, freeText.points);
   });
 });

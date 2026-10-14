@@ -1,5 +1,6 @@
 import { test } from '../fixtures';
 import { QUIZ_NIGHT } from '../support/quiz-night';
+import { startWithTwoTeams } from '../support/two-team-quiz';
 
 const { freeText, choice } = QUIZ_NIGHT;
 const WRONG_CAPITAL = 'Lyon';
@@ -9,12 +10,7 @@ test('a reloaded phone gets its team, its answers and the current question back'
   joinPhone,
 }) => {
   // 1. Two teams join and the quiz master opens the first question.
-  const phoneA = await joinPhone('Team A');
-  const phoneB = await joinPhone('Team B');
-  await control.expectTeams([phoneA.teamName, phoneB.teamName]);
-  await control.startQuiz();
-  await control.advance('round_intro');
-  await control.advance('question_open');
+  const { phoneA, phoneB } = await startWithTwoTeams(control, joinPhone);
   await phoneA.expectQuestion(freeText.prompt);
 
   // 2. Team A answers the first question wrongly, then the game moves on to the second.
@@ -54,12 +50,7 @@ test('a phone that goes offline while the game moves on shows the current questi
   joinPhone,
 }) => {
   // 1. Two teams join; the quiz master opens the first question.
-  const phoneA = await joinPhone('Team A');
-  const phoneB = await joinPhone('Team B');
-  await control.expectTeams([phoneA.teamName, phoneB.teamName]);
-  await control.startQuiz();
-  await control.advance('round_intro');
-  await control.advance('question_open');
+  const { phoneA, phoneB } = await startWithTwoTeams(control, joinPhone);
   await phoneA.expectQuestion(freeText.prompt);
   await phoneA.submitText(freeText.key);
 
