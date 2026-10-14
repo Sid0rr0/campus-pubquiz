@@ -324,11 +324,32 @@ showdown state, the closest_guess reveal step, `revealQuestions`).
 
 | View                            | Fields                                                                                                              |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `priorStandings`, `kahootQuestionEndsAt` |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt` |
 | Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                        |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                        |
 
 A field only one room reads is added to that room's view type, not the base.
+
+**The display's leaderboard (`leaderboardBoard`).** The server describes the
+board once and `/display` draws it as sent (the Screen projection builds it
+from the session, so a reloaded or second big screen draws the same thing):
+
+- `entries` — the standings, already capped: a kahoot round keeps the first
+  five by final standing, splitting a tie at the cutoff (the reveal walk's step
+  count is taken over the same capped entries).
+- `countUpBoard` — present only for the between-questions kahoot board: the
+  prior standings of the teams in `entries`, which the board holds, counts up
+  from, then reorders into `entries`. Absent everywhere else, and on the first
+  board after a backend restart (the prior standings are ephemeral).
+- `trends` — `up` / `down` / `same` per team id, shown once the board settles.
+  The basis is the prior standings in a kahoot round (between questions, round
+  end, quiz end), otherwise the standings with the current round's points
+  backed out. When the prior standings are a real board with more than one team
+  all tied (e.g. everyone on 0), every team is `up`. A team missing from the
+  basis has no trend. Ranks are compared with the shared ranking rule.
+
+`leaderboardRevealCount` stays a separate display field: how many ranks,
+counting up from last place, are revealed.
 
 ### Events
 

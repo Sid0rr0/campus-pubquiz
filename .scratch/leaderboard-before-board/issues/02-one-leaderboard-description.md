@@ -6,7 +6,7 @@ Parent spec: `.scratch/leaderboard-before-board/spec.md`
 
 **Blocked by:** 01 (prior standings on the server)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Screen projection builds the description for the display view. The trend basis is the prior standings in a kahoot round (between questions, round end and quiz end), otherwise the standings with the current round's points backed out, and otherwise no trend. Every team is `up` on an all-tied real prior board with more than one team, and a team missing from the basis has no trend. Ranks are compared with the shared ranking rule.
 - [ ] The kahoot top-five cap (first five by final standing, splitting a tie at the cutoff) is applied by the same shared module that gives the reveal walk its step count; the description's entries arrive capped.

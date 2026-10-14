@@ -1,11 +1,20 @@
 import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { LeaderboardEntry } from '@campus-pubquiz/types';
+import type { LeaderboardBoard, LeaderboardEntry } from '@campus-pubquiz/types';
 import { Leaderboard } from '@/app/components/leaderboard';
 
 // Which teams show, in what order, with which label and trend is row
 // selection's job (leaderboard-rows.test.ts). These tests cover only what
-// the view adds: the phase timers and what a row renders.
+// the view adds: the phase timers and what a row renders. Every board is a
+// description fixture, as the server sends it.
+
+/** A description with no count-up board and no trends unless given. */
+function described(
+  entries: LeaderboardEntry[],
+  extra: Partial<LeaderboardBoard> = {},
+): LeaderboardBoard {
+  return { entries, trends: {}, ...extra };
+}
 
 function ranked(
   teamId: number,
@@ -36,7 +45,7 @@ const ENTRIES = [
 
 describe('Leaderboard', () => {
   it('renders the plain preview: every team, no trend icons, no animation', () => {
-    render(<Leaderboard entries={ENTRIES} />);
+    render(<Leaderboard board={described(ENTRIES)} />);
 
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
@@ -49,17 +58,13 @@ describe('Leaderboard', () => {
   });
 
   it('renders a revealed row with its label, name, total and trend icon', () => {
-    const entries = [
-      ranked(1, 'Overtaker', 25, 1, {
-        roundPoints: [{ roundTitle: 'Round 1', points: 15 }],
-      }),
-      ranked(2, 'Leader', 20, 2, {
-        roundPoints: [{ roundTitle: 'Round 1', points: 0 }],
-      }),
-    ];
+    const entries = [ranked(1, 'Overtaker', 25, 1), ranked(2, 'Leader', 20, 2)];
 
     render(
-      <Leaderboard entries={entries} revealCount={1} currentRoundIndex={0} />,
+      <Leaderboard
+        board={described(entries, { trends: { 1: 'up', 2: 'down' } })}
+        revealCount={1}
+      />,
     );
 
     const rows = screen.getAllByRole('listitem');
@@ -74,12 +79,12 @@ describe('Leaderboard', () => {
     it('shows one yellow star per point for a small positive bonus total', () => {
       render(
         <Leaderboard
-          entries={[
+          board={described([
             ranked(1, 'First Place', 33, 1, {
               bonusPoints: 3,
               positiveBonusPoints: 3,
             }),
-          ]}
+          ])}
         />,
       );
 
@@ -91,12 +96,12 @@ describe('Leaderboard', () => {
     it('shows one magenta star per point for a small negative bonus total (penalty)', () => {
       render(
         <Leaderboard
-          entries={[
+          board={described([
             ranked(1, 'First Place', 28, 1, {
               bonusPoints: -2,
               negativeBonusPoints: -2,
             }),
-          ]}
+          ])}
         />,
       );
 
@@ -108,12 +113,12 @@ describe('Leaderboard', () => {
     it('shows the number and a single star once the bonus total exceeds 9', () => {
       render(
         <Leaderboard
-          entries={[
+          board={described([
             ranked(1, 'First Place', 40, 1, {
               bonusPoints: 12,
               positiveBonusPoints: 12,
             }),
-          ]}
+          ])}
         />,
       );
 
@@ -123,12 +128,12 @@ describe('Leaderboard', () => {
     it('shows both a yellow and a magenta badge for a team with both positive and negative bonus awards', () => {
       render(
         <Leaderboard
-          entries={[
+          board={described([
             ranked(1, 'First Place', 30, 1, {
               positiveBonusPoints: 1,
               negativeBonusPoints: -1,
             }),
-          ]}
+          ])}
         />,
       );
 
@@ -141,7 +146,7 @@ describe('Leaderboard', () => {
     });
 
     it('shows no badge for a team with no bonus points', () => {
-      render(<Leaderboard entries={ENTRIES} />);
+      render(<Leaderboard board={described(ENTRIES)} />);
 
       expect(screen.queryByText('★', { exact: false })).not.toBeInTheDocument();
     });
@@ -168,9 +173,10 @@ describe('Leaderboard', () => {
       vi.useFakeTimers();
       render(
         <Leaderboard
-          entries={NEW}
-          previousEntries={OLD}
-          currentRoundIndex={0}
+          board={described(NEW, {
+            countUpBoard: OLD,
+            trends: { 1: 'up', 2: 'down' },
+          })}
         />,
       );
 

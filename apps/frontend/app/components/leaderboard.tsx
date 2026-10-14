@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { animate, motion } from 'motion/react';
-import { KAHOOT_LEADERBOARD_TOP_N } from '@campus-pubquiz/types';
+import type { RankTrend } from '@campus-pubquiz/types';
 import {
   selectLeaderboardRows,
   type LeaderboardPhase,
   type LeaderboardRowsInput,
-  type RankTrend,
 } from '@/app/components/leaderboard-rows';
-
-/** `maxRank` for a Kahoot round — at most N teams are shown. Re-exported here (from shared/types) so existing imports of this constant from this module keep working. */
-export { KAHOOT_LEADERBOARD_TOP_N };
 
 /**
  * Every prop means what {@link LeaderboardRowsInput} documents; the view
@@ -147,15 +143,8 @@ function AnimatedTotal({
   return <span className={className}>{displayValue}</span>;
 }
 
-export function Leaderboard({
-  entries,
-  revealCount,
-  maxRank,
-  currentRoundIndex,
-  previousEntries,
-  trendBaseline,
-}: LeaderboardProps) {
-  const hasOldState = previousEntries !== undefined;
+export function Leaderboard({ board, revealCount }: LeaderboardProps) {
+  const hasOldState = board.countUpBoard !== undefined;
   const [phase, setPhase] = useState<LeaderboardPhase>(
     hasOldState ? 'old' : 'settled',
   );
@@ -174,20 +163,12 @@ export function Leaderboard({
       clearTimeout(toCounting);
       clearTimeout(toSettled);
     };
-    // Deliberately only depends on hasOldState, not entries/previousEntries:
+    // Deliberately only depends on hasOldState, not the board's contents:
     // this sequence should play once per mount (a fresh leaderboard screen),
     // not restart on every snapshot broadcast while it's on screen.
   }, [hasOldState]);
 
-  const visibleRows = selectLeaderboardRows({
-    entries,
-    revealCount,
-    maxRank,
-    previousEntries,
-    trendBaseline,
-    currentRoundIndex,
-    phase,
-  });
+  const visibleRows = selectLeaderboardRows({ board, revealCount, phase });
 
   return (
     <ol className="flex flex-col gap-2">
