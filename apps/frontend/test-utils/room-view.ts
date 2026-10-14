@@ -77,6 +77,8 @@ export interface SessionDescription {
   /** Defaults the roster from its rows when `teams` is left out. */
   leaderboard?: LeaderboardDescription[];
   leaderboardRevealCount?: number;
+  /** The standings before the latest scoring; omit for none (the board counts up from 0). */
+  priorStandings?: LeaderboardDescription[];
   /** The closest_guess reveal sub-step on air (0-indexed); the phone is sent each step's stats and answer only once it is reached. */
   closestGuessRevealStep?: number;
   timers?: Partial<
@@ -242,6 +244,7 @@ export function buildSessionState(
     teams,
     leaderboard,
     leaderboardRevealCount: description.leaderboardRevealCount ?? 0,
+    priorStandings: buildLeaderboard(description.priorStandings ?? []),
     closestGuessRevealStep: description.closestGuessRevealStep ?? 0,
     closestGuessSummaries: closestGuessSummariesOf(roundDescriptions, rounds),
     answeredTeamIdsByQuestion: description.answeredTeams ?? {},

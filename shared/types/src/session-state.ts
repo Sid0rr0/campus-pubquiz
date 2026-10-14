@@ -100,6 +100,13 @@ export interface SessionState {
    * the leaderboard. Ephemeral — not persisted, resets on toggle/new game.
    */
   leaderboardRevealCount: number;
+  /**
+   * The standings as they stood before the latest scoring the leaderboard
+   * should show: the leaderboard the session had when a write started while a
+   * question was on air with the board hidden. Empty before any such write
+   * (and after a restart). Ephemeral like leaderboardRevealCount.
+   */
+  priorStandings: LeaderboardEntry[];
   teams: TeamRosterEntry[];
   answeredTeamIdsByQuestion: Record<number, number[]>;
   /** teamId -> socket.id of the one device currently connected as that team. */
@@ -165,6 +172,7 @@ export function freshSessionState(
     openedQuestionIds: [],
     leaderboard: [],
     leaderboardRevealCount: 0,
+    priorStandings: [],
     teams: [],
     answeredTeamIdsByQuestion: {},
     connectedTeamSockets: {},

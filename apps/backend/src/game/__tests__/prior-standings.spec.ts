@@ -1,0 +1,124 @@
+import { SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { asSocket } from '@/game/__tests__/test-utils';
+import {
+  freezeClockAt,
+  restoreClock,
+  setupRealStoreGatewayTest,
+  type RealStoreGateway,
+} from '@/game/__tests__/real-store-test-utils';
+
+const KAHOOT_TIMER_SECONDS = 10;
+const BONUS_POINTS = 3;
+
+describe('GameGateway — prior standings on the display view', () => {
+  const harness = setupRealStoreGatewayTest();
+  let game: RealStoreGateway;
+
+  beforeEach(async () => {
+    freezeClockAt('2024-01-01T00:00:00.000Z');
+    // Kahoot points are speed-scored at the lock, so they land after the
+    // board the question opened on.
+    const question = {
+      type: 'multiple_choice' as const,
+      prompt: 'Capital of France?',
+      answer: 'Paris',
+      points: 10,
+      payload: { options: ['Paris', 'London'] },
+    };
+    game = await harness.createGateway({
+      teamNames: ['First', 'Second'],
+      rounds: [
+        {
+          title: 'Speed Round',
+          kahootMode: true,
+          questions: [question, { ...question, prompt: 'Capital of UK?' }],
+        },
+      ],
+      settings: { kahootQuestionTimerSeconds: KAHOOT_TIMER_SECONDS },
+    });
+    await game.act('START_QUIZ');
+    await game.act('ADVANCE'); // -> round_intro
+    await game.act('ADVANCE'); // -> question_open q0
+  });
+
+  afterEach(() => {
+    restoreClock();
+  });
+
+  function displayView() {
+    return game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY);
+  }
+
+  function totals(
+    board: { teamId: number; totalPoints: number }[],
+  ): Record<number, number> {
+    return Object.fromEntries(board.map((e) => [e.teamId, e.totalPoints]));
+  }
+
+  async function awardBonus(teamIndex: number) {
+    const admin = await game.connectAdmin();
+    await game.gateway.handleAwardBonus(asSocket(admin), {
+      teamId: game.teams[teamIndex].teamId,
+      category: 'shot',
+      points: BONUS_POINTS,
+    });
+  }
+
+  /** Locks q0, then points land for the first team on the reveal, and the next question opens behind the leaderboard. */
+  async function landFirstQuestionPoints() {
+    await game.act('ADVANCE'); // -> locking
+    await game.act('ADVANCE'); // -> reveal
+    await awardBonus(0);
+    await game.act('ADVANCE'); // -> q1 open behind the leaderboard
+  }
+
+  it('holds the standings from before the last question points landed', async () => {
+    await landFirstQuestionPoints();
+
+    const view = displayView();
+    const [first, second] = game.teams;
+    expect(view.progress.isLeaderboardVisible).toBe(true);
+    expect(totals(view.leaderboard)[first.teamId]).toBeGreaterThan(0);
+    expect(totals(view.priorStandings)).toEqual({
+      [first.teamId]: 0,
+      [second.teamId]: 0,
+    });
+  });
+
+  it('sends a resyncing big screen the same prior standings', async () => {
+    await landFirstQuestionPoints();
+
+    const resynced = await game.resync('display');
+
+    expect(resynced.priorStandings).toEqual(displayView().priorStandings);
+    expect(resynced.priorStandings).not.toEqual([]);
+  });
+
+  it('counts a bonus awarded while the question is on air into the prior standings', async () => {
+    await awardBonus(1);
+    await landFirstQuestionPoints();
+
+    const prior = totals(displayView().priorStandings);
+
+    expect(prior[game.teams[1].teamId]).toBe(BONUS_POINTS);
+    expect(prior[game.teams[0].teamId]).toBe(0);
+  });
+
+  it('leaves the prior standings untouched while the leaderboard is shown', async () => {
+    await landFirstQuestionPoints();
+    const before = displayView().priorStandings;
+
+    await awardBonus(1);
+    await game.act('ADVANCE'); // reveals a rank, board still up
+
+    expect(displayView().priorStandings).toEqual(before);
+  });
+
+  it('has no prior standings after a backend restart', async () => {
+    await landFirstQuestionPoints();
+
+    const restarted = await game.restart();
+
+    expect((await restarted.resync('display')).priorStandings).toEqual([]);
+  });
+});

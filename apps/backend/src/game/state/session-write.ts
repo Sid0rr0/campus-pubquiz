@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { LeaderboardEntry, SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
-import { withLeaderboard } from '@/game/state/session-updates.util';
+import {
+  withLeaderboard,
+  withPriorStandings,
+} from '@/game/state/session-updates.util';
 import { deadlinesOf, type SessionOutcome } from '@/game/state/session-outcome';
 
 /** What a change returns: the new session and the outcome the write resolves to. */
@@ -226,9 +229,10 @@ export class SessionWrite {
   private async commit<T>(
     joinCode: string,
     started: SessionState,
-    { session, outcome }: SessionChange<T>,
+    { session: changed, outcome }: SessionChange<T>,
     refreshStandings: boolean,
   ): Promise<T> {
+    const session = withPriorStandings(started, changed);
     if (refreshStandings) await this.storeWithStandings(joinCode, session);
     else this.sessions.set(joinCode, session);
     return reportDeadlineChange(started, this.read(joinCode), outcome);
