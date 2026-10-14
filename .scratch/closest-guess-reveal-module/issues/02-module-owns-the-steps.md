@@ -1,6 +1,6 @@
 # 02: The Closest-guess reveal module owns the steps, and both screens are sent the trimmed question
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 01
 

@@ -8,7 +8,7 @@ import { getFeedbackField } from './feedback-rounds';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
-import { toBlockQuestionView } from './question-view-conversions';
+import { FULLY_REVEALED_STEP, shownAtStep } from './closest-guess-reveal';
 import { describeAdvanceStep, describePreviousState } from './move-plan';
 import {
   describeAdminIndicators,
@@ -17,7 +17,6 @@ import {
 } from './on-air-screen';
 import type {
   BlockRevealQuestionView,
-  ClosestGuessRevealData,
   PlayersRevealQuestionView,
 } from './question-views';
 import type { StateViewByRoom } from './room-views';
@@ -31,46 +30,17 @@ import {
 } from './session-snapshot';
 import { SOCKET_ROOMS, type SocketRoomName } from './socket-events';
 
-// Closest-guess reveal steps (see closest-guess-reveal): each one adds a
-// line to the big screen, and the phone is sent each only once it is on air.
-const HIGHEST_GUESS_STEP = 2;
-const ANSWER_STEP = 3;
-const CLOSEST_TEAMS_STEP = 4;
-
-function trimClosestGuessStats(
-  stats: ClosestGuessRevealData,
-  step: number,
-): ClosestGuessRevealData {
-  const { minGuess, maxGuess, closestGuesses } = stats;
-  return {
-    hasSubmissions: true,
-    ...(step >= 1 && minGuess !== undefined ? { minGuess } : {}),
-    ...(step >= HIGHEST_GUESS_STEP && maxGuess !== undefined
-      ? { maxGuess }
-      : {}),
-    closestGuesses: step >= CLOSEST_TEAMS_STEP ? closestGuesses : [],
-  };
-}
-
-/** The on-air closest_guess question as the big screen has shown it at `step`; any other question, and one nobody guessed for (a single-step reveal), is returned whole. */
-function trimToClosestGuessStep(
-  question: BlockRevealQuestionView,
-  step: number,
-): PlayersRevealQuestionView {
-  if (
-    question.revealKind !== 'closest_guess' ||
-    !question.closestGuess.hasSubmissions ||
-    step >= CLOSEST_TEAMS_STEP
-  ) {
-    return question;
-  }
-  const trimmedStats = trimClosestGuessStats(question.closestGuess, step);
-  if (step >= ANSWER_STEP) return { ...question, closestGuess: trimmedStats };
-  return {
-    ...toBlockQuestionView(question),
-    revealKind: 'closest_guess_pending',
-    closestGuess: trimmedStats,
-  };
+/** The question on air in 'reveal', shown only as far as its closest-guess step has got; earlier reveal questions, and every question outside 'reveal', are sent whole. */
+function trimOnAirQuestion(
+  revealQuestions: readonly BlockRevealQuestionView[],
+  { status, revealIndex }: GameProgress,
+  closestGuessRevealStep: number,
+): PlayersRevealQuestionView[] {
+  return revealQuestions.map((question, index) =>
+    status === 'reveal' && index === revealIndex
+      ? shownAtStep(question, closestGuessRevealStep)
+      : question,
+  );
 }
 
 /**
@@ -82,18 +52,18 @@ function trimToClosestGuessStep(
  */
 function trimToRevealWalk(
   revealQuestions: readonly BlockRevealQuestionView[],
-  { status, revealIndex }: GameProgress,
+  progress: GameProgress,
   closestGuessRevealStep: number,
 ): PlayersRevealQuestionView[] {
-  const isOnAirRevealShown = status === 'reveal';
-  const shownCount = isOnAirRevealShown ? revealIndex + 1 : revealIndex;
-  return revealQuestions
-    .slice(0, shownCount)
-    .map((question, index) =>
-      isOnAirRevealShown && index === revealIndex
-        ? trimToClosestGuessStep(question, closestGuessRevealStep)
-        : question,
-    );
+  const shownCount =
+    progress.status === 'reveal'
+      ? progress.revealIndex + 1
+      : progress.revealIndex;
+  return trimOnAirQuestion(
+    revealQuestions.slice(0, shownCount),
+    progress,
+    closestGuessRevealStep,
+  );
 }
 
 /**
@@ -112,7 +82,7 @@ function endedRevealWalk(session: SessionState): PlayersRevealQuestionView[] {
   return trimToRevealWalk(
     getBlockSeededQuestions(session, endedFrom),
     endedFrom,
-    CLOSEST_TEAMS_STEP,
+    FULLY_REVEALED_STEP,
   );
 }
 
@@ -139,6 +109,11 @@ export function projectScreen(
       return {
         ...snapshot,
         ...buildDisplayFields(session),
+        revealQuestions: trimOnAirQuestion(
+          snapshot.revealQuestions,
+          snapshot.progress,
+          snapshot.closestGuessRevealStep,
+        ),
         onAirScreen: screen,
         screenKey,
         header,
