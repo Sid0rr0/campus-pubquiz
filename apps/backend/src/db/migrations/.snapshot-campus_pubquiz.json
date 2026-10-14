@@ -860,6 +860,22 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "json"
+        },
+        "is_join_overlay_visible": {
+          "name": "is_join_overlay_visible",
+          "type": "bool",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "false",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "boolean"
         }
       },
       "name": "game_sessions",
