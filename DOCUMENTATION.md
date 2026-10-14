@@ -623,7 +623,7 @@ choices are all blank is `text`. Every other type takes its registry input
 kind. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
 encodes, formats and scores a stored answer, and Scoring takes its base score
 from it. `closest_guess` shares the `number` kind but is never scored one
-answer at a time: `gradeAtSubmit` skips batch types and the batch grader
+answer at a time: the Grading policy's `gradeAtSubmit` skips batch types and the batch grader
 decides its result. Any type can
 carry `media_url`/`answer_media_url` — image vs. audio vs. YouTube is inferred
 from the URL, so there is deliberately no dedicated `picture` type.

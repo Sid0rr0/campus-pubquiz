@@ -1,6 +1,6 @@
 import {
-  gradeAtSubmit,
   gradeClosestGuessBatch,
+  matchesKey,
   QUESTION_KINDS,
   scoreSubmission,
   type GradingMode,
@@ -51,6 +51,30 @@ function clearsRevision(
   stored: StoredAnswerGrade | null,
 ): GradeWrite {
   return stored !== null && stored.value !== value ? CLEAR : KEEP;
+}
+
+const SUBMIT_GRADE: Record<
+  GradingMode,
+  (question: ScoredQuestion, value: string) => ScoreResult | null
+> = {
+  // Every submission is scored.
+  auto: (question, value) => scoreSubmission(question, value),
+  // Graded correct only when it matches the key; the rest waits for the quiz master.
+  'match-or-human': (question, value) =>
+    matchesKey(question, value) ? scoreSubmission(question, value) : null,
+  // Never graded at submit: the lock-time batch grades it.
+  batch: () => null,
+};
+
+/**
+ * The grade a submission gets the moment it lands, or null when it gets none
+ * and waits for the quiz master (or, for a batch type, for the lock).
+ */
+export function gradeAtSubmit(
+  question: ScoredQuestion,
+  value: string,
+): ScoreResult | null {
+  return SUBMIT_GRADE[modeOf(question)](question, value);
 }
 
 const SUBMIT: Record<GradingMode, SubmitRule> = {
