@@ -26,11 +26,11 @@ Parent spec: `.scratch/e2e-tests/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `pnpm e2e` runs from a clean checkout with only the docker-compose Postgres running, and leaves :8888, :3000, `.next` and `campus_pubquiz` alone.
-- [ ] If Postgres isn't running, the run stops in setup with a clear message.
-- [ ] The happy path passes and makes its assertions on what the screens show.
-- [ ] The UI login-and-import test passes.
-- [ ] Both pass `--repeat-each=5`.
-- [ ] `pnpm lint` and `pnpm typecheck` pass, and `pnpm test` doesn't run E2E.
+- [x] `pnpm e2e` runs from a clean checkout with only the docker-compose Postgres running, and leaves :8888, :3000, `.next` and `campus_pubquiz` alone.
+- [x] If Postgres isn't running, the run stops in setup with a clear message.
+- [x] The happy path passes and makes its assertions on what the screens show.
+- [x] The UI login-and-import test passes.
+- [x] Both pass `--repeat-each=5`.
+- [x] `pnpm lint` and `pnpm typecheck` pass, and `pnpm test` doesn't run E2E.
