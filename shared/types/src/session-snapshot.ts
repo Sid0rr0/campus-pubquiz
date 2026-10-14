@@ -1,4 +1,4 @@
-import { getBlockInPlayIds } from './block-in-play';
+import { getBlockInPlay, getBlockInPlayIds } from './block-in-play';
 import {
   getAnsweredTeamIds,
   getBlockQuestions,
@@ -12,6 +12,7 @@ import { isAnsweringStatus } from './game-state-groups';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import type { SeededQuestion } from './question-views';
 import type {
   AdminQuestionContext,
   AdminStatePayload,
@@ -153,16 +154,28 @@ export function isBlockAnswerable(session: SessionState): boolean {
   );
 }
 
-export function isQuestionOpenForAnswering(
+/**
+ * The session's copy of `questionId` when it can be answered right now (the
+ * block is answerable and the question is in it), else undefined. One block
+ * lookup serves the submit gate and the question it hands over.
+ */
+export function findQuestionOpenForAnswering(
   session: SessionState,
   questionId: number,
-): boolean {
-  return (
-    isBlockAnswerable(session) &&
-    getBlockInPlayIds(session.seededGame.rounds, session.progress).includes(
-      questionId,
-    )
+): SeededQuestion | undefined {
+  if (
+    !isAnsweringStatus(session.progress.status) ||
+    isQuestionHiddenBehindKahootLeaderboard(session)
+  ) {
+    return undefined;
+  }
+  const { rounds } = session.seededGame;
+  const position = getBlockInPlay(rounds, session.progress).find(
+    (inPlay) => inPlay.questionId === questionId,
   );
+  return position === undefined
+    ? undefined
+    : rounds[position.roundIndex].questions[position.questionIndex];
 }
 
 /**

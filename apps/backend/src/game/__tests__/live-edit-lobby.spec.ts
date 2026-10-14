@@ -108,6 +108,50 @@ describe('Live edit — saving a quiz while a session waits in the lobby', () =>
   });
 });
 
+describe('Live edit — a changed round setting while a session waits in the lobby', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  it('takes effect in the lobby session: the break moves to the other round and the round turns kahoot', async () => {
+    const game = await harness.createGateway({
+      rounds: [
+        {
+          title: 'Round A',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'multiple_choice' as const,
+              prompt: 'Capital of France?',
+              answer: 'Paris',
+              points: 2,
+              payload: { options: ['Paris', 'London', 'Berlin', 'Rome'] },
+            },
+          ],
+        },
+        { ...ROUNDS[0], title: 'Round B', breakAfter: false },
+        { ...ROUNDS[0], title: 'Round C', breakAfter: false },
+      ],
+    });
+    await game.connectAdmin();
+    // The last round always ends a block.
+    expect((await game.snapshot()).quizStructure.breakRoundNumbers).toEqual([
+      1, 3,
+    ]);
+
+    await game.saveQuizEdit((rounds) =>
+      rounds.map((round, index) => ({
+        ...round,
+        breakAfter: index === 1,
+        kahootMode: index === 0,
+      })),
+    );
+
+    const view = await game.snapshot();
+    expect(view.quizStructure.breakRoundNumbers).toEqual([2, 3]);
+    await game.act('START_QUIZ');
+    expect((await game.act('ADVANCE')).isCurrentRoundKahoot).toBe(true);
+  });
+});
+
 const TWO_ROUNDS = [
   {
     title: 'Round A',
