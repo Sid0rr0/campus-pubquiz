@@ -54,6 +54,13 @@ export class DisplayScreen {
     ).toBeVisible();
   }
 
+  /** The question on air counts `teamCount` teams in the room, however many have answered. */
+  async expectTeamCount(teamCount: number): Promise<void> {
+    await expect(
+      this.page.getByText(`OF ${teamCount} TEAMS ANSWERED`),
+    ).toBeVisible();
+  }
+
   async expectAudioPlayer(src: string): Promise<void> {
     await expect(this.page.locator('audio')).toHaveAttribute('src', src);
   }

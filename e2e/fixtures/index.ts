@@ -40,6 +40,8 @@ interface TestFixtures {
   display: DisplayScreen;
   /** Opens a phone context (mobile viewport, touch, mobile user agent, its own localStorage) without opening a page. */
   newPhoneContext: () => Promise<BrowserContext>;
+  /** A fresh phone (own context, empty storage) for a team name that already exists; nothing is opened or joined yet. */
+  openPhone: (teamName: string) => Promise<PhoneScreen>;
   /** Opens phones on `/play` and joins them to the session. */
   joinPhone: JoinPhone;
 }
@@ -103,6 +105,17 @@ export const test = base.extend<TestFixtures>({
 
   newPhoneContext: async ({ newContext }, use) => {
     await use(() => newContext(PHONE_DEVICE));
+  },
+
+  openPhone: async ({ newPhoneContext, session }, use) => {
+    await use(async (teamName) => {
+      const context = await newPhoneContext();
+      return new PhoneScreen(
+        await context.newPage(),
+        teamName,
+        session.joinCode,
+      );
+    });
   },
 
   joinPhone: async ({ newPhoneContext, session }, use) => {
