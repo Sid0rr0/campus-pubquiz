@@ -6,7 +6,7 @@ Parent spec: `.scratch/grading-state/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The submit-time grade is decided inside the Grading policy, expressed through its per-mode submit table; Scoring no longer branches on grading mode for it.
 - [ ] The submit-time grade cases move from the Scoring tests to the Grading policy spec unchanged (auto, match-or-human match and miss, batch never graded, Number margin cases).

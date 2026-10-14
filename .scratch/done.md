@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| grading-state | [The Grading policy decides whether an answer can be graded now, for the clients too](grading-state/spec.md) | 3 |
 | leaderboard-before-board | [The server sends the leaderboard's "before" board](leaderboard-before-board/spec.md) | 2 |
 | frontend-happy-dom | [The frontend suite runs on happy-dom instead of jsdom](frontend-happy-dom/spec.md) | 3 |
 | session-quiz-copy | [Every session holds the current quiz, and grading reads only that copy](session-quiz-copy/spec.md) | 2 |

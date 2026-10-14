@@ -6,7 +6,7 @@ Parent spec: `.scratch/grading-state/spec.md`
 
 **Blocked by:** 01 (both edit Scoring)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The auto-graded type list, the match-or-human type list, `isAutoGradedType` and `isMatchOrHumanType` are deleted, along with the scoring and registry-parity test assertions that exist only to pin them.
 - [ ] `isBatchGradedType` and the batch list stay while the closest-guess reveal and block reveal views still call them (candidate 1 deletes them); `KAHOOT_ALLOWED_TYPES` and `hasMarginType` stay.
