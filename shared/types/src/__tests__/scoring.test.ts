@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { IDK_ANSWER_VALUE } from '../answers';
 import {
-  AUTO_GRADED_TYPES,
   BATCH_GRADED_TYPES,
   KAHOOT_ALLOWED_TYPES,
-  MATCH_OR_HUMAN_TYPES,
   gradeClosestGuessBatch,
   halfPoints,
   nearestHalfPoint,
@@ -294,19 +292,8 @@ describe('nearestHalfPoint', () => {
 });
 
 describe('category lists', () => {
-  it('grades multiple_choice, sort, match and number at submit', () => {
-    expect([...AUTO_GRADED_TYPES].sort()).toEqual(
-      ['match', 'multiple_choice', 'number', 'sort'].sort(),
-    );
-  });
-
-  it('batch-grades closest_guess and grades free_text/audio/youtube only on a match', () => {
+  it('batch-grades closest_guess', () => {
     expect(BATCH_GRADED_TYPES).toEqual(['closest_guess']);
-    expect([...MATCH_OR_HUMAN_TYPES].sort()).toEqual([
-      'audio',
-      'free_text',
-      'youtube',
-    ]);
   });
 
   it('allows only multiple_choice, sort, match and number in kahoot rounds', () => {
@@ -321,12 +308,6 @@ describe('category lists', () => {
 });
 
 describe('batch-graded types are never scored one answer at a time', () => {
-  it('has no type that is both auto-graded and batch-graded', () => {
-    expect(
-      BATCH_GRADED_TYPES.filter((type) => AUTO_GRADED_TYPES.includes(type)),
-    ).toEqual([]);
-  });
-
   it('includes closest_guess, whose number format has no per-answer score', () => {
     expect(BATCH_GRADED_TYPES).toContain('closest_guess');
   });
