@@ -6,7 +6,7 @@ Parent spec: `.scratch/leaderboard-before-board/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Write first, and watch fail against today's code: a backend real-store spec where a big screen joins or resyncs between kahoot questions and receives the standings from before the last question's points landed.
 - [ ] The Session write updates the prior standings. When a write starts from a session whose question is on air (open or locking) and whose leaderboard is hidden, that session's current leaderboard becomes the prior standings before the new standings are read. Otherwise they carry over. Before any board exists they are every team on 0.

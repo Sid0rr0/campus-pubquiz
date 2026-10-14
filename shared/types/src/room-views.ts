@@ -152,6 +152,8 @@ export interface DisplayStatePayload extends Omit<
    * up. Ephemeral — resets to 0 whenever TOGGLE_LEADERBOARD fires.
    */
   leaderboardRevealCount: number;
+  /** The standings before the latest scoring landed, which the between-questions count-up and the kahoot trends compare against. Empty when the session has none yet (before the first board, or after a backend restart). */
+  priorStandings: LeaderboardEntry[];
   /** Epoch-ms deadline when the currently-open kahootMode question auto-locks, or null when not armed (non-kahoot round, unlimited setting, or a historical question revisited via Previous). */
   kahootQuestionEndsAt: number | null;
 }

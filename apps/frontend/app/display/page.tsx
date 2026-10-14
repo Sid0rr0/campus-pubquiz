@@ -1,13 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   DEFAULT_SESSION_SETTINGS,
   getBreakNumber,
   isShowingLastBreak,
-  type LeaderboardEntry,
   type OnAirScreen,
 } from '@campus-pubquiz/types';
 import { useDisplayGame } from '@/app/lib/use-display-game';
@@ -22,7 +21,6 @@ import {
   KAHOOT_LEADERBOARD_TOP_N,
   Leaderboard,
 } from '@/app/components/leaderboard';
-import { capturePreviousBoard } from '@/app/components/leaderboard-rows';
 import { RulesContent } from '@/app/components/rules-content';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
 import { BreakReviewScreen } from '@/app/display/break-review-screen';
@@ -59,14 +57,6 @@ function DisplayPageContent() {
         DEFAULT_SESSION_SETTINGS.playLockCountdownSound,
     });
 
-  // Standings from the most recent snapshot where the leaderboard was
-  // hidden — i.e. exactly the board as it stood right before whatever just
-  // updated it. Feeds the Kahoot between-questions leaderboard's old->new
-  // animation (see isBetweenKahootQuestions below).
-  const [previousLeaderboard, setPreviousLeaderboard] = useState<
-    LeaderboardEntry[]
-  >([]);
-
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) silently falls back to the plain picker rather than surfacing a
   // "connection error" for what's normal end-of-game cleanup — this just
@@ -101,6 +91,7 @@ function DisplayPageContent() {
     quizStructure,
     leaderboard,
     leaderboardRevealCount,
+    priorStandings,
     teams,
     answeredTeamIds,
     blockQuestions,
@@ -124,27 +115,6 @@ function DisplayPageContent() {
     header: headerContent,
     isBetweenKahootQuestions,
   } = snapshot;
-
-  // Adjusted directly during render (React's sanctioned "remember info from
-  // a previous render" pattern, guarded so it only fires on an actual
-  // change) rather than in an effect — an effect would only capture this a
-  // tick later, after isLeaderboardVisible has already flipped true, which
-  // is too late for the animation below to have an old state to open on.
-  // Compares snapshot.leaderboard itself (not the `leaderboard` local above,
-  // which falls back to a fresh `[]` literal every render whenever the
-  // field is absent — that fresh reference would never match
-  // previousLeaderboard and re-trigger this on every render). When to
-  // capture is capturePreviousBoard's rule; it returns the same reference
-  // when nothing changes, so the guard below only fires on a real change.
-  const nextPreviousLeaderboard = capturePreviousBoard({
-    remembered: previousLeaderboard,
-    status: progress.status,
-    isLeaderboardVisible: progress.isLeaderboardVisible,
-    leaderboard: snapshot.leaderboard,
-  });
-  if (nextPreviousLeaderboard !== previousLeaderboard) {
-    setPreviousLeaderboard(nextPreviousLeaderboard);
-  }
 
   // The question each break/reveal screen is about was resolved by the
   // server (progress.roundIndex stays pinned to the block's last round
@@ -171,19 +141,17 @@ function DisplayPageContent() {
             <Leaderboard
               entries={leaderboard}
               previousEntries={
-                isBetweenKahootQuestions ? previousLeaderboard : undefined
+                isBetweenKahootQuestions ? priorStandings : undefined
               }
               // For a Kahoot round's own round-end/quiz-end reveal (not
               // caught by isBetweenKahootQuestions above, so it keeps its
               // one-by-one suspense walk rather than animating), the trend
-              // icon still needs the real captured standings — comparing
+              // icon still needs the real prior standings — comparing
               // to "this round's points backed out" via currentRoundIndex
               // would net out every question in the round, not just the
               // last one, producing a bogus shared baseline whenever the
               // round is the quiz's first (see currentRoundIndex's docs).
-              trendBaseline={
-                isCurrentRoundKahoot ? previousLeaderboard : undefined
-              }
+              trendBaseline={isCurrentRoundKahoot ? priorStandings : undefined}
               revealCount={leaderboardRevealCount}
               maxRank={
                 isCurrentRoundKahoot ? KAHOOT_LEADERBOARD_TOP_N : undefined

@@ -324,7 +324,7 @@ showdown state, the closest_guess reveal step, `revealQuestions`).
 
 | View                            | Fields                                                                                                              |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `kahootQuestionEndsAt` |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `priorStandings`, `kahootQuestionEndsAt` |
 | Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                        |
 | Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`                                                                        |
 

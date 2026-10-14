@@ -67,6 +67,7 @@ export function buildDisplayFields(
   | 'roundCategories'
   | 'roundAuthors'
   | 'leaderboardRevealCount'
+  | 'priorStandings'
   | 'kahootQuestionEndsAt'
 > {
   const { rounds } = session.seededGame;
@@ -77,6 +78,7 @@ export function buildDisplayFields(
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
     leaderboardRevealCount: session.leaderboardRevealCount,
+    priorStandings: session.priorStandings,
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
   };
 }

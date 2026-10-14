@@ -1,4 +1,5 @@
 import {
+  isQuestionOnAirStatus,
   type ActiveShowdownRoundState,
   type LeaderboardEntry,
   type SessionState,
@@ -17,6 +18,26 @@ export function withLeaderboard(
   leaderboard: LeaderboardEntry[],
 ): SessionState {
   return { ...session, leaderboard };
+}
+
+/**
+ * The session a write ends with, its prior standings brought up to date: when
+ * the write started from a session whose question was on air with the
+ * leaderboard hidden, that session's leaderboard becomes the prior standings
+ * (points land at the lock, after this board, so it is the board before them).
+ * Otherwise the prior standings carry over. Call before the new standings are
+ * read.
+ */
+export function withPriorStandings(
+  started: SessionState,
+  session: SessionState,
+): SessionState {
+  const isBoardBeforeScoring =
+    isQuestionOnAirStatus(started.progress.status) &&
+    !started.progress.isLeaderboardVisible;
+  return isBoardBeforeScoring
+    ? { ...session, priorStandings: started.leaderboard }
+    : session;
 }
 
 export function withTeams(
