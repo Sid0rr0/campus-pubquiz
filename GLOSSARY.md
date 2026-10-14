@@ -81,8 +81,11 @@ A screen showing a round's name before its content: the round intro before its q
 The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries the question the big screen is revealing. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
 
 **Reveal kind**:
-How the screens reveal a revealed question: `answer` (the question with its correct answer, laid out by its answer kind), `closest_guess` (the step-by-step closest-guess reveal) or `closest_guess_pending` (players view only: a `closest_guess` question whose answer step isn't on air yet, so no answer). Decided once by the Screen projection from the question type registry.
+How the screens reveal a revealed question: `answer` (the question with its correct answer, laid out by its answer kind), `closest_guess` (the step-by-step closest-guess reveal) or `closest_guess_pending` (display and players views: a `closest_guess` question whose answer step isn't on air yet, so no answer). Decided once by the Screen projection from the question type registry.
 _Avoid_: reveal type, reveal mode
+
+**Closest-guess reveal**:
+The step-by-step reveal of a closest_guess question: the question; then the smallest guess, the highest guess, the correct answer and the closest teams, one more line per Advance (one step when nobody guessed). Owned by one module and sent to each screen already trimmed to the step on air, so the reveal screen draws what it is sent and never sees a step number.
 
 **Auto-advance**:
 A phone setting, on by default and remembered on that phone. On, the block browser follows the big screen's current question and reveal step; off, the team browses the block freely with previous/next.

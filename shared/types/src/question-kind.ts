@@ -69,6 +69,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   gradingMode: GradingMode;
   /** Its own field, never derived from `gradingMode`: free_text grades itself on a match but is excluded (ADR 0001). */
   kahootAllowed: boolean;
+  /** How the reveal shows the question: its answer, or the step-by-step closest-guess reveal. Its own field, never derived from `gradingMode`. */
+  revealKind: 'answer' | 'closest_guess';
   /** Which per-type grading settings the question carries beyond its answer and points (see answer-key.ts). */
   gradingSettings: readonly GradingSettingName[];
 }
@@ -81,6 +83,7 @@ export const QUESTION_KINDS: {
 } = {
   free_text: {
     type: 'free_text',
+    revealKind: 'answer',
     label: 'Free text',
     moderatorNote:
       'No options. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it, and you can override any mark by hand.',
@@ -96,6 +99,7 @@ export const QUESTION_KINDS: {
   },
   multiple_choice: {
     type: 'multiple_choice',
+    revealKind: 'answer',
     label: 'Multiple choice',
     moderatorNote:
       'Options are separated by pipes (Paris|London|Berlin) and the answer must match one option exactly. Graded automatically when a team submits; you can override by hand.',
@@ -111,6 +115,7 @@ export const QUESTION_KINDS: {
   },
   audio: {
     type: 'audio',
+    revealKind: 'answer',
     label: 'Audio',
     moderatorNote:
       'Needs an http audio link as its media. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
@@ -126,6 +131,7 @@ export const QUESTION_KINDS: {
   },
   youtube: {
     type: 'youtube',
+    revealKind: 'answer',
     label: 'YouTube video',
     moderatorNote:
       'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
@@ -142,6 +148,7 @@ export const QUESTION_KINDS: {
   },
   sort: {
     type: 'sort',
+    revealKind: 'answer',
     label: 'Sort / order',
     moderatorNote:
       'Options are pipe-separated in any order and the answer lists them in the correct order. Graded automatically when a team submits; you can override by hand.',
@@ -157,6 +164,7 @@ export const QUESTION_KINDS: {
   },
   match: {
     type: 'match',
+    revealKind: 'answer',
     label: 'Match pairs',
     moderatorNote:
       'Options hold both lists as left1|left2+right1|right2 and the answer pairs them (Paris+France|Tokyo+Japan). Graded automatically when a team submits; you can override by hand.',
@@ -172,6 +180,7 @@ export const QUESTION_KINDS: {
   },
   closest_guess: {
     type: 'closest_guess',
+    revealKind: 'closest_guess',
     label: 'Closest guess',
     moderatorNote:
       'The answer is a number. Graded in one batch once the block locks: every team tied for the closest guess gets full points and everyone else gets zero. From then on you can override any mark by hand.',
@@ -187,6 +196,7 @@ export const QUESTION_KINDS: {
   },
   number: {
     type: 'number',
+    revealKind: 'answer',
     label: 'Number',
     moderatorNote:
       'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',

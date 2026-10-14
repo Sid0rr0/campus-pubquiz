@@ -1,11 +1,13 @@
-import type { ClosestGuessRevealData } from '@campus-pubquiz/types';
+import type {
+  ClosestGuessRevealData,
+  ClosestGuessRevealView,
+  PendingClosestGuessRevealView,
+} from '@campus-pubquiz/types';
 import { AnswerMedia } from '@/app/display/question-display';
 
 interface ClosestGuessRevealScreenProps {
   prompt: string;
-  /** 0-4, ignored when !closestGuess.hasSubmissions (always shows the question + correct answer together). */
-  step: number;
-  /** Absent on a phone until the answer step is on air. */
+  /** Present once the answer step is on air (the `closest_guess` Reveal kind). */
   correctAnswer?: string;
   answerMediaUrl?: string;
   closestGuess: ClosestGuessRevealData;
@@ -13,49 +15,51 @@ interface ClosestGuessRevealScreenProps {
   autoplayMedia?: boolean;
 }
 
-// Shared by /display and /play so both surfaces build up the same reveal in
-// lockstep, driven by the admin's ADVANCE/PREVIOUS presses. Cumulative, not
-// exclusive: step 1 adds the smallest guess and it stays on screen as step 2
-// adds the highest guess, then step 3 adds the correct answer, then step 4
-// adds the closest team(s) — nothing already shown is ever replaced.
+/** The answer props for a closest-guess reveal question: only the `closest_guess` kind carries the answer; `closest_guess_pending` has none yet. */
+export function closestGuessAnswerProps(
+  question: ClosestGuessRevealView | PendingClosestGuessRevealView,
+): Pick<ClosestGuessRevealScreenProps, 'correctAnswer' | 'answerMediaUrl'> {
+  return question.revealKind === 'closest_guess'
+    ? {
+        correctAnswer: question.answer,
+        answerMediaUrl: question.answerMediaUrl,
+      }
+    : {};
+}
+
+// Shared by /display and /play. Draws exactly the lines it is sent: the
+// server trims the on-air question to its reveal step (the Closest-guess
+// reveal module), so this screen never sees a step number.
 export function ClosestGuessRevealScreen({
   prompt,
-  step,
   correctAnswer,
   answerMediaUrl,
   closestGuess,
   mediaTestIdPrefix,
   autoplayMedia,
 }: ClosestGuessRevealScreenProps) {
-  const { hasSubmissions } = closestGuess;
-  const showSmallest = hasSubmissions && step >= 1;
-  const showHighest = hasSubmissions && step >= 2;
-  // Nobody submitted a guess — show the question + correct answer together
-  // immediately (mirrors every other type's single-shot reveal, see
-  // GameStateService.getRevealStepCount) rather than waiting on a step that
-  // will never arrive.
-  const showCorrect = !hasSubmissions || step >= 3;
-  const showClosest = hasSubmissions && step >= 4;
+  const { minGuess, maxGuess, closestGuesses } = closestGuess;
+  const showCorrect = correctAnswer !== undefined;
 
   return (
     <>
       <h1 className="text-balance font-display text-display-4xl leading-snug">
         {prompt}
       </h1>
-      {showSmallest && (
+      {minGuess !== undefined && (
         <p className="font-display text-display-lg text-cyan">
           <span className="font-body text-display-sm font-extrabold text-foreground/55">
             SMALLEST GUESS{' '}
           </span>
-          {closestGuess.minGuess}
+          {minGuess}
         </p>
       )}
-      {showHighest && (
+      {maxGuess !== undefined && (
         <p className="font-display text-display-lg text-cyan">
           <span className="font-body text-display-sm font-extrabold text-foreground/55">
             HIGHEST GUESS{' '}
           </span>
-          {closestGuess.maxGuess}
+          {maxGuess}
         </p>
       )}
       {showCorrect && (
@@ -73,9 +77,9 @@ export function ClosestGuessRevealScreen({
           />
         </>
       )}
-      {showClosest && (
+      {closestGuesses !== undefined && closestGuesses.length > 0 && (
         <ul className="flex w-full max-w-xl flex-col gap-3 text-left">
-          {closestGuess.closestGuesses.map((guess, index) => (
+          {closestGuesses.map((guess, index) => (
             <li
               key={index}
               className="flex items-center justify-between gap-3 rounded-xl border-2 border-green bg-white px-5 py-3 text-display-xl font-bold text-foreground"

@@ -4,8 +4,15 @@ import {
   getRoundAndQuestionForBlockPosition,
 } from './game-state-block-position';
 import type { GameAction, GameProgress } from './game-state-types';
-import type { ClosestGuessRevealData, SeededQuestion } from './question-views';
-import { findClosestGuesses, isBatchGradedType } from './scoring';
+import type {
+  BlockRevealQuestionView,
+  ClosestGuessRevealData,
+  PlayersRevealQuestionView,
+  SeededQuestion,
+} from './question-views';
+import { toBlockQuestionView } from './question-view-conversions';
+import { QUESTION_KINDS } from './question-kind';
+import { findClosestGuesses } from './scoring';
 import { getGameContext, type SessionState } from './session-state';
 
 /**
@@ -54,21 +61,83 @@ function getRevealTargetQuestion(
 }
 
 /**
- * How many reveal sub-steps this question has. closest_guess with
- * submissions gets 5, cumulatively building up on one screen: (0) just the
- * question, (1) +smallest guess, (2) +highest guess, (3) +correct answer,
- * (4) +closest team(s) — each step keeps everything shown at the previous
- * step and adds one more line, it never replaces. Every other type, and
- * closest_guess with zero submissions, keeps today's single-shot behavior
- * (1 step: question + answer together immediately).
+ * The reveal lines in the order they go on air, after the question-only
+ * step 0: step N shows the first N lines. Each step keeps everything shown at
+ * the previous step and adds one more line, it never replaces.
+ */
+const REVEAL_LINES = [
+  'minGuess',
+  'maxGuess',
+  'answer',
+  'closestGuesses',
+] as const;
+
+type RevealLine = (typeof REVEAL_LINES)[number];
+
+/** The step with every line on air: the last step of a question someone guessed on. */
+export const FULLY_REVEALED_STEP = REVEAL_LINES.length;
+
+const isLineShownAt = (line: RevealLine, step: number): boolean =>
+  REVEAL_LINES.indexOf(line) < step;
+
+/**
+ * How many reveal sub-steps this question has: the question-only step plus one
+ * per reveal line when someone guessed. Every other type, and closest_guess
+ * with zero submissions, is one step (question + answer together immediately).
  */
 function getRevealStepCount(
   question: SeededQuestion | undefined,
   session: SessionState,
 ): number {
-  if (!question || !isBatchGradedType(question.type)) return 1;
+  if (!question || QUESTION_KINDS[question.type].revealKind !== 'closest_guess')
+    return 1;
   const summary = session.closestGuessSummaries[question.id];
-  return summary?.hasSubmissions ? 5 : 1;
+  return summary?.hasSubmissions ? FULLY_REVEALED_STEP + 1 : 1;
+}
+
+function statsShownAt(
+  stats: ClosestGuessRevealData,
+  step: number,
+): ClosestGuessRevealData {
+  const { minGuess, maxGuess, closestGuesses } = stats;
+  return {
+    hasSubmissions: true,
+    ...(isLineShownAt('minGuess', step) && minGuess !== undefined
+      ? { minGuess }
+      : {}),
+    ...(isLineShownAt('maxGuess', step) && maxGuess !== undefined
+      ? { maxGuess }
+      : {}),
+    ...(isLineShownAt('closestGuesses', step) && closestGuesses !== undefined
+      ? { closestGuesses }
+      : {}),
+  };
+}
+
+/**
+ * The reveal question as the room sees it at `step`. Before the answer step a
+ * closest_guess question is `closest_guess_pending` (no answer, no answer
+ * media); from it on it is `closest_guess`; in both only the stats lines
+ * reached so far are present. A question nobody guessed on, and every other
+ * kind, is returned whole at every step.
+ */
+export function shownAtStep(
+  question: BlockRevealQuestionView,
+  step: number,
+): PlayersRevealQuestionView {
+  if (
+    question.revealKind !== 'closest_guess' ||
+    !question.closestGuess.hasSubmissions
+  ) {
+    return question;
+  }
+  const closestGuess = statsShownAt(question.closestGuess, step);
+  if (isLineShownAt('answer', step)) return { ...question, closestGuess };
+  return {
+    ...toBlockQuestionView(question),
+    revealKind: 'closest_guess_pending',
+    closestGuess,
+  };
 }
 
 /** ADVANCE/PREVIOUS while mid-sequence on the current reveal question — null when there's nothing to gate (not closest_guess, single-step, or already at a boundary), signaling the caller to fall through to getNextGameState. */

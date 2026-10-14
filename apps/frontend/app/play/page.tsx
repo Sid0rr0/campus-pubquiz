@@ -156,7 +156,6 @@ function PlayPageContent() {
     upcomingQuestions,
     quizStructure,
     isCurrentRoundKahoot,
-    closestGuessRevealStep,
     settings,
     activeShowdown,
     showdownRevealStep,
@@ -282,7 +281,6 @@ function PlayPageContent() {
               totalPickerSlots={totalPickerSlots}
               selectedQuestion={selectedQuestion}
               revealQuestion={revealQuestion}
-              closestGuessRevealStep={closestGuessRevealStep}
               isKahootMode={isCurrentRoundKahoot}
               myAnswers={myAnswers}
               myAnswerPoints={selectedQuestionPoints}

@@ -1,6 +1,6 @@
 # 03: The reveal screen draws what it is sent, and the phone's browse-back shows the full reveal
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: 02
 

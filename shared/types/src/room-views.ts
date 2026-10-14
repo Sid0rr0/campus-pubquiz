@@ -124,7 +124,12 @@ export interface StateSnapshotPayload {
  * read what its own room is sent.
  */
 /** What /display renders: the snapshot plus the screen on air, resolved once by the server. */
-export interface DisplayStatePayload extends StateSnapshotPayload {
+export interface DisplayStatePayload extends Omit<
+  StateSnapshotPayload,
+  'revealQuestions'
+> {
+  /** The reveal questions of the block; the one on air is shown only as far as its closest-guess step has got (see the Screen projection). */
+  revealQuestions: PlayersRevealQuestionView[];
   /** The named screen on air, and the question or round it is about. */
   onAirScreen: OnAirScreen;
   /** Transition key — changes only when what's on screen changes. */

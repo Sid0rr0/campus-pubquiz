@@ -237,17 +237,23 @@ away again.
 
 Every reveal question carries a **reveal kind** (`revealKind`), decided once by the
 projection from the question type registry, and the screens switch on it instead
-of re-deriving it from the type. `/display` and the admin views receive `answer`
+of re-deriving it from the type. The admin views receive `answer`
 (the question with its answer and optional answer media, no closest-guess stats)
 or `closest_guess` (the same plus the `closestGuess` stats; the "no submissions"
-stats when nobody guessed). The players view can also send
-`closest_guess_pending`: before the on-air closest_guess question's answer step
-(3) it is the block question view plus the stats shown so far, with no answer and
-no answer media; from step 3 on it is `closest_guess` with the stats trimmed to
-the current step. A closest_guess question nobody guessed on is sent whole as
+stats when nobody guessed), always untrimmed. `/display` and the players view
+are sent the on-air closest_guess question trimmed to its step by the
+Closest-guess reveal module (the same function for both rooms), and can also
+receive `closest_guess_pending`: before the answer step (3) it is the block
+question view plus the stats lines reached so far, with no answer and no answer
+media; from step 3 on it is `closest_guess` with the stats reached so far. The
+closest teams (`closestGuesses`) are present only once they are on air. Only the
+question at the reveal position is trimmed; earlier reveal questions are sent
+whole. A closest_guess question nobody guessed on is sent whole as
 `closest_guess`, and so is the `ended` reveal walk. The seeded question has no
 reveal kind or stats; they are added when the block's questions are dressed as
-reveal views. Both closest-guess kinds draw `ClosestGuessRevealScreen`, but only
+reveal views. Both closest-guess kinds draw `ClosestGuessRevealScreen`, which takes
+no step: it draws the prompt and whichever stats lines it is sent, so a phone
+browsing back to an earlier closest_guess question shows it fully revealed. Only
 `closest_guess` passes the correct answer and answer media; the screens' switches
 are exhaustive, so a new kind fails typecheck until each handles it. At `ended` the players view keeps the final block's walk as it stood
 when the quiz ended (trimmed by `previousStatus`, so a reconnecting phone keeps
