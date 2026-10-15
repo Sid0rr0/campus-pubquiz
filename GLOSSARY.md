@@ -113,6 +113,18 @@ What a bonus award was given for: shot, selfie, or custom. A custom award carrie
 
 ## Team link
 
+**Player count**:
+How many people a team says are playing in one session: one number per team per session, shared by all the team's phones. The team gives it from its phone and can change it at any time during the session; the quiz master can correct it. It may be unknown, and it is for stats only: the team-size rule in the house rules is not enforced from it.
+_Avoid_: team size (that's the cap in the house rules), headcount, members
+
+**Placing**:
+Where a team finished in one ended session, with tied teams sharing a place (joint 2nd counts as 2nd). A team that left the session (kicked, or left on its own) has no placing in it.
+_Avoid_: position, rank (on its own)
+
+**Average placing**:
+The mean of a team's placings across the ended sessions it played, leaving out the sessions it left. A team with no placing has no average placing.
+_Avoid_: average position, average rank
+
 **Team link**:
 A phone's link to its team in a live session: who the team is, whether the server has this connection registered as the team's, and the team's own answers, grades, bonus awards and ratings. It's made by a join, remade after every reconnect and after a session restart, and ended by a kick, the session closing or logging out.
 

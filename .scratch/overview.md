@@ -6,6 +6,7 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
+| `player-count-and-team-stats` | Player counts and a team stats page | 5 | — |
 
 ## Won't do
 
