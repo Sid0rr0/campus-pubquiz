@@ -100,6 +100,7 @@ export class GameStateService implements OnModuleInit {
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
     this.playerCountChanges = new TeamPlayerCountChanges(
       this.playerCountService,
+      this.standingsService,
     );
     this.showdownsChanges = new ShowdownsChanges(this.showdownService);
     this.moveCommitter = new MoveCommitter(

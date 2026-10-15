@@ -4,6 +4,7 @@ import type {
   SetTeamPlayerCountPayload,
 } from '@campus-pubquiz/types';
 import { PlayerCountService } from '@/player-count/player-count.service';
+import { StandingsService } from '@/standings/standings.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import type { SessionChange } from '@/game/state/session-write';
 import {
@@ -27,7 +28,10 @@ import {
  * the big screen and the players room hear nothing.
  */
 export class TeamPlayerCountChanges {
-  constructor(private readonly playerCountService: PlayerCountService) {}
+  constructor(
+    private readonly playerCountService: PlayerCountService,
+    private readonly standingsService: StandingsService,
+  ) {}
 
   async playerCountSet(
     session: SessionState,
@@ -53,17 +57,23 @@ export class TeamPlayerCountChanges {
     return await this.store(session, teamId, playerCount);
   }
 
-  /** On the roster now, or off it by a kick with a count still stored (a count outlives the roster row). */
+  /**
+   * On the roster now, or off it by a kick or leave but still on record: a
+   * count, graded answers or bonus awards outlive the roster row (the same
+   * record the standings use for departed teams).
+   */
   private async hasBeenOnRoster(
     session: SessionState,
     teamId: number,
   ): Promise<boolean> {
     if (session.teams.some((team) => team.teamId === teamId)) return true;
+    const { gameSessionId } = session.seededGame;
     const stored = await this.playerCountService.getForTeam(
-      session.seededGame.gameSessionId,
+      gameSessionId,
       teamId,
     );
-    return stored !== null;
+    if (stored !== null) return true;
+    return await this.standingsService.hasTakenPart(gameSessionId, teamId);
   }
 
   private async store(
