@@ -19,6 +19,9 @@ export function StandingsTable({ standings }: StandingsTableProps) {
               Team
             </th>
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
+              Players
+            </th>
+            <th className="px-4 py-2 font-display text-sm text-foreground/70">
               Answer points
             </th>
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
@@ -39,7 +42,7 @@ export function StandingsTable({ standings }: StandingsTableProps) {
           {standings.length === 0 ? (
             <tr>
               <td
-                colSpan={7}
+                colSpan={8}
                 className="px-4 py-3 text-center text-foreground/50"
               >
                 No teams joined this session.
@@ -64,6 +67,7 @@ export function StandingsTable({ standings }: StandingsTableProps) {
                     </span>
                   )}
                 </td>
+                <td className="px-4 py-2">{team.playerCount ?? '—'}</td>
                 <td className="px-4 py-2">{team.answerPoints}</td>
                 <td className="px-4 py-2">{team.bonusPoints}</td>
                 <td className="px-4 py-2 font-extrabold">{team.total}</td>

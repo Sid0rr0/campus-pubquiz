@@ -16,6 +16,7 @@ import type {
   DepartedTeam,
   SessionStandings,
 } from '@/standings/standings.service';
+import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionFeedback } from '@/stats/session-feedback.calc';
 
 export interface SessionDetailSessionRow {
@@ -75,6 +76,8 @@ export interface SessionDetailInput {
   session: SessionDetailSessionRow;
   /** Who took part and how they rank — decided by the Standings service, passed through as given. */
   standings: SessionStandings;
+  /** Reported player count by team id; a team that gave none has no entry. */
+  playerCounts: ReadonlyMap<number, number>;
   rounds: SessionDetailRoundInputRow[];
   /** One row per round at least one team rated; an unrated round has none. */
   roundRatings: SessionDetailRoundRatingInputRow[];
@@ -213,6 +216,7 @@ export function computeSessionDetail(
   const {
     session,
     standings: sessionStandings,
+    playerCounts,
     rounds,
     roundRatings,
     isFeedbackCollected,
@@ -237,6 +241,7 @@ export function computeSessionDetail(
       isWinner: sessionStandings.winner?.teamId === team.teamId,
       teamId: team.teamId,
       teamName: team.teamName,
+      playerCount: playerCounts.get(team.teamId) ?? null,
       answerPoints: team.totalPoints - team.bonusPoints,
       bonusPoints: team.bonusPoints,
       total: team.totalPoints,
@@ -348,6 +353,7 @@ export function computeSessionDetail(
     playedAt: new Date(session.playedAt).toISOString(),
     teamCount,
     maxPoints,
+    playerCount: summarisePlayerCounts(standings.map((s) => s.playerCount)),
     difficulty: {
       averagePercent,
       label: getDifficultyLabel(averagePercent),

@@ -12,6 +12,7 @@ import type {
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { StandingsService } from '@/standings/standings.service';
+import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
 import type { PlayedSessionsQuery } from '@/stats/stats-query.schema';
 
@@ -32,6 +33,12 @@ interface SessionHeaderRow {
   name: string | null;
   playedAt: string | Date;
   settings: Partial<SessionSettings>;
+}
+
+interface SessionPlayerCountRow {
+  gameSessionId: number;
+  teamId: number;
+  playerCount: number;
 }
 
 interface SessionFeedbackRow {
@@ -151,9 +158,19 @@ export class StatsService {
       rows.map((row) => row.gameSessionId),
     );
 
+    const playerCounts = await this.playerCountsBySession(
+      rows.map((row) => row.gameSessionId),
+    );
+
     return {
       items: rows.map((row) => {
         const sessionStandings = standings.get(row.gameSessionId)!;
+        const sessionCounts = playerCounts.get(row.gameSessionId);
+        const { total, reportedTeams } = summarisePlayerCounts(
+          [...sessionStandings.leaderboard, ...sessionStandings.departed].map(
+            (team) => sessionCounts?.get(team.teamId) ?? null,
+          ),
+        );
         return {
           gameSessionId: row.gameSessionId,
           joinCode: row.joinCode,
@@ -164,12 +181,38 @@ export class StatsService {
           maxPoints: Number(row.maxPoints),
           winnerTeamName: sessionStandings.winner?.teamName ?? null,
           winnerPoints: sessionStandings.winner?.totalPoints ?? null,
+          totalPlayers: reportedTeams > 0 ? total : null,
         };
       }),
       total: Number(total),
       page,
       pageSize,
     };
+  }
+
+  /**
+   * The reported player counts, by session then team. Read straight from the
+   * counts table, not the roster, so a kicked or departed team keeps its count.
+   */
+  private async playerCountsBySession(
+    gameSessionIds: readonly number[],
+  ): Promise<Map<number, Map<number, number>>> {
+    const result = new Map<number, Map<number, number>>();
+    if (gameSessionIds.length === 0) return result;
+    const rows = (await this.gameSessions
+      .getKnex()('session_player_counts')
+      .whereIn('game_session_id', gameSessionIds as number[])
+      .select(
+        'game_session_id as gameSessionId',
+        'team_id as teamId',
+        'player_count as playerCount',
+      )) as SessionPlayerCountRow[];
+    for (const row of rows) {
+      const byTeam = result.get(row.gameSessionId) ?? new Map<number, number>();
+      byTeam.set(row.teamId, row.playerCount);
+      result.set(row.gameSessionId, byTeam);
+    }
+    return result;
   }
 
   async getSessionDetail(gameSessionId: number): Promise<SessionDetailStats> {
@@ -196,6 +239,9 @@ export class StatsService {
     }
 
     const standings = await this.standings.forSession(gameSessionId);
+    const playerCounts =
+      (await this.playerCountsBySession([gameSessionId])).get(gameSessionId) ??
+      new Map<number, number>();
 
     const rounds = (await knex('rounds as r')
       .where('r.quiz_id', header.quizId)
@@ -265,6 +311,7 @@ export class StatsService {
         playedAt: header.playedAt,
       },
       standings,
+      playerCounts,
       rounds: rounds.map((r) => ({
         roundId: r.roundId,
         title: r.title,

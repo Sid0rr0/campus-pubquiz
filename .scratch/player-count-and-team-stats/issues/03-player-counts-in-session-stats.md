@@ -8,7 +8,7 @@ Parent spec: `.scratch/player-count-and-team-stats/spec.md`
 
 **Blocked by:** 01 (Teams report their player count)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Stats service on real Postgres: the total and average leave out unknown counts, `reportedTeams` is correct, a departed team's count is included, and the average is `null` when nobody reported
 - [ ] Stats service: each standing row carries its count, departed rows included, and `null` when unknown

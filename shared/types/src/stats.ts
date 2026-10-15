@@ -15,6 +15,8 @@ export interface PlayedSessionStats {
   // first was never broken — null when no team is on the roster.
   winnerTeamName: string | null;
   winnerPoints: number | null; // that team's winning total, bonus (and any showdown bonus) included
+  /** Sum of the player counts teams reported, departed teams included — null when no team in the session reported one. */
+  totalPlayers: number | null;
 }
 
 export interface PlayedSessionsListedPayload {
@@ -53,6 +55,8 @@ export interface SessionDetailStandingRow {
   isWinner: boolean;
   teamId: number;
   teamName: string;
+  /** The player count the team reported, null when it gave none. Kept for a team that has left. */
+  playerCount: number | null;
   answerPoints: number;
   bonusPoints: number;
   total: number;
@@ -148,6 +152,16 @@ export interface SessionDetailHighlights {
   winningMargin: number | null;
 }
 
+/** How many players came, from the counts teams reported. Teams that gave none are left out, never counted as zero. */
+export interface SessionDetailPlayerCount {
+  /** Sum of the known counts across every participant, departed teams included. */
+  total: number;
+  /** total ÷ reportedTeams — null when no team reported. */
+  average: number | null;
+  /** How many participants gave a count. */
+  reportedTeams: number;
+}
+
 /** Deep-dive stats for one ended session, behind `/stats/:id`. */
 export interface SessionDetailStats {
   gameSessionId: number;
@@ -158,6 +172,7 @@ export interface SessionDetailStats {
   playedAt: string; // ISO
   teamCount: number;
   maxPoints: number;
+  playerCount: SessionDetailPlayerCount;
   difficulty: {
     averagePercent: number;
     label: QuizDifficultyLabel;
