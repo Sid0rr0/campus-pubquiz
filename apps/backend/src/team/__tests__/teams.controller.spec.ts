@@ -81,6 +81,22 @@ describe('TeamsController', () => {
       });
     });
 
+    it('accepts averagePlacing as a sort column', async () => {
+      const { controller, teamService } = makeController();
+      teamService.listAll.mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
+
+      await controller.list({ sortBy: 'averagePlacing', sortOrder: 'asc' });
+
+      expect(teamService.listAll).toHaveBeenCalledWith(
+        expect.objectContaining({ sortBy: 'averagePlacing', sortOrder: 'asc' }),
+      );
+    });
+
     it('rejects an invalid pageSize', async () => {
       const { controller } = makeController();
 

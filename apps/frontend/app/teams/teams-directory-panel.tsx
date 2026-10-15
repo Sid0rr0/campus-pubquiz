@@ -65,6 +65,10 @@ export function TeamsDirectoryPanel() {
           cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),
         }),
         helper.accessor('sessionsJoined', { header: 'Sessions played' }),
+        helper.accessor('averagePlacing', {
+          header: 'Avg. placing',
+          cell: (ctx) => ctx.getValue()?.toFixed(1) ?? '—',
+        }),
         helper.display({
           id: 'actions',
           header: 'Actions',

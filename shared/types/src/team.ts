@@ -4,6 +4,8 @@ export interface TeamListItem {
   code: string;
   joinedAt: string; // Team.createdAt — when this team first ever registered
   sessionsJoined: number; // count of game_session_teams rows for this team
+  /** Mean placing over ended sessions to one decimal (same figure as the team page), null when the team has no placing. */
+  averagePlacing: number | null;
 }
 
 /** A single team's persistent join code, looked up on demand (e.g. the control panel's "Show team code" action) rather than broadcast with every game state update. */
@@ -63,6 +65,10 @@ export interface TeamDetail {
   sessions: TeamSessionRow[];
 }
 
-export const TEAMS_SORT_COLUMNS = ['joinedAt', 'sessionsJoined'] as const;
+export const TEAMS_SORT_COLUMNS = [
+  'joinedAt',
+  'sessionsJoined',
+  'averagePlacing',
+] as const;
 export type TeamsSortColumn = (typeof TEAMS_SORT_COLUMNS)[number];
 export type TeamsSortOrder = 'asc' | 'desc';

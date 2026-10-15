@@ -1101,6 +1101,15 @@ with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
 wins, podiums, best or average placing. The response never carries feedback or
 the team code.
 
+The `/teams` directory (`GET /teams`) shows the same figure: each list item
+carries `averagePlacing: number | null`, computed by `averagePlacingOf` over
+`TeamHistoryService.resultsForTeams`, so the directory and a team's page always
+agree. It is `null` for a team with no placing (shown as "—" in the **Avg.
+placing** column). `sortBy=averagePlacing` is a sort column alongside `joinedAt`
+and `sessionsJoined`; teams with no placing sort last in both directions. Because
+placings are not SQL ranks, this sort loads every team's results and orders and
+pages them in memory; the other sorts only compute the figure for the visible page.
+
 ## Deploy and CI
 
 - **Backend** deploys to Render (`render.yaml`) on the Docker runtime

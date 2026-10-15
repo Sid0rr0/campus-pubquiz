@@ -1,8 +1,13 @@
 import type { EntityManager } from '@mikro-orm/postgresql';
+import { Answer } from '@/db/entities/answer.entity';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
+import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
+import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
+import { StandingsService } from '@/standings/standings.service';
+import { TeamHistoryService } from '@/team/team-history.service';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
@@ -21,12 +26,16 @@ describe('TeamService (Postgres integration)', () => {
 
   beforeEach(async () => {
     em = db.orm.em.fork();
+    const gameSessionTeams = em.getRepository<
+      GameSessionTeam,
+      GameSessionTeamRepository
+    >(GameSessionTeam);
+    const teams = em.getRepository<Team, TeamRepository>(Team);
     teamService = new TeamService(
-      em.getRepository<Team, TeamRepository>(Team),
+      teams,
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
-      em.getRepository<GameSessionTeam, GameSessionTeamRepository>(
-        GameSessionTeam,
-      ),
+      gameSessionTeams,
+      new TeamHistoryService(teams, new StandingsService(gameSessionTeams)),
     );
     const quiz = em.create(Quiz, { title: 'Team Test Quiz' });
     const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });
@@ -337,6 +346,128 @@ describe('TeamService (Postgres integration)', () => {
       });
 
       expect(result.items.map((item) => item.id)).toEqual([fewer.id, more.id]);
+    });
+
+    describe('averagePlacing', () => {
+      /** Plays an ended session where each named team is seated and scores the given points. */
+      async function playEndedSession(
+        scores: Record<string, number>,
+        options: { leavers?: string[] } = {},
+      ): Promise<void> {
+        const quiz = em.create(Quiz, { title: 'Played Quiz' });
+        const round = em.create(Round, {
+          quiz,
+          title: 'Round 1',
+          orderIndex: 0,
+        });
+        const question = em.create(Question, {
+          round,
+          orderIndex: 0,
+          type: 'free_text',
+          prompt: 'Q',
+          answer: 'a',
+          points: 10,
+        });
+        playedSessions += 1;
+        const session = em.create(GameSession, {
+          quiz,
+          joinCode: `PLAY${playedSessions}`,
+          status: 'ended',
+        });
+        await em.flush();
+        for (const [name, points] of Object.entries(scores)) {
+          const team =
+            (await em.findOne(Team, { name })) ??
+            em.create(Team, {
+              name,
+              token: `${name}-token`,
+              code: `${name}-code`,
+            });
+          if (!options.leavers?.includes(name)) {
+            em.create(GameSessionTeam, { gameSession: session, team });
+          }
+          em.create(Answer, {
+            gameSession: session,
+            question,
+            team,
+            value: 'v',
+            pointsAwarded: points,
+            gradedAt: new Date(),
+            verdict: points > 0 ? 'correct' : 'incorrect',
+          });
+          await em.flush();
+        }
+      }
+      let playedSessions = 0;
+
+      async function listByAveragePlacing(
+        sortOrder: 'asc' | 'desc',
+      ): Promise<Array<{ name: string; averagePlacing: number | null }>> {
+        const result = await teamService.listAll({
+          page: 1,
+          pageSize: 20,
+          sortBy: 'averagePlacing',
+          sortOrder,
+        });
+        return result.items.map(({ name, averagePlacing }) => ({
+          name,
+          averagePlacing,
+        }));
+      }
+
+      it('averages placings to one decimal, counts ties at the shared placing and leaves out left sessions', async () => {
+        await playEndedSession({ Ace: 30, Bee: 20, Cat: 10 });
+        await playEndedSession({ Ace: 20, Bee: 20, Cat: 10 });
+        await playEndedSession({ Bee: 5, Ace: 1 }, { leavers: ['Ace'] });
+
+        const items = await listByAveragePlacing('asc');
+
+        // Ace: 1st, tied 1st (left session ignored) = 1.0; Bee: 2nd, tied 1st, 1st = 1.3; Cat: 3rd, 3rd = 3.0
+        expect(items).toEqual([
+          { name: 'Ace', averagePlacing: 1 },
+          { name: 'Bee', averagePlacing: 1.3 },
+          { name: 'Cat', averagePlacing: 3 },
+        ]);
+      });
+
+      it('puts teams with no placing last when sorting ascending and descending', async () => {
+        await playEndedSession({ Ace: 20, Bee: 10 });
+        await createBareTeam('Bare');
+
+        const asc = await listByAveragePlacing('asc');
+        const desc = await listByAveragePlacing('desc');
+
+        expect(asc.map((item) => item.name)).toEqual(['Ace', 'Bee', 'Bare']);
+        expect(desc.map((item) => item.name)).toEqual(['Bee', 'Ace', 'Bare']);
+        expect(asc[2].averagePlacing).toBeNull();
+      });
+
+      it('paginates over the placing order', async () => {
+        await playEndedSession({ Ace: 30, Bee: 20, Cat: 10 });
+
+        const page2 = await teamService.listAll({
+          page: 2,
+          pageSize: 2,
+          sortBy: 'averagePlacing',
+          sortOrder: 'asc',
+        });
+
+        expect(page2.items.map((item) => item.name)).toEqual(['Cat']);
+        expect(page2.total).toBe(3);
+      });
+
+      it('reports averagePlacing on the default sort too', async () => {
+        await playEndedSession({ Ace: 20, Bee: 10 });
+
+        const result = await teamService.listAll({
+          page: 1,
+          pageSize: 20,
+          sortBy: 'joinedAt',
+          sortOrder: 'asc',
+        });
+
+        expect(result.items.map((item) => item.averagePlacing)).toEqual([1, 2]);
+      });
     });
 
     it('sorts by joinedAt ascending, oldest team first', async () => {
