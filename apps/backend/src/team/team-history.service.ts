@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import type { TeamDetail, TeamSessionRow } from '@campus-pubquiz/types';
 import { Team } from '@/db/entities/team.entity';
 import { TeamRepository } from '@/db/repositories/team.repository';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import {
   StandingsService,
   type SessionStandings,
@@ -29,12 +30,6 @@ interface CorrectCountRow {
   count: string | number;
 }
 
-interface PlayerCountRow {
-  gameSessionId: number;
-  teamId: number;
-  playerCount: number;
-}
-
 /** A team's session results, with every placing read from the session's Standings. */
 export interface TeamSessionResults {
   rows: TeamSessionRow[];
@@ -53,6 +48,7 @@ export class TeamHistoryService {
   constructor(
     @InjectRepository(Team) private readonly teams: TeamRepository,
     private readonly standings: StandingsService,
+    private readonly playerCountService: PlayerCountService,
   ) {}
 
   /** One team's header, summary and sessions; null for an unknown team. */
@@ -99,7 +95,7 @@ export class TeamHistoryService {
         this.standings.forSessions(sessionIds),
         this.loadMaxPoints(quizIds),
         this.loadCorrectCounts(sessionIds, teamIds),
-        this.loadPlayerCounts(sessionIds, teamIds),
+        this.playerCountService.listForSessions(sessionIds, teamIds),
       ]);
 
     const keyOf = (gameSessionId: number, teamId: number) =>
@@ -108,12 +104,6 @@ export class TeamHistoryService {
       correctCounts.map((row) => [
         keyOf(row.gameSessionId, row.teamId),
         Number(row.count),
-      ]),
-    );
-    const playerCountByTeamSession = new Map(
-      playerCounts.map((row) => [
-        keyOf(row.gameSessionId, row.teamId),
-        row.playerCount,
       ]),
     );
     const maxPointsByQuiz = new Map(
@@ -130,9 +120,9 @@ export class TeamHistoryService {
         correctByTeamSession.get(
           keyOf(participation.gameSessionId, participation.teamId),
         ) ?? 0,
-        playerCountByTeamSession.get(
-          keyOf(participation.gameSessionId, participation.teamId),
-        ) ?? null,
+        playerCounts
+          .get(participation.gameSessionId)
+          ?.get(participation.teamId) ?? null,
       );
       if (!row) continue;
       result.rows.push(row);
@@ -202,21 +192,6 @@ export class TeamHistoryService {
       .groupBy('game_session_id', 'team_id')
       .select('game_session_id as gameSessionId', 'team_id as teamId')
       .select(knex.raw('count(*) as count'))) as CorrectCountRow[];
-  }
-
-  private async loadPlayerCounts(
-    sessionIds: readonly number[],
-    teamIds: readonly number[],
-  ): Promise<PlayerCountRow[]> {
-    const knex = this.teams.getKnex();
-    return (await knex('session_player_counts')
-      .whereIn('game_session_id', [...sessionIds])
-      .whereIn('team_id', [...teamIds])
-      .select(
-        'game_session_id as gameSessionId',
-        'team_id as teamId',
-        'player_count as playerCount',
-      )) as PlayerCountRow[];
   }
 }
 

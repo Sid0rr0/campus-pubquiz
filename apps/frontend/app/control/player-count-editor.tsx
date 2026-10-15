@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { Pencil1Icon } from '@radix-ui/react-icons';
 import {
+  isValidPlayerCount,
   MAX_PLAYER_COUNT,
   MIN_PLAYER_COUNT,
   type AdminTeamView,
@@ -17,12 +18,7 @@ interface PlayerCountEditorProps {
 /** The count typed, or null when it is not a whole number the server would accept. */
 function parseDraft(draft: string): number | null {
   const count = Number(draft);
-  const isValid =
-    draft.trim() !== '' &&
-    Number.isInteger(count) &&
-    count >= MIN_PLAYER_COUNT &&
-    count <= MAX_PLAYER_COUNT;
-  return isValid ? count : null;
+  return draft.trim() !== '' && isValidPlayerCount(count) ? count : null;
 }
 
 /** One team's player count in the Teams panel, with the over-cap flag and a small editor to set or correct it. */
