@@ -292,6 +292,24 @@ describe('TeamHistoryService (Postgres integration)', () => {
     expect(detail!.sessions.map((s) => s.maxPoints)).toEqual([40, 10]);
   });
 
+  it('leaves a session with no points to win out of the share average', async () => {
+    await playSession({ Alpha: 0 }, 0);
+    const { teams } = await playSession({ Alpha: 10 }, 10);
+
+    const detail = await history.detail(teams.Alpha.id);
+
+    expect(detail!.summary.averageSharePercent).toBe(100);
+    expect(detail!.summary.sessionsPlayed).toBe(2);
+  });
+
+  it('has no share average when every session has no points to win', async () => {
+    const { teams } = await playSession({ Alpha: 0 }, 0);
+
+    const detail = await history.detail(teams.Alpha.id);
+
+    expect(detail!.summary.averageSharePercent).toBeNull();
+  });
+
   it('counts correct answers per session', async () => {
     const { quiz, questions } = await createQuiz([5, 5, 5]);
     const session = await createSession(quiz);

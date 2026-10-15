@@ -485,8 +485,11 @@ and refused, with "Only admin clients may set a team’s player count", from any
 room) and uses the same Zod validation as `SET_PLAYER_COUNT` (a whole number from 1
 to 20). The ack is the result: `{ success: true }` once saved, or an error with a
 reason — "Team N is not in this session" for a team that was never on this session's
-roster (a team removed by a kick still counts if it had reported a number, since the
-number outlives the roster row). It writes the same per-team, per-session row as the
+roster. A team removed by a kick or leave still counts if it left a record: a reported
+number, or graded answers or bonus awards (the standings' record of a departed team).
+A team removed before it left any record is not recoverable and is refused. Both
+player count events are refused once the session is closed (its state is evicted, so the
+write fails with an unknown-session error). It writes the same per-team, per-session row as the
 phone's event (last write wins, so the team's later report overwrites the correction
 and vice versa) and reaches the team's phones through the same `TEAM_PLAYER_COUNT_SYNCED`
 per-team sync; a team with no connected phone gets the number on its next join. The
@@ -1117,7 +1120,9 @@ non-numeric id a 400. The response is `{ id, name, summary, sessions }`:
   `averagePlayerCount`. The placing figures are `null` when the team has no
   placing; the player count average leaves out sessions with no count and is
   `null` when there are none. The share of max points is each session's total
-  divided by its max points, averaged per session, not pooled.
+  divided by its max points, averaged per session, not pooled; a session whose
+  quiz has no points to win is left out, and the average is `null` when every
+  session is.
 - `sessions` (newest first): `gameSessionId`, `name`, `playedAt`, `placing`,
   `placingTo`, `teamCount`, `hasLeft`, `totalPoints`, `maxPoints`,
   `correctCount` and `playerCount`.
