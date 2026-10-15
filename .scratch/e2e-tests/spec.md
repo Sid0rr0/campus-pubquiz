@@ -1,6 +1,6 @@
 # Spec: Browser end-to-end tests for a quiz night
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 
