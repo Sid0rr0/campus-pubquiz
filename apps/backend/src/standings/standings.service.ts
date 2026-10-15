@@ -160,11 +160,12 @@ export class StandingsService {
    */
   async hasTakenPart(gameSessionId: number, teamId: number): Promise<boolean> {
     const knex = this.gameSessionTeams.getKnex();
-    const row = await knex
+    const rows = (await knex
       .from(participantsQuery(knex, [gameSessionId]).as('p'))
       .where('p.team_id', teamId)
-      .first('p.team_id');
-    return row !== undefined;
+      .select('p.team_id')
+      .limit(1)) as unknown[];
+    return rows.length > 0;
   }
 
   async forSession(gameSessionId: number): Promise<SessionStandings> {
