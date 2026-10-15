@@ -5,7 +5,7 @@ interface HighlightTilesProps {
   data: SessionDetailStats;
 }
 
-function StatTile({
+export function StatTile({
   label,
   value,
   detail,

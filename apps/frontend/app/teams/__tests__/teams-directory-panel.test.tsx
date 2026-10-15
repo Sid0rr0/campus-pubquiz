@@ -50,6 +50,20 @@ describe('TeamsDirectoryPanel', () => {
     expect(screen.getByText('Second Place')).toBeInTheDocument();
   });
 
+  it('links each team name to its team page', async () => {
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+
+    expect(screen.getByRole('link', { name: 'The Quizzards' })).toHaveAttribute(
+      'href',
+      '/teams/1',
+    );
+    expect(screen.getByRole('link', { name: 'Second Place' })).toHaveAttribute(
+      'href',
+      '/teams/2',
+    );
+  });
+
   it('renders Team/Code headers without a sort toggle', async () => {
     renderWithQuery(<TeamsDirectoryPanel />);
     await waitFor(() => screen.getByText('The Quizzards'));

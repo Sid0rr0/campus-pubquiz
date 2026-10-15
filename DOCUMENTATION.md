@@ -72,6 +72,7 @@ management and authoring UI:
 | `/control/users` | Admin only                  | Approve pending accounts, deactivate active ones                                |
 | `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
+| `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -1055,6 +1056,31 @@ The session detail also carries a `feedback` section, shown on the page as
   ("Geography ×4").
 - The team is never selected: no team id or name reaches the response or the page.
   Comment and topic order uses when the team last sent its feedback.
+
+### Team stats
+
+`/teams/:id` shows one team's history across its **ended** sessions, from
+`GET /teams/:id` (`TeamHistoryService.detail`; same guards as the stats
+endpoints, so admins and moderators). An unknown team id is a 404 and a
+non-numeric id a 400. The response is `{ id, name, summary, sessions }`:
+
+- `summary`: `sessionsPlayed`, `wins`, `podiums` (placing 1 to 3), `bestPlacing`,
+  `averagePlacing` (one decimal), `averageSharePercent`, `averageTotalPoints` and
+  `averagePlayerCount`. The placing figures are `null` when the team has no
+  placing; the player count average leaves out sessions with no count and is
+  `null` when there are none. The share of max points is each session's total
+  divided by its max points, averaged per session, not pooled.
+- `sessions` (newest first): `gameSessionId`, `name`, `playedAt`, `placing`,
+  `placingTo`, `teamCount`, `hasLeft`, `totalPoints`, `maxPoints`,
+  `correctCount` and `playerCount`.
+
+Placings come from the Standings service for each session, never from SQL ranks,
+so the page agrees with each session's standings table; a tie shares the
+competition rank ("Joint 2nd"). A **win** is placing 1 and being the session's
+single Standings winner. A session the team was kicked from or left is listed
+with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
+wins, podiums, best or average placing. The response never carries feedback or
+the team code.
 
 ## Deploy and CI
 

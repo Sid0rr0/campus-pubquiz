@@ -25,6 +25,7 @@ import { MediaService } from '@/media/media.service';
 import { SessionsController } from '@/session/sessions.controller';
 import { StatsController } from '@/stats/stats.controller';
 import { StatsService } from '@/stats/stats.service';
+import { TeamHistoryService } from '@/team/team-history.service';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { StatsService } from '@/stats/stats.service';
     { provide: MEDIA_STORAGE, useFactory: () => createMediaStorage() },
     MediaService,
     StatsService,
+    TeamHistoryService,
   ],
 })
 export class AppModule {}
