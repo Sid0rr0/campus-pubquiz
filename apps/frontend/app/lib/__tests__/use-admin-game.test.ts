@@ -68,6 +68,12 @@ describe('useAdminGame', () => {
         call: (game) => game.kickTeam(7),
       },
       {
+        name: 'setTeamPlayerCount',
+        event: SOCKET_EVENTS.SET_TEAM_PLAYER_COUNT,
+        payload: { teamId: 7, playerCount: 5 },
+        call: (game) => game.setTeamPlayerCount(7, 5),
+      },
+      {
         name: 'awardBonus',
         event: SOCKET_EVENTS.AWARD_BONUS,
         payload: { teamId: 31, category: 'custom', points: 3, reason: 'Name' },

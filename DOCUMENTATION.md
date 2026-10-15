@@ -226,7 +226,8 @@ leaves the timers as they were.
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
 the display view names the screen on air; the admin view adds what `/control`
-marks as on air plus server-decided Advance/Previous availability; the
+marks as on air plus server-decided Advance/Previous availability, and gives each
+roster team its player count and over-cap flag; the
 players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state), and drops anything teams haven't been shown
 yet (a kahoot question hidden behind the leaderboard is removed server-side,
 never filtered by the client). In particular it carries only the reveal walk so
@@ -424,7 +425,7 @@ Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED
 team's own phone only), `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
-Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `AWARD_BONUS`,
+Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
 `SEND_FEEDBACK`, `SET_PLAYER_COUNT` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
@@ -476,6 +477,34 @@ and the players view are untouched. Instead the server sends `TEAM_PLAYER_COUNT_
 that also carries the team's answers), so a team's count never reaches another team.
 The service that reads and writes it is `PlayerCountService`
 (`apps/backend/src/player-count/`).
+
+`SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
+moderator set or correct any team's player count from the Teams panel at any status.
+It is admin-room gated like `KICK_TEAM` (so it is allowed for admins and moderators
+and refused, with "Only admin clients may set a team’s player count", from any other
+room) and uses the same Zod validation as `SET_PLAYER_COUNT` (a whole number from 1
+to 20). The ack is the result: `{ success: true }` once saved, or an error with a
+reason — "Team N is not in this session" for a team that was never on this session's
+roster (a team removed by a kick still counts if it had reported a number, since the
+number outlives the roster row). It writes the same per-team, per-session row as the
+phone's event (last write wins, so the team's later report overwrites the correction
+and vice versa) and reaches the team's phones through the same `TEAM_PLAYER_COUNT_SYNCED`
+per-team sync; a team with no connected phone gets the number on its next join. The
+big screen and the players view are untouched. The admin room alone is sent a fresh
+`STATE_UPDATED` (the outcome's `shouldBroadcastAdminState`), after this event and
+after a team's own `SET_PLAYER_COUNT`, so an open `/control` shows the new number.
+
+**Player count in the admin view.** Each entry of the admin view's `teams` (an
+`AdminTeamView`) carries, besides `teamId`, `teamName` and `isConnected`,
+`playerCount` (`number | null`, null until the team or the quiz master has set one) and
+`isOverPlayerCap` (`boolean`). The server sets `isOverPlayerCap` when `playerCount`
+is above the session's `maxPlayersPerTeam` setting, so changing that setting in the
+lobby changes the flag and `/control` doesn't repeat the rule. The display and
+players views keep the plain `TeamView` entries without either field. The session
+caches the counts (`SessionState.playerCounts`, filled as teams join and as counts
+are set) so the view stays synchronous; the database row remains the source of truth.
+The flag is information only: no penalty is applied, and the quiz master can still
+give the house-rules penalty as a bonus award.
 
 Answer _content_ only ever goes to the admin room and the answering team
 itself — the display and other players just see counts.

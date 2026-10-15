@@ -33,6 +33,15 @@ export function broadcastGameState(
   }
 }
 
+/** A fresh view for the admin room alone, for a change only the quiz master's screens show. */
+export function broadcastAdminState(
+  server: GameServer,
+  joinCode: string,
+  gameState: GameStateService,
+): void {
+  sendStateUpdate(server, joinCode, gameState, SOCKET_ROOMS.ADMIN);
+}
+
 /** One room's own view, sent to that room — typed so no room is sent another's. */
 function sendStateUpdate<R extends SocketRoomName>(
   server: GameServer,

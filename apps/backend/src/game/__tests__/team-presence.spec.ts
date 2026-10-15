@@ -37,7 +37,13 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
 
     const { teams } = await game.snapshot();
     expect(teams).toEqual([
-      { teamId, teamName: 'The Quizzards', isConnected: true },
+      {
+        teamId,
+        teamName: 'The Quizzards',
+        isConnected: true,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
     ]);
   });
 
@@ -58,7 +64,13 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
     expectStateUpdateInEveryRoom();
     const { teams } = await game.snapshot();
     expect(teams).toEqual([
-      { teamId, teamName: 'The Quizzards', isConnected: false },
+      {
+        teamId,
+        teamName: 'The Quizzards',
+        isConnected: false,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
     ]);
   });
 
@@ -85,8 +97,20 @@ describe('GameGateway — team presence (one live device per team + kick)', () =
 
     const { teams } = await game.snapshot();
     expect(teams).toEqual([
-      { teamId: teamA.teamId, teamName: 'The Quizzards', isConnected: false },
-      { teamId: teamB.teamId, teamName: 'The Brainiacs', isConnected: true },
+      {
+        teamId: teamA.teamId,
+        teamName: 'The Quizzards',
+        isConnected: false,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
+      {
+        teamId: teamB.teamId,
+        teamName: 'The Brainiacs',
+        isConnected: true,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
     ]);
   });
 

@@ -56,6 +56,8 @@ export interface SessionOutcome {
   replies: readonly SocketReply[];
   /** Presenter context to admin, then the state snapshot to all three rooms. */
   shouldBroadcastState: boolean;
+  /** The admin room's view alone, afresh, for a change only the quiz master's screens show (a team's player count). Redundant when `shouldBroadcastState` is set. */
+  shouldBroadcastAdminState: boolean;
   /** Questions whose answer list the admin room needs afresh. */
   answerListQuestionIds: readonly number[];
   /** Connected teams whose own graded-answer list needs a per-team sync. */
@@ -81,6 +83,7 @@ export interface SessionOutcome {
 export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   replies: [],
   shouldBroadcastState: true,
+  shouldBroadcastAdminState: false,
   answerListQuestionIds: [],
   teamSyncs: [],
   playerCountSyncs: [],

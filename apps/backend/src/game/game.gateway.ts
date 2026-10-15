@@ -168,6 +168,20 @@ export class GameGateway
     );
   }
 
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setTeamPlayerCount.event)
+  async handleSetTeamPlayerCount(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.setTeamPlayerCount,
+      rawPayload,
+      client,
+      ({ joinCode, payload }) =>
+        this.gameState.teamPlayerCountSet(joinCode, payload),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.gradeAnswer.event)
   async handleGradeAnswer(
     @ConnectedSocket() client: GameSocket,

@@ -74,6 +74,11 @@ const SENDERS: Record<keyof typeof D, EventSender> = {
       gateway.handleSetPlayerCount(asSocket(socket), payload),
     payload: () => ({ playerCount: 4 }),
   },
+  setTeamPlayerCount: {
+    send: (gateway, socket, payload) =>
+      gateway.handleSetTeamPlayerCount(asSocket(socket), payload),
+    payload: ({ teamId }) => ({ teamId, playerCount: 4 }),
+  },
   gradeAnswer: {
     send: (gateway, socket, payload) =>
       gateway.handleGradeAnswer(asSocket(socket), payload),

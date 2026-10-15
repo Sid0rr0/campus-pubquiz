@@ -27,6 +27,7 @@ export const SOCKET_EVENTS = {
   RATE_ROUND: 'game:rate_round',
   SEND_FEEDBACK: 'game:send_feedback',
   SET_PLAYER_COUNT: 'game:set_player_count',
+  SET_TEAM_PLAYER_COUNT: 'game:set_team_player_count',
 } as const;
 
 export const SOCKET_ROOMS = {

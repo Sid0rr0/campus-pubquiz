@@ -24,6 +24,7 @@ export type ControlPanelActions = Pick<
   UseAdminGameResult,
   | 'sendAction'
   | 'kickTeam'
+  | 'setTeamPlayerCount'
   | 'setBreakEndTime'
   | 'setDisplayTextScale'
   | 'setDisplaySoundMuted'

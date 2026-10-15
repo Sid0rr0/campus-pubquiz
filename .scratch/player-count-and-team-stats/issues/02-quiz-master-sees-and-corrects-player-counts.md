@@ -8,7 +8,7 @@ Parent spec: `.scratch/player-count-and-team-stats/spec.md`
 
 **Blocked by:** 01 (Teams report their player count)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Gateway harness: when a team sets its count, the admin view's roster entry shows it; `null` before any count is set
 - [ ] Gateway harness: `isOverPlayerCap` is true above the session's max players per team and false at or below it

@@ -123,6 +123,8 @@ export interface SessionState {
    */
   verdictTallies: Record<number, VerdictTally>;
   teams: TeamRosterEntry[];
+  /** teamId -> the team's player count this session, for teams that have one. A cache of the stored counts, filled as teams join and as counts are set, so the admin view stays synchronous. */
+  playerCounts: Record<number, number>;
   answeredTeamIdsByQuestion: Record<number, number[]>;
   /** teamId -> socket.id of the one device currently connected as that team. */
   connectedTeamSockets: Record<number, string>;
@@ -191,6 +193,7 @@ export function freshSessionState(
     priorStandings: [],
     verdictTallies: {},
     teams: [],
+    playerCounts: {},
     answeredTeamIdsByQuestion: {},
     connectedTeamSockets: {},
     closestGuessRevealStep: 0,

@@ -18,6 +18,7 @@ import {
   type SendFeedbackPayload,
   type SessionSettings,
   type SetPlayerCountPayload,
+  type SetTeamPlayerCountPayload,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -236,6 +237,18 @@ export class GameStateService implements OnModuleInit {
       joinCode,
       (session) =>
         this.playerCountChanges.playerCountSet(session, payload, socketId),
+      NOT_TOUCHING_SCORES,
+    );
+  }
+
+  /** The quiz master or a moderator sets or corrects a team's player count. Like `playerCountSet`, plus the admin room's view is refreshed. */
+  teamPlayerCountSet(
+    joinCode: string,
+    payload: SetTeamPlayerCountPayload,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(
+      joinCode,
+      (session) => this.playerCountChanges.teamPlayerCountSet(session, payload),
       NOT_TOUCHING_SCORES,
     );
   }

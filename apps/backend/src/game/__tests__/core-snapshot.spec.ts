@@ -65,13 +65,25 @@ describe('GameStateService — core snapshot', () => {
   it('reflects a joined team in the snapshot, connected until its socket drops', async () => {
     const { socket, teamId } = await game.joinTeam('The Quizzards');
     expect((await game.snapshot()).teams).toEqual([
-      { teamId, teamName: 'The Quizzards', isConnected: true },
+      {
+        teamId,
+        teamName: 'The Quizzards',
+        isConnected: true,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
     ]);
 
     await game.gateway.handleDisconnect(asSocket(socket));
 
     expect((await game.snapshot()).teams).toEqual([
-      { teamId, teamName: 'The Quizzards', isConnected: false },
+      {
+        teamId,
+        teamName: 'The Quizzards',
+        isConnected: false,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
     ]);
   });
 
