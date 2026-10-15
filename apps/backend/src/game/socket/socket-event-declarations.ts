@@ -16,6 +16,7 @@ import {
   leaveSessionPayloadSchema,
   rateRoundPayloadSchema,
   sendFeedbackPayloadSchema,
+  setPlayerCountPayloadSchema,
   setBreakEndTimePayloadSchema,
   setDisplaySoundMutedPayloadSchema,
   setDisplayTextScalePayloadSchema,
@@ -95,6 +96,13 @@ export const SOCKET_EVENT_DECLARATIONS = {
     allowedRoom: SOCKET_ROOMS.PLAYERS,
     rejection: 'Only player clients may send feedback',
     logFields: [],
+  }),
+  setPlayerCount: declareSocketEvent({
+    event: SOCKET_EVENTS.SET_PLAYER_COUNT,
+    schema: setPlayerCountPayloadSchema,
+    allowedRoom: SOCKET_ROOMS.PLAYERS,
+    rejection: 'Only player clients may report a player count',
+    logFields: ['playerCount'],
   }),
   gradeAnswer: declareSocketEvent({
     event: SOCKET_EVENTS.GRADE_ANSWER,

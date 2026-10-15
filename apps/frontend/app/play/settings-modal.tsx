@@ -1,13 +1,21 @@
 'use client';
 
 import { Dialog } from 'radix-ui';
+import type { AckResult } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
+import {
+  DEFAULT_PLAYER_COUNT,
+  PlayerCountStepper,
+} from '@/app/play/player-count-stepper';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   autoAdvanceEnabled: boolean;
   onAutoAdvanceChange: (enabled: boolean) => void;
+  /** The team's player count as the server holds it, or null until one is reported. */
+  playerCount: number | null;
+  onPlayerCountChange: (playerCount: number) => Promise<AckResult>;
 }
 
 /** Player-only preferences, opened from the team menu (mobile drawer + desktop button). */
@@ -16,6 +24,8 @@ export function SettingsModal({
   onOpenChange,
   autoAdvanceEnabled,
   onAutoAdvanceChange,
+  playerCount,
+  onPlayerCountChange,
 }: SettingsModalProps) {
   return (
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -36,6 +46,13 @@ export function SettingsModal({
               ? 'Your screen follows the big screen automatically.'
               : 'Your screen stays put until you tap Next — use the Prev/Next buttons to move between questions the quiz master has already opened.'}
           </p>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-extrabold">Players in your team</p>
+            <PlayerCountStepper
+              initialCount={playerCount ?? DEFAULT_PLAYER_COUNT}
+              onSend={onPlayerCountChange}
+            />
+          </div>
           <Button
             type="button"
             onClick={() => onOpenChange(false)}

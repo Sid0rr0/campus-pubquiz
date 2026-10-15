@@ -95,6 +95,12 @@ async function deliverEmits(
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers });
   }
 
+  for (const { socketId, playerCount } of outcome.playerCountSyncs) {
+    server
+      .to(socketId)
+      .emit(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, { playerCount });
+  }
+
   for (const notice of outcome.notices) {
     emitNotice(server.to(notice.socketId), notice);
   }

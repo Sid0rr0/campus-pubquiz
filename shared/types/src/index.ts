@@ -8,6 +8,7 @@ export * from './team-presence';
 export * from './session-settings';
 export * from './bonus';
 export * from './feedback';
+export * from './player-count';
 export * from './showdown';
 export * from './admin-actions';
 export * from './rest';

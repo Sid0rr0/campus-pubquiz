@@ -18,6 +18,10 @@ import type {
 } from './answers';
 import type { AwardBonusPayload, BonusAwardedPayload } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
+import type {
+  SetPlayerCountPayload,
+  TeamPlayerCountSyncedPayload,
+} from './player-count';
 import type { PresenterContextPayload, StateViewByRoom } from './room-views';
 import type {
   CreateShowdownRoundPayload,
@@ -68,6 +72,10 @@ export interface ClientToServerProtocol {
   };
   [SOCKET_EVENTS.RATE_ROUND]: { payload: RateRoundPayload; ack: void };
   [SOCKET_EVENTS.SEND_FEEDBACK]: { payload: SendFeedbackPayload; ack: void };
+  [SOCKET_EVENTS.SET_PLAYER_COUNT]: {
+    payload: SetPlayerCountPayload;
+    ack: void;
+  };
 }
 
 export type ClientToServerEvent = keyof ClientToServerProtocol;
@@ -95,6 +103,7 @@ export interface ServerToClientProtocol {
   [SOCKET_EVENTS.TEAM_ANSWERS_SYNCED]: TeamAnswersSyncedPayload;
   [SOCKET_EVENTS.BONUS_AWARDED]: BonusAwardedPayload;
   [SOCKET_EVENTS.SESSION_CLOSED]: SessionClosedPayload;
+  [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED]: TeamPlayerCountSyncedPayload;
   [SOCKET_EVENTS.TEAM_KICKED]: void;
   exception: ExceptionPayload | string;
 }

@@ -54,6 +54,10 @@ export function teamLinkResult({
         myBonusAwards: [],
         myRoundRatings: {},
         myFeedback: { comment: '', topics: [] },
+        // Most screens are tested for a team that already reported its count;
+        // the player count tests pass null.
+        myPlayerCount: 3,
+        setPlayerCount: vi.fn().mockResolvedValue({ success: true }),
         sendFeedback: vi.fn().mockResolvedValue({ success: true }),
         roundRatingsEpoch: 0,
         rateRound: vi.fn().mockResolvedValue({ success: true }),

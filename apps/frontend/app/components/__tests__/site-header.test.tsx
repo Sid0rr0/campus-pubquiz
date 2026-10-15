@@ -229,6 +229,7 @@ describe('SiteHeader', () => {
           bonusAwards: [],
           roundRatings: [],
           feedback: { comment: '', topics: [] },
+          playerCount: null,
         },
         onLogOut,
       }),

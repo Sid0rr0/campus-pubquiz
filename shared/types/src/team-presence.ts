@@ -24,6 +24,8 @@ export interface JoinAcceptedPayload {
   roundRatings: RoundRatingView[];
   /** The team's own saved comment and topic suggestions this session (empty when it sent none), so a reconnecting phone shows its final form again. */
   feedback: TeamFeedbackView;
+  /** The team's own player count this session (null until reported), so a reconnect, a second phone or a rejoin after a kick shows it. */
+  playerCount: number | null;
 }
 
 export interface KickTeamPayload {

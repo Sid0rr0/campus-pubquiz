@@ -58,6 +58,7 @@ const ACCEPTED = {
   bonusAwards: [],
   roundRatings: [],
   feedback: { comment: '', topics: [] },
+  playerCount: null,
 };
 
 function latestSocket(): FakeSocket {
@@ -254,6 +255,50 @@ describe('useTeamLink: the team data and the pending answer', () => {
       duration: undefined,
     });
     expect(socket.emitsOf(SOCKET_EVENTS.SUBMIT_ANSWER)).toHaveLength(0);
+  });
+
+  it('sends the player count, keeps it once acknowledged and follows the server when it syncs a change', async () => {
+    const { result, socket } = renderPlayingTeam();
+    expect(result.current.game?.myPlayerCount).toBeNull();
+
+    let sent!: Promise<AckResult>;
+    act(() => {
+      sent = joinedGame(result).setPlayerCount(4);
+    });
+    expect(socket.lastEmitOf(SOCKET_EVENTS.SET_PLAYER_COUNT).payload).toEqual({
+      playerCount: 4,
+    });
+    expect(result.current.game?.myPlayerCount).toBeNull();
+    await act(async () => socket.acknowledge(SOCKET_EVENTS.SET_PLAYER_COUNT));
+    await expect(sent).resolves.toMatchObject({ success: true });
+    expect(result.current.game?.myPlayerCount).toBe(4);
+
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, {
+        playerCount: 7,
+      }),
+    );
+    expect(result.current.game?.myPlayerCount).toBe(7);
+  });
+
+  it('keeps the old count and resolves a refusal when the server refuses a new one', async () => {
+    const { result, socket } = renderPlayingTeam();
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, {
+        playerCount: 5,
+      }),
+    );
+
+    let sent!: Promise<AckResult>;
+    act(() => {
+      sent = joinedGame(result).setPlayerCount(9);
+    });
+    await act(async () =>
+      socket.reject(SOCKET_EVENTS.SET_PLAYER_COUNT, 'Nope'),
+    );
+
+    await expect(sent).resolves.toMatchObject({ success: false });
+    expect(result.current.game?.myPlayerCount).toBe(5);
   });
 
   it('keeps an acknowledged rating after a rejoin only when the server held it', async () => {
