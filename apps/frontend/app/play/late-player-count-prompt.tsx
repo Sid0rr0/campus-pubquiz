@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import type { AckResult } from '@campus-pubquiz/types';
 import {
+  readPlayerCountPromptDecision,
   readPlayerCountPromptDismissed,
+  writePlayerCountPromptDecision,
   writePlayerCountPromptDismissed,
 } from '@/app/lib/player-count-prompt-storage';
 import { PlayerCountCard } from '@/app/play/player-count-card';
@@ -21,9 +23,10 @@ interface LatePlayerCountPromptProps {
 /**
  * The player count card for a team that joined after the lobby without a
  * count: asked once, over whatever screen it landed on, with a dismiss that
- * this phone remembers. Whether to ask is decided once, when the join first
- * lands, so a reconnect with a count never asks and a saved count folds the
- * card instead of removing it.
+ * this phone remembers. Whether to ask is decided once per session, when the
+ * join first lands, and remembered on this phone, so a reconnect with a count
+ * never asks, a lobby joiner is not asked after a mid-quiz reload, and a saved
+ * count folds the card instead of removing it.
  */
 export function LatePlayerCountPrompt({
   joinCode,
@@ -32,12 +35,16 @@ export function LatePlayerCountPrompt({
   savedCount,
   onSend,
 }: LatePlayerCountPromptProps) {
-  const [shouldAsk, setShouldAsk] = useState<boolean | null>(null);
+  const [shouldAsk, setShouldAsk] = useState<boolean | null>(() =>
+    readPlayerCountPromptDecision(joinCode),
+  );
   const [isDismissed, setIsDismissed] = useState(() =>
     readPlayerCountPromptDismissed(joinCode),
   );
   if (shouldAsk === null && hasJoined) {
-    setShouldAsk(!isLobby && savedCount === null);
+    const decision = !isLobby && savedCount === null;
+    writePlayerCountPromptDecision(joinCode, decision);
+    setShouldAsk(decision);
   }
   if (!shouldAsk || isDismissed) return null;
 

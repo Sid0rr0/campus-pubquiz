@@ -6,6 +6,7 @@ import {
 import { asSocket, type MockSocket } from '@/game/__tests__/test-utils';
 import {
   setupRealStoreGatewayTest,
+  tieOnFirstQuestion,
   type JoinedTeam,
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
@@ -41,6 +42,16 @@ function syncsTo(
         emit.event === SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED,
     )
     .map((emit) => emit.payload);
+}
+
+/** The count stored for a team, read straight from the database. */
+function storedCount(
+  game: RealStoreGateway,
+  teamId: number,
+): Promise<number | null> {
+  return game.inRequestContext(() =>
+    game.playerCountService.getForTeam(game.gameSessionId, teamId),
+  );
 }
 
 /** The roster entry the admin view shows for a team. */
@@ -159,6 +170,46 @@ describe('GameGateway — the admin view shows each team’s player count', () =
     expect(await rosterEntry(restarted, team.teamId)).toMatchObject({
       playerCount: 5,
     });
+  });
+});
+
+describe('GameGateway — player counts after the session is closed', () => {
+  const harness = setupRealStoreGatewayTest();
+
+  /** A game whose session has ended and been closed (evicted), with its team's phone and an admin still connected. */
+  async function closedGame() {
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const [team] = game.teams;
+    const admin = await game.connectAdmin();
+    // The default session is never evicted, so a second one takes its place.
+    await game.inRequestContext(() =>
+      game.gameState.createSession(game.quizId),
+    );
+    await game.act('START_QUIZ');
+    await game.act('END_QUIZ');
+    await game.gameState.closeSession(game.joinCode);
+    return { game, team, admin };
+  }
+
+  it('refuses a team’s own count and stores nothing', async () => {
+    const { game, team } = await closedGame();
+
+    const ack = await teamSetCount(game, team, 4);
+
+    expect(ack.success).toBe(false);
+    expect(await storedCount(game, team.teamId)).toBeNull();
+  });
+
+  it('refuses the admin’s correction and stores nothing', async () => {
+    const { game, team, admin } = await closedGame();
+
+    const ack = await adminSetCount(game, admin, {
+      teamId: team.teamId,
+      playerCount: 4,
+    });
+
+    expect(ack.success).toBe(false);
+    expect(await storedCount(game, team.teamId)).toBeNull();
   });
 });
 
@@ -293,6 +344,24 @@ describe('GameGateway — SET_TEAM_PLAYER_COUNT', () => {
         playerCount: 20,
       }),
     ).toEqual({ success: true });
+  });
+
+  it('corrects a kicked team that never gave a count but left an answer behind', async () => {
+    const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
+    const [team] = game.teams;
+    await tieOnFirstQuestion(game, [team]);
+    const admin = await game.connectAdmin();
+    await game.gateway.handleKickTeam(asSocket(admin), {
+      teamId: team.teamId,
+    });
+
+    const ack = await adminSetCount(game, admin, {
+      teamId: team.teamId,
+      playerCount: 4,
+    });
+
+    expect(ack).toEqual({ success: true });
+    expect(await storedCount(game, team.teamId)).toBe(4);
   });
 
   it('refuses a team that was never on the roster, with a reason', async () => {

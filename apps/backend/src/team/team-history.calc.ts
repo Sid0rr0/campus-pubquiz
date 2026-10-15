@@ -37,9 +37,10 @@ export function summarizeTeamHistory(
   winningSessionIds: ReadonlySet<number>,
 ): TeamStatsSummary {
   const placings = placingsOf(rows);
-  const shares = rows.map((row) =>
-    row.maxPoints > 0 ? (row.totalPoints / row.maxPoints) * 100 : 0,
-  );
+  // A session with no points to win has no share, so it stays out of the mean.
+  const shares = rows
+    .filter((row) => row.maxPoints > 0)
+    .map((row) => (row.totalPoints / row.maxPoints) * 100);
   const playerCounts = rows.flatMap((row) =>
     row.playerCount === null ? [] : [row.playerCount],
   );

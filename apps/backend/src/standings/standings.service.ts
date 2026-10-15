@@ -154,6 +154,20 @@ export class StandingsService {
     return tallies;
   }
 
+  /**
+   * Whether the team took part in the session: on the roster now, or kicked or
+   * departed with graded answers or bonus awards left behind.
+   */
+  async hasTakenPart(gameSessionId: number, teamId: number): Promise<boolean> {
+    const knex = this.gameSessionTeams.getKnex();
+    const rows = (await knex
+      .from(participantsQuery(knex, [gameSessionId]).as('p'))
+      .where('p.team_id', teamId)
+      .select('p.team_id')
+      .limit(1)) as unknown[];
+    return rows.length > 0;
+  }
+
   async forSession(gameSessionId: number): Promise<SessionStandings> {
     const bySession = await this.forSessions([gameSessionId]);
     return bySession.get(gameSessionId)!;

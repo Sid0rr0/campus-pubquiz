@@ -5,6 +5,7 @@ import {
   MAX_FEEDBACK_COMMENT_LENGTH,
   MAX_FEEDBACK_TOPICS,
   MAX_FEEDBACK_TOPIC_LENGTH,
+  isValidPlayerCount,
   MAX_PLAYER_COUNT,
   MIN_PLAYER_COUNT,
   DISPLAY_TEXT_SCALE_STEPS,
@@ -86,7 +87,9 @@ export const sendFeedbackPayloadSchema = z.object({
 });
 
 export const setPlayerCountPayloadSchema = z.object({
-  playerCount: z.number().int().min(MIN_PLAYER_COUNT).max(MAX_PLAYER_COUNT),
+  playerCount: z.number().refine(isValidPlayerCount, {
+    message: `Must be a whole number from ${MIN_PLAYER_COUNT} to ${MAX_PLAYER_COUNT}`,
+  }),
 });
 
 export const setTeamPlayerCountPayloadSchema =

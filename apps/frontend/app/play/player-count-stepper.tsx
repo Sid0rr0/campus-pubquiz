@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  isValidPlayerCount,
   MAX_PLAYER_COUNT,
   MIN_PLAYER_COUNT,
   type AckResult,
@@ -35,7 +36,7 @@ export function PlayerCountStepper({
 
   function step(delta: number): void {
     setCount((current) =>
-      Math.min(MAX_PLAYER_COUNT, Math.max(MIN_PLAYER_COUNT, current + delta)),
+      isValidPlayerCount(current + delta) ? current + delta : current,
     );
     setStatus('idle');
   }

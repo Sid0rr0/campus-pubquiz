@@ -6,6 +6,9 @@ import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
+import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
+import { SessionPlayerCountRepository } from '@/db/repositories/session-player-count.repository';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
 import { TeamHistoryService } from '@/team/team-history.service';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
@@ -35,7 +38,15 @@ describe('TeamService (Postgres integration)', () => {
       teams,
       em.getRepository<GameSession, GameSessionRepository>(GameSession),
       gameSessionTeams,
-      new TeamHistoryService(teams, new StandingsService(gameSessionTeams)),
+      new TeamHistoryService(
+        teams,
+        new StandingsService(gameSessionTeams),
+        new PlayerCountService(
+          em.getRepository<SessionPlayerCount, SessionPlayerCountRepository>(
+            SessionPlayerCount,
+          ),
+        ),
+      ),
     );
     const quiz = em.create(Quiz, { title: 'Team Test Quiz' });
     const session = em.create(GameSession, { quiz, joinCode: 'ABCDEF' });

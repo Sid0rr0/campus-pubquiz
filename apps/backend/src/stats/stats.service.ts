@@ -11,6 +11,7 @@ import type {
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
@@ -33,12 +34,6 @@ interface SessionHeaderRow {
   name: string | null;
   playedAt: string | Date;
   settings: Partial<SessionSettings>;
-}
-
-interface SessionPlayerCountRow {
-  gameSessionId: number;
-  teamId: number;
-  playerCount: number;
 }
 
 interface SessionFeedbackRow {
@@ -93,6 +88,7 @@ export class StatsService {
     @InjectRepository(GameSession)
     private readonly gameSessions: GameSessionRepository,
     private readonly standings: StandingsService,
+    private readonly playerCountService: PlayerCountService,
   ) {}
 
   async listPlayedSessions({
@@ -158,7 +154,7 @@ export class StatsService {
       rows.map((row) => row.gameSessionId),
     );
 
-    const playerCounts = await this.playerCountsBySession(
+    const playerCounts = await this.playerCountService.listForSessions(
       rows.map((row) => row.gameSessionId),
     );
 
@@ -190,31 +186,6 @@ export class StatsService {
     };
   }
 
-  /**
-   * The reported player counts, by session then team. Read straight from the
-   * counts table, not the roster, so a kicked or departed team keeps its count.
-   */
-  private async playerCountsBySession(
-    gameSessionIds: readonly number[],
-  ): Promise<Map<number, Map<number, number>>> {
-    const result = new Map<number, Map<number, number>>();
-    if (gameSessionIds.length === 0) return result;
-    const rows = (await this.gameSessions
-      .getKnex()('session_player_counts')
-      .whereIn('game_session_id', gameSessionIds as number[])
-      .select(
-        'game_session_id as gameSessionId',
-        'team_id as teamId',
-        'player_count as playerCount',
-      )) as SessionPlayerCountRow[];
-    for (const row of rows) {
-      const byTeam = result.get(row.gameSessionId) ?? new Map<number, number>();
-      byTeam.set(row.teamId, row.playerCount);
-      result.set(row.gameSessionId, byTeam);
-    }
-    return result;
-  }
-
   async getSessionDetail(gameSessionId: number): Promise<SessionDetailStats> {
     const knex = this.gameSessions.getKnex();
 
@@ -240,8 +211,9 @@ export class StatsService {
 
     const standings = await this.standings.forSession(gameSessionId);
     const playerCounts =
-      (await this.playerCountsBySession([gameSessionId])).get(gameSessionId) ??
-      new Map<number, number>();
+      (await this.playerCountService.listForSessions([gameSessionId])).get(
+        gameSessionId,
+      ) ?? new Map<number, number>();
 
     const rounds = (await knex('rounds as r')
       .where('r.quiz_id', header.quizId)
