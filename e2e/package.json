@@ -1,0 +1,23 @@
+{
+  "name": "e2e",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Browser end-to-end tests for a quiz night. The script is named e2e, not test, so `pnpm -r test` never runs it.",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report playwright-report",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.15.5",
+    "eslint": "^9.18.0",
+    "pg": "^8.16.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  }
+}

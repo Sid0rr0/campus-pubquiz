@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - shared/*
+  - e2e
 
 overrides:
   ws: '>=8.21.0'

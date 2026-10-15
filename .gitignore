@@ -13,6 +13,7 @@ dist/
 build/
 coverage/
 .next/
+.next-e2e/
 out/
 temp/
 
@@ -20,6 +21,13 @@ temp/
 .env
 .env.*
 !.env.example
+
+# Browser end-to-end test output (the E2E migration run also writes this snapshot)
+apps/backend/src/db/migrations/.snapshot-campus_pubquiz_e2e.json
+e2e/playwright-report/
+e2e/test-results/
+e2e/.auth/
+e2e/.logs/
 
 # Logs
 logs/
