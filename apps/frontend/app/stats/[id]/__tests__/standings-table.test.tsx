@@ -12,6 +12,7 @@ function row(
     rankTo: 1,
     hasLeft: false,
     isWinner: false,
+    playerCount: null,
     answerPoints: 0,
     bonusPoints: 0,
     total: 0,
@@ -67,6 +68,32 @@ describe('StandingsTable', () => {
     expect(
       within(screen.getByText('Zed').closest('tr')!).queryByText('Winner'),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows each team’s player count in a Players column, a dash when unknown, and keeps it for a team that left', () => {
+    render(
+      <StandingsTable
+        standings={[
+          row({ teamId: 1, teamName: 'Amy', playerCount: 4 }),
+          row({ teamId: 2, teamName: 'Silent', rank: 2, rankTo: 2 }),
+          row({
+            teamId: 3,
+            teamName: 'Kicked',
+            rank: null,
+            rankTo: null,
+            hasLeft: true,
+            playerCount: 6,
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Players' }),
+    ).toBeInTheDocument();
+    expect(cellsOf('Amy')[2]).toBe('4');
+    expect(cellsOf('Silent')[2]).toBe('—');
+    expect(cellsOf('Kicked')[2]).toBe('6');
   });
 
   it('shows "left" instead of a rank for a team that left', () => {

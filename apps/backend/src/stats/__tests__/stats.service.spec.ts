@@ -12,6 +12,7 @@ import { Quiz } from '@/db/entities/quiz.entity';
 import { Round } from '@/db/entities/round.entity';
 import { RoundRating } from '@/db/entities/round-rating.entity';
 import { SessionFeedback } from '@/db/entities/session-feedback.entity';
+import { SessionPlayerCount } from '@/db/entities/session-player-count.entity';
 import { Team } from '@/db/entities/team.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -866,6 +867,113 @@ describe('StatsService (Postgres integration)', () => {
         'Stayer',
         'Leaver',
       ]);
+    });
+  });
+
+  describe('player counts', () => {
+    async function report(
+      session: GameSession,
+      team: Team,
+      playerCount: number,
+    ): Promise<void> {
+      em.create(SessionPlayerCount, {
+        gameSession: session,
+        team,
+        playerCount,
+      });
+      await em.flush();
+    }
+
+    it('totals the known counts, leaves out teams that gave none and reports how many gave one', async () => {
+      const { quiz } = await createQuiz('Quiz P', [[5]]);
+      const session = await createSession(quiz, 'PLAYERS1', 'ended');
+      const amy = await joinTeam(session, 'Amy');
+      const bob = await joinTeam(session, 'Bob');
+      await joinTeam(session, 'Silent');
+      await report(session, amy, 4);
+      await report(session, bob, 3);
+
+      const detail = await statsService.getSessionDetail(session.id);
+
+      expect(detail.playerCount).toEqual({
+        total: 7,
+        average: 3.5,
+        reportedTeams: 2,
+      });
+    });
+
+    it('has a null average and a zero total when nobody reported', async () => {
+      const { quiz } = await createQuiz('Quiz P', [[5]]);
+      const session = await createSession(quiz, 'PLAYERS2', 'ended');
+      await joinTeam(session, 'Silent');
+
+      const detail = await statsService.getSessionDetail(session.id);
+
+      expect(detail.playerCount).toEqual({
+        total: 0,
+        average: null,
+        reportedTeams: 0,
+      });
+    });
+
+    it('still includes the count of a team that left', async () => {
+      const { quiz, questions } = await createQuiz('Quiz P', [[5]]);
+      const session = await createSession(quiz, 'PLAYERS3', 'ended');
+      const leaver = await joinTeam(session, 'Leaver');
+      const stayer = await joinTeam(session, 'Stayer');
+      await grade(session, questions[0][0], leaver, 5);
+      await report(session, leaver, 5);
+      await report(session, stayer, 2);
+      await em.nativeDelete(GameSessionTeam, {
+        gameSession: session,
+        team: leaver,
+      });
+
+      const detail = await statsService.getSessionDetail(session.id);
+
+      expect(detail.playerCount.total).toBe(7);
+      expect(detail.standings.map((s) => [s.teamName, s.playerCount])).toEqual([
+        ['Stayer', 2],
+        ['Leaver', 5],
+      ]);
+    });
+
+    it('gives each standing row its count, null when unknown', async () => {
+      const { quiz, questions } = await createQuiz('Quiz P', [[5]]);
+      const session = await createSession(quiz, 'PLAYERS4', 'ended');
+      const amy = await joinTeam(session, 'Amy');
+      const silent = await joinTeam(session, 'Silent');
+      await grade(session, questions[0][0], amy, 5);
+      await report(session, amy, 6);
+
+      const detail = await statsService.getSessionDetail(session.id);
+
+      expect(detail.standings.map((s) => [s.teamId, s.playerCount])).toEqual([
+        [amy.id, 6],
+        [silent.id, null],
+      ]);
+    });
+
+    it('lists the total players of each session, null when nobody reported', async () => {
+      const { quiz } = await createQuiz('Quiz P', [[5]]);
+      const reported = await createSession(quiz, 'PLAYERS5', 'ended');
+      const unreported = await createSession(quiz, 'PLAYERS6', 'ended');
+      const amy = await joinTeam(reported, 'Amy');
+      const bob = await joinTeam(reported, 'Bob');
+      await joinTeam(unreported, 'Silent');
+      await report(reported, amy, 4);
+      await report(reported, bob, 2);
+
+      const { items } = await statsService.listPlayedSessions(defaultQuery);
+
+      expect(
+        items.map((i) => [i.gameSessionId, i.totalPlayers]).sort(),
+      ).toEqual(
+        [
+          [reported.id, 6],
+          [unreported.id, null],
+        ].sort(),
+      );
     });
   });
 

@@ -1055,6 +1055,25 @@ for the rest of the flow.
 a questions table and highlight tiles. All of it is computed per request from
 the stored rows, never cached.
 
+**Player counts** show how many people came. They are read from the
+per-session player counts (the table the teams' reports are stored in), joined
+through the session and the team and never through the roster, so a team that was
+kicked or left keeps its count. A team that reported none is left out of every
+total and average, never counted as zero.
+
+- The session detail carries `playerCount: { total, average, reportedTeams }`:
+  `total` sums the known counts across every participant (departed teams
+  included), `reportedTeams` is how many participants gave a count, and
+  `average` is `total ÷ reportedTeams`, `null` when nobody reported. The page
+  shows them as the **Total players** tile ("n of m teams reported") and the
+  **Avg. team size** tile, both "—" when nobody reported.
+- Every standing row, departed rows included, carries `playerCount: number | null`
+  (the **Players** column, "—" when unknown).
+- Each item of the played-sessions list (`/stats`) carries
+  `totalPlayers: number | null`, `null` when nobody in the session reported
+  (including every session played before player counts existed); the list shows
+  it as the **Players** column, "—" when null. The column is not sortable.
+
 A question's **correct rate** credits each answer by its verdict, never by the
 question type: `correct` counts in full (a speed-scaled kahoot answer too),
 `partial` counts as its points' share of the question's points (between 0 and 1),
