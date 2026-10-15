@@ -6,7 +6,10 @@ import {
 } from '@campus-pubquiz/types';
 import type { AnswerService } from '@/answer/answer.service';
 import { buildAnswersUpdatedPayload } from '@/game/socket/answers-updated-payload.util';
-import { broadcastGameState } from '@/game/socket/game-broadcast.util';
+import {
+  broadcastAdminState,
+  broadcastGameState,
+} from '@/game/socket/game-broadcast.util';
 import type { GameStateService } from '@/game/state/game-state.service';
 import type {
   DeadlineChange,
@@ -72,6 +75,8 @@ async function deliverEmits(
   }
   if (outcome.shouldBroadcastState) {
     broadcastGameState(server, joinCode, gameState);
+  } else if (outcome.shouldBroadcastAdminState) {
+    broadcastAdminState(server, joinCode, gameState);
   }
 
   for (const questionId of outcome.answerListQuestionIds) {
@@ -93,6 +98,12 @@ async function deliverEmits(
       teamId,
     );
     server.to(socketId).emit(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, { answers });
+  }
+
+  for (const { socketId, playerCount } of outcome.playerCountSyncs) {
+    server
+      .to(socketId)
+      .emit(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, { playerCount });
   }
 
   for (const notice of outcome.notices) {

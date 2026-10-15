@@ -17,6 +17,8 @@ import {
   type RateRoundPayload,
   type SendFeedbackPayload,
   type SessionSettings,
+  type SetPlayerCountPayload,
+  type SetTeamPlayerCountPayload,
   type SocketRoomName,
   type StateSnapshotPayload,
   type StateViewByRoom,
@@ -36,6 +38,8 @@ import { BonusAwardsChanges } from '@/game/state/bonus-awards-changes';
 import { SessionSettingsChanges } from '@/game/state/session-settings-changes';
 import { TeamRosterChanges } from '@/game/state/team-roster-changes';
 import { TeamFeedbackChanges } from '@/game/state/team-feedback-changes';
+import { TeamPlayerCountChanges } from '@/game/state/team-player-count-changes';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { ShowdownsChanges } from '@/game/state/showdowns-changes';
 import { MoveCommitter } from '@/game/state/commit-a-move.service';
 import { buildPresenterContext } from '@/game/state/screen-preview.util';
@@ -66,6 +70,7 @@ export class GameStateService implements OnModuleInit {
   private readonly bonusChanges: BonusAwardsChanges;
   private readonly rosterChanges: TeamRosterChanges;
   private readonly feedbackChanges: TeamFeedbackChanges;
+  private readonly playerCountChanges: TeamPlayerCountChanges;
   private readonly showdownsChanges: ShowdownsChanges;
 
   constructor(
@@ -78,6 +83,7 @@ export class GameStateService implements OnModuleInit {
     private readonly teamService: TeamService,
     private readonly bonusService: BonusService,
     private readonly feedbackService: FeedbackService,
+    private readonly playerCountService: PlayerCountService,
     private readonly sessionWrite: SessionWrite,
     private readonly grading: BlockGradingService,
   ) {
@@ -89,8 +95,13 @@ export class GameStateService implements OnModuleInit {
       this.answerService,
       this.bonusService,
       this.feedbackService,
+      this.playerCountService,
     );
     this.feedbackChanges = new TeamFeedbackChanges(this.feedbackService);
+    this.playerCountChanges = new TeamPlayerCountChanges(
+      this.playerCountService,
+      this.standingsService,
+    );
     this.showdownsChanges = new ShowdownsChanges(this.showdownService);
     this.moveCommitter = new MoveCommitter(
       this.grading,
@@ -213,6 +224,32 @@ export class GameStateService implements OnModuleInit {
     return this.sessionWrite.write(
       joinCode,
       (session) => this.feedbackChanges.roundRated(session, payload, socketId),
+      NOT_TOUCHING_SCORES,
+    );
+  }
+
+  /** A team reports how many players it has. Changes no scores and broadcasts nothing; only the team's own phones are told. */
+  playerCountSet(
+    joinCode: string,
+    payload: SetPlayerCountPayload,
+    socketId: string,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(
+      joinCode,
+      (session) =>
+        this.playerCountChanges.playerCountSet(session, payload, socketId),
+      NOT_TOUCHING_SCORES,
+    );
+  }
+
+  /** The quiz master or a moderator sets or corrects a team's player count. Like `playerCountSet`, plus the admin room's view is refreshed. */
+  teamPlayerCountSet(
+    joinCode: string,
+    payload: SetTeamPlayerCountPayload,
+  ): Promise<SessionOutcome> {
+    return this.sessionWrite.write(
+      joinCode,
+      (session) => this.playerCountChanges.teamPlayerCountSet(session, payload),
       NOT_TOUCHING_SCORES,
     );
   }

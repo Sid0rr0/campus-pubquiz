@@ -21,6 +21,7 @@ const DETAIL: SessionDetailStats = {
   playedAt: '2026-01-05T00:00:00.000Z',
   teamCount: 2,
   maxPoints: 10,
+  playerCount: { total: 7, average: 3.5, reportedTeams: 2 },
   difficulty: { averagePercent: 60, label: 'Medium' },
   standings: [
     {
@@ -30,6 +31,7 @@ const DETAIL: SessionDetailStats = {
       isWinner: true,
       teamId: 1,
       teamName: 'Team A',
+      playerCount: 4,
       answerPoints: 8,
       bonusPoints: 2,
       total: 10,
@@ -43,6 +45,7 @@ const DETAIL: SessionDetailStats = {
       isWinner: false,
       teamId: 2,
       teamName: 'Team B',
+      playerCount: 3,
       answerPoints: 4,
       bonusPoints: 0,
       total: 4,
@@ -140,6 +143,36 @@ describe('SessionDetailPanel', () => {
     expect(
       screen.getByRole('link', { name: '← Back to stats' }),
     ).toHaveAttribute('href', '/stats');
+  });
+
+  it('shows the total players with how many teams reported, and the average team size', async () => {
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    await waitFor(() => screen.getByText('Total players'));
+    const total = screen.getByText('Total players').closest('div')!;
+    expect(within(total).getByText('7')).toBeInTheDocument();
+    expect(
+      within(total).getByText('2 of 2 teams reported'),
+    ).toBeInTheDocument();
+    const average = screen.getByText('Avg. team size').closest('div')!;
+    expect(within(average).getByText('3.5')).toBeInTheDocument();
+  });
+
+  it('shows dashes for the player tiles when no team reported', async () => {
+    mockFetchSessionDetail.mockResolvedValue({
+      ...DETAIL,
+      playerCount: { total: 0, average: null, reportedTeams: 0 },
+    });
+    renderWithQuery(<SessionDetailPanel gameSessionId={1} />);
+
+    await waitFor(() => screen.getByText('Total players'));
+    const total = screen.getByText('Total players').closest('div')!;
+    expect(within(total).getByText('—')).toBeInTheDocument();
+    expect(
+      within(total).getByText('0 of 2 teams reported'),
+    ).toBeInTheDocument();
+    const average = screen.getByText('Avg. team size').closest('div')!;
+    expect(within(average).getByText('—')).toBeInTheDocument();
   });
 
   it("shows 'Not recorded' for a team with no timed answers", async () => {

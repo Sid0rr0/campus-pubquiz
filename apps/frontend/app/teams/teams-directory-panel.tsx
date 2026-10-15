@@ -14,6 +14,7 @@ import type {
   SortingState,
   Updater,
 } from '@tanstack/react-table';
+import Link from 'next/link';
 import { DotsVerticalIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 import { DropdownMenu } from 'radix-ui';
 import type {
@@ -46,13 +47,28 @@ export function TeamsDirectoryPanel() {
   const columns = useMemo(
     () =>
       helper.columns([
-        helper.accessor('name', { header: 'Team', enableSorting: false }),
+        helper.accessor('name', {
+          header: 'Team',
+          enableSorting: false,
+          cell: (ctx) => (
+            <Link
+              href={`/teams/${ctx.row.original.id}`}
+              className="underline-offset-2 hover:underline"
+            >
+              {ctx.getValue()}
+            </Link>
+          ),
+        }),
         helper.accessor('code', { header: 'Code', enableSorting: false }),
         helper.accessor('joinedAt', {
           header: 'Joined',
           cell: (ctx) => new Date(ctx.getValue()).toLocaleDateString(),
         }),
         helper.accessor('sessionsJoined', { header: 'Sessions played' }),
+        helper.accessor('averagePlacing', {
+          header: 'Avg. placing',
+          cell: (ctx) => ctx.getValue()?.toFixed(1) ?? '—',
+        }),
         helper.display({
           id: 'actions',
           header: 'Actions',

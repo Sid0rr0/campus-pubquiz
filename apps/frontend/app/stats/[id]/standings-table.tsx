@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 import { formatRankLabel } from '@/app/lib/rank-label';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
@@ -17,6 +18,9 @@ export function StandingsTable({ standings }: StandingsTableProps) {
             </th>
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
               Team
+            </th>
+            <th className="px-4 py-2 font-display text-sm text-foreground/70">
+              Players
             </th>
             <th className="px-4 py-2 font-display text-sm text-foreground/70">
               Answer points
@@ -39,7 +43,7 @@ export function StandingsTable({ standings }: StandingsTableProps) {
           {standings.length === 0 ? (
             <tr>
               <td
-                colSpan={7}
+                colSpan={8}
                 className="px-4 py-3 text-center text-foreground/50"
               >
                 No teams joined this session.
@@ -57,13 +61,19 @@ export function StandingsTable({ standings }: StandingsTableProps) {
                     : formatRankLabel({ rank: team.rank, rankTo: team.rankTo })}
                 </td>
                 <td className="px-4 py-2">
-                  {team.teamName}
+                  <Link
+                    href={`/teams/${team.teamId}`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {team.teamName}
+                  </Link>
                   {team.isWinner && (
                     <span className="ml-2 rounded-full bg-yellow px-2 py-0.5 text-xs">
                       Winner
                     </span>
                   )}
                 </td>
+                <td className="px-4 py-2">{team.playerCount ?? '—'}</td>
                 <td className="px-4 py-2">{team.answerPoints}</td>
                 <td className="px-4 py-2">{team.bonusPoints}</td>
                 <td className="px-4 py-2 font-extrabold">{team.total}</td>

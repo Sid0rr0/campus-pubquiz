@@ -47,6 +47,7 @@ function AdminPageContent() {
     liveAnswers,
     gradeAnswer,
     kickTeam,
+    setTeamPlayerCount,
     awardBonus,
     setBreakEndTime,
     setDisplayTextScale,
@@ -263,6 +264,7 @@ function AdminPageContent() {
     actions: {
       sendAction,
       kickTeam,
+      setTeamPlayerCount,
       setBreakEndTime,
       setDisplayTextScale,
       setDisplaySoundMuted,

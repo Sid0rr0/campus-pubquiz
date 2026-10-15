@@ -5,6 +5,9 @@ import {
   MAX_FEEDBACK_COMMENT_LENGTH,
   MAX_FEEDBACK_TOPICS,
   MAX_FEEDBACK_TOPIC_LENGTH,
+  isValidPlayerCount,
+  MAX_PLAYER_COUNT,
+  MIN_PLAYER_COUNT,
   DISPLAY_TEXT_SCALE_STEPS,
   type BonusCategory,
   type GameAction,
@@ -82,6 +85,15 @@ export const sendFeedbackPayloadSchema = z.object({
   comment: z.string().max(MAX_FEEDBACK_COMMENT_LENGTH),
   topics: topicsSchema,
 });
+
+export const setPlayerCountPayloadSchema = z.object({
+  playerCount: z.number().refine(isValidPlayerCount, {
+    message: `Must be a whole number from ${MIN_PLAYER_COUNT} to ${MAX_PLAYER_COUNT}`,
+  }),
+});
+
+export const setTeamPlayerCountPayloadSchema =
+  setPlayerCountPayloadSchema.extend({ teamId: positiveInt });
 
 export const gradeAnswerPayloadSchema = z.object({
   answerId: positiveInt,

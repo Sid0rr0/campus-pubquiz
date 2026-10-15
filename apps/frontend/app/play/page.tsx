@@ -11,6 +11,8 @@ import { CopyButton } from '@/app/components/copy-button';
 import { QuestionBrowser } from '@/app/play/question-browser';
 import { FinalFeedbackForm } from '@/app/play/final-feedback-form';
 import { RoundRatingCard } from '@/app/play/round-rating-card';
+import { LatePlayerCountPrompt } from '@/app/play/late-player-count-prompt';
+import { PlayerCountCard } from '@/app/play/player-count-card';
 import { AnsweredQuestionsPanel } from '@/app/play/answered-questions-panel';
 import { BonusProgressPanel } from '@/app/play/bonus-progress-panel';
 import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
@@ -155,6 +157,8 @@ function PlayPageContent() {
     rateRound,
     myFeedback,
     sendFeedback,
+    myPlayerCount,
+    setPlayerCount,
     seenQuestions,
     submitShowdownGuess,
   } = game;
@@ -263,6 +267,13 @@ function PlayPageContent() {
             onRate={rateRound}
           />
         )}
+        <LatePlayerCountPrompt
+          joinCode={view.joinCode}
+          hasJoined={team !== null}
+          isLobby={phoneScreen.kind === 'lobby'}
+          savedCount={myPlayerCount}
+          onSend={setPlayerCount}
+        />
         <GameStatusScreens
           phoneScreen={phoneScreen}
           quizStructure={quizStructure}
@@ -275,6 +286,12 @@ function PlayPageContent() {
           isConnected={connectionError === null}
           teamName={teamName}
           leaderboard={view.leaderboard}
+          playerCountCard={
+            <PlayerCountCard
+              savedCount={myPlayerCount}
+              onSend={setPlayerCount}
+            />
+          }
           onSubmitShowdownGuess={submitShowdownGuess}
         />
         {feedback?.kind === 'final_form' && (
@@ -355,6 +372,8 @@ function PlayPageContent() {
         onOpenChange={setIsSettingsOpen}
         autoAdvanceEnabled={autoAdvanceEnabled}
         onAutoAdvanceChange={setAutoAdvance}
+        playerCount={myPlayerCount}
+        onPlayerCountChange={setPlayerCount}
       />
     </main>
   );

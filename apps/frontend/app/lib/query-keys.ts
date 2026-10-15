@@ -25,6 +25,7 @@ export const queryKeys = {
       sortOrder: string;
     }) => ['teams', 'list', params] as const,
     code: (teamId: number) => ['teams', 'code', teamId] as const,
+    detail: (teamId: number) => ['teams', 'detail', teamId] as const,
   },
   quizzes: {
     all: ['quizzes'] as const,

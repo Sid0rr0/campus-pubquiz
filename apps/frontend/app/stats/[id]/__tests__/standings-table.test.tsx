@@ -12,6 +12,7 @@ function row(
     rankTo: 1,
     hasLeft: false,
     isWinner: false,
+    playerCount: null,
     answerPoints: 0,
     bonusPoints: 0,
     total: 0,
@@ -29,6 +30,32 @@ function cellsOf(teamName: string): string[] {
 }
 
 describe('StandingsTable', () => {
+  it('links each team name to its team page, departed teams included', () => {
+    render(
+      <StandingsTable
+        standings={[
+          row({ teamId: 4, teamName: 'Amy' }),
+          row({
+            teamId: 9,
+            teamName: 'Gone',
+            rank: null,
+            rankTo: null,
+            hasLeft: true,
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Amy' })).toHaveAttribute(
+      'href',
+      '/teams/4',
+    );
+    expect(screen.getByRole('link', { name: 'Gone' })).toHaveAttribute(
+      'href',
+      '/teams/9',
+    );
+  });
+
   it('labels tied teams with their shared rank range', () => {
     render(
       <StandingsTable
@@ -67,6 +94,32 @@ describe('StandingsTable', () => {
     expect(
       within(screen.getByText('Zed').closest('tr')!).queryByText('Winner'),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows each team’s player count in a Players column, a dash when unknown, and keeps it for a team that left', () => {
+    render(
+      <StandingsTable
+        standings={[
+          row({ teamId: 1, teamName: 'Amy', playerCount: 4 }),
+          row({ teamId: 2, teamName: 'Silent', rank: 2, rankTo: 2 }),
+          row({
+            teamId: 3,
+            teamName: 'Kicked',
+            rank: null,
+            rankTo: null,
+            hasLeft: true,
+            playerCount: 6,
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Players' }),
+    ).toBeInTheDocument();
+    expect(cellsOf('Amy')[2]).toBe('4');
+    expect(cellsOf('Silent')[2]).toBe('—');
+    expect(cellsOf('Kicked')[2]).toBe('6');
   });
 
   it('shows "left" instead of a rank for a team that left', () => {

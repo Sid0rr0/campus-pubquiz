@@ -154,6 +154,34 @@ export class GameGateway
     );
   }
 
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setPlayerCount.event)
+  async handleSetPlayerCount(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.setPlayerCount,
+      rawPayload,
+      client,
+      ({ joinCode, payload, client }) =>
+        this.gameState.playerCountSet(joinCode, payload, client.id),
+    );
+  }
+
+  @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.setTeamPlayerCount.event)
+  async handleSetTeamPlayerCount(
+    @ConnectedSocket() client: GameSocket,
+    @MessageBody() rawPayload: unknown,
+  ): Promise<AckResult> {
+    return this.dispatch(
+      SOCKET_EVENT_DECLARATIONS.setTeamPlayerCount,
+      rawPayload,
+      client,
+      ({ joinCode, payload }) =>
+        this.gameState.teamPlayerCountSet(joinCode, payload),
+    );
+  }
+
   @SubscribeMessage(SOCKET_EVENT_DECLARATIONS.gradeAnswer.event)
   async handleGradeAnswer(
     @ConnectedSocket() client: GameSocket,

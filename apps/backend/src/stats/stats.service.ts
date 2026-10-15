@@ -11,7 +11,9 @@ import type {
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionRepository } from '@/db/repositories/game-session.repository';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
+import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
 import type { PlayedSessionsQuery } from '@/stats/stats-query.schema';
 
@@ -86,6 +88,7 @@ export class StatsService {
     @InjectRepository(GameSession)
     private readonly gameSessions: GameSessionRepository,
     private readonly standings: StandingsService,
+    private readonly playerCountService: PlayerCountService,
   ) {}
 
   async listPlayedSessions({
@@ -151,9 +154,19 @@ export class StatsService {
       rows.map((row) => row.gameSessionId),
     );
 
+    const playerCounts = await this.playerCountService.listForSessions(
+      rows.map((row) => row.gameSessionId),
+    );
+
     return {
       items: rows.map((row) => {
         const sessionStandings = standings.get(row.gameSessionId)!;
+        const sessionCounts = playerCounts.get(row.gameSessionId);
+        const { total, reportedTeams } = summarisePlayerCounts(
+          [...sessionStandings.leaderboard, ...sessionStandings.departed].map(
+            (team) => sessionCounts?.get(team.teamId) ?? null,
+          ),
+        );
         return {
           gameSessionId: row.gameSessionId,
           joinCode: row.joinCode,
@@ -164,6 +177,7 @@ export class StatsService {
           maxPoints: Number(row.maxPoints),
           winnerTeamName: sessionStandings.winner?.teamName ?? null,
           winnerPoints: sessionStandings.winner?.totalPoints ?? null,
+          totalPlayers: reportedTeams > 0 ? total : null,
         };
       }),
       total: Number(total),
@@ -196,6 +210,10 @@ export class StatsService {
     }
 
     const standings = await this.standings.forSession(gameSessionId);
+    const playerCounts =
+      (await this.playerCountService.listForSessions([gameSessionId])).get(
+        gameSessionId,
+      ) ?? new Map<number, number>();
 
     const rounds = (await knex('rounds as r')
       .where('r.quiz_id', header.quizId)
@@ -265,6 +283,7 @@ export class StatsService {
         playedAt: header.playedAt,
       },
       standings,
+      playerCounts,
       rounds: rounds.map((r) => ({
         roundId: r.roundId,
         title: r.title,

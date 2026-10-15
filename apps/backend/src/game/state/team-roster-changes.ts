@@ -6,6 +6,7 @@ import {
 import { AnswerService } from '@/answer/answer.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { SessionRefusal } from '@/game/state/errors/session-refusal.error';
 import {
   BROADCAST_STATE_OUTCOME,
@@ -13,6 +14,7 @@ import {
 } from '@/game/state/session-outcome';
 import {
   findTeamIdBySocketId,
+  withPlayerCount,
   withTeamConnected,
   withTeams,
   withoutTeamConnection,
@@ -39,6 +41,7 @@ export class TeamRosterChanges {
     private readonly answerService: AnswerService,
     private readonly bonusService: BonusService,
     private readonly feedbackService: FeedbackService,
+    private readonly playerCountService: PlayerCountService,
   ) {}
 
   /**
@@ -75,9 +78,17 @@ export class TeamRosterChanges {
         `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
       );
     }
+    const playerCount = await this.playerCountService.getForTeam(
+      gameSessionId,
+      team.id,
+    );
     return {
       session: withTeams(
-        withTeamConnected(session, team.id, socketId),
+        withPlayerCount(
+          withTeamConnected(session, team.id, socketId),
+          team.id,
+          playerCount,
+        ),
         await this.teamService.listForSession(gameSessionId),
       ),
       outcome: {
@@ -90,7 +101,7 @@ export class TeamRosterChanges {
     };
   }
 
-  /** The JOIN_ACCEPTED reply for a joined team: its saved answers, bonus awards, round ratings and feedback. Built after the join's write. */
+  /** The JOIN_ACCEPTED reply for a joined team: its saved answers, bonus awards, round ratings, feedback and player count. Built after the join's write. */
   async joinReply(
     gameSessionId: number,
     team: TeamIdentity,
@@ -112,6 +123,10 @@ export class TeamRosterChanges {
           team.id,
         ),
         feedback: await this.feedbackService.getFeedbackForTeam(
+          gameSessionId,
+          team.id,
+        ),
+        playerCount: await this.playerCountService.getForTeam(
           gameSessionId,
           team.id,
         ),

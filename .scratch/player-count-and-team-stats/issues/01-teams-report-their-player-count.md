@@ -10,7 +10,7 @@ Parent spec: `.scratch/player-count-and-team-stats/spec.md`
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Gateway harness: a team sets its count and gets an ok ack; its second connected phone receives the count; another team's phone never does
 - [ ] Gateway harness: setting it again keeps the last value, and a reconnect's join-accepted payload carries it (`null` before any count is set)

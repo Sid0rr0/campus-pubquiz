@@ -5,7 +5,7 @@ interface HighlightTilesProps {
   data: SessionDetailStats;
 }
 
-function StatTile({
+export function StatTile({
   label,
   value,
   detail,
@@ -32,7 +32,8 @@ const BONUS_CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function HighlightTiles({ data }: HighlightTilesProps) {
-  const { highlights } = data;
+  const { highlights, playerCount } = data;
+  const { reportedTeams } = playerCount;
   const hardestQuestion = data.questions.find(
     (q) => q.questionId === highlights.hardestQuestionId,
   );
@@ -62,6 +63,19 @@ export function HighlightTiles({ data }: HighlightTilesProps) {
       <StatTile
         label="Average score"
         value={`${averageTeamTotal.toFixed(1)} / ${data.maxPoints}`}
+      />
+      <StatTile
+        label="Total players"
+        value={reportedTeams > 0 ? String(playerCount.total) : '—'}
+        detail={`${reportedTeams} of ${data.teamCount} teams reported`}
+      />
+      <StatTile
+        label="Avg. team size"
+        value={
+          playerCount.average === null
+            ? '—'
+            : String(Math.round(playerCount.average * 10) / 10)
+        }
       />
       <StatTile
         label="Hardest question"

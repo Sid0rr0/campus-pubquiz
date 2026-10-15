@@ -54,6 +54,20 @@ export function withTeams(
   return { ...session, teams };
 }
 
+/** The session with `teamId`'s player count cached; a null count (none reported) leaves the cache as it was. */
+export function withPlayerCount(
+  session: SessionState,
+  teamId: number,
+  playerCount: number | null,
+): SessionState {
+  return playerCount === null
+    ? session
+    : {
+        ...session,
+        playerCounts: { ...session.playerCounts, [teamId]: playerCount },
+      };
+}
+
 export function withTeamConnected(
   session: SessionState,
   teamId: number,

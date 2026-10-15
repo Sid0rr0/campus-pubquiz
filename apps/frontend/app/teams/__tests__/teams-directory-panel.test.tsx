@@ -21,6 +21,7 @@ const PAYLOAD = {
       code: 'ABC-DEF-GHI',
       joinedAt: '2026-01-05T00:00:00.000Z',
       sessionsJoined: 3,
+      averagePlacing: 1.5,
     },
     {
       id: 2,
@@ -28,6 +29,7 @@ const PAYLOAD = {
       code: 'JKL-MNO-PQR',
       joinedAt: '2026-01-01T00:00:00.000Z',
       sessionsJoined: 1,
+      averagePlacing: null,
     },
   ],
   total: 25,
@@ -48,6 +50,20 @@ describe('TeamsDirectoryPanel', () => {
       expect(screen.getByText('The Quizzards')).toBeInTheDocument(),
     );
     expect(screen.getByText('Second Place')).toBeInTheDocument();
+  });
+
+  it('links each team name to its team page', async () => {
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+
+    expect(screen.getByRole('link', { name: 'The Quizzards' })).toHaveAttribute(
+      'href',
+      '/teams/1',
+    );
+    expect(screen.getByRole('link', { name: 'Second Place' })).toHaveAttribute(
+      'href',
+      '/teams/2',
+    );
   });
 
   it('renders Team/Code headers without a sort toggle', async () => {
@@ -81,6 +97,32 @@ describe('TeamsDirectoryPanel', () => {
     await waitFor(() =>
       expect(mockFetchTeams).toHaveBeenCalledWith(
         expect.objectContaining({ sortBy: 'joinedAt', sortOrder: 'desc' }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  it('shows the average placing, or a dash for a team with none', async () => {
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+
+    const quizzards = screen.getByRole('row', { name: /The Quizzards/ });
+    const secondPlace = screen.getByRole('row', { name: /Second Place/ });
+    expect(within(quizzards).getByText('1.5')).toBeInTheDocument();
+    expect(within(secondPlace).getByText('—')).toBeInTheDocument();
+  });
+
+  it('sorts by average placing when its header is clicked', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<TeamsDirectoryPanel />);
+    await waitFor(() => screen.getByText('The Quizzards'));
+    mockFetchTeams.mockClear();
+
+    await user.click(screen.getByRole('button', { name: /avg\. placing/i }));
+
+    await waitFor(() =>
+      expect(mockFetchTeams).toHaveBeenCalledWith(
+        expect.objectContaining({ sortBy: 'averagePlacing' }),
         expect.anything(),
       ),
     );

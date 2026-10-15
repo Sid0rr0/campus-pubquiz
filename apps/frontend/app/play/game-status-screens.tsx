@@ -34,6 +34,8 @@ interface GameStatusScreensProps {
   isConnected: boolean;
   teamName: string | null;
   leaderboard: readonly LeaderboardEntry[];
+  /** The "How many players are you?" card the lobby screen shows under its waiting line. */
+  playerCountCard: ReactNode;
   onSubmitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -76,6 +78,7 @@ export function GameStatusScreens({
   teamName,
   onSubmitShowdownGuess,
   leaderboard,
+  playerCountCard,
 }: GameStatusScreensProps) {
   const isMyTurn =
     phoneScreen.kind === 'showdown_guessing' &&
@@ -119,6 +122,7 @@ export function GameStatusScreens({
           <p className="text-center text-sm text-foreground/65">
             Waiting for the quiz to start…
           </p>
+          {playerCountCard}
           <a
             href={`/rules?code=${joinCode}`}
             className="text-sm font-extrabold text-cyan underline"

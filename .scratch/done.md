@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| player-count-and-team-stats | [Player counts and a team stats page](player-count-and-team-stats/spec.md) | 5 |
 | e2e-tests | [Browser end-to-end tests for a quiz night](e2e-tests/spec.md) | 5 |
 | player-polish | [Player polish — motion, sound and haptics for the big moments](player-polish/spec.md) | 9 |
 | stats-read-standings | [Stats take totals from the Standings module and credit answers by verdict](stats-read-standings/spec.md) | 2 |

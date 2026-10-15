@@ -8,7 +8,7 @@ Parent spec: `.scratch/player-count-and-team-stats/spec.md`
 
 **Blocked by:** 04 (Team stats page), whose placing derivation this reuses
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Team service on real Postgres: `averagePlacing` matches the team page's average placing for the same team, leaving out left sessions and counting ties at the shared placing
 - [ ] Team service: sorting by average placing works ascending and descending, with teams that have no placing last both ways

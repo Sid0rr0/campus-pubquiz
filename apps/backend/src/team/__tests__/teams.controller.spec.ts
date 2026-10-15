@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ParseIntPipe,
+} from '@nestjs/common';
+import type { TeamHistoryService } from '@/team/team-history.service';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { TeamsController } from '@/team/teams.controller';
@@ -10,8 +15,12 @@ function makeController() {
     listAll: jest.fn(),
     getTeamCode: jest.fn(),
   };
-  const controller = new TeamsController(teamService as unknown as TeamService);
-  return { controller, teamService };
+  const teamHistory = { detail: jest.fn() };
+  const controller = new TeamsController(
+    teamService as unknown as TeamService,
+    teamHistory as unknown as TeamHistoryService,
+  );
+  return { controller, teamService, teamHistory };
 }
 
 describe('TeamsController', () => {
@@ -72,6 +81,22 @@ describe('TeamsController', () => {
       });
     });
 
+    it('accepts averagePlacing as a sort column', async () => {
+      const { controller, teamService } = makeController();
+      teamService.listAll.mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+      });
+
+      await controller.list({ sortBy: 'averagePlacing', sortOrder: 'asc' });
+
+      expect(teamService.listAll).toHaveBeenCalledWith(
+        expect.objectContaining({ sortBy: 'averagePlacing', sortOrder: 'asc' }),
+      );
+    });
+
     it('rejects an invalid pageSize', async () => {
       const { controller } = makeController();
 
@@ -86,6 +111,34 @@ describe('TeamsController', () => {
       await expect(controller.list({ sortBy: 'notAColumn' })).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('getDetail', () => {
+    it('returns the team history from the history service', async () => {
+      const { controller, teamHistory } = makeController();
+      const detail = { id: 7, name: 'The Quizzards' };
+      teamHistory.detail.mockResolvedValue(detail);
+
+      await expect(controller.getDetail(7)).resolves.toBe(detail);
+      expect(teamHistory.detail).toHaveBeenCalledWith(7);
+    });
+
+    it('throws NotFoundException for an unknown team', async () => {
+      const { controller, teamHistory } = makeController();
+      teamHistory.detail.mockResolvedValue(null);
+
+      await expect(controller.getDetail(999)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rejects a non-numeric id', async () => {
+      const pipe = new ParseIntPipe();
+
+      await expect(
+        pipe.transform('abc', { type: 'param', data: 'id' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -72,6 +72,7 @@ management and authoring UI:
 | `/control/users` | Admin only                  | Approve pending accounts, deactivate active ones                                |
 | `/quizzes/[id]`  | Admin/moderator (any)       | Quiz create/edit page (`id === 'new'` for a blank draft); CSV import lives here |
 | `/rules`         | Anyone, any time            | Standalone round/topic/break-structure page, computed from the active quiz      |
+| `/teams/[id]`    | Admin/moderator (any)       | One team's history over its ended sessions, linked from `/teams`                |
 
 ## Game Flow: Rounds, Blocks, and the State Machine
 
@@ -95,19 +96,19 @@ Meanings of these terms (block, break, break review, round title card,
 status groups) live in [`GLOSSARY.md`](GLOSSARY.md); this table is the
 behaviour of each status.
 
-| Status              | Big screen                                                                                                                                                                                                   | Phones                                                                                                                                                                                                                                                               | Reached by                                                                                                                         | `ADVANCE` goes to                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `lobby`             | QR code and join code; joined teams pop into the roster with a chime (at most one per 500 ms; teams present at load stay silent)                                                                             | "You're in! Look for (the team's name) on the big screen", "Waiting for the quiz to start…" + rules link                                                                                                                                                             | Session created, or `PREVIOUS` from `rules`                                                                                        | — (`START_QUIZ` → `rules`)                                                                                             |
-| `rules`             | Rules: round/topic/break structure + house rules, shown once per quiz                                                                                                                                        | The same rules                                                                                                                                                                                                                                                       | `START_QUIZ`                                                                                                                       | `round_overview`, or `round_intro` if the overview is turned off                                                       |
-| `round_overview`    | Every round's title (with category/author), shown once                                                                                                                                                       | "Look at the screen — Rounds"                                                                                                                                                                                                                                        | `ADVANCE` from `rules`                                                                                                             | First round's `round_intro`                                                                                            |
-| `round_intro`       | Round title card: "ROUND N — category", title, author                                                                                                                                                        | "Look at the screen" + round title; the block browser instead if questions are already open                                                                                                                                                                          | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
-| `question_open`     | The current question (prompt + media)                                                                                                                                                                        | Block browser: every question opened so far in the block, answerable (last write wins)                                                                                                                                                                               | `ADVANCE` from `round_intro` or the previous question                                                                              | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
-| `locking`           | Countdown on the block's last question                                                                                                                                                                       | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                           | `break_intro` — the block locks; a kahoot round goes straight to `reveal`                                              |
-| `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                              | Block browser, read-only                                                                                                                                                                                                                                             | The block locking                                                                                                                  | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
-| `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                           | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                        | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
-| `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                      | "Look at the screen" + round title                                                                                                                                                                                                                                   | `PREVIOUS` across the start of a round during break review                                                                         | Back into `break` on the same question                                                                                 |
-| `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                       | "Look at the screen" + round title                                                                                                                                                                                                                                   | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                      | `reveal` on that round's first question                                                                                |
-| `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                | Block browser with the team's answer, the correct answer and points                                                                                                                                                                                                  | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                         | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
+| Status              | Big screen                                                                                                                                                                                                                                                                                                                    | Phones                                                                                                                                                                                                                                                               | Reached by                                                                                                                         | `ADVANCE` goes to                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `lobby`             | QR code and join code; joined teams pop into the roster with a chime (at most one per 500 ms; teams present at load stay silent)                                                                                                                                                                                              | "You're in! Look for (the team's name) on the big screen", "Waiting for the quiz to start…" + the player count card + rules link                                                                                                                                     | Session created, or `PREVIOUS` from `rules`                                                                                        | — (`START_QUIZ` → `rules`)                                                                                             |
+| `rules`             | Rules: round/topic/break structure + house rules, shown once per quiz                                                                                                                                                                                                                                                         | The same rules                                                                                                                                                                                                                                                       | `START_QUIZ`                                                                                                                       | `round_overview`, or `round_intro` if the overview is turned off                                                       |
+| `round_overview`    | Every round's title (with category/author), shown once                                                                                                                                                                                                                                                                        | "Look at the screen — Rounds"                                                                                                                                                                                                                                        | `ADVANCE` from `rules`                                                                                                             | First round's `round_intro`                                                                                            |
+| `round_intro`       | Round title card: "ROUND N — category", title, author                                                                                                                                                                                                                                                                         | "Look at the screen" + round title; the block browser instead if questions are already open                                                                                                                                                                          | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
+| `question_open`     | The current question (prompt + media)                                                                                                                                                                                                                                                                                         | Block browser: every question opened so far in the block, answerable (last write wins)                                                                                                                                                                               | `ADVANCE` from `round_intro` or the previous question                                                                              | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
+| `locking`           | Countdown on the block's last question                                                                                                                                                                                                                                                                                        | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                           | `break_intro` — the block locks; a kahoot round goes straight to `reveal`                                              |
+| `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                                                                                                                                               | Block browser, read-only                                                                                                                                                                                                                                             | The block locking                                                                                                                  | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
+| `break`             | One locked question under break review (prompt + media, no answer)                                                                                                                                                                                                                                                            | Block browser, read-only                                                                                                                                                                                                                                             | `PREVIOUS` from `break_intro` (lands on the block's last question) or from a later question                                        | The next question in the block; from the block's last question, `reveal_intro` (same ungraded check)                   |
+| `break_round_intro` | Round title card: "ROUND N", title — no answers implied                                                                                                                                                                                                                                                                       | "Look at the screen" + round title                                                                                                                                                                                                                                   | `PREVIOUS` across the start of a round during break review                                                                         | Back into `break` on the same question                                                                                 |
+| `reveal_intro`      | Round title card: "REVEALING ANSWERS · ROUND N", title                                                                                                                                                                                                                                                                        | "Look at the screen" + round title                                                                                                                                                                                                                                   | Leaving the break, or `ADVANCE` across the start of a round during the reveal                                                      | `reveal` on that round's first question                                                                                |
+| `reveal`            | One question with its correct answer (and `answer_media_url`)                                                                                                                                                                                                                                                                 | Block browser with the team's answer, the correct answer and points                                                                                                                                                                                                  | `ADVANCE` from `reveal_intro` or the previous reveal question; `locking` in a kahoot round                                         | Next reveal question; `reveal_intro` at a round boundary; the next block's `round_intro`; `ended` after the last round |
 | `ended`             | Final screen (a podium of the top three in three colours at the top, "Quiz complete!", the other teams with their places in a scrolling row like the lobby roster, and a thank-you — with an invitation to rate the rounds when feedback is collected), or an active showdown; confetti and a fanfare when the quiz ends live | "Quiz complete!", the team's final placing ("You finished 4th of 12", "Joint 2nd" for a tie; confetti for ranks 1–3), then the final feedback form (every round with its stars) once any showdown is decided; or the showdown guess form / reveal while it is played | `ADVANCE` past the last reveal, or `END_QUIZ`                                                                                      | —                                                                                                                      |
 
 `PREVIOUS` walks the same path backward, symmetrically, including back
@@ -225,7 +226,8 @@ leaves the timers as they were.
 Each room gets **its own view**, built by the screen projection
 (`projectScreen`, `shared/types/src/screen-projection.ts`, a pure module the backend calls):
 the display view names the screen on air; the admin view adds what `/control`
-marks as on air plus server-decided Advance/Previous availability; the
+marks as on air plus server-decided Advance/Previous availability, and gives each
+roster team its player count and over-cap flag; the
 players view adds answerability, names the **phone screen** (`phoneScreen`, which `/play` switches on instead of deriving its screen from the game state), and drops anything teams haven't been shown
 yet (a kahoot question hidden behind the leaderboard is removed server-side,
 never filtered by the client). In particular it carries only the reveal walk so
@@ -338,11 +340,11 @@ silences the lock-countdown track.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                  |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| View                            | Fields                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect` |
-| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                            |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                        |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                            |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                        |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -419,13 +421,14 @@ connected as `players` receives `PlayersStatePayload` on them and nothing else.
 Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
 `PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview),
-`TEAM_ANSWERS_SYNCED`, `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
+`TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
+team's own phone only), `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
 
-Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `AWARD_BONUS`,
+Client → server: `ADMIN_ACTION`, `GRADE_ANSWER`, `KICK_TEAM`, `SET_TEAM_PLAYER_COUNT`, `AWARD_BONUS`,
 `SET_BREAK_END_TIME`, `SET_DISPLAY_TEXT_SCALE`, `SET_DISPLAY_SOUND_MUTED`
 (`{ isDisplaySoundMuted: boolean }`) and `CREATE_SHOWDOWN_ROUND` (admin only); `JOIN_PLAYERS`, `SUBMIT_ANSWER`, `LEAVE_SESSION`, `RATE_ROUND`,
-`SEND_FEEDBACK` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
+`SEND_FEEDBACK`, `SET_PLAYER_COUNT` and `SUBMIT_SHOWDOWN_GUESS` (players only). Every one is
 acknowledged with `AckResult`. Room
 membership is checked server-side on every handler; violations raise
 `WsException`. Quiz listing/creation and session lifecycle (list, start,
@@ -457,6 +460,54 @@ text, `topics` a JSON string array that is parsed with Zod on read, never cast),
 sending again replaces the whole row. Like `RATE_ROUND` it is a plain team-scoped
 write: it broadcasts nothing and doesn't go through the session write. Stepping back
 out of `ended` keeps the row.
+
+`SET_PLAYER_COUNT` — `{ playerCount }` — saves the team's **player count**: how many
+players it brought to this session. `playerCount` must be a whole number from 1 to 20
+(Zod-validated, so 0, 21, 2.5 and a string are refused). The ack is the result:
+`{ success: true }` once saved, or an error with a reason — "Join a team before
+reporting your player count" for a socket with no team link. It is allowed at any
+status, in the lobby and mid-quiz alike, and never touches scores. One row is kept per
+(session, team) in `session_player_counts` (unique on both, cascading from both);
+it is not stored on the roster row because a kick deletes that row and the count must
+survive a kick and a rejoin. Setting it again replaces the number (last write wins);
+there is no way to clear it back to unknown. It goes through the session write,
+declaring that it doesn't change scores, and broadcasts no room view: the display view
+and the players view are untouched. Instead the server sends `TEAM_PLAYER_COUNT_SYNCED`
+(`{ playerCount }`) to the team's connected phone through the per-team sync (the path
+that also carries the team's answers), so a team's count never reaches another team.
+The service that reads and writes it is `PlayerCountService`
+(`apps/backend/src/player-count/`).
+
+`SET_TEAM_PLAYER_COUNT` — `{ teamId, playerCount }` — lets the quiz master or a
+moderator set or correct any team's player count from the Teams panel at any status.
+It is admin-room gated like `KICK_TEAM` (so it is allowed for admins and moderators
+and refused, with "Only admin clients may set a team’s player count", from any other
+room) and uses the same Zod validation as `SET_PLAYER_COUNT` (a whole number from 1
+to 20). The ack is the result: `{ success: true }` once saved, or an error with a
+reason — "Team N is not in this session" for a team that was never on this session's
+roster. A team removed by a kick or leave still counts if it left a record: a reported
+number, or graded answers or bonus awards (the standings' record of a departed team).
+A team removed before it left any record is not recoverable and is refused. Both
+player count events are refused once the session is closed (its state is evicted, so the
+write fails with an unknown-session error). It writes the same per-team, per-session row as the
+phone's event (last write wins, so the team's later report overwrites the correction
+and vice versa) and reaches the team's phones through the same `TEAM_PLAYER_COUNT_SYNCED`
+per-team sync; a team with no connected phone gets the number on its next join. The
+big screen and the players view are untouched. The admin room alone is sent a fresh
+`STATE_UPDATED` (the outcome's `shouldBroadcastAdminState`), after this event and
+after a team's own `SET_PLAYER_COUNT`, so an open `/control` shows the new number.
+
+**Player count in the admin view.** Each entry of the admin view's `teams` (an
+`AdminTeamView`) carries, besides `teamId`, `teamName` and `isConnected`,
+`playerCount` (`number | null`, null until the team or the quiz master has set one) and
+`isOverPlayerCap` (`boolean`). The server sets `isOverPlayerCap` when `playerCount`
+is above the session's `maxPlayersPerTeam` setting, so changing that setting in the
+lobby changes the flag and `/control` doesn't repeat the rule. The display and
+players views keep the plain `TeamView` entries without either field. The session
+caches the counts (`SessionState.playerCounts`, filled as teams join and as counts
+are set) so the view stays synchronous; the database row remains the source of truth.
+The flag is information only: no penalty is applied, and the quiz master can still
+give the house-rules penalty as a bonus award.
 
 Answer _content_ only ever goes to the admin room and the answering team
 itself — the display and other players just see counts.
@@ -509,7 +560,21 @@ of `{ roundId, stars }`, never another team's): the phone draws its stars from
 this, so a rating whose save never reached the server shows as empty again. The
 same goes for its comment and topics (`feedback`, `{ comment, topics }`, an empty
 comment and no topics when it sent none), which the final form is filled in from;
-a phone that reconnects marks them "Sent ✓".
+a phone that reconnects marks them "Sent ✓". The team's **player count** rides along
+too (`playerCount`, `number | null`, null until it reported one), so a reconnect, a
+second phone or a rejoin after a kick (with the team code) shows it again.
+
+On the phone, the lobby screen keeps "You're in!", "Look for (team name) on the big
+screen", the waiting line and the rules link, and adds a **player count card**: "How
+many players are you?" with a − / + stepper limited to 1–20 and a Send button. Send
+shows "Saved ✓" once the server acknowledges it, or a "Not saved — try again" retry
+when it was refused or failed. Once a count is saved the card folds into "(n) players ·
+edit", which reopens it. Answering is optional and never blocks the phone. The count can
+be changed at any status from the "Players in your team" field of the settings modal
+(same stepper and feedback). A team that joins after the lobby with no count gets the
+same card once, over whatever screen it lands on, with a Dismiss control; dismissing is
+remembered on that phone and session in `localStorage` (the card still works when
+storage is blocked). A team that already has a count never sees the prompt.
 
 ## Teams: Join, Reconnect, and Kick
 
@@ -994,6 +1059,25 @@ for the rest of the flow.
 a questions table and highlight tiles. All of it is computed per request from
 the stored rows, never cached.
 
+**Player counts** show how many people came. They are read from the
+per-session player counts (the table the teams' reports are stored in), joined
+through the session and the team and never through the roster, so a team that was
+kicked or left keeps its count. A team that reported none is left out of every
+total and average, never counted as zero.
+
+- The session detail carries `playerCount: { total, average, reportedTeams }`:
+  `total` sums the known counts across every participant (departed teams
+  included), `reportedTeams` is how many participants gave a count, and
+  `average` is `total ÷ reportedTeams`, `null` when nobody reported. The page
+  shows them as the **Total players** tile ("n of m teams reported") and the
+  **Avg. team size** tile, both "—" when nobody reported.
+- Every standing row, departed rows included, carries `playerCount: number | null`
+  (the **Players** column, "—" when unknown).
+- Each item of the played-sessions list (`/stats`) carries
+  `totalPlayers: number | null`, `null` when nobody in the session reported
+  (including every session played before player counts existed); the list shows
+  it as the **Players** column, "—" when null. The column is not sortable.
+
 A question's **correct rate** credits each answer by its verdict, never by the
 question type: `correct` counts in full (a speed-scaled kahoot answer too),
 `partial` counts as its points' share of the question's points (between 0 and 1),
@@ -1023,6 +1107,42 @@ The session detail also carries a `feedback` section, shown on the page as
   ("Geography ×4").
 - The team is never selected: no team id or name reaches the response or the page.
   Comment and topic order uses when the team last sent its feedback.
+
+### Team stats
+
+`/teams/:id` shows one team's history across its **ended** sessions, from
+`GET /teams/:id` (`TeamHistoryService.detail`; same guards as the stats
+endpoints, so admins and moderators). An unknown team id is a 404 and a
+non-numeric id a 400. The response is `{ id, name, summary, sessions }`:
+
+- `summary`: `sessionsPlayed`, `wins`, `podiums` (placing 1 to 3), `bestPlacing`,
+  `averagePlacing` (one decimal), `averageSharePercent`, `averageTotalPoints` and
+  `averagePlayerCount`. The placing figures are `null` when the team has no
+  placing; the player count average leaves out sessions with no count and is
+  `null` when there are none. The share of max points is each session's total
+  divided by its max points, averaged per session, not pooled; a session whose
+  quiz has no points to win is left out, and the average is `null` when every
+  session is.
+- `sessions` (newest first): `gameSessionId`, `name`, `playedAt`, `placing`,
+  `placingTo`, `teamCount`, `hasLeft`, `totalPoints`, `maxPoints`,
+  `correctCount` and `playerCount`.
+
+Placings come from the Standings service for each session, never from SQL ranks,
+so the page agrees with each session's standings table; a tie shares the
+competition rank ("Joint 2nd"). A **win** is placing 1 and being the session's
+single Standings winner. A session the team was kicked from or left is listed
+with `hasLeft: true` and no placing: it counts in `sessionsPlayed` but not in
+wins, podiums, best or average placing. The response never carries feedback or
+the team code.
+
+The `/teams` directory (`GET /teams`) shows the same figure: each list item
+carries `averagePlacing: number | null`, computed by `averagePlacingOf` over
+`TeamHistoryService.resultsForTeams`, so the directory and a team's page always
+agree. It is `null` for a team with no placing (shown as "—" in the **Avg.
+placing** column). `sortBy=averagePlacing` is a sort column alongside `joinedAt`
+and `sessionsJoined`; teams with no placing sort last in both directions. Because
+placings are not SQL ranks, this sort loads every team's results and orders and
+pages them in memory; the other sorts only compute the figure for the visible page.
 
 ## Deploy and CI
 
