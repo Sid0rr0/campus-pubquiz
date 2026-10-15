@@ -27,6 +27,11 @@ export interface TeamSync {
   socketId: string;
 }
 
+/** A connected team whose phone needs its new player count, with the socket it is on. */
+export interface PlayerCountSync extends TeamSync {
+  playerCount: number;
+}
+
 /** The session's auto-lock deadlines (epoch-ms, or null when none is due) after a write that moved either. */
 export interface DeadlineChange {
   questionLockAt: number | null;
@@ -55,6 +60,8 @@ export interface SessionOutcome {
   answerListQuestionIds: readonly number[];
   /** Connected teams whose own graded-answer list needs a per-team sync. */
   teamSyncs: readonly TeamSync[];
+  /** Connected teams whose own player count changed, each told its new number (never sent room-wide). */
+  playerCountSyncs: readonly PlayerCountSync[];
   notices: readonly SocketNotice[];
   /** Sockets to disconnect, last of all, after the notices. */
   socketsToClose: readonly string[];
@@ -76,6 +83,7 @@ export const BROADCAST_STATE_OUTCOME: SessionOutcome = {
   shouldBroadcastState: true,
   answerListQuestionIds: [],
   teamSyncs: [],
+  playerCountSyncs: [],
   notices: [],
   socketsToClose: [],
 };

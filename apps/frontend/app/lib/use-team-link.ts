@@ -16,6 +16,7 @@ import {
   type LeaveSessionPayload,
   type RateRoundPayload,
   type SendFeedbackPayload,
+  type SetPlayerCountPayload,
   type StateViewByRoom,
   type SubmitShowdownGuessPayload,
   type TeamBonusAwardView,
@@ -119,6 +120,10 @@ export interface TeamLinkGame {
   rateRound: (roundId: number, stars: number) => Promise<AckResult>;
   /** Resolves to the server's verdict on the comment and topics; the final form shows it, so nothing is toasted here. */
   sendFeedback: (feedback: SendFeedbackPayload) => Promise<AckResult>;
+  /** The team's player count as the server last confirmed it, or null until one is reported. */
+  myPlayerCount: number | null;
+  /** Resolves to the server's verdict on the count; the card shows it, so nothing is toasted here. */
+  setPlayerCount: (playerCount: number) => Promise<AckResult>;
   submitShowdownGuess: (
     showdownRoundId: number,
     teamId: number,
@@ -290,6 +295,12 @@ export function useTeamLink(
       socket.on(SOCKET_EVENTS.TEAM_ANSWERS_SYNCED, (payload) =>
         dispatch({ type: 'teamAnswersSynced', answers: payload.answers }),
       );
+      socket.on(SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, (payload) =>
+        dispatch({
+          type: 'playerCountSynced',
+          playerCount: payload.playerCount,
+        }),
+      );
       socket.on(SOCKET_EVENTS.BONUS_AWARDED, (payload) =>
         dispatch({ type: 'bonusAwarded', payload }),
       );
@@ -407,6 +418,16 @@ export function useTeamLink(
     [emitWithAck, dispatch],
   );
 
+  const setPlayerCount = useCallback(
+    async (playerCount: number) => {
+      const payload: SetPlayerCountPayload = { playerCount };
+      const result = await emitWithAck(SOCKET_EVENTS.SET_PLAYER_COUNT, payload);
+      if (result.success) dispatch({ type: 'playerCountSaved', playerCount });
+      return result;
+    },
+    [emitWithAck, dispatch],
+  );
+
   const submitShowdownGuess = useCallback(
     async (showdownRoundId: number, teamId: number, value: string) => {
       const payload: SubmitShowdownGuessPayload = {
@@ -483,11 +504,13 @@ export function useTeamLink(
           myBonusAwards: link.myBonusAwards,
           myRoundRatings: link.myRoundRatings,
           myFeedback: link.myFeedback,
+          myPlayerCount: link.myPlayerCount,
           roundRatingsEpoch: link.roundRatingsEpoch,
           seenQuestions,
           submitAnswer,
           rateRound,
           sendFeedback,
+          setPlayerCount,
           submitShowdownGuess,
         }
       : undefined,

@@ -11,6 +11,8 @@ describe('SettingsModal', () => {
         onOpenChange={vi.fn()}
         autoAdvanceEnabled={true}
         onAutoAdvanceChange={vi.fn()}
+        playerCount={4}
+        onPlayerCountChange={vi.fn()}
       />,
     );
 
@@ -24,6 +26,8 @@ describe('SettingsModal', () => {
         onOpenChange={vi.fn()}
         autoAdvanceEnabled={true}
         onAutoAdvanceChange={vi.fn()}
+        playerCount={4}
+        onPlayerCountChange={vi.fn()}
       />,
     );
 
@@ -39,6 +43,8 @@ describe('SettingsModal', () => {
         onOpenChange={vi.fn()}
         autoAdvanceEnabled={false}
         onAutoAdvanceChange={vi.fn()}
+        playerCount={4}
+        onPlayerCountChange={vi.fn()}
       />,
     );
 
@@ -55,6 +61,8 @@ describe('SettingsModal', () => {
         onOpenChange={vi.fn()}
         autoAdvanceEnabled={true}
         onAutoAdvanceChange={onAutoAdvanceChange}
+        playerCount={4}
+        onPlayerCountChange={vi.fn()}
       />,
     );
 
@@ -73,6 +81,8 @@ describe('SettingsModal', () => {
         onOpenChange={onOpenChange}
         autoAdvanceEnabled={true}
         onAutoAdvanceChange={vi.fn()}
+        playerCount={4}
+        onPlayerCountChange={vi.fn()}
       />,
     );
 

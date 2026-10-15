@@ -47,6 +47,7 @@ function renderScreens(
       }}
       isConnected={isConnected}
       leaderboard={[]}
+      playerCountCard={null}
       onSubmitShowdownGuess={vi.fn()}
     />
   );

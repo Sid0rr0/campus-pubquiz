@@ -143,6 +143,8 @@ export interface TeamLinkState {
   /** What the join carried plus every rating the server acknowledged since. */
   myRoundRatings: Record<number, number>;
   myFeedback: TeamFeedbackView;
+  /** How many players the server holds for this team, or null until one is reported. */
+  myPlayerCount: number | null;
   /** Counts join payloads: when it changes, `myRoundRatings` was replaced wholesale. */
   roundRatingsEpoch: number;
   /** The latest answer the server hasn't acknowledged — resent after a rejoin. */
@@ -173,6 +175,10 @@ export type TeamLinkInput =
   | { type: 'answerTimedOut'; attempt: number }
   | { type: 'ratingSaved'; roundId: number; stars: number }
   | { type: 'feedbackSaved'; feedback: TeamFeedbackView }
+  // The server told the team's phones its count changed.
+  | { type: 'playerCountSynced'; playerCount: number }
+  // The server acknowledged a count this phone sent.
+  | { type: 'playerCountSaved'; playerCount: number }
   // Intents
   | { type: 'nameTyped'; value: string }
   | { type: 'gameCodeTyped'; value: string }
@@ -265,6 +271,7 @@ const EMPTY_TEAM_DATA = {
   myBonusAwards: [],
   myRoundRatings: {},
   myFeedback: EMPTY_FEEDBACK,
+  myPlayerCount: null,
   pendingAnswer: null,
 } satisfies Partial<TeamLinkState>;
 
@@ -499,6 +506,7 @@ function acceptJoin(
     myBonusAwards: payload.bonusAwards ?? [],
     myRoundRatings: buildMyRoundRatings(payload.roundRatings ?? []),
     myFeedback: payload.feedback ?? EMPTY_FEEDBACK,
+    myPlayerCount: payload.playerCount ?? null,
     roundRatingsEpoch: state.roundRatingsEpoch + 1,
   };
   const storeIdentity: TeamLinkCommand = {
@@ -649,6 +657,9 @@ export function teamLink(
       });
     case 'feedbackSaved':
       return unchanged({ ...state, myFeedback: input.feedback });
+    case 'playerCountSynced':
+    case 'playerCountSaved':
+      return unchanged({ ...state, myPlayerCount: input.playerCount });
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);

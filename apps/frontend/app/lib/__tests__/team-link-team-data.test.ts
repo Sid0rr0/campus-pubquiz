@@ -34,6 +34,7 @@ const ACCEPTED: JoinAcceptedPayload = {
   bonusAwards: [{ category: 'shot', points: 1 }],
   roundRatings: [{ roundId: 11, stars: 4 }],
   feedback: { comment: 'Loved it', topics: ['Geography'] },
+  playerCount: null,
 };
 
 const STORED = {
@@ -205,10 +206,37 @@ describe('team link: the team data', () => {
     expect(rejoined.state.myRoundRatings).toEqual({ 11: 4 });
   });
 
+  it('has no player count until the join carries one, then follows the server: join, sync and a saved send', () => {
+    expect(linkedPhone().myPlayerCount).toBeNull();
+
+    const joined = run(
+      linkedPhone(),
+      accepted({ ...ACCEPTED, playerCount: 4 }),
+    );
+    expect(joined.state.myPlayerCount).toBe(4);
+
+    const synced = run(joined.state, {
+      type: 'playerCountSynced',
+      playerCount: 6,
+    });
+    expect(synced.state.myPlayerCount).toBe(6);
+
+    const saved = run(linkedPhone(), {
+      type: 'playerCountSaved',
+      playerCount: 3,
+    });
+    expect(saved.state.myPlayerCount).toBe(3);
+  });
+
   it('clears the previous team data on a new connection identity until the new join answers', () => {
-    const { state } = run(linkedPhone(), { type: 'identityChanged' });
+    const { state } = run(
+      linkedPhone(),
+      { type: 'playerCountSaved', playerCount: 3 },
+      { type: 'identityChanged' },
+    );
 
     expect(state).toMatchObject({
+      myPlayerCount: null,
       team: null,
       isLinked: false,
       myAnswers: {},

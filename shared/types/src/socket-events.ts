@@ -10,6 +10,7 @@ export const SOCKET_EVENTS = {
   BONUS_AWARDED: 'game:bonus_awarded',
   SESSION_CLOSED: 'game:session_closed',
   TEAM_KICKED: 'game:team_kicked',
+  TEAM_PLAYER_COUNT_SYNCED: 'game:team_player_count_synced',
   // client -> server
   ADMIN_ACTION: 'game:admin_action',
   SUBMIT_ANSWER: 'game:submit_answer',
@@ -25,6 +26,7 @@ export const SOCKET_EVENTS = {
   SUBMIT_SHOWDOWN_GUESS: 'game:submit_showdown_guess',
   RATE_ROUND: 'game:rate_round',
   SEND_FEEDBACK: 'game:send_feedback',
+  SET_PLAYER_COUNT: 'game:set_player_count',
 } as const;
 
 export const SOCKET_ROOMS = {

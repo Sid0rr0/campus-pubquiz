@@ -11,6 +11,7 @@ import { BlockGradingService } from '@/game/state/block-grading.service';
 import { GameProgressRepository } from '@/game/state/game-progress.repository';
 import { GameStateService } from '@/game/state/game-state.service';
 import { SessionWrite } from '@/game/state/session-write';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { StandingsService } from '@/standings/standings.service';
@@ -32,6 +33,7 @@ import { TeamService } from '@/team/team.service';
     StandingsService,
     BonusService,
     FeedbackService,
+    PlayerCountService,
     QuizService,
     ShowdownService,
     GameProgressRepository,
@@ -50,6 +52,7 @@ import { TeamService } from '@/team/team.service';
     AnswerService,
     BonusService,
     TeamService,
+    PlayerCountService,
     QuizService,
     SeedService,
     StandingsService,

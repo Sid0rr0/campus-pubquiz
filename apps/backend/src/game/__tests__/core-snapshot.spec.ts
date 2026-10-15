@@ -27,6 +27,7 @@ describe('GameStateService — core snapshot', () => {
       game.teamService,
       game.bonusService,
       game.feedbackService,
+      game.playerCountService,
       new SessionWrite(game.standingsService),
       new BlockGradingService(game.answerService),
     );

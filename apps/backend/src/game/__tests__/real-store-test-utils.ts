@@ -21,6 +21,7 @@ import { AnswerService } from '@/answer/answer.service';
 import { StandingsService } from '@/standings/standings.service';
 import { BonusService } from '@/bonus/bonus.service';
 import { FeedbackService } from '@/feedback/feedback.service';
+import { PlayerCountService } from '@/player-count/player-count.service';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { Question } from '@/db/entities/question.entity';
 import { Quiz } from '@/db/entities/quiz.entity';
@@ -184,6 +185,7 @@ export interface RealStoreGateway extends PlayableQuiz {
   teamService: TeamService;
   bonusService: BonusService;
   feedbackService: FeedbackService;
+  playerCountService: PlayerCountService;
   showdownService: ShowdownService;
   seedService: SeedService;
   quizService: QuizService;
@@ -521,6 +523,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
       teamService: moduleRef.get(TeamService),
       bonusService: moduleRef.get(BonusService),
       feedbackService: moduleRef.get(FeedbackService),
+      playerCountService: moduleRef.get(PlayerCountService),
       showdownService: moduleRef.get(ShowdownService),
       seedService: moduleRef.get(SeedService),
       progressRepository: moduleRef.get(GameProgressRepository),

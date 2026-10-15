@@ -5,6 +5,8 @@ import {
   MAX_FEEDBACK_COMMENT_LENGTH,
   MAX_FEEDBACK_TOPICS,
   MAX_FEEDBACK_TOPIC_LENGTH,
+  MAX_PLAYER_COUNT,
+  MIN_PLAYER_COUNT,
   DISPLAY_TEXT_SCALE_STEPS,
   type BonusCategory,
   type GameAction,
@@ -81,6 +83,10 @@ const topicsSchema = z
 export const sendFeedbackPayloadSchema = z.object({
   comment: z.string().max(MAX_FEEDBACK_COMMENT_LENGTH),
   topics: topicsSchema,
+});
+
+export const setPlayerCountPayloadSchema = z.object({
+  playerCount: z.number().int().min(MIN_PLAYER_COUNT).max(MAX_PLAYER_COUNT),
 });
 
 export const gradeAnswerPayloadSchema = z.object({
