@@ -29,6 +29,14 @@ function renderGuideText(): string {
 }
 
 describe('GuideContent', () => {
+  it('explains the player count, the over-cap flag and how to correct a count', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('player count');
+    expect(text).toContain('over the player cap');
+    expect(text).toContain('press Edit');
+  });
+
   it('explains the Collect feedback switch and where teams and the moderator see feedback', () => {
     const text = renderGuideText();
 

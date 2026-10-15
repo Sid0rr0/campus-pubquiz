@@ -20,6 +20,7 @@ import type { AwardBonusPayload, BonusAwardedPayload } from './bonus';
 import type { RateRoundPayload, SendFeedbackPayload } from './feedback';
 import type {
   SetPlayerCountPayload,
+  SetTeamPlayerCountPayload,
   TeamPlayerCountSyncedPayload,
 } from './player-count';
 import type { PresenterContextPayload, StateViewByRoom } from './room-views';
@@ -74,6 +75,10 @@ export interface ClientToServerProtocol {
   [SOCKET_EVENTS.SEND_FEEDBACK]: { payload: SendFeedbackPayload; ack: void };
   [SOCKET_EVENTS.SET_PLAYER_COUNT]: {
     payload: SetPlayerCountPayload;
+    ack: void;
+  };
+  [SOCKET_EVENTS.SET_TEAM_PLAYER_COUNT]: {
+    payload: SetTeamPlayerCountPayload;
     ack: void;
   };
 }

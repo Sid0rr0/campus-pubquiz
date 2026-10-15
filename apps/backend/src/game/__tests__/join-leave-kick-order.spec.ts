@@ -60,7 +60,13 @@ describe('GameGateway — join, leave and kick land in one order', () => {
     });
     const snapshot = await game.snapshot();
     expect(snapshot.teams).toEqual([
-      { teamId: team.teamId, teamName: 'The Quizzards', isConnected: true },
+      {
+        teamId: team.teamId,
+        teamName: 'The Quizzards',
+        isConnected: true,
+        playerCount: null,
+        isOverPlayerCap: false,
+      },
     ]);
     expectRosterAndLeaderboardAgree(snapshot);
   });

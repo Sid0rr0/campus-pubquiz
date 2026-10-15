@@ -16,6 +16,7 @@ import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
 import type { SeededQuestion } from './question-views';
 import type {
   AdminQuestionContext,
+  AdminTeamView,
   AdminStatePayload,
   DisplayStatePayload,
   PlayersStatePayload,
@@ -110,9 +111,20 @@ export function buildAdminFields(
   session: SessionState,
 ): Pick<
   AdminStatePayload,
-  'ungradedQuestionIds' | 'phaseStartedAt' | 'phaseElapsedMs'
+  'teams' | 'ungradedQuestionIds' | 'phaseStartedAt' | 'phaseElapsedMs'
 > {
+  const { maxPlayersPerTeam } = session.seededGame.settings;
   return {
+    teams: session.teams.map((team): AdminTeamView => {
+      const playerCount = session.playerCounts[team.teamId] ?? null;
+      return {
+        ...team,
+        isConnected: Boolean(session.connectedTeamSockets[team.teamId]),
+        playerCount,
+        isOverPlayerCap:
+          playerCount !== null && playerCount > maxPlayersPerTeam,
+      };
+    }),
     ungradedQuestionIds: session.ungradedQuestionIds,
     ...resolveCurrentPhaseTimerView(session),
   };

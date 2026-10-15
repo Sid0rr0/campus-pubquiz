@@ -20,6 +20,7 @@ import {
   type SetBreakEndTimePayload,
   type SetDisplaySoundMutedPayload,
   type SetDisplayTextScalePayload,
+  type SetTeamPlayerCountPayload,
   type StateViewByRoom,
 } from '@campus-pubquiz/types';
 import {
@@ -43,6 +44,11 @@ export interface UseAdminGameResult {
   sendAction: (action: GameAction) => Promise<AckResult>;
   gradeAnswer: (answerId: number, pointsAwarded: number) => Promise<AckResult>;
   kickTeam: (teamId: number) => Promise<AckResult>;
+  /** Sets or corrects a team's player count; a rejection is a toast and the returned result. */
+  setTeamPlayerCount: (
+    teamId: number,
+    playerCount: number,
+  ) => Promise<AckResult>;
   awardBonus: (
     teamId: number,
     category: BonusCategory,
@@ -149,6 +155,14 @@ export function useAdminGame(
     [emitAction],
   );
 
+  const setTeamPlayerCount = useCallback(
+    (teamId: number, playerCount: number) => {
+      const payload: SetTeamPlayerCountPayload = { teamId, playerCount };
+      return emitAction(SOCKET_EVENTS.SET_TEAM_PLAYER_COUNT, payload);
+    },
+    [emitAction],
+  );
+
   const awardBonus = useCallback(
     (
       teamId: number,
@@ -209,6 +223,7 @@ export function useAdminGame(
     sendAction,
     gradeAnswer,
     kickTeam,
+    setTeamPlayerCount,
     awardBonus,
     setBreakEndTime,
     setDisplayTextScale,

@@ -89,6 +89,9 @@ export const setPlayerCountPayloadSchema = z.object({
   playerCount: z.number().int().min(MIN_PLAYER_COUNT).max(MAX_PLAYER_COUNT),
 });
 
+export const setTeamPlayerCountPayloadSchema =
+  setPlayerCountPayloadSchema.extend({ teamId: positiveInt });
+
 export const gradeAnswerPayloadSchema = z.object({
   answerId: positiveInt,
   pointsAwarded: finiteNumber,

@@ -1,15 +1,17 @@
 'use client';
 
 import { Cross2Icon } from '@radix-ui/react-icons';
-import type { TeamView } from '@campus-pubquiz/types';
+import type { AdminTeamView } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
+import { PlayerCountEditor } from '@/app/control/player-count-editor';
 
 interface TeamsPanelProps {
-  teams: TeamView[];
+  teams: AdminTeamView[];
   showAnswerStatus: boolean;
   answeredTeamIds: number[];
   onKickTeam: (teamId: number) => void;
+  onSetPlayerCount: (teamId: number, playerCount: number) => void;
   className?: string;
 }
 
@@ -18,6 +20,7 @@ export function TeamsPanel({
   showAnswerStatus,
   answeredTeamIds,
   onKickTeam,
+  onSetPlayerCount,
   className = '',
 }: TeamsPanelProps) {
   if (teams.length === 0) {
@@ -85,6 +88,10 @@ export function TeamsPanel({
                   onConfirm={() => onKickTeam(team.teamId)}
                 />
               </div>
+              <PlayerCountEditor
+                team={team}
+                onSetPlayerCount={onSetPlayerCount}
+              />
             </li>
           );
         })}

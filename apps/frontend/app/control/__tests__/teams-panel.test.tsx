@@ -1,13 +1,143 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { TeamView } from '@campus-pubquiz/types';
+import type { AdminTeamView } from '@campus-pubquiz/types';
 import { TeamsPanel } from '@/app/control/teams-panel';
 
-const TEAMS: TeamView[] = [
-  { teamId: 1, teamName: 'The Quizzards', isConnected: true },
-  { teamId: 2, teamName: 'Beer Necessities', isConnected: false },
+const TEAMS: AdminTeamView[] = [
+  {
+    teamId: 1,
+    teamName: 'The Quizzards',
+    isConnected: true,
+    playerCount: 4,
+    isOverPlayerCap: false,
+  },
+  {
+    teamId: 2,
+    teamName: 'Beer Necessities',
+    isConnected: false,
+    playerCount: null,
+    isOverPlayerCap: false,
+  },
 ];
+
+function teamItem(name: string): HTMLElement {
+  return screen.getByText(name).closest('li') as HTMLElement;
+}
+
+describe('TeamsPanel player counts', () => {
+  const renderPanel = (
+    teams: AdminTeamView[] = TEAMS,
+    onSetPlayerCount = vi.fn(),
+  ) => {
+    render(
+      <TeamsPanel
+        teams={teams}
+        showAnswerStatus={false}
+        answeredTeamIds={[]}
+        onKickTeam={vi.fn()}
+        onSetPlayerCount={onSetPlayerCount}
+      />,
+    );
+    return onSetPlayerCount;
+  };
+
+  it('shows each team’s count, and a dash for a team with none', () => {
+    renderPanel();
+
+    expect(within(teamItem('The Quizzards')).getByText('4')).toBeVisible();
+    expect(within(teamItem('Beer Necessities')).getByText('—')).toBeVisible();
+  });
+
+  it('flags only a team over the cap', () => {
+    renderPanel([
+      { ...TEAMS[0], playerCount: 8, isOverPlayerCap: true },
+      TEAMS[1],
+    ]);
+
+    expect(
+      within(teamItem('The Quizzards')).getByText(/over the player cap/i),
+    ).toBeVisible();
+    expect(
+      within(teamItem('Beer Necessities')).queryByText(/over the player cap/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('sends the chosen count for that team', async () => {
+    const onSetPlayerCount = renderPanel();
+    const item = teamItem('Beer Necessities');
+
+    await userEvent.click(
+      within(item).getByRole('button', {
+        name: /edit player count for beer necessities/i,
+      }),
+    );
+    const input = within(item).getByRole('spinbutton', {
+      name: /player count for beer necessities/i,
+    });
+    await userEvent.type(input, '5');
+    await userEvent.click(
+      within(item).getByRole('button', { name: /^save$/i }),
+    );
+
+    expect(onSetPlayerCount).toHaveBeenCalledWith(2, 5);
+  });
+
+  it('starts the editor on the current count', async () => {
+    renderPanel();
+    const item = teamItem('The Quizzards');
+
+    await userEvent.click(
+      within(item).getByRole('button', {
+        name: /edit player count for the quizzards/i,
+      }),
+    );
+
+    expect(
+      within(item).getByRole('spinbutton', {
+        name: /player count for the quizzards/i,
+      }),
+    ).toHaveValue(4);
+  });
+
+  it.each([['0'], ['21'], ['2.5']])('does not send %s', async (typed) => {
+    const onSetPlayerCount = renderPanel();
+    const item = teamItem('Beer Necessities');
+    await userEvent.click(
+      within(item).getByRole('button', {
+        name: /edit player count for beer necessities/i,
+      }),
+    );
+    await userEvent.type(
+      within(item).getByRole('spinbutton', {
+        name: /player count for beer necessities/i,
+      }),
+      typed,
+    );
+
+    expect(
+      within(item).getByRole('button', { name: /^save$/i }),
+    ).toBeDisabled();
+    expect(onSetPlayerCount).not.toHaveBeenCalled();
+  });
+
+  it('closes the editor without sending on cancel', async () => {
+    const onSetPlayerCount = renderPanel();
+    const item = teamItem('The Quizzards');
+    await userEvent.click(
+      within(item).getByRole('button', {
+        name: /edit player count for the quizzards/i,
+      }),
+    );
+
+    await userEvent.click(
+      within(item).getByRole('button', { name: /^cancel$/i }),
+    );
+
+    expect(onSetPlayerCount).not.toHaveBeenCalled();
+    expect(within(item).queryByRole('spinbutton')).not.toBeInTheDocument();
+  });
+});
 
 describe('TeamsPanel', () => {
   it('asks for confirmation before kicking a team', async () => {
@@ -18,6 +148,7 @@ describe('TeamsPanel', () => {
         showAnswerStatus={false}
         answeredTeamIds={[]}
         onKickTeam={onKickTeam}
+        onSetPlayerCount={vi.fn()}
       />,
     );
 
@@ -55,6 +186,7 @@ describe('TeamsPanel', () => {
         showAnswerStatus={false}
         answeredTeamIds={[]}
         onKickTeam={onKickTeam}
+        onSetPlayerCount={vi.fn()}
       />,
     );
 

@@ -9,6 +9,11 @@ export interface SetPlayerCountPayload {
   playerCount: number;
 }
 
+/** The quiz master or a moderator setting or correcting one team's player count; the ack says whether it was saved. Replaces whatever the team reported before. */
+export interface SetTeamPlayerCountPayload extends SetPlayerCountPayload {
+  teamId: number;
+}
+
 /** Sent to a team's own phone after its player count changed, so every phone of the team shows the same number. */
 export interface TeamPlayerCountSyncedPayload {
   playerCount: number;

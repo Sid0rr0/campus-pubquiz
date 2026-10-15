@@ -61,6 +61,7 @@ export function adminGameResult(
     sendAction: vi.fn(ok),
     gradeAnswer: vi.fn(ok),
     kickTeam: vi.fn(ok),
+    setTeamPlayerCount: vi.fn(ok),
     awardBonus: vi.fn(ok),
     setBreakEndTime: vi.fn(ok),
     setDisplayTextScale: vi.fn(ok),
