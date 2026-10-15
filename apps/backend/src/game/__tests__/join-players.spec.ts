@@ -145,8 +145,18 @@ describe('GameGateway — join players', () => {
         room,
         SOCKET_EVENTS.STATE_UPDATED,
       );
+      // Only the quiz master's roster entries carry the player count.
+      const adminOnly =
+        room === SOCKET_ROOMS.ADMIN
+          ? { playerCount: null, isOverPlayerCap: false }
+          : {};
       expect(snapshots[snapshots.length - 1].teams).toEqual([
-        { teamId: team.teamId, teamName: 'The Quizzards', isConnected: true },
+        {
+          teamId: team.teamId,
+          teamName: 'The Quizzards',
+          isConnected: true,
+          ...adminOnly,
+        },
       ]);
     }
   });
