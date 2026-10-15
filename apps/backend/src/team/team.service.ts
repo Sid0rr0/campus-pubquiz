@@ -4,8 +4,10 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { UniqueConstraintViolationException } from '@mikro-orm/core';
 import type {
   TeamCodeView,
+  TeamListItem,
   TeamRosterEntry,
   TeamsListedPayload,
+  TeamsSortOrder,
 } from '@campus-pubquiz/types';
 import { GameSession } from '@/db/entities/game-session.entity';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
@@ -14,6 +16,8 @@ import { GameSessionRepository } from '@/db/repositories/game-session.repository
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
 import { TeamRepository } from '@/db/repositories/team.repository';
 import { generateJoinCode } from '@/db/join-code.util';
+import { averagePlacingOf } from '@/team/team-history.calc';
+import { TeamHistoryService } from '@/team/team-history.service';
 import type { TeamsQuery } from '@/team/teams-query.schema';
 
 class TeamNameTakenError extends Error {
@@ -47,6 +51,20 @@ interface TeamListRow {
   sessionsJoined: string | number;
 }
 
+/** Orders by average placing in the given direction, teams without one last either way (ties keep their id order). */
+function sortByAveragePlacing(
+  items: readonly TeamListItem[],
+  sortOrder: TeamsSortOrder,
+): TeamListItem[] {
+  const direction = sortOrder === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    if (a.averagePlacing === null && b.averagePlacing === null) return 0;
+    if (a.averagePlacing === null) return 1;
+    if (b.averagePlacing === null) return -1;
+    return direction * (a.averagePlacing - b.averagePlacing);
+  });
+}
+
 export interface TeamIdentity {
   id: number;
   name: string;
@@ -68,6 +86,7 @@ export class TeamService {
     private readonly gameSessions: GameSessionRepository,
     @InjectRepository(GameSessionTeam)
     private readonly gameSessionTeams: GameSessionTeamRepository,
+    private readonly teamHistory: TeamHistoryService,
   ) {}
 
   async join(
@@ -147,16 +166,35 @@ export class TeamService {
       .select('team_id')
       .count({ count: '*' });
 
+    const teamRows = knex('teams as t')
+      .leftJoin(sessionCounts.as('sc'), 'sc.team_id', 't.id')
+      .select('t.id', 't.name', 't.code', 't.created_at as joinedAt')
+      .select(knex.raw('coalesce(sc.count, 0) as "sessionsJoined"'));
+
+    // Placings come from the Standings per session, never from SQL, so the
+    // average-placing order can't be done in the query: load every team,
+    // sort in memory and slice the page.
+    if (sortBy === 'averagePlacing') {
+      const allRows = (await teamRows.orderBy('t.id', 'asc')) as TeamListRow[];
+      const items = await this.withAveragePlacing(allRows);
+      return {
+        items: sortByAveragePlacing(items, sortOrder).slice(
+          offset,
+          offset + pageSize,
+        ),
+        total: items.length,
+        page,
+        pageSize,
+      };
+    }
+
     const orderColumn =
       sortBy === 'sessionsJoined'
         ? knex.raw('coalesce(sc.count, 0)')
         : 't.created_at';
 
     const [rows, [{ count: total }]] = await Promise.all([
-      knex('teams as t')
-        .leftJoin(sessionCounts.as('sc'), 'sc.team_id', 't.id')
-        .select('t.id', 't.name', 't.code', 't.created_at as joinedAt')
-        .select(knex.raw('coalesce(sc.count, 0) as "sessionsJoined"'))
+      teamRows
         .orderBy(orderColumn, sortOrder)
         .orderBy('t.id', 'asc')
         .limit(pageSize)
@@ -165,17 +203,27 @@ export class TeamService {
     ]);
 
     return {
-      items: rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        code: row.code,
-        joinedAt: new Date(row.joinedAt).toISOString(),
-        sessionsJoined: Number(row.sessionsJoined),
-      })),
+      items: await this.withAveragePlacing(rows),
       total: Number(total),
       page,
       pageSize,
     };
+  }
+
+  private async withAveragePlacing(
+    rows: readonly TeamListRow[],
+  ): Promise<TeamListItem[]> {
+    const results = await this.teamHistory.resultsForTeams(
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      joinedAt: new Date(row.joinedAt).toISOString(),
+      sessionsJoined: Number(row.sessionsJoined),
+      averagePlacing: averagePlacingOf(results.get(row.id) ?? []),
+    }));
   }
 
   /** Looks up one team's persistent join code on demand — used by the "Show team code" admin action rather than being carried on every roster/game-state broadcast. */
