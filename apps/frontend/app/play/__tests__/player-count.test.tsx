@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithQuery } from '@/test-utils/query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -168,6 +168,26 @@ describe('PlayPage — a team that joins after the lobby', () => {
     expect(
       screen.queryByRole('button', { name: /dismiss/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('is not asked after a reload mid-quiz when it joined in the lobby without a count', () => {
+    renderPhone({ status: 'lobby', myPlayerCount: null });
+    cleanup();
+
+    renderPhone({ status: 'rules', myPlayerCount: null });
+
+    expect(
+      screen.queryByText(/how many players are you/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('is asked again after a reload until it answers or dismisses', () => {
+    renderPhone({ status: 'rules', myPlayerCount: null });
+    cleanup();
+
+    renderPhone({ status: 'rules', myPlayerCount: null });
+
+    expect(screen.getByText(/how many players are you/i)).toBeInTheDocument();
   });
 
   it('hides the card for good on this phone once dismissed', async () => {
