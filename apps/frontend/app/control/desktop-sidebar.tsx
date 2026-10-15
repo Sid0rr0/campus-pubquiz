@@ -67,6 +67,7 @@ export function DesktopSidebar({ panel }: { panel: ControlPanel }) {
         showAnswerStatus={controls.showAnswerStatus}
         answeredTeamIds={view.answeredTeamIds}
         onKickTeam={actions.kickTeam}
+        onSetPlayerCount={actions.setTeamPlayerCount}
         className="mt-auto border-t border-background/20 pt-4"
       />
     </aside>

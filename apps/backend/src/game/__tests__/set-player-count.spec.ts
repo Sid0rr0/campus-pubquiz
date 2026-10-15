@@ -169,7 +169,7 @@ describe('GameGateway — a team reports its player count', () => {
     });
   });
 
-  it('works mid-quiz, and leaves the big screen and the room views alone', async () => {
+  it('works mid-quiz, and leaves the big screen and the phones’ room view alone', async () => {
     const game = await harness.createGateway({ teamNames: ['The Quizzards'] });
     const [team] = game.teams;
     await game.openFirstQuestion(await game.connectAdmin());
@@ -181,9 +181,20 @@ describe('GameGateway — a team reports its player count', () => {
     await game.settled();
 
     expect(ack).toEqual({ success: true });
-    expect(game.roomEmits().map((emit) => emit.event)).toEqual([
-      SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED,
+    expect(
+      game
+        .roomEmits()
+        .map((emit) => [emit.event, emit.rooms.includes(team.socket.id)]),
+    ).toEqual([
+      [SOCKET_EVENTS.STATE_UPDATED, false],
+      [SOCKET_EVENTS.TEAM_PLAYER_COUNT_SYNCED, true],
     ]);
+    expect(
+      game.payloadsTo(SOCKET_ROOMS.DISPLAY, SOCKET_EVENTS.STATE_UPDATED),
+    ).toEqual([]);
+    expect(
+      game.payloadsTo(SOCKET_ROOMS.PLAYERS, SOCKET_EVENTS.STATE_UPDATED),
+    ).toEqual([]);
     expect(await game.resync(SOCKET_ROOMS.DISPLAY)).toEqual(displayBefore);
     expect(await game.resync(SOCKET_ROOMS.PLAYERS)).toEqual(playersBefore);
   });

@@ -68,6 +68,14 @@ export interface TeamView {
   isConnected: boolean;
 }
 
+/** A roster entry in the quiz master's view: the team's player count and whether it is over the session's max players per team. */
+export interface AdminTeamView extends TeamView {
+  /** The team's player count this session, or null until it (or the quiz master) has set one. */
+  playerCount: number | null;
+  /** True when `playerCount` exceeds the session's max players per team, worked out by the server. */
+  isOverPlayerCap: boolean;
+}
+
 export interface StateSnapshotPayload {
   progress: GameProgress;
   quizStructure: QuizStructureSummary;
@@ -201,7 +209,9 @@ export type PreviousState =
 
 /** The quiz master's view: the snapshot plus the screen on air and what /control's question browser marks as on air. */
 export interface AdminStatePayload
-  extends StateSnapshotPayload, AdminIndicators {
+  extends Omit<StateSnapshotPayload, 'teams'>, AdminIndicators {
+  /** The roster, each team with its player count and over-cap flag. */
+  teams: AdminTeamView[];
   onAirScreen: OnAirScreen;
   /** What a press of the Advance slot does next — the Move plan's step for ADVANCE. */
   advanceStep: AdvanceSlotStep;

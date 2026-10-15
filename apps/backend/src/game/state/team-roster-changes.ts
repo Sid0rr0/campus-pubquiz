@@ -14,6 +14,7 @@ import {
 } from '@/game/state/session-outcome';
 import {
   findTeamIdBySocketId,
+  withPlayerCount,
   withTeamConnected,
   withTeams,
   withoutTeamConnection,
@@ -77,9 +78,17 @@ export class TeamRosterChanges {
         `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
       );
     }
+    const playerCount = await this.playerCountService.getForTeam(
+      gameSessionId,
+      team.id,
+    );
     return {
       session: withTeams(
-        withTeamConnected(session, team.id, socketId),
+        withPlayerCount(
+          withTeamConnected(session, team.id, socketId),
+          team.id,
+          playerCount,
+        ),
         await this.teamService.listForSession(gameSessionId),
       ),
       outcome: {
