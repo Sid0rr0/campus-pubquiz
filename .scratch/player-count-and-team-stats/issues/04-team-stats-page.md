@@ -30,7 +30,7 @@ Parent spec: `.scratch/player-count-and-team-stats/spec.md`
 
 **Blocked by:** 01 (Teams report their player count), for the player count column and tile
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Team service on real Postgres: only ended sessions count; a left session is listed with `hasLeft` but excluded from wins, podiums, best and average placing; a tie counts at its shared placing
 - [ ] Team service: share of max points is averaged per session; average player count leaves out unknown counts; a team with no sessions gives an empty sessions list and `null` averages

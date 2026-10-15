@@ -30,6 +30,32 @@ function cellsOf(teamName: string): string[] {
 }
 
 describe('StandingsTable', () => {
+  it('links each team name to its team page, departed teams included', () => {
+    render(
+      <StandingsTable
+        standings={[
+          row({ teamId: 4, teamName: 'Amy' }),
+          row({
+            teamId: 9,
+            teamName: 'Gone',
+            rank: null,
+            rankTo: null,
+            hasLeft: true,
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Amy' })).toHaveAttribute(
+      'href',
+      '/teams/4',
+    );
+    expect(screen.getByRole('link', { name: 'Gone' })).toHaveAttribute(
+      'href',
+      '/teams/9',
+    );
+  });
+
   it('labels tied teams with their shared rank range', () => {
     render(
       <StandingsTable

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { SessionDetailStats } from '@campus-pubquiz/types';
 import { formatRankLabel } from '@/app/lib/rank-label';
 import { formatResponseMs } from '@/app/stats/[id]/format-response-ms';
@@ -60,7 +61,12 @@ export function StandingsTable({ standings }: StandingsTableProps) {
                     : formatRankLabel({ rank: team.rank, rankTo: team.rankTo })}
                 </td>
                 <td className="px-4 py-2">
-                  {team.teamName}
+                  <Link
+                    href={`/teams/${team.teamId}`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {team.teamName}
+                  </Link>
                   {team.isWinner && (
                     <span className="ml-2 rounded-full bg-yellow px-2 py-0.5 text-xs">
                       Winner

@@ -8,7 +8,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import type { TeamCodeView, TeamsListedPayload } from '@campus-pubquiz/types';
+import type {
+  TeamCodeView,
+  TeamDetail,
+  TeamsListedPayload,
+} from '@campus-pubquiz/types';
+import { TeamHistoryService } from '@/team/team-history.service';
 import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { TeamService } from '@/team/team.service';
@@ -18,7 +23,10 @@ import { teamsQuerySchema } from '@/team/teams-query.schema';
 @Controller('teams')
 @UseGuards(SessionGuard, RolesGuard)
 export class TeamsController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(
+    private readonly teamService: TeamService,
+    private readonly teamHistory: TeamHistoryService,
+  ) {}
 
   @Get()
   async list(
@@ -31,6 +39,15 @@ export class TeamsController {
       );
     }
     return this.teamService.listAll(parsed.data);
+  }
+
+  @Get(':id')
+  async getDetail(@Param('id', ParseIntPipe) id: number): Promise<TeamDetail> {
+    const detail = await this.teamHistory.detail(id);
+    if (!detail) {
+      throw new NotFoundException(`Team ${id} not found`);
+    }
+    return detail;
   }
 
   @Get(':id/code')
