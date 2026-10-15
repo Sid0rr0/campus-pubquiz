@@ -15,6 +15,7 @@ import { PlayerCountService } from '@/player-count/player-count.service';
 import { QuizService } from '@/quiz/quiz.service';
 import { ShowdownService } from '@/showdown/showdown.service';
 import { StandingsService } from '@/standings/standings.service';
+import { TeamHistoryService } from '@/team/team-history.service';
 import { TeamService } from '@/team/team.service';
 
 /**
@@ -29,6 +30,7 @@ import { TeamService } from '@/team/team.service';
   providers: [
     SeedService,
     TeamService,
+    TeamHistoryService,
     AnswerService,
     StandingsService,
     BonusService,
@@ -52,6 +54,7 @@ import { TeamService } from '@/team/team.service';
     AnswerService,
     BonusService,
     TeamService,
+    TeamHistoryService,
     PlayerCountService,
     QuizService,
     SeedService,
