@@ -148,6 +148,11 @@ export function PlayedSessionsPanel() {
           cell: (context) => new Date(context.getValue()).toLocaleDateString(),
         }),
         helper.accessor('teamCount', { header: 'Teams' }),
+        helper.accessor('totalPlayers', {
+          header: 'Players',
+          enableSorting: false,
+          cell: (context) => context.getValue() ?? '—',
+        }),
         helper.accessor('maxPoints', { header: 'Max points' }),
         // Sorted server-side on the winner's total points (nulls — no teams
         // on the roster — last); see PlayedSessionsSortColumn 'winner'.

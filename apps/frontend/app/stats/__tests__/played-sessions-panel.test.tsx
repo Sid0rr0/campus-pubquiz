@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -66,6 +66,7 @@ const SESSIONS = [
     maxPoints: 20,
     winnerTeamName: 'The Quizzards',
     winnerPoints: 15,
+    totalPlayers: 11,
   },
   {
     gameSessionId: 2,
@@ -77,6 +78,7 @@ const SESSIONS = [
     maxPoints: 10,
     winnerTeamName: null,
     winnerPoints: null,
+    totalPlayers: null,
   },
 ];
 
@@ -121,7 +123,24 @@ describe('PlayedSessionsPanel', () => {
     renderWithQuery(<PlayedSessionsPanel />);
 
     await waitFor(() => screen.getByText('Trivia Tuesday'));
-    expect(screen.getByText('—')).toBeInTheDocument();
+    const row = screen.getByText('Trivia Tuesday').closest('tr')!;
+    const cells = within(row).getAllByRole('cell');
+    expect(cells[cells.length - 1]).toHaveTextContent('—');
+  });
+
+  it('shows the total players per session in a Players column, a dash when nobody reported', async () => {
+    renderWithQuery(<PlayedSessionsPanel />);
+
+    await waitFor(() => screen.getByText('Quiz Night'));
+    expect(
+      screen.getByRole('columnheader', { name: /Players/ }),
+    ).toBeInTheDocument();
+    const reported = within(screen.getByText('Quiz Night').closest('tr')!);
+    expect(reported.getByText('11')).toBeInTheDocument();
+    const unreported = within(
+      screen.getByText('Trivia Tuesday').closest('tr')!,
+    );
+    expect(unreported.getAllByText('—')).toHaveLength(2);
   });
 
   it('shows an empty state when no sessions have ended yet', async () => {
