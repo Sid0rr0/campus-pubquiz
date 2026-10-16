@@ -1,5 +1,6 @@
 import {
   type JoinPlayersPayload,
+  SEAT_TAKEN_REFUSAL_MARKER,
   type SessionState,
   SOCKET_EVENTS,
 } from '@campus-pubquiz/types';
@@ -75,7 +76,7 @@ export class TeamRosterChanges {
       heldBy && heldBy !== socketId && isSocketLive(heldBy) ? heldBy : null;
     if (takenOver && request.previousSocketId !== takenOver) {
       throw new SessionRefusal(
-        `"${team.name}" is already connected on another device — ask the quiz master to remove it, then try again.`,
+        `"${team.name}" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master to remove it, then try again.`,
       );
     }
     const playerCount = await this.playerCountService.getForTeam(

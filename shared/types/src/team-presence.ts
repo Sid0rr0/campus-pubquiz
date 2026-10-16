@@ -11,6 +11,19 @@ export interface JoinPlayersPayload {
   previousSocketId?: string;
 }
 
+/** What the server refuses a submitted answer with when the sending socket doesn't hold the team's seat. */
+export const NOT_YOUR_TEAM_ANSWER_ERROR =
+  'You may only submit answers for your own team';
+
+/** The part of the "team already connected" join refusal that is the same whatever the team's name. */
+export const SEAT_TAKEN_REFUSAL_MARKER =
+  'is already connected on another device';
+
+/** Whether a join refusal says another live socket holds the team's seat — it clears once the server notices that socket is dead. */
+export function isSeatTakenRefusal(error: string): boolean {
+  return error.includes(SEAT_TAKEN_REFUSAL_MARKER);
+}
+
 export interface JoinAcceptedPayload {
   teamId: number;
   teamToken: string;

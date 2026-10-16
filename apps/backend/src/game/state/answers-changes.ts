@@ -1,5 +1,6 @@
 import {
   findQuestionOpenForAnswering,
+  NOT_YOUR_TEAM_ANSWER_ERROR,
   SOCKET_EVENTS,
   type SessionState,
   type SubmitAnswerPayload,
@@ -43,7 +44,7 @@ export class AnswersChanges {
       throw new SessionRefusal('Answers are locked for this question');
     }
     if (session.connectedTeamSockets[teamId] !== socketId) {
-      throw new SessionRefusal('You may only submit answers for your own team');
+      throw new SessionRefusal(NOT_YOUR_TEAM_ANSWER_ERROR);
     }
 
     const responseMs =

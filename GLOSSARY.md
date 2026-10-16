@@ -130,7 +130,7 @@ The mean of a team's placings across the ended sessions it played, leaving out t
 _Avoid_: average position, average rank
 
 **Team link**:
-A phone's link to its team in a live session: who the team is, whether the server has this connection registered as the team's, and the team's own answers, grades, bonus awards and ratings. It's made by a join, remade after every reconnect and after a session restart, and ended by a kick, the session closing or logging out.
+A phone's link to its team in a live session: who the team is, whether the server has this connection registered as the team's, and the team's own answers, grades, bonus awards and ratings. It's made by a join, remade after every reconnect and after a session restart, and ended by a kick, the session closing or logging out. A phone is linked only while the server confirms this connection holds the team's seat; until then it offers no answer form, and a rejoin refused because an older socket still holds the seat is retried quietly rather than shown.
 
 **Reconnecting bar**:
 The full-width bar fixed to the top of a phone while its connection is down. After 10 seconds it offers "Tap to reconnect", which forces a fresh connection and so remakes the Team link.
