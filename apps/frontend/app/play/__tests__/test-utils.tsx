@@ -69,6 +69,8 @@ export function teamLinkResult({
   // getters, so a field a test does not override is read on access.
   const join: TeamLinkJoin = {
     connectionError: null,
+    isReconnecting: false,
+    forceReconnect: vi.fn(),
     teamName: null,
     hasStoredIdentity: false,
     activeJoinCode: null,

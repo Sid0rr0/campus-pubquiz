@@ -598,6 +598,12 @@ table (`GameSessionTeam`).
   connected team's socket gets `TEAM_KICKED` and is closed; its phone then
   forgets its stored token, name and team code, so it can rejoin under the
   same name only with the team's recovery code.
+- **Reconnecting bar** — while a joined phone's socket is retrying, `/play`
+  shows a full-width magenta bar fixed to the top ("Connection lost —
+  reconnecting…", `role="alert"`). After `RECONNECT_HELP_DELAY_MS` (10 s)
+  without reconnecting it adds a "Tap to reconnect" button that forces a fresh
+  connection (`forceReconnect`); the rejoin goes through the normal join path.
+  Join refusals and the kick notice keep their inline text.
 
 ## Question Types
 
