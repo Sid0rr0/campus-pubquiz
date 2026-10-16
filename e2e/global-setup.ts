@@ -73,6 +73,11 @@ function buildApps(): void {
   fs.rmSync(path.join(PATHS.backendDir, 'tsconfig.build.tsbuildinfo'), {
     force: true,
   });
+  // nest build never deletes old output, so a migration compiled on another branch would still be applied.
+  fs.rmSync(path.join(PATHS.backendDir, 'dist', 'db', 'migrations'), {
+    recursive: true,
+    force: true,
+  });
   run('pnpm', ['--filter', 'backend', 'build'], { cwd: PATHS.repoRoot });
   run('pnpm', ['--filter', 'frontend', 'build'], {
     cwd: PATHS.repoRoot,
