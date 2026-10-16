@@ -1,6 +1,6 @@
 # Spec: The Session write is its own module
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows session-write and outcome-deadlines, both done)
 

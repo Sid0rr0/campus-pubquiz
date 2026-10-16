@@ -83,6 +83,10 @@ An answer still waiting for the quiz master to grade it, and a question with at 
 **Break**:
 The pause after a block locks, in which the quiz master finishes any grading still open. The quiz cannot leave the break while an answer is ungraded.
 
+**Fun fact**:
+A line of trivia about the session so far, shown on the big screen during a break. It is drawn only from blocks already revealed, or from figures that give no answer away, so it never hints at the block in play.
+_Avoid_: stat, highlight (that's a stats-page tile)
+
 **Break review**:
 Stepping back through a block's locked questions during its break, with answers still hidden, e.g. to show a question to the room again.
 
@@ -140,6 +144,20 @@ _Avoid_: round score (that's points)
 
 **Topic suggestion**:
 One topic a team would like as a round in a future session, entered as its own short line so suggestions from different teams can be counted together.
+
+## League
+
+**League**:
+A named competition, such as a semester's, over which teams are ranked across sessions. A session counts towards a league only once it has been added to that league and has ended.
+_Avoid_: season, championship, all teams ever (that's the team directory)
+
+**League points**:
+What a team earns towards a league from one session: 5, 4, 3, 2 or 1 for placing 1st to 5th (tied teams each get their shared place's full points) and nothing below 5th, plus one participation point for having answered at least one question. A team that left the session has no placing, so it gets the participation point only.
+_Avoid_: season points, ranking points
+
+**League table**:
+The teams of a league ranked by league points; teams level on points are split by more nights won, then by better average placing, and otherwise share the position.
+_Avoid_: league leaderboard, standings (that's one session)
 
 ## Game status
 

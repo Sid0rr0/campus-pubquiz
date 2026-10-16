@@ -1,6 +1,6 @@
 # Spec: Split outbound broadcasting out of the GameGateway
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-13, candidate 04 ("Worth exploring", ports & adapters).
 

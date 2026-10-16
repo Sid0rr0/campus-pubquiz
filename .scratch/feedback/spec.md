@@ -1,6 +1,6 @@
 # Spec: Teams rate the rounds and leave feedback from their phones
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: —
 

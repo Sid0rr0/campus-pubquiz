@@ -1,6 +1,6 @@
 # Spec: Grouped Control panel props, and passing whole objects
 
-Status: ready-for-agent
+Status: done
 
 Research: `.scratch/props-refactor/research.md` (primary-source review of the options, with file:line references).
 

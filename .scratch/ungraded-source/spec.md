@@ -1,6 +1,6 @@
 # Spec: One rule and one reader for "which questions are still ungraded"
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: session-settle ticket 03 for ticket 03 of this feature only (restore is rewritten there). Tickets 01, 02 and 04 can start immediately. Session-settle ticket 01 (named status groups) replaces the grading and graded status lists this spec leaves alone, so it can land before or after.
 

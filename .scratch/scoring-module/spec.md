@@ -1,6 +1,6 @@
 # Spec: One Scoring module per question type
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

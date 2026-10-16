@@ -1,6 +1,6 @@
 # Spec: One stored-question codec — a question crosses storage, preview and the seeded game in one place
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

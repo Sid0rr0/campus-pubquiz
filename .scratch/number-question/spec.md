@@ -1,6 +1,6 @@
 # Spec: Number question type, graded against a margin
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

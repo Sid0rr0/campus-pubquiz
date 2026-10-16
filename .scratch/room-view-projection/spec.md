@@ -1,6 +1,6 @@
 # Spec: One room-view projection shared by the server and the frontend fixtures
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: socket-protocol 01 (split socket-events by concept) and socket-protocol 04 (single-room fields in their room view). Both move the view types this spec builds on.
 

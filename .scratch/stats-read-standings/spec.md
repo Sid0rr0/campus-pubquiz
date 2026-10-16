@@ -1,6 +1,6 @@
 # Spec: Stats take totals from the Standings module and credit answers by verdict
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-14, candidate 6 ("Speculative", local-substitutable).
 

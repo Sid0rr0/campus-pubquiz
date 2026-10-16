@@ -1,6 +1,6 @@
 # Spec: Build the real-store harness from a Game module, not by hand
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

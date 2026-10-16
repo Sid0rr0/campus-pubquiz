@@ -1,6 +1,6 @@
 # Spec: Commit a move — one module from the Move plan to saved progress
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: `.scratch/grading-refresh/` (candidate 1). It rewrites the grading stages this module calls and the break-entry refresh in the same action path. This spec builds on it rather than racing it.
 

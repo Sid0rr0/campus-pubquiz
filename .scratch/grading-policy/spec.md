@@ -1,6 +1,6 @@
 # Spec: Grading policy in one module — key-fix regrades and the Grading refresh behind a narrow interface
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

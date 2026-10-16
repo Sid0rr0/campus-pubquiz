@@ -1,6 +1,6 @@
 # Spec: One settle step derives a session's fields; named status groups
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: advance-plan ticket 02 ("One Move plan drives the handler, button availability and the /remote preview"). That ticket rewrites the same action handler. This spec builds on it rather than racing it.
 

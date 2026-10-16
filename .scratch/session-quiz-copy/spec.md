@@ -1,6 +1,6 @@
 # Spec: Every session holds the current quiz, and grading reads only that copy
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-14, candidate 2 ("Strong", local-substitutable).
 

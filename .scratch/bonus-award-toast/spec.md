@@ -1,6 +1,6 @@
 # Spec: Toast when a bonus award is given
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

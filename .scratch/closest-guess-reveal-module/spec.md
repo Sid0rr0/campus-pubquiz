@@ -1,6 +1,6 @@
 # Spec: One Closest-guess reveal module owns the reveal steps
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-14, candidate 1 ("Strong", in-process).
 

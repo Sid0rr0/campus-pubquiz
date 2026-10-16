@@ -1,6 +1,6 @@
 # Spec: Half points are exactly half
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

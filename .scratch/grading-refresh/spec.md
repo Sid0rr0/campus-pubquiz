@@ -1,6 +1,6 @@
 # Spec: Every change to grades ends through one grading refresh
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows ungraded-source and typed-answer-grading, both done)
 

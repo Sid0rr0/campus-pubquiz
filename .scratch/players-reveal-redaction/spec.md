@@ -1,6 +1,6 @@
 # Spec: The players view redacts the reveal, and names the phone screen
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None. Source: architecture review 2026-10-02, candidate 3. Builds on `screen-projection`. That spec's user story 21 kept "answers reach phones once reveal starts", which is the leak fixed here. `display-screen-kind` is prior art for the second half, not a dependency.
 

@@ -1,6 +1,6 @@
 # Spec: One Move plan decides what Advance and Previous do
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

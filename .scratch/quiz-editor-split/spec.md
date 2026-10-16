@@ -1,6 +1,6 @@
 # Spec: Split the quiz editor panel into a draft hook, an import hook and pure round edits
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

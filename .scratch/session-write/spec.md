@@ -1,6 +1,6 @@
 # Spec: Every change to a live session is one session write, ending with fresh standings
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows standings-module, grading-refresh, live-session-module and commit-a-move, all done)
 

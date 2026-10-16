@@ -1,6 +1,6 @@
 # Spec: One Standings module for participation, ranking and ties
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

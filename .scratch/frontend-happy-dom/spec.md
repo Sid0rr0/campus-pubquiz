@@ -1,6 +1,6 @@
 # Spec: The frontend suite runs on happy-dom instead of jsdom
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

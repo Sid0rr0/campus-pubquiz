@@ -1,6 +1,6 @@
 # Spec: Phase timers are their own module, apart from the gateway
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

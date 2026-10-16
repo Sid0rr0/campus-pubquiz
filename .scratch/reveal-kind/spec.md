@@ -1,6 +1,6 @@
 # Spec: Let the reveal view say what kind of reveal it is
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-13, candidate 07 ("Speculative", in-process).
 

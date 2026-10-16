@@ -1,6 +1,6 @@
 # Spec: A Screen projection per room
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

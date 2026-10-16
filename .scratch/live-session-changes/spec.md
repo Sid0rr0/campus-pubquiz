@@ -1,6 +1,6 @@
 # Spec: Live session events are built by per-domain change modules
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: session-write-module
 

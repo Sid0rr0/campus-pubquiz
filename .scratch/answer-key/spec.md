@@ -1,6 +1,6 @@
 # Spec: One Answer key — what an answer is graded against, defaults filled in once
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

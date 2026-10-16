@@ -1,6 +1,6 @@
 # Spec: Player counts and a team stats page
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: —
 

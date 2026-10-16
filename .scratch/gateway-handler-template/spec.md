@@ -1,6 +1,6 @@
 # Spec: Collapse the gateway's per-event handler template
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: `.scratch/live-session-module` issue 07 (every session change goes through a Live session operation that returns an outcome delivered by one delivery step)
 

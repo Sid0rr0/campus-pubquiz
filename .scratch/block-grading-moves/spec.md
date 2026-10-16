@@ -1,6 +1,6 @@
 # Spec: Give Block grading one entry point per move
 
-Status: ready-for-agent
+Status: done
 
 Source: architecture review 2026-10-13, candidate 05 ("Worth exploring", in-process). The [grading-mode-policy](../grading-mode-policy/spec.md) spec lists this as out of scope and says it becomes easier once that spec lands.
 

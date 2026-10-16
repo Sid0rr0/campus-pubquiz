@@ -1,6 +1,6 @@
 # Spec: Team events go into the Live session module; the getters go
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: — (follows live-session-module, grading-refresh and commit-a-move, all done)
 

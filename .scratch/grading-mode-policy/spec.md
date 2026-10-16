@@ -1,6 +1,6 @@
 # Spec: One Grading policy per grading mode — every grading event decided in one pure module
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

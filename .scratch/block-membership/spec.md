@@ -1,6 +1,6 @@
 # Spec: Block membership is its own rule, and the reveal views are built on it
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

@@ -1,6 +1,6 @@
 # Spec: One sortable table module across five panels, and a smaller session picker
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

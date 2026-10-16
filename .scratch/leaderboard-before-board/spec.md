@@ -1,6 +1,6 @@
 # Spec: The server sends the leaderboard's "before" board
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

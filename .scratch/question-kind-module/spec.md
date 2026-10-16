@@ -1,6 +1,6 @@
 # Spec: One Question kind module per QuestionType
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

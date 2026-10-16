@@ -1,6 +1,6 @@
 # Spec: One pure function decides which question a team's phone shows
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None. Independent of the other features. `/play`'s inline "break or reveal" status chain is replaced by session-settle ticket 01 (named status groups); that edit is a different line from the ones this spec touches.
 

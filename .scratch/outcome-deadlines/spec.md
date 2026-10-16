@@ -1,6 +1,6 @@
 # Spec: Deadline changes travel on the SessionOutcome, and the pass-through socket handlers go
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: none
 

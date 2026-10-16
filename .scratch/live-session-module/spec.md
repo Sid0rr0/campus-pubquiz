@@ -1,6 +1,6 @@
 # Spec: Deepen the Live session module
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

@@ -1,6 +1,6 @@
 # Spec: Role-shaped socket hooks and a Control panel context
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 

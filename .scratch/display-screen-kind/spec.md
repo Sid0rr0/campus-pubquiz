@@ -1,6 +1,6 @@
 # Spec: /display renders the On-air screen it is sent
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: None. Independent of advance-plan, session-settle and question-kind-module. The one shared touch-point is session-settle ticket 01 (named status groups), which also edits `/display`'s live-question check; whichever lands second rebases over the other.
 

@@ -1,6 +1,6 @@
 # Spec: The Live edit module owns the quiz edit, its hold and the live-edit frontier
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: session-write-module
 
