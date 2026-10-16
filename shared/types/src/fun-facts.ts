@@ -1,11 +1,7 @@
-import { getPastBlockIds } from './block-in-play';
+import { getLastPastBlockIds, getPastBlockIds } from './block-in-play';
 import { BONUS_CATEGORIES, type BonusCategory } from './bonus';
 import type { Verdict } from './answer-kind';
-import {
-  getBlockStartPosition,
-  getPreviousQuestionPosition,
-} from './game-state-block-position';
-import { getGameContext, type SessionState } from './session-state';
+import type { SessionState } from './session-state';
 
 /** One submitted answer, as far as fun facts need it. */
 export interface FunFactAnswer {
@@ -98,31 +94,6 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
   );
 }
 
-/** The ids of the block just before the block in play; empty at the first block. */
-function getLastRevealedBlockIds(session: SessionState): Set<number> {
-  const { rounds } = session.seededGame;
-  const { roundIndex, questionIndex } = session.progress;
-  const context = getGameContext(session);
-  const playStart = getBlockStartPosition(roundIndex, questionIndex, context);
-  const lastRevealed = getPreviousQuestionPosition(playStart, context);
-  if (lastRevealed === null) return new Set();
-  const start = getBlockStartPosition(
-    lastRevealed.roundIndex,
-    lastRevealed.questionIndex,
-    context,
-  );
-  const ids: number[] = [];
-  for (let r = start.roundIndex; r <= lastRevealed.roundIndex; r += 1) {
-    const from = r === start.roundIndex ? start.questionIndex : 0;
-    const to =
-      r === lastRevealed.roundIndex
-        ? lastRevealed.questionIndex
-        : rounds[r].questions.length - 1;
-    for (let q = from; q <= to; q += 1) ids.push(rounds[r].questions[q].id);
-  }
-  return new Set(ids);
-}
-
 /** How much of a question one answer counts: `correct` in full, `partial` as its points' share (0-1), else none — the stats page's definition. */
 function answerCredit(answer: FunFactAnswer, questionPoints: number): number {
   if (answer.verdict === 'correct') return 1;
@@ -209,7 +180,9 @@ function cleanSweep(
   session: SessionState,
   answers: readonly FunFactAnswer[],
 ): FunFact | null {
-  const blockIds = getLastRevealedBlockIds(session);
+  const blockIds = new Set(
+    getLastPastBlockIds(session.seededGame.rounds, session.progress),
+  );
   if (blockIds.size === 0) return null;
   const teamNames = new Map<number, string>();
   const correctCounts = new Map<number, number>();
@@ -257,15 +230,21 @@ export function describeFunFacts(session: SessionState): FunFact[] {
   const teamCount = session.leaderboard.length;
   const outcomes = outcomesOf(revealed, revealedAnswers, teamCount);
 
+  const nobody = outcomes.find(({ correctCount }) => correctCount === 0);
+  // A question nobody got right is the nobody-got-it fact's; never show it twice.
   const toughest = pickLowest(
-    outcomes.filter(({ correctRate }) => correctRate < 1),
+    outcomes.filter(
+      (outcome) =>
+        outcome !== nobody &&
+        outcome.correctRate > 0 &&
+        outcome.correctRate < 1,
+    ),
     ({ correctRate }) => correctRate,
   );
   const split = pickLowest(
     outcomes.filter(({ correctRate }) => correctRate > 0 && correctRate < 1),
     ({ correctRate }) => Math.abs(correctRate - HALF),
   );
-  const nobody = outcomes.find(({ correctCount }) => correctCount === 0);
 
   const facts: (FunFact | null)[] = [
     fastestCorrectAnswer(revealed, revealedAnswers),

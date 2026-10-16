@@ -7,6 +7,7 @@ import {
   isAnsweringStatus,
   isBlockStartedStatus,
 } from './game-state';
+import { getPreviousQuestionPosition } from './game-state-block-position';
 
 /** The part of a seeded round the Block module reads — a SeededRound fits. */
 interface BlockRound {
@@ -140,4 +141,42 @@ export function getPastBlockIds(
       ? questionIdsOf(rounds[blockStart.roundIndex], blockStart.questionIndex)
       : []),
   ];
+}
+
+/**
+ * The question ids of the block played just before the one `progress` is in,
+ * in play order; empty at the first block.
+ */
+export function getLastPastBlockIds(
+  rounds: readonly BlockRound[],
+  progress: GameProgress,
+): number[] {
+  const context = toGameContext(rounds);
+  const blockStart = getBlockStartPosition(
+    progress.roundIndex,
+    progress.questionIndex,
+    context,
+  );
+  const lastQuestion = getPreviousQuestionPosition(blockStart, context);
+  if (lastQuestion === null) return [];
+
+  const lastBlockStart = getBlockStartPosition(
+    lastQuestion.roundIndex,
+    lastQuestion.questionIndex,
+    context,
+  );
+  const lastBlockLength =
+    getBlockPositionForQuestion(
+      lastQuestion.roundIndex,
+      lastQuestion.questionIndex,
+      context,
+    ) + 1;
+  return Array.from({ length: lastBlockLength }, (_, position) => {
+    const { roundIndex, questionIndex } = getRoundAndQuestionForBlockPosition(
+      lastBlockStart,
+      position,
+      context,
+    );
+    return rounds[roundIndex].questions[questionIndex].id;
+  });
 }

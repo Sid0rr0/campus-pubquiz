@@ -217,7 +217,7 @@ describe('describeFunFacts', () => {
     it('counts a partial answer as its share of the question points', () => {
       const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
         answers: [
-          answer(1, 0, 'partial', { pointsAwarded: 500 }),
+          answer(1, 0, 'correct'),
           answer(1, 1, 'partial', { pointsAwarded: 500 }),
           answer(1, 2, 'incorrect'),
           answer(1, 3, 'incorrect'),
@@ -231,7 +231,55 @@ describe('describeFunFacts', () => {
       const toughest = describeFunFacts(session).find(
         (fact) => fact.kind === 'toughest_question',
       );
-      expect(toughest).toMatchObject({ correctRate: 0.25 });
+      expect(toughest).toMatchObject({ correctRate: 0.375 });
+    });
+
+    it('leaves a partial-credit question nobody fully got right to nobody-got-it', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'partial', { pointsAwarded: 500 }),
+          answer(1, 1, 'incorrect'),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'incorrect'),
+        ],
+      });
+
+      const facts = describeFunFacts(session);
+      expect(facts.find((f) => f.kind === 'nobody_got_it')).toMatchObject({
+        question: { questionId: 1 },
+      });
+      expect(facts.find((f) => f.kind === 'toughest_question')).toMatchObject({
+        question: { questionId: 2 },
+      });
+    });
+
+    it('leaves a question nobody got right to the nobody-got-it fact', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(1, 1, 'incorrect'),
+          answer(2, 0, 'incorrect'),
+          answer(2, 1, 'incorrect'),
+        ],
+      });
+
+      const facts = describeFunFacts(session);
+      const toughest = facts.find((fact) => fact.kind === 'toughest_question');
+      const nobody = facts.find((fact) => fact.kind === 'nobody_got_it');
+      expect(toughest).toMatchObject({ question: { questionId: 1 } });
+      expect(nobody).toMatchObject({ question: { questionId: 2 } });
+    });
+
+    it('is skipped when the only hard question is one nobody got right', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          ...[0, 1, 2, 3].map((team) => answer(1, team, 'correct')),
+          ...[0, 1, 2, 3].map((team) => answer(2, team, 'incorrect')),
+        ],
+      });
+
+      expect(kinds(session)).not.toContain('toughest_question');
+      expect(kinds(session)).toContain('nobody_got_it');
     });
 
     it('is skipped when every revealed question was answered correctly by everyone', () => {

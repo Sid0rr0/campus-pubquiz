@@ -33,6 +33,17 @@
 
   /* A fun fact fading in on the /display break screen */
   --animate-fun-fact-in: fun-fact-in 0.8s ease-out;
+  /* The same entrance under prefers-reduced-motion: opacity only, no movement */
+  --animate-fun-fact-fade: fun-fact-fade 0.8s ease-out;
+}
+
+@keyframes fun-fact-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fun-fact-in {

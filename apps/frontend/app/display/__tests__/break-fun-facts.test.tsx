@@ -73,6 +73,13 @@ describe('BreakIntroScreen — fun facts', () => {
     expect(screen.getByText('BREAK 1')).toBeInTheDocument();
   });
 
+  it('fades in under reduced motion instead of dropping the entrance', () => {
+    renderBreak([{ kind: 'answers_so_far', count: 42 }]);
+    const { className } = screen.getByTestId('fun-fact');
+    expect(className).toContain('motion-reduce:animate-fun-fact-fade');
+    expect(className).not.toContain('motion-reduce:animate-none');
+  });
+
   it('shows nothing extra for an empty list', () => {
     const { container } = renderBreak([]);
     expect(screen.queryByTestId('fun-fact')).not.toBeInTheDocument();

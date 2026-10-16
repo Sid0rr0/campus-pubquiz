@@ -34,7 +34,7 @@ export function FunFactRotator({ funFacts }: FunFactRotatorProps) {
     <div
       key={position}
       data-testid="fun-fact"
-      className="flex max-w-5xl animate-fun-fact-in flex-col items-center gap-2 motion-reduce:animate-none"
+      className="flex max-w-5xl animate-fun-fact-in flex-col items-center gap-2 motion-reduce:animate-fun-fact-fade"
     >
       <p className="text-balance font-display text-display-6xl">{headline}</p>
       <p className="font-display text-display-2xl text-foreground/70">
