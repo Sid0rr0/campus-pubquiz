@@ -439,6 +439,12 @@ answers and bonus awards (`funFactData`) and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes.
 
+`/display` (`BreakIntroScreen`, via `FunFactRotator`) shows one fact at a time
+under the BREAK heading, with the team name or question number large, and
+moves to the next every `FUN_FACT_ROTATE_MS` (8 s), fading in unless the
+viewer prefers reduced motion. A single fact stays put; an empty list draws
+nothing, leaving the break card as before.
+
 **The phone's verdict card.** When the big screen lands on a revealed question
 (a live forward move: not on connect or reconnect, not on Previous), every
 phone shows a card for about three seconds that never blocks input: "✓ Correct

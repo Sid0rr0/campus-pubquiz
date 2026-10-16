@@ -64,7 +64,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'The break and break review',
     paragraphs: [
-      'When a block ends, the questions stop accepting answers and the break starts. The big screen shows a break card with the break timer and the bonus categories; use this time to finish grading. The Break End Time control sets or extends how long the break countdown runs.',
+      'When a block ends, the questions stop accepting answers and the break starts. The big screen shows a break card with the break timer and the bonus categories; use this time to finish grading. Under the BREAK heading the card also rotates through fun facts about the quiz so far (the fastest correct answer, the toughest question, a clean sweep, how many answers have come in); they only use blocks that have already been revealed or counts that give nothing away, so they never spoil the block you are grading, and the card shows none when there is nothing worth saying. The Break End Time control sets or extends how long the break countdown runs.',
       "To show a question to the room again during the break, press Previous to step back through the block's questions. Answers stay hidden while you do this (break review). Stepping back across the start of a round shows that round's title card again.",
     ],
   },
