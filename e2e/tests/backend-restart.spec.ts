@@ -33,7 +33,7 @@ test('a backend restart mid-block leaves every screen resynced, answers intact, 
   await control.expectReconnecting();
   await phoneA.expectReconnecting();
   await phoneB.expectReconnecting();
-  await display.expectDisconnected();
+  await display.expectReconnecting();
 
   // 3. The backend comes back on the same port and database: nothing is reloaded, nothing is lost.
   await restartableBackend.start();
@@ -113,7 +113,7 @@ test.describe('restart while the block is locking', () => {
     await restartableBackend.stop();
     await control.expectReconnecting();
     await phoneA.expectReconnecting();
-    await display.expectDisconnected();
+    await display.expectReconnecting();
     await restartableBackend.start();
 
     // 3. The restart finished inside the grace window: the game is still locking and the countdown still runs.

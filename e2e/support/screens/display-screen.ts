@@ -20,10 +20,10 @@ export class DisplayScreen {
     ).toBeVisible();
   }
 
-  /** The big screen has lost its connection: it drops the pinned session and offers the session picker. */
-  async expectDisconnected(): Promise<void> {
+  /** The big screen has lost its connection: it keeps the pinned session on air and shows a reconnecting pill. */
+  async expectReconnecting(): Promise<void> {
     await expect(
-      this.page.getByRole('heading', { name: 'Pick a game to display' }),
+      this.page.getByRole('status').filter({ hasText: 'Reconnecting…' }),
     ).toBeVisible();
   }
 
