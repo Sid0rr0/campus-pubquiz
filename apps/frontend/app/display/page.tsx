@@ -13,6 +13,11 @@ import {
 import { fireConfetti } from '@/app/lib/confetti';
 import { displaySounds } from '@/app/lib/display-sounds';
 import { useOnLiveForwardMove } from '@/app/lib/live-change';
+import {
+  clearStoredDisplayCode,
+  readStoredDisplayCode,
+  storeDisplayCode,
+} from '@/app/lib/display-code-storage';
 import { useDisplayGame } from '@/app/lib/use-display-game';
 import { revealPosition } from '@/app/lib/reveal-position';
 import { useDisplaySoundMuted } from '@/app/lib/use-display-sound-muted';
@@ -52,10 +57,11 @@ function DisplayPageContent() {
   // an implicit "default" session — once more than one game can run at
   // once that would silently point the screen at the wrong game.
   const codeFromUrl = searchParams.get('code') ?? undefined;
-  const { snapshot, connectionError } = useDisplayGame(
+  const { snapshot, connectionError, connectionIssue } = useDisplayGame(
     Boolean(codeFromUrl),
     codeFromUrl,
   );
+  const isRefused = connectionIssue === 'refused';
   const isConnected = snapshot !== null && !connectionError;
   const { needsUnlock: needsSoundUnlock, unlock: unlockSound } =
     useLockCountdownSound({
@@ -113,17 +119,40 @@ function DisplayPageContent() {
 
   useDisplaySoundMuted(snapshot?.isDisplaySoundMuted ?? false);
 
+  // A bare /display resumes the game this screen last showed, once, on load.
+  const hasTriedResumeRef = useRef(false);
+  useEffect(() => {
+    if (hasTriedResumeRef.current) return;
+    hasTriedResumeRef.current = true;
+    if (codeFromUrl) return;
+    const storedCode = readStoredDisplayCode();
+    if (storedCode) router.replace(`/display?code=${storedCode}`);
+  }, [codeFromUrl, router]);
+
+  // A code the server has really served is the one to resume after a reload.
+  const hasSnapshot = snapshot !== null;
+  useEffect(() => {
+    if (codeFromUrl && hasSnapshot) storeDisplayCode(codeFromUrl);
+  }, [codeFromUrl, hasSnapshot]);
+
   // An unknown/stale code (e.g. a pre-printed QR for a session that's since
   // ended) silently falls back to the plain picker rather than surfacing a
-  // "connection error" for what's normal end-of-game cleanup — this just
-  // strips the bad ?code= from the address bar.
+  // "connection error" for what's normal end-of-game cleanup — this forgets
+  // the code and strips the bad ?code= from the address bar. A transient
+  // drop (`reconnecting`) is not a refusal: socket.io retries on its own.
   useEffect(() => {
-    if (codeFromUrl && connectionError) {
+    if (codeFromUrl && isRefused) {
+      clearStoredDisplayCode();
       router.replace('/display');
     }
-  }, [codeFromUrl, connectionError, router]);
+  }, [codeFromUrl, isRefused, router]);
 
-  if (!codeFromUrl || connectionError) {
+  function pickAnotherGame() {
+    clearStoredDisplayCode();
+    router.replace('/display');
+  }
+
+  if (!codeFromUrl || isRefused) {
     return (
       <DisplaySessionPicker
         onSelectSession={(joinCode) =>
@@ -215,6 +244,7 @@ function DisplayPageContent() {
             joinCode={codeFromUrl}
             maxPlayersPerTeam={settings.maxPlayersPerTeam}
             extraPlayerPenaltyPoints={settings.extraPlayerPenaltyPoints}
+            onPickAnotherGame={pickAnotherGame}
           />
         );
       case 'join_overlay':
@@ -384,6 +414,14 @@ function DisplayPageContent() {
         { '--display-text-scale': displayTextScale } as React.CSSProperties
       }
     >
+      {connectionIssue === 'reconnecting' && (
+        <p
+          role="status"
+          className="fixed right-4 bottom-4 z-50 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+        >
+          Reconnecting…
+        </p>
+      )}
       {needsSoundUnlock && <EnableSoundButton onClick={unlockSound} />}
       <TriviaHeader
         label={headerContent.label}

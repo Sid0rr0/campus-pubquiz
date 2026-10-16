@@ -8,6 +8,7 @@ interface LobbyScreenProps {
   joinCode: string | null | undefined;
   maxPlayersPerTeam: number;
   extraPlayerPenaltyPoints: number;
+  onPickAnotherGame: () => void;
 }
 
 export function LobbyScreen({
@@ -16,6 +17,7 @@ export function LobbyScreen({
   joinCode,
   maxPlayersPerTeam,
   extraPlayerPenaltyPoints,
+  onPickAnotherGame,
 }: LobbyScreenProps) {
   return (
     <div className="flex flex-1 flex-col px-16 text-center">
@@ -32,6 +34,13 @@ export function LobbyScreen({
         )}
       </div>
       <TeamRoster teams={teams} isConnected={isConnected} />
+      <button
+        type="button"
+        onClick={onPickAnotherGame}
+        className="mx-auto my-2 text-sm text-muted-foreground underline"
+      >
+        Pick another game
+      </button>
     </div>
   );
 }

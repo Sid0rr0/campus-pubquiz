@@ -55,6 +55,17 @@ the data model live in [`docs/architecture.md`](docs/architecture.md).
 | Route      | Who                  | What it does                                                                                                                                                                           |
 | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/display` | Big screen (TV)      | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
+
+The big screen survives a dropped connection. While socket.io retries it keeps
+the last frame and shows a small "Reconnecting…" badge in the corner, then
+resyncs on its own; it goes back to the picker only when the server refuses the
+code (`io server disconnect`, e.g. "Unknown game session code"). `useGameConnection`
+reports this as `connectionIssue`: `reconnecting` or `refused`. The screen
+remembers the last code it showed in localStorage (every access wrapped in
+try/catch), so a reload or a bare `/display` resumes that session, falling back
+to the picker if the code is refused; the lobby has a small "Pick another game"
+link to leave it. With storage unavailable the screen still works and just
+starts at the picker.
 | `/control` | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards                                                                             |
 | `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far                 |
 
