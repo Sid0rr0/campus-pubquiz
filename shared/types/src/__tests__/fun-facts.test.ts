@@ -1,0 +1,524 @@
+import { describe, expect, it } from 'vitest';
+import {
+  describeFunFacts,
+  type FunFactAnswer,
+  type FunFactData,
+} from '../fun-facts';
+import type { GameProgress } from '../game-state-types';
+import type { LeaderboardEntry } from '../room-views';
+import { projectScreen } from '../screen-projection';
+import { SOCKET_ROOMS } from '../socket-events';
+import {
+  freshSessionState,
+  type SeededRound,
+  type SessionState,
+} from '../session-state';
+import { DEFAULT_SESSION_SETTINGS } from '../session-settings';
+
+const TEAM_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
+
+interface RoundSpec {
+  title: string;
+  questionCount: number;
+  isKahoot?: boolean;
+}
+
+/** Question ids run 1, 2, 3… across the rounds; every round ends a block (breakAfter). */
+function roundsOf(specs: RoundSpec[]): SeededRound[] {
+  let nextId = 1;
+  return specs.map((spec, roundIndex) => ({
+    id: roundIndex + 1,
+    title: spec.title,
+    breakAfter: true,
+    kahootMode: spec.isKahoot ?? false,
+    questions: Array.from({ length: spec.questionCount }, () => {
+      const id = nextId++;
+      return {
+        id,
+        type: 'free_text' as const,
+        prompt: `Question ${id}?`,
+        answer: 'x',
+        points: 1000,
+      };
+    }),
+  }));
+}
+
+function leaderboardOf(names: string[]): LeaderboardEntry[] {
+  return names.map((teamName, index) => ({
+    teamId: index + 1,
+    teamName,
+    totalPoints: 0,
+    bonusPoints: 0,
+    positiveBonusPoints: 0,
+    negativeBonusPoints: 0,
+    roundPoints: [],
+    rank: index + 1,
+    rankTo: index + 1,
+  }));
+}
+
+/** teamIndex is 0-based into TEAM_NAMES. */
+function answer(
+  questionId: number,
+  teamIndex: number,
+  verdict: FunFactAnswer['verdict'],
+  extra: Partial<FunFactAnswer> = {},
+): FunFactAnswer {
+  return {
+    questionId,
+    teamId: teamIndex + 1,
+    teamName: TEAM_NAMES[teamIndex],
+    verdict,
+    pointsAwarded: verdict === 'correct' ? 1000 : 0,
+    responseMs: null,
+    ...extra,
+  };
+}
+
+function breakProgress(
+  roundIndex: number,
+  questionIndex: number,
+): GameProgress {
+  return {
+    status: 'break',
+    roundIndex,
+    questionIndex,
+    isLeaderboardVisible: false,
+    isJoinOverlayVisible: false,
+    revealIndex: 0,
+    furthestOpenIndex: questionIndex,
+  };
+}
+
+function sessionOf(
+  specs: RoundSpec[],
+  progress: GameProgress,
+  data: Partial<FunFactData>,
+): SessionState {
+  return {
+    ...freshSessionState(
+      {
+        quizId: 1,
+        gameSessionId: 1,
+        joinCode: 'ABCDEF',
+        rounds: roundsOf(specs),
+        settings: DEFAULT_SESSION_SETTINGS,
+      },
+      progress,
+    ),
+    leaderboard: leaderboardOf(TEAM_NAMES),
+    funFactData: { answers: [], bonusAwards: [], ...data },
+  };
+}
+
+const THREE_ROUNDS: RoundSpec[] = [
+  { title: 'One', questionCount: 2 },
+  { title: 'Two', questionCount: 2 },
+  { title: 'Three', questionCount: 2 },
+];
+
+/** Break after round 2: round 1 (questions 1-2) is revealed, round 2 (questions 3-4) is the block in play. */
+const AFTER_ROUND_TWO = breakProgress(1, 1);
+
+function kinds(session: SessionState): string[] {
+  return describeFunFacts(session).map((fact) => fact.kind);
+}
+
+describe('describeFunFacts', () => {
+  it('yields nothing when there is no data at all', () => {
+    expect(
+      describeFunFacts(sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {})),
+    ).toEqual([]);
+  });
+
+  describe('fastest correct answer', () => {
+    const kahootRounds: RoundSpec[] = [
+      { title: 'Warm-up', questionCount: 1 },
+      { title: 'Buzzer', questionCount: 2, isKahoot: true },
+      { title: 'Finale', questionCount: 1 },
+    ];
+    // Break after the first kahoot question: question 2 is revealed? No — it is the block in play.
+    // Break after the second kahoot question (round 1, question 1): question 2 (kahoot) is revealed.
+    const afterSecondKahoot = breakProgress(1, 1);
+
+    it('names the quickest correct kahoot answer with its time and question', () => {
+      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+        answers: [
+          answer(2, 0, 'correct', { responseMs: 4200 }),
+          answer(2, 1, 'correct', { responseMs: 2300 }),
+          answer(2, 2, 'incorrect', { responseMs: 900 }),
+        ],
+      });
+
+      expect(describeFunFacts(session)[0]).toEqual({
+        kind: 'fastest_correct_answer',
+        teamName: 'Bravo',
+        responseMs: 2300,
+        question: {
+          questionId: 2,
+          roundNumber: 2,
+          questionNumberInRound: 1,
+          prompt: 'Question 2?',
+        },
+      });
+    });
+
+    it('ignores response times on questions that are not kahoot', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [answer(1, 0, 'correct', { responseMs: 1500 })],
+      });
+
+      expect(kinds(session)).not.toContain('fastest_correct_answer');
+    });
+
+    it('is skipped when no correct kahoot answer has a time', () => {
+      const session = sessionOf(kahootRounds, afterSecondKahoot, {
+        answers: [
+          answer(2, 0, 'correct', { responseMs: null }),
+          answer(2, 1, 'incorrect', { responseMs: 800 }),
+        ],
+      });
+
+      expect(kinds(session)).not.toContain('fastest_correct_answer');
+    });
+  });
+
+  describe('toughest question', () => {
+    it('picks the revealed question with the lowest correct rate, with its number and text', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(1, 1, 'correct'),
+          answer(1, 2, 'correct'),
+          answer(1, 3, 'incorrect'),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'incorrect'),
+          answer(2, 2, 'incorrect'),
+          answer(2, 3, 'incorrect'),
+        ],
+      });
+
+      const toughest = describeFunFacts(session).find(
+        (fact) => fact.kind === 'toughest_question',
+      );
+      expect(toughest).toEqual({
+        kind: 'toughest_question',
+        correctRate: 0.25,
+        question: {
+          questionId: 2,
+          roundNumber: 1,
+          questionNumberInRound: 2,
+          prompt: 'Question 2?',
+        },
+      });
+    });
+
+    it('counts a partial answer as its share of the question points', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'partial', { pointsAwarded: 500 }),
+          answer(1, 1, 'partial', { pointsAwarded: 500 }),
+          answer(1, 2, 'incorrect'),
+          answer(1, 3, 'incorrect'),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'correct'),
+          answer(2, 2, 'correct'),
+          answer(2, 3, 'correct'),
+        ],
+      });
+
+      const toughest = describeFunFacts(session).find(
+        (fact) => fact.kind === 'toughest_question',
+      );
+      expect(toughest).toMatchObject({ correctRate: 0.25 });
+    });
+
+    it('is skipped when every revealed question was answered correctly by everyone', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [0, 1, 2, 3].flatMap((team) => [
+          answer(1, team, 'correct'),
+          answer(2, team, 'correct'),
+        ]),
+      });
+
+      expect(kinds(session)).not.toContain('toughest_question');
+    });
+  });
+
+  describe('room split', () => {
+    it('picks the question whose correct rate is closest to one half', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(1, 1, 'correct'),
+          answer(1, 2, 'correct'),
+          answer(1, 3, 'incorrect'),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'correct'),
+          answer(2, 2, 'incorrect'),
+          answer(2, 3, 'incorrect'),
+        ],
+      });
+
+      const split = describeFunFacts(session).find(
+        (fact) => fact.kind === 'room_split',
+      );
+      expect(split).toMatchObject({
+        kind: 'room_split',
+        correctRate: 0.5,
+        question: { questionId: 2 },
+      });
+    });
+
+    it('is skipped when no question was split (all or nothing)', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          ...[0, 1, 2, 3].map((team) => answer(1, team, 'correct')),
+          ...[0, 1, 2, 3].map((team) => answer(2, team, 'incorrect')),
+        ],
+      });
+
+      expect(kinds(session)).not.toContain('room_split');
+    });
+  });
+
+  describe('nobody got it', () => {
+    it('names a revealed question with no correct answer', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(1, 1, 'incorrect'),
+          answer(2, 0, 'incorrect'),
+          answer(2, 1, 'incorrect'),
+        ],
+      });
+
+      const nobody = describeFunFacts(session).find(
+        (fact) => fact.kind === 'nobody_got_it',
+      );
+      expect(nobody).toMatchObject({
+        kind: 'nobody_got_it',
+        question: { questionId: 2 },
+      });
+    });
+
+    it('skips a question nobody answered at all, as there is nothing to say about it', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [answer(1, 0, 'correct')],
+      });
+
+      expect(kinds(session)).not.toContain('nobody_got_it');
+    });
+
+    it('is skipped when every revealed question had a correct answer', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [answer(1, 0, 'correct'), answer(2, 1, 'correct')],
+      });
+
+      expect(kinds(session)).not.toContain('nobody_got_it');
+    });
+  });
+
+  describe('clean sweep', () => {
+    it('lists the teams that got every question of the last revealed block fully correct', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+        answers: [
+          // Round 2 (questions 3-4) is the last revealed block; round 1 doesn't count.
+          answer(1, 2, 'incorrect'),
+          answer(3, 0, 'correct'),
+          answer(4, 0, 'correct'),
+          answer(3, 1, 'correct'),
+          answer(4, 1, 'partial', { pointsAwarded: 500 }),
+          answer(3, 2, 'correct'),
+          answer(4, 2, 'correct'),
+          answer(3, 3, 'incorrect'),
+        ],
+      });
+
+      const sweep = describeFunFacts(session).find(
+        (fact) => fact.kind === 'clean_sweep',
+      );
+      expect(sweep).toEqual({
+        kind: 'clean_sweep',
+        teamNames: ['Alpha', 'Charlie'],
+      });
+    });
+
+    it('is skipped when no team swept the block', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+        answers: [answer(3, 0, 'correct'), answer(4, 0, 'incorrect')],
+      });
+
+      expect(kinds(session)).not.toContain('clean_sweep');
+    });
+  });
+
+  describe('answers so far', () => {
+    it('counts every answer submitted, the block in play included', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(3, 0, 'incorrect'),
+          answer(4, 1, null),
+        ],
+      });
+
+      expect(describeFunFacts(session)).toContainEqual({
+        kind: 'answers_so_far',
+        count: 3,
+      });
+    });
+  });
+
+  describe('bonus awards so far', () => {
+    it('counts positive awards per category in category order', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        bonusAwards: [
+          { category: 'selfie', points: 100 },
+          { category: 'shot', points: 100 },
+          { category: 'selfie', points: 100 },
+          { category: 'shot', points: -100 },
+          { category: 'custom', points: 0 },
+        ],
+      });
+
+      expect(describeFunFacts(session)).toContainEqual({
+        kind: 'bonus_awards_so_far',
+        counts: [
+          { category: 'shot', count: 1 },
+          { category: 'selfie', count: 2 },
+        ],
+      });
+    });
+
+    it('is skipped when no award was positive', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        bonusAwards: [{ category: 'shot', points: -100 }],
+      });
+
+      expect(kinds(session)).not.toContain('bonus_awards_so_far');
+    });
+  });
+
+  describe('the block in play', () => {
+    it('never contributes: a question nobody got right in it does not appear', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'correct'),
+          answer(2, 0, 'correct'),
+          // Questions 3-4 are the block in play: nobody got them right.
+          answer(3, 0, 'incorrect', { responseMs: 100 }),
+          answer(4, 0, 'incorrect'),
+        ],
+      });
+
+      const facts = describeFunFacts(session);
+      const questionIds = facts.flatMap((fact) =>
+        'question' in fact ? [fact.question.questionId] : [],
+      );
+      expect(questionIds.filter((id) => id >= 3)).toEqual([]);
+      expect(kinds(session)).not.toContain('nobody_got_it');
+    });
+  });
+
+  describe('the first break', () => {
+    it('yields only answers so far and bonus awards so far', () => {
+      const session = sessionOf(THREE_ROUNDS, breakProgress(0, 1), {
+        answers: [
+          answer(1, 0, 'correct', { responseMs: 1000 }),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'incorrect'),
+        ],
+        bonusAwards: [{ category: 'shot', points: 100 }],
+      });
+
+      expect(describeFunFacts(session)).toEqual([
+        { kind: 'answers_so_far', count: 3 },
+        {
+          kind: 'bonus_awards_so_far',
+          counts: [{ category: 'shot', count: 1 }],
+        },
+      ]);
+    });
+  });
+
+  describe('the display view', () => {
+    const data: Partial<FunFactData> = {
+      answers: [answer(1, 0, 'correct'), answer(2, 1, 'incorrect')],
+    };
+
+    it('carries the facts on the break screen', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, data);
+      const onBreak = {
+        ...session,
+        progress: { ...session.progress, status: 'break_intro' as const },
+      };
+
+      const view = projectScreen(onBreak, SOCKET_ROOMS.DISPLAY);
+
+      expect(view.onAirScreen.kind).toBe('break_intro');
+      expect(view.funFacts).toEqual(describeFunFacts(onBreak));
+      expect(view.funFacts.length).toBeGreaterThan(0);
+    });
+
+    it.each(['lobby', 'question_open', 'break', 'reveal', 'ended'] as const)(
+      'is empty on the %s screen',
+      (status) => {
+        const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, data);
+        const elsewhere = {
+          ...session,
+          progress: { ...session.progress, status },
+        };
+
+        expect(projectScreen(elsewhere, SOCKET_ROOMS.DISPLAY).funFacts).toEqual(
+          [],
+        );
+      },
+    );
+
+    it('is empty while the leaderboard covers the break screen', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, data);
+      const covered = {
+        ...session,
+        progress: { ...session.progress, isLeaderboardVisible: true },
+      };
+
+      expect(projectScreen(covered, SOCKET_ROOMS.DISPLAY).funFacts).toEqual([]);
+    });
+
+    it('is not on the players or admin views', () => {
+      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, data);
+
+      expect(projectScreen(session, SOCKET_ROOMS.PLAYERS)).not.toHaveProperty(
+        'funFacts',
+      );
+      expect(projectScreen(session, SOCKET_ROOMS.ADMIN)).not.toHaveProperty(
+        'funFacts',
+      );
+    });
+  });
+
+  it('orders the facts as the spec lists them', () => {
+    const session = sessionOf(THREE_ROUNDS, breakProgress(2, 1), {
+      answers: [
+        answer(1, 0, 'correct'),
+        answer(1, 1, 'incorrect'),
+        answer(2, 0, 'incorrect'),
+        answer(2, 1, 'incorrect'),
+        answer(3, 0, 'correct'),
+        answer(4, 0, 'correct'),
+      ],
+      bonusAwards: [{ category: 'shot', points: 100 }],
+    });
+
+    expect(kinds(session)).toEqual([
+      'toughest_question',
+      'room_split',
+      'nobody_got_it',
+      'clean_sweep',
+      'answers_so_far',
+      'bonus_awards_so_far',
+    ]);
+  });
+});

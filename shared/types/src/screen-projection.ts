@@ -5,6 +5,7 @@ import {
 } from './admin-view-flags';
 import { getBlockSeededQuestions } from './block-questions';
 import { getFeedbackField } from './feedback-rounds';
+import { describeFunFacts } from './fun-facts';
 import type { GameProgress } from './game-state-types';
 import { isRevealingStatus } from './game-state-groups';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
@@ -119,6 +120,8 @@ export function projectScreen(
         screenKey,
         header,
         leaderboardBoard: describeLeaderboardBoard(session),
+        funFacts:
+          screen.kind === 'break_intro' ? describeFunFacts(session) : [],
       };
     case SOCKET_ROOMS.ADMIN:
       return {

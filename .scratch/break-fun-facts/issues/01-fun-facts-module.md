@@ -6,10 +6,10 @@ Parent spec: `.scratch/break-fun-facts/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Unit tests for every fact, including the skip-when-no-data cases
-- [ ] A test that the block in play never contributes (e.g. a question nobody answered right in the block in play doesn't appear)
-- [ ] The first break yields only "answers so far" and "bonus awards so far"
-- [ ] The display view carries `funFacts` on the break screen and nowhere else
-- [ ] `DOCUMENTATION.md` (snapshot section) documents `funFacts`; `GLOSSARY.md` already has **Fun fact**
+- [x] Unit tests for every fact, including the skip-when-no-data cases
+- [x] A test that the block in play never contributes (e.g. a question nobody answered right in the block in play doesn't appear)
+- [x] The first break yields only "answers so far" and "bonus awards so far"
+- [x] The display view carries `funFacts` on the break screen and nowhere else
+- [x] `DOCUMENTATION.md` (snapshot section) documents `funFacts`; `GLOSSARY.md` already has **Fun fact**

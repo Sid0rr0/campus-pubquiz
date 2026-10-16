@@ -3,6 +3,7 @@ import type { SessionState } from '@campus-pubquiz/types';
 import { StandingsService } from '@/standings/standings.service';
 import { SessionWriteQueue } from '@/game/state/session-write-queue';
 import {
+  withFunFactData,
   withLeaderboard,
   withPriorStandings,
   withVerdictTallies,
@@ -254,22 +255,26 @@ export class SessionWrite {
     session: SessionState,
   ): Promise<void> {
     const { gameSessionId } = session.seededGame;
-    const [leaderboard, verdictTallies] = await Promise.all([
+    const [leaderboard, verdictTallies, funFactData] = await Promise.all([
       this.readOrKeep(joinCode, 'Standings', () =>
         this.standingsService.leaderboard(gameSessionId),
       ),
       this.readOrKeep(joinCode, 'Verdict tally', () =>
         this.standingsService.verdictTallies(gameSessionId),
       ),
+      this.readOrKeep(joinCode, 'Fun fact data', () =>
+        this.standingsService.funFactData(gameSessionId),
+      ),
     ]);
     const withStandings = leaderboard
       ? withLeaderboard(session, leaderboard)
       : session;
+    const withTallies = verdictTallies
+      ? withVerdictTallies(withStandings, verdictTallies)
+      : withStandings;
     this.sessions.set(
       joinCode,
-      verdictTallies
-        ? withVerdictTallies(withStandings, verdictTallies)
-        : withStandings,
+      funFactData ? withFunFactData(withTallies, funFactData) : withTallies,
     );
   }
 

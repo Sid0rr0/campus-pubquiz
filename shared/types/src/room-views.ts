@@ -1,3 +1,4 @@
+import type { FunFact } from './fun-facts';
 import type {
   AdminIndicators,
   FeedbackField,
@@ -185,6 +186,12 @@ export interface DisplayStatePayload extends Omit<
   kahootQuestionEndsAt: number | null;
   /** The revealed question's teams-correct count; null outside a reveal and on closest_guess, whose reveal names the closest teams. */
   teamsCorrect: TeamsCorrect | null;
+  /**
+   * The fun facts to rotate through on the break screen, already filtered by
+   * the server to revealed blocks and figures that give nothing away. Empty
+   * on every other screen and when there is nothing worth saying.
+   */
+  funFacts: FunFact[];
 }
 
 /** How many teams got the revealed question right (`correct`), partly right (`partial`), out of every team in the session (no-answers included). */
