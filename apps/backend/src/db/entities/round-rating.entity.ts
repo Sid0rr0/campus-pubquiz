@@ -1,4 +1,5 @@
 import {
+  Check,
   Entity,
   Index,
   ManyToOne,
@@ -12,7 +13,7 @@ import { Round } from '@/db/entities/round.entity';
 import { Team } from '@/db/entities/team.entity';
 import { RoundRatingRepository } from '@/db/repositories/round-rating.repository';
 
-/** One team's 1–5 star rating of one round in one session; rating again overwrites (last write wins, like answers). */
+/** One team's 1–5 star rating (in half stars) of one round in one session; rating again overwrites (last write wins, like answers). */
 @Entity({ tableName: 'round_ratings', repository: () => RoundRatingRepository })
 @Unique({ properties: ['gameSession', 'round', 'team'] })
 // listForTeam() filters by (gameSession, team), which isn't a usable prefix of
@@ -31,6 +32,11 @@ export class RoundRating extends BaseEntity {
   @ManyToOne(() => Team, { deleteRule: 'cascade' })
   team!: Team;
 
-  @Property({ type: 'smallint' })
+  // 'float' (Postgres real) holds every half star exactly.
+  @Property({ type: 'float' })
+  @Check({
+    name: 'round_ratings_stars_check',
+    expression: 'stars between 1 and 5 and stars * 2 = round(stars * 2)',
+  })
   stars!: number;
 }

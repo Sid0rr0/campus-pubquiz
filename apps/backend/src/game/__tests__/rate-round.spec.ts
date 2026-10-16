@@ -210,7 +210,21 @@ describe('GameGateway — rating the rounds in the break', () => {
       });
     });
 
-    it.each([0, 6, 2.5, '4'])('refuses %p stars', async (stars) => {
+    it.each([1, 3.5, 5])(
+      'accepts %p stars and keeps it exactly',
+      async (stars) => {
+        const { game, team } = await atBreakIntro();
+        const roundId = game.rounds[0].id;
+
+        const ack = await rate(game, team, { roundId, stars });
+
+        expect(ack).toEqual({ success: true });
+        const accepted = await rejoin(game, team, 'The Quizzards');
+        expect(accepted.roundRatings).toEqual([{ roundId, stars }]);
+      },
+    );
+
+    it.each([0, 0.5, 6, 2.25, '4'])('refuses %p stars', async (stars) => {
       const { game, team } = await atBreakIntro();
 
       const ack = await rate(game, team, {

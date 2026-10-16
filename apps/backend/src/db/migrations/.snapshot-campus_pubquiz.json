@@ -1330,19 +1330,19 @@
         },
         "stars": {
           "name": "stars",
-          "type": "int2",
+          "type": "float4",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "unique": false,
           "length": null,
-          "precision": 16,
-          "scale": 0,
+          "precision": 24,
+          "scale": null,
           "default": null,
           "comment": null,
           "enumItems": [],
-          "mappedType": "smallint"
+          "mappedType": "float"
         }
       },
       "name": "round_ratings",
@@ -1386,8 +1386,8 @@
         {
           "name": "round_ratings_stars_check",
           "columnName": "stars",
-          "definition": "CHECK (((stars >= 1) AND (stars <= 5)))",
-          "expression": "(stars >= 1) AND (stars <= 5)"
+          "definition": "CHECK ((((stars >= (1)::double precision) AND (stars <= (5)::double precision)) AND ((stars * (2)::double precision) = round((stars * (2)::double precision)))))",
+          "expression": "(stars >= (1 precision) AND stars <= (5 precision)) AND (stars * (2 precision) = round(stars * (2 precision)))"
         }
       ],
       "foreignKeys": {

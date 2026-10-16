@@ -617,13 +617,13 @@ describe('StatsService (Postgres integration)', () => {
       const gamma = await joinTeam(session, 'Gamma');
       await rate(session, questions[0][0].round, alpha, 5);
       await rate(session, questions[0][0].round, beta, 4);
-      await rate(session, questions[0][0].round, gamma, 4);
+      await rate(session, questions[0][0].round, gamma, 4.5);
       await rate(session, questions[1][0].round, alpha, 2);
 
       const result = await statsService.getSessionDetail(session.id);
 
       expect(result.rounds.map((r) => r.rating)).toEqual([
-        { average: 13 / 3, count: 3 },
+        { average: 13.5 / 3, count: 3 },
         { average: 2, count: 1 },
         null,
       ]);

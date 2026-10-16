@@ -135,7 +135,7 @@ What a team tells the quiz master about a session from its phone: round ratings,
 _Avoid_: survey, review
 
 **Round rating**:
-A team's 1–5 star score for one round. Asked in the break for the rounds of the block that just locked, and again on the final feedback form, where an earlier rating can be changed. A kahoot round has no break of its own, so it is rated only on the final form.
+A team's score for one round, from 1 to 5 stars in half-star steps (1, 1½ … 5). Asked in the break for the rounds of the block that just locked, and again on the final feedback form, where an earlier rating can be changed. A kahoot round has no break of its own, so it is rated only on the final form.
 _Avoid_: round score (that's points)
 
 **Topic suggestion**:

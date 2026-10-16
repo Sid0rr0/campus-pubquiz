@@ -41,6 +41,7 @@ const SHOWDOWN_GUESS_MAX_LENGTH = 100;
 
 const MIN_STARS = 1;
 const MAX_STARS = 5;
+const STAR_STEP = 0.5;
 
 const positiveInt = z.number().int().positive();
 const finiteNumber = z.number().finite();
@@ -69,7 +70,7 @@ export const submitAnswerPayloadSchema = z.object({
 
 export const rateRoundPayloadSchema = z.object({
   roundId: positiveInt,
-  stars: z.number().int().min(MIN_STARS).max(MAX_STARS),
+  stars: z.number().min(MIN_STARS).max(MAX_STARS).multipleOf(STAR_STEP),
 });
 
 // Topics are cleaned before their limits are checked, so a line of spaces or

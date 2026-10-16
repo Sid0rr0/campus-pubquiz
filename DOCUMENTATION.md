@@ -435,13 +435,13 @@ membership is checked server-side on every handler; violations raise
 close) now go over REST (`/quizzes`, `/sessions`) rather than sockets — see
 [Sessions](#sessions-running-multiple-quizzes-at-once).
 
-`RATE_ROUND` — `{ roundId, stars }`, `stars` an integer 1–5 (Zod-validated) —
+`RATE_ROUND` — `{ roundId, stars }`, `stars` 1–5 in half-star steps (Zod-validated) —
 saves a team's **round rating** for one round of the break card or the final form. The ack is the
 result: `{ success: true }` once saved, or an error with a reason — "Feedback is off
 for this session" when `collectFeedback` is off, "This round
 can't be rated right now" when the round isn't in the feedback field's list (a
 round outside the current block, a status that is neither a break nor `ended`, or a showdown still being played), or a
-validation error for stars outside 1–5. The team is the one whose socket sent
+validation error for stars outside 1–5 or between half stars. The team is the one whose socket sent
 it. One rating is kept per (session, round, team); rating again overwrites it
 (last write wins). It is a plain team-scoped write: it broadcasts nothing and
 doesn't go through the session write.

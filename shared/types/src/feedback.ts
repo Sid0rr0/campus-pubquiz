@@ -26,6 +26,6 @@ export interface SendFeedbackPayload {
 /** A team rating one round of the break card; the ack says whether it was saved. */
 export interface RateRoundPayload {
   roundId: number;
-  /** An integer from 1 to 5. */
+  /** From 1 to 5 in half-star steps (1, 1.5 … 5). */
   stars: number;
 }
