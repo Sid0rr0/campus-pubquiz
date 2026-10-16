@@ -19,6 +19,7 @@ import { MobileQuizActionsBar } from '@/app/play/mobile-quiz-actions-bar';
 import { RevealVerdictCard } from '@/app/play/reveal-verdict-card';
 import { SettingsModal } from '@/app/play/settings-modal';
 import { LockMoment } from '@/app/play/lock-moment';
+import { ReconnectingBar } from '@/app/play/reconnecting-bar';
 import {
   SavedConfirmation,
   useSavedConfirmation,
@@ -46,6 +47,8 @@ function PlayPageContent() {
     setTeamCodeInput,
     hasStoredIdentity,
     connectionError,
+    isReconnecting,
+    forceReconnect,
     team,
     needsJoinForm,
     handleJoin,
@@ -200,9 +203,10 @@ function PlayPageContent() {
 
   return (
     <main
-      className={`flex min-h-screen flex-col bg-background px-5 pt-1 text-foreground ${
-        hasMobileActionBar ? 'pb-24 md:pb-5' : 'pb-5'
-      }`}
+      className={`flex min-h-screen flex-col bg-background px-5 text-foreground ${
+        // The fixed bar sits over the top edge, so leave room for it.
+        isReconnecting ? 'pt-14' : 'pt-1'
+      } ${hasMobileActionBar ? 'pb-24 md:pb-5' : 'pb-5'}`}
     >
       {/* Order below is mobile-first (team identity sits last, under the
           block browser) and reshuffled back to the original top-down
@@ -242,7 +246,8 @@ function PlayPageContent() {
           </p>
         )}
       </div>
-      {connectionError && (
+      {isReconnecting && <ReconnectingBar onReconnect={forceReconnect} />}
+      {connectionError && !isReconnecting && (
         <p
           role="alert"
           className="order-1 mb-4 font-extrabold text-magenta md:order-2"

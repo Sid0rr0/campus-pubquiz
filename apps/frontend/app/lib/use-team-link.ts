@@ -79,6 +79,10 @@ export interface TeamLinkJoin {
   /** What the join screen shows: a rejected join's reason, the kick notice, or a connection problem — in that order. */
   connectionError: string | null;
   teamName: string | null;
+  /** True while the only thing wrong is the socket reconnecting — no join error or kick notice outranks it — so /play shows the reconnecting bar instead of inline text. */
+  isReconnecting: boolean;
+  /** Drops the current socket and connects afresh; the join path hands the team's seat over. */
+  forceReconnect: () => void;
   nameInput: string;
   setNameInput: (value: string) => void;
   codeInput: string;
@@ -487,6 +491,11 @@ export function useTeamLink(
         hasTeam: Boolean(link.team),
       }),
       connectionError,
+      isReconnecting:
+        link.joinError === null &&
+        link.kickNotice === null &&
+        socketConnectionError !== null,
+      forceReconnect,
       teamName: link.teamName,
       nameInput: link.nameInput,
       setNameInput,
