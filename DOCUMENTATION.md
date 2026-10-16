@@ -55,6 +55,17 @@ the data model live in [`docs/architecture.md`](docs/architecture.md).
 | Route      | Who                  | What it does                                                                                                                                                                           |
 | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/display` | Big screen (TV)      | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
+
+The big screen survives a dropped connection. While socket.io retries it keeps
+the last frame and shows a small "Reconnecting…" badge in the corner, then
+resyncs on its own; it goes back to the picker only when the server refuses the
+code (`io server disconnect`, e.g. "Unknown game session code"). `useGameConnection`
+reports this as `connectionIssue`: `reconnecting` or `refused`. The screen
+remembers the last code it showed in localStorage (every access wrapped in
+try/catch), so a reload or a bare `/display` resumes that session, falling back
+to the picker if the code is refused; the lobby has a small "Pick another game"
+link to leave it. With storage unavailable the screen still works and just
+starts at the picker.
 | `/control` | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards                                                                             |
 | `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far                 |
 
@@ -591,6 +602,13 @@ table (`GameSessionTeam`).
   _new_ session's roster still requires that session's join code).
 - **Existing name, no token** (e.g. a teammate's phone) → requires the team's
   recovery `code`, since a bare name match isn't proof of identity.
+- **Waking a phone** — mobile OSes freeze a backgrounded socket, so `/play`
+  opens a fresh connection (`forceReconnect`) when the page turns visible after
+  being hidden for at least `HIDDEN_RECONNECT_THRESHOLD_MS` (5 s), when it is
+  restored from the back/forward cache (`pageshow` with `persisted`), and when
+  the network returns (`online`). The rejoin goes through the normal join path,
+  naming the earlier socket as `previousSocketId` so the team keeps its seat. A
+  shorter hide changes nothing.
 - **Kick** — the admin can remove a team from the _current session's roster_
   (`KICK_TEAM`) without touching the underlying `Team` entity or its answer
   history; a kicked team's persistent identity and past scores survive. The
@@ -598,6 +616,12 @@ table (`GameSessionTeam`).
   connected team's socket gets `TEAM_KICKED` and is closed; its phone then
   forgets its stored token, name and team code, so it can rejoin under the
   same name only with the team's recovery code.
+- **Reconnecting bar** — while a joined phone's socket is retrying, `/play`
+  shows a full-width magenta bar fixed to the top ("Connection lost —
+  reconnecting…", `role="alert"`). After `RECONNECT_HELP_DELAY_MS` (10 s)
+  without reconnecting it adds a "Tap to reconnect" button that forces a fresh
+  connection (`forceReconnect`); the rejoin goes through the normal join path.
+  Join refusals and the kick notice keep their inline text.
 
 **One device per team.** A team's seat (`connectedTeamSockets[teamId]`) is held
 by one live socket, and answers are accepted only from it ("You may only submit

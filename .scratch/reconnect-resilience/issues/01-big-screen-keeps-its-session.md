@@ -6,10 +6,10 @@ Parent spec: `.scratch/reconnect-resilience/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `useGameConnection`: a transient disconnect yields `reconnecting` and keeps the snapshot; `io server disconnect` yields `refused`
-- [ ] `/display`: `reconnecting` keeps the current screen and shows the badge; `refused` shows the picker and clears the stored code
-- [ ] `/display` with no `?code=` resumes the stored code; an unknown stored code falls back to the picker
-- [ ] Storage reads and writes are wrapped in try/catch, and the page works with storage unavailable
-- [ ] `DOCUMENTATION.md` (The Three UIs) and the `/guide` page say the big screen reconnects on its own
+- [x] `useGameConnection`: a transient disconnect yields `reconnecting` and keeps the snapshot; `io server disconnect` yields `refused`
+- [x] `/display`: `reconnecting` keeps the current screen and shows the badge; `refused` shows the picker and clears the stored code
+- [x] `/display` with no `?code=` resumes the stored code; an unknown stored code falls back to the picker
+- [x] Storage reads and writes are wrapped in try/catch, and the page works with storage unavailable
+- [x] `DOCUMENTATION.md` (The Three UIs) and the `/guide` page say the big screen reconnects on its own

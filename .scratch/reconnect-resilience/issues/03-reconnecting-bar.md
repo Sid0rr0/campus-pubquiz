@@ -6,8 +6,8 @@ Parent spec: `.scratch/reconnect-resilience/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The bar shows while reconnecting and hides on reconnect
-- [ ] The button appears only after 10 s (fake timers) and calls `forceReconnect`
-- [ ] The bar is announced to screen readers (`role="alert"`) and doesn't cover the answer form's submit button
+- [x] The bar shows while reconnecting and hides on reconnect
+- [x] The button appears only after 10 s (fake timers) and calls `forceReconnect`
+- [x] The bar is announced to screen readers (`role="alert"`) and doesn't cover the answer form's submit button

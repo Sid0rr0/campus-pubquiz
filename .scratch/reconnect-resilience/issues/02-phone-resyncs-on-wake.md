@@ -6,10 +6,10 @@ Parent spec: `.scratch/reconnect-resilience/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Hidden ≥ 5 s, then visible → `forceReconnect` is called once (fake timers)
-- [ ] Hidden < 5 s → no reconnect
-- [ ] `pageshow` with `persisted` and `online` each trigger a reconnect
-- [ ] Listeners are removed on unmount
-- [ ] The rejoin carries `previousSocketId`, and the team keeps its seat (team-link reducer test)
+- [x] Hidden ≥ 5 s, then visible → `forceReconnect` is called once (fake timers)
+- [x] Hidden < 5 s → no reconnect
+- [x] `pageshow` with `persisted` and `online` each trigger a reconnect
+- [x] Listeners are removed on unmount
+- [x] The rejoin carries `previousSocketId`, and the team keeps its seat (team-link reducer test)
