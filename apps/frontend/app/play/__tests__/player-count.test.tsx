@@ -56,7 +56,9 @@ describe('PlayPage — the lobby player count card', () => {
   it('asks how many players, next to the existing lobby content', () => {
     renderPhone({ status: 'lobby', myPlayerCount: null });
 
-    expect(screen.getByText(/how many players are you/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/how many players does your team have/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/you're in!/i)).toBeInTheDocument();
     expect(
       screen.getByText(/look for The Quizzards on the big screen/i),
@@ -125,13 +127,15 @@ describe('PlayPage — the lobby player count card', () => {
     renderPhone({ status: 'lobby', myPlayerCount: 4 });
 
     expect(
-      screen.queryByText(/how many players are you/i),
+      screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
     const edit = screen.getByRole('button', { name: /4 players · edit/i });
 
     await userEvent.click(edit);
 
-    expect(screen.getByText(/how many players are you/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/how many players does your team have/i),
+    ).toBeInTheDocument();
     expect(shown()).toHaveTextContent('4');
   });
 
@@ -153,7 +157,9 @@ describe('PlayPage — a team that joins after the lobby', () => {
   it('is asked once, over whatever screen it lands on', () => {
     renderPhone({ status: 'rules', myPlayerCount: null });
 
-    expect(screen.getByText(/how many players are you/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/how many players does your team have/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /dismiss/i }),
     ).toBeInTheDocument();
@@ -163,7 +169,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
     renderPhone({ status: 'rules', myPlayerCount: 5 });
 
     expect(
-      screen.queryByText(/how many players are you/i),
+      screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /dismiss/i }),
@@ -177,7 +183,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
     renderPhone({ status: 'rules', myPlayerCount: null });
 
     expect(
-      screen.queryByText(/how many players are you/i),
+      screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
   });
 
@@ -187,7 +193,9 @@ describe('PlayPage — a team that joins after the lobby', () => {
 
     renderPhone({ status: 'rules', myPlayerCount: null });
 
-    expect(screen.getByText(/how many players are you/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/how many players does your team have/i),
+    ).toBeInTheDocument();
   });
 
   it('hides the card for good on this phone once dismissed', async () => {
@@ -195,12 +203,12 @@ describe('PlayPage — a team that joins after the lobby', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /dismiss/i }));
     expect(
-      screen.queryByText(/how many players are you/i),
+      screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
 
     renderPhone({ status: 'rules', myPlayerCount: null });
     expect(
-      screen.queryByText(/how many players are you/i),
+      screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
   });
 
@@ -221,7 +229,7 @@ describe('PlayPage — a team that joins after the lobby', () => {
     await userEvent.click(screen.getByRole('button', { name: /dismiss/i }));
 
     expect(
-      screen.queryByText(/how many players are you/i),
+      screen.queryByText(/how many players does your team have/i),
     ).not.toBeInTheDocument();
     setItem.mockRestore();
     getItem.mockRestore();

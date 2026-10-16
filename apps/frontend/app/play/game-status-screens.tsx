@@ -34,7 +34,7 @@ interface GameStatusScreensProps {
   isConnected: boolean;
   teamName: string | null;
   leaderboard: readonly LeaderboardEntry[];
-  /** The "How many players are you?" card the lobby screen shows under its waiting line. */
+  /** The "How many players does your team have?" card the lobby screen shows under its waiting line. */
   playerCountCard: ReactNode;
   onSubmitShowdownGuess: (
     showdownRoundId: number,

@@ -23,7 +23,7 @@ function describePlayers(count: number): string {
 }
 
 /**
- * "How many players are you?": asks while the team has no count, and once one
+ * "How many players does your team have?": asks while the team has no count, and once one
  * is saved folds into "(n) players · edit", which reopens the card.
  */
 export function PlayerCountCard({
@@ -76,7 +76,7 @@ export function PlayerCountCard({
       className="flex w-full flex-col items-center gap-3 rounded-lg border border-foreground/15 p-4"
     >
       <h2 id="player-count-heading" className="font-display text-lg">
-        How many players are you?
+        How many players does your team have?
       </h2>
       <PlayerCountStepper
         initialCount={count ?? DEFAULT_PLAYER_COUNT}
