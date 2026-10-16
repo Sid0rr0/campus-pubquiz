@@ -599,6 +599,30 @@ table (`GameSessionTeam`).
   forgets its stored token, name and team code, so it can rejoin under the
   same name only with the team's recovery code.
 
+**One device per team.** A team's seat (`connectedTeamSockets[teamId]`) is held
+by one live socket, and answers are accepted only from it ("You may only submit
+answers for your own team" otherwise). A join is refused ("… is already
+connected on another device") while a different live socket holds the seat,
+unless it names that socket as `previousSocketId`: only the device that held
+it knows the id, so a phone reconnecting before the server's ping timeout
+(~45 s) noticed its old socket died takes the seat over.
+
+The phone cannot always name the socket that holds the seat (a reload, or a
+reply lost on a socket that then died). It treats these as recoverable, never as
+a dead end:
+
+- A rejoin refused only because another socket holds the seat is not shown to a
+  phone that already proved who it is (it was linked, or holds the team's
+  token). The phone asks again every 3 s on the same connection, up to 20 times
+  (longer than the ping timeout), then shows the refusal. A second phone with
+  only the recovery code still sees the refusal at once.
+- The answer form is offered only while the server confirms this connection
+  holds the seat (the join was accepted on it), so a reconnecting phone never
+  shows a form whose submit would be refused.
+- If an answer is refused as "not your own team" anyway, the phone drops its
+  link, rejoins by itself and sends the answer again once the join is accepted.
+  No error is shown.
+
 ## Question Types
 
 `QuestionType` is one of `free_text`, `multiple_choice`, `audio`, `youtube`,

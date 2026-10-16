@@ -1,8 +1,15 @@
 import { renderHook, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SubmitEvent } from 'react';
-import { SOCKET_EVENTS, SOCKET_ROOMS } from '@campus-pubquiz/types';
+import { toast } from 'sonner';
+import {
+  NOT_YOUR_TEAM_ANSWER_ERROR,
+  SEAT_TAKEN_REFUSAL_MARKER,
+  SOCKET_EVENTS,
+  SOCKET_ROOMS,
+} from '@campus-pubquiz/types';
 import { roomView } from '@/test-utils/room-view';
+import { JOIN_RETRY_DELAY_MS } from '@/app/lib/team-link';
 import { useTeamLink } from '@/app/lib/use-team-link';
 import {
   createFakeSocket,
@@ -14,6 +21,9 @@ import {
 const { mockIo } = vi.hoisted(() => ({ mockIo: vi.fn() }));
 
 vi.mock('socket.io-client', () => ({ io: mockIo }));
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
+}));
 const { mockPush } = vi.hoisted(() => ({ mockPush: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
@@ -34,6 +44,7 @@ describe('useTeamLink', () => {
     window.localStorage.clear();
     mockIo.mockReset();
     mockPush.mockReset();
+    vi.mocked(toast.error).mockClear();
     mockIo.mockImplementation(() => createFakeSocket());
   });
 
@@ -136,6 +147,109 @@ describe('useTeamLink', () => {
 
       expect(result.current.game?.view).toBeDefined();
       expect(result.current.join.needsJoinForm).toBe(false);
+    });
+  });
+
+  describe('a phone whose team seat the server does not confirm', () => {
+    const ACCEPTED = {
+      teamId: 7,
+      teamName: 'The Quizzards',
+      teamToken: 'token-1',
+      teamCode: 'QUICK-JADE-FOX',
+      answers: [],
+      bonusAwards: [],
+      roundRatings: [],
+      feedback: { comment: '', topics: [] },
+    };
+
+    const OPEN_QUESTION = {
+      rounds: [{ questions: [{ id: 1, prompt: 'Capital of France?' }] }],
+      progress: { status: 'question_open' as const },
+    };
+
+    function reconnectingTeam() {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'The Quizzards');
+      window.localStorage.setItem('campus-pubquiz-join-code', 'ABCDEF');
+      const hook = renderHook(() => useTeamLink(''));
+      const socket = latestSocket();
+      act(() => socket.serverConnects());
+      act(() =>
+        socket.trigger(
+          SOCKET_EVENTS.STATE_SYNC,
+          roomView(SOCKET_ROOMS.PLAYERS, OPEN_QUESTION),
+        ),
+      );
+      act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+      return { ...hook, socket };
+    }
+
+    it('offers no answer form until the join is accepted, on the first connection and after a reconnect', () => {
+      const { result, socket } = reconnectingTeam();
+      expect(result.current.game?.view.isAnswerable).toBe(true);
+
+      act(() => socket.serverDisconnects());
+      act(() => socket.serverConnects());
+      act(() =>
+        socket.trigger(
+          SOCKET_EVENTS.STATE_SYNC,
+          roomView(SOCKET_ROOMS.PLAYERS, OPEN_QUESTION),
+        ),
+      );
+      expect(result.current.game?.view.isAnswerable).toBe(false);
+
+      act(() => socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, ACCEPTED));
+      expect(result.current.game?.view.isAnswerable).toBe(true);
+    });
+
+    it('asks again by itself when the rejoin is refused because an old socket holds the seat, and hides the refusal', async () => {
+      vi.useFakeTimers();
+      try {
+        const { result, socket } = reconnectingTeam();
+        act(() => socket.serverDisconnects());
+        socket.sent.length = 0;
+        act(() => socket.serverConnects());
+        act(() =>
+          socket.trigger(
+            SOCKET_EVENTS.STATE_SYNC,
+            roomView(SOCKET_ROOMS.PLAYERS, OPEN_QUESTION),
+          ),
+        );
+
+        await act(async () =>
+          socket.reject(
+            SOCKET_EVENTS.JOIN_PLAYERS,
+            `"The Quizzards" ${SEAT_TAKEN_REFUSAL_MARKER} — ask the quiz master`,
+          ),
+        );
+        expect(result.current.join.connectionError).toBeNull();
+        expect(socket.emitsOf(SOCKET_EVENTS.JOIN_PLAYERS)).toHaveLength(1);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(JOIN_RETRY_DELAY_MS);
+        });
+
+        expect(socket.emitsOf(SOCKET_EVENTS.JOIN_PLAYERS)).toHaveLength(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('rejoins by itself, with no error toast, when an answer is refused as not its own team', async () => {
+      const { result, socket } = reconnectingTeam();
+      socket.sent.length = 0;
+
+      let submitted: Promise<unknown> | undefined;
+      act(() => {
+        submitted = result.current.game?.submitAnswer(1, 7, 'Paris');
+      });
+      await act(async () => {
+        socket.reject(SOCKET_EVENTS.SUBMIT_ANSWER, NOT_YOUR_TEAM_ANSWER_ERROR);
+        await submitted;
+      });
+
+      expect(socket.emitsOf(SOCKET_EVENTS.JOIN_PLAYERS)).toHaveLength(1);
+      expect(result.current.game?.view.isAnswerable).toBe(false);
+      expect(toast.error).not.toHaveBeenCalled();
     });
   });
 

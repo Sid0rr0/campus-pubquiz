@@ -146,6 +146,16 @@ function writeIdentity(
   }
 }
 
+/** The view the phone draws: a question is answerable only while the server confirms this socket holds the team's seat, so the form never offers an answer the server would refuse. */
+function viewWithSeat(
+  view: StateViewByRoom['players'],
+  isLinked: boolean,
+): StateViewByRoom['players'] {
+  return view.isAnswerable && !isLinked
+    ? { ...view, isAnswerable: false }
+    : view;
+}
+
 function showToast(command: Extract<TeamLinkCommand, { type: 'toast' }>) {
   const options = { duration: command.durationMs };
   if (command.tone === 'success') toast.success(command.message, options);
@@ -183,6 +193,7 @@ export function useTeamLink(
   const connectionRef = useRef<PlayerConnection | null>(null);
   const goToJoinScreenRef = useRef<() => void>(() => undefined);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // What each answer attempt's caller is waiting for.
   const answerWaitersRef = useRef(new Map<number, (r: AckResult) => void>());
   const latestAnswerRef = useRef<Promise<AckResult> | null>(null);
@@ -198,6 +209,12 @@ export function useTeamLink(
       if (confirmTimerRef.current === null) return;
       clearTimeout(confirmTimerRef.current);
       confirmTimerRef.current = null;
+    }
+
+    function clearJoinRetryTimer() {
+      if (joinRetryTimerRef.current === null) return;
+      clearTimeout(joinRetryTimerRef.current);
+      joinRetryTimerRef.current = null;
     }
 
     function runCommand(command: TeamLinkCommand) {
@@ -249,6 +266,16 @@ export function useTeamLink(
           break;
         case 'forceReconnect':
           connection?.forceReconnect();
+          break;
+        case 'scheduleJoinRetry':
+          clearJoinRetryTimer();
+          joinRetryTimerRef.current = setTimeout(() => {
+            joinRetryTimerRef.current = null;
+            dispatch({
+              type: 'joinRetryDue',
+              connectionId: command.connectionId,
+            });
+          }, command.delayMs);
           break;
         case 'toast':
           showToast(command);
@@ -336,6 +363,9 @@ export function useTeamLink(
     () => () => {
       if (confirmTimerRef.current !== null) {
         clearTimeout(confirmTimerRef.current);
+      }
+      if (joinRetryTimerRef.current !== null) {
+        clearTimeout(joinRetryTimerRef.current);
       }
     },
     [],
@@ -498,7 +528,7 @@ export function useTeamLink(
     },
     game: snapshot
       ? {
-          view: snapshot,
+          view: viewWithSeat(snapshot, link.isLinked),
           myAnswers: link.myAnswers,
           myAnswerGrades: link.myAnswerGrades,
           myBonusAwards: link.myBonusAwards,
