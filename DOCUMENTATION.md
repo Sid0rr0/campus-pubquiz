@@ -591,6 +591,13 @@ table (`GameSessionTeam`).
   _new_ session's roster still requires that session's join code).
 - **Existing name, no token** (e.g. a teammate's phone) → requires the team's
   recovery `code`, since a bare name match isn't proof of identity.
+- **Waking a phone** — mobile OSes freeze a backgrounded socket, so `/play`
+  opens a fresh connection (`forceReconnect`) when the page turns visible after
+  being hidden for at least `HIDDEN_RECONNECT_THRESHOLD_MS` (5 s), when it is
+  restored from the back/forward cache (`pageshow` with `persisted`), and when
+  the network returns (`online`). The rejoin goes through the normal join path,
+  naming the earlier socket as `previousSocketId` so the team keeps its seat. A
+  shorter hide changes nothing.
 - **Kick** — the admin can remove a team from the _current session's roster_
   (`KICK_TEAM`) without touching the underlying `Team` entity or its answer
   history; a kicked team's persistent identity and past scores survive. The

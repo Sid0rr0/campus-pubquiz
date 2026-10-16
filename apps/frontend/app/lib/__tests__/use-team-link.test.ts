@@ -84,6 +84,47 @@ describe('useTeamLink', () => {
     expect(result.current.join.connectionError).toBeNull();
   });
 
+  it('reconnects when the network returns and rejoins naming the earlier socket', () => {
+    const { result } = renderHook(() => useTeamLink(''));
+    act(() => {
+      result.current.join.setNameInput('The Quizzards');
+      result.current.join.setCodeInput('abcdef');
+    });
+    act(() => result.current.join.handleJoin(fakeSubmitEvent()));
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+    act(() =>
+      socket.trigger(SOCKET_EVENTS.JOIN_ACCEPTED, {
+        teamId: 1,
+        teamName: 'The Quizzards',
+        teamToken: 'token-1',
+        teamCode: 'QUICK-JADE-FOX',
+        answers: [],
+        bonusAwards: [],
+        roundRatings: [],
+        feedback: { comment: '', topics: [] },
+      }),
+    );
+
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    expect(socket.disconnect).toHaveBeenCalledTimes(1);
+    expect(socket.connect).toHaveBeenCalledTimes(1);
+
+    // Play the real socket: the old connection closes, a new id connects.
+    act(() => socket.serverDisconnects('io client disconnect'));
+    socket.id = 'fake-socket-id-2';
+    act(() => socket.serverConnects());
+
+    const joins = socket.emitsOf(SOCKET_EVENTS.JOIN_PLAYERS);
+    expect(joins).toHaveLength(2);
+    expect(joins[1].payload).toMatchObject({
+      previousSocketId: 'fake-socket-id',
+    });
+  });
+
   describe('the join form gate', () => {
     it('needs the join form when the phone has no team name', () => {
       const { result } = renderHook(() => useTeamLink(''));
