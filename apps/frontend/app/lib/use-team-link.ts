@@ -348,6 +348,7 @@ export function useTeamLink(
     snapshot,
     socketConnection,
     connectionError: socketConnectionError,
+    connectionIssue,
     identityKey,
     emitWithAck,
     forceReconnect,
@@ -524,7 +525,7 @@ export function useTeamLink(
       isReconnecting:
         link.joinError === null &&
         link.kickNotice === null &&
-        socketConnectionError !== null,
+        connectionIssue === 'reconnecting',
       forceReconnect,
       teamName: link.teamName,
       nameInput: link.nameInput,

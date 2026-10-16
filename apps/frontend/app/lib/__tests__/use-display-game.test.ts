@@ -71,12 +71,18 @@ describe('useDisplayGame', () => {
     expect(result.current.connectionIssue).toBe('refused');
   });
 
-  it('reports refused when the handshake is rejected', () => {
+  it('keeps reconnecting with its snapshot when a retry fails after a network drop', () => {
     const { result } = renderHook(() => useDisplayGame(true, 'TESTCODE'));
+    const socket = latestSocket();
+    const snapshot = { joinCode: 'TESTCODE' };
+    act(() => socket.serverConnects());
+    act(() => socket.trigger(SOCKET_EVENTS.STATE_SYNC, snapshot));
+    act(() => socket.serverDisconnects('transport close'));
 
-    act(() => latestSocket().trigger('connect_error', new Error('Nope')));
+    act(() => socket.trigger('connect_error', new Error('xhr poll error')));
 
-    expect(result.current.connectionIssue).toBe('refused');
+    expect(result.current.connectionIssue).toBe('reconnecting');
+    expect(result.current.snapshot).toEqual(snapshot);
   });
 
   it('exposes the snapshot on sync and a refused connection as the connection error', () => {
@@ -87,8 +93,10 @@ describe('useDisplayGame', () => {
     act(() => socket.trigger(SOCKET_EVENTS.STATE_SYNC, snapshot));
     expect(result.current.snapshot).toEqual(snapshot);
 
-    act(() => socket.trigger('connect_error', new Error('Nope')));
-    expect(result.current.connectionError).toBe('Nope');
+    act(() => socket.serverDisconnects('io server disconnect'));
+    expect(result.current.connectionError).toBe(
+      'Disconnected: io server disconnect',
+    );
   });
 
   it('does not connect while disabled', () => {

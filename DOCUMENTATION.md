@@ -645,7 +645,9 @@ a dead end:
   shows a form whose submit would be refused.
 - If an answer is refused as "not your own team" anyway, the phone drops its
   link, rejoins by itself and sends the answer again once the join is accepted.
-  No error is shown.
+  No error is shown for the seat refusal itself; if the resend is refused for
+  another reason (e.g. the block locked meanwhile) the player sees that reason
+  as a toast and the answer is dropped.
 
 ## Question Types
 

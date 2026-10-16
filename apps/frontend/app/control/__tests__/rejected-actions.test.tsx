@@ -119,11 +119,11 @@ describe('AdminPage — rejected actions', () => {
     await waitFor(() => expect(mockToastError).toHaveBeenCalledWith(reason));
   });
 
-  it('bounces an unknown ?code= to the session picker when it never connects', async () => {
+  it('bounces an unknown ?code= to the session picker when the server refuses the socket', async () => {
     renderWithQuery(<AdminPage />);
     const socket = latestSocket();
 
-    act(() => socket.trigger('connect_error', { message: 'Unknown session' }));
+    act(() => socket.serverDisconnects('io server disconnect'));
 
     await waitFor(() =>
       expect(routerRef.replace).toHaveBeenCalledWith('/sessions'),

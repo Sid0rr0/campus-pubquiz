@@ -232,8 +232,10 @@ describe('useAdminGame', () => {
     it('sets the connection error only from connection problems, and clears it on state sync', () => {
       const { result, socket } = renderConnectedAdmin();
 
-      act(() => socket.trigger('connect_error', { message: 'Refused' }));
-      expect(result.current.connectionError).toBe('Refused');
+      act(() => socket.serverDisconnects('io server disconnect'));
+      expect(result.current.connectionError).toBe(
+        'Disconnected: io server disconnect',
+      );
 
       act(() => socket.trigger(SOCKET_EVENTS.STATE_SYNC, SNAPSHOT));
       expect(result.current.connectionError).toBeNull();

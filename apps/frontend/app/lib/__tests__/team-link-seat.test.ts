@@ -238,6 +238,24 @@ describe('team link: an answer refused because the socket does not hold the seat
     ]);
   });
 
+  it('shows the server reason and drops the answer when the resend is refused, e.g. the block locked meanwhile', () => {
+    const { state, commands } = run(
+      linkedWithAnswerSent().state,
+      refusal,
+      accepted,
+      {
+        type: 'answerResult',
+        attempt: 2,
+        result: { success: false, error: 'Answers are locked' },
+      },
+    );
+
+    expect(state.pendingAnswer).toBeNull();
+    expect(ofType(commands, 'toast')).toMatchObject([
+      { tone: 'error', message: 'Answers are locked' },
+    ]);
+  });
+
   it('sends no second join while one is already in flight', () => {
     const restarting = run(
       linkedWithAnswerSent().state,

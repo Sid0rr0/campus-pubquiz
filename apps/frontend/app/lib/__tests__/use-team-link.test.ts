@@ -95,6 +95,26 @@ describe('useTeamLink', () => {
     expect(result.current.join.connectionError).toBeNull();
   });
 
+  it('shows the reconnecting bar for a dropped connection, but the plain error once the server has refused the socket', () => {
+    const { result } = renderHook(() => useTeamLink(''));
+    act(() => {
+      result.current.join.setNameInput('The Quizzards');
+      result.current.join.setCodeInput('abcdef');
+    });
+    act(() => result.current.join.handleJoin(fakeSubmitEvent()));
+    const socket = latestSocket();
+    act(() => socket.serverConnects());
+
+    act(() => socket.serverDisconnects('transport close'));
+    expect(result.current.join.isReconnecting).toBe(true);
+
+    act(() => socket.serverDisconnects('io server disconnect'));
+    expect(result.current.join.isReconnecting).toBe(false);
+    expect(result.current.join.connectionError).toBe(
+      'Disconnected: io server disconnect',
+    );
+  });
+
   it('reconnects when the network returns and rejoins naming the earlier socket', () => {
     const { result } = renderHook(() => useTeamLink(''));
     act(() => {
