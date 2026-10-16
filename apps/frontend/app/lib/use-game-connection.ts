@@ -33,6 +33,8 @@ export type EmitWithAck = <E extends ClientToServerEvent>(
   payload: ClientToServerPayload<E>,
 ) => Promise<AckResult<ClientToServerAck<E>>>;
 
+export type ConnectionIssue = 'reconnecting' | 'refused';
+
 export interface SocketConnection {
   socketId: string | null;
 }
@@ -41,6 +43,8 @@ export interface UseGameConnectionResult<Role extends SocketRoomName> {
   snapshot: StateViewByRoom[Role] | null;
   /** Set only by connection problems (refused, lost, reconnecting) — never by a rejected action. */
   connectionError: string | null;
+  /** Why the socket isn't connected: socket.io is retrying (`reconnecting`) or the server turned it away (`refused`). Null while connected. */
+  connectionIssue: ConnectionIssue | null;
   /** Timestamp of the most recent successful (re)connection, including the first. */
   reconnectedAt: number | null;
   /** The live connection: a new object on every connect (so a reconnect is never mistaken for the connection before it), null while disconnected. */
@@ -77,6 +81,8 @@ export function useGameConnection<Role extends SocketRoomName>(
 ): UseGameConnectionResult<Role> {
   const [snapshot, setSnapshot] = useState<StateViewByRoom[Role] | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionIssue, setConnectionIssue] =
+    useState<ConnectionIssue | null>(null);
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [socketConnection, setSocketConnection] =
     useState<SocketConnection | null>(null);
@@ -95,6 +101,7 @@ export function useGameConnection<Role extends SocketRoomName>(
     if (enabled) {
       setSnapshot(null);
       setConnectionError(null);
+      setConnectionIssue(null);
       setSocketConnection(null);
     }
   }
@@ -115,12 +122,16 @@ export function useGameConnection<Role extends SocketRoomName>(
     socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
       setSnapshot(payload);
       setConnectionError(null);
+      setConnectionIssue(null);
     });
     socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
       setSnapshot(payload);
     });
     socket.on('connect_error', (payload: unknown) => {
+      // socket.io retries a lost network by itself and never surfaces it here:
+      // an error on the socket is the server's refusal.
       setConnectionError(getErrorMessage(payload));
+      setConnectionIssue('refused');
     });
     socket.on('disconnect', (reason: string) => {
       setSocketConnection(null);
@@ -128,9 +139,11 @@ export function useGameConnection<Role extends SocketRoomName>(
       if (reason === 'io server disconnect') {
         // The server refused this socket — socket.io won't retry on its own.
         setConnectionError((current) => current ?? `Disconnected: ${reason}`);
+        setConnectionIssue('refused');
         return;
       }
       setConnectionError(RECONNECTING_MESSAGE);
+      setConnectionIssue('reconnecting');
     });
     bindSocketRef.current?.(socket);
 
@@ -177,6 +190,7 @@ export function useGameConnection<Role extends SocketRoomName>(
     const socket = socketRef.current;
     if (!socket) return;
     setConnectionError(RECONNECTING_MESSAGE);
+    setConnectionIssue('reconnecting');
     socket.disconnect();
     socket.connect();
   }, []);
@@ -184,6 +198,7 @@ export function useGameConnection<Role extends SocketRoomName>(
   return {
     snapshot,
     connectionError,
+    connectionIssue,
     reconnectedAt,
     socketConnection,
     identityKey,
