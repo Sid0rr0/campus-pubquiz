@@ -3,6 +3,9 @@ import type { AckResult, RatableRound } from '@campus-pubquiz/types';
 
 const STAR_COUNT = 5;
 const STARS = Array.from({ length: STAR_COUNT }, (_, index) => index + 1);
+const HALF_STAR = 0.5;
+
+type StarFill = 'full' | 'half' | 'empty';
 
 type RowStatus = 'saving' | 'saved' | 'failed';
 
@@ -55,13 +58,6 @@ export function useRoundRatings(
   return { rows, rate };
 }
 
-export function isEveryRoundSaved(
-  rounds: readonly RatableRound[],
-  rows: Readonly<Record<number, RowState>>,
-): boolean {
-  return rounds.every((round) => rows[round.id]?.status === 'saved');
-}
-
 interface RoundStarRowsProps {
   rounds: readonly RatableRound[];
   rows: Readonly<Record<number, RowState>>;
@@ -79,23 +75,15 @@ export function RoundStarRows({ rounds, rows, onRate }: RoundStarRowsProps) {
             <span className="text-sm font-extrabold">{round.title}</span>
             <div className="flex items-center gap-3">
               <div className="flex">
-                {STARS.map((value) => {
-                  const isFilled = value <= (row?.stars ?? 0);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-label={`Rate ${round.title} ${value} of ${STAR_COUNT}`}
-                      aria-pressed={isFilled}
-                      onClick={() => onRate(round.id, value)}
-                      className={`p-1 text-2xl leading-none ${
-                        isFilled ? 'text-magenta' : 'text-foreground/30'
-                      }`}
-                    >
-                      {isFilled ? '★' : '☆'}
-                    </button>
-                  );
-                })}
+                {STARS.map((position) => (
+                  <Star
+                    key={position}
+                    position={position}
+                    roundTitle={round.title}
+                    stars={row?.stars ?? 0}
+                    onRate={(stars) => onRate(round.id, stars)}
+                  />
+                ))}
               </div>
               {row?.status === 'saved' && (
                 <span className="text-xs font-extrabold text-foreground/55">
@@ -115,5 +103,60 @@ export function RoundStarRows({ rounds, rows, onRate }: RoundStarRowsProps) {
         );
       })}
     </ul>
+  );
+}
+
+function starFill(position: number, stars: number): StarFill {
+  if (stars >= position) return 'full';
+  if (stars >= position - HALF_STAR) return 'half';
+  return 'empty';
+}
+
+/** The ratings one star offers: its left half is a half star, except on the first star, since a rating starts at 1. */
+function starValues(position: number): number[] {
+  return position === 1 ? [position] : [position - HALF_STAR, position];
+}
+
+const HALF_BUTTON_CLASSES = ['left-0 w-1/2', 'right-0 w-1/2'];
+
+interface StarProps {
+  position: number;
+  roundTitle: string;
+  stars: number;
+  onRate: (stars: number) => void;
+}
+
+/** One star, drawn full, half or empty, with a tap target over each half. */
+function Star({ position, roundTitle, stars, onRate }: StarProps) {
+  const fill = starFill(position, stars);
+  const values = starValues(position);
+
+  return (
+    <span className="relative flex h-11 w-11 items-center justify-center text-4xl leading-none">
+      <span aria-hidden="true" className="relative">
+        <span className="text-foreground/30">☆</span>
+        {fill !== 'empty' && (
+          <span
+            className={`absolute inset-y-0 left-0 overflow-hidden whitespace-nowrap text-magenta ${
+              fill === 'half' ? 'w-1/2' : 'w-full'
+            }`}
+          >
+            ★
+          </span>
+        )}
+      </span>
+      {values.map((value, index) => (
+        <button
+          key={value}
+          type="button"
+          aria-label={`Rate ${roundTitle} ${value} of ${STAR_COUNT}`}
+          aria-pressed={value <= stars}
+          onClick={() => onRate(value)}
+          className={`absolute inset-y-0 ${
+            values.length === 1 ? 'inset-x-0' : HALF_BUTTON_CLASSES[index]
+          }`}
+        />
+      ))}
+    </span>
   );
 }

@@ -122,20 +122,17 @@ describe('PlayPage — rating the rounds in the break', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('collapses to "Rated ✓ · edit" once every round is saved, and reopens on edit', async () => {
+  it('stays open with every row saved once every round is rated', async () => {
     const user = userEvent.setup();
     renderBreak();
 
     await user.click(star('Music', 5));
     await user.click(star('Film', 2));
 
-    const edit = await screen.findByRole('button', { name: /rated ✓ · edit/i });
-    expect(screen.queryByText('Rate these rounds')).not.toBeInTheDocument();
-    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
-
-    await user.click(edit);
-
+    await waitFor(() => expect(screen.getAllByText('Saved ✓')).toHaveLength(2));
     expect(screen.getByText('Rate these rounds')).toBeInTheDocument();
+    expect(star('Film', 2)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Name a fruit')).toBeInTheDocument();
   });
 
   it('keeps the card open while a round is still unrated', async () => {
@@ -148,12 +145,40 @@ describe('PlayPage — rating the rounds in the break', () => {
     expect(screen.getByText('Rate these rounds')).toBeInTheDocument();
   });
 
-  it('starts collapsed when the join payload already holds a rating for every round', () => {
+  it('starts open when the join payload already holds a rating for every round', () => {
     renderBreak({ myRoundRatings: { [MUSIC_ID]: 4, [FILM_ID]: 2 } });
 
+    expect(screen.getByText('Rate these rounds')).toBeInTheDocument();
+    expect(screen.getAllByText('Saved ✓')).toHaveLength(2);
+  });
+
+  it('sends a half star when the left half of a star is tapped', async () => {
+    const user = userEvent.setup();
+    const { rateRound } = renderBreak();
+
+    await user.click(star('Film', 3.5));
+
+    expect(rateRound).toHaveBeenCalledWith(FILM_ID, 3.5);
+    expect(star('Film', 3.5)).toHaveAttribute('aria-pressed', 'true');
+    expect(star('Film', 4)).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('offers no half star below one star', () => {
+    renderBreak();
+
     expect(
-      screen.getByRole('button', { name: /rated ✓ · edit/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: 'Rate Music 0.5 of 5' }),
+    ).not.toBeInTheDocument();
+    for (const stars of [1.5, 2.5, 3.5, 4.5]) {
+      expect(star('Music', stars)).toBeInTheDocument();
+    }
+  });
+
+  it('shows a restored half-star rating as saved', () => {
+    renderBreak({ myRoundRatings: { [MUSIC_ID]: 2.5 } });
+
+    expect(star('Music', 2.5)).toHaveAttribute('aria-pressed', 'true');
+    expect(star('Music', 3)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('shows a restored rating as saved and a round never rated as empty', () => {
@@ -201,6 +226,5 @@ describe('PlayPage — rating the rounds in the break', () => {
     renderBreak({ isFeedbackCollected: false });
 
     expect(screen.queryByText('Rate these rounds')).not.toBeInTheDocument();
-    expect(screen.queryByText(/rated ✓/i)).not.toBeInTheDocument();
   });
 });

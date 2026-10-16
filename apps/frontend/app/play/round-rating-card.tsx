@@ -1,10 +1,5 @@
-import { useState } from 'react';
 import type { AckResult, RatableRound } from '@campus-pubquiz/types';
-import {
-  isEveryRoundSaved,
-  RoundStarRows,
-  useRoundRatings,
-} from '@/app/play/round-star-rows';
+import { RoundStarRows, useRoundRatings } from '@/app/play/round-star-rows';
 
 interface RoundRatingCardProps {
   rounds: readonly RatableRound[];
@@ -14,8 +9,8 @@ interface RoundRatingCardProps {
 }
 
 /**
- * "Rate these rounds": one star row per round the server lists. When every
- * listed round is saved the card collapses to "Rated ✓ · edit".
+ * "Rate these rounds": one star row per round the server lists. It stays open
+ * for the whole break, each row showing its own "Saved ✓".
  */
 export function RoundRatingCard({
   rounds,
@@ -23,19 +18,6 @@ export function RoundRatingCard({
   onRate,
 }: RoundRatingCardProps) {
   const { rows, rate } = useRoundRatings(savedRatings, onRate);
-  const [isEditing, setIsEditing] = useState(false);
-
-  if (isEveryRoundSaved(rounds, rows) && !isEditing) {
-    return (
-      <button
-        type="button"
-        onClick={() => setIsEditing(true)}
-        className="mb-4 w-full rounded-lg border border-foreground/15 px-4 py-2 text-left text-sm font-extrabold text-foreground/70"
-      >
-        Rated ✓ · edit
-      </button>
-    );
-  }
 
   return (
     <section
