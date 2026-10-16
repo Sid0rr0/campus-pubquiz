@@ -211,4 +211,48 @@ describe('PlayPage — join and reconnect', () => {
 
     expect(routerRef.replace).toHaveBeenCalledWith('/play?code=ABCDEF');
   });
+
+  it('shows the reconnecting bar while the phone is reconnecting and hides it once connected', () => {
+    const session = { progress: { status: 'question_open' as const } };
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session,
+        join: {
+          teamName: 'Returning Team',
+          isReconnecting: true,
+          connectionError: 'Connection lost — reconnecting…',
+        },
+      }),
+    );
+    const { rerender } = renderWithQuery(<PlayPage />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Connection lost — reconnecting…',
+    );
+
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({ session, join: { teamName: 'Returning Team' } }),
+    );
+    rerender(<PlayPage />);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps showing a kick or join notice as inline text rather than the bar', () => {
+    mockUseTeamLink.mockReturnValue(
+      teamLinkResult({
+        session: { progress: { status: 'question_open' } },
+        join: {
+          teamName: 'Returning Team',
+          needsJoinForm: false,
+          isReconnecting: false,
+          connectionError: 'Some join problem',
+        },
+      }),
+    );
+    renderWithQuery(<PlayPage />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Some join problem');
+    expect(screen.getByRole('alert').className).not.toContain('fixed');
+  });
 });

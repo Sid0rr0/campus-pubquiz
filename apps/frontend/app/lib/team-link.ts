@@ -1,18 +1,23 @@
 import { formatBonusAwardToast } from '@/app/lib/bonus-categories';
-import { NOT_CONNECTED_MESSAGE } from '@/app/lib/connection-messages';
+import {
+  NOT_CONNECTED_MESSAGE,
+  isNotDelivered,
+} from '@/app/lib/connection-messages';
 import { normalizeJoinCode } from '@/app/lib/team-storage';
-import type {
-  AckResult,
-  AnswerReceivedPayload,
-  GameStatus,
-  JoinAcceptedPayload,
-  JoinPlayersPayload,
-  RoundRatingView,
-  SubmitAnswerPayload,
-  TeamAnswerView,
-  TeamBonusAwardView,
-  TeamFeedbackView,
-  Verdict,
+import {
+  NOT_YOUR_TEAM_ANSWER_ERROR,
+  isSeatTakenRefusal,
+  type AckResult,
+  type AnswerReceivedPayload,
+  type GameStatus,
+  type JoinAcceptedPayload,
+  type JoinPlayersPayload,
+  type RoundRatingView,
+  type SubmitAnswerPayload,
+  type TeamAnswerView,
+  type TeamBonusAwardView,
+  type TeamFeedbackView,
+  type Verdict,
 } from '@campus-pubquiz/types';
 
 /**
@@ -28,6 +33,11 @@ import type {
 export const KICK_NOTICE = 'You were removed from this team by the quiz master';
 /** Award toasts outlast the default so a team passing the phone around still sees them. */
 export const BONUS_AWARD_TOAST_DURATION_MS = 8000;
+
+/** How long a refused rejoin waits before asking again: the old socket holding the seat is gone once the server's ping timeout (~45 s) notices it. */
+export const JOIN_RETRY_DELAY_MS = 3000;
+/** Retries before a refused rejoin is shown as an error: together they outlast the ping timeout. */
+export const MAX_JOIN_RETRIES = 20;
 
 /** A team's own graded answer to one question — absent from the map entirely until grading happens (at submit when the answer is graded automatically, on admin grading otherwise). */
 export interface MyAnswerGrade {
@@ -125,6 +135,8 @@ export interface TeamLinkState {
   /** The socket id the server last registered this team on. */
   linkedSocketId: string | null;
   joinError: string | null;
+  /** How many times in a row a refused rejoin has been retried on this connection. */
+  joinRetries: number;
   /** Set while the team has been kicked and hasn't joined again. */
   kickNotice: string | null;
   /** The team the server last confirmed for this phone, or null when there is none. */
@@ -161,6 +173,8 @@ export type TeamLinkInput =
   | { type: 'connectionRefused' }
   | { type: 'joinAccepted'; payload: JoinAcceptedPayload }
   | { type: 'joinRefused'; connectionId: number; reason: string }
+  // A refused rejoin's wait is over.
+  | { type: 'joinRetryDue'; connectionId: number }
   | { type: 'statusSeen'; status: GameStatus }
   | { type: 'kicked' }
   | { type: 'sessionClosed' }
@@ -208,6 +222,7 @@ export type TeamLinkCommand =
   | { type: 'armConfirmTimer'; attempt: number }
   | { type: 'clearConfirmTimer' }
   | { type: 'forceReconnect' }
+  | { type: 'scheduleJoinRetry'; connectionId: number; delayMs: number }
   | {
       type: 'toast';
       tone: 'success' | 'neutral' | 'error';
@@ -306,6 +321,7 @@ export function initialTeamLink(entry: TeamLinkEntry): TeamLinkState {
     isJoinInFlight: false,
     linkedSocketId: null,
     joinError: null,
+    joinRetries: 0,
     kickNotice: null,
     confirmedTeamId: null,
     lastStatus: null,
@@ -344,6 +360,45 @@ function sendJoin(state: TeamLinkState): TeamLinkStep {
   };
 }
 
+/** Whether the phone already proved who it is (it was linked, or holds a token), so a seat-taken refusal can only be an old socket of its own. */
+function isKnownTeam(state: TeamLinkState): boolean {
+  return state.team !== null || Boolean(state.storedTeamToken);
+}
+
+/** A refusal of the join sent on the current connection: a rejoin refused only because an old socket still holds the seat is retried quietly; anything else is shown. */
+function refuseJoin(
+  state: TeamLinkState,
+  connectionId: number,
+  reason: string,
+): TeamLinkStep {
+  const isRetryable =
+    isKnownTeam(state) &&
+    (isSeatTakenRefusal(reason) ||
+      isNotDelivered({ success: false, error: reason })) &&
+    state.joinRetries < MAX_JOIN_RETRIES;
+  if (!isRetryable) {
+    return unchanged({ ...state, isJoinInFlight: false, joinError: reason });
+  }
+  return {
+    state: {
+      ...state,
+      isJoinInFlight: false,
+      joinRetries: state.joinRetries + 1,
+    },
+    commands: [
+      { type: 'scheduleJoinRetry', connectionId, delayMs: JOIN_RETRY_DELAY_MS },
+    ],
+  };
+}
+
+function retryJoin(state: TeamLinkState, connectionId: number): TeamLinkStep {
+  const isStillWaiting =
+    state.connection?.id === connectionId &&
+    !state.isLinked &&
+    !state.isJoinInFlight;
+  return isStillWaiting ? sendJoin(state) : unchanged(state);
+}
+
 function joinOncePerConnection(state: TeamLinkState): TeamLinkStep {
   if (!state.connection || state.joinSentFor === state.connection.id) {
     return { state, commands: [] };
@@ -365,6 +420,7 @@ function submitJoin(state: TeamLinkState): TeamLinkStep {
       attempt,
       isJoinInFlight: true,
       joinError: null,
+      joinRetries: 0,
       kickNotice: null,
       // A fresh connection opens, so nothing carries over from the old one.
       connection: null,
@@ -425,6 +481,7 @@ function leaveSession(state: TeamLinkState, kind: LeaveKind): TeamLinkStep {
       linkedSocketId: null,
       lastStatus: null,
       joinError: null,
+      joinRetries: 0,
       kickNotice,
       confirmedTeamId: null,
     },
@@ -494,6 +551,7 @@ function acceptJoin(
     ...state,
     isJoinInFlight: false,
     joinError: null,
+    joinRetries: 0,
     confirmedTeamId: payload.teamId,
     linkedSocketId: state.connection?.socketId ?? null,
     storedTeamToken: payload.teamToken,
@@ -522,6 +580,23 @@ function acceptJoin(
   };
 }
 
+function isSeatLostRefusal(result: AckResult): boolean {
+  return !result.success && result.error === NOT_YOUR_TEAM_ANSWER_ERROR;
+}
+
+/**
+ * The server says this socket doesn't hold the team's seat, though the phone
+ * thought it did. The phone stops offering answers and joins again by itself;
+ * the answer stays pending and goes out once the join is accepted.
+ */
+function rejoinAfterLostSeat(state: TeamLinkState): TeamLinkStep {
+  const unlinked: TeamLinkState = { ...state, isLinked: false };
+  const rejoin = state.isJoinInFlight
+    ? unchanged(unlinked)
+    : sendJoin(unlinked);
+  return { state: rejoin.state, commands: [CLEAR_TIMER, ...rejoin.commands] };
+}
+
 function receiveAnswerResult(
   state: TeamLinkState,
   attempt: number,
@@ -529,6 +604,7 @@ function receiveAnswerResult(
 ): TeamLinkStep {
   // A superseded send says nothing about the answer now pending.
   if (attempt !== state.answerAttempt) return unchanged(state);
+  if (isSeatLostRefusal(result)) return rejoinAfterLostSeat(state);
   return {
     state: { ...state, pendingAnswer: null },
     commands: result.success
@@ -606,6 +682,7 @@ export function teamLink(
       const unlinked = isNewConnection ? unlink(state) : unchanged(state);
       const join = joinOncePerConnection({
         ...unlinked.state,
+        joinRetries: isNewConnection ? 0 : unlinked.state.joinRetries,
         // The first status on a new connection is a first status again.
         lastStatus: isNewConnection ? null : unlinked.state.lastStatus,
         connection: { id: input.connectionId, socketId: input.socketId },
@@ -663,11 +740,9 @@ export function teamLink(
     case 'joinRefused':
       // An answer to a join on an earlier connection says nothing about this one.
       if (input.connectionId !== state.joinSentFor) return unchanged(state);
-      return unchanged({
-        ...state,
-        isJoinInFlight: false,
-        joinError: input.reason,
-      });
+      return refuseJoin(state, input.connectionId, input.reason);
+    case 'joinRetryDue':
+      return retryJoin(state, input.connectionId);
     case 'statusSeen':
       return seeStatus(state, input.status);
     case 'kicked':

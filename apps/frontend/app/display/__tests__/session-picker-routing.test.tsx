@@ -81,6 +81,7 @@ describe('DisplayPage — session picker routing', () => {
     mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
+      connectionIssue: 'refused',
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);
@@ -96,6 +97,7 @@ describe('DisplayPage — session picker routing', () => {
     mockUseGame.mockReturnValue({
       snapshot: null,
       connectionError: 'Unknown game session code',
+      connectionIssue: 'refused',
       sendAction: vi.fn(),
     });
     render(<DisplayPage />);

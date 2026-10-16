@@ -33,6 +33,8 @@ export type EmitWithAck = <E extends ClientToServerEvent>(
   payload: ClientToServerPayload<E>,
 ) => Promise<AckResult<ClientToServerAck<E>>>;
 
+export type ConnectionIssue = 'reconnecting' | 'refused';
+
 export interface SocketConnection {
   socketId: string | null;
 }
@@ -41,6 +43,8 @@ export interface UseGameConnectionResult<Role extends SocketRoomName> {
   snapshot: StateViewByRoom[Role] | null;
   /** Set only by connection problems (refused, lost, reconnecting) — never by a rejected action. */
   connectionError: string | null;
+  /** Why the socket isn't connected: socket.io is retrying (`reconnecting`) or the server turned it away (`refused`). Null while connected. */
+  connectionIssue: ConnectionIssue | null;
   /** Timestamp of the most recent successful (re)connection, including the first. */
   reconnectedAt: number | null;
   /** The live connection: a new object on every connect (so a reconnect is never mistaken for the connection before it), null while disconnected. */
@@ -50,15 +54,6 @@ export interface UseGameConnectionResult<Role extends SocketRoomName> {
   emitWithAck: EmitWithAck;
   /** Drops the current socket and opens a fresh connection, showing the reconnecting banner meanwhile — for a socket that looks connected but has stopped answering. */
   forceReconnect: () => void;
-}
-
-function getErrorMessage(payload: unknown): string {
-  if (typeof payload === 'string') return payload;
-  if (payload && typeof payload === 'object' && 'message' in payload) {
-    const message = (payload as { message: unknown }).message;
-    if (typeof message === 'string') return message;
-  }
-  return 'Unknown error';
 }
 
 /**
@@ -77,6 +72,8 @@ export function useGameConnection<Role extends SocketRoomName>(
 ): UseGameConnectionResult<Role> {
   const [snapshot, setSnapshot] = useState<StateViewByRoom[Role] | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionIssue, setConnectionIssue] =
+    useState<ConnectionIssue | null>(null);
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
   const [socketConnection, setSocketConnection] =
     useState<SocketConnection | null>(null);
@@ -86,6 +83,15 @@ export function useGameConnection<Role extends SocketRoomName>(
     bindSocketRef.current = bindSocket;
   }, [bindSocket]);
 
+  // The error text and the issue always change together.
+  const reportConnection = useCallback(
+    (issue: ConnectionIssue | null, message: string | null) => {
+      setConnectionError(message);
+      setConnectionIssue(issue);
+    },
+    [],
+  );
+
   // A fresh connect starts from a clean slate — adjusted during render, keyed
   // the same way the connect Effect's dependency array is.
   const identityKey = `${enabled}|${role}|${joinCode ?? ''}|${retryKey}`;
@@ -94,7 +100,7 @@ export function useGameConnection<Role extends SocketRoomName>(
     setPrevIdentityKey(identityKey);
     if (enabled) {
       setSnapshot(null);
-      setConnectionError(null);
+      reportConnection(null, null);
       setSocketConnection(null);
     }
   }
@@ -114,30 +120,34 @@ export function useGameConnection<Role extends SocketRoomName>(
     });
     socket.on(SOCKET_EVENTS.STATE_SYNC, (payload) => {
       setSnapshot(payload);
-      setConnectionError(null);
+      reportConnection(null, null);
     });
     socket.on(SOCKET_EVENTS.STATE_UPDATED, (payload) => {
       setSnapshot(payload);
     });
-    socket.on('connect_error', (payload: unknown) => {
-      setConnectionError(getErrorMessage(payload));
+    socket.on('connect_error', () => {
+      // The backend refuses a socket by accepting and then disconnecting it
+      // (see `disconnect` below), never with a CONNECT_ERROR packet. So every
+      // `connect_error` is a transport failure — including each failed retry
+      // while the network is down — and socket.io is still retrying.
+      reportConnection('reconnecting', RECONNECTING_MESSAGE);
     });
     socket.on('disconnect', (reason: string) => {
       setSocketConnection(null);
       if (reason === 'io client disconnect') return;
       if (reason === 'io server disconnect') {
         // The server refused this socket — socket.io won't retry on its own.
-        setConnectionError((current) => current ?? `Disconnected: ${reason}`);
+        reportConnection('refused', `Disconnected: ${reason}`);
         return;
       }
-      setConnectionError(RECONNECTING_MESSAGE);
+      reportConnection('reconnecting', RECONNECTING_MESSAGE);
     });
     bindSocketRef.current?.(socket);
 
     return () => {
       socket.disconnect();
     };
-  }, [enabled, role, joinCode, retryKey]);
+  }, [enabled, role, joinCode, retryKey, reportConnection]);
 
   const emitWithAck = useCallback(
     <E extends ClientToServerEvent>(
@@ -176,14 +186,15 @@ export function useGameConnection<Role extends SocketRoomName>(
   const forceReconnect = useCallback(() => {
     const socket = socketRef.current;
     if (!socket) return;
-    setConnectionError(RECONNECTING_MESSAGE);
+    reportConnection('reconnecting', RECONNECTING_MESSAGE);
     socket.disconnect();
     socket.connect();
-  }, []);
+  }, [reportConnection]);
 
   return {
     snapshot,
     connectionError,
+    connectionIssue,
     reconnectedAt,
     socketConnection,
     identityKey,

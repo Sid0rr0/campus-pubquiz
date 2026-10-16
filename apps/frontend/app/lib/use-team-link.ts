@@ -46,6 +46,7 @@ import {
   clearStoredSession,
   readStoredIdentity,
 } from '@/app/lib/team-storage';
+import { useReconnectOnWake } from '@/app/lib/use-reconnect-on-wake';
 import {
   useGameConnection,
   type RoomSocket,
@@ -78,6 +79,10 @@ export interface TeamLinkJoin {
   /** What the join screen shows: a rejected join's reason, the kick notice, or a connection problem — in that order. */
   connectionError: string | null;
   teamName: string | null;
+  /** True while the only thing wrong is the socket reconnecting — no join error or kick notice outranks it — so /play shows the reconnecting bar instead of inline text. */
+  isReconnecting: boolean;
+  /** Drops the current socket and connects afresh; the join path hands the team's seat over. */
+  forceReconnect: () => void;
   nameInput: string;
   setNameInput: (value: string) => void;
   codeInput: string;
@@ -146,6 +151,16 @@ function writeIdentity(
   }
 }
 
+/** The view the phone draws: a question is answerable only while the server confirms this socket holds the team's seat, so the form never offers an answer the server would refuse. */
+function viewWithSeat(
+  view: StateViewByRoom['players'],
+  isLinked: boolean,
+): StateViewByRoom['players'] {
+  return view.isAnswerable && !isLinked
+    ? { ...view, isAnswerable: false }
+    : view;
+}
+
 function showToast(command: Extract<TeamLinkCommand, { type: 'toast' }>) {
   const options = { duration: command.durationMs };
   if (command.tone === 'success') toast.success(command.message, options);
@@ -183,6 +198,7 @@ export function useTeamLink(
   const connectionRef = useRef<PlayerConnection | null>(null);
   const goToJoinScreenRef = useRef<() => void>(() => undefined);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const joinRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // What each answer attempt's caller is waiting for.
   const answerWaitersRef = useRef(new Map<number, (r: AckResult) => void>());
   const latestAnswerRef = useRef<Promise<AckResult> | null>(null);
@@ -198,6 +214,12 @@ export function useTeamLink(
       if (confirmTimerRef.current === null) return;
       clearTimeout(confirmTimerRef.current);
       confirmTimerRef.current = null;
+    }
+
+    function clearJoinRetryTimer() {
+      if (joinRetryTimerRef.current === null) return;
+      clearTimeout(joinRetryTimerRef.current);
+      joinRetryTimerRef.current = null;
     }
 
     function runCommand(command: TeamLinkCommand) {
@@ -249,6 +271,16 @@ export function useTeamLink(
           break;
         case 'forceReconnect':
           connection?.forceReconnect();
+          break;
+        case 'scheduleJoinRetry':
+          clearJoinRetryTimer();
+          joinRetryTimerRef.current = setTimeout(() => {
+            joinRetryTimerRef.current = null;
+            dispatch({
+              type: 'joinRetryDue',
+              connectionId: command.connectionId,
+            });
+          }, command.delayMs);
           break;
         case 'toast':
           showToast(command);
@@ -316,6 +348,7 @@ export function useTeamLink(
     snapshot,
     socketConnection,
     connectionError: socketConnectionError,
+    connectionIssue,
     identityKey,
     emitWithAck,
     forceReconnect,
@@ -332,10 +365,15 @@ export function useTeamLink(
     goToJoinScreenRef.current = () => router.push('/play');
   }, [emitWithAck, forceReconnect, router]);
 
+  useReconnectOnWake(forceReconnect);
+
   useEffect(
     () => () => {
       if (confirmTimerRef.current !== null) {
         clearTimeout(confirmTimerRef.current);
+      }
+      if (joinRetryTimerRef.current !== null) {
+        clearTimeout(joinRetryTimerRef.current);
       }
     },
     [],
@@ -484,6 +522,11 @@ export function useTeamLink(
         hasTeam: Boolean(link.team),
       }),
       connectionError,
+      isReconnecting:
+        link.joinError === null &&
+        link.kickNotice === null &&
+        connectionIssue === 'reconnecting',
+      forceReconnect,
       teamName: link.teamName,
       nameInput: link.nameInput,
       setNameInput,
@@ -498,7 +541,7 @@ export function useTeamLink(
     },
     game: snapshot
       ? {
-          view: snapshot,
+          view: viewWithSeat(snapshot, link.isLinked),
           myAnswers: link.myAnswers,
           myAnswerGrades: link.myAnswerGrades,
           myBonusAwards: link.myBonusAwards,
