@@ -55,15 +55,20 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     meta,
     question: candidate,
     sheetAnswerIssue,
+    clipIssues,
   } = decodeSheetRow(row, type as QuestionType);
   const parsedMeta = sheetRowMetaSchema.safeParse(meta);
   const checkedQuestion = checkQuestion(candidate);
-  // Only when the schema passed: a failing pairing is already reported there.
-  const questionIssues = checkedQuestion.success
-    ? sheetAnswerIssue
-      ? [sheetAnswerIssue]
-      : []
-    : checkedQuestion.issues;
+  // The answer issue only when the schema passed: a failing pairing is already
+  // reported there. Clip issues are never in the schema's sight, so always.
+  const questionIssues = [
+    ...(checkedQuestion.success
+      ? sheetAnswerIssue
+        ? [sheetAnswerIssue]
+        : []
+      : checkedQuestion.issues),
+    ...clipIssues,
+  ];
   if (!parsedMeta.success || questionIssues.length > 0) {
     const issues = [
       ...(parsedMeta.success

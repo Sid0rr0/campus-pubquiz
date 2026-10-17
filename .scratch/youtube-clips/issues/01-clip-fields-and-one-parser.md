@@ -13,7 +13,7 @@ Parent spec: `.scratch/youtube-clips/spec.md`
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Parser tests: each timecode shape, quoted/unquoted, the legacy `YouTube clip: {…}` line, `{start: "55", end: "88"}`, no group, free notes around the group preserved
 - [ ] The parser also reads `revealStart`, `revealEnd` and `hideVideo: true`, so 02 and 03 only add fields and UI

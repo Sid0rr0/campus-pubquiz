@@ -723,17 +723,49 @@ grading behavior:
   rendering is actually keyed off `media_url` itself, not the `type` value —
   matching how image vs. audio already works — so a `free_text`/etc. row
   with a YouTube `media_url` still embeds too. A clip's start/end (seconds
-  into the video) is best-effort parsed out of that question's `notes` cell,
-  e.g. `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds
-  all parse) — this isn't strict JSON, it's a regex looking for
-  `start`/`end` keywords, so `notes` without that syntax is left untouched
-  as a normal free-text note. Parsing happens once, in
-  `QuizService.syncRoundsAndQuestions` (shared by CSV import and the manual
-  editor's Save), which derives `mediaStartSeconds`/`mediaEndSeconds` into
-  the question's JSON `payload` alongside `mediaUrl`. `answer_media_url`
-  never gets clip times (no notes channel of its own) — a YouTube answer
-  video always renders full-length. Optional `options` and hand grading,
-  same as `audio`.
+  into the video) are real question fields (`mediaStartSeconds`/
+  `mediaEndSeconds` on the draft, the preview and the JSON `payload`
+  alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
+  inputs for any YouTube `media_url`. The `notes` cell of a CSV row carries
+  them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
+  `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
+  parse; quotes optional; the older `YouTube clip: {…}` line still imports).
+  It isn't strict JSON: one lenient parser (`parseClipNotes` in
+  `shared/types/src/youtube.ts`) reads the keys `start`, `end`, `revealStart`,
+  `revealEnd` and `hideVideo: true`, and returns the notes with the group
+  removed, so notes without that syntax stay a normal free-text note. A
+  clip time that doesn't parse (e.g. `start: "1:2x"`) is never dropped
+  silently: a CSV row with one is reported as invalid on its `notes` column,
+  and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
+  save ("Clip times must be whole seconds"); a blank one just means the whole
+  video. CSV
+  import moves the group out of the notes into the fields (only when
+  `media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
+  the clip when `media_url` is); CSV export writes the fields back as one
+  canonical group appended to the free notes, leaving empty keys out. Stored
+  `notes` are free text only: loading a stored question strips any clip group
+  an older save left there (the payload fields stay the truth), and saving
+  again cleans the row. The **reveal clip** (`revealStartSeconds`/
+  `revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
+  start/end of the one video played at reveal, and applies when either
+  `media_url` or `answer_media_url` is a YouTube link (the editor labels the
+  inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
+  "Reveal clip (question video)"). At reveal exactly one video plays: a
+  YouTube `answer_media_url` replaces the question video, clipped by the
+  reveal clip; otherwise the question video plays again (restarted, unless it is a hidden video, which just lifts its cover), clipped
+  by the reveal clip, not the question clip. An empty reveal start/end means
+  the whole video. The question clip (`start`/`end`) still applies only while
+  the question is asked. Reveal views carry the reveal clip (it is on
+  `SeededQuestion`, like `answerMediaUrl`, never on the pre-reveal
+  `QuestionView`). **Hidden video:** the
+  "Hide video (sound only)" checkbox (`isVideoHidden` on the draft, preview,
+  payload and question views; `hideVideo: true` in the CSV notes group) shows
+  for any YouTube `media_url`. The big screen keeps the iframe mounted at full
+  size (a hidden or zero-size player may not autoplay) under an opaque panel
+  with a 🎵 label, while the question is asked and in break review; the panel
+  comes off at reveal without remounting the player. Phones show "🎧 Listen"
+  in place of "👀 Look at the screen". A stored payload without the field
+  reads as not hidden. Optional `options` and hand grading, same as `audio`.
 - **`sort`** — players drag `options` into what they think is the correct
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must

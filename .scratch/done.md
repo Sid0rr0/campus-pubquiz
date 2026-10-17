@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| youtube-clips | [YouTube clips, reveal clips and hidden videos](youtube-clips/spec.md) | 3 |
 | break-fun-facts | [Fun facts on the big screen during a break](break-fun-facts/spec.md) | 2 |
 | reconnect-resilience | [The big screen and the phones survive a dropped connection](reconnect-resilience/spec.md) | 4 |
 | player-count-and-team-stats | [Player counts and a team stats page](player-count-and-team-stats/spec.md) | 5 |

@@ -36,6 +36,8 @@ export interface QuestionView {
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
+  /** A YouTube mediaUrl whose picture is covered on the big screen until reveal (sound only); phones say "Listen". Unset reads as not hidden. */
+  isVideoHidden?: boolean;
   points: number;
 }
 
@@ -44,6 +46,9 @@ export interface SeededQuestion extends QuestionView {
   answer: string;
   /** Shown alongside the answer during reveal only — never sent before the question is revealed. */
   answerMediaUrl?: string;
+  /** Clip range (seconds) of the video played at reveal — see `revealStartSeconds` on ImportQuestionPreview. Reveal only, like `answerMediaUrl`. */
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
 }
 
 /** How the screens reveal a revealed question; decided once by the Screen projection from the question type registry. */

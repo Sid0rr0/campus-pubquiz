@@ -51,6 +51,14 @@ export interface ImportQuestionPreview {
   /** Number only: unset is resolved by the Answer key (answer-key.ts), never defaulted by readers. Never CSV-settable, like matchScoringMode: only the manual quiz editor sets it. */
   margin?: Margin;
   mediaUrl?: string;
+  /** The clip of a YouTube `mediaUrl`, in whole seconds — real fields, never kept in `notes` (the CSV carries them as a group in the notes cell; see `parseClipNotes`). */
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
+  /** A YouTube `mediaUrl` played sound-only: covered on the big screen until reveal. Unset reads as not hidden; the CSV carries it as `hideVideo: true` in the notes group. */
+  isVideoHidden?: boolean;
+  /** The reveal clip: the part of the video played at reveal — the YouTube `answerMediaUrl` when there is one, else the question's own YouTube video. Unset means the whole video. Carried in the notes group as `revealStart`/`revealEnd`. */
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;
 }

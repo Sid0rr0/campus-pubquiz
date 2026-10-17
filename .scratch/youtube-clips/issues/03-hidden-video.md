@@ -9,10 +9,10 @@ Parent spec: `.scratch/youtube-clips/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Field round-trips: editor → save → load, and CSV import → export → import; a stored payload without the field reads as not hidden
-- [ ] Display test: covered in question view and break review, uncovered at reveal, iframe present in all three
-- [ ] Phone test: "🎧 Listen" when hidden, "👀 Look at the screen" otherwise
-- [ ] Checkbox shown only for YouTube media
-- [ ] `DOCUMENTATION.md` covers hidden video; `/guide` describes the checkbox
+- [x] Field round-trips: editor → save → load, and CSV import → export → import; a stored payload without the field reads as not hidden
+- [x] Display test: covered in question view and break review, uncovered at reveal, iframe present in all three
+- [x] Phone test: "🎧 Listen" when hidden, "👀 Look at the screen" otherwise
+- [x] Checkbox shown only for YouTube media
+- [x] `DOCUMENTATION.md` covers hidden video; `/guide` describes the checkbox

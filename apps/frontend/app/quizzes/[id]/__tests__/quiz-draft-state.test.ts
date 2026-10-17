@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   QUESTION_KINDS,
+  checkQuestion,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRoundPreview,
@@ -52,6 +53,11 @@ describe('makeQuestion / makeRound', () => {
       correctText: '',
       mediaUrl: '',
       answerMediaUrl: '',
+      clipStart: '',
+      clipEnd: '',
+      isVideoHidden: false,
+      revealStart: '',
+      revealEnd: '',
     });
   });
 
@@ -71,6 +77,114 @@ describe('makeQuestion / makeRound', () => {
       author: '',
       questions: [],
     });
+  });
+});
+
+describe('YouTube clip fields in the editor draft', () => {
+  const preview: ImportQuestionPreview = {
+    type: 'youtube',
+    prompt: 'Which movie?',
+    answer: 'Jaws',
+    points: 2,
+    mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+    mediaStartSeconds: 55,
+    mediaEndSeconds: 88,
+  };
+
+  it('shows the clip seconds as timecodes and saves them back as seconds', () => {
+    const question = questionFromPreview('q1', preview);
+
+    expect([question.clipStart, question.clipEnd]).toEqual(['55', '1:28']);
+    expect(questionToPreview(question)).toEqual(preview);
+  });
+
+  it('saves a typed timecode and drops an unreadable or emptied one', () => {
+    const question = questionFromPreview('q1', preview);
+
+    const saved = questionToPreview({
+      ...question,
+      clipStart: '1:02:03',
+      clipEnd: '',
+    });
+
+    expect(saved.mediaStartSeconds).toBe(3723);
+    expect(saved).not.toHaveProperty('mediaEndSeconds');
+  });
+
+  it('sends a typed time that does not read as a timecode as an invalid value, so the save rejects it', () => {
+    const question = questionFromPreview('q1', preview);
+
+    const saved = questionToPreview({
+      ...question,
+      clipStart: '1:2x',
+      revealStart: 'soon',
+      revealEnd: '  ',
+    });
+
+    expect(saved.mediaStartSeconds).toBeNaN();
+    expect(saved.revealStartSeconds).toBeNaN();
+    expect(saved).not.toHaveProperty('revealEndSeconds');
+    expect(checkQuestion(saved).success).toBe(false);
+  });
+
+  it('round-trips a hidden video and saves a visible one without the field', () => {
+    const hidden = questionFromPreview('q1', {
+      ...preview,
+      isVideoHidden: true,
+    });
+
+    expect(hidden.isVideoHidden).toBe(true);
+    expect(questionToPreview(hidden)).toEqual({
+      ...preview,
+      isVideoHidden: true,
+    });
+    expect(
+      questionToPreview(questionFromPreview('q1', preview)),
+    ).not.toHaveProperty('isVideoHidden');
+  });
+
+  it('shows the reveal clip as timecodes and saves it back as seconds', () => {
+    const withReveal: ImportQuestionPreview = {
+      ...preview,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+    };
+
+    const question = questionFromPreview('q1', withReveal);
+
+    expect([question.revealStart, question.revealEnd]).toEqual([
+      '2:30',
+      '2:45',
+    ]);
+    expect(questionToPreview(question)).toEqual(withReveal);
+  });
+
+  it('saves the reveal clip for a YouTube answer media over a non-YouTube question media', () => {
+    const imageWithAnswerVideo: ImportQuestionPreview = {
+      type: 'free_text',
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      mediaUrl: 'https://example.com/a.jpg',
+      answerMediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      revealStartSeconds: 5,
+    };
+
+    const question = questionFromPreview('q1', imageWithAnswerVideo);
+
+    expect(questionToPreview(question)).toEqual(imageWithAnswerVideo);
+  });
+
+  it('drops the reveal clip when neither media is a YouTube link', () => {
+    const question = {
+      ...questionFromPreview('q1', preview),
+      mediaUrl: 'https://example.com/a.jpg',
+      revealStart: '0:05',
+    };
+
+    expect(questionToPreview(question)).not.toHaveProperty(
+      'revealStartSeconds',
+    );
   });
 });
 

@@ -38,6 +38,26 @@ describe('sample-quiz-import.csv', () => {
     );
   });
 
+  it('carries a clip, a reveal clip and a hidden video from the notes group', () => {
+    const youtubeQuestions = preview.rounds
+      .flatMap((round) => round.questions)
+      .filter((question) => question.type === 'youtube');
+
+    expect(youtubeQuestions).toEqual([
+      expect.objectContaining({
+        mediaStartSeconds: 55,
+        mediaEndSeconds: 88,
+      }),
+      expect.objectContaining({
+        mediaStartSeconds: 10,
+        mediaEndSeconds: 25,
+        revealStartSeconds: 43,
+        revealEndSeconds: 58,
+        isVideoHidden: true,
+      }),
+    ]);
+  });
+
   it('gives each round a category and an author', () => {
     expect(
       preview.rounds.map(({ title, category, author }) => ({

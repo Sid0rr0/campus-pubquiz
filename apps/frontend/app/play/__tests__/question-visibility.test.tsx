@@ -165,4 +165,38 @@ describe('PlayPage — question visibility', () => {
 
     expect(screen.queryByText(/look at the screen/i)).not.toBeInTheDocument();
   });
+
+  it.each([
+    [true, /listen/i, /look at the screen/i],
+    [false, /look at the screen/i, /listen/i],
+  ])(
+    'for a YouTube video with isVideoHidden=%s shows the matching hint',
+    (isVideoHidden, shown, notShown) => {
+      window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
+      mockUseTeamLink.mockReturnValue(
+        teamLinkResult({
+          session: {
+            rounds: [
+              {
+                questions: [
+                  {
+                    type: 'free_text',
+                    prompt: 'Name this song.',
+                    mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+                    ...(isVideoHidden ? { isVideoHidden } : {}),
+                    points: 3,
+                  },
+                ],
+              },
+            ],
+            progress: { status: 'question_open' },
+          },
+        }),
+      );
+      renderWithQuery(<PlayPage />);
+
+      expect(screen.getByText(shown)).toBeInTheDocument();
+      expect(screen.queryByText(notShown)).not.toBeInTheDocument();
+    },
+  );
 });

@@ -18,6 +18,11 @@ const media = {
   // Quiz save derives clip times from any YouTube mediaUrl, whatever the type.
   mediaStartSeconds: z.number().optional(),
   mediaEndSeconds: z.number().optional(),
+  // Absent in payloads saved before hidden video existed: reads as not hidden.
+  isVideoHidden: z.boolean().optional(),
+  // The reveal clip: any question whose media or answer media is YouTube.
+  revealStartSeconds: z.number().optional(),
+  revealEndSeconds: z.number().optional(),
 };
 
 export const freeTextPayloadSchema = z.object(media);
@@ -62,4 +67,7 @@ export interface QuestionPayload {
   answerMediaUrl?: string;
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
+  isVideoHidden?: boolean;
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
 }

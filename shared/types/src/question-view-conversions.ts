@@ -38,6 +38,7 @@ export function toQuestionView(question: SeededQuestion): QuestionView {
     ...(question.mediaEndSeconds !== undefined
       ? { mediaEndSeconds: question.mediaEndSeconds }
       : {}),
+    ...(question.isVideoHidden ? { isVideoHidden: true } : {}),
   };
 }
 
