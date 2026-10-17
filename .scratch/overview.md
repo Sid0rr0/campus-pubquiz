@@ -6,7 +6,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 
 | Spec                            | Title                                                                                                                                                                      | Tickets | Blocked by |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
-| break-fun-facts | [Fun facts on the big screen during a break](break-fun-facts/spec.md) | 2 | — |
 | feedback-trends | [Feedback trends across sessions](feedback-trends/spec.md) | 3 | — |
 | team-page | [A team page opened with the team code](team-page/spec.md) | 3 | — |
 | league | [Leagues — ranking teams across a semester](league/spec.md) | 6 | team-page, feedback-trends |

@@ -47,6 +47,7 @@ export * from './answer-kind';
 export * from './margin';
 export * from './answer-key';
 export * from './session-state';
+export * from './fun-facts';
 export * from './question-view-conversions';
 export * from './block-in-play';
 export * from './block-questions';

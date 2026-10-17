@@ -1,6 +1,7 @@
 import {
   getBlockInPlay,
   getBlockInPlayIds,
+  getLastPastBlockIds,
   getPastBlockIds,
   type GameProgress,
   type GameStatus,
@@ -168,5 +169,39 @@ describe('getPastBlockIds', () => {
 
   it.each(cases)('is the right ids when %s', (_name, given, expected) => {
     expect(getPastBlockIds(BLOCK_IN_PLAY_ROUNDS, given)).toEqual(expected);
+  });
+});
+
+describe('getLastPastBlockIds', () => {
+  const cases: [string, GameProgress, number[]][] = [
+    [
+      'the first block has no block before it',
+      progress('question_open', 1, 0, 2),
+      [],
+    ],
+    [
+      'the second block has the whole first block (two rounds) before it',
+      progress('question_open', 2, 0, 0),
+      FIRST_BLOCK,
+    ],
+    [
+      'a kahoot round at its first question has the block before it',
+      progress('question_open', 3, 0, 0),
+      [q(2, 0), q(2, 1)],
+    ],
+    [
+      "a kahoot round's second question has only its first question before it",
+      progress('question_open', 3, 1, 0),
+      [q(3, 0)],
+    ],
+    [
+      'the final round has the last kahoot question before it',
+      progress('break', 4, 1, 1),
+      [q(3, 1)],
+    ],
+  ];
+
+  it.each(cases)('is the right ids when %s', (_name, given, expected) => {
+    expect(getLastPastBlockIds(BLOCK_IN_PLAY_ROUNDS, given)).toEqual(expected);
   });
 });

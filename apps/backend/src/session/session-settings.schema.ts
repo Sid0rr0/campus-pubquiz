@@ -37,6 +37,7 @@ export const sessionSettingsPartialSchema = z
     extraPlayerPenaltyPoints: z.number().int().nonnegative(),
     kahootQuestionTimerSeconds: z.number().int().positive().nullable(),
     collectFeedback: z.boolean(),
+    funFactsEnabled: z.boolean(),
   })
   .partial();
 

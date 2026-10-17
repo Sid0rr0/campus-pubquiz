@@ -288,6 +288,7 @@ describe('SessionSettings defaults', () => {
       extraPlayerPenaltyPoints: 2,
       kahootQuestionTimerSeconds: null,
       collectFeedback: true,
+      funFactsEnabled: true,
       rules: [
         'No cheating.',
         'Please write your answers in English.',

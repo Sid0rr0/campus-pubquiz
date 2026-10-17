@@ -56,6 +56,15 @@ describe('sessionSettingsPartialSchema', () => {
     ).toBe(false);
   });
 
+  it('accepts funFactsEnabled as a boolean and rejects anything else', () => {
+    expect(
+      sessionSettingsPartialSchema.safeParse({ funFactsEnabled: false }).data,
+    ).toEqual({ funFactsEnabled: false });
+    expect(
+      sessionSettingsPartialSchema.safeParse({ funFactsEnabled: 'no' }).success,
+    ).toBe(false);
+  });
+
   it('rejects an empty enabledBonusCategories array', () => {
     expect(
       sessionSettingsPartialSchema.safeParse({ enabledBonusCategories: [] })

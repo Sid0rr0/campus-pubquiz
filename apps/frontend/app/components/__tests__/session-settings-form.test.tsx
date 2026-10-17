@@ -241,6 +241,25 @@ describe('SessionSettingsForm', () => {
     });
   });
 
+  it('toggles funFactsEnabled off, and it starts on', async () => {
+    const onChange = vi.fn();
+    render(
+      <SessionSettingsForm
+        value={DEFAULT_SESSION_SETTINGS}
+        onChange={onChange}
+      />,
+    );
+    const toggle = screen.getByLabelText(/fun facts on the break screen/i);
+    expect(toggle).toBeChecked();
+
+    await userEvent.click(toggle);
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SESSION_SETTINGS,
+      funFactsEnabled: false,
+    });
+  });
+
   it('adds a new blank rule line', async () => {
     const onChange = vi.fn();
     render(

@@ -203,6 +203,17 @@ export function SessionSettingsForm({
         Collect feedback
       </label>
 
+      <label className="flex items-center gap-2 text-sm font-extrabold">
+        <input
+          type="checkbox"
+          checked={value.funFactsEnabled}
+          onChange={(event) =>
+            onChange({ ...value, funFactsEnabled: event.target.checked })
+          }
+        />
+        Fun facts on the break screen
+      </label>
+
       <div className="flex flex-wrap gap-4">
         <label className="flex flex-col gap-1 text-sm font-extrabold">
           Max players per team

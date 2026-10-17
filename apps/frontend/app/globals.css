@@ -30,6 +30,31 @@
 
   /* Looping horizontal scroll for the /display lobby team roster when it overflows */
   --animate-marquee: marquee var(--marquee-duration, 30s) linear infinite;
+
+  /* A fun fact fading in on the /display break screen */
+  --animate-fun-fact-in: fun-fact-in 0.8s ease-out;
+  /* The same entrance under prefers-reduced-motion: opacity only, no movement */
+  --animate-fun-fact-fade: fun-fact-fade 0.8s ease-out;
+}
+
+@keyframes fun-fact-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fun-fact-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes marquee {

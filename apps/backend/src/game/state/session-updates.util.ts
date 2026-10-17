@@ -27,6 +27,13 @@ export function withVerdictTallies(
   return { ...session, verdictTallies };
 }
 
+export function withFunFactData(
+  session: SessionState,
+  funFactData: SessionState['funFactData'],
+): SessionState {
+  return { ...session, funFactData };
+}
+
 /**
  * The session a write ends with, its prior standings brought up to date: when
  * the write started from a session whose question was on air with the

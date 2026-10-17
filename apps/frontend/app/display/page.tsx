@@ -190,6 +190,7 @@ function DisplayPageContent() {
     questionLockAt,
     kahootQuestionEndsAt,
     teamsCorrect,
+    funFacts,
     breakEndsAt,
     displayTextScale,
     settings,
@@ -314,6 +315,7 @@ function DisplayPageContent() {
             quizStructure={quizStructure}
             showBonusList={showBonusList}
             isFeedbackPromptShown={screen.isFeedbackPromptShown}
+            funFacts={funFacts}
           />
         );
       case 'break_review':

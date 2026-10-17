@@ -10,7 +10,7 @@ While the quiz master grades in a break, the big screen shows "BREAK", the time 
 
 ## Solution
 
-The break screen rotates through **fun facts** (see `GLOSSARY.md`) about the session so far. A fun fact is built only from blocks already revealed, or from figures that give no answer away. It never says anything about the block in play, whose answers stay hidden until its reveal. A fact with no data is skipped. At the first break, nothing has been revealed yet, so only the figures that give nothing away appear there.
+The break screen rotates through **fun facts** (see `GLOSSARY.md`) about the session so far. A fun fact is built only from blocks already revealed, or from figures that give no answer away. It never says anything about the block in play, whose answers stay hidden until its reveal. A fact with no data is skipped. At the first break, nothing has been revealed yet, so only the bonus awards appear there (and nothing at all when none was awarded).
 
 ## User Stories
 
@@ -22,14 +22,15 @@ The break screen rotates through **fun facts** (see `GLOSSARY.md`) about the ses
 ## Fun facts (first set)
 
 From revealed blocks:
+
 - **Fastest correct answer**: the team and its time, from kahoot questions only (only there is response time a race).
-- **Toughest question**: the lowest correct rate (the stats definition: credit by verdict), with the question number and its text.
-- **Room split**: the question whose correct rate is closest to 50%.
-- **Nobody got it**: a question with no correct answer.
-- **Clean sweep**: teams that got every question of the last revealed block fully correct.
+- **Toughest question**: the lowest correct rate (the stats definition: credit by verdict), with the question number and its text. Never a closest guess question: it has one winner by design.
+- **Room split**: the question whose correct rate is closest to 50%. Never a closest guess question.
+- **Nobody got it**: a question with no correct answer. Never a closest guess question, which always has a winner.
+- **Clean sweep**: teams that got every question of the last revealed block fully correct. Closest guess questions of the block are not counted (only the closest team can get one right); a block of only closest guesses has no sweep.
 
 Figures that give nothing away (any break):
-- **Answers so far**: the total number of answers submitted in the session.
+
 - **Bonus awards so far**: counts per bonus category (e.g. "7 shots, 3 selfies"), counting positive awards only.
 
 ## Implementation Decisions
@@ -38,15 +39,18 @@ Figures that give nothing away (any break):
 - "Revealed" means the blocks before the block in play (the Block module answers which those are). The block in play is never read.
 - The facts are worked out when the break starts and when grading changes a revealed answer. They aren't recomputed per broadcast if the Standings read already covers that data; reuse it where it does.
 - `/display` rotates the facts every `FUN_FACT_ROTATE_MS` (8 s) under the BREAK heading, keeping "Back at…" and the bonus list. It shows nothing when the list is empty.
-- The phones and `/control` are unchanged.
+- The facts only start after `FUN_FACT_START_DELAY_MS` (60 s) from when the rotator mounts on the break screen (a client-side timer; a display reload restarts the wait). Before that the break screen looks as it did before fun facts.
+- The session setting `funFactsEnabled` (default `true`, modelled like `collectFeedback`: lobby-only, a stored settings JSON without it reads as on) gates `funFacts` in the projection: off means `[]`. The `/control` settings panel gets one switch, "Fun facts on the break screen".
+- The phones are unchanged.
 
 ## Testing Decisions
 
-- The pure module: each fact from a hand-built session; nothing from the block in play; facts with no data skipped; the first break yields only figures that give nothing away; fastest-answer ignores non-kahoot questions.
+- The pure module: each fact from a hand-built session; nothing from the block in play; facts with no data skipped; the first break yields only bonus awards (or nothing); fastest-answer ignores non-kahoot questions; closest guess questions never appear in toughest, split or nobody-got-it and don't count toward a clean sweep.
 - The display view carries `funFacts` only on the break screen.
-- The break screen rotates (fake timers) and renders nothing for an empty list.
+- The break screen shows nothing before the start delay, the first fact after it, then rotates (fake timers), and renders nothing for an empty list.
+- Setting off: `funFacts` is empty on the break screen; default on; a stored settings JSON without the key reads as on; the `/control` switch toggles it.
 
 ## Out of Scope
 
 - Fun facts on the phones, at the reveal or on the ended screen.
-- Settings to choose or turn off individual facts. Add them only if asked.
+- Settings to choose individual facts. There is a single on/off session setting (`funFactsEnabled`, default on) for all fun facts; per-fact choices stay out of scope until asked.

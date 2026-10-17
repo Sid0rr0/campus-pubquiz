@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import type { LeaderboardEntry, VerdictTally } from '@campus-pubquiz/types';
+import type {
+  FunFactAnswer,
+  FunFactBonusAward,
+  FunFactData,
+  LeaderboardEntry,
+  VerdictTally,
+} from '@campus-pubquiz/types';
 import { compareTeamNames, rankTeams } from '@campus-pubquiz/types';
 import { GameSessionTeam } from '@/db/entities/game-session-team.entity';
 import { GameSessionTeamRepository } from '@/db/repositories/game-session-team.repository';
@@ -152,6 +158,45 @@ export class StandingsService {
       tallies[questionId] = { ...tally, [verdict]: Number(count) };
     }
     return tallies;
+  }
+
+  /**
+   * The session's answers (roster teams only, like the verdict tallies) and
+   * bonus awards, in the shape the fun facts are built from.
+   */
+  async funFactData(gameSessionId: number): Promise<FunFactData> {
+    const knex = this.gameSessionTeams.getKnex();
+    const [answerRows, bonusRows] = await Promise.all([
+      knex('answers as a')
+        .join('game_session_teams as gst', function joinRoster() {
+          this.on('gst.game_session_id', 'a.game_session_id').andOn(
+            'gst.team_id',
+            'a.team_id',
+          );
+        })
+        .join('teams as t', 't.id', 'a.team_id')
+        .where('a.game_session_id', gameSessionId)
+        .select('a.question_id as questionId', 'a.team_id as teamId')
+        .select('t.name as teamName', 'a.verdict as verdict')
+        .select(
+          'a.points_awarded as pointsAwarded',
+          'a.response_ms as responseMs',
+        ) as Promise<FunFactAnswer[]>,
+      knex('bonus_awards')
+        .where('game_session_id', gameSessionId)
+        .select('category', 'points') as Promise<FunFactBonusAward[]>,
+    ]);
+    return {
+      answers: answerRows.map((row) => ({
+        ...row,
+        pointsAwarded: Number(row.pointsAwarded),
+        responseMs: row.responseMs === null ? null : Number(row.responseMs),
+      })),
+      bonusAwards: bonusRows.map((row) => ({
+        category: row.category,
+        points: Number(row.points),
+      })),
+    };
   }
 
   /**

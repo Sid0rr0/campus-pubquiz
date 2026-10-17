@@ -1,8 +1,10 @@
 import type {
   BonusCategory,
+  FunFact,
   QuizStructureSummary,
 } from '@campus-pubquiz/types';
 import { BreakBonusList } from '@/app/display/break-bonus-list';
+import { FunFactRotator } from '@/app/display/fun-fact-rotator';
 
 interface BreakIntroScreenProps {
   roundNumber: number;
@@ -18,6 +20,8 @@ interface BreakIntroScreenProps {
   showBonusList: boolean;
   /** The server's say-so that teams are being asked for feedback — draws the "Rate the rounds" line, nothing when false. */
   isFeedbackPromptShown: boolean;
+  /** The server's already-filtered fun facts, rotated one at a time under BREAK; empty shows nothing. */
+  funFacts: FunFact[];
 }
 
 /** "Back at 9:45 PM" — local time, no seconds. */
@@ -37,6 +41,7 @@ export function BreakIntroScreen({
   quizStructure,
   showBonusList,
   isFeedbackPromptShown,
+  funFacts,
 }: BreakIntroScreenProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-16 py-10 text-center">
@@ -51,6 +56,7 @@ export function BreakIntroScreen({
           Back at {formatBreakEndTime(breakEndsAt)}
         </p>
       )}
+      <FunFactRotator funFacts={funFacts} />
       {isFeedbackPromptShown && (
         <p className="font-display text-display-2xl text-magenta">
           Rate the rounds on your phone ★

@@ -6,9 +6,9 @@ Parent spec: `.scratch/break-fun-facts/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Rotation under fake timers; a single fact doesn't rotate
-- [ ] Each fact kind renders its wording
-- [ ] An empty list leaves the break screen as it is today
-- [ ] The `/guide` page mentions that the break screen shows fun facts
+- [x] Rotation under fake timers; a single fact doesn't rotate
+- [x] Each fact kind renders its wording
+- [x] An empty list leaves the break screen as it is today
+- [x] The `/guide` page mentions that the break screen shows fun facts

@@ -24,6 +24,7 @@ import {
   type SavedPhaseTimer,
 } from '@/game/state/session-settle.util';
 import {
+  withFunFactData,
   withLeaderboard,
   withVerdictTallies,
 } from '@/game/state/session-updates.util';
@@ -141,13 +142,14 @@ export class MoveCommitter {
       savedPhaseTimer: saved,
     });
     const { gameSessionId } = placed.seededGame;
-    const [leaderboard, verdictTallies] = await Promise.all([
+    const [leaderboard, verdictTallies, funFactData] = await Promise.all([
       this.standingsService.leaderboard(gameSessionId),
       this.standingsService.verdictTallies(gameSessionId),
+      this.standingsService.funFactData(gameSessionId),
     ]);
-    return withVerdictTallies(
-      withLeaderboard(placed, leaderboard),
-      verdictTallies,
+    return withFunFactData(
+      withVerdictTallies(withLeaderboard(placed, leaderboard), verdictTallies),
+      funFactData,
     );
   }
 

@@ -52,9 +52,9 @@ the data model live in [`docs/architecture.md`](docs/architecture.md).
 
 ## The Three UIs
 
-| Route      | Who                  | What it does                                                                                                                                                                           |
-| ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/display` | Big screen (TV)      | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
+| Route      | Who             | What it does                                                                                                                                                                           |
+| ---------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/display` | Big screen (TV) | If no session is picked, shows a session picker; otherwise the current status screen (lobby, rules, round intro, question, locking countdown, break intro, reveal, leaderboard, ended) |
 
 The big screen survives a dropped connection. While socket.io retries it keeps
 the last frame and shows a small "Reconnecting…" badge in the corner, then
@@ -66,8 +66,8 @@ try/catch), so a reload or a bare `/display` resumes that session, falling back
 to the picker if the code is refused; the lobby has a small "Pick another game"
 link to leave it. With storage unavailable the screen still works and just
 starts at the picker.
-| `/control` | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards                                                                             |
-| `/play`    | Team phones          | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far                 |
+| `/control` | Quiz master's laptop | Bound to one session via `?code=`; state machine controls, grading, teams roster (with kick), bonus awards |
+| `/play` | Team phones | Join by name + code (or reconnect via saved token/team code), browse open questions, submit and revise answers, review a running history of every question seen so far |
 
 ## Other Routes: Auth, Sessions, and Quiz Authoring
 
@@ -351,11 +351,11 @@ silences the lock-countdown track.
 
 **Fields that belong to one room's view:**
 
-| View                            | Fields                                                                                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect` |
-| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                            |
-| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                        |
+| View                            | Fields                                                                                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display (`DisplayStatePayload`) | `roundCategory`, `roundAuthor`, `roundCategories`, `roundAuthors`, `leaderboardRevealCount`, `leaderboardBoard`, `kahootQuestionEndsAt`, `teamsCorrect`, `funFacts` |
+| Admin (`AdminStatePayload`)     | `ungradedQuestionIds`, `phaseStartedAt`, `phaseElapsedMs` (read by `/control` and `/remote`)                                                                        |
+| Players (`PlayersStatePayload`) | `upcomingQuestions`, `pastRevealedQuestions`, `phoneLeaderboard`                                                                                                    |
 
 A field only one room reads is added to that room's view type, not the base.
 
@@ -409,6 +409,54 @@ reveal already names the closest teams. The session holds the per-question
 tallies and re-reads them with the standings at the end of every session write
 and when a session is placed (creation, restart), so they follow hand grades,
 lock grading and key fixes.
+
+**The break's fun facts (`funFacts`).** While the break screen is on air
+(`onAirScreen.kind === 'break_intro'`; not over the leaderboard, not while
+stepping through the block in break review) the display view carries
+`funFacts: FunFact[]`; on every other screen it is `[]`, and the players and
+admin views have no such field. Each fact is a typed object, not a sentence:
+`/display` words it. The server builds the list in the shared `describeFunFacts`
+module, in this order, and skips a fact with no data:
+
+| `kind`                   | Fields                               | Meaning                                                                                                                                                         |
+| ------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fastest_correct_answer` | `teamName`, `responseMs`, `question` | Quickest `correct` answer to a kahoot question (response time is a race only there); ties go to the alphabetically first team                                   |
+| `toughest_question`      | `correctRate` (0-1), `question`      | Lowest correct rate above 0 of the revealed questions, never the question `nobody_got_it` names; skipped when none is below 1; never a `closest_guess` question |
+| `room_split`             | `correctRate` (0-1), `question`      | Revealed question whose correct rate is closest to one half (strictly between 0 and 1); never a `closest_guess` question                                        |
+| `nobody_got_it`          | `question`                           | First revealed question with no `correct` answer (a question nobody answered is skipped); never a `closest_guess` question                                      |
+| `clean_sweep`            | `teamNames`                          | Teams that got every question of the last revealed block `correct`, alphabetical; `closest_guess` questions of the block are not counted                        |
+| `bonus_awards_so_far`    | `counts: { category, count }[]`      | Positive bonus awards per category, in category order (`shot`, `selfie`, `custom`)                                                                              |
+
+`question` is `{ questionId, roundNumber, questionNumberInRound, prompt }`. The
+correct rate is the stats page's definition: `correct` counts fully, `partial`
+as its points' share of the question's points, over every roster team. A
+`closest_guess` question has a single winner by design (ties aside), so its
+correct rate says nothing and it always has a winner: it is left out of
+`toughest_question`, `room_split` and `nobody_got_it`, and out of the
+`clean_sweep` block (a block of only closest guesses has no sweep).
+`fastest_correct_answer` stays kahoot-only. The
+facts about questions read only the blocks before the block in play (whose
+answers stay hidden until its reveal); the block in play contributes nothing.
+At the first break nothing is revealed, so only `bonus_awards_so_far` can
+appear (and the list is `[]` when no bonus was awarded). The session holds the
+answers and bonus awards (`funFactData`) and re-reads them with the standings
+at the end of every session write and when a session is placed, so the facts
+follow hand grades and key fixes.
+
+The **`funFactsEnabled`** session setting (a boolean, default `true`, validated
+by the partial-settings Zod schema, editable in the lobby only like every other
+setting; a stored settings JSON without the field reads as on) turns all fun
+facts off: the server then sends `funFacts: []` on the break screen too. The
+`/control` lobby settings panel shows it as the "Fun facts on the break screen"
+switch. There is no per-fact choice.
+
+`/display` (`BreakIntroScreen`, via `FunFactRotator`) first shows the break card
+as it was before fun facts; the first fact appears `FUN_FACT_START_DELAY_MS`
+(60 s) after the rotator mounts, then it shows one fact at a time under the
+BREAK heading and moves to the next every `FUN_FACT_ROTATE_MS` (8 s), fading in
+unless the viewer prefers reduced motion. The wait is a client-side timer from
+mount, so reloading `/display` during a break restarts it. A single fact stays
+put; an empty list draws nothing, leaving the break card as before.
 
 **The phone's verdict card.** When the big screen lands on a revealed question
 (a live forward move: not on connect or reconnect, not on Previous), every

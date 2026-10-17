@@ -29,6 +29,8 @@ export interface SessionSettings {
   kahootQuestionTimerSeconds: number | null;
   /** Whether teams are asked for feedback — the break card and the final form on phones. Off means the server also refuses ratings and Send. */
   collectFeedback: boolean;
+  /** Whether the break screen on /display rotates fun facts. Off means the server sends the display an empty `funFacts`. */
+  funFactsEnabled: boolean;
 }
 
 /** Default prefill for kahootQuestionTimerSeconds when the frontend detects the quiz being started contains a kahootMode round — see session-picker-panel.tsx. */
@@ -59,6 +61,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = Object.freeze({
   extraPlayerPenaltyPoints: 2,
   kahootQuestionTimerSeconds: null,
   collectFeedback: true,
+  funFactsEnabled: true,
   rules: Object.freeze([
     'No cheating.',
     'Please write your answers in English.',
