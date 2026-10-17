@@ -54,6 +54,8 @@ export interface ImportQuestionPreview {
   /** The clip of a YouTube `mediaUrl`, in whole seconds — real fields, never kept in `notes` (the CSV carries them as a group in the notes cell; see `parseClipNotes`). */
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
+  /** A YouTube `mediaUrl` played sound-only: covered on the big screen until reveal. Unset reads as not hidden; the CSV carries it as `hideVideo: true` in the notes group. */
+  isVideoHidden?: boolean;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;
 }

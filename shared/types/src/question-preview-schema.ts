@@ -39,6 +39,8 @@ const baseQuestionFields = {
   // A clip applies to any YouTube mediaUrl, whatever the type (the save ignores it for other media).
   mediaStartSeconds: clipSeconds.optional(),
   mediaEndSeconds: clipSeconds.optional(),
+  // Covers a YouTube video on the big screen while the question is asked (sound only).
+  isVideoHidden: z.boolean().optional(),
 };
 
 export const freeTextPreviewSchema = z.object({

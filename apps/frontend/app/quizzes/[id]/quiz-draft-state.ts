@@ -65,6 +65,8 @@ export interface EditorQuestion {
   /** YouTube clip start/end as typed ("55", "1:22"; '' when unset), parsed to seconds at save — see `mediaStartSeconds` on ImportQuestionPreview. */
   clipStart: string;
   clipEnd: string;
+  /** Sound only: the YouTube video is covered on the big screen until reveal — see `isVideoHidden` on ImportQuestionPreview. */
+  isVideoHidden: boolean;
   /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an opened question). */
   savedDisplayOrder?: string[];
 }
@@ -109,6 +111,7 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     answerMediaUrl: '',
     clipStart: '',
     clipEnd: '',
+    isVideoHidden: false,
   };
 }
 
@@ -161,6 +164,7 @@ function clipFieldsFrom(question: EditorQuestion) {
   return {
     ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
     ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
+    ...(question.isVideoHidden ? { isVideoHidden: true } : {}),
   };
 }
 
@@ -187,6 +191,7 @@ export function questionFromPreview(
     answerMediaUrl: question.answerMediaUrl ?? '',
     clipStart: timecodeText(question.mediaStartSeconds),
     clipEnd: timecodeText(question.mediaEndSeconds),
+    isVideoHidden: question.isVideoHidden ?? false,
     ...loadAnswerDraft(question),
     ...loadGradingDrafts(question),
   };

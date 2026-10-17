@@ -277,6 +277,32 @@ describe('YouTube clip in the notes cell', () => {
     });
   });
 
+  it('imports hideVideo: true into isVideoHidden', () => {
+    const { question } = decodeSheetRow(
+      { ...YOUTUBE_ROW, notes: '{hideVideo: true}' },
+      'youtube',
+    );
+
+    expect(question).toMatchObject({ isVideoHidden: true, notes: undefined });
+  });
+
+  it('exports a hidden video in the group and imports it back unchanged', () => {
+    const hidden = {
+      ...QUESTION_BY_TYPE.youtube,
+      isVideoHidden: true as const,
+    };
+    const { row, checked } = roundTrip(hidden);
+
+    expect(row.notes).toBe(
+      'Play the chorus\n{start: "1:22", end: "2:20", hideVideo: true}',
+    );
+    expect(checked).toEqual({ success: true, data: hidden });
+  });
+
+  it('exports a video that is not hidden without a hideVideo key', () => {
+    expect(YOUTUBE_ROW.notes).not.toContain('hideVideo');
+  });
+
   it('leaves a clip-looking group in the notes of non-YouTube media', () => {
     const { question } = decodeSheetRow(
       {

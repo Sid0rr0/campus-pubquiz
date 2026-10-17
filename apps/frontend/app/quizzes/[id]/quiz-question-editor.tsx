@@ -264,6 +264,16 @@ export function QuizQuestionEditor({
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
           </label>
+          <label className="col-span-2 flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+            <input
+              type="checkbox"
+              checked={question.isVideoHidden}
+              onChange={(event) =>
+                onChange({ isVideoHidden: event.target.checked })
+              }
+            />
+            Hide video (sound only)
+          </label>
         </div>
       )}
 

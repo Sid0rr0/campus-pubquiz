@@ -120,6 +120,7 @@ export type QuestionDisplayQuestion = Pick<
   | 'mediaUrl'
   | 'mediaStartSeconds'
   | 'mediaEndSeconds'
+  | 'isVideoHidden'
   | 'options'
   | 'matchTargets'
   | 'margin'
@@ -197,6 +198,8 @@ export function QuestionDisplay({
     !questionYoutubeId &&
     !isAudioUrl(rawQuestionMediaUrl);
   const showSideBySideReveal = isRevealingWithAnswerMedia && questionIsImage;
+  // Covered while the question is asked and in break review; uncovered at reveal.
+  const isVideoCovered = question.isVideoHidden === true && !isRevealing;
   const questionMediaUrl =
     isRevealingWithAnswerMedia && !showSideBySideReveal
       ? undefined
@@ -312,6 +315,18 @@ export function QuestionDisplay({
               aria-hidden
               className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
             />
+            {/* Hidden video: the player keeps playing at full size under an
+                opaque panel (a hidden or zero-size player may not autoplay).
+                Same tree as the iframe, so lifting it at reveal never
+                remounts the player. */}
+            {isVideoCovered && (
+              <div
+                data-testid={`${mediaTestIdPrefix}-video-cover`}
+                className="absolute inset-0 flex items-center justify-center bg-black text-display-4xl"
+              >
+                <span aria-label="Sound only">🎵</span>
+              </div>
+            )}
           </div>
         </div>
       )}
