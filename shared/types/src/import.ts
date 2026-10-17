@@ -51,6 +51,9 @@ export interface ImportQuestionPreview {
   /** Number only: unset is resolved by the Answer key (answer-key.ts), never defaulted by readers. Never CSV-settable, like matchScoringMode: only the manual quiz editor sets it. */
   margin?: Margin;
   mediaUrl?: string;
+  /** The clip of a YouTube `mediaUrl`, in whole seconds — real fields, never kept in `notes` (the CSV carries them as a group in the notes cell; see `parseClipNotes`). */
+  mediaStartSeconds?: number;
+  mediaEndSeconds?: number;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;
 }

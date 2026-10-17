@@ -297,7 +297,7 @@ describe('QuizService (Postgres integration)', () => {
       ]);
     });
 
-    it('derives a YouTube clip range from notes into the question payload', async () => {
+    it('stores the clip fields in the payload and leaves the notes free text', async () => {
       const result = await quizService.create('Trivia Night', [
         {
           title: 'Music Videos',
@@ -308,8 +308,10 @@ describe('QuizService (Postgres integration)', () => {
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,
-              notes: '{start: "1:22", end: "2:20"}',
+              notes: 'Play the chorus',
               mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              mediaStartSeconds: 82,
+              mediaEndSeconds: 140,
             },
           ],
         },
@@ -318,6 +320,7 @@ describe('QuizService (Postgres integration)', () => {
       const [question] = await em.find(Question, {
         round: { quiz: result.quizId },
       });
+      expect(question.notes).toBe('Play the chorus');
       expect(question.payload).toMatchObject({
         mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
         mediaStartSeconds: 82,

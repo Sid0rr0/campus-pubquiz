@@ -55,7 +55,7 @@ function rowOf(type: QuestionType, notes: string | null): StoredQuestionRow {
 }
 
 function notesFor(type: QuestionType): string | null {
-  return type === 'youtube' ? CLIP_NOTES : 'Hint';
+  return 'Hint';
 }
 
 describe('question record codec', () => {
@@ -194,14 +194,15 @@ describe('question record codec', () => {
     },
   );
 
-  it('reads the clip bounds from the notes for any YouTube media link', () => {
+  it('writes the clip fields to the payload for any YouTube media link', () => {
     const stored = previewToStoredFields({
       type: 'free_text',
       prompt: 'Q?',
       answer: 'A',
       points: 1,
-      notes: 'start: 0:03, end: 0:09',
       mediaUrl: YOUTUBE,
+      mediaStartSeconds: 3,
+      mediaEndSeconds: 9,
     });
 
     expect(stored.payload).toEqual({
@@ -211,16 +212,78 @@ describe('question record codec', () => {
     });
   });
 
-  it('ignores clip notes when the media is not a YouTube link', () => {
+  it('keeps the notes as written, free text only', () => {
+    const stored = previewToStoredFields({
+      type: 'free_text',
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      notes: 'start: 0:03 is just a note',
+      mediaUrl: YOUTUBE,
+    });
+
+    expect(stored.notes).toBe('start: 0:03 is just a note');
+    expect(stored.payload).toEqual({ mediaUrl: YOUTUBE });
+  });
+
+  it('ignores clip fields when the media is not a YouTube link', () => {
     const stored = previewToStoredFields({
       type: 'audio',
       prompt: 'Q?',
       answer: 'A',
       points: 1,
-      notes: CLIP_NOTES,
       mediaUrl: 'https://example.com/a.mp3',
+      mediaStartSeconds: 5,
     });
 
     expect(stored.payload).toEqual({ mediaUrl: 'https://example.com/a.mp3' });
+  });
+
+  it('loads a stored row with a clip line in its notes: fields set, line stripped', () => {
+    const preview = rowToPreview(rowOf('youtube', CLIP_NOTES), {
+      mediaUrl: YOUTUBE,
+    });
+
+    expect(preview).toMatchObject({
+      notes: 'Hint',
+      mediaStartSeconds: 5,
+      mediaEndSeconds: 20,
+    });
+  });
+
+  it('prefers the payload clip over a clip group left in the notes', () => {
+    const preview = rowToPreview(rowOf('youtube', CLIP_NOTES), {
+      mediaUrl: YOUTUBE,
+      mediaStartSeconds: 30,
+    });
+
+    expect(preview).toMatchObject({
+      mediaStartSeconds: 30,
+      mediaEndSeconds: 20,
+    });
+  });
+
+  it('leaves the notes of a non-YouTube row alone', () => {
+    const preview = rowToPreview(rowOf('audio', CLIP_NOTES), {
+      mediaUrl: 'https://example.com/a.mp3',
+    });
+
+    expect(preview.notes).toBe(CLIP_NOTES);
+    expect(preview).not.toHaveProperty('mediaStartSeconds');
+  });
+
+  it('cleans the notes when a stripped row is saved again', () => {
+    const preview = rowToPreview(rowOf('youtube', CLIP_NOTES), {
+      mediaUrl: YOUTUBE,
+    });
+
+    expect(previewToStoredFields(preview)).toMatchObject({
+      notes: 'Hint',
+      payload: {
+        mediaUrl: YOUTUBE,
+        mediaStartSeconds: 5,
+        mediaEndSeconds: 20,
+      },
+    });
   });
 });

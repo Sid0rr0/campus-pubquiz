@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { checkQuestion, decodeSheetRow } from '@campus-pubquiz/types';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
@@ -206,7 +207,51 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByLabelText(/clip end/i)).toBeInTheDocument();
   });
 
-  it('shows dedicated clip start/end inputs for a YouTube media url, pre-filled from notes', async () => {
+  it('fills the clip inputs from the sample CSV YouTube question (55 and 88 seconds)', async () => {
+    const user = userEvent.setup();
+    const { question, meta } = decodeSheetRow(
+      {
+        rowNumber: 7,
+        round: 'Music & Movies',
+        type: 'youtube',
+        question: 'Which movie is this trailer clip from?',
+        options: '',
+        answer: 'Sample Movie Title',
+        points: '2',
+        mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        answerMediaUrl: '',
+        notes: '{start: "55", end: "88"}',
+        breakAfter: '',
+        category: '',
+        author: '',
+      },
+      'youtube',
+    );
+    const checked = checkQuestion(question);
+    if (!checked.success) throw new Error('sample question should be valid');
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'Sample',
+      rounds: [
+        {
+          title: (meta as { round: string }).round,
+          breakAfter: false,
+          questions: [checked.data],
+        },
+      ],
+      issues: [],
+      isImportable: true,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.upload(screen.getByLabelText(/import csv/i), makeCsvFile());
+
+    await screen.findByDisplayValue('Music & Movies');
+    expect(screen.getByLabelText(/clip start/i)).toHaveValue('55');
+    expect(screen.getByLabelText(/clip end/i)).toHaveValue('1:28');
+    expect(screen.getByLabelText(/^notes$/i)).toHaveValue('');
+  });
+
+  it('shows dedicated clip start/end inputs for a YouTube media url, pre-filled from the clip fields', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
@@ -220,9 +265,10 @@ describe('QuizEditorPanel', () => {
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,
-              notes:
-                'Play the chorus\nYouTube clip: {start: "1:22", end: "2:20"}',
+              notes: 'Play the chorus',
               mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              mediaStartSeconds: 82,
+              mediaEndSeconds: 140,
             },
           ],
         },
@@ -237,7 +283,7 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByLabelText(/^notes$/i)).toHaveValue('Play the chorus');
   });
 
-  it('recomposes notes when a clip end time is edited', async () => {
+  it('saves an edited clip end as a field and leaves the notes alone', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
@@ -252,8 +298,10 @@ describe('QuizEditorPanel', () => {
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,
-              notes: 'YouTube clip: {start: "1:22", end: "2:20"}',
+              notes: 'Play the chorus',
               mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              mediaStartSeconds: 82,
+              mediaEndSeconds: 140,
             },
           ],
         },
@@ -282,7 +330,9 @@ describe('QuizEditorPanel', () => {
             expect.objectContaining({
               questions: [
                 expect.objectContaining({
-                  notes: 'YouTube clip: {start: "1:22", end: "3:00"}',
+                  notes: 'Play the chorus',
+                  mediaStartSeconds: 82,
+                  mediaEndSeconds: 180,
                 }),
               ],
             }),

@@ -1,7 +1,9 @@
 import {
   DEFAULT_MARGIN,
   describeLiveEditRounds,
+  formatTimecode,
   parseFiniteNumber,
+  parseTimecode,
   hasMarginType,
   type MarginUnit,
   type ImportPreview,
@@ -60,6 +62,9 @@ export interface EditorQuestion {
   correctText: string;
   mediaUrl: string;
   answerMediaUrl: string;
+  /** YouTube clip start/end as typed ("55", "1:22"; '' when unset), parsed to seconds at save — see `mediaStartSeconds` on ImportQuestionPreview. */
+  clipStart: string;
+  clipEnd: string;
   /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an opened question). */
   savedDisplayOrder?: string[];
 }
@@ -102,6 +107,8 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     correctText: '',
     mediaUrl: '',
     answerMediaUrl: '',
+    clipStart: '',
+    clipEnd: '',
   };
 }
 
@@ -143,6 +150,20 @@ export function patchQuestion(
   return { ...retyped, ...patch };
 }
 
+function timecodeText(seconds: number | undefined): string {
+  return seconds === undefined ? '' : formatTimecode(seconds);
+}
+
+/** The clip fields a preview carries: each present only when the typed time reads as a timecode. */
+function clipFieldsFrom(question: EditorQuestion) {
+  const startSeconds = parseTimecode(question.clipStart);
+  const endSeconds = parseTimecode(question.clipEnd);
+  return {
+    ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
+    ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
+  };
+}
+
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
   id: string,
@@ -164,6 +185,8 @@ export function questionFromPreview(
     correctText: '',
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
+    clipStart: timecodeText(question.mediaStartSeconds),
+    clipEnd: timecodeText(question.mediaEndSeconds),
     ...loadAnswerDraft(question),
     ...loadGradingDrafts(question),
   };
@@ -320,6 +343,7 @@ export function questionToPreview(
     ...saveAnswerDraft(question),
     ...saveGradingDrafts(question),
     ...(mediaUrl ? { mediaUrl } : {}),
+    ...(mediaUrl ? clipFieldsFrom(question) : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
   };
 }

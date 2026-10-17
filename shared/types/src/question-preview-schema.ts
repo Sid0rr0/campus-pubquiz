@@ -21,6 +21,11 @@ const httpUrl = z.url({
   error: 'Media URL must be a valid http(s) URL',
 });
 
+const clipSeconds = z
+  .number('Clip times must be whole seconds')
+  .int('Clip times must be whole seconds')
+  .nonnegative('Clip times must not be negative');
+
 const baseQuestionFields = {
   questionId: z.number().int().positive().optional(),
   prompt: z.string().min(1, 'Missing question text'),
@@ -31,6 +36,9 @@ const baseQuestionFields = {
     .int('Points must be a positive whole number')
     .positive('Points must be a positive whole number'),
   answerMediaUrl: httpUrl.optional(),
+  // A clip applies to any YouTube mediaUrl, whatever the type (the save ignores it for other media).
+  mediaStartSeconds: clipSeconds.optional(),
+  mediaEndSeconds: clipSeconds.optional(),
 };
 
 export const freeTextPreviewSchema = z.object({

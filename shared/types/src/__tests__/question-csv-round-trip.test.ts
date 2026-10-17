@@ -1,22 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ImportQuestionPreview, ImportRoundPreview } from '../import';
-import { QUESTION_KINDS, checkQuestion } from '../question-kind';
+import { checkQuestion } from '../question-kind';
 import {
   decodeSheetRow,
   encodeSheetRow,
   sheetRowMetaSchema,
 } from '../question-row-schema';
 import { QUESTION_TYPES, type QuestionType } from '../question-types';
-import { parseYoutubeClipFromNotes } from '../youtube';
 
 const YOUTUBE = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 const IMAGE = 'https://example.com/answer.jpg';
 const AUDIO = 'https://example.com/clip.mp3';
-const CLIP_NOTES = QUESTION_KINDS.youtube.clipNotes.write(
-  'Play the chorus',
-  '1:22',
-  '2:20',
-);
 
 /** One fully populated question per type: every CSV-carried field set. */
 const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
@@ -52,7 +46,9 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     points: 2,
     mediaUrl: YOUTUBE,
     answerMediaUrl: IMAGE,
-    notes: CLIP_NOTES,
+    notes: 'Play the chorus',
+    mediaStartSeconds: 82,
+    mediaEndSeconds: 140,
   },
   sort: {
     type: 'sort',
@@ -132,16 +128,6 @@ describe('CSV round-trip through the question kinds', () => {
       expect(checked).toEqual({ success: true, data: question });
     },
   );
-
-  it('keeps the YouTube clip seconds the notes carry', () => {
-    const { checked } = roundTrip(QUESTION_BY_TYPE.youtube);
-
-    const notes = (checked as { data: ImportQuestionPreview }).data.notes;
-    expect(parseYoutubeClipFromNotes(notes)).toEqual({
-      startSeconds: 82,
-      endSeconds: 140,
-    });
-  });
 
   it('writes the match pairs as explicit left+right cells', () => {
     const { row } = roundTrip(QUESTION_BY_TYPE.match);
@@ -230,33 +216,78 @@ describe('audio and youtube questions with choices', () => {
   });
 });
 
-describe('YouTube clip notes', () => {
-  const { clipNotes } = QUESTION_KINDS.youtube;
+describe('YouTube clip in the notes cell', () => {
+  const YOUTUBE_ROW = {
+    rowNumber: 2,
+    ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.youtube, true),
+  };
 
-  it('reads back the clip fields and free notes it wrote', () => {
-    expect(clipNotes.read(CLIP_NOTES)).toEqual({
-      freeNotes: 'Play the chorus',
-      clipStart: '1:22',
-      clipEnd: '2:20',
+  it('exports the clip fields as a canonical group after the free notes', () => {
+    expect(YOUTUBE_ROW.notes).toBe(
+      'Play the chorus\n{start: "1:22", end: "2:20"}',
+    );
+  });
+
+  it('exports a question without a clip with its notes unchanged', () => {
+    const { row } = roundTrip({
+      ...QUESTION_BY_TYPE.youtube,
+      mediaStartSeconds: undefined,
+      mediaEndSeconds: undefined,
+    });
+
+    expect(row.notes).toBe('Play the chorus');
+  });
+
+  it('omits an empty key from the exported group', () => {
+    const { row } = roundTrip({
+      ...QUESTION_BY_TYPE.youtube,
+      notes: undefined,
+      mediaEndSeconds: undefined,
+    });
+
+    expect(row.notes).toBe('{start: "1:22"}');
+  });
+
+  it('imports the sample CSV group {start: "55", end: "88"} into the clip fields', () => {
+    const { question } = decodeSheetRow(
+      { ...YOUTUBE_ROW, notes: '{start: "55", end: "88"}' },
+      'youtube',
+    );
+
+    expect(question).toMatchObject({
+      mediaStartSeconds: 55,
+      mediaEndSeconds: 88,
+      notes: undefined,
     });
   });
 
-  it('writes only the free notes when no clip is set', () => {
-    expect(clipNotes.write('Just notes', '', '')).toBe('Just notes');
-  });
+  it('imports the legacy YouTube clip line', () => {
+    const { question } = decodeSheetRow(
+      {
+        ...YOUTUBE_ROW,
+        notes: 'Hint\nYouTube clip: {start: "0:05", end: "0:20"}',
+      },
+      'youtube',
+    );
 
-  it('writes only the clip line when there are no free notes', () => {
-    const notes = clipNotes.write('', '0:10', '');
-
-    expect(notes).toBe('YouTube clip: {start: "0:10", end: ""}');
-    expect(parseYoutubeClipFromNotes(notes)).toEqual({ startSeconds: 10 });
-  });
-
-  it('treats hand-written notes without the clip line as free notes', () => {
-    expect(clipNotes.read('{start: "55", end: "88"}')).toEqual({
-      freeNotes: '{start: "55", end: "88"}',
-      clipStart: '',
-      clipEnd: '',
+    expect(question).toMatchObject({
+      mediaStartSeconds: 5,
+      mediaEndSeconds: 20,
+      notes: 'Hint',
     });
+  });
+
+  it('leaves a clip-looking group in the notes of non-YouTube media', () => {
+    const { question } = decodeSheetRow(
+      {
+        ...YOUTUBE_ROW,
+        mediaUrl: AUDIO,
+        notes: '{start: "0:05"}',
+      },
+      'audio',
+    );
+
+    expect(question).toMatchObject({ notes: '{start: "0:05"}' });
+    expect(question).not.toHaveProperty('mediaStartSeconds');
   });
 });
