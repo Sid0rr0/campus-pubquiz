@@ -52,6 +52,8 @@ describe('makeQuestion / makeRound', () => {
       correctText: '',
       mediaUrl: '',
       answerMediaUrl: '',
+      clipStart: '',
+      clipEnd: '',
     });
   });
 
@@ -71,6 +73,38 @@ describe('makeQuestion / makeRound', () => {
       author: '',
       questions: [],
     });
+  });
+});
+
+describe('YouTube clip fields in the editor draft', () => {
+  const preview: ImportQuestionPreview = {
+    type: 'youtube',
+    prompt: 'Which movie?',
+    answer: 'Jaws',
+    points: 2,
+    mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+    mediaStartSeconds: 55,
+    mediaEndSeconds: 88,
+  };
+
+  it('shows the clip seconds as timecodes and saves them back as seconds', () => {
+    const question = questionFromPreview('q1', preview);
+
+    expect([question.clipStart, question.clipEnd]).toEqual(['55', '1:28']);
+    expect(questionToPreview(question)).toEqual(preview);
+  });
+
+  it('saves a typed timecode and drops an unreadable or emptied one', () => {
+    const question = questionFromPreview('q1', preview);
+
+    const saved = questionToPreview({
+      ...question,
+      clipStart: '1:02:03',
+      clipEnd: '',
+    });
+
+    expect(saved.mediaStartSeconds).toBe(3723);
+    expect(saved).not.toHaveProperty('mediaEndSeconds');
   });
 });
 

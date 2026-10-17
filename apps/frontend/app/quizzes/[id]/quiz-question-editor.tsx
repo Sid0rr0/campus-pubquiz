@@ -73,10 +73,6 @@ function typeButtonClass(isActive: boolean): string {
     : 'px-3 py-2 text-xs font-extrabold bg-white text-foreground';
 }
 
-// A clip lives in the question's notes, in the youtube kind's line format
-// (parseYoutubeClipFromNotes reads it at save time) — no dedicated field.
-const { clipNotes } = QUESTION_KINDS.youtube;
-
 /** The types this question's picker offers: all of them, or in a kahoot round only the kahoot-allowed ones — plus the question's current type, so a disallowed one that arrived with a loaded quiz stays visible (and is flagged by save validation) instead of vanishing. */
 function pickerTypes(
   isKahootRound: boolean,
@@ -109,16 +105,9 @@ export function QuizQuestionEditor({
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
   );
   const { requiresMedia: needsMediaUrl } = QUESTION_KINDS[question.type];
-  const hasClipNotes = 'clipNotes' in QUESTION_KINDS[question.type];
+  const isYoutubeType = QUESTION_KINDS[question.type].hasYoutubeMedia === true;
   const isYoutubeMedia =
-    hasClipNotes || extractYoutubeVideoId(question.mediaUrl) !== undefined;
-  const { freeNotes, clipStart, clipEnd } = isYoutubeMedia
-    ? clipNotes.read(question.notes)
-    : { freeNotes: question.notes, clipStart: '', clipEnd: '' };
-
-  function updateClip(nextStart: string, nextEnd: string): void {
-    onChange({ notes: clipNotes.write(freeNotes, nextStart, nextEnd) });
-  }
+    isYoutubeType || extractYoutubeVideoId(question.mediaUrl) !== undefined;
 
   return (
     <div
@@ -240,7 +229,7 @@ export function QuizQuestionEditor({
             isRequired={needsMediaUrl}
             value={question.mediaUrl}
             onChange={(mediaUrl) => onChange({ mediaUrl })}
-            placeholder={hasClipNotes ? 'https://youtu.be/…' : 'https://…'}
+            placeholder={isYoutubeType ? 'https://youtu.be/…' : 'https://…'}
           />
           <FieldErrors issues={fieldIssues(issues, 'mediaUrl')} />
         </div>
@@ -260,8 +249,8 @@ export function QuizQuestionEditor({
           <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
             Clip start
             <input
-              value={clipStart}
-              onChange={(event) => updateClip(event.target.value, clipEnd)}
+              value={question.clipStart}
+              onChange={(event) => onChange({ clipStart: event.target.value })}
               placeholder="1:22"
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
@@ -269,8 +258,8 @@ export function QuizQuestionEditor({
           <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
             Clip end
             <input
-              value={clipEnd}
-              onChange={(event) => updateClip(clipStart, event.target.value)}
+              value={question.clipEnd}
+              onChange={(event) => onChange({ clipEnd: event.target.value })}
               placeholder="2:20"
               className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
             />
@@ -281,12 +270,8 @@ export function QuizQuestionEditor({
       <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
         Notes
         <textarea
-          value={freeNotes}
-          onChange={(event) =>
-            onChange({
-              notes: clipNotes.write(event.target.value, clipStart, clipEnd),
-            })
-          }
+          value={question.notes}
+          onChange={(event) => onChange({ notes: event.target.value })}
           rows={1}
           className="resize-y rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
         />

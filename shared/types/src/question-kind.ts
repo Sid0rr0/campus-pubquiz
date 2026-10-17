@@ -28,7 +28,6 @@ import {
   sortCsv,
   type QuestionCsvCodec,
 } from './question-csv-codec';
-import { youtubeClipNotes, type ClipNotesCodec } from './youtube';
 
 /** How a type's answers are graded: at submit, in one batch after lock, or by the quiz master. */
 /**
@@ -58,6 +57,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   inputKind: AnswerInputKind;
   /** Whether the question is unusable without a `mediaUrl` (the editor marks the field required). */
   requiresMedia: boolean;
+  /** Set when the type's `mediaUrl` must be a YouTube link, so the editor shows the clip inputs before a URL is typed. Any other type shows them once its media URL is a YouTube link. */
+  hasYoutubeMedia?: true;
   /** Whether the question carries a list of choices: never, always, or only when the author adds some (the answer is then one of them). */
   choices: 'none' | 'required' | 'optional';
   /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
@@ -77,9 +78,6 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
 
 export const QUESTION_KINDS: {
   readonly [T in QuestionType]: QuestionKind<T>;
-} & {
-  /** The clip start/end a YouTube question carries in its `notes` (read at save time by `parseYoutubeClipFromNotes`). */
-  readonly youtube: { readonly clipNotes: ClipNotesCodec };
 } = {
   free_text: {
     type: 'free_text',
@@ -137,11 +135,11 @@ export const QUESTION_KINDS: {
       'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
     inputKind: 'text',
     requiresMedia: true,
+    hasYoutubeMedia: true,
     choices: 'optional',
     schema: youtubePreviewSchema,
     payload: youtubePayloadSchema,
     csv: choicesCsv,
-    clipNotes: youtubeClipNotes,
     gradingMode: 'match-or-human',
     kahootAllowed: false,
     gradingSettings: [],

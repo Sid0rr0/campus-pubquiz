@@ -723,17 +723,25 @@ grading behavior:
   rendering is actually keyed off `media_url` itself, not the `type` value —
   matching how image vs. audio already works — so a `free_text`/etc. row
   with a YouTube `media_url` still embeds too. A clip's start/end (seconds
-  into the video) is best-effort parsed out of that question's `notes` cell,
-  e.g. `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds
-  all parse) — this isn't strict JSON, it's a regex looking for
-  `start`/`end` keywords, so `notes` without that syntax is left untouched
-  as a normal free-text note. Parsing happens once, in
-  `QuizService.syncRoundsAndQuestions` (shared by CSV import and the manual
-  editor's Save), which derives `mediaStartSeconds`/`mediaEndSeconds` into
-  the question's JSON `payload` alongside `mediaUrl`. `answer_media_url`
-  never gets clip times (no notes channel of its own) — a YouTube answer
-  video always renders full-length. Optional `options` and hand grading,
-  same as `audio`.
+  into the video) are real question fields (`mediaStartSeconds`/
+  `mediaEndSeconds` on the draft, the preview and the JSON `payload`
+  alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
+  inputs for any YouTube `media_url`. The `notes` cell of a CSV row carries
+  them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
+  `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
+  parse; quotes optional; the older `YouTube clip: {…}` line still imports).
+  It isn't strict JSON: one lenient parser (`parseClipNotes` in
+  `shared/types/src/youtube.ts`) reads the keys `start`, `end`, `revealStart`,
+  `revealEnd` and `hideVideo: true`, and returns the notes with the group
+  removed, so notes without that syntax stay a normal free-text note. CSV
+  import moves the group out of the notes into the fields (only when
+  `media_url` is a YouTube link); CSV export writes the fields back as one
+  canonical group appended to the free notes, leaving empty keys out. Stored
+  `notes` are free text only: loading a stored question strips any clip group
+  an older save left there (the payload fields stay the truth), and saving
+  again cleans the row. `answer_media_url` never gets clip times — a YouTube
+  answer video always renders full-length. Optional `options` and hand
+  grading, same as `audio`.
 - **`sort`** — players drag `options` into what they think is the correct
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must

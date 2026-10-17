@@ -7,6 +7,12 @@ import type {
 import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
+import {
+  isYoutubeUrl,
+  parseClipNotes,
+  writeClipNotes,
+  type ClipNotesFields,
+} from './youtube';
 
 /**
  * Sheet-row half of the CSV format, both directions. The question's own
@@ -80,6 +86,11 @@ export function decodeSheetRow(
   sheetAnswerIssue?: QuestionIssue;
 } {
   const trimmedPoints = row.points.trim();
+  const mediaUrl = blankToUndefined(row.mediaUrl);
+  // The clip group is CSV-only syntax: pulled out of the notes into fields, for a YouTube link only.
+  const { freeNotes, clip } = isYoutubeUrl(mediaUrl)
+    ? parseClipNotes(row.notes)
+    : { freeNotes: row.notes, clip: {} as ClipNotesFields };
   const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
     options: row.options,
     answer: row.answer,
@@ -96,10 +107,16 @@ export function decodeSheetRow(
       type,
       prompt: row.question.trim(),
       ...choices,
-      notes: blankToUndefined(row.notes),
+      notes: blankToUndefined(freeNotes),
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
-      mediaUrl: blankToUndefined(row.mediaUrl),
+      mediaUrl,
       answerMediaUrl: blankToUndefined(row.answerMediaUrl),
+      ...(clip.startSeconds !== undefined
+        ? { mediaStartSeconds: clip.startSeconds }
+        : {}),
+      ...(clip.endSeconds !== undefined
+        ? { mediaEndSeconds: clip.endSeconds }
+        : {}),
     },
   };
 }
@@ -131,7 +148,16 @@ export function encodeSheetRow(
     points: String(question.points),
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    notes: question.notes ?? '',
+    notes: isYoutubeUrl(question.mediaUrl)
+      ? writeClipNotes(question.notes ?? '', {
+          ...(question.mediaStartSeconds !== undefined
+            ? { startSeconds: question.mediaStartSeconds }
+            : {}),
+          ...(question.mediaEndSeconds !== undefined
+            ? { endSeconds: question.mediaEndSeconds }
+            : {}),
+        })
+      : (question.notes ?? ''),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
     category: isLastInRound ? (round.category ?? '') : '',
     author: isLastInRound ? (round.author ?? '') : '',
