@@ -36,6 +36,17 @@ Where the live sessions on a quiz have got to — their opened questions, the cu
 What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
 _Avoid_: question kind, question format
 
+**Clip**:
+The part of a question's YouTube video that plays while the question is asked, set by a start and end time.
+
+**Reveal clip**:
+The part of a YouTube video that plays when a question's answer is revealed: either the question's own video or a separate answer video, each with its own start and end.
+_Avoid_: answer clip (could be read as a team's answer)
+
+**Hidden video**:
+A YouTube video played as sound only, covered on the big screen until the question's answer is revealed.
+_Avoid_: audio-only (the audio question type is something else)
+
 **Answer kind**:
 How a question is answered: typed text, a number, picking a choice, putting items in order, or pairing items up. Question type says what a question asks teams to do; answer kind says how they enter the answer, and it is worked out from the type and whether the question carries choices. Branch on this, not on the type, when behaviour differs by how a question is answered.
 _Avoid_: input kind (the registry field that is its default)
