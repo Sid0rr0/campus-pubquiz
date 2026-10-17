@@ -740,8 +740,15 @@ grading behavior:
   `notes` are free text only: loading a stored question strips any clip group
   an older save left there (the payload fields stay the truth), and saving
   again cleans the row. `answer_media_url` never gets clip times — a YouTube
-  answer video always renders full-length. Optional `options` and hand
-  grading, same as `audio`.
+  answer video always renders full-length. **Hidden video:** the
+  "Hide video (sound only)" checkbox (`isVideoHidden` on the draft, preview,
+  payload and question views; `hideVideo: true` in the CSV notes group) shows
+  for any YouTube `media_url`. The big screen keeps the iframe mounted at full
+  size (a hidden or zero-size player may not autoplay) under an opaque panel
+  with a 🎵 label, while the question is asked and in break review; the panel
+  comes off at reveal without remounting the player. Phones show "🎧 Listen"
+  in place of "👀 Look at the screen". A stored payload without the field
+  reads as not hidden. Optional `options` and hand grading, same as `audio`.
 - **`sort`** — players drag `options` into what they think is the correct
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must

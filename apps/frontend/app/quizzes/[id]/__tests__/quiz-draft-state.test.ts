@@ -54,6 +54,7 @@ describe('makeQuestion / makeRound', () => {
       answerMediaUrl: '',
       clipStart: '',
       clipEnd: '',
+      isVideoHidden: false,
     });
   });
 
@@ -105,6 +106,22 @@ describe('YouTube clip fields in the editor draft', () => {
 
     expect(saved.mediaStartSeconds).toBe(3723);
     expect(saved).not.toHaveProperty('mediaEndSeconds');
+  });
+
+  it('round-trips a hidden video and saves a visible one without the field', () => {
+    const hidden = questionFromPreview('q1', {
+      ...preview,
+      isVideoHidden: true,
+    });
+
+    expect(hidden.isVideoHidden).toBe(true);
+    expect(questionToPreview(hidden)).toEqual({
+      ...preview,
+      isVideoHidden: true,
+    });
+    expect(
+      questionToPreview(questionFromPreview('q1', preview)),
+    ).not.toHaveProperty('isVideoHidden');
   });
 });
 

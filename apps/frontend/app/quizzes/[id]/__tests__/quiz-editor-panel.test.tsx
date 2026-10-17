@@ -342,6 +342,60 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  it('shows the hide-video checkbox only for YouTube media and saves it as a field', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'Music Videos',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Name this song.',
+              answer: 'Song',
+              points: 3,
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            },
+          ],
+        },
+      ],
+    });
+    mockUpdateQuiz.mockResolvedValue({
+      quizId: 5,
+      roundCount: 1,
+      questionCount: 1,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    const checkbox = screen.getByLabelText(/hide video \(sound only\)/i);
+    expect(checkbox).not.toBeChecked();
+    await user.click(checkbox);
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuiz).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({
+              questions: [expect.objectContaining({ isVideoHidden: true })],
+            }),
+          ],
+        }),
+      ),
+    );
+
+    await user.clear(screen.getByLabelText(/^media url$/i));
+    expect(
+      screen.queryByLabelText(/hide video \(sound only\)/i),
+    ).not.toBeInTheDocument();
+  });
+
   it('reorders questions within a round via the move up/down buttons', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({

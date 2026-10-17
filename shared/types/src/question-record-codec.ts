@@ -72,6 +72,7 @@ export function rowToPreview(
     : { freeNotes: row.notes ?? '', clip: {} as ClipNotesFields };
   const startSeconds = payload.mediaStartSeconds ?? clip.startSeconds;
   const endSeconds = payload.mediaEndSeconds ?? clip.endSeconds;
+  const isVideoHidden = payload.isVideoHidden || clip.isVideoHidden;
   return {
     questionId: row.id,
     type: row.type,
@@ -82,6 +83,7 @@ export function rowToPreview(
     ...sharedFieldsFrom(payload),
     ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
     ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
+    ...(isVideoHidden ? { isVideoHidden: true } : {}),
     ...gradingSettingsFrom(row.type, payload),
   };
 }
@@ -111,6 +113,7 @@ export function rowToSeededQuestion(
     ...(payload.mediaEndSeconds !== undefined
       ? { mediaEndSeconds: payload.mediaEndSeconds }
       : {}),
+    ...(payload.isVideoHidden ? { isVideoHidden: true } : {}),
   };
 }
 
@@ -134,6 +137,7 @@ export function previewToStoredFields(
       ...(clip?.mediaEndSeconds !== undefined
         ? { mediaEndSeconds: clip.mediaEndSeconds }
         : {}),
+      ...(clip?.isVideoHidden ? { isVideoHidden: true } : {}),
     },
   };
 }

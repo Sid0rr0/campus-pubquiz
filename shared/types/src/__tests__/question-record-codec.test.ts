@@ -212,6 +212,53 @@ describe('question record codec', () => {
     });
   });
 
+  it('writes a hidden video to the payload for YouTube media only', () => {
+    const base = {
+      type: 'free_text' as const,
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      isVideoHidden: true as const,
+    };
+
+    expect(
+      previewToStoredFields({ ...base, mediaUrl: YOUTUBE }).payload,
+    ).toEqual({ mediaUrl: YOUTUBE, isVideoHidden: true });
+    expect(previewToStoredFields({ ...base, mediaUrl: IMAGE }).payload).toEqual(
+      { mediaUrl: IMAGE },
+    );
+  });
+
+  it('loads a stored payload with a hidden video, and one without as not hidden', () => {
+    const hidden = rowToPreview(rowOf('youtube', 'Hint'), {
+      mediaUrl: YOUTUBE,
+      isVideoHidden: true,
+    });
+    const plain = rowToPreview(rowOf('youtube', 'Hint'), {
+      mediaUrl: YOUTUBE,
+    });
+
+    expect(hidden.isVideoHidden).toBe(true);
+    expect(plain).not.toHaveProperty('isVideoHidden');
+  });
+
+  it('loads a hideVideo group left in the notes: field set, group stripped', () => {
+    const preview = rowToPreview(rowOf('youtube', 'Hint\n{hideVideo: true}'), {
+      mediaUrl: YOUTUBE,
+    });
+
+    expect(preview).toMatchObject({ notes: 'Hint', isVideoHidden: true });
+  });
+
+  it('seeds a hidden video into the session question', () => {
+    const seeded = rowToSeededQuestion(rowOf('youtube', null), {
+      mediaUrl: YOUTUBE,
+      isVideoHidden: true,
+    });
+
+    expect(seeded.isVideoHidden).toBe(true);
+  });
+
   it('keeps the notes as written, free text only', () => {
     const stored = previewToStoredFields({
       type: 'free_text',

@@ -36,6 +36,8 @@ export interface QuestionView {
   /** Clip range (seconds) into a YouTube mediaUrl — derived from the question's notes, ignored for non-YouTube media. */
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
+  /** A YouTube mediaUrl whose picture is covered on the big screen until reveal (sound only); phones say "Listen". Unset reads as not hidden. */
+  isVideoHidden?: boolean;
   points: number;
 }
 

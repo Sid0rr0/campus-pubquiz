@@ -117,6 +117,7 @@ export function decodeSheetRow(
       ...(clip.endSeconds !== undefined
         ? { mediaEndSeconds: clip.endSeconds }
         : {}),
+      ...(clip.isVideoHidden ? { isVideoHidden: true } : {}),
     },
   };
 }
@@ -156,6 +157,7 @@ export function encodeSheetRow(
           ...(question.mediaEndSeconds !== undefined
             ? { endSeconds: question.mediaEndSeconds }
             : {}),
+          ...(question.isVideoHidden ? { isVideoHidden: true as const } : {}),
         })
       : (question.notes ?? ''),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
