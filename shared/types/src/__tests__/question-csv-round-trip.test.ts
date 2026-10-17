@@ -348,6 +348,29 @@ describe('YouTube clip in the notes cell', () => {
     expect(question).not.toHaveProperty('revealStartSeconds');
   });
 
+  it('reports an issue on the notes cell for a clip time that is not a timecode', () => {
+    const { clipIssues, question } = decodeSheetRow(
+      { ...YOUTUBE_ROW, notes: '{start: "1:2x", revealEnd: "2:00"}' },
+      'youtube',
+    );
+
+    expect(clipIssues).toEqual([
+      {
+        path: ['notes'],
+        code: 'custom',
+        message:
+          'Clip time "start" is not a timecode — use seconds, M:SS or H:MM:SS',
+      },
+    ]);
+    expect(question).not.toHaveProperty('mediaStartSeconds');
+  });
+
+  it('reports no clip issue for a valid group', () => {
+    const { clipIssues } = decodeSheetRow(YOUTUBE_ROW, 'youtube');
+
+    expect(clipIssues).toEqual([]);
+  });
+
   it('leaves a clip-looking group in the notes of non-YouTube media', () => {
     const { question } = decodeSheetRow(
       {

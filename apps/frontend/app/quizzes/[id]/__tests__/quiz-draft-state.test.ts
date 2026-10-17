@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   QUESTION_KINDS,
+  checkQuestion,
   type ImportPreview,
   type ImportQuestionPreview,
   type ImportRoundPreview,
@@ -108,6 +109,22 @@ describe('YouTube clip fields in the editor draft', () => {
 
     expect(saved.mediaStartSeconds).toBe(3723);
     expect(saved).not.toHaveProperty('mediaEndSeconds');
+  });
+
+  it('sends a typed time that does not read as a timecode as an invalid value, so the save rejects it', () => {
+    const question = questionFromPreview('q1', preview);
+
+    const saved = questionToPreview({
+      ...question,
+      clipStart: '1:2x',
+      revealStart: 'soon',
+      revealEnd: '  ',
+    });
+
+    expect(saved.mediaStartSeconds).toBeNaN();
+    expect(saved.revealStartSeconds).toBeNaN();
+    expect(saved).not.toHaveProperty('revealEndSeconds');
+    expect(checkQuestion(saved).success).toBe(false);
   });
 
   it('round-trips a hidden video and saves a visible one without the field', () => {

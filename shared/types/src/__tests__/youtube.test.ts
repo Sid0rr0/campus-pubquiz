@@ -81,6 +81,7 @@ describe('parseClipNotes', () => {
     expect(result).toEqual({
       freeNotes: '',
       clip: { startSeconds: 82, endSeconds: 140 },
+      invalidKeys: [],
     });
   });
 
@@ -141,6 +142,7 @@ describe('parseClipNotes', () => {
     expect(result).toEqual({
       freeNotes: 'Play the chorus',
       clip: { startSeconds: 82, endSeconds: 140 },
+      invalidKeys: [],
     });
   });
 
@@ -150,23 +152,41 @@ describe('parseClipNotes', () => {
     expect(result).toEqual({
       freeNotes: 'Intro\nOutro',
       clip: { startSeconds: 5 },
+      invalidKeys: [],
     });
   });
 
   it('leaves notes without a clip group untouched', () => {
     const notes = 'Ask the audience if no one gets it in 10 seconds {maybe}';
 
-    expect(parseClipNotes(notes)).toEqual({ freeNotes: notes, clip: {} });
+    expect(parseClipNotes(notes)).toEqual({
+      freeNotes: notes,
+      clip: {},
+      invalidKeys: [],
+    });
   });
 
-  it('treats a group with no readable timecode as free notes', () => {
-    const notes = '{start: "soon"}';
+  it('reports a timecode that does not parse instead of dropping it', () => {
+    expect(parseClipNotes('{start: "soon"}')).toEqual({
+      freeNotes: '',
+      clip: {},
+      invalidKeys: ['start'],
+    });
+  });
 
-    expect(parseClipNotes(notes)).toEqual({ freeNotes: notes, clip: {} });
+  it('does not read the digits of a malformed timecode as a shorter one', () => {
+    const result = parseClipNotes('{start: "1:2x", revealEnd: "2:00"}');
+
+    expect(result.clip).toEqual({ revealEndSeconds: 120 });
+    expect(result.invalidKeys).toEqual(['start']);
   });
 
   it('reads undefined notes as empty', () => {
-    expect(parseClipNotes(undefined)).toEqual({ freeNotes: '', clip: {} });
+    expect(parseClipNotes(undefined)).toEqual({
+      freeNotes: '',
+      clip: {},
+      invalidKeys: [],
+    });
   });
 });
 
@@ -214,6 +234,7 @@ describe('writeClipNotes', () => {
     expect(parseClipNotes(writeClipNotes('Hint', clip))).toEqual({
       freeNotes: 'Hint',
       clip,
+      invalidKeys: [],
     });
   });
 });

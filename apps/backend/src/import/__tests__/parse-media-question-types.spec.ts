@@ -54,6 +54,24 @@ describe('parseQuestionRow - media question types', () => {
     }
   });
 
+  it('rejects a youtube row whose clip time in the notes is not a timecode, naming the notes column', () => {
+    const result = parseQuestionRow(
+      makeRow({
+        type: 'youtube',
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        answer: 'Never Gonna Give You Up',
+        notes: '{start: "1:2x"}',
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0].field).toBe('notes');
+      expect(result.issues[0].message).toContain('"start"');
+    }
+  });
+
   it('rejects a youtube row missing a media url or pointing at a non-YouTube url', () => {
     const missing = parseQuestionRow(
       makeRow({ type: 'youtube', mediaUrl: '' }),

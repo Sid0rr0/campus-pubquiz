@@ -64,6 +64,8 @@ export interface ParsedClipNotes {
   /** The notes with the clip group (and a legacy `YouTube clip:` prefix) removed. */
   freeNotes: string;
   clip: ClipNotesFields;
+  /** The timecode keys (`start`, `revealEnd`, …) the group sets to something that doesn't read as a timecode — never silently dropped, so the caller can reject the row. */
+  invalidKeys: string[];
 }
 
 // A `{…}` group, optionally behind the legacy "YouTube clip:" prefix.
@@ -84,16 +86,31 @@ function keyPattern(key: string, valuePattern: string): RegExp {
   );
 }
 
-function readGroup(body: string): ClipNotesFields {
-  const timecodes = TIMECODE_KEYS.flatMap(([key, field]) => {
-    const raw = keyPattern(key, '[\\d:]+').exec(body)?.[1];
-    const seconds = raw === undefined ? undefined : parseTimecode(raw);
-    return seconds === undefined ? [] : [[field, seconds] as const];
+interface ReadGroup {
+  clip: ClipNotesFields;
+  invalidKeys: string[];
+}
+
+function readGroup(body: string): ReadGroup {
+  const readings = TIMECODE_KEYS.flatMap(([key, field]) => {
+    const raw = keyPattern(key, `[^\\s,}"']+`).exec(body)?.[1];
+    if (raw === undefined) return [];
+    const seconds = parseTimecode(raw);
+    return [{ key, field, seconds }];
   });
   const isHidden = keyPattern('hideVideo', 'true').test(body);
   return {
-    ...Object.fromEntries(timecodes),
-    ...(isHidden ? { isVideoHidden: true as const } : {}),
+    clip: {
+      ...Object.fromEntries(
+        readings.flatMap(({ field, seconds }) =>
+          seconds === undefined ? [] : [[field, seconds]],
+        ),
+      ),
+      ...(isHidden ? { isVideoHidden: true as const } : {}),
+    },
+    invalidKeys: readings.flatMap(({ key, seconds }) =>
+      seconds === undefined ? [key] : [],
+    ),
   };
 }
 
@@ -108,14 +125,14 @@ function readGroup(body: string): ClipNotesFields {
 export function parseClipNotes(notes: string | undefined): ParsedClipNotes {
   const text = notes ?? '';
   for (const match of text.matchAll(CLIP_GROUP_PATTERN)) {
-    const clip = readGroup(match[1]);
-    if (Object.keys(clip).length === 0) continue;
+    const { clip, invalidKeys } = readGroup(match[1]);
+    if (Object.keys(clip).length === 0 && invalidKeys.length === 0) continue;
     const before = text.slice(0, match.index).trimEnd();
     const after = text.slice(match.index + match[0].length).trimStart();
     const freeNotes = [before, after].filter(Boolean).join('\n');
-    return { freeNotes, clip };
+    return { freeNotes, clip, invalidKeys };
   }
-  return { freeNotes: text, clip: {} };
+  return { freeNotes: text, clip: {}, invalidKeys: [] };
 }
 
 /** Appends the clip as one canonical group, e.g. `{start: "55", end: "1:28"}`, leaving empty keys out; with no clip the free notes come back unchanged. */

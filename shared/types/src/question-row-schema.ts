@@ -85,20 +85,34 @@ export function decodeSheetRow(
   question: { type: QuestionType } & Record<string, unknown>;
   /** Set when a match answer isn't written as `left+right` pairs — the question schema alone can't see that, as a bare right-hand list is a valid draft answer. */
   sheetAnswerIssue?: QuestionIssue;
+  /** One issue per clip time in the notes group that isn't a timecode — the question schema can't see it, as the bad value was never turned into a field. */
+  clipIssues: QuestionIssue[];
 } {
   const trimmedPoints = row.points.trim();
   const mediaUrl = blankToUndefined(row.mediaUrl);
   const answerMediaUrl = blankToUndefined(row.answerMediaUrl);
   // The clip group is CSV-only syntax: pulled out of the notes into fields, when either video is a YouTube link.
-  const { freeNotes, clip } = hasYoutubeMedia({ mediaUrl, answerMediaUrl })
+  const { freeNotes, clip, invalidKeys } = hasYoutubeMedia({
+    mediaUrl,
+    answerMediaUrl,
+  })
     ? parseClipNotes(row.notes)
-    : { freeNotes: row.notes, clip: {} as ClipNotesFields };
+    : {
+        freeNotes: row.notes,
+        clip: {} as ClipNotesFields,
+        invalidKeys: [] as string[],
+      };
   const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
     options: row.options,
     answer: row.answer,
   });
   return {
     sheetAnswerIssue: answerIssue,
+    clipIssues: invalidKeys.map((key) => ({
+      path: ['notes'],
+      code: 'custom',
+      message: `Clip time "${key}" is not a timecode — use seconds, M:SS or H:MM:SS`,
+    })),
     meta: {
       round: row.round.trim(),
       break_after: row.breakAfter.trim(),

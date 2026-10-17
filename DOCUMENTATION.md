@@ -733,7 +733,12 @@ grading behavior:
   It isn't strict JSON: one lenient parser (`parseClipNotes` in
   `shared/types/src/youtube.ts`) reads the keys `start`, `end`, `revealStart`,
   `revealEnd` and `hideVideo: true`, and returns the notes with the group
-  removed, so notes without that syntax stay a normal free-text note. CSV
+  removed, so notes without that syntax stay a normal free-text note. A
+  clip time that doesn't parse (e.g. `start: "1:2x"`) is never dropped
+  silently: a CSV row with one is reported as invalid on its `notes` column,
+  and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
+  save ("Clip times must be whole seconds"); a blank one just means the whole
+  video. CSV
   import moves the group out of the notes into the fields (only when
   `media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
   the clip when `media_url` is); CSV export writes the fields back as one
@@ -747,7 +752,7 @@ grading behavior:
   inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
   "Reveal clip (question video)"). At reveal exactly one video plays: a
   YouTube `answer_media_url` replaces the question video, clipped by the
-  reveal clip; otherwise the question video plays again (restarted), clipped
+  reveal clip; otherwise the question video plays again (restarted, unless it is a hidden video, which just lifts its cover), clipped
   by the reveal clip, not the question clip. An empty reveal start/end means
   the whole video. The question clip (`start`/`end`) still applies only while
   the question is asked. Reveal views carry the reveal clip (it is on

@@ -163,10 +163,21 @@ function timecodeText(seconds: number | undefined): string {
   return seconds === undefined ? '' : formatTimecode(seconds);
 }
 
-/** The clip fields a preview carries: each present only when the typed time reads as a timecode. */
+/**
+ * The seconds a typed time stands for: absent when blank, NaN when it doesn't
+ * read as a timecode. NaN is deliberate — it travels to the save as a value
+ * the preview schema rejects ("Clip times must be whole seconds"), so a typo
+ * is reported instead of silently playing the whole video.
+ */
+function typedSeconds(typed: string): number | undefined {
+  if (typed.trim() === '') return undefined;
+  return parseTimecode(typed) ?? Number.NaN;
+}
+
+/** The clip fields a preview carries: each present when something is typed. */
 function clipFieldsFrom(question: EditorQuestion) {
-  const startSeconds = parseTimecode(question.clipStart);
-  const endSeconds = parseTimecode(question.clipEnd);
+  const startSeconds = typedSeconds(question.clipStart);
+  const endSeconds = typedSeconds(question.clipEnd);
   return {
     ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
     ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
@@ -174,10 +185,10 @@ function clipFieldsFrom(question: EditorQuestion) {
   };
 }
 
-/** The reveal clip fields a preview carries: each present only when the typed time reads as a timecode. */
+/** The reveal clip fields a preview carries: each present when something is typed. */
 function revealClipFieldsFrom(question: EditorQuestion) {
-  const startSeconds = parseTimecode(question.revealStart);
-  const endSeconds = parseTimecode(question.revealEnd);
+  const startSeconds = typedSeconds(question.revealStart);
+  const endSeconds = typedSeconds(question.revealEnd);
   return {
     ...(startSeconds !== undefined ? { revealStartSeconds: startSeconds } : {}),
     ...(endSeconds !== undefined ? { revealEndSeconds: endSeconds } : {}),
