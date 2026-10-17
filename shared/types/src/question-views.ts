@@ -44,6 +44,9 @@ export interface SeededQuestion extends QuestionView {
   answer: string;
   /** Shown alongside the answer during reveal only — never sent before the question is revealed. */
   answerMediaUrl?: string;
+  /** Clip range (seconds) of the video played at reveal — see `revealStartSeconds` on ImportQuestionPreview. Reveal only, like `answerMediaUrl`. */
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
 }
 
 /** How the screens reveal a revealed question; decided once by the Screen projection from the question type registry. */

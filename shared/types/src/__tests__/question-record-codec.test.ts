@@ -212,6 +212,67 @@ describe('question record codec', () => {
     });
   });
 
+  it('stores the reveal clip when the question media or the answer media is YouTube', () => {
+    const base = {
+      type: 'free_text' as const,
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      revealStartSeconds: 4,
+      revealEndSeconds: 8,
+    };
+
+    const onQuestionVideo = previewToStoredFields({
+      ...base,
+      mediaUrl: YOUTUBE,
+    });
+    const onAnswerVideo = previewToStoredFields({
+      ...base,
+      mediaUrl: 'https://example.com/a.jpg',
+      answerMediaUrl: YOUTUBE,
+    });
+    const onNeither = previewToStoredFields({
+      ...base,
+      mediaUrl: 'https://example.com/a.jpg',
+    });
+
+    expect(onQuestionVideo.payload).toMatchObject({
+      revealStartSeconds: 4,
+      revealEndSeconds: 8,
+    });
+    expect(onAnswerVideo.payload).toMatchObject({
+      revealStartSeconds: 4,
+      revealEndSeconds: 8,
+    });
+    expect(onNeither.payload).not.toHaveProperty('revealStartSeconds');
+  });
+
+  it('carries the reveal clip from a stored row to the preview and the seeded question', () => {
+    const payload = {
+      mediaUrl: YOUTUBE,
+      revealStartSeconds: 4,
+      revealEndSeconds: 8,
+    };
+
+    expect(rowToPreview(rowOf('youtube', null), payload)).toMatchObject({
+      revealStartSeconds: 4,
+      revealEndSeconds: 8,
+    });
+    expect(rowToSeededQuestion(rowOf('youtube', null), payload)).toMatchObject({
+      revealStartSeconds: 4,
+      revealEndSeconds: 8,
+    });
+  });
+
+  it('strips a reveal group left in the notes of a stored row and fills the fields from it', () => {
+    const preview = rowToPreview(
+      rowOf('free_text', 'Hint\n{revealStart: "0:05"}'),
+      { mediaUrl: 'https://example.com/a.jpg', answerMediaUrl: YOUTUBE },
+    );
+
+    expect(preview).toMatchObject({ notes: 'Hint', revealStartSeconds: 5 });
+  });
+
   it('keeps the notes as written, free text only', () => {
     const stored = previewToStoredFields({
       type: 'free_text',

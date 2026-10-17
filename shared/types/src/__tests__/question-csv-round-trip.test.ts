@@ -277,6 +277,51 @@ describe('YouTube clip in the notes cell', () => {
     });
   });
 
+  it('round-trips the reveal clip through revealStart/revealEnd in the group', () => {
+    const question: ImportQuestionPreview = {
+      ...QUESTION_BY_TYPE.youtube,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+    };
+    const { row, checked } = roundTrip(question);
+
+    expect(row.notes).toBe(
+      'Play the chorus\n{start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45"}',
+    );
+    expect(checked).toEqual({ success: true, data: question });
+  });
+
+  it('round-trips a reveal clip on a question whose only YouTube link is the answer media', () => {
+    const question: ImportQuestionPreview = {
+      type: 'free_text',
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      mediaUrl: IMAGE,
+      answerMediaUrl: YOUTUBE,
+      revealStartSeconds: 5,
+    };
+    const { row, checked } = roundTrip(question);
+
+    expect(row.notes).toBe('{revealStart: "5"}');
+    expect(checked).toEqual({ success: true, data: question });
+  });
+
+  it('leaves a reveal group in the notes when neither media is YouTube', () => {
+    const { question } = decodeSheetRow(
+      {
+        ...YOUTUBE_ROW,
+        mediaUrl: AUDIO,
+        answerMediaUrl: IMAGE,
+        notes: '{revealStart: "0:05"}',
+      },
+      'audio',
+    );
+
+    expect(question).toMatchObject({ notes: '{revealStart: "0:05"}' });
+    expect(question).not.toHaveProperty('revealStartSeconds');
+  });
+
   it('leaves a clip-looking group in the notes of non-YouTube media', () => {
     const { question } = decodeSheetRow(
       {

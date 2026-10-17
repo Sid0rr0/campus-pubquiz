@@ -39,6 +39,8 @@ const baseQuestionFields = {
   // A clip applies to any YouTube mediaUrl, whatever the type (the save ignores it for other media).
   mediaStartSeconds: clipSeconds.optional(),
   mediaEndSeconds: clipSeconds.optional(),
+  revealStartSeconds: clipSeconds.optional(),
+  revealEndSeconds: clipSeconds.optional(),
 };
 
 export const freeTextPreviewSchema = z.object({

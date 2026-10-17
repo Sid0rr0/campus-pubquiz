@@ -14,7 +14,7 @@ Parent spec: `.scratch/youtube-clips/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Field round-trips: editor → save → load, and CSV import → export → import
 - [ ] Display test: YouTube answer media at reveal leaves exactly one iframe, the answer one, with `start`/`end` from the reveal clip

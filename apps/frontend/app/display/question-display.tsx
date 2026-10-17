@@ -61,6 +61,9 @@ interface AnswerMediaProps {
   autoplayMedia?: boolean;
   /** Overrides the answer image's className — defaults to the original fixed size used by ClosestGuessRevealScreen's standalone reveal. */
   imageClassName?: string;
+  /** The reveal clip, applied when `url` is a YouTube link. */
+  startSeconds?: number;
+  endSeconds?: number;
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
@@ -72,6 +75,8 @@ export function AnswerMedia({
   mediaTestIdPrefix,
   autoplayMedia = true,
   imageClassName = 'max-h-64 rounded-xl',
+  startSeconds,
+  endSeconds,
 }: AnswerMediaProps) {
   const safeUrl = url && isHttpUrl(url) ? url : undefined;
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
@@ -82,7 +87,12 @@ export function AnswerMedia({
       <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
         <iframe
           data-testid={`${mediaTestIdPrefix}-answer-youtube`}
-          src={buildYoutubeEmbedSrc(youtubeId, autoplayMedia)}
+          src={buildYoutubeEmbedSrc(
+            youtubeId,
+            autoplayMedia,
+            startSeconds,
+            endSeconds,
+          )}
           title="Answer video"
           className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
           allow="autoplay; encrypted-media"
@@ -124,7 +134,12 @@ export type QuestionDisplayQuestion = Pick<
   | 'matchTargets'
   | 'margin'
 > &
-  Partial<Pick<SeededQuestion, 'answer' | 'answerMediaUrl'>>;
+  Partial<
+    Pick<
+      SeededQuestion,
+      'answer' | 'answerMediaUrl' | 'revealStartSeconds' | 'revealEndSeconds'
+    >
+  >;
 
 interface QuestionDisplayProps {
   /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a YouTube `mediaUrl` — ignored for non-YouTube media and for `answerMediaUrl`. */
@@ -160,8 +175,8 @@ export function QuestionDisplay({
 }: QuestionDisplayProps) {
   const {
     prompt,
-    mediaStartSeconds,
-    mediaEndSeconds,
+    revealStartSeconds,
+    revealEndSeconds,
     answer: correctAnswer,
   } = question;
   const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
@@ -172,6 +187,11 @@ export function QuestionDisplay({
   // together, question image smaller, answer image bigger, side by side — see
   // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
+  // While asked the question video plays its clip; at reveal it plays the
+  // reveal clip instead (empty means the whole video).
+  const questionClip = isRevealing
+    ? { start: revealStartSeconds, end: revealEndSeconds }
+    : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
   // Presence of the prop (not its content) is what switches sort/match into
   // player-reveal mode — an empty string still means "don't show the answer
   // key", it just has nothing of the team's own to show either.
@@ -291,13 +311,13 @@ export function QuestionDisplay({
             }
           >
             <iframe
-              key={mediaReplayToken}
+              key={`${mediaReplayToken}-${isRevealing}`}
               data-testid={`${mediaTestIdPrefix}-youtube`}
               src={buildYoutubeEmbedSrc(
                 questionYoutubeId,
                 autoplayMedia,
-                mediaStartSeconds,
-                mediaEndSeconds,
+                questionClip.start,
+                questionClip.end,
               )}
               title="Question video"
               className="absolute inset-0 h-full w-full"
@@ -336,6 +356,8 @@ export function QuestionDisplay({
                 mediaTestIdPrefix={mediaTestIdPrefix}
                 autoplayMedia={autoplayMedia}
                 imageClassName="max-h-full max-w-full rounded-xl object-contain"
+                startSeconds={revealStartSeconds}
+                endSeconds={revealEndSeconds}
               />
             </div>
           </div>
@@ -375,6 +397,8 @@ export function QuestionDisplay({
             mediaTestIdPrefix={mediaTestIdPrefix}
             autoplayMedia={autoplayMedia}
             imageClassName="max-h-full max-w-full rounded-xl object-contain"
+            startSeconds={revealStartSeconds}
+            endSeconds={revealEndSeconds}
           />
         </div>
       )}

@@ -8,6 +8,7 @@ import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
 import {
+  hasYoutubeMedia,
   isYoutubeUrl,
   parseClipNotes,
   writeClipNotes,
@@ -87,8 +88,9 @@ export function decodeSheetRow(
 } {
   const trimmedPoints = row.points.trim();
   const mediaUrl = blankToUndefined(row.mediaUrl);
-  // The clip group is CSV-only syntax: pulled out of the notes into fields, for a YouTube link only.
-  const { freeNotes, clip } = isYoutubeUrl(mediaUrl)
+  const answerMediaUrl = blankToUndefined(row.answerMediaUrl);
+  // The clip group is CSV-only syntax: pulled out of the notes into fields, when either video is a YouTube link.
+  const { freeNotes, clip } = hasYoutubeMedia({ mediaUrl, answerMediaUrl })
     ? parseClipNotes(row.notes)
     : { freeNotes: row.notes, clip: {} as ClipNotesFields };
   const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
@@ -110,13 +112,8 @@ export function decodeSheetRow(
       notes: blankToUndefined(freeNotes),
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
       mediaUrl,
-      answerMediaUrl: blankToUndefined(row.answerMediaUrl),
-      ...(clip.startSeconds !== undefined
-        ? { mediaStartSeconds: clip.startSeconds }
-        : {}),
-      ...(clip.endSeconds !== undefined
-        ? { mediaEndSeconds: clip.endSeconds }
-        : {}),
+      answerMediaUrl,
+      ...clipPreviewFieldsOf(clip, isYoutubeUrl(mediaUrl)),
     },
   };
 }
@@ -148,19 +145,50 @@ export function encodeSheetRow(
     points: String(question.points),
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    notes: isYoutubeUrl(question.mediaUrl)
-      ? writeClipNotes(question.notes ?? '', {
-          ...(question.mediaStartSeconds !== undefined
-            ? { startSeconds: question.mediaStartSeconds }
-            : {}),
-          ...(question.mediaEndSeconds !== undefined
-            ? { endSeconds: question.mediaEndSeconds }
-            : {}),
-        })
+    notes: hasYoutubeMedia(question)
+      ? writeClipNotes(question.notes ?? '', clipNotesFieldsOf(question))
       : (question.notes ?? ''),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
     category: isLastInRound ? (round.category ?? '') : '',
     author: isLastInRound ? (round.author ?? '') : '',
+  };
+}
+
+/** The notes-group fields a question carries: the clip only for a YouTube question video, the reveal clip for either YouTube video. */
+function clipNotesFieldsOf(question: ImportQuestionPreview): ClipNotesFields {
+  const { mediaStartSeconds, mediaEndSeconds } = question;
+  const isQuestionVideo = isYoutubeUrl(question.mediaUrl);
+  return {
+    ...(isQuestionVideo && mediaStartSeconds !== undefined
+      ? { startSeconds: mediaStartSeconds }
+      : {}),
+    ...(isQuestionVideo && mediaEndSeconds !== undefined
+      ? { endSeconds: mediaEndSeconds }
+      : {}),
+    ...(question.revealStartSeconds !== undefined
+      ? { revealStartSeconds: question.revealStartSeconds }
+      : {}),
+    ...(question.revealEndSeconds !== undefined
+      ? { revealEndSeconds: question.revealEndSeconds }
+      : {}),
+  };
+}
+
+/** The preview fields a notes group fills; the clip only for a YouTube question video. */
+function clipPreviewFieldsOf(clip: ClipNotesFields, isQuestionVideo: boolean) {
+  return {
+    ...(isQuestionVideo && clip.startSeconds !== undefined
+      ? { mediaStartSeconds: clip.startSeconds }
+      : {}),
+    ...(isQuestionVideo && clip.endSeconds !== undefined
+      ? { mediaEndSeconds: clip.endSeconds }
+      : {}),
+    ...(clip.revealStartSeconds !== undefined
+      ? { revealStartSeconds: clip.revealStartSeconds }
+      : {}),
+    ...(clip.revealEndSeconds !== undefined
+      ? { revealEndSeconds: clip.revealEndSeconds }
+      : {}),
   };
 }
 

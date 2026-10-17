@@ -54,6 +54,9 @@ export interface ImportQuestionPreview {
   /** The clip of a YouTube `mediaUrl`, in whole seconds — real fields, never kept in `notes` (the CSV carries them as a group in the notes cell; see `parseClipNotes`). */
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
+  /** The reveal clip: the part of the video played at reveal — the YouTube `answerMediaUrl` when there is one, else the question's own YouTube video. Unset means the whole video. Carried in the notes group as `revealStart`/`revealEnd`. */
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
   /** Shown alongside the correct answer during reveal — independent of the question's own media_url. */
   answerMediaUrl?: string;
 }
