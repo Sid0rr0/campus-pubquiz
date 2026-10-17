@@ -67,11 +67,6 @@ export function describeFunFactLine(fact: FunFact): FunFactLine {
         headline: fact.teamNames.join(', '),
         detail: 'Clean sweep: every question right in the last block',
       };
-    case 'answers_so_far':
-      return {
-        headline: plural(fact.count, 'answer', 'answers'),
-        detail: 'submitted so far',
-      };
     case 'bonus_awards_so_far':
       return {
         headline: fact.counts

@@ -66,13 +66,13 @@ describe('Display view — fun facts on the break screen', () => {
     expect((await displayView()).funFacts).toEqual([]);
   });
 
-  it('carries only the answers so far on the first break', async () => {
+  it('carries no fun facts on the first break when no bonus was awarded', async () => {
     await answer(0, ['right', 'wrong']);
     await advanceUntil((view) => view.onAirScreen.kind === 'break_intro');
 
     const view = await displayView();
 
-    expect(view.funFacts).toEqual([{ kind: 'answers_so_far', count: 2 }]);
+    expect(view.funFacts).toEqual([]);
   });
 
   it('reads revealed blocks on the next break but never the block in play', async () => {
@@ -93,7 +93,6 @@ describe('Display view — fun facts on the break screen', () => {
     expect(nobodyGotIt).toMatchObject({
       question: { questionId: firstQuestionId },
     });
-    expect(funFacts).toContainEqual({ kind: 'answers_so_far', count: 4 });
     const mentionedIds = funFacts.flatMap((fact) =>
       'question' in fact ? [fact.question.questionId] : [],
     );

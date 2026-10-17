@@ -21,6 +21,8 @@ interface RoundSpec {
   title: string;
   questionCount: number;
   isKahoot?: boolean;
+  /** Ids (as numbered across the rounds) of questions that are closest_guess. */
+  closestGuessIds?: number[];
 }
 
 /** Question ids run 1, 2, 3… across the rounds; every round ends a block (breakAfter). */
@@ -35,7 +37,9 @@ function roundsOf(specs: RoundSpec[]): SeededRound[] {
       const id = nextId++;
       return {
         id,
-        type: 'free_text' as const,
+        type: spec.closestGuessIds?.includes(id)
+          ? ('closest_guess' as const)
+          : ('free_text' as const),
         prompt: `Question ${id}?`,
         answer: 'x',
         points: 1000,
@@ -402,20 +406,82 @@ describe('describeFunFacts', () => {
     });
   });
 
-  describe('answers so far', () => {
-    it('counts every answer submitted, the block in play included', () => {
-      const session = sessionOf(THREE_ROUNDS, AFTER_ROUND_TWO, {
+  describe('closest guess questions', () => {
+    // Question 1 is a closest guess (one winner by design); question 2 is ordinary.
+    const rounds: RoundSpec[] = [
+      { title: 'One', questionCount: 2, closestGuessIds: [1] },
+      { title: 'Two', questionCount: 2 },
+      { title: 'Three', questionCount: 2 },
+    ];
+
+    it('never appear in the rate-based facts, even with a single correct team', () => {
+      const session = sessionOf(rounds, AFTER_ROUND_TWO, {
         answers: [
           answer(1, 0, 'correct'),
-          answer(3, 0, 'incorrect'),
-          answer(4, 1, null),
+          answer(1, 1, 'incorrect'),
+          answer(1, 2, 'incorrect'),
+          answer(1, 3, 'incorrect'),
+          answer(2, 0, 'correct'),
+          answer(2, 1, 'correct'),
+          answer(2, 2, 'correct'),
+          answer(2, 3, 'incorrect'),
         ],
       });
 
-      expect(describeFunFacts(session)).toContainEqual({
-        kind: 'answers_so_far',
-        count: 3,
+      const rated = describeFunFacts(session).flatMap((fact) =>
+        fact.kind === 'toughest_question' || fact.kind === 'room_split'
+          ? [fact.question.questionId]
+          : [],
+      );
+      expect(rated).not.toContain(1);
+      expect(rated).toEqual([2, 2]);
+    });
+
+    it('is never the nobody-got-it question', () => {
+      const session = sessionOf(rounds, AFTER_ROUND_TWO, {
+        answers: [
+          answer(1, 0, 'incorrect'),
+          answer(1, 1, 'incorrect'),
+          answer(2, 0, 'correct'),
+        ],
       });
+
+      expect(kinds(session)).not.toContain('nobody_got_it');
+    });
+
+    it('does not make a lone closest-guess winner a clean sweep', () => {
+      const session = sessionOf(
+        [
+          { title: 'One', questionCount: 1, closestGuessIds: [1] },
+          { title: 'Two', questionCount: 1 },
+        ],
+        breakProgress(1, 0),
+        { answers: [answer(1, 0, 'correct'), answer(1, 1, 'incorrect')] },
+      );
+
+      expect(kinds(session)).not.toContain('clean_sweep');
+    });
+
+    it('is left out of a clean sweep: the other questions of the block decide it', () => {
+      const session = sessionOf(
+        [
+          { title: 'One', questionCount: 2, closestGuessIds: [1] },
+          { title: 'Two', questionCount: 1 },
+        ],
+        breakProgress(1, 0),
+        {
+          answers: [
+            answer(1, 0, 'correct'),
+            answer(1, 1, 'incorrect'),
+            answer(2, 0, 'correct'),
+            answer(2, 1, 'correct'),
+          ],
+        },
+      );
+
+      expect(
+        describeFunFacts(session).find((f) => f.kind === 'clean_sweep'),
+      ).toEqual({ kind: 'clean_sweep', teamNames: ['Alpha', 'Bravo'] });
     });
   });
 
@@ -471,7 +537,12 @@ describe('describeFunFacts', () => {
   });
 
   describe('the first break', () => {
-    it('yields only answers so far and bonus awards so far', () => {
+    it('yields only bonus awards so far, and nothing without a positive award', () => {
+      const noAwards = sessionOf(THREE_ROUNDS, breakProgress(0, 1), {
+        answers: [answer(1, 0, 'correct'), answer(2, 1, 'incorrect')],
+      });
+      expect(describeFunFacts(noAwards)).toEqual([]);
+
       const session = sessionOf(THREE_ROUNDS, breakProgress(0, 1), {
         answers: [
           answer(1, 0, 'correct', { responseMs: 1000 }),
@@ -482,7 +553,6 @@ describe('describeFunFacts', () => {
       });
 
       expect(describeFunFacts(session)).toEqual([
-        { kind: 'answers_so_far', count: 3 },
         {
           kind: 'bonus_awards_so_far',
           counts: [{ category: 'shot', count: 1 }],
@@ -565,7 +635,6 @@ describe('describeFunFacts', () => {
       'room_split',
       'nobody_got_it',
       'clean_sweep',
-      'answers_so_far',
       'bonus_awards_so_far',
     ]);
   });

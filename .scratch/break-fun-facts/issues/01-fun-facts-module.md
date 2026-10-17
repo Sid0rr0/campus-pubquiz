@@ -10,6 +10,7 @@ Parent spec: `.scratch/break-fun-facts/spec.md`
 
 - [x] Unit tests for every fact, including the skip-when-no-data cases
 - [x] A test that the block in play never contributes (e.g. a question nobody answered right in the block in play doesn't appear)
-- [x] The first break yields only "answers so far" and "bonus awards so far"
+- [x] The first break yields only "bonus awards so far" (or nothing)
+- [x] Closest guess questions are excluded from toughest, room split, nobody got it and the clean sweep
 - [x] The display view carries `funFacts` on the break screen and nowhere else
 - [x] `DOCUMENTATION.md` (snapshot section) documents `funFacts`; `GLOSSARY.md` already has **Fun fact**

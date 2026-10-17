@@ -71,13 +71,14 @@ export type FunFact =
     }
   | { kind: 'nobody_got_it'; question: FunFactQuestion }
   | { kind: 'clean_sweep'; teamNames: string[] }
-  | { kind: 'answers_so_far'; count: number }
   | { kind: 'bonus_awards_so_far'; counts: FunFactBonusCount[] };
 
 const HALF = 0.5;
 
 interface RevealedQuestion extends FunFactQuestion {
   isKahoot: boolean;
+  /** A closest guess has one winner by design, so rates say nothing about it. */
+  isClosestGuess: boolean;
   points: number;
 }
 
@@ -89,6 +90,7 @@ function listQuestions(session: SessionState): RevealedQuestion[] {
       questionNumberInRound: questionIndex + 1,
       prompt: question.prompt,
       isKahoot: round.kahootMode ?? false,
+      isClosestGuess: question.type === 'closest_guess',
       points: question.points,
     })),
   );
@@ -159,6 +161,7 @@ function outcomesOf(
   teamCount: number,
 ): QuestionOutcome[] {
   return revealed.flatMap((question) => {
+    if (question.isClosestGuess) return [];
     const own = answers.filter((a) => a.questionId === question.questionId);
     // Nobody answered: no data, so nothing to say about it.
     if (own.length === 0) return [];
@@ -178,10 +181,17 @@ function outcomesOf(
 
 function cleanSweep(
   session: SessionState,
+  revealed: readonly RevealedQuestion[],
   answers: readonly FunFactAnswer[],
 ): FunFact | null {
+  // Closest guesses don't count: only the closest team gets one right.
+  const closestGuessIds = new Set(
+    revealed.filter((q) => q.isClosestGuess).map((q) => q.questionId),
+  );
   const blockIds = new Set(
-    getLastPastBlockIds(session.seededGame.rounds, session.progress),
+    getLastPastBlockIds(session.seededGame.rounds, session.progress).filter(
+      (id) => !closestGuessIds.has(id),
+    ),
   );
   if (blockIds.size === 0) return null;
   const teamNames = new Map<number, string>();
@@ -214,9 +224,10 @@ function bonusAwardsSoFar(
  * The fun facts for the break the session is in, in the order they rotate.
  * Pure, and the one place that decides what a fun fact may say: the facts
  * about questions read only blocks before the block in play (whose answers
- * stay hidden until its reveal); "answers so far" and "bonus awards so far"
- * are counts that give nothing away. A fact with no data is skipped, so the
- * first break yields only the two counts.
+ * stay hidden until its reveal); "bonus awards so far" is a count that gives
+ * nothing away. Closest guess questions are left out of the rate-based facts
+ * and the clean sweep. A fact with no data is skipped, so the first break
+ * yields only the bonus awards (or nothing).
  */
 export function describeFunFacts(session: SessionState): FunFact[] {
   const { answers } = session.funFactData;
@@ -265,10 +276,7 @@ export function describeFunFacts(session: SessionState): FunFact[] {
     nobody
       ? { kind: 'nobody_got_it', question: toFunFactQuestion(nobody.question) }
       : null,
-    cleanSweep(session, revealedAnswers),
-    answers.length > 0
-      ? { kind: 'answers_so_far', count: answers.length }
-      : null,
+    cleanSweep(session, revealed, revealedAnswers),
     bonusAwardsSoFar(session.funFactData),
   ];
   return facts.filter((fact): fact is FunFact => fact !== null);

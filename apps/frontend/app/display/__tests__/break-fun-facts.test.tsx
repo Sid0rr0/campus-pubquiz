@@ -17,6 +17,11 @@ const QUESTION = {
   prompt: 'Which river runs through Cairo?',
 };
 
+const BONUS_FACT: FunFact = {
+  kind: 'bonus_awards_so_far',
+  counts: [{ category: 'shot', count: 42 }],
+};
+
 function renderBreak(funFacts: FunFact[]) {
   return render(
     <BreakIntroScreen
@@ -47,34 +52,31 @@ describe('BreakIntroScreen — fun facts', () => {
   });
 
   it('shows the first fact, then the next after each rotation, wrapping round', () => {
-    renderBreak([
-      { kind: 'answers_so_far', count: 42 },
-      { kind: 'nobody_got_it', question: QUESTION },
-    ]);
-    expect(screen.getByText('42 answers')).toBeInTheDocument();
+    renderBreak([BONUS_FACT, { kind: 'nobody_got_it', question: QUESTION }]);
+    expect(screen.getByText('42 shots')).toBeInTheDocument();
     expect(screen.queryByText('Nobody got it')).not.toBeInTheDocument();
 
     rotate();
     expect(screen.getByText('Nobody got it')).toBeInTheDocument();
-    expect(screen.queryByText('42 answers')).not.toBeInTheDocument();
+    expect(screen.queryByText('42 shots')).not.toBeInTheDocument();
 
     rotate();
-    expect(screen.getByText('42 answers')).toBeInTheDocument();
+    expect(screen.getByText('42 shots')).toBeInTheDocument();
   });
 
   it("doesn't rotate a single fact", () => {
-    renderBreak([{ kind: 'answers_so_far', count: 42 }]);
+    renderBreak([BONUS_FACT]);
     rotate(3);
-    expect(screen.getByText('42 answers')).toBeInTheDocument();
+    expect(screen.getByText('42 shots')).toBeInTheDocument();
   });
 
   it('keeps BREAK on screen beside the fact', () => {
-    renderBreak([{ kind: 'answers_so_far', count: 42 }]);
+    renderBreak([BONUS_FACT]);
     expect(screen.getByText('BREAK 1')).toBeInTheDocument();
   });
 
   it('fades in under reduced motion instead of dropping the entrance', () => {
-    renderBreak([{ kind: 'answers_so_far', count: 42 }]);
+    renderBreak([BONUS_FACT]);
     const { className } = screen.getByTestId('fun-fact');
     expect(className).toContain('motion-reduce:animate-fun-fact-fade');
     expect(className).not.toContain('motion-reduce:animate-none');
@@ -118,11 +120,6 @@ describe('BreakIntroScreen — fun facts', () => {
       'clean_sweep',
       { kind: 'clean_sweep', teamNames: ['Alpha', 'Beta'] },
       ['Alpha', 'Beta', 'Clean sweep'],
-    ],
-    [
-      'answers_so_far',
-      { kind: 'answers_so_far', count: 1 },
-      ['1 answer', 'so far'],
     ],
     [
       'bonus_awards_so_far',
