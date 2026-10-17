@@ -88,6 +88,22 @@ describe('hidden video on the big screen', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('restarts a video that is not hidden when the answer comes in, even with the same src', () => {
+    const { rerender } = render(
+      <QuestionDisplay question={QUESTION} mediaTestIdPrefix="question" />,
+    );
+    const iframe = screen.getByTestId('question-youtube');
+
+    rerender(
+      <QuestionDisplay
+        question={{ ...QUESTION, answer: 'Never Gonna Give You Up' }}
+        mediaTestIdPrefix="question"
+      />,
+    );
+
+    expect(screen.getByTestId('question-youtube')).not.toBe(iframe);
+  });
+
   it('shows no cover for a video that is not hidden', () => {
     render(
       <QuestionOpenScreen

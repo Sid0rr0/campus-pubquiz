@@ -302,9 +302,9 @@ export function QuestionDisplay({
               : 'w-full max-w-2xl'
           }
         >
-          {/* The iframe is never keyed on the reveal: lifting the hidden-video
-              cover must not remount it, and a different reveal clip reloads
-              the player through its changed src anyway.
+          {/* A visible video is keyed on the reveal so it plays again even when
+              the reveal clip's src equals the question's; a hidden video is
+              not, so lifting its cover must not remount the player.
               Same nesting (and the same iframe element) in both states —
               changing the tree shape between fullscreen and inline would
               remount the iframe and restart the YouTube player instead of
@@ -317,7 +317,11 @@ export function QuestionDisplay({
             }
           >
             <iframe
-              key={mediaReplayToken}
+              key={
+                isRevealing && question.isVideoHidden !== true
+                  ? `${mediaReplayToken}-reveal`
+                  : mediaReplayToken
+              }
               data-testid={`${mediaTestIdPrefix}-youtube`}
               src={buildYoutubeEmbedSrc(
                 questionYoutubeId,
