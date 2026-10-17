@@ -39,15 +39,18 @@ Figures that give nothing away (any break):
 - "Revealed" means the blocks before the block in play (the Block module answers which those are). The block in play is never read.
 - The facts are worked out when the break starts and when grading changes a revealed answer. They aren't recomputed per broadcast if the Standings read already covers that data; reuse it where it does.
 - `/display` rotates the facts every `FUN_FACT_ROTATE_MS` (8 s) under the BREAK heading, keeping "Back at…" and the bonus list. It shows nothing when the list is empty.
-- The phones and `/control` are unchanged.
+- The facts only start after `FUN_FACT_START_DELAY_MS` (60 s) from when the rotator mounts on the break screen (a client-side timer; a display reload restarts the wait). Before that the break screen looks as it did before fun facts.
+- The session setting `funFactsEnabled` (default `true`, modelled like `collectFeedback`: lobby-only, a stored settings JSON without it reads as on) gates `funFacts` in the projection: off means `[]`. The `/control` settings panel gets one switch, "Fun facts on the break screen".
+- The phones are unchanged.
 
 ## Testing Decisions
 
 - The pure module: each fact from a hand-built session; nothing from the block in play; facts with no data skipped; the first break yields only bonus awards (or nothing); fastest-answer ignores non-kahoot questions; closest guess questions never appear in toughest, split or nobody-got-it and don't count toward a clean sweep.
 - The display view carries `funFacts` only on the break screen.
-- The break screen rotates (fake timers) and renders nothing for an empty list.
+- The break screen shows nothing before the start delay, the first fact after it, then rotates (fake timers), and renders nothing for an empty list.
+- Setting off: `funFacts` is empty on the break screen; default on; a stored settings JSON without the key reads as on; the `/control` switch toggles it.
 
 ## Out of Scope
 
 - Fun facts on the phones, at the reveal or on the ended screen.
-- Settings to choose or turn off individual facts. Add them only if asked.
+- Settings to choose individual facts. There is a single on/off session setting (`funFactsEnabled`, default on) for all fun facts; per-fact choices stay out of scope until asked.

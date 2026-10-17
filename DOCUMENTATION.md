@@ -443,11 +443,20 @@ answers and bonus awards (`funFactData`) and re-reads them with the standings
 at the end of every session write and when a session is placed, so the facts
 follow hand grades and key fixes.
 
-`/display` (`BreakIntroScreen`, via `FunFactRotator`) shows one fact at a time
-under the BREAK heading, with the team name or question number large, and
-moves to the next every `FUN_FACT_ROTATE_MS` (8 s), fading in unless the
-viewer prefers reduced motion. A single fact stays put; an empty list draws
-nothing, leaving the break card as before.
+The **`funFactsEnabled`** session setting (a boolean, default `true`, validated
+by the partial-settings Zod schema, editable in the lobby only like every other
+setting; a stored settings JSON without the field reads as on) turns all fun
+facts off: the server then sends `funFacts: []` on the break screen too. The
+`/control` lobby settings panel shows it as the "Fun facts on the break screen"
+switch. There is no per-fact choice.
+
+`/display` (`BreakIntroScreen`, via `FunFactRotator`) first shows the break card
+as it was before fun facts; the first fact appears `FUN_FACT_START_DELAY_MS`
+(60 s) after the rotator mounts, then it shows one fact at a time under the
+BREAK heading and moves to the next every `FUN_FACT_ROTATE_MS` (8 s), fading in
+unless the viewer prefers reduced motion. The wait is a client-side timer from
+mount, so reloading `/display` during a break restarts it. A single fact stays
+put; an empty list draws nothing, leaving the break card as before.
 
 **The phone's verdict card.** When the big screen lands on a revealed question
 (a live forward move: not on connect or reconnect, not on Previous), every

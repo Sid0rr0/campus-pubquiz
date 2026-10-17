@@ -58,6 +58,25 @@ describe('SessionSettingsPanel', () => {
     });
   });
 
+  it('saves the "Fun facts on the break screen" switch turned off', async () => {
+    renderWithQuery(
+      <SessionSettingsPanel
+        joinCode="ABCDEF"
+        settings={DEFAULT_SESSION_SETTINGS}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByLabelText(/fun facts on the break screen/i),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(mockUpdateSessionSettings).toHaveBeenCalledWith('ABCDEF', {
+      ...DEFAULT_SESSION_SETTINGS,
+      funFactsEnabled: false,
+    });
+  });
+
   it('re-syncs local edits when the settings prop changes (e.g. saved from another admin tab)', () => {
     const { rerender } = renderWithQuery(
       <SessionSettingsPanel

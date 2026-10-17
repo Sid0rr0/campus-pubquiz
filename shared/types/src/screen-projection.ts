@@ -121,7 +121,10 @@ export function projectScreen(
         header,
         leaderboardBoard: describeLeaderboardBoard(session),
         funFacts:
-          screen.kind === 'break_intro' ? describeFunFacts(session) : [],
+          screen.kind === 'break_intro' &&
+          session.seededGame.settings.funFactsEnabled
+            ? describeFunFacts(session)
+            : [],
       };
     case SOCKET_ROOMS.ADMIN:
       return {

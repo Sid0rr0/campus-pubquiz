@@ -2,7 +2,10 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FunFact, QuizStructureSummary } from '@campus-pubquiz/types';
 import { BreakIntroScreen } from '@/app/display/break-intro-screen';
-import { FUN_FACT_ROTATE_MS } from '@/app/display/fun-fact-rotator';
+import {
+  FUN_FACT_ROTATE_MS,
+  FUN_FACT_START_DELAY_MS,
+} from '@/app/display/fun-fact-rotator';
 
 const QUIZ_STRUCTURE: QuizStructureSummary = {
   roundCount: 2,
@@ -43,6 +46,12 @@ function rotate(times = 1) {
   });
 }
 
+function waitForStartDelay() {
+  act(() => {
+    vi.advanceTimersByTime(FUN_FACT_START_DELAY_MS);
+  });
+}
+
 describe('BreakIntroScreen — fun facts', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -51,8 +60,29 @@ describe('BreakIntroScreen — fun facts', () => {
     vi.useRealTimers();
   });
 
+  it('shows no fact until the start delay has passed, then the first one', () => {
+    renderBreak([BONUS_FACT]);
+    expect(screen.queryByTestId('fun-fact')).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(FUN_FACT_START_DELAY_MS - 1);
+    });
+    expect(screen.queryByTestId('fun-fact')).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByText('42 shots')).toBeInTheDocument();
+  });
+
+  it('waits the delay out with BREAK already on screen', () => {
+    renderBreak([BONUS_FACT]);
+    expect(screen.getByText('BREAK 1')).toBeInTheDocument();
+  });
+
   it('shows the first fact, then the next after each rotation, wrapping round', () => {
     renderBreak([BONUS_FACT, { kind: 'nobody_got_it', question: QUESTION }]);
+    waitForStartDelay();
     expect(screen.getByText('42 shots')).toBeInTheDocument();
     expect(screen.queryByText('Nobody got it')).not.toBeInTheDocument();
 
@@ -66,17 +96,20 @@ describe('BreakIntroScreen — fun facts', () => {
 
   it("doesn't rotate a single fact", () => {
     renderBreak([BONUS_FACT]);
+    waitForStartDelay();
     rotate(3);
     expect(screen.getByText('42 shots')).toBeInTheDocument();
   });
 
   it('keeps BREAK on screen beside the fact', () => {
     renderBreak([BONUS_FACT]);
+    waitForStartDelay();
     expect(screen.getByText('BREAK 1')).toBeInTheDocument();
   });
 
   it('fades in under reduced motion instead of dropping the entrance', () => {
     renderBreak([BONUS_FACT]);
+    waitForStartDelay();
     const { className } = screen.getByTestId('fun-fact');
     expect(className).toContain('motion-reduce:animate-fun-fact-fade');
     expect(className).not.toContain('motion-reduce:animate-none');
@@ -84,6 +117,7 @@ describe('BreakIntroScreen — fun facts', () => {
 
   it('shows nothing extra for an empty list', () => {
     const { container } = renderBreak([]);
+    waitForStartDelay();
     expect(screen.queryByTestId('fun-fact')).not.toBeInTheDocument();
     rotate(2);
     expect(screen.queryByTestId('fun-fact')).not.toBeInTheDocument();
@@ -134,6 +168,7 @@ describe('BreakIntroScreen — fun facts', () => {
     ],
   ])('renders the %s wording', (_kind, fact, expected) => {
     renderBreak([fact]);
+    waitForStartDelay();
     const text = screen.getByTestId('fun-fact').textContent ?? '';
     for (const part of expected) expect(text).toContain(part);
   });
