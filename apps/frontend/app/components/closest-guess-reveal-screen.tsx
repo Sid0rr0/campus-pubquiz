@@ -11,6 +11,9 @@ interface ClosestGuessRevealScreenProps {
   /** Present once the answer step is on air (the `closest_guess` Reveal kind). */
   correctAnswer?: string;
   answerMediaUrl?: string;
+  /** The reveal clip of a YouTube `answerMediaUrl`. */
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
   closestGuess: ClosestGuessRevealData;
   mediaTestIdPrefix: string;
   autoplayMedia?: boolean;
@@ -21,11 +24,16 @@ interface ClosestGuessRevealScreenProps {
 /** The answer props for a closest-guess reveal question: only the `closest_guess` kind carries the answer; `closest_guess_pending` has none yet. */
 export function closestGuessAnswerProps(
   question: ClosestGuessRevealView | PendingClosestGuessRevealView,
-): Pick<ClosestGuessRevealScreenProps, 'correctAnswer' | 'answerMediaUrl'> {
+): Pick<
+  ClosestGuessRevealScreenProps,
+  'correctAnswer' | 'answerMediaUrl' | 'revealStartSeconds' | 'revealEndSeconds'
+> {
   return question.revealKind === 'closest_guess'
     ? {
         correctAnswer: question.answer,
         answerMediaUrl: question.answerMediaUrl,
+        revealStartSeconds: question.revealStartSeconds,
+        revealEndSeconds: question.revealEndSeconds,
       }
     : {};
 }
@@ -37,6 +45,8 @@ export function ClosestGuessRevealScreen({
   prompt,
   correctAnswer,
   answerMediaUrl,
+  revealStartSeconds,
+  revealEndSeconds,
   closestGuess,
   mediaTestIdPrefix,
   autoplayMedia,
@@ -90,6 +100,8 @@ export function ClosestGuessRevealScreen({
             url={answerMediaUrl}
             mediaTestIdPrefix={mediaTestIdPrefix}
             autoplayMedia={autoplayMedia}
+            startSeconds={revealStartSeconds}
+            endSeconds={revealEndSeconds}
           />
         </>
       )}

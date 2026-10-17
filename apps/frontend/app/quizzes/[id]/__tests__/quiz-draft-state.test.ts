@@ -55,6 +55,8 @@ describe('makeQuestion / makeRound', () => {
       clipStart: '',
       clipEnd: '',
       isVideoHidden: false,
+      revealStart: '',
+      revealEnd: '',
     });
   });
 
@@ -122,6 +124,50 @@ describe('YouTube clip fields in the editor draft', () => {
     expect(
       questionToPreview(questionFromPreview('q1', preview)),
     ).not.toHaveProperty('isVideoHidden');
+  });
+
+  it('shows the reveal clip as timecodes and saves it back as seconds', () => {
+    const withReveal: ImportQuestionPreview = {
+      ...preview,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+    };
+
+    const question = questionFromPreview('q1', withReveal);
+
+    expect([question.revealStart, question.revealEnd]).toEqual([
+      '2:30',
+      '2:45',
+    ]);
+    expect(questionToPreview(question)).toEqual(withReveal);
+  });
+
+  it('saves the reveal clip for a YouTube answer media over a non-YouTube question media', () => {
+    const imageWithAnswerVideo: ImportQuestionPreview = {
+      type: 'free_text',
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      mediaUrl: 'https://example.com/a.jpg',
+      answerMediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      revealStartSeconds: 5,
+    };
+
+    const question = questionFromPreview('q1', imageWithAnswerVideo);
+
+    expect(questionToPreview(question)).toEqual(imageWithAnswerVideo);
+  });
+
+  it('drops the reveal clip when neither media is a YouTube link', () => {
+    const question = {
+      ...questionFromPreview('q1', preview),
+      mediaUrl: 'https://example.com/a.jpg',
+      revealStart: '0:05',
+    };
+
+    expect(questionToPreview(question)).not.toHaveProperty(
+      'revealStartSeconds',
+    );
   });
 });
 

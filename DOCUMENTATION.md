@@ -735,12 +735,24 @@ grading behavior:
   `revealEnd` and `hideVideo: true`, and returns the notes with the group
   removed, so notes without that syntax stay a normal free-text note. CSV
   import moves the group out of the notes into the fields (only when
-  `media_url` is a YouTube link); CSV export writes the fields back as one
+  `media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
+  the clip when `media_url` is); CSV export writes the fields back as one
   canonical group appended to the free notes, leaving empty keys out. Stored
   `notes` are free text only: loading a stored question strips any clip group
   an older save left there (the payload fields stay the truth), and saving
-  again cleans the row. `answer_media_url` never gets clip times — a YouTube
-  answer video always renders full-length. **Hidden video:** the
+  again cleans the row. The **reveal clip** (`revealStartSeconds`/
+  `revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
+  start/end of the one video played at reveal, and applies when either
+  `media_url` or `answer_media_url` is a YouTube link (the editor labels the
+  inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
+  "Reveal clip (question video)"). At reveal exactly one video plays: a
+  YouTube `answer_media_url` replaces the question video, clipped by the
+  reveal clip; otherwise the question video plays again (restarted), clipped
+  by the reveal clip, not the question clip. An empty reveal start/end means
+  the whole video. The question clip (`start`/`end`) still applies only while
+  the question is asked. Reveal views carry the reveal clip (it is on
+  `SeededQuestion`, like `answerMediaUrl`, never on the pre-reveal
+  `QuestionView`). **Hidden video:** the
   "Hide video (sound only)" checkbox (`isVideoHidden` on the draft, preview,
   payload and question views; `hideVideo: true` in the CSV notes group) shows
   for any YouTube `media_url`. The big screen keeps the iframe mounted at full

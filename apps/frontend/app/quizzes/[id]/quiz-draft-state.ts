@@ -2,6 +2,7 @@ import {
   DEFAULT_MARGIN,
   describeLiveEditRounds,
   formatTimecode,
+  hasYoutubeMedia,
   parseFiniteNumber,
   parseTimecode,
   hasMarginType,
@@ -67,6 +68,9 @@ export interface EditorQuestion {
   clipEnd: string;
   /** Sound only: the YouTube video is covered on the big screen until reveal — see `isVideoHidden` on ImportQuestionPreview. */
   isVideoHidden: boolean;
+  /** Reveal clip start/end as typed, same shape as `clipStart` — see `revealStartSeconds` on ImportQuestionPreview. */
+  revealStart: string;
+  revealEnd: string;
   /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an opened question). */
   savedDisplayOrder?: string[];
 }
@@ -112,6 +116,8 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     clipStart: '',
     clipEnd: '',
     isVideoHidden: false,
+    revealStart: '',
+    revealEnd: '',
   };
 }
 
@@ -168,6 +174,16 @@ function clipFieldsFrom(question: EditorQuestion) {
   };
 }
 
+/** The reveal clip fields a preview carries: each present only when the typed time reads as a timecode. */
+function revealClipFieldsFrom(question: EditorQuestion) {
+  const startSeconds = parseTimecode(question.revealStart);
+  const endSeconds = parseTimecode(question.revealEnd);
+  return {
+    ...(startSeconds !== undefined ? { revealStartSeconds: startSeconds } : {}),
+    ...(endSeconds !== undefined ? { revealEndSeconds: endSeconds } : {}),
+  };
+}
+
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
   id: string,
@@ -192,6 +208,8 @@ export function questionFromPreview(
     clipStart: timecodeText(question.mediaStartSeconds),
     clipEnd: timecodeText(question.mediaEndSeconds),
     isVideoHidden: question.isVideoHidden ?? false,
+    revealStart: timecodeText(question.revealStartSeconds),
+    revealEnd: timecodeText(question.revealEndSeconds),
     ...loadAnswerDraft(question),
     ...loadGradingDrafts(question),
   };
@@ -350,6 +368,9 @@ export function questionToPreview(
     ...(mediaUrl ? { mediaUrl } : {}),
     ...(mediaUrl ? clipFieldsFrom(question) : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
+    ...(hasYoutubeMedia({ mediaUrl, answerMediaUrl })
+      ? revealClipFieldsFrom(question)
+      : {}),
   };
 }
 

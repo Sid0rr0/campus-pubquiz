@@ -3,7 +3,12 @@ import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
-import { isYoutubeUrl, parseClipNotes, type ClipNotesFields } from './youtube';
+import {
+  hasYoutubeMedia,
+  isYoutubeUrl,
+  parseClipNotes,
+  type ClipNotesFields,
+} from './youtube';
 
 /**
  * The question record codec: a question's stored row (columns plus a payload
@@ -60,6 +65,18 @@ function sharedFieldsFrom(source: QuestionPayload) {
   };
 }
 
+/** The reveal clip fields of the source, each present only when set. */
+function revealClipFrom(source: QuestionPayload) {
+  return {
+    ...(source.revealStartSeconds !== undefined
+      ? { revealStartSeconds: source.revealStartSeconds }
+      : {}),
+    ...(source.revealEndSeconds !== undefined
+      ? { revealEndSeconds: source.revealEndSeconds }
+      : {}),
+  };
+}
+
 /** A stored row and its parsed payload as the preview the editor and import work with. */
 export function rowToPreview(
   row: StoredQuestionRow,
@@ -67,12 +84,15 @@ export function rowToPreview(
 ): ImportQuestionPreview {
   // A clip group left in the notes by an older save is stripped; the payload
   // fields stay the truth, the group only fills what the payload lacks.
-  const { freeNotes, clip } = isYoutubeUrl(payload.mediaUrl)
+  const { freeNotes, clip } = hasYoutubeMedia(payload)
     ? parseClipNotes(row.notes ?? undefined)
     : { freeNotes: row.notes ?? '', clip: {} as ClipNotesFields };
   const startSeconds = payload.mediaStartSeconds ?? clip.startSeconds;
   const endSeconds = payload.mediaEndSeconds ?? clip.endSeconds;
   const isVideoHidden = payload.isVideoHidden || clip.isVideoHidden;
+  const revealStartSeconds =
+    payload.revealStartSeconds ?? clip.revealStartSeconds;
+  const revealEndSeconds = payload.revealEndSeconds ?? clip.revealEndSeconds;
   return {
     questionId: row.id,
     type: row.type,
@@ -84,6 +104,7 @@ export function rowToPreview(
     ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
     ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
     ...(isVideoHidden ? { isVideoHidden: true } : {}),
+    ...revealClipFrom({ revealStartSeconds, revealEndSeconds }),
     ...gradingSettingsFrom(row.type, payload),
   };
 }
@@ -114,6 +135,7 @@ export function rowToSeededQuestion(
       ? { mediaEndSeconds: payload.mediaEndSeconds }
       : {}),
     ...(payload.isVideoHidden ? { isVideoHidden: true } : {}),
+    ...revealClipFrom(payload),
   };
 }
 
@@ -138,6 +160,7 @@ export function previewToStoredFields(
         ? { mediaEndSeconds: clip.mediaEndSeconds }
         : {}),
       ...(clip?.isVideoHidden ? { isVideoHidden: true } : {}),
+      ...(hasYoutubeMedia(preview) ? revealClipFrom(preview) : {}),
     },
   };
 }

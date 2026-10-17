@@ -20,6 +20,9 @@ const media = {
   mediaEndSeconds: z.number().optional(),
   // Absent in payloads saved before hidden video existed: reads as not hidden.
   isVideoHidden: z.boolean().optional(),
+  // The reveal clip: any question whose media or answer media is YouTube.
+  revealStartSeconds: z.number().optional(),
+  revealEndSeconds: z.number().optional(),
 };
 
 export const freeTextPayloadSchema = z.object(media);
@@ -65,4 +68,6 @@ export interface QuestionPayload {
   mediaStartSeconds?: number;
   mediaEndSeconds?: number;
   isVideoHidden?: boolean;
+  revealStartSeconds?: number;
+  revealEndSeconds?: number;
 }

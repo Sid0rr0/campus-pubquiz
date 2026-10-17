@@ -108,6 +108,8 @@ export function QuizQuestionEditor({
   const isYoutubeType = QUESTION_KINDS[question.type].hasYoutubeMedia === true;
   const isYoutubeMedia =
     isYoutubeType || extractYoutubeVideoId(question.mediaUrl) !== undefined;
+  const isYoutubeAnswerMedia =
+    extractYoutubeVideoId(question.answerMediaUrl) !== undefined;
 
   return (
     <div
@@ -276,6 +278,40 @@ export function QuizQuestionEditor({
           </label>
         </div>
       )}
+
+      {isYoutubeMedia || isYoutubeAnswerMedia ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-extrabold text-foreground/60">
+            {isYoutubeAnswerMedia
+              ? 'Answer video clip'
+              : 'Reveal clip (question video)'}
+          </span>
+          <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
+            <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+              Reveal start
+              <input
+                value={question.revealStart}
+                onChange={(event) =>
+                  onChange({ revealStart: event.target.value })
+                }
+                placeholder="1:22"
+                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+              Reveal end
+              <input
+                value={question.revealEnd}
+                onChange={(event) =>
+                  onChange({ revealEnd: event.target.value })
+                }
+                placeholder="2:20"
+                className="min-w-0 flex-1 rounded-lg border-2 border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground disabled:opacity-50"
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       <label className="flex flex-col gap-1 text-xs font-extrabold text-foreground/60">
         Notes

@@ -41,6 +41,8 @@ const baseQuestionFields = {
   mediaEndSeconds: clipSeconds.optional(),
   // Covers a YouTube video on the big screen while the question is asked (sound only).
   isVideoHidden: z.boolean().optional(),
+  revealStartSeconds: clipSeconds.optional(),
+  revealEndSeconds: clipSeconds.optional(),
 };
 
 export const freeTextPreviewSchema = z.object({

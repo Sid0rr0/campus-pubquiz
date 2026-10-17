@@ -283,6 +283,90 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByLabelText(/^notes$/i)).toHaveValue('Play the chorus');
   });
 
+  describe('reveal clip inputs', () => {
+    const question = {
+      type: 'free_text',
+      prompt: 'Name this music video.',
+      answer: 'Never Gonna Give You Up',
+      points: 3,
+    };
+
+    function loadQuestion(fields: Record<string, unknown>) {
+      mockFetchQuizDraft.mockResolvedValue({
+        id: 5,
+        title: 'Trivia Night',
+        rounds: [
+          {
+            title: 'Music Videos',
+            breakAfter: true,
+            questions: [{ ...question, ...fields }],
+          },
+        ],
+      });
+      mockUpdateQuiz.mockResolvedValue({
+        quizId: 5,
+        roundCount: 1,
+        questionCount: 1,
+      });
+      return renderWithQuery(<QuizEditorPanel quizId="5" />);
+    }
+
+    it('labels them as the question video clip when only the question media is YouTube', async () => {
+      loadQuestion({
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        revealStartSeconds: 150,
+        revealEndSeconds: 165,
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByText('Reveal clip (question video)')).toBeVisible();
+      expect(screen.getByLabelText(/reveal start/i)).toHaveValue('2:30');
+      expect(screen.getByLabelText(/reveal end/i)).toHaveValue('2:45');
+    });
+
+    it('labels them as the answer video clip when the answer media is YouTube', async () => {
+      loadQuestion({
+        mediaUrl: 'https://example.com/a.jpg',
+        answerMediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByText('Answer video clip')).toBeVisible();
+      expect(screen.getByLabelText(/reveal start/i)).toHaveValue('');
+    });
+
+    it('is hidden when neither media is a YouTube link', async () => {
+      loadQuestion({ mediaUrl: 'https://example.com/a.jpg' });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.queryByLabelText(/reveal start/i)).not.toBeInTheDocument();
+    });
+
+    it('saves a typed reveal clip as seconds', async () => {
+      const user = userEvent.setup();
+      loadQuestion({ mediaUrl: 'https://youtu.be/dQw4w9WgXcQ' });
+      await screen.findByDisplayValue('Trivia Night');
+
+      await user.type(screen.getByLabelText(/reveal start/i), '2:30');
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuiz).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({
+            rounds: [
+              expect.objectContaining({
+                questions: [
+                  expect.objectContaining({ revealStartSeconds: 150 }),
+                ],
+              }),
+            ],
+          }),
+        ),
+      );
+    });
+  });
+
   it('saves an edited clip end as a field and leaves the notes alone', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({
