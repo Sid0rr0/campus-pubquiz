@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
+  type PresenterContextPayload,
   type SeededQuestion,
   type ScreenPreview,
 } from '@campus-pubquiz/types';
@@ -65,6 +66,31 @@ function ScreenPreviewCard({ screen }: { screen: ScreenPreview }) {
   );
 }
 
+/** Question notes when a question is open, the round note on a round intro or break round intro, else the empty state. */
+function NotesBody({
+  presenterContext,
+  isRoundIntroOnAir,
+}: {
+  presenterContext: PresenterContextPayload | null;
+  isRoundIntroOnAir: boolean;
+}) {
+  const roundNote = presenterContext?.currentRoundNote;
+  if (roundNote) {
+    return <p className="text-sm whitespace-pre-line">{roundNote}</p>;
+  }
+  if (isRoundIntroOnAir) {
+    return (
+      <p className="text-sm text-foreground/50">No note for this round.</p>
+    );
+  }
+  if (presenterContext?.currentQuestionNotes) {
+    return <p className="text-sm">{presenterContext.currentQuestionNotes}</p>;
+  }
+  return (
+    <p className="text-sm text-foreground/50">No notes for this question.</p>
+  );
+}
+
 function RemotePageContent() {
   const {
     snapshot,
@@ -99,6 +125,7 @@ function RemotePageContent() {
 
   const {
     progress,
+    onAirScreen,
     teams = [],
     answeredTeamIds = [],
     displayTextScale = DEFAULT_DISPLAY_TEXT_SCALE,
@@ -165,13 +192,13 @@ function RemotePageContent() {
         <h2 className="text-xs font-extrabold tracking-wide text-magenta uppercase">
           Notes
         </h2>
-        {presenterContext?.currentQuestionNotes ? (
-          <p className="text-sm">{presenterContext.currentQuestionNotes}</p>
-        ) : (
-          <p className="text-sm text-foreground/50">
-            No notes for this question.
-          </p>
-        )}
+        <NotesBody
+          presenterContext={presenterContext}
+          isRoundIntroOnAir={
+            onAirScreen.kind === 'round_title' ||
+            onAirScreen.kind === 'break_round_title'
+          }
+        />
       </section>
 
       <section className="flex flex-col gap-2 rounded-lg border-2 border-foreground/10 p-3">

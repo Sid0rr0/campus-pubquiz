@@ -4,6 +4,7 @@ import {
   QUESTION_KINDS,
   checkQuestion,
   ROUND_CATEGORIES,
+  ROUND_NOTE_MAX_LENGTH,
   type QuizDraftIssue,
   type QuizDraftSaveRequest,
 } from '@campus-pubquiz/types';
@@ -88,6 +89,23 @@ export function validateQuizDraft(
         field: 'author',
         message: 'Author must be text',
       });
+    }
+    if (round.note !== undefined) {
+      if (typeof round.note !== 'string') {
+        issues.push({
+          roundIndex,
+          questionIndex: null,
+          field: 'note',
+          message: 'Round note must be text',
+        });
+      } else if (round.note.trim().length > ROUND_NOTE_MAX_LENGTH) {
+        issues.push({
+          roundIndex,
+          questionIndex: null,
+          field: 'note',
+          message: `Round note must be at most ${ROUND_NOTE_MAX_LENGTH} characters`,
+        });
+      }
     }
 
     round.questions.forEach((question, questionIndex) => {

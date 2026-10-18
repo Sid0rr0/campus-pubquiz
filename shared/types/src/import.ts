@@ -79,6 +79,8 @@ export interface ImportRoundPreview {
   category?: string;
   /** Who wrote this round's questions — optional, shown on the big screen's round_intro/round_overview alongside the title. */
   author?: string;
+  /** What the quiz master says while this round's intro is on air — see Round.note. Blank is never stored: it is absent. */
+  note?: string;
   questions: ImportQuestionPreview[];
 }
 

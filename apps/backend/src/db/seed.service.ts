@@ -120,6 +120,7 @@ export class SeedService {
         kahootMode: roundRow.kahootMode,
         category: roundRow.category ?? undefined,
         author: roundRow.author ?? undefined,
+        note: roundRow.note ?? undefined,
         questions: questionRows.map((row) =>
           rowToSeededQuestion(row, readQuestionPayload(row)),
         ),

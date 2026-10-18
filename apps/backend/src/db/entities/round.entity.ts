@@ -21,7 +21,8 @@ export class Round extends BaseEntity {
     | 'breakAfter'
     | 'kahootMode'
     | 'category'
-    | 'author';
+    | 'author'
+    | 'note';
 
   @ManyToOne(() => Quiz, { deleteRule: 'cascade' })
   quiz!: Quiz;
@@ -45,6 +46,10 @@ export class Round extends BaseEntity {
   /** Who wrote this round's questions — optional, manual/CSV-set metadata shown on the big screen. */
   @Property({ type: 'text', nullable: true })
   author?: string;
+
+  /** What the quiz master says while this round's intro is on air — plain text, trimmed, at most ROUND_NOTE_MAX_LENGTH characters, validated at the request boundary; null when blank. Host-only. */
+  @Property({ type: 'text', nullable: true })
+  note?: string;
 
   @OneToMany(() => Question, (question) => question.round)
   questions = new Collection<Question>(this);
