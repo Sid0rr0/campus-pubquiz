@@ -890,9 +890,9 @@ be hand-graded before then). `/control` renders the state it is sent and never
 asks the question type. The team's own answer view carries no grading state.
 
 Every question also has one **answer kind** — `text`, `number`, `choice`,
-`sort` or `match` — resolved by `resolveAnswerKind`
-(`shared/types/src/answer-kind.ts`). A type whose choices are `required`
-(`multiple_choice`) is always `choice`. Every other type takes its registry
+`sort` or `match` — resolved from its type alone by `resolveAnswerKind`
+(`shared/types/src/answer-kind.ts`). `multiple_choice` is the only type that
+carries choices and is always `choice`; every other type takes its registry
 input kind, whatever `options` it carries. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
 encodes, formats and scores a stored answer, and Scoring takes its base score
 from it. `closest_guess` shares the `number` kind but is never scored one
