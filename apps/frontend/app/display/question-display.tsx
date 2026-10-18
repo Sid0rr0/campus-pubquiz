@@ -1,6 +1,9 @@
 import { useState, type SyntheticEvent } from 'react';
 import {
+  classifyMediaUrl,
   extractYoutubeVideoId,
+  isHttpUrl,
+  isVideoUrl,
   resolveAnswerKind,
   type QuestionView,
   type SeededQuestion,
@@ -10,42 +13,12 @@ import {
   REVEAL_BODIES,
 } from '@/app/display/answer-kind-bodies';
 import { useMediaPause } from '@/app/display/use-media-pause';
+import { useVideoLoadFailure, VideoFile } from '@/app/display/video-file';
 
-const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
-const HTTP_URL_PATTERN = /^https?:\/\//i;
-
-// Neither media_url nor answer_media_url is tied to the question's `type`
-// (e.g. a free_text question can carry a photo or reveal one), so image vs.
-// audio vs. YouTube is inferred from the URL itself instead.
-function isAudioUrl(url: string): boolean {
-  return AUDIO_EXTENSION_PATTERN.test(url);
-}
-
-// media_url/answer_media_url come from an admin-imported spreadsheet, not a
-// trusted author — restrict to http(s) so a malicious sheet can't slip in a
-// data:/blob: payload that bloats or hangs the shared display. Exported so
-// callers (e.g. QuestionBrowser's "Look at the screen" hint) can detect
-// whether a question has display-worthy media without duplicating this check.
-export function isHttpUrl(url: string): boolean {
-  return HTTP_URL_PATTERN.test(url);
-}
-
-/** Whether `url` is an http(s) URL that resolves to an embeddable YouTube video — the same inference QuestionDisplay uses to pick the iframe branch, exposed so /control and /remote can decide whether a "Play again" action has anything to act on. */
-export function isYoutubeMediaUrl(url: string | undefined): boolean {
-  return (
-    url !== undefined &&
-    isHttpUrl(url) &&
-    extractYoutubeVideoId(url) !== undefined
-  );
-}
-
-/** Whether `url` is media /display can pause and resume (YouTube or audio) — what the pause button gates on. Images and other media have no playback to pause. */
+/** Whether `url` is media /display can pause and resume (video or audio) — what the pause button gates on. Images have no playback to pause. */
 export function isPausableMediaUrl(url: string | undefined): boolean {
-  return (
-    url !== undefined &&
-    isHttpUrl(url) &&
-    (extractYoutubeVideoId(url) !== undefined || isAudioUrl(url))
-  );
+  const kind = classifyMediaUrl(url);
+  return kind !== undefined && kind !== 'image';
 }
 
 function buildYoutubeEmbedSrc(
@@ -73,9 +46,13 @@ interface AnswerMediaProps {
   autoplayMedia?: boolean;
   /** Overrides the answer image's className — defaults to the original fixed size used by ClosestGuessRevealScreen's standalone reveal. */
   imageClassName?: string;
-  /** The reveal clip, applied when `url` is a YouTube link. */
+  /** The reveal clip, applied when `url` is a video (YouTube or file). */
   startSeconds?: number;
   endSeconds?: number;
+  /** GameProgress.isMediaPaused — pauses and resumes a video-file answer in place. */
+  isMediaPaused?: boolean;
+  /** GameProgress.mediaReplayToken — a change seeks a video-file answer to the reveal clip start and plays it. */
+  mediaReplayToken?: number;
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
@@ -89,11 +66,38 @@ export function AnswerMedia({
   imageClassName = 'max-h-64 rounded-xl',
   startSeconds,
   endSeconds,
+  isMediaPaused = false,
+  mediaReplayToken = 0,
 }: AnswerMediaProps) {
   const safeUrl = url && isHttpUrl(url) ? url : undefined;
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
+  const { videoRef, onVideoReady } = useMediaPause(
+    isMediaPaused,
+    mediaReplayToken,
+    startSeconds ?? 0,
+  );
+  const videoFailure = useVideoLoadFailure(safeUrl);
   if (!safeUrl) return null;
+  const kind = classifyMediaUrl(safeUrl);
 
+  if (kind === 'video-file') {
+    if (videoFailure.isFailed) return null;
+    return (
+      <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl bg-black">
+        <VideoFile
+          videoRef={videoRef}
+          testId={`${mediaTestIdPrefix}-answer-video`}
+          url={safeUrl}
+          startSeconds={startSeconds}
+          endSeconds={endSeconds}
+          autoPlay={autoplayMedia}
+          onLoadedMetadata={onVideoReady}
+          onError={videoFailure.onError}
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+      </div>
+    );
+  }
   if (youtubeId) {
     return (
       <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
@@ -113,7 +117,7 @@ export function AnswerMedia({
       </div>
     );
   }
-  if (isAudioUrl(safeUrl)) {
+  if (kind === 'audio') {
     return (
       <audio
         data-testid={`${mediaTestIdPrefix}-answer-audio`}
@@ -155,7 +159,7 @@ export type QuestionDisplayQuestion = Pick<
   >;
 
 interface QuestionDisplayProps {
-  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a YouTube `mediaUrl` — ignored for non-YouTube media and for `answerMediaUrl`. */
+  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a video `mediaUrl` (YouTube or file) — ignored for other media and for `answerMediaUrl`. */
   question: QuestionDisplayQuestion;
   /** Renders the question with no media at all (neither its own nor the answer's) — the phone's question browser, which leaves the big screen's audio and video to the big screen. */
   isMediaHidden?: boolean;
@@ -189,7 +193,6 @@ export function QuestionDisplay({
   isMediaPaused = false,
   hasRevealEntrance = false,
 }: QuestionDisplayProps) {
-  const { youtubeRef, onYoutubeLoad, audioRef } = useMediaPause(isMediaPaused);
   const {
     prompt,
     revealStartSeconds,
@@ -209,6 +212,8 @@ export function QuestionDisplay({
   const questionClip = isRevealing
     ? { start: revealStartSeconds, end: revealEndSeconds }
     : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
+  const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
+    useMediaPause(isMediaPaused, mediaReplayToken, questionClip.start ?? 0);
   // Presence of the prop (not its content) is what switches sort/match into
   // player-reveal mode — an empty string still means "don't show the answer
   // key", it just has nothing of the team's own to show either.
@@ -229,10 +234,7 @@ export function QuestionDisplay({
   const questionYoutubeId = rawQuestionMediaUrl
     ? extractYoutubeVideoId(rawQuestionMediaUrl)
     : undefined;
-  const questionIsImage =
-    rawQuestionMediaUrl !== undefined &&
-    !questionYoutubeId &&
-    !isAudioUrl(rawQuestionMediaUrl);
+  const questionIsImage = classifyMediaUrl(rawQuestionMediaUrl) === 'image';
   const showSideBySideReveal = isRevealingWithAnswerMedia && questionIsImage;
   // Covered while the question is asked and in break review; uncovered at reveal.
   const isVideoCovered = question.isVideoHidden === true && !isRevealing;
@@ -266,11 +268,19 @@ export function QuestionDisplay({
   // Side-by-side answer reveal and fullscreen already have their own
   // deliberate layouts — the two-column treatment only applies to a plain
   // question image shown inline.
+  const questionMediaKind = classifyMediaUrl(questionMediaUrl);
+  const isQuestionVideo = isVideoUrl(questionMediaUrl);
+  const questionVideoFailure = useVideoLoadFailure(questionMediaUrl);
+  const videoKey =
+    isRevealing && question.isVideoHidden !== true
+      ? `${mediaReplayToken}-reveal`
+      : mediaReplayToken;
+  // A video file replays by seeking in place (see useMediaPause), so its key
+  // leaves out the replay token; it still remounts at reveal for the reveal clip.
+  const videoFileKey =
+    isRevealing && question.isVideoHidden !== true ? 'reveal' : 'question';
   const isPlainQuestionImage =
-    questionMediaUrl !== undefined &&
-    !questionYoutubeId &&
-    !isAudioUrl(questionMediaUrl) &&
-    !showSideBySideReveal;
+    questionMediaKind === 'image' && !showSideBySideReveal;
   const showTwoColumnLayout =
     isPlainQuestionImage &&
     !isFullscreen &&
@@ -310,74 +320,88 @@ export function QuestionDisplay({
         )}
       </div>
       {reveal?.lead}
-      {questionMediaUrl && questionYoutubeId && (
-        <div
-          className={
-            isFullscreen
-              ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
-              : 'w-full max-w-2xl'
-          }
-        >
-          {/* A visible video is keyed on the reveal so it plays again even when
+      {questionMediaUrl &&
+        isQuestionVideo &&
+        !questionVideoFailure.isFailed && (
+          <div
+            className={
+              isFullscreen
+                ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
+                : 'w-full max-w-2xl'
+            }
+          >
+            {/* A visible video is keyed on the reveal so it plays again even when
               the reveal clip's src equals the question's; a hidden video is
               not, so lifting its cover must not remount the player.
               Same nesting (and the same iframe element) in both states —
               changing the tree shape between fullscreen and inline would
               remount the iframe and restart the YouTube player instead of
               continuing playback. */}
-          <div
-            className={
-              isFullscreen
-                ? 'relative aspect-video max-h-full w-full'
-                : 'relative aspect-video w-full overflow-hidden rounded-xl'
-            }
-          >
-            <iframe
-              ref={youtubeRef}
-              onLoad={onYoutubeLoad}
-              key={
-                isRevealing && question.isVideoHidden !== true
-                  ? `${mediaReplayToken}-reveal`
-                  : mediaReplayToken
-              }
-              data-testid={`${mediaTestIdPrefix}-youtube`}
-              src={buildYoutubeEmbedSrc(
-                questionYoutubeId,
-                autoplayMedia,
-                questionClip.start,
-                questionClip.end,
-              )}
-              title="Question video"
-              className="absolute inset-0 h-full w-full"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
-            {/* YouTube always renders its title/channel overlay near the top
-                of the player and no longer honors any param that removes it
-                (modestbranding is deprecated) — mask it with a solid bar
-                instead, sized to the band YouTube draws it in. */}
             <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
-            />
-            {/* Hidden video: the player keeps playing at full size under an
+              className={
+                isFullscreen
+                  ? 'relative aspect-video max-h-full w-full'
+                  : 'relative aspect-video w-full overflow-hidden rounded-xl'
+              }
+            >
+              {questionYoutubeId ? (
+                <>
+                  <iframe
+                    ref={youtubeRef}
+                    onLoad={onYoutubeLoad}
+                    key={videoKey}
+                    data-testid={`${mediaTestIdPrefix}-youtube`}
+                    src={buildYoutubeEmbedSrc(
+                      questionYoutubeId,
+                      autoplayMedia,
+                      questionClip.start,
+                      questionClip.end,
+                    )}
+                    title="Question video"
+                    className="absolute inset-0 h-full w-full"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                  />
+                  {/* YouTube always renders its title/channel overlay near the
+                    top of the player and no longer honors any param that
+                    removes it (modestbranding is deprecated) — mask it with a
+                    solid bar instead, sized to the band YouTube draws it in. */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
+                  />
+                </>
+              ) : (
+                <VideoFile
+                  videoRef={videoRef}
+                  key={videoFileKey}
+                  testId={`${mediaTestIdPrefix}-video`}
+                  url={questionMediaUrl}
+                  startSeconds={questionClip.start}
+                  endSeconds={questionClip.end}
+                  autoPlay={autoplayMedia}
+                  onLoadedMetadata={onVideoReady}
+                  onError={questionVideoFailure.onError}
+                  className="absolute inset-0 h-full w-full bg-black object-contain"
+                />
+              )}
+              {/* Hidden video: the player keeps playing at full size under an
                 opaque panel (a hidden or zero-size player may not autoplay).
                 Same tree as the iframe, so lifting it at reveal never
                 remounts the player. */}
-            {isVideoCovered && (
-              <div
-                data-testid={`${mediaTestIdPrefix}-video-cover`}
-                className="absolute inset-0 flex items-center justify-center bg-black text-display-4xl"
-              >
-                <span aria-label="Sound only">🎵</span>
-              </div>
-            )}
+              {isVideoCovered && (
+                <div
+                  data-testid={`${mediaTestIdPrefix}-video-cover`}
+                  className="absolute inset-0 flex items-center justify-center bg-black text-display-4xl"
+                >
+                  <span aria-label="Sound only">🎵</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
       {questionMediaUrl &&
-        !questionYoutubeId &&
-        !isAudioUrl(questionMediaUrl) &&
+        questionMediaKind === 'image' &&
         !showTwoColumnLayout &&
         (showSideBySideReveal ? (
           <div className="flex w-full min-h-0 flex-1 items-stretch justify-center gap-6">
@@ -398,6 +422,8 @@ export function QuestionDisplay({
                 imageClassName="max-h-full max-w-full rounded-xl object-contain"
                 startSeconds={revealStartSeconds}
                 endSeconds={revealEndSeconds}
+                isMediaPaused={isMediaPaused}
+                mediaReplayToken={mediaReplayToken}
               />
             </div>
           </div>
@@ -419,17 +445,15 @@ export function QuestionDisplay({
             />
           </div>
         ))}
-      {questionMediaUrl &&
-        !questionYoutubeId &&
-        isAudioUrl(questionMediaUrl) && (
-          <audio
-            ref={audioRef}
-            data-testid={`${mediaTestIdPrefix}-audio`}
-            src={questionMediaUrl}
-            controls
-            autoPlay={autoplayMedia}
-          />
-        )}
+      {questionMediaUrl && questionMediaKind === 'audio' && (
+        <audio
+          ref={audioRef}
+          data-testid={`${mediaTestIdPrefix}-audio`}
+          src={questionMediaUrl}
+          controls
+          autoPlay={autoplayMedia}
+        />
+      )}
       {reveal ? reveal.body : <QuestionBody question={question} />}
       {isRevealing && !showSideBySideReveal && answerMediaUrl && (
         <div className="flex w-full min-h-0 flex-1 items-center justify-center">
@@ -440,6 +464,8 @@ export function QuestionDisplay({
             imageClassName="max-h-full max-w-full rounded-xl object-contain"
             startSeconds={revealStartSeconds}
             endSeconds={revealEndSeconds}
+            isMediaPaused={isMediaPaused}
+            mediaReplayToken={mediaReplayToken}
           />
         </div>
       )}

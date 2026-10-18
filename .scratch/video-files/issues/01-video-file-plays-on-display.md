@@ -13,11 +13,11 @@ See the spec's "Recognising a video file", "One media classifier", "Rendering on
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Shared classifier table test: each extension, uppercase, `?query`, YouTube, audio, image, non-http.
-- [ ] `/display` test: an `.mp4` `media_url` renders a `<video>` without controls, not an `<img>`.
-- [ ] `/display` test: a video file `answer_media_url` replaces question media at reveal (file→file, YouTube question + file answer, file question + YouTube answer).
-- [ ] `/display` test: an image question with an `.mp4` answer keeps the side-by-side layout rule as today (question image shown only for image questions).
-- [ ] `/display` test: a `<video>` `error` event removes the video, prompt still shown.
-- [ ] `pnpm typecheck`, `pnpm lint` and `pnpm --filter frontend test` / shared-types tests pass.
+- [x] Shared classifier table test: each extension, uppercase, `?query`, YouTube, audio, image, non-http.
+- [x] `/display` test: an `.mp4` `media_url` renders a `<video>` without controls, not an `<img>`.
+- [x] `/display` test: a video file `answer_media_url` replaces question media at reveal (file→file, YouTube question + file answer, file question + YouTube answer).
+- [x] `/display` test: an image question with an `.mp4` answer keeps the side-by-side layout rule as today (question image shown only for image questions).
+- [x] `/display` test: a `<video>` `error` event removes the video, prompt still shown.
+- [x] `pnpm typecheck`, `pnpm lint` and `pnpm --filter frontend test` / shared-types tests pass.

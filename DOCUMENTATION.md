@@ -177,29 +177,34 @@ be refused); the press after that moves the quiz.
 
 ### Admin actions
 
-| Action                    | Legal from                              | Effect                                                                                                                         |
-| ------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `START_QUIZ`              | `lobby`                                 | → `rules`                                                                                                                      |
-| `ADVANCE`                 | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                     |
-| `PREVIOUS`                | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby` |
-| `END_QUIZ`                | any except `ended`                      | Force-end                                                                                                                      |
-| `TOGGLE_LEADERBOARD`      | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                 |
-| `TOGGLE_JOIN_OVERLAY`     | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                     |
-| `TOGGLE_MEDIA_FULLSCREEN` | any                                     | Flips `isMediaFullscreen`; any other action clears it                                                                          |
-| `REPLAY_MEDIA`            | any                                     | Bumps `mediaReplayToken` (the display remounts the YouTube iframe, restarting it) and clears `isMediaPaused`                   |
-| `TOGGLE_MEDIA_PAUSE`      | any                                     | Flips `isMediaPaused`; status untouched                                                                                        |
+| Action                    | Legal from                              | Effect                                                                                                                                                    |
+| ------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `START_QUIZ`              | `lobby`                                 | → `rules`                                                                                                                                                 |
+| `ADVANCE`                 | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                                                |
+| `PREVIOUS`                | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby`                            |
+| `END_QUIZ`                | any except `ended`                      | Force-end                                                                                                                                                 |
+| `TOGGLE_LEADERBOARD`      | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                                            |
+| `TOGGLE_JOIN_OVERLAY`     | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                                                |
+| `TOGGLE_MEDIA_FULLSCREEN` | any                                     | Flips `isMediaFullscreen`; any other action clears it                                                                                                     |
+| `REPLAY_MEDIA`            | any                                     | Bumps `mediaReplayToken` (the display remounts the YouTube iframe; a video file seeks to its clip start and plays, no remount) and clears `isMediaPaused` |
+| `TOGGLE_MEDIA_PAUSE`      | any                                     | Flips `isMediaPaused`; status untouched                                                                                                                   |
 
 **Pausing media.** `isMediaPaused` is server-owned game state in `progress`
 (so a display that reconnects mid-pause comes back paused). The big screen
 applies it in place, without remounting anything: a YouTube embed (loaded with
 `enablejsapi=1`) gets an IFrame API `pauseVideo`/`playVideo` `postMessage`
-command, and a question `<audio>` element is `pause()`d/`play()`ed. Every
+command, and a question `<audio>` or video-file `<video>` element (including a
+video-file answer at reveal) is `pause()`d/`play()`ed. Every
 action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 `REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
 alone. `/control` and `/remote` show Pause/Resume only for an open question
-whose media is YouTube or audio. Browsers may refuse the display's `play()` on
-resume if it has had no user interaction (autoplay policy); the audio element's
-own controls remain as the fallback.
+whose media is a video (YouTube or file) or audio. Browsers may refuse the
+display's `play()` on resume if it has had no user interaction (autoplay
+policy); a rejection is ignored and the moderator can press Resume again. A
+standing pause is re-applied to a video file once it has loaded. "Play again"
+(`REPLAY_MEDIA`) is offered for an open question with a video (YouTube or file),
+not for audio; it seeks a video file to the start of the clip it is showing (the
+reveal clip at reveal, a video-file answer included).
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
@@ -817,17 +822,37 @@ grading behavior. Media is not a type: any question can carry a
 There is deliberately no picture, audio or YouTube type: any question can
 carry a `media_url` and an `answer_media_url`, and the display works out from
 the URL whether it is an image, an `<audio controls>` element (autoplaying)
-or an embedded YouTube iframe. A question's type only decides how teams answer
-and how the answer is graded, so a music multiple choice is a
-`multiple_choice` row with an mp3 `media_url`. Media is never required.
-(Questions saved as `audio` or `youtube` before this were re-typed by a
-migration: `multiple_choice` when they had choices, `free_text` otherwise.)
+an embedded YouTube iframe, or a `<video>` for a video file. A question's type
+only decides how teams answer and how the answer is graded, so a music
+multiple choice is a `multiple_choice` row with an mp3 `media_url`. Media is
+never required. (Questions saved as `audio` or `youtube` before this were
+re-typed by a migration: `multiple_choice` when they had choices, `free_text`
+otherwise.)
+
+**Video files.** A link ending in `.mp4`, `.webm`, `.mov` or `.m4v`
+(case-insensitive, a `?query` is fine) is a video file, recognised by
+`classifyMediaUrl` in `shared/types/src/media.ts` (the one place that infers
+image / audio / YouTube / video file from a link; `isVideoUrl` is "YouTube or
+video file"). Hosting pages (Vimeo, Google Drive, Dropbox share links) are not
+direct files and are not recognised. On `/display` it is a `<video>` with no
+controls, `playsInline` and `autoPlay` from `autoplayMedia`, in the same 16:9
+box as YouTube (and the same fullscreen overlay, without remounting). The
+reveal rule is worded over video: a video `answer_media_url` (YouTube or file,
+either source) replaces the question media at reveal; otherwise the question
+video plays again. The side-by-side image reveal is unchanged. If the file
+fails to load (`error` event) the display hides the video area for that media
+and leaves the prompt and answers; there is no retry and no message. Venue
+internet carries the video, so link short, compressed clips. Uploading video
+is not supported (`POST /media` stays images-only).
 
 A clip's start/end (seconds
 into the video) are real question fields (`mediaStartSeconds`/
 `mediaEndSeconds` on the draft, the preview and the JSON `payload`
 alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
-inputs for any YouTube `media_url`. The `notes` cell of a CSV row carries
+inputs for any video `media_url` (YouTube or video file). On the big screen
+a YouTube clip is the embed's `start`/`end` params; a video file's clip is a
+media fragment on the `<video>` src (`#t=start,end`, either bound optional,
+an empty clip leaves the url bare). The `notes` cell of a CSV row carries
 them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
 `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
 parse; quotes optional; the older `YouTube clip: {…}` line still imports).
@@ -840,7 +865,7 @@ silently: a CSV row with one is reported as invalid on its `notes` column,
 and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
 save ("Clip times must be whole seconds"); a blank one just means the whole
 video. CSV import moves the group out of the notes into the fields (only when
-`media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
+`media_url` or `answer_media_url` is a video, YouTube or file; `start`/`end` only fill
 the clip when `media_url` is); CSV export writes the fields back as one
 canonical group appended to the free notes, leaving empty keys out. Stored
 `notes` are free text only: loading a stored question strips any clip group
@@ -848,10 +873,10 @@ an older save left there (the payload fields stay the truth), and saving
 again cleans the row. The **reveal clip** (`revealStartSeconds`/
 `revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
 start/end of the one video played at reveal, and applies when either
-`media_url` or `answer_media_url` is a YouTube link (the editor labels the
-inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
+`media_url` or `answer_media_url` is a video (the editor labels the
+inputs "Answer video clip" when `answer_media_url` is a video, otherwise
 "Reveal clip (question video)"). At reveal exactly one video plays: a
-YouTube `answer_media_url` replaces the question video, clipped by the
+video `answer_media_url` replaces the question video, clipped by the
 reveal clip; otherwise the question video plays again (restarted, unless it
 is a hidden video, which just lifts its cover), clipped by the reveal clip,
 not the question clip. An empty reveal start/end means the whole video. The
@@ -860,8 +885,8 @@ asked. Reveal views carry the reveal clip (it is on `SeededQuestion`, like
 `answerMediaUrl`, never on the pre-reveal `QuestionView`). **Hidden video:**
 the "Hide video (sound only)" checkbox (`isVideoHidden` on the draft,
 preview, payload and question views; `hideVideo: true` in the CSV notes
-group) shows for any YouTube `media_url`. The big screen keeps the iframe
-mounted at full size (a hidden or zero-size player may not autoplay) under an
+group) shows for any video `media_url` (YouTube or file). The big screen keeps
+the player (iframe or `<video>`) mounted at full size (a hidden or zero-size player may not autoplay) under an
 opaque panel with a 🎵 label, while the question is asked and in break
 review; the panel comes off at reveal without remounting the player. Phones
 show "🎧 Listen" in place of "👀 Look at the screen". A stored payload

@@ -346,6 +346,29 @@ describe('QuizEditorPanel', () => {
       expect(screen.getByLabelText(/reveal start/i)).toHaveValue('');
     });
 
+    it('shows the clip inputs and the hide-video checkbox for a video file media url', async () => {
+      loadQuestion({ mediaUrl: 'https://example.com/clip.mp4' });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByLabelText(/clip start/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/clip end/i)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/hide video \(sound only\)/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Reveal clip (question video)')).toBeVisible();
+    });
+
+    it('labels them as the answer video clip when the answer media is a video file', async () => {
+      loadQuestion({
+        mediaUrl: 'https://example.com/a.jpg',
+        answerMediaUrl: 'https://example.com/answer.mp4',
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByText('Answer video clip')).toBeVisible();
+      expect(screen.queryByLabelText(/clip start/i)).not.toBeInTheDocument();
+    });
+
     it('is hidden when neither media is a YouTube link', async () => {
       loadQuestion({ mediaUrl: 'https://example.com/a.jpg' });
       await screen.findByDisplayValue('Trivia Night');

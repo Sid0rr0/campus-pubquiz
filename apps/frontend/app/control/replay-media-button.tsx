@@ -5,7 +5,7 @@ import type { GameAction } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
 
 interface ReplayMediaButtonProps {
-  /** Whether the currently open question has a YouTube video showing on /display — see isYoutubeMediaUrl. Renders nothing otherwise, since there'd be nothing for REPLAY_MEDIA to act on. */
+  /** Whether the currently open question has a video (YouTube or file) showing on /display — see isVideoUrl. Renders nothing otherwise, since there'd be nothing for REPLAY_MEDIA to act on. */
   canReplay: boolean;
   onAction: (action: GameAction) => void;
   className?: string;

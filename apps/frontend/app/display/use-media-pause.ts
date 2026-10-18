@@ -19,18 +19,40 @@ interface MediaPauseHandles {
   /** Re-applies a standing pause once the embed has loaded — commands sent before then are dropped. */
   onYoutubeLoad: () => void;
   audioRef: RefObject<HTMLAudioElement | null>;
+  videoRef: RefObject<HTMLVideoElement | null>;
+  /** Re-applies a standing pause once a (re)mounted <video> has loaded — it would otherwise autoplay. */
+  onVideoReady: () => void;
 }
 
 /**
  * Applies GameProgress.isMediaPaused to the question's YouTube iframe (via the
- * IFrame API's postMessage commands) and <audio> element without remounting
- * either. Resume only fires after a pause this hook applied, so a question
- * that never paused is never told to play (autoplay stays the setting's call).
+ * IFrame API's postMessage commands), <audio> and <video> elements without
+ * remounting any of them. Resume only fires after a pause this hook applied,
+ * so a question that never paused is never told to play (autoplay stays the
+ * setting's call).
+ *
+ * A change of `replayToken` (Play again) on a <video> file seeks it to
+ * `clipStart` and plays, in place. YouTube replays by remounting instead.
  */
-export function useMediaPause(isPaused: boolean): MediaPauseHandles {
+export function useMediaPause(
+  isPaused: boolean,
+  replayToken = 0,
+  clipStart = 0,
+): MediaPauseHandles {
   const youtubeRef = useRef<HTMLIFrameElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const wasPausedRef = useRef(false);
+  const lastReplayTokenRef = useRef(replayToken);
+
+  useEffect(() => {
+    if (replayToken === lastReplayTokenRef.current) return;
+    lastReplayTokenRef.current = replayToken;
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = clipStart;
+    video.play()?.catch(() => undefined);
+  }, [replayToken, clipStart]);
 
   useEffect(() => {
     if (isPaused === wasPausedRef.current) return;
@@ -39,14 +61,15 @@ export function useMediaPause(isPaused: boolean): MediaPauseHandles {
       youtubeRef.current,
       isPaused ? 'pauseVideo' : 'playVideo',
     );
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPaused) {
-      audio.pause();
-    } else {
-      // Browsers may reject play() (autoplay policy); the audio element's own
-      // controls remain as the fallback, so there is nothing to do on failure.
-      audio.play()?.catch(() => undefined);
+    for (const element of [audioRef.current, videoRef.current]) {
+      if (!element) continue;
+      if (isPaused) {
+        element.pause();
+      } else {
+        // Browsers may reject play() (autoplay policy); a rejection is ignored
+        // and the moderator can pause/resume again.
+        element.play()?.catch(() => undefined);
+      }
     }
   }, [isPaused]);
 
@@ -54,5 +77,9 @@ export function useMediaPause(isPaused: boolean): MediaPauseHandles {
     if (isPaused) postYoutubeCommand(youtubeRef.current, 'pauseVideo');
   }, [isPaused]);
 
-  return { youtubeRef, onYoutubeLoad, audioRef };
+  const onVideoReady = useCallback(() => {
+    if (isPaused) videoRef.current?.pause();
+  }, [isPaused]);
+
+  return { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady };
 }

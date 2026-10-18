@@ -6,19 +6,6 @@ export function extractYoutubeVideoId(url: string): string | undefined {
   return YOUTUBE_ID_PATTERN.exec(url)?.[1];
 }
 
-/** Whether the URL is a YouTube link (the only media a clip applies to). */
-export function isYoutubeUrl(url: string | undefined): boolean {
-  return url !== undefined && extractYoutubeVideoId(url) !== undefined;
-}
-
-/** Whether the question's own media or its answer media is a YouTube link — the questions that carry a reveal clip. */
-export function hasYoutubeMedia(media: {
-  mediaUrl?: string;
-  answerMediaUrl?: string;
-}): boolean {
-  return isYoutubeUrl(media.mediaUrl) || isYoutubeUrl(media.answerMediaUrl);
-}
-
 const SECONDS_PER_MINUTE = 60;
 const MAX_TIMECODE_PARTS = 3;
 

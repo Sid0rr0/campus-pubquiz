@@ -1,4 +1,4 @@
-import { formatAnswer, isBreakStatus } from '@campus-pubquiz/types';
+import { formatAnswer, isBreakStatus, isHttpUrl } from '@campus-pubquiz/types';
 import type {
   BlockQuestionView,
   PlayersRevealQuestionView,
@@ -7,7 +7,7 @@ import type {
   QuestionView,
 } from '@campus-pubquiz/types';
 import { NumberMarginText } from '@/app/components/number-margin-text';
-import { isHttpUrl, QuestionDisplay } from '@/app/display/question-display';
+import { QuestionDisplay } from '@/app/display/question-display';
 import {
   ClosestGuessRevealScreen,
   closestGuessAnswerProps,

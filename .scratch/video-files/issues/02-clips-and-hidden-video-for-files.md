@@ -14,11 +14,13 @@ See the spec's "One media classifier", "Clips", "Reveal rule" and "Hidden video"
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] CSV round-trip test: `free_text` row with `.mp4` `media_url` and full notes group decodes to clip fields and encodes back identically.
-- [ ] CSV/record test: image `media_url` + `.mp4` `answer_media_url` keeps only the reveal clip.
-- [ ] Record codec test: clip fields stored for an `.mp4` `media_url`.
-- [ ] Editor test: pasting an `.mp4` shows the clip inputs and hidden checkbox; `.mp4` answer media labels "Answer video clip".
-- [ ] `/display` tests: `<video>` src carries the question clip fragment while asked and the reveal clip at reveal; hidden cover shown while asked, lifted at reveal with the same element (no remount).
-- [ ] `pnpm typecheck`, `pnpm lint` and the touched workspaces' tests pass.
+Sample CSV row skipped: no stable public sample video URL could be verified (the sample file's audio row is itself an `example.com` placeholder), so no unverifiable link was added.
+
+- [x] CSV round-trip test: `free_text` row with `.mp4` `media_url` and full notes group decodes to clip fields and encodes back identically.
+- [x] CSV/record test: image `media_url` + `.mp4` `answer_media_url` keeps only the reveal clip.
+- [x] Record codec test: clip fields stored for an `.mp4` `media_url`.
+- [x] Editor test: pasting an `.mp4` shows the clip inputs and hidden checkbox; `.mp4` answer media labels "Answer video clip".
+- [x] `/display` tests: `<video>` src carries the question clip fragment while asked and the reveal clip at reveal; hidden cover shown while asked, lifted at reveal with the same element (no remount).
+- [x] `pnpm typecheck`, `pnpm lint` and the touched workspaces' tests pass.
