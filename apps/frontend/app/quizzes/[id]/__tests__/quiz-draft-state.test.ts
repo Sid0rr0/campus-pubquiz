@@ -82,7 +82,7 @@ describe('makeQuestion / makeRound', () => {
 
 describe('YouTube clip fields in the editor draft', () => {
   const preview: ImportQuestionPreview = {
-    type: 'youtube',
+    type: 'free_text',
     prompt: 'Which movie?',
     answer: 'Jaws',
     points: 2,
@@ -208,74 +208,26 @@ describe('questionFromPreview / questionToPreview round-trip', () => {
     expect(questionToPreview(question)).toEqual(preview);
   });
 
-  it.each(['audio', 'youtube'] as const)(
-    'round-trips a %s question with choices and one without',
-    (type) => {
-      const mediaUrl =
-        type === 'audio'
-          ? 'https://example.com/clip.mp3'
-          : 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-      const withChoices: ImportQuestionPreview = {
+  it.each([
+    ['free_text', 'https://example.com/clip.mp3'],
+    ['multiple_choice', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+  ] as const)(
+    'round-trips a %s question that carries media',
+    (type, mediaUrl) => {
+      const preview: ImportQuestionPreview = {
         type,
         prompt: 'Which one?',
         answer: 'B',
         points: 1,
         mediaUrl,
-        options: ['A', 'B'],
-      };
-      const withoutChoices: ImportQuestionPreview = {
-        type,
-        prompt: 'Which one?',
-        answer: 'B',
-        points: 1,
-        mediaUrl,
+        ...(type === 'multiple_choice' ? { options: ['A', 'B'] } : {}),
       };
 
-      const editable = questionFromPreview('q1', withChoices);
-
-      expect(editable.options[1]).toEqual({ text: 'B', isCorrect: true });
-      expect(questionToPreview(editable)).toEqual(withChoices);
-      expect(
-        questionToPreview(questionFromPreview('q2', withoutChoices)),
-      ).toEqual(withoutChoices);
+      expect(questionToPreview(questionFromPreview('q1', preview))).toEqual(
+        preview,
+      );
     },
   );
-
-  it('saves an audio question whose choices were all cleared as a typed answer', () => {
-    const editable = {
-      ...questionFromPreview('q1', {
-        type: 'audio',
-        prompt: 'Which one?',
-        answer: 'B',
-        points: 1,
-        mediaUrl: 'https://example.com/clip.mp3',
-        options: ['A', 'B'],
-      }),
-    };
-    const cleared = {
-      ...editable,
-      options: editable.options.map((option) => ({ ...option, text: '' })),
-      correctText: ' B ',
-    };
-
-    const preview = questionToPreview(cleared);
-
-    expect(preview.answer).toBe('B');
-    expect(preview).not.toHaveProperty('options');
-  });
-
-  it('loads an audio question whose choices are all blank as a typed answer', () => {
-    const editable = questionFromPreview('q1', {
-      type: 'audio',
-      prompt: 'Which one?',
-      answer: 'B',
-      points: 1,
-      mediaUrl: 'https://example.com/clip.mp3',
-      options: ['', ''],
-    });
-
-    expect(editable.correctText).toBe('B');
-  });
 
   it('carries notes and media urls through for a question with an image mediaUrl', () => {
     const preview: ImportQuestionPreview = {
@@ -646,17 +598,6 @@ describe('questionToPreview after a type change', () => {
       expect(preview).not.toHaveProperty('matchTargets');
       expect(preview).not.toHaveProperty('matchScoringMode');
       expect(preview.answer).toBe('42');
-    },
-  );
-
-  it.each(['audio', 'youtube'] as const)(
-    'keeps the choices already entered, as optional choices, for %s',
-    (type) => {
-      const preview = staleQuestion(type);
-
-      expect(preview.options).toEqual(['Paris', 'Rome']);
-      expect(preview.answer).toBe('Paris');
-      expect(preview).not.toHaveProperty('matchTargets');
     },
   );
 

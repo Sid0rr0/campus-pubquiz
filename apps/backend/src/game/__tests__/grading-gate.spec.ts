@@ -19,14 +19,14 @@ describe('GameGateway — grading gate before reveal', () => {
         {
           title: 'Round 1',
           questions: [
-            { type: 'audio', prompt: 'Name that tune', answer: 'Queen' },
+            { type: 'free_text', prompt: 'Name that tune', answer: 'Queen' },
           ],
         },
         {
           title: 'Round 2',
           breakAfter: true,
           questions: [
-            { type: 'audio', prompt: 'Name that band', answer: 'Abba' },
+            { type: 'free_text', prompt: 'Name that band', answer: 'Abba' },
           ],
         },
       ],

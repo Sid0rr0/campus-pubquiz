@@ -122,47 +122,17 @@ describe('DisplayPage — question display', () => {
     expect(screen.getByText('Earth')).toBeInTheDocument();
   });
 
-  it.each(['audio', 'youtube'] as const)(
-    'shows the choices of a %s question that has some',
-    (type) => {
-      mockUseGame.mockReturnValue({
-        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-          rounds: [
-            {
-              questions: [
-                {
-                  type,
-                  prompt: 'Which song is this?',
-                  mediaUrl: 'https://example.com/song.mp3',
-                  options: ['Yesterday', 'Help!'],
-                  points: 1,
-                },
-              ],
-            },
-          ],
-          progress: { status: 'question_open' },
-        }),
-        connectionError: null,
-        sendAction: vi.fn(),
-      });
-      render(<DisplayPage />);
-
-      expect(screen.getByText('Yesterday')).toBeInTheDocument();
-      expect(screen.getByText('Help!')).toBeInTheDocument();
-    },
-  );
-
-  it('shows no choices for an audio question whose choices are all blank', () => {
+  it('shows the choices of a multiple choice question with audio media', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
         rounds: [
           {
             questions: [
               {
-                type: 'audio',
+                type: 'multiple_choice',
                 prompt: 'Which song is this?',
                 mediaUrl: 'https://example.com/song.mp3',
-                options: ['', '  '],
+                options: ['Yesterday', 'Help!'],
                 points: 1,
               },
             ],
@@ -175,7 +145,8 @@ describe('DisplayPage — question display', () => {
     });
     render(<DisplayPage />);
 
-    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    expect(screen.getByText('Yesterday')).toBeInTheDocument();
+    expect(screen.getByText('Help!')).toBeInTheDocument();
   });
 
   it('shows both match lists before reveal', () => {

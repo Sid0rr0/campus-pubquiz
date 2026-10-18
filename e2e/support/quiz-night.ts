@@ -20,7 +20,7 @@ export const QUIZ_NIGHT = {
     wrong: 'Venus',
     points: 3,
   },
-  /** `audio`: only checked for rendering. */
+  /** A `free_text` question with an mp3 `media_url`: only checked for rendering. */
   audio: {
     prompt: 'Which band recorded the song you hear?',
     mediaUrl: 'https://example.invalid/e2e-clip.mp3',

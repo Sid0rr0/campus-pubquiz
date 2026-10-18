@@ -47,7 +47,7 @@ describe('GameGateway — acknowledgement on success', () => {
           title: 'Round 1',
           breakAfter: true,
           questions: [
-            { type: 'audio', prompt: 'Band?', answer: 'Queen', points: 2 },
+            { type: 'free_text', prompt: 'Band?', answer: 'Queen', points: 2 },
           ],
         },
       ],

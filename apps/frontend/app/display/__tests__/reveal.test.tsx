@@ -282,14 +282,14 @@ describe('DisplayPage — reveal', () => {
     );
   });
 
-  it('highlights the correct choice of an audio question that has choices', () => {
+  it('highlights the correct choice of a multiple choice question with audio media', () => {
     mockUseGame.mockReturnValue({
       snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
         rounds: [
           {
             questions: [
               {
-                type: 'audio',
+                type: 'multiple_choice',
                 prompt: 'Which song is this?',
                 mediaUrl: 'https://example.com/song.mp3',
                 options: ['Yesterday', 'Help!'],
@@ -313,34 +313,6 @@ describe('DisplayPage — reveal', () => {
       })
       .closest('li');
     expect(correctItem).toHaveClass('border-green');
-  });
-
-  it('shows only the answer line for an audio question whose choices are all blank', () => {
-    mockUseGame.mockReturnValue({
-      snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
-        rounds: [
-          {
-            questions: [
-              {
-                type: 'audio',
-                prompt: 'Which song is this?',
-                mediaUrl: 'https://example.com/song.mp3',
-                options: [' '],
-                points: 1,
-                answer: 'Help!',
-              },
-            ],
-          },
-        ],
-        progress: { status: 'reveal', revealIndex: 0 },
-      }),
-      connectionError: null,
-      sendAction: vi.fn(),
-    });
-    render(<DisplayPage />);
-
-    expect(screen.getByText('Help!')).toBeInTheDocument();
-    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
   it('places the answer text above the picture on reveal', () => {

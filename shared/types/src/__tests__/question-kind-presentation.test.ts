@@ -9,8 +9,6 @@ const EXPECTED = {
     requiresMedia: false,
   },
   free_text: { label: 'Free text', inputKind: 'text', requiresMedia: false },
-  audio: { label: 'Audio', inputKind: 'text', requiresMedia: true },
-  youtube: { label: 'YouTube video', inputKind: 'text', requiresMedia: true },
   sort: { label: 'Sort / order', inputKind: 'sort', requiresMedia: false },
   match: { label: 'Match pairs', inputKind: 'match', requiresMedia: false },
   closest_guess: {
@@ -22,7 +20,15 @@ const EXPECTED = {
 } as const;
 
 describe('question kind presentation', () => {
-  it('lists the types in the editor picker order', () => {
+  it('lists exactly the six types, in the editor picker order', () => {
+    expect([...QUESTION_TYPES]).toEqual([
+      'multiple_choice',
+      'free_text',
+      'sort',
+      'match',
+      'closest_guess',
+      'number',
+    ]);
     expect([...QUESTION_TYPES]).toEqual(Object.keys(EXPECTED));
   });
 

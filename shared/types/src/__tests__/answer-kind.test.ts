@@ -21,12 +21,6 @@ describe('resolveAnswerKind', () => {
     ['multiple_choice', ['a', 'b'], 'choice'],
     ['multiple_choice', undefined, 'choice'],
     ['multiple_choice', [], 'choice'],
-    ['audio', undefined, 'text'],
-    ['audio', [], 'text'],
-    ['audio', ['', '  '], 'text'],
-    ['audio', ['', 'Queen'], 'choice'],
-    ['youtube', ['Queen', 'Kings'], 'choice'],
-    ['youtube', ['  '], 'text'],
     ['sort', ['a', 'b'], 'sort'],
     ['match', ['a', 'b'], 'match'],
     ['closest_guess', undefined, 'number'],
@@ -80,10 +74,10 @@ describe('formatAnswer', () => {
     expect(formatAnswer('42', { type: 'closest_guess' })).toBe('42');
   });
 
-  it('returns an audio answer unchanged, with and without choices', () => {
-    expect(formatAnswer('Jaws', { type: 'audio' })).toBe('Jaws');
+  it('returns a free text answer unchanged, with and without stray options', () => {
+    expect(formatAnswer('Jaws', { type: 'free_text' })).toBe('Jaws');
     expect(
-      formatAnswer('Jaws', { type: 'audio', options: ['Jaws', 'Alien'] }),
+      formatAnswer('Jaws', { type: 'free_text', options: ['Jaws', 'Alien'] }),
     ).toBe('Jaws');
   });
 

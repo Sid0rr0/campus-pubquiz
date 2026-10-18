@@ -18,7 +18,7 @@ describe('GameGateway — grades and bonus awards wait their turn in the session
           title: 'Round 1',
           breakAfter: true,
           questions: [
-            { type: 'audio', prompt: 'Name that tune', answer: 'Queen' },
+            { type: 'free_text', prompt: 'Name that tune', answer: 'Queen' },
           ],
         },
       ],

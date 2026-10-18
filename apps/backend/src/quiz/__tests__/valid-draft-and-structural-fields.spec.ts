@@ -18,13 +18,13 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
               options: ['Paris', 'London', 'Berlin'],
             }),
             makeQuestion({
-              type: 'audio',
+              type: 'free_text',
               answer: 'Bohemian Rhapsody',
               mediaUrl: 'https://example.com/song.mp3',
               answerMediaUrl: 'https://example.com/cover.jpg',
             }),
             makeQuestion({
-              type: 'youtube',
+              type: 'free_text',
               answer: 'Never Gonna Give You Up',
               mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
             }),
@@ -179,17 +179,10 @@ describe('validateQuizDraft - valid draft and structural fields', () => {
       expect(validateQuizDraft(request)).toEqual([]);
     });
 
-    it.each(['free_text', 'audio', 'youtube', 'closest_guess'] as const)(
+    it.each(['free_text', 'closest_guess'] as const)(
       'rejects a %s question in a kahoot round',
       (type) => {
-        const overrides =
-          type === 'audio'
-            ? { mediaUrl: 'https://example.com/song.mp3' }
-            : type === 'youtube'
-              ? { mediaUrl: 'https://youtu.be/dQw4w9WgXcQ' }
-              : type === 'closest_guess'
-                ? { answer: '1000' }
-                : {};
+        const overrides = type === 'closest_guess' ? { answer: '1000' } : {};
         const issues = validateQuizDraft(
           makeRequest({
             rounds: [

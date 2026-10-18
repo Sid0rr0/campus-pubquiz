@@ -19,7 +19,7 @@ function viewWith(
 describe('getAdminControls — canPauseMedia', () => {
   it.each([
     ['YouTube', 'https://youtu.be/dQw4w9WgXcQ'],
-    ['audio', 'https://example.com/song.mp3'],
+    ['an mp3', 'https://example.com/song.mp3'],
   ])('is true for an open question with %s media', (_kind, url) => {
     expect(getAdminControls(viewWith('question_open', url)).canPauseMedia).toBe(
       true,

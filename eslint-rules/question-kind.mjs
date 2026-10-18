@@ -8,8 +8,6 @@
 export const QUESTION_TYPE_LITERALS = [
   'multiple_choice',
   'free_text',
-  'audio',
-  'youtube',
   'sort',
   'match',
   'closest_guess',

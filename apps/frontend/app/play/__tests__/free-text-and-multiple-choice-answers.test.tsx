@@ -58,12 +58,11 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
   });
 
   it.each([
-    ['with options', ['Jaws', 'Alien'], 'button'],
-    ['without options', undefined, 'textbox'],
-    ['whose options are all blank', ['', '  '], 'textbox'],
+    ['multiple_choice', ['Jaws', 'Alien'], 'button'],
+    ['free_text', undefined, 'textbox'],
   ] as const)(
-    'shows the right input for an audio question %s',
-    (_label, options, expectedRole) => {
+    'shows the right input for a %s question with audio media',
+    (type, options, expectedRole) => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
         teamLinkResult({
@@ -72,7 +71,7 @@ describe('PlayPage — free-text and multiple-choice answers', () => {
               {
                 questions: [
                   {
-                    type: 'audio',
+                    type,
                     prompt: 'Name the film',
                     points: 1,
                     mediaUrl: 'https://example.com/clip.mp3',

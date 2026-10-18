@@ -89,7 +89,7 @@ describe('DisplayPage — media rendering', () => {
           {
             questions: [
               {
-                type: 'audio',
+                type: 'free_text',
                 prompt: 'Name this song.',
                 mediaUrl: 'https://example.com/song.mp3',
                 points: 3,
@@ -179,7 +179,7 @@ describe('DisplayPage — media rendering', () => {
           {
             questions: [
               {
-                type: 'audio',
+                type: 'free_text',
                 prompt: 'Name this song.',
                 mediaUrl: 'https://example.com/song.mp3',
                 points: 3,
@@ -305,7 +305,7 @@ describe('DisplayPage — media rendering', () => {
       points: 3,
     };
     const audioQuestion = {
-      type: 'audio' as const,
+      type: 'free_text' as const,
       prompt: 'Name this song.',
       mediaUrl: 'https://example.com/song.mp3',
       points: 3,
