@@ -35,10 +35,10 @@ const baseQuestionFields = {
     .int('Points must be a positive whole number')
     .positive('Points must be a positive whole number'),
   answerMediaUrl: httpUrl.optional(),
-  // A clip applies to any YouTube mediaUrl, whatever the type (the save ignores it for other media).
+  // A clip applies to any video (YouTube or file) mediaUrl, whatever the type (the save ignores it for other media).
   mediaStartSeconds: clipSeconds.optional(),
   mediaEndSeconds: clipSeconds.optional(),
-  // Covers a YouTube video on the big screen while the question is asked (sound only).
+  // Covers a video on the big screen while the question is asked (sound only).
   isVideoHidden: z.boolean().optional(),
   revealStartSeconds: clipSeconds.optional(),
   revealEndSeconds: clipSeconds.optional(),

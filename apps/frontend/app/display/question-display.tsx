@@ -39,6 +39,21 @@ export function isPausableMediaUrl(url: string | undefined): boolean {
   return kind !== undefined && kind !== 'image';
 }
 
+/** A video file's src with its clip as a media fragment (`#t=start,end`, either bound optional); an empty clip leaves the url as it is. */
+function buildVideoFileSrc(
+  url: string,
+  startSeconds?: number,
+  endSeconds?: number,
+): string {
+  if (startSeconds === undefined && endSeconds === undefined) return url;
+  const [baseUrl] = url.split('#');
+  const range =
+    endSeconds === undefined
+      ? `${startSeconds}`
+      : `${startSeconds ?? ''},${endSeconds}`;
+  return `${baseUrl}#t=${range}`;
+}
+
 function buildYoutubeEmbedSrc(
   videoId: string,
   autoplay: boolean,
@@ -64,7 +79,7 @@ interface AnswerMediaProps {
   autoplayMedia?: boolean;
   /** Overrides the answer image's className — defaults to the original fixed size used by ClosestGuessRevealScreen's standalone reveal. */
   imageClassName?: string;
-  /** The reveal clip, applied when `url` is a YouTube link (video file clips are not applied yet). */
+  /** The reveal clip, applied when `url` is a video (YouTube or file). */
   startSeconds?: number;
   endSeconds?: number;
 }
@@ -93,7 +108,7 @@ export function AnswerMedia({
       <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl bg-black">
         <video
           data-testid={`${mediaTestIdPrefix}-answer-video`}
-          src={safeUrl}
+          src={buildVideoFileSrc(safeUrl, startSeconds, endSeconds)}
           autoPlay={autoplayMedia}
           playsInline
           onError={() => setFailedVideoUrl(safeUrl)}
@@ -163,7 +178,7 @@ export type QuestionDisplayQuestion = Pick<
   >;
 
 interface QuestionDisplayProps {
-  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a YouTube `mediaUrl` — ignored for non-YouTube media and for `answerMediaUrl`. */
+  /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a video `mediaUrl` (YouTube or file) — ignored for other media and for `answerMediaUrl`. */
   question: QuestionDisplayQuestion;
   /** Renders the question with no media at all (neither its own nor the answer's) — the phone's question browser, which leaves the big screen's audio and video to the big screen. */
   isMediaHidden?: boolean;
@@ -377,7 +392,11 @@ export function QuestionDisplay({
                 ref={videoRef}
                 key={videoKey}
                 data-testid={`${mediaTestIdPrefix}-video`}
-                src={questionMediaUrl}
+                src={buildVideoFileSrc(
+                  questionMediaUrl,
+                  questionClip.start,
+                  questionClip.end,
+                )}
                 autoPlay={autoplayMedia}
                 playsInline
                 onError={() => setFailedVideoUrl(questionMediaUrl)}

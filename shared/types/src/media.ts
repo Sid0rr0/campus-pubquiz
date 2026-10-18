@@ -33,6 +33,14 @@ export function isVideoUrl(url: string | undefined): boolean {
   return kind === 'youtube' || kind === 'video-file';
 }
 
+/** Whether the question's own media or its answer media is a video — the questions that carry a reveal clip. */
+export function hasVideoMedia(media: {
+  mediaUrl?: string;
+  answerMediaUrl?: string;
+}): boolean {
+  return isVideoUrl(media.mediaUrl) || isVideoUrl(media.answerMediaUrl);
+}
+
 export interface MediaUploadResult {
   /** Public, direct link to the stored image — safe to drop into `mediaUrl`/`answerMediaUrl`. */
   url: string;

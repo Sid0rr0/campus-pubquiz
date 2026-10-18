@@ -845,7 +845,10 @@ A clip's start/end (seconds
 into the video) are real question fields (`mediaStartSeconds`/
 `mediaEndSeconds` on the draft, the preview and the JSON `payload`
 alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
-inputs for any YouTube `media_url`. The `notes` cell of a CSV row carries
+inputs for any video `media_url` (YouTube or video file). On the big screen
+a YouTube clip is the embed's `start`/`end` params; a video file's clip is a
+media fragment on the `<video>` src (`#t=start,end`, either bound optional,
+an empty clip leaves the url bare). The `notes` cell of a CSV row carries
 them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
 `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
 parse; quotes optional; the older `YouTube clip: {…}` line still imports).
@@ -858,7 +861,7 @@ silently: a CSV row with one is reported as invalid on its `notes` column,
 and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
 save ("Clip times must be whole seconds"); a blank one just means the whole
 video. CSV import moves the group out of the notes into the fields (only when
-`media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
+`media_url` or `answer_media_url` is a video, YouTube or file; `start`/`end` only fill
 the clip when `media_url` is); CSV export writes the fields back as one
 canonical group appended to the free notes, leaving empty keys out. Stored
 `notes` are free text only: loading a stored question strips any clip group
@@ -866,10 +869,10 @@ an older save left there (the payload fields stay the truth), and saving
 again cleans the row. The **reveal clip** (`revealStartSeconds`/
 `revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
 start/end of the one video played at reveal, and applies when either
-`media_url` or `answer_media_url` is a YouTube link (the editor labels the
-inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
+`media_url` or `answer_media_url` is a video (the editor labels the
+inputs "Answer video clip" when `answer_media_url` is a video, otherwise
 "Reveal clip (question video)"). At reveal exactly one video plays: a
-YouTube `answer_media_url` replaces the question video, clipped by the
+video `answer_media_url` replaces the question video, clipped by the
 reveal clip; otherwise the question video plays again (restarted, unless it
 is a hidden video, which just lifts its cover), clipped by the reveal clip,
 not the question clip. An empty reveal start/end means the whole video. The
@@ -878,8 +881,8 @@ asked. Reveal views carry the reveal clip (it is on `SeededQuestion`, like
 `answerMediaUrl`, never on the pre-reveal `QuestionView`). **Hidden video:**
 the "Hide video (sound only)" checkbox (`isVideoHidden` on the draft,
 preview, payload and question views; `hideVideo: true` in the CSV notes
-group) shows for any YouTube `media_url`. The big screen keeps the iframe
-mounted at full size (a hidden or zero-size player may not autoplay) under an
+group) shows for any video `media_url` (YouTube or file). The big screen keeps
+the player (iframe or `<video>`) mounted at full size (a hidden or zero-size player may not autoplay) under an
 opaque panel with a 🎵 label, while the question is asked and in break
 review; the panel comes off at reveal without remounting the player. Phones
 show "🎧 Listen" in place of "👀 Look at the screen". A stored payload

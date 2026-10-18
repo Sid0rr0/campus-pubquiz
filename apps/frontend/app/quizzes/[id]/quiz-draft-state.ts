@@ -2,7 +2,7 @@ import {
   DEFAULT_MARGIN,
   describeLiveEditRounds,
   formatTimecode,
-  hasYoutubeMedia,
+  hasVideoMedia,
   parseFiniteNumber,
   parseTimecode,
   hasMarginType,
@@ -379,7 +379,7 @@ export function questionToPreview(
     ...(mediaUrl ? { mediaUrl } : {}),
     ...(mediaUrl ? clipFieldsFrom(question) : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
-    ...(hasYoutubeMedia({ mediaUrl, answerMediaUrl })
+    ...(hasVideoMedia({ mediaUrl, answerMediaUrl })
       ? revealClipFieldsFrom(question)
       : {}),
   };
