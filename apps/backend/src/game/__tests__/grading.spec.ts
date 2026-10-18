@@ -28,7 +28,7 @@ describe('GameGateway — grading', () => {
           breakAfter: true,
           questions: [
             {
-              type: 'audio',
+              type: 'free_text',
               prompt: 'Which band is this?',
               answer: 'Queen',
               points: 2,
@@ -79,7 +79,7 @@ describe('GameGateway — grading', () => {
     }>(SOCKET_ROOMS.ADMIN, SOCKET_EVENTS.ANSWERS_UPDATED);
     expect(update.questionId).toBe(questionId);
     expect(update.question).toMatchObject({
-      type: 'audio',
+      type: 'free_text',
       prompt: 'Which band is this?',
       points: 2,
       correctAnswer: 'Queen',

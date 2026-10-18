@@ -330,7 +330,7 @@ const PLAYABLE_QUESTIONS: Record<keyof SeededQuestionIds, SeedQuestion> = {
     },
   },
   audio: {
-    type: 'audio',
+    type: 'free_text',
     prompt: 'Which band is this?',
     answer: 'Queen',
     points: 2,

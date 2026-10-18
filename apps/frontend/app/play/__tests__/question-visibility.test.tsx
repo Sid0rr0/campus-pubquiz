@@ -102,7 +102,7 @@ describe('PlayPage — question visibility', () => {
             {
               questions: [
                 {
-                  type: 'audio',
+                  type: 'free_text',
                   prompt: 'Name this song.',
                   mediaUrl: 'https://example.com/song.mp3',
                   points: 3,

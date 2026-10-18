@@ -31,25 +31,6 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     options: ['Mars', 'Venus', 'Jupiter, the big one'],
     answerMediaUrl: IMAGE,
   },
-  audio: {
-    type: 'audio',
-    prompt: 'Name the song',
-    answer: 'Bohemian Rhapsody',
-    points: 3,
-    mediaUrl: AUDIO,
-    notes: 'Fade in',
-  },
-  youtube: {
-    type: 'youtube',
-    prompt: 'Which movie?',
-    answer: 'Jaws',
-    points: 2,
-    mediaUrl: YOUTUBE,
-    answerMediaUrl: IMAGE,
-    notes: 'Play the chorus',
-    mediaStartSeconds: 82,
-    mediaEndSeconds: 140,
-  },
   sort: {
     type: 'sort',
     prompt: 'Oldest first',
@@ -83,6 +64,19 @@ const QUESTION_BY_TYPE: Record<QuestionType, ImportQuestionPreview> = {
     // CSV carries no margin: an imported Number question gets the default.
     margin: { value: 10, unit: 'percent' },
   },
+};
+
+/** Media is carried by any type: a free text question with a clipped YouTube video. */
+const YOUTUBE_QUESTION: ImportQuestionPreview = {
+  type: 'free_text',
+  prompt: 'Which movie?',
+  answer: 'Jaws',
+  points: 2,
+  mediaUrl: YOUTUBE,
+  answerMediaUrl: IMAGE,
+  notes: 'Play the chorus',
+  mediaStartSeconds: 82,
+  mediaEndSeconds: 140,
 };
 
 const ROUND: ImportRoundPreview = {
@@ -174,52 +168,26 @@ describe('CSV round-trip through the question kinds', () => {
   });
 });
 
-describe('audio and youtube questions with choices', () => {
-  it.each(['audio', 'youtube'] as const)(
-    'round-trips a %s question with options',
-    (type) => {
-      const question: ImportQuestionPreview = {
-        ...QUESTION_BY_TYPE[type],
-        options: ['Jaws', 'Alien', 'Heat'],
-        answer: 'Jaws',
-      };
+describe('media on a multiple choice question', () => {
+  it('round-trips a multiple choice question that carries a clipped YouTube video', () => {
+    const question: ImportQuestionPreview = {
+      ...QUESTION_BY_TYPE.multiple_choice,
+      mediaUrl: YOUTUBE,
+      mediaStartSeconds: 10,
+      mediaEndSeconds: 25,
+    };
 
-      const { checked, row } = roundTrip(question);
+    const { checked, row } = roundTrip(question);
 
-      expect(row.options).toBe('Jaws|Alien|Heat');
-      expect(checked).toEqual({ success: true, data: question });
-    },
-  );
-
-  it.each(['audio', 'youtube'] as const)(
-    'rejects %s options that omit the answer, repeat, or number fewer than two',
-    (type) => {
-      const base = QUESTION_BY_TYPE[type];
-
-      const missingAnswer = checkQuestion({ ...base, options: ['A', 'B'] });
-      const repeated = checkQuestion({
-        ...base,
-        options: [base.answer, base.answer],
-      });
-      const single = checkQuestion({ ...base, options: [base.answer] });
-
-      for (const result of [missingAnswer, repeated, single]) {
-        expect(result.success).toBe(false);
-      }
-    },
-  );
-
-  it('treats an empty options list as no choices', () => {
-    const result = checkQuestion({ ...QUESTION_BY_TYPE.audio, options: [] });
-
-    expect(result).toEqual({ success: true, data: QUESTION_BY_TYPE.audio });
+    expect(row.notes).toBe('{start: "10", end: "25"}');
+    expect(checked).toEqual({ success: true, data: question });
   });
 });
 
 describe('YouTube clip in the notes cell', () => {
   const YOUTUBE_ROW = {
     rowNumber: 2,
-    ...encodeSheetRow(ROUND, QUESTION_BY_TYPE.youtube, true),
+    ...encodeSheetRow(ROUND, YOUTUBE_QUESTION, true),
   };
 
   it('exports the clip fields as a canonical group after the free notes', () => {
@@ -230,7 +198,7 @@ describe('YouTube clip in the notes cell', () => {
 
   it('exports a question without a clip with its notes unchanged', () => {
     const { row } = roundTrip({
-      ...QUESTION_BY_TYPE.youtube,
+      ...YOUTUBE_QUESTION,
       mediaStartSeconds: undefined,
       mediaEndSeconds: undefined,
     });
@@ -240,7 +208,7 @@ describe('YouTube clip in the notes cell', () => {
 
   it('omits an empty key from the exported group', () => {
     const { row } = roundTrip({
-      ...QUESTION_BY_TYPE.youtube,
+      ...YOUTUBE_QUESTION,
       notes: undefined,
       mediaEndSeconds: undefined,
     });
@@ -251,7 +219,7 @@ describe('YouTube clip in the notes cell', () => {
   it('imports the sample CSV group {start: "55", end: "88"} into the clip fields', () => {
     const { question } = decodeSheetRow(
       { ...YOUTUBE_ROW, notes: '{start: "55", end: "88"}' },
-      'youtube',
+      'free_text',
     );
 
     expect(question).toMatchObject({
@@ -267,7 +235,7 @@ describe('YouTube clip in the notes cell', () => {
         ...YOUTUBE_ROW,
         notes: 'Hint\nYouTube clip: {start: "0:05", end: "0:20"}',
       },
-      'youtube',
+      'free_text',
     );
 
     expect(question).toMatchObject({
@@ -280,7 +248,7 @@ describe('YouTube clip in the notes cell', () => {
   it('imports hideVideo: true into isVideoHidden', () => {
     const { question } = decodeSheetRow(
       { ...YOUTUBE_ROW, notes: '{hideVideo: true}' },
-      'youtube',
+      'free_text',
     );
 
     expect(question).toMatchObject({ isVideoHidden: true, notes: undefined });
@@ -288,7 +256,7 @@ describe('YouTube clip in the notes cell', () => {
 
   it('exports a hidden video in the group and imports it back unchanged', () => {
     const hidden = {
-      ...QUESTION_BY_TYPE.youtube,
+      ...YOUTUBE_QUESTION,
       isVideoHidden: true as const,
     };
     const { row, checked } = roundTrip(hidden);
@@ -305,7 +273,7 @@ describe('YouTube clip in the notes cell', () => {
 
   it('round-trips the reveal clip through revealStart/revealEnd in the group', () => {
     const question: ImportQuestionPreview = {
-      ...QUESTION_BY_TYPE.youtube,
+      ...YOUTUBE_QUESTION,
       revealStartSeconds: 150,
       revealEndSeconds: 165,
     };
@@ -341,7 +309,7 @@ describe('YouTube clip in the notes cell', () => {
         answerMediaUrl: IMAGE,
         notes: '{revealStart: "0:05"}',
       },
-      'audio',
+      'free_text',
     );
 
     expect(question).toMatchObject({ notes: '{revealStart: "0:05"}' });
@@ -351,7 +319,7 @@ describe('YouTube clip in the notes cell', () => {
   it('reports an issue on the notes cell for a clip time that is not a timecode', () => {
     const { clipIssues, question } = decodeSheetRow(
       { ...YOUTUBE_ROW, notes: '{start: "1:2x", revealEnd: "2:00"}' },
-      'youtube',
+      'free_text',
     );
 
     expect(clipIssues).toEqual([
@@ -366,7 +334,7 @@ describe('YouTube clip in the notes cell', () => {
   });
 
   it('reports no clip issue for a valid group', () => {
-    const { clipIssues } = decodeSheetRow(YOUTUBE_ROW, 'youtube');
+    const { clipIssues } = decodeSheetRow(YOUTUBE_ROW, 'free_text');
 
     expect(clipIssues).toEqual([]);
   });
@@ -378,7 +346,7 @@ describe('YouTube clip in the notes cell', () => {
         mediaUrl: AUDIO,
         notes: '{start: "0:05"}',
       },
-      'audio',
+      'free_text',
     );
 
     expect(question).toMatchObject({ notes: '{start: "0:05"}' });

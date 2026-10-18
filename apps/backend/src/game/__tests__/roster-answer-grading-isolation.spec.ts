@@ -18,7 +18,7 @@ describe('GameGateway — concurrent sessions: roster, answer, and grading isola
           breakAfter: true,
           questions: [
             {
-              type: 'audio',
+              type: 'free_text',
               prompt: 'Name that tune',
               answer: 'Queen',
               points: 7,

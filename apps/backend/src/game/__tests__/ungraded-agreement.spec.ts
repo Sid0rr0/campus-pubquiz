@@ -11,8 +11,8 @@ import {
   type RealStoreGateway,
 } from '@/game/__tests__/real-store-test-utils';
 
-// One block holding the three typed-answer types (audio, youtube, free_text:
-// graded at submit only on a match, otherwise left for the moderator), an
+// One block holding three free_text questions (two carrying media: graded at
+// submit only on a match, otherwise left for the moderator), an
 // auto-graded multiple_choice and the batch-graded closest_guess — every kind
 // of question the ungraded set has a rule for.
 const ONE_BLOCK_QUIZ: QuizRoundSpec[] = [
@@ -21,14 +21,14 @@ const ONE_BLOCK_QUIZ: QuizRoundSpec[] = [
     breakAfter: true,
     questions: [
       {
-        type: 'audio',
+        type: 'free_text',
         prompt: 'Which band is this?',
         answer: 'Queen',
         points: 2,
         payload: { mediaUrl: 'https://example.com/queen.mp3' },
       },
       {
-        type: 'youtube',
+        type: 'free_text',
         prompt: 'Which film is this clip from?',
         answer: 'Jaws',
         points: 2,

@@ -330,7 +330,7 @@ describe('GameStateService — getPresenterContext', () => {
           breakAfter: true,
           questions: [
             {
-              type: 'audio',
+              type: 'free_text',
               prompt: 'Name that tune',
               answer: 'Queen',
               points: 1,

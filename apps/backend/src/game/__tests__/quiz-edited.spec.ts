@@ -128,7 +128,7 @@ const MIXED_BLOCK_QUIZ: CreateGatewayOptions['rounds'] = [
         payload: { options: ['Paris', 'London'] },
       },
       {
-        type: 'audio',
+        type: 'free_text',
         prompt: 'Name that tune',
         answer: 'Queen',
         points: 3,

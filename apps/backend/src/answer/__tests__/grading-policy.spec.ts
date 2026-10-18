@@ -38,27 +38,28 @@ const GRADED = { value: 'x', gradedAt: new Date('2026-01-01') };
 const UNGRADED = { value: 'x', gradedAt: null };
 
 describe('Grading policy: grade at submit', () => {
-  it.each(['free_text', 'audio', 'youtube'] as const)(
-    '%s: a value matching the key (trimmed, any case) is correct',
-    (type) => {
-      const question = { type, answer: 'Queen', points: 10 };
-      for (const value of ['Queen', ' queen ', 'QUEEN']) {
-        expect(gradeAtSubmit(question, value)).toEqual({
-          points: 10,
-          verdict: 'correct',
-        });
-      }
-    },
-  );
+  it('free_text: a value matching the key (trimmed, any case) is correct', () => {
+    const question = {
+      type: 'free_text',
+      answer: 'Queen',
+      points: 10,
+    } as const;
+    for (const value of ['Queen', ' queen ', 'QUEEN']) {
+      expect(gradeAtSubmit(question, value)).toEqual({
+        points: 10,
+        verdict: 'correct',
+      });
+    }
+  });
 
-  it.each(['free_text', 'audio', 'youtube'] as const)(
-    '%s: a value that does not match the key has no automatic verdict',
-    (type) => {
-      expect(
-        gradeAtSubmit({ type, answer: 'Queen', points: 10 }, 'Queens'),
-      ).toBeNull();
-    },
-  );
+  it('free_text: a value that does not match the key has no automatic verdict', () => {
+    expect(
+      gradeAtSubmit(
+        { type: 'free_text', answer: 'Queen', points: 10 },
+        'Queens',
+      ),
+    ).toBeNull();
+  });
 
   it('grades an auto type either way', () => {
     expect(gradeAtSubmit(AUTO, 'Rome')).toEqual({

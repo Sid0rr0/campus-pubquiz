@@ -226,7 +226,7 @@ describe('QuizService (Postgres integration)', () => {
           breakAfter: true,
           questions: [
             {
-              type: 'audio',
+              type: 'free_text',
               prompt: 'Name this song.',
               answer: 'Bohemian Rhapsody',
               points: 2,
@@ -251,7 +251,7 @@ describe('QuizService (Postgres integration)', () => {
             questions: [
               {
                 questionId: expect.any(Number) as number,
-                type: 'audio',
+                type: 'free_text',
                 prompt: 'Name this song.',
                 answer: 'Bohemian Rhapsody',
                 points: 2,

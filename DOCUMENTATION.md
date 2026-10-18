@@ -607,7 +607,7 @@ itself — the display and other players just see counts.
    / full points, where half is exactly half the question's points: 0.5 on a
    1-point question), and must finish any remaining grading in the `break`:
    leaving it is refused while an answer in the block is ungraded. If a team
-   changes a hand-graded (`audio`/`youtube`) answer, its grade is cleared,
+   changes a hand-graded (`free_text`) answer, its grade is cleared,
    since it belonged to the old value. Grades are written to the answer row;
    grading an answer twice is prevented in the UI. Exception: `closest_guess` answers are graded automatically once the
    block locks and reject a manual `GRADE_ANSWER` until then — see
@@ -714,9 +714,10 @@ a dead end:
 
 ## Question Types
 
-`QuestionType` is one of `free_text`, `multiple_choice`, `audio`, `youtube`,
-`sort`, `match`, `closest_guess`, or `number`. Each has its own submission format and
-grading behavior:
+`QuestionType` is one of `free_text`, `multiple_choice`, `sort`, `match`,
+`closest_guess`, or `number`. Each has its own submission format and
+grading behavior. Media is not a type: any question can carry a
+`media_url` and an `answer_media_url` (see [Media on any question](#media-on-any-question)).
 
 - **`free_text`** — any typed answer (`FreeTextAnswer`). An answer matching
   the stored `answer` (trimmed, case-insensitive, so "Paris"/" paris "/"PARIS"
@@ -725,62 +726,6 @@ grading behavior:
   miss. The admin can override any answer, matching or not.
 - **`multiple_choice`** — players pick one of `options`. Auto-graded at
   submit time by exact match against the stored `answer`.
-- **`audio`** — `media_url` is required and plays on `/display` as an
-  autoplaying `<audio controls>` element. Teams type an answer, or pick from
-  `options` when the author adds at least two (the answer must then be one of
-  them, as for `multiple_choice`). Same rule as `free_text`: an answer
-  matching the key (a picked option is stored as its text) is graded correct
-  at submit time, any other waits for the admin.
-- **`youtube`** — `media_url` is required and must resolve to a
-  `youtube.com`/`youtu.be` video id (enforced by both the CSV import schema
-  and the manual editor's save validation). The display renders it as an
-  embedded iframe instead of `<img>`/`<audio>`; under the hood this
-  rendering is actually keyed off `media_url` itself, not the `type` value —
-  matching how image vs. audio already works — so a `free_text`/etc. row
-  with a YouTube `media_url` still embeds too. A clip's start/end (seconds
-  into the video) are real question fields (`mediaStartSeconds`/
-  `mediaEndSeconds` on the draft, the preview and the JSON `payload`
-  alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
-  inputs for any YouTube `media_url`. The `notes` cell of a CSV row carries
-  them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
-  `{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
-  parse; quotes optional; the older `YouTube clip: {…}` line still imports).
-  It isn't strict JSON: one lenient parser (`parseClipNotes` in
-  `shared/types/src/youtube.ts`) reads the keys `start`, `end`, `revealStart`,
-  `revealEnd` and `hideVideo: true`, and returns the notes with the group
-  removed, so notes without that syntax stay a normal free-text note. A
-  clip time that doesn't parse (e.g. `start: "1:2x"`) is never dropped
-  silently: a CSV row with one is reported as invalid on its `notes` column,
-  and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
-  save ("Clip times must be whole seconds"); a blank one just means the whole
-  video. CSV
-  import moves the group out of the notes into the fields (only when
-  `media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
-  the clip when `media_url` is); CSV export writes the fields back as one
-  canonical group appended to the free notes, leaving empty keys out. Stored
-  `notes` are free text only: loading a stored question strips any clip group
-  an older save left there (the payload fields stay the truth), and saving
-  again cleans the row. The **reveal clip** (`revealStartSeconds`/
-  `revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
-  start/end of the one video played at reveal, and applies when either
-  `media_url` or `answer_media_url` is a YouTube link (the editor labels the
-  inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
-  "Reveal clip (question video)"). At reveal exactly one video plays: a
-  YouTube `answer_media_url` replaces the question video, clipped by the
-  reveal clip; otherwise the question video plays again (restarted, unless it is a hidden video, which just lifts its cover), clipped
-  by the reveal clip, not the question clip. An empty reveal start/end means
-  the whole video. The question clip (`start`/`end`) still applies only while
-  the question is asked. Reveal views carry the reveal clip (it is on
-  `SeededQuestion`, like `answerMediaUrl`, never on the pre-reveal
-  `QuestionView`). **Hidden video:** the
-  "Hide video (sound only)" checkbox (`isVideoHidden` on the draft, preview,
-  payload and question views; `hideVideo: true` in the CSV notes group) shows
-  for any YouTube `media_url`. The big screen keeps the iframe mounted at full
-  size (a hidden or zero-size player may not autoplay) under an opaque panel
-  with a 🎵 label, while the question is asked and in break review; the panel
-  comes off at reveal without remounting the player. Phones show "🎧 Listen"
-  in place of "👀 Look at the screen". A stored payload without the field
-  reads as not hidden. Optional `options` and hand grading, same as `audio`.
 - **`sort`** — players drag `options` into what they think is the correct
   order (`SortAnswer`, `apps/frontend/app/play/sort-answer.tsx`); the
   submitted value is the reordered pipe-list. The CSV `answer` cell must
@@ -867,9 +812,64 @@ grading behavior:
   `closest_guess` and every other type are sent without one. The screens show
   margin text from the view alone and never ask the question type registry.
 
+### Media on any question
+
+There is deliberately no picture, audio or YouTube type: any question can
+carry a `media_url` and an `answer_media_url`, and the display works out from
+the URL whether it is an image, an `<audio controls>` element (autoplaying)
+or an embedded YouTube iframe. A question's type only decides how teams answer
+and how the answer is graded, so a music multiple choice is a
+`multiple_choice` row with an mp3 `media_url`. Media is never required.
+(Questions saved as `audio` or `youtube` before this were re-typed by a
+migration: `multiple_choice` when they had choices, `free_text` otherwise.)
+
+A clip's start/end (seconds
+into the video) are real question fields (`mediaStartSeconds`/
+`mediaEndSeconds` on the draft, the preview and the JSON `payload`
+alongside `mediaUrl`); the editor shows them as the "Clip start"/"Clip end"
+inputs for any YouTube `media_url`. The `notes` cell of a CSV row carries
+them as CSV-only syntax: one `{…}` group anywhere in the notes, e.g.
+`{start: "1:22", end: "2:20"}` (`M:SS`, `H:MM:SS`, or plain seconds all
+parse; quotes optional; the older `YouTube clip: {…}` line still imports).
+It isn't strict JSON: one lenient parser (`parseClipNotes` in
+`shared/types/src/youtube.ts`) reads the keys `start`, `end`, `revealStart`,
+`revealEnd` and `hideVideo: true`, and returns the notes with the group
+removed, so notes without that syntax stay a normal free-text note. A
+clip time that doesn't parse (e.g. `start: "1:2x"`) is never dropped
+silently: a CSV row with one is reported as invalid on its `notes` column,
+and in the editor an unreadable "Clip start"/"Reveal end" etc. is rejected at
+save ("Clip times must be whole seconds"); a blank one just means the whole
+video. CSV import moves the group out of the notes into the fields (only when
+`media_url` or `answer_media_url` is a YouTube link; `start`/`end` only fill
+the clip when `media_url` is); CSV export writes the fields back as one
+canonical group appended to the free notes, leaving empty keys out. Stored
+`notes` are free text only: loading a stored question strips any clip group
+an older save left there (the payload fields stay the truth), and saving
+again cleans the row. The **reveal clip** (`revealStartSeconds`/
+`revealEndSeconds`, in the notes group as `revealStart`/`revealEnd`) is the
+start/end of the one video played at reveal, and applies when either
+`media_url` or `answer_media_url` is a YouTube link (the editor labels the
+inputs "Answer video clip" when `answer_media_url` is YouTube, otherwise
+"Reveal clip (question video)"). At reveal exactly one video plays: a
+YouTube `answer_media_url` replaces the question video, clipped by the
+reveal clip; otherwise the question video plays again (restarted, unless it
+is a hidden video, which just lifts its cover), clipped by the reveal clip,
+not the question clip. An empty reveal start/end means the whole video. The
+question clip (`start`/`end`) still applies only while the question is
+asked. Reveal views carry the reveal clip (it is on `SeededQuestion`, like
+`answerMediaUrl`, never on the pre-reveal `QuestionView`). **Hidden video:**
+the "Hide video (sound only)" checkbox (`isVideoHidden` on the draft,
+preview, payload and question views; `hideVideo: true` in the CSV notes
+group) shows for any YouTube `media_url`. The big screen keeps the iframe
+mounted at full size (a hidden or zero-size player may not autoplay) under an
+opaque panel with a 🎵 label, while the question is asked and in break
+review; the panel comes off at reveal without remounting the player. Phones
+show "🎧 Listen" in place of "👀 Look at the screen". A stored payload
+without the field reads as not hidden.
+
 `multiple_choice`/`sort`/`match`/`number` are auto-graded the instant a team
 submits, and the admin can still override any of them per answer;
-`free_text`/`audio`/`youtube` (grading mode `match-or-human`) are graded
+`free_text` (grading mode `match-or-human`) is graded
 correct at submit when the answer matches the key and otherwise left ungraded
 for the admin, who can override any of them too. A revision that matches is
 graded correct (replacing any earlier grade); a revision that doesn't match
@@ -892,17 +892,14 @@ asks the question type. The team's own answer view carries no grading state.
 Every question also has one **answer kind** — `text`, `number`, `choice`,
 `sort` or `match` — resolved by `resolveAnswerKind`
 (`shared/types/src/answer-kind.ts`). A type whose choices are `required`
-(`multiple_choice`) is always `choice`. A type whose choices are `optional`
-(`audio`, `youtube`) is `choice` once the question carries at least one choice
-with text, and otherwise its registry input kind (`text`); a question whose
-choices are all blank is `text`. Every other type takes its registry input
-kind. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
+(`multiple_choice`) is always `choice`. Every other type takes its registry
+input kind, whatever `options` it carries. Each answer kind has one answer format (`ANSWER_FORMATS`) that decodes,
 encodes, formats and scores a stored answer, and Scoring takes its base score
 from it. `closest_guess` shares the `number` kind but is never scored one
 answer at a time: the Grading policy's `gradeAtSubmit` gives a batch type no
 grade at submit and the batch grader decides its result. Any type can
 carry `media_url`/`answer_media_url` — image vs. audio vs. YouTube is inferred
-from the URL, so there is deliberately no dedicated `picture` type.
+from the URL, so there is deliberately no picture, audio or YouTube type.
 
 ## Quiz Authoring and CSV Import
 
@@ -1023,7 +1020,7 @@ rounds back up to full points) from the response time stored on each answer at s
 survives a backend restart, and a correction made before the question locks is
 speed-scaled like any other); an already-graded `closest_guess` re-runs its batch,
 overwriting any override like the auto-graded types;
-`match-or-human` types (`free_text`/`audio`/`youtube`) grade answers that
+`match-or-human` types (`free_text` only) grade answers that
 match the corrected key correct, keep the admin's grade on a non-matching
 answer, and send any other non-matching answer back to ungraded — including
 one that was auto-graded correct under the old key (told apart by re-running
@@ -1107,9 +1104,13 @@ Sheet row format (one row per question):
 round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author
 ```
 
-`type` is one of the seven [Question Types](#question-types) above — see
-that section for what each needs in `options` and `answer`. `media_url` is
-required for `audio`/`youtube`, optional otherwise. `answer_media_url` is
+`type` is one of the six [Question Types](#question-types) above — see
+that section for what each needs in `options` and `answer`. A row typed
+`audio` or `youtube` (an older export) is rejected on its `type` cell with
+`Question type "audio" was removed — use free_text (or multiple_choice if the
+row has options) and keep the media_url.`; there are no silent aliases.
+`media_url` is optional on every type (see
+[Media on any question](#media-on-any-question)). `answer_media_url` is
 optional on any type (shown alongside the correct answer during reveal).
 `break_after` is `''`/`0`/`1`; the **last round's break is always forced on**
 regardless of its cells, since the state machine has no other way to ever

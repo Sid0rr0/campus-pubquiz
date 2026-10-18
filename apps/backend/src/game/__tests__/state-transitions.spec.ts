@@ -416,7 +416,7 @@ describe('GameGateway — state transitions', () => {
             title: 'Speed Round',
             kahootMode: true,
             questions: [
-              { type: 'audio', prompt: 'Which band?', answer: 'Queen' },
+              { type: 'free_text', prompt: 'Which band?', answer: 'Queen' },
             ],
           },
         ],

@@ -1,24 +1,20 @@
 import type { z } from 'zod';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import {
-  audioPreviewSchema,
   closestGuessPreviewSchema,
   freeTextPreviewSchema,
   matchPreviewSchema,
   multipleChoicePreviewSchema,
   numberPreviewSchema,
   sortPreviewSchema,
-  youtubePreviewSchema,
 } from './question-preview-schema';
 import {
-  audioPayloadSchema,
   closestGuessPayloadSchema,
   freeTextPayloadSchema,
   matchPayloadSchema,
   multipleChoicePayloadSchema,
   numberPayloadSchema,
   sortPayloadSchema,
-  youtubePayloadSchema,
   type QuestionPayload,
 } from './question-payload-schema';
 import {
@@ -109,39 +105,6 @@ export const QUESTION_KINDS: {
     csv: choicesCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    gradingSettings: [],
-  },
-  audio: {
-    type: 'audio',
-    revealKind: 'answer',
-    label: 'Audio',
-    moderatorNote:
-      'Needs an http audio link as its media. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
-    inputKind: 'text',
-    requiresMedia: true,
-    choices: 'optional',
-    schema: audioPreviewSchema,
-    payload: audioPayloadSchema,
-    csv: choicesCsv,
-    gradingMode: 'match-or-human',
-    kahootAllowed: false,
-    gradingSettings: [],
-  },
-  youtube: {
-    type: 'youtube',
-    revealKind: 'answer',
-    label: 'YouTube video',
-    moderatorNote:
-      'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
-    inputKind: 'text',
-    requiresMedia: true,
-    hasYoutubeMedia: true,
-    choices: 'optional',
-    schema: youtubePreviewSchema,
-    payload: youtubePayloadSchema,
-    csv: choicesCsv,
-    gradingMode: 'match-or-human',
-    kahootAllowed: false,
     gradingSettings: [],
   },
   sort: {
