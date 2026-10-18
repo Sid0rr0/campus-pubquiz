@@ -1080,9 +1080,10 @@ whatever the order of its fields.
 
 **CSV export mechanics**: purely client-side — `quizToCsv`
 (`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
-draft (unsaved edits included) into the same 12-column format the importer
-reads, so an exported file re-imports as-is. `break_after`, `category`, and
-`author` all land on each round's last row; `match` answers are rebuilt as
+draft (unsaved edits included) into the same 14-column format the importer
+reads, so an exported file re-imports as-is. `break_after`, `category`,
+`author`, `round_note`, and `show_round_note` all land on each round's last
+row (`show_round_note` is blank when the setting is off); `match` answers are rebuilt as
 `left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
 has no column, so it isn't exported.
 
@@ -1146,7 +1147,7 @@ plain links.
 Sheet row format (one row per question):
 
 ```
-round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author
+round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author | round_note | show_round_note
 ```
 
 `type` is one of the six [Question Types](#question-types) above — see
@@ -1173,6 +1174,15 @@ blocking the import (an unrecognized category is a typo, not something
 worth stopping an admin's import over). The manual quiz editor offers the
 same list as a `<select>`, so it can never produce an invalid value.
 `author` stays free text.
+
+`round_note` and `show_round_note` are two more optional, round-level cells
+(a sheet without them still imports), resolved like `category` and `author`:
+the first non-blank cell seen for a round wins. `round_note` is the round's
+[Round note](GLOSSARY.md) — plain text, line breaks kept, trimmed; one over
+`ROUND_NOTE_MAX_LENGTH` (500 characters) is an issue on that `round_note`
+cell and blocks the import. `show_round_note` is `''`/`0`/`1` (anything else is
+an issue on its cell) and turns on the round's "show on screen" setting;
+`1` with an empty note is accepted and has no effect.
 
 ## Persistence and Restart Resilience
 

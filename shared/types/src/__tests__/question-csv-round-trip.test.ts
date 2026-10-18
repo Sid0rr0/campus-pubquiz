@@ -138,7 +138,37 @@ describe('CSV round-trip through the question kinds', () => {
       break_after: '1',
       category: 'Music',
       author: 'Sam',
+      show_round_note: '',
     });
+  });
+
+  it('carries the round note and its show-on-screen setting on the last row of a round', () => {
+    const shown = roundTrip(QUESTION_BY_TYPE.free_text, {
+      ...ROUND,
+      note: 'Say hi.\nThen the rules.',
+      showNoteOnScreen: true,
+    });
+    const hostOnly = roundTrip(QUESTION_BY_TYPE.free_text, {
+      ...ROUND,
+      note: 'Host only',
+    });
+    const earlier = roundTrip(
+      QUESTION_BY_TYPE.free_text,
+      { ...ROUND, note: 'Host only', showNoteOnScreen: true },
+      false,
+    );
+
+    expect(shown.row).toMatchObject({
+      roundNote: 'Say hi.\nThen the rules.',
+      showRoundNote: '1',
+    });
+    expect(shown.meta).toMatchObject({
+      round_note: 'Say hi.\nThen the rules.',
+      show_round_note: '1',
+    });
+    expect(hostOnly.row.showRoundNote).toBe('');
+    expect(hostOnly.meta.round_note).toBe('Host only');
+    expect(earlier.row).toMatchObject({ roundNote: '', showRoundNote: '' });
   });
 
   it('leaves round-level cells blank on earlier rows and on rounds without a break', () => {
@@ -153,6 +183,7 @@ describe('CSV round-trip through the question kinds', () => {
       round: 'Round 1',
       break_after: '',
       category: '',
+      show_round_note: '',
     });
     expect(noBreak.break_after).toBe('');
   });

@@ -235,6 +235,8 @@ describe('QuizEditorPanel', () => {
         breakAfter: '',
         category: '',
         author: '',
+        roundNote: '',
+        showRoundNote: '',
       },
       'free_text',
     );
