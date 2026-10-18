@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| video-files | [Video files as media](video-files/spec.md) | 3 |
 | media-not-a-question-type | [Media is something any question carries, not a question type](media-not-a-question-type/spec.md) | 3 |
 | youtube-clips | [YouTube clips, reveal clips and hidden videos](youtube-clips/spec.md) | 3 |
 | break-fun-facts | [Fun facts on the big screen during a break](break-fun-facts/spec.md) | 2 |
