@@ -8,7 +8,6 @@ import {
 } from '@radix-ui/react-icons';
 import {
   hasMarginType,
-  QUESTION_KINDS,
   type AnswerKind,
   parseFiniteNumber,
   type MarginUnit,
@@ -68,8 +67,7 @@ function ChoiceList({
   issues,
   isOpened,
   onChange,
-  hasOptionalChoices,
-}: AnswerFieldsProps & { hasOptionalChoices: boolean }) {
+}: AnswerFieldsProps) {
   function isDuplicateOption(optionIndex: number): boolean {
     const normalized = normalizedOptionText(question.options[optionIndex].text);
     if (normalized === '') return false;
@@ -98,12 +96,6 @@ function ChoiceList({
 
   return (
     <div className="flex flex-col gap-2">
-      {hasOptionalChoices && (
-        <p className="text-xs font-extrabold text-foreground/60">
-          Choices (optional) — fill in at least two to let teams pick instead of
-          typing
-        </p>
-      )}
       {question.options.map((option, optionIndex) => {
         const isDuplicate = isDuplicateOption(optionIndex);
         return (
@@ -168,22 +160,8 @@ function ChoiceList({
   );
 }
 
-/** A typed answer, plus the choices list for a type whose choices are optional (filling in two switches it to choice). */
-function TypedAnswerFields(
-  props: AnswerFieldsProps & { inputType: 'text' | 'number' },
-) {
-  const hasOptionalChoices =
-    QUESTION_KINDS[props.question.type].choices === 'optional';
-  return (
-    <>
-      <TypedAnswerField {...props} />
-      {hasOptionalChoices && <ChoiceList {...props} hasOptionalChoices />}
-    </>
-  );
-}
-
 function TextFields(props: AnswerFieldsProps) {
-  return <TypedAnswerFields {...props} inputType="text" />;
+  return <TypedAnswerField {...props} inputType="text" />;
 }
 
 const MARGIN_UNIT_LABELS: readonly { unit: MarginUnit; label: string }[] = [
@@ -245,20 +223,9 @@ function MarginRow({ question, issues, onChange }: AnswerFieldsProps) {
 function NumberFields(props: AnswerFieldsProps) {
   return (
     <>
-      <TypedAnswerFields {...props} inputType="number" />
+      <TypedAnswerField {...props} inputType="number" />
       {hasMarginType(props.question.type) && <MarginRow {...props} />}
     </>
-  );
-}
-
-function ChoiceFields(props: AnswerFieldsProps) {
-  return (
-    <ChoiceList
-      {...props}
-      hasOptionalChoices={
-        QUESTION_KINDS[props.question.type].choices === 'optional'
-      }
-    />
   );
 }
 
@@ -466,14 +433,14 @@ function MatchFields({
 const ANSWER_KIND_FIELDS = {
   text: TextFields,
   number: NumberFields,
-  choice: ChoiceFields,
+  choice: ChoiceList,
   sort: SortFields,
   match: MatchFields,
 } satisfies {
   readonly [K in AnswerKind]: (props: AnswerFieldsProps) => unknown;
 };
 
-/** The answer fields for the question's answer kind, resolved from its type and the choices typed so far. */
+/** The answer fields for the question's answer kind, resolved from its type. */
 export function AnswerSection(props: AnswerFieldsProps) {
   const Fields = ANSWER_KIND_FIELDS[resolveDraftAnswerKind(props.question)];
   return <Fields {...props} />;

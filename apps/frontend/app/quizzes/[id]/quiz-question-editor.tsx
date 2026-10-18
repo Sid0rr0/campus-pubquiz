@@ -104,10 +104,7 @@ export function QuizQuestionEditor({
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
   );
-  const { requiresMedia: needsMediaUrl } = QUESTION_KINDS[question.type];
-  const isYoutubeType = QUESTION_KINDS[question.type].hasYoutubeMedia === true;
-  const isYoutubeMedia =
-    isYoutubeType || extractYoutubeVideoId(question.mediaUrl) !== undefined;
+  const isYoutubeMedia = extractYoutubeVideoId(question.mediaUrl) !== undefined;
   const isYoutubeAnswerMedia =
     extractYoutubeVideoId(question.answerMediaUrl) !== undefined;
 
@@ -228,10 +225,9 @@ export function QuizQuestionEditor({
         <div className="flex flex-col gap-1">
           <MediaUrlField
             label="Media URL"
-            isRequired={needsMediaUrl}
             value={question.mediaUrl}
             onChange={(mediaUrl) => onChange({ mediaUrl })}
-            placeholder={isYoutubeType ? 'https://youtu.be/…' : 'https://…'}
+            placeholder="https://…"
           />
           <FieldErrors issues={fieldIssues(issues, 'mediaUrl')} />
         </div>
