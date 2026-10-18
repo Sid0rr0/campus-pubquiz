@@ -4,14 +4,22 @@ import type { SeededRound, SessionState } from './session-state';
 /** Longest round note, in characters, after trimming — enforced at the quiz-draft save boundary and shown as the editor's character count. */
 export const ROUND_NOTE_MAX_LENGTH = 500;
 
+/** Whether the screen is a round's intro or break round intro (the reveal intro is not). */
+export function isRoundIntroScreen(
+  screen: OnAirScreen,
+): screen is Extract<
+  OnAirScreen,
+  { kind: 'round_title' | 'break_round_title' }
+> {
+  return screen.kind === 'round_title' || screen.kind === 'break_round_title';
+}
+
 /** The round whose intro or break round intro is on air; undefined on every other screen (the reveal intro included). */
 function roundWithIntroOnAir(
   session: SessionState,
   screen: OnAirScreen,
 ): SeededRound | undefined {
-  if (screen.kind !== 'round_title' && screen.kind !== 'break_round_title') {
-    return undefined;
-  }
+  if (!isRoundIntroScreen(screen)) return undefined;
   if (screen.roundIndex === null) return undefined;
   return session.seededGame.rounds[screen.roundIndex];
 }

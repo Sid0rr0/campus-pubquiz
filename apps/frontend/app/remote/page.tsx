@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import {
   DEFAULT_DISPLAY_TEXT_SCALE,
+  isRoundIntroScreen,
   type PresenterContextPayload,
   type SeededQuestion,
   type ScreenPreview,
@@ -194,10 +195,7 @@ function RemotePageContent() {
         </h2>
         <NotesBody
           presenterContext={presenterContext}
-          isRoundIntroOnAir={
-            onAirScreen.kind === 'round_title' ||
-            onAirScreen.kind === 'break_round_title'
-          }
+          isRoundIntroOnAir={isRoundIntroScreen(onAirScreen)}
         />
       </section>
 

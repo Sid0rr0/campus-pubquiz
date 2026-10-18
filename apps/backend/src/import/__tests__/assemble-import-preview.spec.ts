@@ -166,6 +166,46 @@ describe('assembleImportPreview', () => {
     expect(preview.rounds[2].showNoteOnScreen).toBeUndefined();
   });
 
+  it('lets an earlier show_round_note 0 win over a later 1, so the note stays off the big screen', () => {
+    const rows: SheetRow[] = [
+      makeRow({
+        rowNumber: 2,
+        round: 'History',
+        roundNote: 'Say hi.',
+        showRoundNote: '0',
+      }),
+      makeRow({ rowNumber: 3, round: 'History', showRoundNote: '1' }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.rounds[0].note).toBe('Say hi.');
+    expect(preview.rounds[0].showNoteOnScreen).toBeUndefined();
+  });
+
+  it('resolves show_round_note per round, not across rounds', () => {
+    const rows: SheetRow[] = [
+      makeRow({
+        rowNumber: 2,
+        round: 'History',
+        roundNote: 'Say hi.',
+        showRoundNote: '0',
+      }),
+      makeRow({
+        rowNumber: 3,
+        round: 'Music',
+        roundNote: 'Host only',
+        showRoundNote: '1',
+      }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.rounds[0].showNoteOnScreen).toBeUndefined();
+    expect(preview.rounds[1].showNoteOnScreen).toBe(true);
+  });
+
   it('reports a round_note over the limit as an issue on that cell', () => {
     const rows: SheetRow[] = [
       makeRow({ rowNumber: 2, roundNote: 'x'.repeat(501) }),
@@ -178,6 +218,7 @@ describe('assembleImportPreview', () => {
     expect(preview.issues).toEqual([
       expect.objectContaining({ rowNumber: 2, field: 'round_note' }),
     ]);
+    expect(preview.issues[0].message).toMatch(/500/);
   });
 
   it('reports a show_round_note that is not blank, 0 or 1', () => {
