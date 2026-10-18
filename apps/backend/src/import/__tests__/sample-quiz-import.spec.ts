@@ -66,6 +66,19 @@ describe('sample-quiz-import.csv', () => {
     ]);
   });
 
+  it('gives one round a host-only note and another a note shown on screen', () => {
+    expect(
+      preview.rounds.map(({ title, note, showNoteOnScreen }) => ({
+        title,
+        hasNote: Boolean(note),
+        showNoteOnScreen: showNoteOnScreen ?? false,
+      })),
+    ).toEqual([
+      { title: 'General Knowledge', hasNote: true, showNoteOnScreen: false },
+      { title: 'Music & Movies', hasNote: true, showNoteOnScreen: true },
+    ]);
+  });
+
   it('gives each round a category and an author', () => {
     expect(
       preview.rounds.map(({ title, category, author }) => ({

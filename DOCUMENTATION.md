@@ -112,7 +112,7 @@ behaviour of each status.
 | `lobby`             | QR code and join code; joined teams pop into the roster with a chime (at most one per 500 ms; teams present at load stay silent)                                                                                                                                                                                              | "You're in! Look for (the team's name) on the big screen", "Waiting for the quiz to start…" + the player count card + rules link                                                                                                                                     | Session created, or `PREVIOUS` from `rules`                                                                                        | — (`START_QUIZ` → `rules`)                                                                                             |
 | `rules`             | Rules: round/topic/break structure + house rules, shown once per quiz                                                                                                                                                                                                                                                         | The same rules                                                                                                                                                                                                                                                       | `START_QUIZ`                                                                                                                       | `round_overview`, or `round_intro` if the overview is turned off                                                       |
 | `round_overview`    | Every round's title (with category/author), shown once                                                                                                                                                                                                                                                                        | "Look at the screen — Rounds"                                                                                                                                                                                                                                        | `ADVANCE` from `rules`                                                                                                             | First round's `round_intro`                                                                                            |
-| `round_intro`       | Round title card: "ROUND N — category", title, author                                                                                                                                                                                                                                                                         | "Look at the screen" + round title; the block browser instead if questions are already open                                                                                                                                                                          | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
+| `round_intro`       | Round title card: "ROUND N — category", title, author, and the round note when shown on screen                                                                                                                                                                                                                                                                    | "Look at the screen" + round title; the block browser instead if questions are already open                                                                                                                                                                          | `ADVANCE` from `round_overview`, from a round's last question when the block continues, or from the previous block's last `reveal` | That round's first `question_open`                                                                                     |
 | `question_open`     | The current question (prompt + media)                                                                                                                                                                                                                                                                                         | Block browser: every question opened so far in the block, answerable (last write wins)                                                                                                                                                                               | `ADVANCE` from `round_intro` or the previous question                                                                              | Next question; the next round's `round_intro` if the block continues; `locking` on the block's last question           |
 | `locking`           | Countdown on the block's last question                                                                                                                                                                                                                                                                                        | Still answerable, with a thin bar draining to the same lock deadline as the countdown; when the block locks the phone buzzes and stamps "Locked" (live moves only, not on reconnect or Previous)                                                                     | `ADVANCE` from the block's last question                                                                                           | `break_intro` — the block locks; a kahoot round goes straight to `reveal`                                              |
 | `break_intro`       | "BREAK N" card, break timer, bonus categories, and "Rate the rounds on your phone ★" when feedback is collected                                                                                                                                                                                                               | Block browser, read-only                                                                                                                                                                                                                                             | The block locking                                                                                                                  | `reveal_intro` — refused while any answer in the block is ungraded                                                     |
@@ -499,7 +499,11 @@ connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
 Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
-`PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview),
+`PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview;
+`currentQuestionNotes` for the open question, and `currentRoundNote`, the
+**Round note** of the round whose intro or break round intro is on air, `null`
+on every other screen including the reveal intro, decided from the on-air
+screen in `screen-preview.util.ts`),
 `TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
 team's own phone only), `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
@@ -936,6 +940,22 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Edit the quiz title; per round, edit its title, toggle `breakAfter`, reorder
   with up/down buttons (no drag-and-drop), delete, or add questions; per
   question, edit type/prompt/options/answer/points/media.
+- Write a round's **Round note** in the round's textarea ("Round note — what
+  you say before this round", with a character count). Plain text, line breaks
+  kept, trimmed, at most `ROUND_NOTE_MAX_LENGTH` (500) characters, blank saved
+  as no note; a longer note is rejected like any other invalid draft. It is
+  stored on `Round.note`, seeded onto the session's round, and shown on
+  `/remote`'s Notes panel while that round's intro (or the break round intro)
+  is on air ("No note for this round." when it has none). The round's **Show on
+  screen** checkbox (`Round.showNoteOnScreen`, off by default, disabled while the
+  note is blank) also puts the note on the big screen's round intro and break
+  round intro, drawn as text (line breaks kept, display text scale applied)
+  under the title, category and author. The server decides this once, in the
+  display view's `roundNote`: the note only when that round's intro or break
+  round intro is on air, the setting is on and the note is non-empty, else `''`.
+  Phones and the reveal intro never get it. It can be edited for
+  any round while live — `findLiveEditViolations` ignores it, and the live edit
+  re-seeds running sessions.
 - Re-import a CSV or re-fetch a Google Sheets link mid-edit at any time — it
   overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
@@ -1060,9 +1080,10 @@ whatever the order of its fields.
 
 **CSV export mechanics**: purely client-side — `quizToCsv`
 (`apps/frontend/app/lib/quiz-csv-export.ts`) serializes the editor's current
-draft (unsaved edits included) into the same 12-column format the importer
-reads, so an exported file re-imports as-is. `break_after`, `category`, and
-`author` all land on each round's last row; `match` answers are rebuilt as
+draft (unsaved edits included) into the same 14-column format the importer
+reads, so an exported file re-imports as-is. `break_after`, `category`,
+`author`, `round_note`, and `show_round_note` all land on each round's last
+row (`show_round_note` is blank when the setting is off); `match` answers are rebuilt as
 `left+right` pairs. Rounds with no questions are omitted, and `kahootMode`
 has no column, so it isn't exported.
 
@@ -1126,7 +1147,7 @@ plain links.
 Sheet row format (one row per question):
 
 ```
-round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author
+round | type | question | options | answer | points | media_url | answer_media_url | notes | break_after | category | author | round_note | show_round_note
 ```
 
 `type` is one of the six [Question Types](#question-types) above — see
@@ -1153,6 +1174,15 @@ blocking the import (an unrecognized category is a typo, not something
 worth stopping an admin's import over). The manual quiz editor offers the
 same list as a `<select>`, so it can never produce an invalid value.
 `author` stays free text.
+
+`round_note` and `show_round_note` are two more optional, round-level cells
+(a sheet without them still imports), resolved like `category` and `author`:
+the first non-blank cell seen for a round wins. `round_note` is the round's
+[Round note](GLOSSARY.md) — plain text, line breaks kept, trimmed; one over
+`ROUND_NOTE_MAX_LENGTH` (500 characters) is an issue on that `round_note`
+cell and blocks the import. `show_round_note` is `''`/`0`/`1` (anything else is
+an issue on its cell) and turns on the round's "show on screen" setting;
+`1` with an empty note is accepted and has no effect.
 
 ## Persistence and Restart Resilience
 

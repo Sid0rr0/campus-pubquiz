@@ -75,6 +75,8 @@ describe('makeQuestion / makeRound', () => {
       kahootMode: false,
       category: '',
       author: '',
+      note: '',
+      showNoteOnScreen: false,
       questions: [],
     });
   });

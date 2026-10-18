@@ -31,6 +31,8 @@ describe('parseSheetCsv', () => {
         breakAfter: '1',
         category: '',
         author: '',
+        roundNote: '',
+        showRoundNote: '',
       },
       {
         rowNumber: 3,
@@ -46,8 +48,22 @@ describe('parseSheetCsv', () => {
         breakAfter: '',
         category: '',
         author: '',
+        roundNote: '',
+        showRoundNote: '',
       },
     ]);
+  });
+
+  it('reads the round_note and show_round_note columns, keeping line breaks in the note', () => {
+    const csv = [
+      `${HEADER},round_note,show_round_note`,
+      'Round 1,free_text,Largest planet?,,Jupiter,2,,,1,"Say hi.\nThen go.",1',
+    ].join('\n');
+
+    const [row] = parseSheetCsv(csv);
+
+    expect(row.roundNote).toBe('Say hi.\nThen go.');
+    expect(row.showRoundNote).toBe('1');
   });
 
   it('handles quoted fields with embedded commas and newlines', () => {

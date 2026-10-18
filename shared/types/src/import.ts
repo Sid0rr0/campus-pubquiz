@@ -21,6 +21,10 @@ export interface SheetRow {
   breakAfter: string;
   category: string;
   author: string;
+  /** Round-level, like category and author: the `round_note` cell. */
+  roundNote: string;
+  /** Round-level: the `show_round_note` cell, '' / '0' / '1'. */
+  showRoundNote: string;
 }
 
 export interface ImportRowIssue {
@@ -79,6 +83,10 @@ export interface ImportRoundPreview {
   category?: string;
   /** Who wrote this round's questions — optional, shown on the big screen's round_intro/round_overview alongside the title. */
   author?: string;
+  /** What the quiz master says while this round's intro is on air — see Round.note. Blank is never stored: it is absent. */
+  note?: string;
+  /** Whether the note also shows on the big screen — see Round.showNoteOnScreen. Absent means off. */
+  showNoteOnScreen?: boolean;
   questions: ImportQuestionPreview[];
 }
 

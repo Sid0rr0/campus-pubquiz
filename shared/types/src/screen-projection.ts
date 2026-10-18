@@ -110,7 +110,7 @@ export function projectScreen(
     case SOCKET_ROOMS.DISPLAY:
       return {
         ...snapshot,
-        ...buildDisplayFields(session),
+        ...buildDisplayFields(session, screen),
         revealQuestions: trimOnAirQuestion(
           snapshot.revealQuestions,
           snapshot.progress,

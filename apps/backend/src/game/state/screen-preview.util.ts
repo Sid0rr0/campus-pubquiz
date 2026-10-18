@@ -4,6 +4,7 @@ import {
   getCurrentQuestion,
   getGameContext,
   getQuizStructureSummary,
+  getRoundNoteOnAir,
   nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
@@ -187,9 +188,12 @@ export function buildPresenterContext(
       ? (currentRound.questionNotesById?.[currentQuestion.id] ?? null)
       : null;
 
+  const { onAirScreen } = projectScreen(session, SOCKET_ROOMS.ADMIN);
+
   return {
     currentQuestionNotes,
-    currentScreen: describeScreen(session),
+    currentRoundNote: getRoundNoteOnAir(session, onAirScreen),
+    currentScreen: describeOnAirScreenText(session, onAirScreen),
     nextScreen: describeNextScreen(session),
   };
 }

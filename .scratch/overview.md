@@ -8,7 +8,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- |
 | feedback-trends | [Feedback trends across sessions](feedback-trends/spec.md) | 3 | — |
 | team-page | [A team page opened with the team code](team-page/spec.md) | 3 | — |
-| round-notes | [Round notes on title cards](round-notes/spec.md) | 3 | — |
 | league | [Leagues — ranking teams across a semester](league/spec.md) | 6 | team-page, feedback-trends |
 
 ## Won't do

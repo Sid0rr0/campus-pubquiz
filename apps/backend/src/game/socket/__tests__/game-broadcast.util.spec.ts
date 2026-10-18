@@ -23,6 +23,7 @@ describe('broadcastGameState', () => {
   } as unknown as StateSnapshotPayload;
   const presenterContext: PresenterContextPayload = {
     currentQuestionNotes: 'note',
+    currentRoundNote: null,
     currentScreen: { heading: 'Lobby' },
     nextScreen: null,
   };

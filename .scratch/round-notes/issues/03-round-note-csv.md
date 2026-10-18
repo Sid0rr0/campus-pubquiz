@@ -13,7 +13,7 @@ See the spec's "CSV" decision.
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Shared/backend test: `round_note` and `show_round_note` are resolved per round (first non-blank wins, on any row of the round).
 - [ ] Test: a 501-character `round_note` is an issue on that cell. An empty note with `show_round_note=1` imports with no note.

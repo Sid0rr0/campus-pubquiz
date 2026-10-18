@@ -18,6 +18,8 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
       roundBreakAfter: false,
       roundCategory: '',
       roundAuthor: '',
+      roundNote: '',
+      showRoundNote: '',
       question: {
         type: 'sort',
         prompt: 'Order these planets from the sun outward.',
@@ -74,6 +76,8 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
       roundBreakAfter: false,
       roundCategory: '',
       roundAuthor: '',
+      roundNote: '',
+      showRoundNote: '',
       question: {
         type: 'match',
         prompt: 'Match the hero to their weapon.',
@@ -186,6 +190,8 @@ describe('parseQuestionRow - sort, match, and closest_guess question types', () 
       roundBreakAfter: false,
       roundCategory: '',
       roundAuthor: '',
+      roundNote: '',
+      showRoundNote: '',
       question: {
         type: 'closest_guess',
         prompt: 'How many students attend this university?',
