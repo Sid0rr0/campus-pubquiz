@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { DEFAULT_MARGIN, MARGIN_UNITS, parseFiniteNumber } from './margin';
 import { isSameMultiset, splitPipeList } from './sort-match';
-import { extractYoutubeVideoId } from './youtube';
 
 /**
  * Draft-path validation: one Zod schema per question type over the
@@ -66,54 +65,6 @@ export const multipleChoicePreviewSchema = z
     path: ['options'],
     error: 'Options must not repeat',
   });
-
-// An empty list (a blank CSV cell, an editor with no choices typed) means "no
-// choices", so the question stays free-typed.
-const optionalChoices = z.preprocess(
-  (value) => (Array.isArray(value) && value.length === 0 ? undefined : value),
-  z.array(z.string().min(1)).min(2, 'Provide at least two options').optional(),
-);
-
-/** The `multiple_choice` rules, applied only when the question carries choices. */
-function withOptionalChoiceRules<
-  T extends z.ZodType<{ options?: string[]; answer: string }>,
->(schema: T) {
-  return schema
-    .refine(
-      (question) =>
-        question.options === undefined ||
-        question.options.includes(question.answer),
-      { path: ['answer'], error: 'Answer must be one of the options' },
-    )
-    .refine(
-      (question) =>
-        question.options === undefined || hasNoRepeats(question.options),
-      { path: ['options'], error: 'Options must not repeat' },
-    );
-}
-
-export const audioPreviewSchema = withOptionalChoiceRules(
-  z.object({
-    type: z.literal('audio'),
-    ...baseQuestionFields,
-    options: optionalChoices,
-    mediaUrl: httpUrl,
-  }),
-);
-
-export const youtubePreviewSchema = withOptionalChoiceRules(
-  z.object({
-    type: z.literal('youtube'),
-    ...baseQuestionFields,
-    options: optionalChoices,
-    mediaUrl: httpUrl.refine(
-      (url) => extractYoutubeVideoId(url) !== undefined,
-      {
-        error: 'Media URL must be a youtube.com/youtu.be link for type youtube',
-      },
-    ),
-  }),
-);
 
 /** An answer key that is a finite number — closest guess and Number share it. */
 const numberAnswer = z

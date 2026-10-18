@@ -7,8 +7,6 @@
 export const QUESTION_TYPES = [
   'multiple_choice',
   'free_text',
-  'audio',
-  'youtube',
   'sort',
   'match',
   'closest_guess',

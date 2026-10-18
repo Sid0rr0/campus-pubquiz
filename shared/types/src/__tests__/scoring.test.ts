@@ -39,7 +39,7 @@ describe('scoreSubmission — exact-match types', () => {
     },
   );
 
-  it.each(['audio', 'youtube', 'closest_guess'] as const)(
+  it.each(['free_text', 'closest_guess'] as const)(
     'scores nothing for %s unless it matches the key',
     (type) => {
       expect(scoreSubmission({ type, answer: '5', points: 10 }, '6')).toEqual({

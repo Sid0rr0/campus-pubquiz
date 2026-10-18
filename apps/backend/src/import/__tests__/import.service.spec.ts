@@ -43,7 +43,7 @@ const VALID_CSV = [
   HEADER,
   'History,free_text,Largest planet?,,Jupiter,2,,,,0',
   'History,multiple_choice,Capital of France?,Paris|London,Paris,3,,,,0',
-  'Music,audio,Name this song.,,Bohemian Rhapsody,2,https://example.com/song.mp3,https://example.com/song-answer.jpg,,1',
+  'Music,free_text,Name this song.,,Bohemian Rhapsody,2,https://example.com/song.mp3,https://example.com/song-answer.jpg,,1',
 ].join('\n');
 
 const EDITED_CSV = [
@@ -185,7 +185,7 @@ describe('ImportService (Postgres integration)', () => {
         round: roundRows[1].id,
       });
       expect(questionRows).toHaveLength(1);
-      expect(questionRows[0].type).toBe('audio');
+      expect(questionRows[0].type).toBe('free_text');
       expect(questionRows[0].points).toBe(2);
       expect(questionRows[0].answer).toBe('Bohemian Rhapsody');
       expect(questionRows[0].payload).toEqual({
@@ -370,7 +370,7 @@ describe('ImportService (Postgres integration)', () => {
         expect.arrayContaining(['Jupiter', 'Paris', 'Bohemian Rhapsody']),
       );
       const audioQuestion = questions.find(
-        (question) => question.type === 'audio',
+        (question) => question.mediaUrl === 'https://example.com/song.mp3',
       );
       expect(audioQuestion?.mediaUrl).toBe('https://example.com/song.mp3');
       expect(audioQuestion?.answerMediaUrl).toBe(

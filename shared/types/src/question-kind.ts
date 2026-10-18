@@ -1,24 +1,20 @@
 import type { z } from 'zod';
 import { QUESTION_TYPES, type QuestionType } from './question-types';
 import {
-  audioPreviewSchema,
   closestGuessPreviewSchema,
   freeTextPreviewSchema,
   matchPreviewSchema,
   multipleChoicePreviewSchema,
   numberPreviewSchema,
   sortPreviewSchema,
-  youtubePreviewSchema,
 } from './question-preview-schema';
 import {
-  audioPayloadSchema,
   closestGuessPayloadSchema,
   freeTextPayloadSchema,
   matchPayloadSchema,
   multipleChoicePayloadSchema,
   numberPayloadSchema,
   sortPayloadSchema,
-  youtubePayloadSchema,
   type QuestionPayload,
 } from './question-payload-schema';
 import {
@@ -55,12 +51,8 @@ export interface QuestionKind<T extends QuestionType = QuestionType> {
   /** One moderator-facing sentence for the `/guide` page: how to author the question and how it is graded. */
   moderatorNote: string;
   inputKind: AnswerInputKind;
-  /** Whether the question is unusable without a `mediaUrl` (the editor marks the field required). */
-  requiresMedia: boolean;
-  /** Set when the type's `mediaUrl` must be a YouTube link, so the editor shows the clip inputs before a URL is typed. Any other type shows them once its media URL is a YouTube link. */
-  hasYoutubeMedia?: true;
-  /** Whether the question carries a list of choices: never, always, or only when the author adds some (the answer is then one of them). */
-  choices: 'none' | 'required' | 'optional';
+  /** Whether the question carries a list of choices: never, or always (the answer is one of them). */
+  choices: 'none' | 'required';
   /** The one validation for an ImportQuestionPreview — import (via `decodeSheetRow`) and draft save both use it. */
   schema: z.ZodType;
   /** The payload codec: stored JSON is parsed against this (via `parseQuestionPayload`), never cast. */
@@ -86,7 +78,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'No options. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it, and you can override any mark by hand.',
     inputKind: 'text',
-    requiresMedia: false,
     choices: 'none',
     schema: freeTextPreviewSchema,
     payload: freeTextPayloadSchema,
@@ -102,46 +93,12 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'Options are separated by pipes (Paris|London|Berlin) and the answer must match one option exactly. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'choice',
-    requiresMedia: false,
     choices: 'required',
     schema: multipleChoicePreviewSchema,
     payload: multipleChoicePayloadSchema,
     csv: choicesCsv,
     gradingMode: 'auto',
     kahootAllowed: true,
-    gradingSettings: [],
-  },
-  audio: {
-    type: 'audio',
-    revealKind: 'answer',
-    label: 'Audio',
-    moderatorNote:
-      'Needs an http audio link as its media. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
-    inputKind: 'text',
-    requiresMedia: true,
-    choices: 'optional',
-    schema: audioPreviewSchema,
-    payload: audioPayloadSchema,
-    csv: choicesCsv,
-    gradingMode: 'match-or-human',
-    kahootAllowed: false,
-    gradingSettings: [],
-  },
-  youtube: {
-    type: 'youtube',
-    revealKind: 'answer',
-    label: 'YouTube video',
-    moderatorNote:
-      'Needs a youtube.com or youtu.be link as its media; the notes can clip it, e.g. {start: "0:10", end: "0:25"}. You can add options if you like. An answer matching the answer text (case and whitespace are ignored) is graded correct when a team submits; any other answer waits for you to grade it.',
-    inputKind: 'text',
-    requiresMedia: true,
-    hasYoutubeMedia: true,
-    choices: 'optional',
-    schema: youtubePreviewSchema,
-    payload: youtubePayloadSchema,
-    csv: choicesCsv,
-    gradingMode: 'match-or-human',
-    kahootAllowed: false,
     gradingSettings: [],
   },
   sort: {
@@ -151,7 +108,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'Options are pipe-separated in any order and the answer lists them in the correct order. Graded automatically when a team submits; you can override by hand.',
     inputKind: 'sort',
-    requiresMedia: false,
     choices: 'none',
     schema: sortPreviewSchema,
     payload: sortPayloadSchema,
@@ -167,7 +123,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'Options hold both lists as left1|left2+right1|right2 and the answer pairs them (Paris+France|Tokyo+Japan). Graded automatically when a team submits; you can override by hand.',
     inputKind: 'match',
-    requiresMedia: false,
     choices: 'none',
     schema: matchPreviewSchema,
     payload: matchPayloadSchema,
@@ -183,7 +138,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'The answer is a number. Graded in one batch once the block locks: every team tied for the closest guess gets full points and everyone else gets zero. From then on you can override any mark by hand.',
     inputKind: 'number',
-    requiresMedia: false,
     choices: 'none',
     schema: closestGuessPreviewSchema,
     payload: closestGuessPayloadSchema,
@@ -199,7 +153,6 @@ export const QUESTION_KINDS: {
     moderatorNote:
       'The answer is a number, and the question carries a margin (10% of the answer unless the editor says otherwise). An answer within the margin, edges included, is graded correct when a team submits; anything else is graded incorrect. Teams answer on a number keypad, and you can override any mark by hand.',
     inputKind: 'number',
-    requiresMedia: false,
     choices: 'none',
     schema: numberPreviewSchema,
     payload: numberPayloadSchema,

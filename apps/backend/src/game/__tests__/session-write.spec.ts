@@ -495,7 +495,7 @@ describe('GameGateway — session write: a refused press', () => {
           title: 'Round 1',
           breakAfter: true,
           questions: [
-            { type: 'audio', prompt: 'Name that tune', answer: 'Queen' },
+            { type: 'free_text', prompt: 'Name that tune', answer: 'Queen' },
           ],
         },
       ],

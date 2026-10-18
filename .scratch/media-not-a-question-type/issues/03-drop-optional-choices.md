@@ -12,7 +12,7 @@ There is no behaviour change for any remaining type. See the spec's "The optiona
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `resolveAnswerKind({ type: 'free_text', options: ['A', 'B'] })` is `text`, and `multiple_choice` is always `choice` (`answer-kind.test.ts`).
 - [ ] The editor shows no choice list on a free text, number or closest guess question (`quiz-editor-panel.test.tsx`).

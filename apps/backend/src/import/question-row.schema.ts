@@ -25,6 +25,9 @@ export type ParsedQuestionRow =
     }
   | { ok: false; issues: ImportRowIssue[] };
 
+/** Types that used to exist: media is now carried by any question, so a row naming one gets a pointer to the replacement. */
+const REMOVED_QUESTION_TYPES: readonly string[] = ['audio', 'youtube'];
+
 function normalizeType(rawType: string): string {
   return rawType
     .trim()
@@ -38,6 +41,18 @@ function normalizeType(rawType: string): string {
  */
 export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
   const type = normalizeType(row.type);
+  if (REMOVED_QUESTION_TYPES.includes(type)) {
+    return {
+      ok: false,
+      issues: [
+        {
+          rowNumber: row.rowNumber,
+          field: 'type',
+          message: `Question type "${row.type.trim()}" was removed — use free_text (or multiple_choice if the row has options) and keep the media_url.`,
+        },
+      ],
+    };
+  }
   if (!(QUESTION_TYPES as readonly string[]).includes(type)) {
     return {
       ok: false,

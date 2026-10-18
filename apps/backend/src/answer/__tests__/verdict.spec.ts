@@ -84,7 +84,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
   });
 
   it('leaves a non-matching audio answer without a verdict until graded, and resets it when the value changes', async () => {
-    const question = await createQuestion('audio', 'Queen', 2);
+    const question = await createQuestion('free_text', 'Queen', 2);
     const team = await insertTeam('Team', 'token-1');
     const ack = await state.answerService.submit(
       state.session.id,
@@ -119,7 +119,7 @@ describe('AnswerService (Postgres integration) - stored verdict', () => {
   ] as const)(
     'stores the manual grade of %i of 2 points as %s',
     async (points, verdict) => {
-      const question = await createQuestion('audio', 'Queen', 2);
+      const question = await createQuestion('free_text', 'Queen', 2);
       const team = await insertTeam('Team', 'token-1');
       const ack = await state.answerService.submit(
         state.session.id,

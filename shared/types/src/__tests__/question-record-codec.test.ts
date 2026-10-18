@@ -22,18 +22,6 @@ const FULL_PAYLOAD: Record<QuestionType, QuestionPayload> = {
     mediaUrl: IMAGE,
     answerMediaUrl: IMAGE,
   },
-  audio: {
-    options: ['Paris', 'Rome'],
-    mediaUrl: 'https://example.com/a.mp3',
-    answerMediaUrl: IMAGE,
-  },
-  youtube: {
-    options: ['Paris', 'Rome'],
-    mediaUrl: YOUTUBE,
-    answerMediaUrl: IMAGE,
-    mediaStartSeconds: 5,
-    mediaEndSeconds: 20,
-  },
   sort: { options: ['b', 'a'], mediaUrl: IMAGE, answerMediaUrl: IMAGE },
   match: {
     options: ['x', 'y'],
@@ -230,11 +218,11 @@ describe('question record codec', () => {
   });
 
   it('loads a stored payload with a hidden video, and one without as not hidden', () => {
-    const hidden = rowToPreview(rowOf('youtube', 'Hint'), {
+    const hidden = rowToPreview(rowOf('free_text', 'Hint'), {
       mediaUrl: YOUTUBE,
       isVideoHidden: true,
     });
-    const plain = rowToPreview(rowOf('youtube', 'Hint'), {
+    const plain = rowToPreview(rowOf('free_text', 'Hint'), {
       mediaUrl: YOUTUBE,
     });
 
@@ -243,15 +231,18 @@ describe('question record codec', () => {
   });
 
   it('loads a hideVideo group left in the notes: field set, group stripped', () => {
-    const preview = rowToPreview(rowOf('youtube', 'Hint\n{hideVideo: true}'), {
-      mediaUrl: YOUTUBE,
-    });
+    const preview = rowToPreview(
+      rowOf('free_text', 'Hint\n{hideVideo: true}'),
+      {
+        mediaUrl: YOUTUBE,
+      },
+    );
 
     expect(preview).toMatchObject({ notes: 'Hint', isVideoHidden: true });
   });
 
   it('seeds a hidden video into the session question', () => {
-    const seeded = rowToSeededQuestion(rowOf('youtube', null), {
+    const seeded = rowToSeededQuestion(rowOf('free_text', null), {
       mediaUrl: YOUTUBE,
       isVideoHidden: true,
     });
@@ -301,11 +292,13 @@ describe('question record codec', () => {
       revealEndSeconds: 8,
     };
 
-    expect(rowToPreview(rowOf('youtube', null), payload)).toMatchObject({
+    expect(rowToPreview(rowOf('free_text', null), payload)).toMatchObject({
       revealStartSeconds: 4,
       revealEndSeconds: 8,
     });
-    expect(rowToSeededQuestion(rowOf('youtube', null), payload)).toMatchObject({
+    expect(
+      rowToSeededQuestion(rowOf('free_text', null), payload),
+    ).toMatchObject({
       revealStartSeconds: 4,
       revealEndSeconds: 8,
     });
@@ -336,7 +329,7 @@ describe('question record codec', () => {
 
   it('ignores clip fields when the media is not a YouTube link', () => {
     const stored = previewToStoredFields({
-      type: 'audio',
+      type: 'free_text',
       prompt: 'Q?',
       answer: 'A',
       points: 1,
@@ -348,7 +341,7 @@ describe('question record codec', () => {
   });
 
   it('loads a stored row with a clip line in its notes: fields set, line stripped', () => {
-    const preview = rowToPreview(rowOf('youtube', CLIP_NOTES), {
+    const preview = rowToPreview(rowOf('free_text', CLIP_NOTES), {
       mediaUrl: YOUTUBE,
     });
 
@@ -360,7 +353,7 @@ describe('question record codec', () => {
   });
 
   it('prefers the payload clip over a clip group left in the notes', () => {
-    const preview = rowToPreview(rowOf('youtube', CLIP_NOTES), {
+    const preview = rowToPreview(rowOf('free_text', CLIP_NOTES), {
       mediaUrl: YOUTUBE,
       mediaStartSeconds: 30,
     });
@@ -372,7 +365,7 @@ describe('question record codec', () => {
   });
 
   it('leaves the notes of a non-YouTube row alone', () => {
-    const preview = rowToPreview(rowOf('audio', CLIP_NOTES), {
+    const preview = rowToPreview(rowOf('free_text', CLIP_NOTES), {
       mediaUrl: 'https://example.com/a.mp3',
     });
 
@@ -381,7 +374,7 @@ describe('question record codec', () => {
   });
 
   it('cleans the notes when a stripped row is saved again', () => {
-    const preview = rowToPreview(rowOf('youtube', CLIP_NOTES), {
+    const preview = rowToPreview(rowOf('free_text', CLIP_NOTES), {
       mediaUrl: YOUTUBE,
     });
 

@@ -14,7 +14,6 @@ interface MediaUrlFieldProps {
   value: string;
   placeholder: string;
   disabled?: boolean;
-  isRequired?: boolean;
   onChange: (url: string) => void;
 }
 
@@ -29,7 +28,6 @@ export function MediaUrlField({
   value,
   placeholder,
   disabled = false,
-  isRequired = false,
   onChange,
 }: MediaUrlFieldProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +62,6 @@ export function MediaUrlField({
     <div className="flex items-center gap-2">
       <label className="flex min-w-0 flex-1 items-center gap-2 text-xs font-extrabold text-foreground/60">
         {label}
-        {isRequired ? ' (required)' : ''}
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}

@@ -116,33 +116,21 @@ const CASES: ParityCase[] = [
     verdict: 'invalid',
   },
 
-  // audio
+  // media on any type
   {
-    name: 'audio with a media url',
-    question: q({ type: 'audio', mediaUrl: AUDIO }),
+    name: 'free_text with an audio url',
+    question: q({ type: 'free_text', mediaUrl: AUDIO }),
     verdict: 'valid',
   },
   {
-    name: 'audio without a media url',
-    question: q({ type: 'audio' }),
-    verdict: 'invalid',
-  },
-
-  // youtube
-  {
-    name: 'youtube with a youtube link',
-    question: q({ type: 'youtube', mediaUrl: YOUTUBE }),
+    name: 'multiple_choice with a youtube link',
+    question: q({
+      type: 'multiple_choice',
+      options: ['Paris', 'London'],
+      answer: 'Paris',
+      mediaUrl: YOUTUBE,
+    }),
     verdict: 'valid',
-  },
-  {
-    name: 'youtube with a non-youtube link',
-    question: q({ type: 'youtube', mediaUrl: AUDIO }),
-    verdict: 'invalid',
-  },
-  {
-    name: 'youtube without a media url',
-    question: q({ type: 'youtube' }),
-    verdict: 'invalid',
   },
 
   // closest_guess
@@ -253,14 +241,6 @@ const EXPECTED_FLAGS: Record<QuestionType, GradingFlags> = {
     gradingMode: 'auto',
     kahootAllowed: true,
   },
-  audio: {
-    gradingMode: 'match-or-human',
-    kahootAllowed: false,
-  },
-  youtube: {
-    gradingMode: 'match-or-human',
-    kahootAllowed: false,
-  },
   sort: { gradingMode: 'auto', kahootAllowed: true },
   match: { gradingMode: 'auto', kahootAllowed: true },
   closest_guess: {
@@ -299,16 +279,14 @@ describe('question kind registry', () => {
     }
   });
 
-  it('lists the eight known question types once each', () => {
+  it('lists the six known question types once each', () => {
     expect([...QUESTION_TYPES].sort()).toEqual([
-      'audio',
       'closest_guess',
       'free_text',
       'match',
       'multiple_choice',
       'number',
       'sort',
-      'youtube',
     ]);
   });
 });

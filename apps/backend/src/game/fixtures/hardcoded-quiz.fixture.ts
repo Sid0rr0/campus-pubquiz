@@ -61,7 +61,7 @@ export const HARDCODED_QUIZ: { title: string; rounds: FixtureRound[] } = {
         },
         {
           id: 5,
-          type: 'audio',
+          type: 'free_text',
           prompt: 'Name this song.',
           mediaUrl: 'https://example.com/song.mp3',
           answer: 'Bohemian Rhapsody',

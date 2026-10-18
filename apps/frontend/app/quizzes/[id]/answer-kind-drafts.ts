@@ -128,24 +128,14 @@ const ANSWER_KIND_DRAFTS = {
   match: matchDraft,
 } satisfies { readonly [K in AnswerKind]: AnswerKindDraft };
 
-/** The draft fields a stored question fills, by the answer kind its choices give it. */
+/** The draft fields a stored question fills, by the answer kind its type gives it. */
 export function loadAnswerDraft(
   question: ImportQuestionPreview,
 ): Partial<EditorQuestion> {
   return ANSWER_KIND_DRAFTS[resolveAnswerKind(question)].load(question);
 }
 
-/** The answer fields to save for a draft, by the answer kind its choice texts give it. */
+/** The answer fields to save for a draft, by the answer kind its type gives it. */
 export function saveAnswerDraft(question: EditorQuestion): SavedAnswer {
-  return ANSWER_KIND_DRAFTS[resolveDraftAnswerKind(question)].save(question);
-}
-
-/** The answer kind of a draft question: its type plus the texts of its choices. */
-export function resolveDraftAnswerKind(
-  question: Pick<EditorQuestion, 'type' | 'options'>,
-): AnswerKind {
-  return resolveAnswerKind({
-    type: question.type,
-    options: question.options.map((option) => option.text),
-  });
+  return ANSWER_KIND_DRAFTS[resolveAnswerKind(question)].save(question);
 }

@@ -4,10 +4,9 @@ import { scoreSubmission } from '../scoring';
 describe('scoreSubmission — pinned base scores for every question type', () => {
   it.each([
     ['free_text', 'queen', 'Queen', undefined, 10, 'correct'],
-    ['audio', ' QUEEN ', 'Queen', undefined, 10, 'correct'],
-    ['audio', 'Kings', 'Queen', undefined, 0, 'incorrect'],
-    ['youtube', 'queen', 'Queen', undefined, 10, 'correct'],
-    ['youtube', '', 'Queen', undefined, 0, 'incorrect'],
+    ['free_text', ' QUEEN ', 'Queen', undefined, 10, 'correct'],
+    ['free_text', 'Kings', 'Queen', undefined, 0, 'incorrect'],
+    ['free_text', '', 'Queen', undefined, 0, 'incorrect'],
     ['multiple_choice', 'Paris', 'Paris', undefined, 10, 'correct'],
     ['multiple_choice', 'Paris ', 'Paris', undefined, 0, 'incorrect'],
     ['sort', ' a ||b| c ', 'a|b|c', undefined, 10, 'correct'],

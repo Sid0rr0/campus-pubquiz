@@ -8,32 +8,24 @@ import { splitPipeList } from './sort-match';
 
 /**
  * How a question is answered: typed text, a number, picking a choice, putting
- * items in order, or pairing items up. Resolved from the question (type plus
- * whether it carries choices) by `resolveAnswerKind`, never by branching on
- * the type or on `options` at the call site.
+ * items in order, or pairing items up. Resolved from the question's type by
+ * `resolveAnswerKind`, never by branching on the type or on `options` at the
+ * call site.
  */
 export type AnswerKind = AnswerInputKind;
 
 /** The slice of a question the resolver needs — QuestionView satisfies it. */
 export interface AnswerKindQuestion {
   type: QuestionType;
-  options?: readonly string[] | null;
 }
 
 /**
- * A `required`-choices type is always `choice`; an `optional`-choices type is
- * `choice` once at least one choice has text and otherwise its registry input
- * kind; every other type takes its registry input kind.
+ * A `required`-choices type is always `choice`; every other type takes its
+ * registry input kind.
  */
 export function resolveAnswerKind(question: AnswerKindQuestion): AnswerKind {
   const entry = QUESTION_KINDS[question.type];
   if (entry.choices === 'required') return 'choice';
-  if (
-    entry.choices === 'optional' &&
-    (question.options ?? []).some((option) => option.trim() !== '')
-  ) {
-    return 'choice';
-  }
   return entry.inputKind;
 }
 
@@ -185,7 +177,7 @@ export const ANSWER_FORMATS = {
  */
 export function formatAnswer(
   stored: string,
-  question: AnswerKindQuestion,
+  question: AnswerKindQuestion & { options?: readonly string[] | null },
 ): string {
   if (stored === IDK_ANSWER_VALUE) return "🤷 I don't know";
   return ANSWER_FORMATS[resolveAnswerKind(question)].format(

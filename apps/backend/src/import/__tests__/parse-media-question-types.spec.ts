@@ -1,26 +1,39 @@
 import { parseQuestionRow } from '@/import/question-row.schema';
 import { makeRow } from '@/import/__tests__/question-row-test-utils';
 
-describe('parseQuestionRow - media question types', () => {
-  it('rejects an audio row without a valid http(s) media url', () => {
-    const missing = parseQuestionRow(makeRow({ type: 'audio', mediaUrl: '' }));
-    const invalid = parseQuestionRow(
-      makeRow({ type: 'audio', mediaUrl: 'ftp://example.com/x.mp3' }),
-    );
-
-    expect(missing.ok).toBe(false);
-    expect(invalid.ok).toBe(false);
-    if (!missing.ok) {
-      expect(missing.issues).toContainEqual(
-        expect.objectContaining({ field: 'media_url' }),
+describe('parseQuestionRow - media on any question type', () => {
+  it.each(['audio', 'Audio', 'youtube', ' YouTube '])(
+    'rejects the removed type %j with a message naming the replacement',
+    (type) => {
+      const result = parseQuestionRow(
+        makeRow({ type, mediaUrl: 'https://example.com/song.mp3' }),
       );
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.issues).toEqual([
+          expect.objectContaining({
+            field: 'type',
+            message: `Question type "${type.trim()}" was removed — use free_text (or multiple_choice if the row has options) and keep the media_url.`,
+          }),
+        ]);
+      }
+    },
+  );
+
+  it('still gives the generic message for any other unknown type', () => {
+    const result = parseQuestionRow(makeRow({ type: 'video' }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues[0].message).toContain('Unknown question type');
     }
   });
 
-  it('accepts an audio row with a valid media url', () => {
+  it('accepts a free_text row with an mp3 media url', () => {
     const result = parseQuestionRow(
       makeRow({
-        type: 'audio',
+        type: 'free_text',
         question: 'Name this song.',
         mediaUrl: 'https://example.com/song.mp3',
         answer: 'Bohemian Rhapsody',
@@ -33,13 +46,16 @@ describe('parseQuestionRow - media question types', () => {
     }
   });
 
-  it('accepts a youtube row with a youtube.com/youtu.be media url', () => {
+  it('accepts a multiple_choice row with a youtube url, clip, reveal clip and hidden video', () => {
     const result = parseQuestionRow(
       makeRow({
-        type: 'youtube',
+        type: 'multiple_choice',
         question: 'Name this music video.',
+        options: 'Never Gonna Give You Up|Africa',
         mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
         answer: 'Never Gonna Give You Up',
+        notes:
+          '{start: "0:10", end: "0:25", revealStart: "0:43", revealEnd: "0:58", hideVideo: true}',
       }),
     );
 
@@ -47,17 +63,22 @@ describe('parseQuestionRow - media question types', () => {
     if (result.ok) {
       expect(result.question).toEqual(
         expect.objectContaining({
-          type: 'youtube',
+          type: 'multiple_choice',
           mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+          mediaStartSeconds: 10,
+          mediaEndSeconds: 25,
+          revealStartSeconds: 43,
+          revealEndSeconds: 58,
+          isVideoHidden: true,
         }),
       );
     }
   });
 
-  it('rejects a youtube row whose clip time in the notes is not a timecode, naming the notes column', () => {
+  it('rejects a row whose clip time in the notes is not a timecode, naming the notes column', () => {
     const result = parseQuestionRow(
       makeRow({
-        type: 'youtube',
+        type: 'free_text',
         mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
         answer: 'Never Gonna Give You Up',
         notes: '{start: "1:2x"}',
@@ -72,18 +93,14 @@ describe('parseQuestionRow - media question types', () => {
     }
   });
 
-  it('rejects a youtube row missing a media url or pointing at a non-YouTube url', () => {
-    const missing = parseQuestionRow(
-      makeRow({ type: 'youtube', mediaUrl: '' }),
-    );
-    const nonYoutube = parseQuestionRow(
-      makeRow({ type: 'youtube', mediaUrl: 'https://example.com/video.mp4' }),
+  it('rejects a media url that is not http(s)', () => {
+    const result = parseQuestionRow(
+      makeRow({ type: 'free_text', mediaUrl: 'ftp://example.com/x.mp3' }),
     );
 
-    expect(missing.ok).toBe(false);
-    expect(nonYoutube.ok).toBe(false);
-    if (!nonYoutube.ok) {
-      expect(nonYoutube.issues).toContainEqual(
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
         expect.objectContaining({ field: 'media_url' }),
       );
     }

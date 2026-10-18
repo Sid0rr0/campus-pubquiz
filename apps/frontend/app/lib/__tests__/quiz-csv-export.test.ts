@@ -110,7 +110,7 @@ describe('quizToCsv', () => {
       roundOf({
         questions: [
           {
-            type: 'youtube',
+            type: 'free_text',
             prompt: 'Which movie?',
             answer: 'Sample',
             points: 2,
@@ -123,7 +123,7 @@ describe('quizToCsv', () => {
     ]);
 
     expect(bodyLines(csv)).toEqual([
-      'Round 1,youtube,Which movie?,,Sample,2,https://youtu.be/dQw4w9WgXcQ,https://example.com/poster.jpg,jot,,,',
+      'Round 1,free_text,Which movie?,,Sample,2,https://youtu.be/dQw4w9WgXcQ,https://example.com/poster.jpg,jot,,,',
     ]);
   });
 

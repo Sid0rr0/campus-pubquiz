@@ -30,18 +30,26 @@ describe('sample-quiz-import.csv', () => {
         'multiple_choice',
         'closest_guess',
         'number',
-        'audio',
-        'youtube',
         'sort',
         'match',
       ]),
     );
   });
 
+  it('carries an audio file on an ordinary question', () => {
+    const audioQuestions = preview.rounds
+      .flatMap((round) => round.questions)
+      .filter((question) => question.mediaUrl?.endsWith('.mp3'));
+
+    expect(audioQuestions).toEqual([
+      expect.objectContaining({ type: 'free_text' }),
+    ]);
+  });
+
   it('carries a clip, a reveal clip and a hidden video from the notes group', () => {
     const youtubeQuestions = preview.rounds
       .flatMap((round) => round.questions)
-      .filter((question) => question.type === 'youtube');
+      .filter((question) => question.mediaUrl?.includes('youtube.com'));
 
     expect(youtubeQuestions).toEqual([
       expect.objectContaining({

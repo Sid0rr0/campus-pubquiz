@@ -188,24 +188,35 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByRole('button', { name: /export csv/i })).toBeDisabled();
   });
 
-  it('selecting the YouTube video type shows the clip inputs and requires a media url', async () => {
-    const user = userEvent.setup();
-    renderWithQuery(<QuizEditorPanel quizId="new" />);
-    await user.click(
-      screen.getByRole('button', { name: /start from scratch/i }),
-    );
-    await user.click(screen.getByRole('button', { name: /add question/i }));
+  it.each(['Multiple choice', 'Free text'])(
+    'pasting a YouTube link into a %s question shows the clip inputs',
+    async (typeLabel) => {
+      const user = userEvent.setup();
+      renderWithQuery(<QuizEditorPanel quizId="new" />);
+      await user.click(
+        screen.getByRole('button', { name: /start from scratch/i }),
+      );
+      await user.click(screen.getByRole('button', { name: /add question/i }));
+      await user.click(
+        screen.getByRole('button', {
+          name: new RegExp(`^${typeLabel}$`, 'i'),
+        }),
+      );
 
-    expect(screen.queryByLabelText(/clip start/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/clip start/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText(/media url \(required\)/i),
+      ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /^youtube video$/i }));
+      await user.type(
+        screen.getAllByLabelText(/media url/i)[0],
+        'https://youtu.be/dQw4w9WgXcQ',
+      );
 
-    expect(
-      screen.getByLabelText(/media url \(required\)/i),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText(/clip start/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/clip end/i)).toBeInTheDocument();
-  });
+      expect(screen.getByLabelText(/clip start/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/clip end/i)).toBeInTheDocument();
+    },
+  );
 
   it('fills the clip inputs from the sample CSV YouTube question (55 and 88 seconds)', async () => {
     const user = userEvent.setup();
@@ -213,7 +224,7 @@ describe('QuizEditorPanel', () => {
       {
         rowNumber: 7,
         round: 'Music & Movies',
-        type: 'youtube',
+        type: 'free_text',
         question: 'Which movie is this trailer clip from?',
         options: '',
         answer: 'Sample Movie Title',
@@ -225,7 +236,7 @@ describe('QuizEditorPanel', () => {
         category: '',
         author: '',
       },
-      'youtube',
+      'free_text',
     );
     const checked = checkQuestion(question);
     if (!checked.success) throw new Error('sample question should be valid');
@@ -1576,8 +1587,6 @@ describe('QuizEditorPanel', () => {
     const TYPE_LABELS = [
       'Multiple choice',
       'Free text',
-      'Audio',
-      'YouTube video',
       'Sort / order',
       'Match pairs',
       'Closest guess',
@@ -1737,70 +1746,34 @@ describe('QuizEditorPanel', () => {
       );
     });
   });
-  describe('audio question answer section', () => {
-    const audio = {
-      type: 'audio',
-      prompt: 'Which song?',
-      answer: 'B',
-      points: 1,
-      mediaUrl: 'https://example.com/clip.mp3',
-    };
-
-    function loadAudio(question: Record<string, unknown>) {
+  describe('free text question with audio media', () => {
+    it('shows a correct-answer text and no choice list', async () => {
       mockFetchQuizDraft.mockResolvedValue({
         id: 5,
         title: 'Trivia Night',
-        rounds: [{ title: 'Music', breakAfter: false, questions: [question] }],
+        rounds: [
+          {
+            title: 'Music',
+            breakAfter: false,
+            questions: [
+              {
+                type: 'free_text',
+                prompt: 'Which song?',
+                answer: 'B',
+                points: 1,
+                mediaUrl: 'https://example.com/clip.mp3',
+              },
+            ],
+          },
+        ],
       });
-      mockUpdateQuiz.mockResolvedValue({
-        quizId: 5,
-        roundCount: 1,
-        questionCount: 1,
-      });
-      return renderWithQuery(<QuizEditorPanel quizId="5" />);
-    }
-
-    it('offers the choices with the correct one marked when the question has choices', async () => {
-      loadAudio({ ...audio, options: ['A', 'B'] });
-      await screen.findByDisplayValue('Music');
-
-      expect(screen.getByLabelText('Mark option 2 as correct')).toBeChecked();
-    });
-
-    it('offers a correct-answer text when the question has no choices', async () => {
-      loadAudio(audio);
+      renderWithQuery(<QuizEditorPanel quizId="5" />);
       await screen.findByDisplayValue('Music');
 
       expect(screen.getByPlaceholderText(/accepted answer/i)).toHaveValue('B');
-    });
-
-    it('saves a typed-answer question once every choice text is cleared', async () => {
-      const user = userEvent.setup();
-      loadAudio({ ...audio, options: ['A', 'B'] });
-      await screen.findByDisplayValue('Music');
-
-      for (const input of screen.getAllByPlaceholderText(/option text/i)) {
-        await user.clear(input);
-      }
-      await user.type(screen.getByPlaceholderText(/accepted answer/i), 'B');
-      await user.click(screen.getByRole('button', { name: /save quiz/i }));
-
-      await waitFor(() =>
-        expect(mockUpdateQuiz).toHaveBeenCalledWith(
-          5,
-          expect.objectContaining({
-            rounds: [
-              expect.objectContaining({
-                questions: [
-                  expect.objectContaining({ type: 'audio', answer: 'B' }),
-                ],
-              }),
-            ],
-          }),
-        ),
-      );
-      const saved = mockUpdateQuiz.mock.calls[0][1].rounds[0].questions[0];
-      expect(saved).not.toHaveProperty('options');
+      expect(
+        screen.queryByPlaceholderText(/option text/i),
+      ).not.toBeInTheDocument();
     });
   });
 

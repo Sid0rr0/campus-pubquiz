@@ -11,7 +11,7 @@ The optional-choices machinery stays in place for now (it simply has no users), 
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `QUESTION_TYPES` is exactly `multiple_choice`, `free_text`, `sort`, `match`, `closest_guess`, `number`, and the registry, preview and payload schemas have no audio/youtube entries.
 - [ ] `parseQuestionRow` gives the removed-type message on the `type` field for `audio`, `Audio`, `youtube` and ` YouTube `. Any other unknown type still gets the generic message.

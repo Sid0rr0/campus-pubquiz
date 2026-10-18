@@ -6,19 +6,14 @@ import {
 } from '@/quiz/__tests__/quiz-draft-test-utils';
 
 describe('validateQuizDraft - media field validation', () => {
-  it('reports audio questions without a valid http(s) media url', () => {
-    const missing = validateQuizDraft(
-      makeRequest({
-        rounds: [makeRound({ questions: [makeQuestion({ type: 'audio' })] })],
-      }),
-    );
+  it('reports a media url that is not http(s) on any question type', () => {
     const invalid = validateQuizDraft(
       makeRequest({
         rounds: [
           makeRound({
             questions: [
               makeQuestion({
-                type: 'audio',
+                type: 'free_text',
                 mediaUrl: 'ftp://example.com/x.mp3',
               }),
             ],
@@ -27,13 +22,6 @@ describe('validateQuizDraft - media field validation', () => {
       }),
     );
 
-    expect(missing).toContainEqual(
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: 0,
-        field: 'mediaUrl',
-      }),
-    );
     expect(invalid).toContainEqual(
       expect.objectContaining({
         roundIndex: 0,
@@ -43,41 +31,16 @@ describe('validateQuizDraft - media field validation', () => {
     );
   });
 
-  it('reports a youtube question missing a media url or pointing at a non-YouTube url', () => {
-    const missing = validateQuizDraft(
-      makeRequest({
-        rounds: [makeRound({ questions: [makeQuestion({ type: 'youtube' })] })],
-      }),
-    );
-    const nonYoutube = validateQuizDraft(
+  it('accepts a question with no media url', () => {
+    const issues = validateQuizDraft(
       makeRequest({
         rounds: [
-          makeRound({
-            questions: [
-              makeQuestion({
-                type: 'youtube',
-                mediaUrl: 'https://example.com/video.mp4',
-              }),
-            ],
-          }),
+          makeRound({ questions: [makeQuestion({ type: 'free_text' })] }),
         ],
       }),
     );
 
-    expect(missing).toContainEqual(
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: 0,
-        field: 'mediaUrl',
-      }),
-    );
-    expect(nonYoutube).toContainEqual(
-      expect.objectContaining({
-        roundIndex: 0,
-        questionIndex: 0,
-        field: 'mediaUrl',
-      }),
-    );
+    expect(issues).toEqual([]);
   });
 
   it('reports an invalid answer media url on any question type', () => {

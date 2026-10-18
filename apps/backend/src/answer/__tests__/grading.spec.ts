@@ -197,7 +197,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const audioQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
-      type: 'audio',
+      type: 'free_text',
       prompt: 'Name that tune',
       answer: 'Reference answer',
       points: 1,
@@ -237,7 +237,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const audioQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
-      type: 'audio',
+      type: 'free_text',
       prompt: 'Name that tune',
       answer: 'Reference answer',
       points: 1,
@@ -372,7 +372,7 @@ describe('AnswerService (Postgres integration) - manual and closest-guess gradin
     const audioQuestion = state.em.create(Question, {
       round: state.round,
       orderIndex: 1,
-      type: 'audio',
+      type: 'free_text',
       prompt: 'Name that tune',
       answer: 'Queen',
       points: 2,
