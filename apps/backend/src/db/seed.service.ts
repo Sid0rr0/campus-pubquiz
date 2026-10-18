@@ -121,6 +121,7 @@ export class SeedService {
         category: roundRow.category ?? undefined,
         author: roundRow.author ?? undefined,
         note: roundRow.note ?? undefined,
+        showNoteOnScreen: roundRow.showNoteOnScreen,
         questions: questionRows.map((row) =>
           rowToSeededQuestion(row, readQuestionPayload(row)),
         ),
@@ -186,6 +187,7 @@ export class SeedService {
         title: roundRow.title,
         breakAfter: roundRow.breakAfter,
         kahootMode: roundRow.kahootMode,
+        showNoteOnScreen: roundRow.showNoteOnScreen,
         questions,
         // The hardcoded fixture carries no notes — matches what a subsequent
         // loadGame() would read back (Question.notes defaults to null),

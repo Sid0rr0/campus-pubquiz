@@ -90,6 +90,17 @@ export function validateQuizDraft(
         message: 'Author must be text',
       });
     }
+    if (
+      round.showNoteOnScreen !== undefined &&
+      typeof round.showNoteOnScreen !== 'boolean'
+    ) {
+      issues.push({
+        roundIndex,
+        questionIndex: null,
+        field: 'showNoteOnScreen',
+        message: 'Show on screen must be true or false',
+      });
+    }
     if (round.note !== undefined) {
       if (typeof round.note !== 'string') {
         issues.push({

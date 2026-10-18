@@ -87,6 +87,8 @@ export interface EditorRound {
   author: string;
   /** What the quiz master says while this round's intro is on air — blank string means no note. */
   note: string;
+  /** Whether the note also shows on the big screen — has no effect while the note is blank. */
+  showNoteOnScreen: boolean;
   questions: EditorQuestion[];
 }
 
@@ -132,6 +134,7 @@ export function makeRound(id: string, title = ''): EditorRound {
     category: '',
     author: '',
     note: '',
+    showNoteOnScreen: false,
     questions: [],
   };
 }
@@ -244,6 +247,7 @@ export function roundFromPreview(
     category: round.category ?? '',
     author: round.author ?? '',
     note: round.note ?? '',
+    showNoteOnScreen: round.showNoteOnScreen ?? false,
     questions: round.questions.map((question, index) =>
       questionFromPreview(makeQuestionId(index), question),
     ),
@@ -559,7 +563,12 @@ export function toSaveRequest(
       kahootMode: round.kahootMode,
       ...(round.category.trim() ? { category: round.category.trim() } : {}),
       ...(round.author.trim() ? { author: round.author.trim() } : {}),
-      ...(round.note.trim() ? { note: round.note.trim() } : {}),
+      ...(round.note.trim()
+        ? {
+            note: round.note.trim(),
+            ...(round.showNoteOnScreen ? { showNoteOnScreen: true } : {}),
+          }
+        : {}),
       questions: round.questions.map(questionToPreview),
     })),
   };

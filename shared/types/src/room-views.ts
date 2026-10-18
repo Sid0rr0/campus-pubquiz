@@ -176,6 +176,8 @@ export interface DisplayStatePayload extends Omit<
   roundCategories: string[];
   /** Author of every round in the quiz, in order, '' where unset — parallel to `roundTitles`, used by the `round_overview` screen. */
   roundAuthors: string[];
+  /** The note of the round whose intro or break round intro is on air, only when that round shows it on screen and it is non-empty; '' on every other screen (the reveal intro included). Drawn as text under the round title card. */
+  roundNote: string;
   /**
    * How many teams (counting up from last place) are currently revealed on
    * the leaderboard, driven by ADVANCE while the board is

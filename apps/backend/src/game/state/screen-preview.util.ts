@@ -4,6 +4,7 @@ import {
   getCurrentQuestion,
   getGameContext,
   getQuizStructureSummary,
+  getRoundNoteOnAir,
   nextPressAction,
   type OnAirScreen,
   type PresenterContextPayload,
@@ -171,18 +172,6 @@ export function describeNextScreen(
   );
 }
 
-/** The note of the round whose intro or break round intro is on air; null on every other screen (the reveal intro included). */
-function roundNoteOnAir(
-  session: SessionState,
-  screen: OnAirScreen,
-): string | null {
-  if (screen.kind !== 'round_title' && screen.kind !== 'break_round_title') {
-    return null;
-  }
-  if (screen.roundIndex === null) return null;
-  return session.seededGame.rounds[screen.roundIndex]?.note ?? null;
-}
-
 /**
  * Host notes for the open question + what /display shows now and after the
  * next Advance, for the /remote presenter view alone. Callers MUST only forward this over an
@@ -203,7 +192,7 @@ export function buildPresenterContext(
 
   return {
     currentQuestionNotes,
-    currentRoundNote: roundNoteOnAir(session, onAirScreen),
+    currentRoundNote: getRoundNoteOnAir(session, onAirScreen),
     currentScreen: describeOnAirScreenText(session, onAirScreen),
     nextScreen: describeNextScreen(session),
   };

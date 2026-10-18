@@ -13,7 +13,9 @@ import { isAnsweringStatus } from './game-state-groups';
 import { getQuizStructureSummary } from './game-state-structure';
 import { getTimedPhaseKey } from './game-state-timed-phase';
 import { isQuestionHiddenBehindKahootLeaderboard } from './kahoot-visibility';
+import type { OnAirScreen } from './on-air-screen';
 import type { SeededQuestion } from './question-views';
+import { getDisplayRoundNote } from './round-note';
 import type {
   AdminQuestionContext,
   AdminTeamView,
@@ -83,12 +85,14 @@ function describeTeamsCorrect(session: SessionState): TeamsCorrect | null {
 /** The fields only /display reads — added to its view alone by the Screen projection. */
 export function buildDisplayFields(
   session: SessionState,
+  onAirScreen: OnAirScreen,
 ): Pick<
   DisplayStatePayload,
   | 'roundCategory'
   | 'roundAuthor'
   | 'roundCategories'
   | 'roundAuthors'
+  | 'roundNote'
   | 'leaderboardRevealCount'
   | 'kahootQuestionEndsAt'
   | 'teamsCorrect'
@@ -100,6 +104,7 @@ export function buildDisplayFields(
     roundAuthor: currentRound?.author ?? '',
     roundCategories: rounds.map((round) => round.category ?? ''),
     roundAuthors: rounds.map((round) => round.author ?? ''),
+    roundNote: getDisplayRoundNote(session, onAirScreen),
     leaderboardRevealCount: session.leaderboardRevealCount,
     kahootQuestionEndsAt: session.kahootQuestionEndsAt,
     teamsCorrect: describeTeamsCorrect(session),

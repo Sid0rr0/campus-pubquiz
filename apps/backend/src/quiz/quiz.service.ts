@@ -143,6 +143,7 @@ export class QuizService {
         ...(round.category ? { category: round.category } : {}),
         ...(round.author ? { author: round.author } : {}),
         ...(round.note ? { note: round.note } : {}),
+        ...(round.showNoteOnScreen ? { showNoteOnScreen: true } : {}),
         questions: round.questions
           .getItems()
           .map((question) =>
@@ -248,6 +249,7 @@ export class QuizService {
           category: round.category ?? null,
           author: round.author ?? null,
           note: round.note?.trim() || null,
+          showNoteOnScreen: round.showNoteOnScreen ?? false,
           createdAt: roundNow,
           updatedAt: roundNow,
         },
@@ -261,6 +263,7 @@ export class QuizService {
             'category',
             'author',
             'note',
+            'showNoteOnScreen',
             'updatedAt',
           ],
         },

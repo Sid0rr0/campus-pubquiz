@@ -297,9 +297,23 @@ export function QuizRoundEditor({
           rows={2}
           className="w-full rounded-lg border-2 border-foreground/15 px-3 py-2 text-sm font-bold text-foreground"
         />
-        <span className="self-end text-xs font-bold text-foreground/60">
-          {round.note.trim().length} / {ROUND_NOTE_MAX_LENGTH}
-        </span>
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
+            <input
+              type="checkbox"
+              checked={round.showNoteOnScreen}
+              disabled={!round.note.trim()}
+              onChange={(event) =>
+                onChange({ showNoteOnScreen: event.target.checked })
+              }
+              className="h-4 w-4"
+            />
+            Show on screen
+          </label>
+          <span className="text-xs font-bold text-foreground/60">
+            {round.note.trim().length} / {ROUND_NOTE_MAX_LENGTH}
+          </span>
+        </div>
         <FieldErrors issues={fieldIssues(roundLevelIssues, 'note')} />
       </div>
 

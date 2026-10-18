@@ -81,6 +81,8 @@ export interface ImportRoundPreview {
   author?: string;
   /** What the quiz master says while this round's intro is on air — see Round.note. Blank is never stored: it is absent. */
   note?: string;
+  /** Whether the note also shows on the big screen — see Round.showNoteOnScreen. Absent means off. */
+  showNoteOnScreen?: boolean;
   questions: ImportQuestionPreview[];
 }
 

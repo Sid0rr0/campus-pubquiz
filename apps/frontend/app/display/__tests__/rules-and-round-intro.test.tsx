@@ -98,4 +98,38 @@ describe('DisplayPage — rules and round intro', () => {
     expect(screen.getByText(/Film & TV/)).toBeInTheDocument();
     expect(screen.getByText(/by Sam/)).toBeInTheDocument();
   });
+
+  describe('round note on the round title card', () => {
+    function renderRoundIntro(round: {
+      note?: string;
+      showNoteOnScreen?: boolean;
+    }) {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [{ title: 'Picture Round', ...round }],
+          progress: { status: 'round_intro', roundIndex: 0 },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+      render(<DisplayPage />);
+    }
+
+    it('draws the note, line breaks kept, when the view carries it', () => {
+      renderRoundIntro({
+        note: 'Answers in English\nNo phones',
+        showNoteOnScreen: true,
+      });
+
+      const note = screen.getByText(/Answers in English/);
+      expect(note).toHaveTextContent('Answers in English No phones');
+      expect(note).toHaveClass('whitespace-pre-line');
+    });
+
+    it('draws nothing extra when the setting is off', () => {
+      renderRoundIntro({ note: 'Answers in English' });
+
+      expect(screen.queryByText(/Answers in English/)).not.toBeInTheDocument();
+    });
+  });
 });
