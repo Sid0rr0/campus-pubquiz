@@ -6,7 +6,7 @@ import {
 } from '@campus-pubquiz/types';
 import {
   isPausableMediaUrl,
-  isYoutubeMediaUrl,
+  isVideoMediaUrl,
 } from '@/app/display/question-display';
 
 export interface AdminControls {
@@ -42,7 +42,7 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
     // question is actually open on /display — see getCurrentQuestion.
     canReplayMedia:
       status === 'question_open' &&
-      isYoutubeMediaUrl(view.currentQuestion?.mediaUrl),
+      isVideoMediaUrl(view.currentQuestion?.mediaUrl),
     canPauseMedia:
       status === 'question_open' &&
       isPausableMediaUrl(view.currentQuestion?.mediaUrl),

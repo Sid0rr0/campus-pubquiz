@@ -24,13 +24,11 @@ export function isHttpUrl(url: string): boolean {
   return HTTP_URL_PATTERN.test(url);
 }
 
-/** Whether `url` is an http(s) URL that resolves to an embeddable YouTube video — the same inference QuestionDisplay uses to pick the iframe branch, exposed so /control and /remote can decide whether a "Play again" action has anything to act on. */
-export function isYoutubeMediaUrl(url: string | undefined): boolean {
-  return (
-    url !== undefined &&
-    isHttpUrl(url) &&
-    extractYoutubeVideoId(url) !== undefined
-  );
+/** Whether `url` is an http(s) URL that /display shows as a video (YouTube embed or video file) — the same inference QuestionDisplay uses, exposed so /control and /remote can decide whether a "Play again" action has anything to act on. */
+export function isVideoMediaUrl(url: string | undefined): boolean {
+  if (url === undefined || !isHttpUrl(url)) return false;
+  const kind = classifyMediaUrl(url);
+  return kind === 'youtube' || kind === 'video-file';
 }
 
 /** Whether `url` is media /display can pause and resume (video or audio) — what the pause button gates on. Images have no playback to pause. */
@@ -197,8 +195,8 @@ export function QuestionDisplay({
   isMediaPaused = false,
   hasRevealEntrance = false,
 }: QuestionDisplayProps) {
-  const { youtubeRef, onYoutubeLoad, audioRef, videoRef } =
-    useMediaPause(isMediaPaused);
+  const { youtubeRef, onYoutubeLoad, audioRef, videoRef, onVideoReady } =
+    useMediaPause(isMediaPaused, mediaReplayToken, question.mediaStartSeconds);
   const [failedVideoUrl, setFailedVideoUrl] = useState<string | undefined>();
   const {
     prompt,
@@ -282,6 +280,10 @@ export function QuestionDisplay({
     isRevealing && question.isVideoHidden !== true
       ? `${mediaReplayToken}-reveal`
       : mediaReplayToken;
+  // A video file replays by seeking in place (see useMediaPause), so its key
+  // leaves out the replay token; it still remounts at reveal for the reveal clip.
+  const videoFileKey =
+    isRevealing && question.isVideoHidden !== true ? 'reveal' : 'question';
   const isPlainQuestionImage =
     questionMediaKind === 'image' && !showSideBySideReveal;
   const showTwoColumnLayout =
@@ -375,11 +377,12 @@ export function QuestionDisplay({
             ) : (
               <video
                 ref={videoRef}
-                key={videoKey}
+                key={videoFileKey}
                 data-testid={`${mediaTestIdPrefix}-video`}
                 src={questionMediaUrl}
                 autoPlay={autoplayMedia}
                 playsInline
+                onLoadedMetadata={onVideoReady}
                 onError={() => setFailedVideoUrl(questionMediaUrl)}
                 className="absolute inset-0 h-full w-full bg-black object-contain"
               />

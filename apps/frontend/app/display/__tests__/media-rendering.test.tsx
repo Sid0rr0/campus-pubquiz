@@ -384,6 +384,107 @@ describe('DisplayPage — media rendering', () => {
       );
     });
 
+    describe('video file', () => {
+      const videoQuestion = {
+        type: 'free_text' as const,
+        prompt: 'Name this film.',
+        mediaUrl: 'https://example.com/clip.mp4',
+        points: 3,
+      };
+
+      function showVideo(progress: Record<string, unknown>) {
+        mockUseGame.mockReturnValue({
+          snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+            rounds: [{ questions: [videoQuestion] }],
+            progress: { status: 'question_open', ...progress },
+          }),
+          connectionError: null,
+          sendAction: vi.fn(),
+        });
+      }
+
+      it('pauses and resumes the <video> without remounting it', () => {
+        const pause = vi
+          .spyOn(HTMLMediaElement.prototype, 'pause')
+          .mockImplementation(() => undefined);
+        const play = vi
+          .spyOn(HTMLMediaElement.prototype, 'play')
+          .mockResolvedValue(undefined);
+        showVideo({ isMediaPaused: false });
+        const { rerender } = render(<DisplayPage />);
+        const video = screen.getByTestId('question-video');
+        expect(pause).not.toHaveBeenCalled();
+
+        showVideo({ isMediaPaused: true });
+        rerender(<DisplayPage />);
+        expect(pause).toHaveBeenCalledTimes(1);
+
+        showVideo({ isMediaPaused: false });
+        rerender(<DisplayPage />);
+        expect(play).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('question-video')).toBe(video);
+      });
+
+      it('ignores a rejected play() when resuming', async () => {
+        vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(
+          () => undefined,
+        );
+        vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(
+          new Error('NotAllowedError'),
+        );
+        showVideo({ isMediaPaused: true });
+        const { rerender } = render(<DisplayPage />);
+
+        showVideo({ isMediaPaused: false });
+        rerender(<DisplayPage />);
+        await Promise.resolve();
+
+        expect(screen.getByTestId('question-video')).toBeTruthy();
+      });
+
+      it('honours a standing pause once the video has loaded', () => {
+        const pause = vi
+          .spyOn(HTMLMediaElement.prototype, 'pause')
+          .mockImplementation(() => undefined);
+        showVideo({ isMediaPaused: true });
+        render(<DisplayPage />);
+        pause.mockClear();
+
+        fireEvent.loadedMetadata(screen.getByTestId('question-video'));
+
+        expect(pause).toHaveBeenCalledTimes(1);
+      });
+
+      it('seeks to the start and plays on mediaReplayToken change, without remounting', () => {
+        const play = vi
+          .spyOn(HTMLMediaElement.prototype, 'play')
+          .mockResolvedValue(undefined);
+        showVideo({ mediaReplayToken: 1 });
+        const { rerender } = render(<DisplayPage />);
+        const video = screen.getByTestId('question-video') as HTMLVideoElement;
+        video.currentTime = 42;
+        expect(play).not.toHaveBeenCalled();
+
+        showVideo({ mediaReplayToken: 2 });
+        rerender(<DisplayPage />);
+
+        expect(video.currentTime).toBe(0);
+        expect(play).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('question-video')).toBe(video);
+      });
+
+      it('keeps the same <video> element when toggling media fullscreen', () => {
+        showVideo({ isMediaFullscreen: false });
+        const { rerender } = render(<DisplayPage />);
+        const video = screen.getByTestId('question-video');
+
+        showVideo({ isMediaFullscreen: true });
+        rerender(<DisplayPage />);
+
+        expect(screen.getByTestId('question-video')).toBe(video);
+      });
+    });
+
     it('pauses and resumes an audio player', () => {
       const pause = vi
         .spyOn(HTMLMediaElement.prototype, 'pause')

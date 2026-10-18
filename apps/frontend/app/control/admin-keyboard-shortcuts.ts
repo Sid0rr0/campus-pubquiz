@@ -50,6 +50,6 @@ export const ADMIN_SHORTCUTS: Readonly<Record<AdminShortcutId, AdminShortcut>> =
       key: ' ',
       keyName: 'Space',
       description:
-        "Toggle a fullscreen view of the current question's image or YouTube video on the big screen.",
+        "Toggle a fullscreen view of the current question's image or video on the big screen.",
     },
   };
