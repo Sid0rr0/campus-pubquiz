@@ -108,6 +108,10 @@ Stepping back through a block's locked questions during its break, with answers 
 **Round title card**:
 A screen showing a round's name before its content: the round intro before its questions, the break round intro when break review steps across it, and the reveal intro before its answers are revealed.
 
+**Round note**:
+What the quiz master says when a round's intro is on air, written on the round. It is always shown on the presenter remote while the round intro (or the break round intro) is on air, and on the big screen too when the round is set to show it; never on the reveal intro, and never on phones. Not the same as a question's notes, which are host-only and never on screen.
+_Avoid_: title card note, intro text, round description
+
 **Phone screen**:
 The screen a team's phone shows, named by the server in the players view as a `phoneScreen` with a kind (`leaderboard`, `block`, `lobby`, `rules`, `round_overview`, `round_title`, `ended`, `showdown_guessing`, `showdown_reveal`). `/play` draws by that kind rather than working it out from the game state. The `block` kind is the block browser, shown while the block is answerable and through break and reveal, and carries the question the big screen is revealing. It does not say which team a phone belongs to: on `showdown_guessing` the phone picks the guess form or the "Tiebreaker in progress" message from its own team id.
 
