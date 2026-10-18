@@ -16,18 +16,13 @@ import {
 
 describe('resolveAnswerKind', () => {
   it.each([
-    ['free_text', undefined, 'text'],
-    ['free_text', ['a'], 'text'],
-    ['multiple_choice', ['a', 'b'], 'choice'],
-    ['multiple_choice', undefined, 'choice'],
-    ['multiple_choice', [], 'choice'],
-    ['sort', ['a', 'b'], 'sort'],
-    ['match', ['a', 'b'], 'match'],
-    ['closest_guess', undefined, 'number'],
-  ] as const)('%s with choices %j is %s', (type, options, expected) => {
-    expect(
-      resolveAnswerKind({ type, options: options as string[] | undefined }),
-    ).toBe(expected);
+    ['free_text', 'text'],
+    ['multiple_choice', 'choice'],
+    ['sort', 'sort'],
+    ['match', 'match'],
+    ['closest_guess', 'number'],
+  ] as const)('%s is %s', (type, expected) => {
+    expect(resolveAnswerKind({ type })).toBe(expected);
   });
 
   it('covers every question type', () => {

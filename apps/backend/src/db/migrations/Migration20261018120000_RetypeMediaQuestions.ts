@@ -2,13 +2,15 @@ import { Migration } from '@mikro-orm/migrations';
 
 // A payload has choices when `options` is a JSON array with at least one
 // non-blank string, the same test `resolveAnswerKind` used for the choice kind.
+// `case` guarantees `jsonb_array_elements` only sees arrays (an `and` gives no
+// evaluation-order promise), and `\\S` makes blank mean JS `.trim()` does
+// (tabs and newlines included).
 const HAS_CHOICES = `(
-  jsonb_typeof("payload" -> 'options') = 'array'
-  and exists (
+  case when jsonb_typeof("payload" -> 'options') = 'array' then exists (
     select 1
     from jsonb_array_elements("payload" -> 'options') as option
-    where jsonb_typeof(option) = 'string' and btrim(option #>> '{}') <> ''
-  )
+    where jsonb_typeof(option) = 'string' and (option #>> '{}') ~ '\\S'
+  ) else false end
 )`;
 
 export class Migration20261018120000_RetypeMediaQuestions extends Migration {

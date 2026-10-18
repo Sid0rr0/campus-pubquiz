@@ -17,12 +17,11 @@ export type AnswerKind = AnswerInputKind;
 /** The slice of a question the resolver needs — QuestionView satisfies it. */
 export interface AnswerKindQuestion {
   type: QuestionType;
-  options?: readonly string[] | null;
 }
 
 /**
  * A `required`-choices type is always `choice`; every other type takes its
- * registry input kind, whatever `options` it carries.
+ * registry input kind.
  */
 export function resolveAnswerKind(question: AnswerKindQuestion): AnswerKind {
   const entry = QUESTION_KINDS[question.type];
@@ -178,7 +177,7 @@ export const ANSWER_FORMATS = {
  */
 export function formatAnswer(
   stored: string,
-  question: AnswerKindQuestion,
+  question: AnswerKindQuestion & { options?: readonly string[] | null },
 ): string {
   if (stored === IDK_ANSWER_VALUE) return "🤷 I don't know";
   return ANSWER_FORMATS[resolveAnswerKind(question)].format(

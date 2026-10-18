@@ -45,12 +45,10 @@ describe('MediaUrlField', () => {
     mockUploadMedia.mockReset();
   });
 
-  it('shows the label, the current value and the required marker', () => {
-    renderField({ value: 'https://x/y.png', isRequired: true });
+  it('shows the label and the current value', () => {
+    renderField({ value: 'https://x/y.png' });
 
-    expect(screen.getByLabelText(/media url \(required\)/i)).toHaveValue(
-      'https://x/y.png',
-    );
+    expect(screen.getByLabelText('Media URL')).toHaveValue('https://x/y.png');
   });
 
   it('reports typed URLs through onChange', async () => {

@@ -10,12 +10,12 @@ import {
   hasMarginType,
   type AnswerKind,
   parseFiniteNumber,
+  resolveAnswerKind,
   type MarginUnit,
   type MatchScoringMode,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
-import { resolveDraftAnswerKind } from '@/app/quizzes/[id]/answer-kind-drafts';
 import { FieldErrors, fieldIssues } from '@/app/quizzes/[id]/field-errors';
 import {
   makeMatchPair,
@@ -442,6 +442,6 @@ const ANSWER_KIND_FIELDS = {
 
 /** The answer fields for the question's answer kind, resolved from its type. */
 export function AnswerSection(props: AnswerFieldsProps) {
-  const Fields = ANSWER_KIND_FIELDS[resolveDraftAnswerKind(props.question)];
+  const Fields = ANSWER_KIND_FIELDS[resolveAnswerKind(props.question)];
   return <Fields {...props} />;
 }
