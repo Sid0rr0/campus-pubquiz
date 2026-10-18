@@ -52,6 +52,8 @@ function toSheetRow(question: ImportQuestionPreview): SheetRow {
     breakAfter: '',
     category: '',
     author: '',
+    roundNote: '',
+    showRoundNote: '',
   };
 }
 

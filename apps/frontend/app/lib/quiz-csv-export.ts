@@ -18,6 +18,8 @@ const CSV_HEADER = [
   'break_after',
   'category',
   'author',
+  'round_note',
+  'show_round_note',
 ];
 
 /** Lets Excel read the file as UTF-8; the importer strips it (`bom: true`). */
@@ -49,6 +51,8 @@ function questionRow(
     row.breakAfter,
     row.category,
     row.author,
+    row.roundNote,
+    row.showRoundNote,
   ];
 }
 

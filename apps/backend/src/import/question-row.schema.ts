@@ -21,6 +21,10 @@ export type ParsedQuestionRow =
       roundCategory: string;
       /** Blank ('') when the row's author cell is empty. */
       roundAuthor: string;
+      /** Blank ('') when the row's round_note cell is empty. */
+      roundNote: string;
+      /** Blank ('') when the row's show_round_note cell is empty. */
+      showRoundNote: '' | '0' | '1';
       question: ImportQuestionPreview;
     }
   | { ok: false; issues: ImportRowIssue[] };
@@ -105,13 +109,16 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
     };
   }
 
-  const { round, break_after, category, author } = parsedMeta.data;
+  const { round, break_after, category, author, round_note, show_round_note } =
+    parsedMeta.data;
   return {
     ok: true,
     roundTitle: round,
     roundBreakAfter: break_after === '1',
     roundCategory: category,
     roundAuthor: author ?? '',
+    roundNote: round_note ?? '',
+    showRoundNote: show_round_note,
     question: (checkedQuestion as { data: unknown })
       .data as ImportQuestionPreview,
   };
@@ -123,8 +130,8 @@ export function parseQuestionRow(row: SheetRow): ParsedQuestionRow {
  * break_after = "1"; blank/"0" rows don't grade a break on their own. The
  * state machine requires the final round to end in a grading break, so the
  * last round's break is always forced on regardless of its break_after
- * cells — authors don't need to remember to mark it. `category`/`author`
- * are round-level metadata too: the first non-blank cell seen for a round
+ * cells — authors don't need to remember to mark it. `category`/`author`/
+ * `round_note`/`show_round_note` are round-level metadata too: the first non-blank cell seen for a round
  * wins, so authors only need to fill it in on one row (conventionally the
  * last, matching where `break_after` is put).
  */
@@ -137,6 +144,8 @@ export function assembleImportPreview(
   const breakAfterByRound = new Map<string, boolean>();
   const categoryByRound = new Map<string, string>();
   const authorByRound = new Map<string, string>();
+  const noteByRound = new Map<string, string>();
+  const showNoteByRound = new Map<string, boolean>();
 
   for (const row of rows) {
     const result = parseQuestionRow(row);
@@ -157,6 +166,12 @@ export function assembleImportPreview(
     if (result.roundAuthor && !authorByRound.has(result.roundTitle)) {
       authorByRound.set(result.roundTitle, result.roundAuthor);
     }
+    if (result.roundNote && !noteByRound.has(result.roundTitle)) {
+      noteByRound.set(result.roundTitle, result.roundNote);
+    }
+    if (result.showRoundNote && !showNoteByRound.has(result.roundTitle)) {
+      showNoteByRound.set(result.roundTitle, result.showRoundNote === '1');
+    }
   }
 
   const roundTitles = [...questionsByRound.keys()];
@@ -170,6 +185,11 @@ export function assembleImportPreview(
       ? { category: categoryByRound.get(title) }
       : {}),
     ...(authorByRound.has(title) ? { author: authorByRound.get(title) } : {}),
+    ...(noteByRound.has(title) ? { note: noteByRound.get(title) } : {}),
+    // The setting means nothing without a note, so an empty note drops it.
+    ...(noteByRound.has(title) && showNoteByRound.get(title)
+      ? { showNoteOnScreen: true }
+      : {}),
     questions: questionsByRound.get(title) ?? [],
   }));
 

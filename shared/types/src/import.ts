@@ -21,6 +21,10 @@ export interface SheetRow {
   breakAfter: string;
   category: string;
   author: string;
+  /** Round-level, like category and author: the `round_note` cell. */
+  roundNote: string;
+  /** Round-level: the `show_round_note` cell, '' / '0' / '1'. */
+  showRoundNote: string;
 }
 
 export interface ImportRowIssue {

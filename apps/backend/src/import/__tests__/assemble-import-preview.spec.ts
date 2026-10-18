@@ -134,6 +134,72 @@ describe('assembleImportPreview', () => {
     expect(preview.rounds[0].category).toBe('Science & nature');
   });
 
+  it('takes the first non-blank round_note and show_round_note per round, from any row', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, round: 'History' }),
+      makeRow({
+        rowNumber: 3,
+        round: 'History',
+        roundNote: '  Say hi.\nThen the rules.  ',
+        showRoundNote: '1',
+      }),
+      makeRow({
+        rowNumber: 4,
+        round: 'History',
+        roundNote: 'Ignored later note',
+        showRoundNote: '0',
+      }),
+      makeRow({ rowNumber: 5, round: 'Music', roundNote: 'Host only' }),
+      makeRow({ rowNumber: 6, round: 'Film' }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.rounds[0]).toMatchObject({
+      note: 'Say hi.\nThen the rules.',
+      showNoteOnScreen: true,
+    });
+    expect(preview.rounds[1].note).toBe('Host only');
+    expect(preview.rounds[1].showNoteOnScreen).toBeUndefined();
+    expect(preview.rounds[2].note).toBeUndefined();
+    expect(preview.rounds[2].showNoteOnScreen).toBeUndefined();
+  });
+
+  it('reports a round_note over the limit as an issue on that cell', () => {
+    const rows: SheetRow[] = [
+      makeRow({ rowNumber: 2, roundNote: 'x'.repeat(501) }),
+      makeRow({ rowNumber: 3, roundNote: 'y'.repeat(500) }),
+    ];
+
+    const preview = assembleImportPreview('Trivia Night', rows);
+
+    expect(preview.isImportable).toBe(false);
+    expect(preview.issues).toEqual([
+      expect.objectContaining({ rowNumber: 2, field: 'round_note' }),
+    ]);
+  });
+
+  it('reports a show_round_note that is not blank, 0 or 1', () => {
+    const preview = assembleImportPreview('Trivia Night', [
+      makeRow({ rowNumber: 2, showRoundNote: 'yes' }),
+    ]);
+
+    expect(preview.issues).toEqual([
+      expect.objectContaining({ rowNumber: 2, field: 'show_round_note' }),
+    ]);
+  });
+
+  it('accepts show_round_note 1 with an empty note and stores no note', () => {
+    const preview = assembleImportPreview('Trivia Night', [
+      makeRow({ rowNumber: 2, showRoundNote: '1' }),
+    ]);
+
+    expect(preview.isImportable).toBe(true);
+    expect(preview.rounds[0].note).toBeUndefined();
+    expect(preview.rounds[0].showNoteOnScreen).toBeUndefined();
+  });
+
   it('reports issues from every broken row and blocks the import', () => {
     const rows: SheetRow[] = [
       makeRow({ rowNumber: 2, breakAfter: '1' }),

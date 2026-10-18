@@ -7,6 +7,7 @@ import type {
 import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
+import { ROUND_NOTE_MAX_LENGTH } from './round-note';
 import { hasVideoMedia, isVideoUrl } from './media';
 import {
   parseClipNotes,
@@ -19,7 +20,7 @@ import {
  * options/answer cells are each kind's `csv` codec
  * (`QUESTION_KINDS[type].csv`), and the decoded question is validated by the
  * kind's schema; this file owns the columns every type shares, what only a
- * sheet row has (round name, break_after, category, author) and the mapping
+ * sheet row has (round name, break_after, category, author, round_note, show_round_note) and the mapping
  * of issue paths back to sheet column names.
  */
 
@@ -51,6 +52,16 @@ export const sheetRowMetaSchema = z.object({
   // here — resolveCategoryCell already blanked out anything unrecognized.
   category: z.string(),
   author: z.string().optional(),
+  round_note: z
+    .string()
+    .max(
+      ROUND_NOTE_MAX_LENGTH,
+      `Round note is over ${ROUND_NOTE_MAX_LENGTH} characters`,
+    )
+    .optional(),
+  show_round_note: z.enum(['', '0', '1'], {
+    error: 'show_round_note must be "1", "0", or blank',
+  }),
 });
 
 export type SheetRowMeta = z.infer<typeof sheetRowMetaSchema>;
@@ -117,6 +128,8 @@ export function decodeSheetRow(
       break_after: row.breakAfter.trim(),
       category: resolveCategoryCell(row.category),
       author: blankToUndefined(row.author),
+      round_note: blankToUndefined(row.roundNote),
+      show_round_note: row.showRoundNote.trim(),
     },
     question: {
       type,
@@ -134,7 +147,7 @@ export function decodeSheetRow(
 /**
  * Encodes one question of `round` as the sheet row `decodeSheetRow` reads
  * back as the same question. Round-level cells (break_after, category,
- * author) are written only on the round's last row — the importer lets any
+ * author, round_note, show_round_note) are written only on the round's last row — the importer lets any
  * row carry them, and the last is where authors conventionally put them.
  * Fields with no column (questionId, matchScoringMode, round kahootMode)
  * are not written.
@@ -142,7 +155,7 @@ export function decodeSheetRow(
 export function encodeSheetRow(
   round: Pick<
     ImportRoundPreview,
-    'title' | 'breakAfter' | 'category' | 'author'
+    'title' | 'breakAfter' | 'category' | 'author' | 'note' | 'showNoteOnScreen'
   >,
   question: ImportQuestionPreview,
   isLastInRound: boolean,
@@ -164,6 +177,8 @@ export function encodeSheetRow(
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
     category: isLastInRound ? (round.category ?? '') : '',
     author: isLastInRound ? (round.author ?? '') : '',
+    roundNote: isLastInRound ? (round.note ?? '') : '',
+    showRoundNote: isLastInRound && round.showNoteOnScreen ? '1' : '',
   };
 }
 
