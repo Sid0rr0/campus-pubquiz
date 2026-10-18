@@ -19,6 +19,7 @@ interface MediaPauseHandles {
   /** Re-applies a standing pause once the embed has loaded — commands sent before then are dropped. */
   onYoutubeLoad: () => void;
   audioRef: RefObject<HTMLAudioElement | null>;
+  videoRef: RefObject<HTMLVideoElement | null>;
 }
 
 /**
@@ -30,6 +31,7 @@ interface MediaPauseHandles {
 export function useMediaPause(isPaused: boolean): MediaPauseHandles {
   const youtubeRef = useRef<HTMLIFrameElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const wasPausedRef = useRef(false);
 
   useEffect(() => {
@@ -39,14 +41,15 @@ export function useMediaPause(isPaused: boolean): MediaPauseHandles {
       youtubeRef.current,
       isPaused ? 'pauseVideo' : 'playVideo',
     );
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPaused) {
-      audio.pause();
-    } else {
-      // Browsers may reject play() (autoplay policy); the audio element's own
-      // controls remain as the fallback, so there is nothing to do on failure.
-      audio.play()?.catch(() => undefined);
+    for (const element of [audioRef.current, videoRef.current]) {
+      if (!element) continue;
+      if (isPaused) {
+        element.pause();
+      } else {
+        // Browsers may reject play() (autoplay policy); a rejection is ignored
+        // and the moderator can pause/resume again.
+        element.play()?.catch(() => undefined);
+      }
     }
   }, [isPaused]);
 
@@ -54,5 +57,5 @@ export function useMediaPause(isPaused: boolean): MediaPauseHandles {
     if (isPaused) postYoutubeCommand(youtubeRef.current, 'pauseVideo');
   }, [isPaused]);
 
-  return { youtubeRef, onYoutubeLoad, audioRef };
+  return { youtubeRef, onYoutubeLoad, audioRef, videoRef };
 }

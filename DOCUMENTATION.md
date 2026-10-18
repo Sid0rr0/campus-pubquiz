@@ -193,13 +193,14 @@ be refused); the press after that moves the quiz.
 (so a display that reconnects mid-pause comes back paused). The big screen
 applies it in place, without remounting anything: a YouTube embed (loaded with
 `enablejsapi=1`) gets an IFrame API `pauseVideo`/`playVideo` `postMessage`
-command, and a question `<audio>` element is `pause()`d/`play()`ed. Every
+command, and a question `<audio>` or video-file `<video>` element is
+`pause()`d/`play()`ed. Every
 action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 `REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
 alone. `/control` and `/remote` show Pause/Resume only for an open question
-whose media is YouTube or audio. Browsers may refuse the display's `play()` on
-resume if it has had no user interaction (autoplay policy); the audio element's
-own controls remain as the fallback.
+whose media is a video (YouTube or file) or audio. Browsers may refuse the
+display's `play()` on resume if it has had no user interaction (autoplay
+policy); a rejection is ignored and the moderator can press Resume again.
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
@@ -817,11 +818,28 @@ grading behavior. Media is not a type: any question can carry a
 There is deliberately no picture, audio or YouTube type: any question can
 carry a `media_url` and an `answer_media_url`, and the display works out from
 the URL whether it is an image, an `<audio controls>` element (autoplaying)
-or an embedded YouTube iframe. A question's type only decides how teams answer
-and how the answer is graded, so a music multiple choice is a
-`multiple_choice` row with an mp3 `media_url`. Media is never required.
-(Questions saved as `audio` or `youtube` before this were re-typed by a
-migration: `multiple_choice` when they had choices, `free_text` otherwise.)
+an embedded YouTube iframe, or a `<video>` for a video file. A question's type
+only decides how teams answer and how the answer is graded, so a music
+multiple choice is a `multiple_choice` row with an mp3 `media_url`. Media is
+never required. (Questions saved as `audio` or `youtube` before this were
+re-typed by a migration: `multiple_choice` when they had choices, `free_text`
+otherwise.)
+
+**Video files.** A link ending in `.mp4`, `.webm`, `.mov` or `.m4v`
+(case-insensitive, a `?query` is fine) is a video file, recognised by
+`classifyMediaUrl` in `shared/types/src/media.ts` (the one place that infers
+image / audio / YouTube / video file from a link; `isVideoUrl` is "YouTube or
+video file"). Hosting pages (Vimeo, Google Drive, Dropbox share links) are not
+direct files and are not recognised. On `/display` it is a `<video>` with no
+controls, `playsInline` and `autoPlay` from `autoplayMedia`, in the same 16:9
+box as YouTube (and the same fullscreen overlay, without remounting). The
+reveal rule is worded over video: a video `answer_media_url` (YouTube or file,
+either source) replaces the question media at reveal; otherwise the question
+video plays again. The side-by-side image reveal is unchanged. If the file
+fails to load (`error` event) the display hides the video area for that media
+and leaves the prompt and answers; there is no retry and no message. Venue
+internet carries the video, so link short, compressed clips. Uploading video
+is not supported (`POST /media` stays images-only).
 
 A clip's start/end (seconds
 into the video) are real question fields (`mediaStartSeconds`/
