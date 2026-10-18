@@ -93,7 +93,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Pausing and replaying question media',
     paragraphs: [
-      'While a question with a YouTube video, a video file or an audio clip is open, a row of media buttons sits directly below the Leaderboard row on Control (and just above Previous/Advance on Remote). Pause stops the video or audio on the big screen where it is, and the same button then reads Resume. "Play again" (YouTube only) restarts the video from the beginning, and also resumes it if it was paused.',
+      'While a question with a YouTube video, a video file or an audio clip is open, a row of media buttons sits directly below the Leaderboard row on Control (and just above Previous/Advance on Remote). Pause stops the video or audio on the big screen where it is, and the same button then reads Resume. "Play again" (YouTube videos and video files) restarts the video from the beginning of its clip, and also resumes it if it was paused.',
       "Moving on to another question, or back, always starts that question's media fresh and un-paused. Showing the leaderboard or the join overlay does not touch a pause. If the big screen reconnects while paused, it comes back paused. If the browser blocks the big screen from restarting audio on Resume, use the player's own controls on the big screen.",
     ],
   },
