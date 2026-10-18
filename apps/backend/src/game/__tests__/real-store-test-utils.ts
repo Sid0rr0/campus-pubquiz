@@ -85,6 +85,8 @@ export interface QuizRoundSpec {
   kahootMode?: boolean;
   /** Host-only round note shown on /remote while the round's intro is on air. */
   note?: string;
+  /** Whether the round note also shows on the big screen. */
+  showNoteOnScreen?: boolean;
   questions: QuizQuestionSpec[];
 }
 
@@ -428,6 +430,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         breakAfter: spec.breakAfter ?? false,
         kahootMode: spec.kahootMode ?? false,
         note: spec.note,
+        showNoteOnScreen: spec.showNoteOnScreen ?? false,
       });
       const questions = spec.questions.map((question, questionIndex) =>
         em.create(Question, {

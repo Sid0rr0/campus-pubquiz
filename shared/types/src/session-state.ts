@@ -25,6 +25,8 @@ export interface SeededRound {
    * never go into a broadcast view on its own.
    */
   note?: string;
+  /** Whether the note also shows on the big screen — see Round.showNoteOnScreen. */
+  showNoteOnScreen?: boolean;
   // Carries the correct answer internally so reveal can show it; only
   // answer-free QuestionView projections leave the server.
   questions: SeededQuestion[];

@@ -96,6 +96,108 @@ describe('Round note — host-only context for a round intro', () => {
     }
   });
 
+  describe('on the big screen (show on screen)', () => {
+    const displayNote = () =>
+      (
+        game.gameState.getView(game.joinCode, SOCKET_ROOMS.DISPLAY) as {
+          roundNote: string;
+        }
+      ).roundNote;
+    const playersCarryNote = () =>
+      JSON.stringify(
+        game.gameState.getView(game.joinCode, SOCKET_ROOMS.PLAYERS),
+      ).includes('Answers must be in English');
+
+    async function setShown(isShown: boolean, note = ROUND_NOTE) {
+      const draft = await game.inRequestContext(() =>
+        game.quizService.findDraftById(game.quizId),
+      );
+      const rounds: ImportRoundPreview[] = draft!.rounds.map((round) => ({
+        ...round,
+        note,
+        showNoteOnScreen: isShown,
+      }));
+      await game.inRequestContext(() =>
+        game.liveEdit.save(game.quizId, { title: draft!.title, rounds }),
+      );
+    }
+
+    it('carries no note on the display view while the setting is off', async () => {
+      await game.act('START_QUIZ');
+      await advance(1); // -> round_intro
+
+      expect(displayNote()).toBe('');
+    });
+
+    it('carries the note on the display view but never the players view while the setting is on', async () => {
+      game = await harness.createGateway({
+        joinCode: 'SHOWN1',
+        rounds: [{ ...NOTED_QUIZ[0], showNoteOnScreen: true }],
+      });
+      await game.act('START_QUIZ');
+      await advance(1); // -> round_intro
+
+      expect(displayNote()).toBe(ROUND_NOTE);
+      expect(playersCarryNote()).toBe(false);
+    });
+
+    it('carries the note on the break round intro', async () => {
+      game = await harness.createGateway({
+        joinCode: 'SHOWN2',
+        rounds: [{ ...NOTED_QUIZ[0], showNoteOnScreen: true }],
+      });
+      await game.act('START_QUIZ');
+      await advance(4); // -> break_intro
+      await game.act('PREVIOUS');
+      await game.act('PREVIOUS'); // -> break_round_intro
+
+      expect(displayNote()).toBe(ROUND_NOTE);
+    });
+
+    it('carries no note on an open question or the reveal intro', async () => {
+      game = await harness.createGateway({
+        joinCode: 'SHOWN3',
+        rounds: [{ ...NOTED_QUIZ[0], showNoteOnScreen: true }],
+      });
+      await game.act('START_QUIZ');
+      await advance(2); // -> question open
+      expect(displayNote()).toBe('');
+
+      await advance(3); // -> reveal_intro
+      expect(displayNote()).toBe('');
+    });
+
+    it('carries no note when the setting is on but the note is empty', async () => {
+      game = await harness.createGateway({
+        joinCode: 'SHOWN4',
+        rounds: [{ ...NOTED_QUIZ[0], note: undefined, showNoteOnScreen: true }],
+      });
+      await game.act('START_QUIZ');
+      await advance(1);
+
+      expect(displayNote()).toBe('');
+    });
+
+    it('updates the display view when the setting is turned on while the intro is on air', async () => {
+      await game.act('START_QUIZ');
+      await advance(1); // -> round_intro
+      expect(displayNote()).toBe('');
+
+      await setShown(true);
+
+      expect(displayNote()).toBe(ROUND_NOTE);
+    });
+
+    it('round-trips the setting through a saved draft', async () => {
+      await setShown(true);
+
+      const draft = await game.inRequestContext(() =>
+        game.quizService.findDraftById(game.quizId),
+      );
+      expect(draft!.rounds[0].showNoteOnScreen).toBe(true);
+    });
+  });
+
   describe('editing the note while live', () => {
     async function saveNote(roundIndex: number, note: string) {
       const draft = await game.inRequestContext(() =>

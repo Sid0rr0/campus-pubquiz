@@ -795,6 +795,26 @@ describe('QuizEditorPanel', () => {
     );
   });
 
+  it('has a Show on screen checkbox that is off, and disabled while the round note is blank', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.click(
+      screen.getByRole('button', { name: /start from scratch/i }),
+    );
+
+    const checkbox = screen.getByRole('checkbox', { name: /show on screen/i });
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeDisabled();
+
+    await user.type(
+      screen.getByRole('textbox', { name: /round note/i }),
+      'Answers in English',
+    );
+    expect(checkbox).toBeEnabled();
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+  });
+
   it('updates an existing quiz in place and shows a saved flash', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({

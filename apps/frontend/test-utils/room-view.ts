@@ -47,6 +47,9 @@ export interface RoundDescription {
   kahootMode?: boolean;
   category?: string;
   author?: string;
+  /** Host-only round note; reaches the display view only with showNoteOnScreen. */
+  note?: string;
+  showNoteOnScreen?: boolean;
   questions?: QuestionDescription[];
 }
 
@@ -139,6 +142,8 @@ function buildRounds(descriptions: RoundDescription[]): SeededRound[] {
       kahootMode: round.kahootMode,
       category: round.category,
       author: round.author,
+      note: round.note,
+      showNoteOnScreen: round.showNoteOnScreen,
     }),
     questions: built[index].questions,
     questionNotesById: built[index].notes,

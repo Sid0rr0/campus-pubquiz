@@ -187,6 +187,7 @@ function DisplayPageContent() {
     roundTitles,
     roundCategories,
     roundAuthors,
+    roundNote,
     questionLockAt,
     kahootQuestionEndsAt,
     teamsCorrect,
@@ -276,6 +277,7 @@ function DisplayPageContent() {
             label={`ROUND ${progress.roundIndex + 1}${roundCategory ? ` — ${roundCategory}` : ''}`}
             roundTitle={roundTitle}
             author={roundAuthor}
+            note={roundNote}
           />
         );
       case 'question':
@@ -333,6 +335,7 @@ function DisplayPageContent() {
           <RoundTitleCard
             label={`ROUND ${screenBlockQuestion.roundNumber}`}
             roundTitle={screenBlockQuestion.roundTitle}
+            note={roundNote}
           />
         );
       case 'reveal_intro':

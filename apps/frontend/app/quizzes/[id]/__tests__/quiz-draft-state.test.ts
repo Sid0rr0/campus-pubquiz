@@ -76,6 +76,7 @@ describe('makeQuestion / makeRound', () => {
       category: '',
       author: '',
       note: '',
+      showNoteOnScreen: false,
       questions: [],
     });
   });
