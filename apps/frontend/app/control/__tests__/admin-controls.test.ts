@@ -44,11 +44,31 @@ describe('getAdminControls — canPauseMedia', () => {
     ).toBe(false);
   });
 
-  it('keeps canReplayMedia YouTube-only', () => {
+  it('is true for an open question with a video file', () => {
     expect(
       getAdminControls(
-        viewWith('question_open', 'https://example.com/song.mp3'),
-      ).canReplayMedia,
+        viewWith('question_open', 'https://example.com/clip.mp4'),
+      ).canPauseMedia,
+    ).toBe(true);
+  });
+});
+
+describe('getAdminControls — canReplayMedia', () => {
+  it.each([
+    ['YouTube', 'https://youtu.be/dQw4w9WgXcQ'],
+    ['an mp4 video file', 'https://example.com/clip.mp4'],
+  ])('is true for an open question with %s media', (_kind, url) => {
+    expect(
+      getAdminControls(viewWith('question_open', url)).canReplayMedia,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['an mp3', 'https://example.com/song.mp3'],
+    ['an image', 'https://example.com/photo.jpg'],
+  ])('is false for %s', (_kind, url) => {
+    expect(
+      getAdminControls(viewWith('question_open', url)).canReplayMedia,
     ).toBe(false);
   });
 });

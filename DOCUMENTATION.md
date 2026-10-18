@@ -177,17 +177,17 @@ be refused); the press after that moves the quiz.
 
 ### Admin actions
 
-| Action                    | Legal from                              | Effect                                                                                                                         |
-| ------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `START_QUIZ`              | `lobby`                                 | → `rules`                                                                                                                      |
-| `ADVANCE`                 | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                     |
-| `PREVIOUS`                | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby` |
-| `END_QUIZ`                | any except `ended`                      | Force-end                                                                                                                      |
-| `TOGGLE_LEADERBOARD`      | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                 |
-| `TOGGLE_JOIN_OVERLAY`     | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                     |
-| `TOGGLE_MEDIA_FULLSCREEN` | any                                     | Flips `isMediaFullscreen`; any other action clears it                                                                          |
-| `REPLAY_MEDIA`            | any                                     | Bumps `mediaReplayToken` (the display remounts the YouTube iframe, restarting it) and clears `isMediaPaused`                   |
-| `TOGGLE_MEDIA_PAUSE`      | any                                     | Flips `isMediaPaused`; status untouched                                                                                        |
+| Action                    | Legal from                              | Effect                                                                                                                                                    |
+| ------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `START_QUIZ`              | `lobby`                                 | → `rules`                                                                                                                                                 |
+| `ADVANCE`                 | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                                                |
+| `PREVIOUS`                | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby`                            |
+| `END_QUIZ`                | any except `ended`                      | Force-end                                                                                                                                                 |
+| `TOGGLE_LEADERBOARD`      | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                                            |
+| `TOGGLE_JOIN_OVERLAY`     | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                                                |
+| `TOGGLE_MEDIA_FULLSCREEN` | any                                     | Flips `isMediaFullscreen`; any other action clears it                                                                                                     |
+| `REPLAY_MEDIA`            | any                                     | Bumps `mediaReplayToken` (the display remounts the YouTube iframe; a video file seeks to its clip start and plays, no remount) and clears `isMediaPaused` |
+| `TOGGLE_MEDIA_PAUSE`      | any                                     | Flips `isMediaPaused`; status untouched                                                                                                                   |
 
 **Pausing media.** `isMediaPaused` is server-owned game state in `progress`
 (so a display that reconnects mid-pause comes back paused). The big screen
@@ -200,7 +200,10 @@ action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 alone. `/control` and `/remote` show Pause/Resume only for an open question
 whose media is a video (YouTube or file) or audio. Browsers may refuse the
 display's `play()` on resume if it has had no user interaction (autoplay
-policy); a rejection is ignored and the moderator can press Resume again.
+policy); a rejection is ignored and the moderator can press Resume again. A
+standing pause is re-applied to a video file once it has loaded. "Play again"
+(`REPLAY_MEDIA`) is offered for an open question with a video (YouTube or file),
+not for audio.
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
