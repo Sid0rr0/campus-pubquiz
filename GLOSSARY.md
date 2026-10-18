@@ -33,8 +33,12 @@ _Avoid_: shown question, locked question (locked means no longer accepting answe
 Where the live sessions on a quiz have got to — their opened questions, the current round of the furthest-on one, and whether that round's block has started locking. The rounds after the current round can be added, deleted and reordered, and their break-after and kahoot setting can change (which moves where the current block ends); the current round and earlier ones keep their place, break-after and kahoot setting. Questions in rounds after the current round can be added, reordered, moved between those rounds and deleted. In the current round the questions after the last opened one can too, until its block starts locking; from then on its rounds are frozen. Rounds before it are always frozen. It is checked and applied while the live sessions are held, so the game can't move past it during a save.
 
 **Question type**:
-What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess, audio, YouTube), which fixes how its answers are graded and whether it can appear in a kahoot round.
+What a question asks teams to do (free text, number, multiple choice, sort, match, closest guess), which fixes how its answers are graded and whether it can appear in a kahoot round. Media is not a question type.
 _Avoid_: question kind, question format
+
+**Media**:
+An image, sound or YouTube video that any question can carry, shown on the big screen while the question is asked or when its answer is revealed. Which of the three it is follows from the link, not from the question type.
+_Avoid_: audio question, YouTube question, picture question (no such types)
 
 **Clip**:
 The part of a question's YouTube video that plays while the question is asked, set by a start and end time.
@@ -45,10 +49,10 @@ _Avoid_: answer clip (could be read as a team's answer)
 
 **Hidden video**:
 A YouTube video played as sound only, covered on the big screen until the question's answer is revealed.
-_Avoid_: audio-only (the audio question type is something else)
+_Avoid_: audio-only (a question's media can itself be plain sound)
 
 **Answer kind**:
-How a question is answered: typed text, a number, picking a choice, putting items in order, or pairing items up. Question type says what a question asks teams to do; answer kind says how they enter the answer, and it is worked out from the type and whether the question carries choices. Branch on this, not on the type, when behaviour differs by how a question is answered.
+How a question is answered: typed text, a number, picking a choice, putting items in order, or pairing items up. Question type says what a question asks teams to do; answer kind says how they enter the answer, and it is worked out from the type. Branch on this, not on the type, when behaviour differs by how a question is answered.
 _Avoid_: input kind (the registry field that is its default)
 
 **Showdown**:
@@ -56,7 +60,7 @@ A tiebreak played between teams tied on the leaderboard, with the teams taking t
 _Avoid_: tiebreaker round, sudden death
 
 **Grading**:
-The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then revises an answer into something that doesn't match the key, its mark is cleared and must be given again. A typed answer (free text, audio, YouTube) that matches the key is graded correct automatically; only the others wait for the quiz master.
+The quiz master marking a team's answer. It can happen as soon as an answer arrives; if the team then revises an answer into something that doesn't match the key, its mark is cleared and must be given again. A free text answer that matches the key is graded correct automatically; only the others wait for the quiz master.
 _Avoid_: scoring, marking
 
 **Answer key**:
