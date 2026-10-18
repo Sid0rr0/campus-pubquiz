@@ -35,7 +35,7 @@ describe('RetypeMediaQuestions migration (Postgres integration)', () => {
       payload: Record<string, unknown>,
       orderIndex: number,
     ): Promise<number> => {
-      const [{ id }] = await connection.execute(
+      const [{ id }]: Array<{ id: number }> = await connection.execute(
         `insert into questions (round_id, order_index, type, prompt, answer, points, payload, created_at, updated_at)
          values (${roundId}, ${orderIndex}, '${type}', '${name}', 'A', 10, '${JSON.stringify(payload)}'::jsonb, now(), now()) returning id`,
       );
