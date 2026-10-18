@@ -81,6 +81,14 @@ describe('GameGateway — admin actions', () => {
     expect(snapshot.progress.mediaReplayToken).toBe(1);
   });
 
+  it('toggles media pause, broadcasts it, and resumes on replay', async () => {
+    const paused = await game.act('TOGGLE_MEDIA_PAUSE');
+    expect(paused.progress.isMediaPaused).toBe(true);
+
+    const replayed = await game.act('REPLAY_MEDIA');
+    expect(replayed.progress.isMediaPaused).toBe(false);
+  });
+
   it('rejects an admin action from a non-admin client without broadcasting', async () => {
     const display = createMockSocket(
       SOCKET_ROOMS.DISPLAY,

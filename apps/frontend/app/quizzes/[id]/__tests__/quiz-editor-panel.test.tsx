@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { checkQuestion, decodeSheetRow } from '@campus-pubquiz/types';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuizDraftApiError } from '@/app/lib/quiz-draft-api';
@@ -206,7 +207,51 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByLabelText(/clip end/i)).toBeInTheDocument();
   });
 
-  it('shows dedicated clip start/end inputs for a YouTube media url, pre-filled from notes', async () => {
+  it('fills the clip inputs from the sample CSV YouTube question (55 and 88 seconds)', async () => {
+    const user = userEvent.setup();
+    const { question, meta } = decodeSheetRow(
+      {
+        rowNumber: 7,
+        round: 'Music & Movies',
+        type: 'youtube',
+        question: 'Which movie is this trailer clip from?',
+        options: '',
+        answer: 'Sample Movie Title',
+        points: '2',
+        mediaUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        answerMediaUrl: '',
+        notes: '{start: "55", end: "88"}',
+        breakAfter: '',
+        category: '',
+        author: '',
+      },
+      'youtube',
+    );
+    const checked = checkQuestion(question);
+    if (!checked.success) throw new Error('sample question should be valid');
+    mockPreviewImport.mockResolvedValue({
+      quizTitle: 'Sample',
+      rounds: [
+        {
+          title: (meta as { round: string }).round,
+          breakAfter: false,
+          questions: [checked.data],
+        },
+      ],
+      issues: [],
+      isImportable: true,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="new" />);
+    await user.upload(screen.getByLabelText(/import csv/i), makeCsvFile());
+
+    await screen.findByDisplayValue('Music & Movies');
+    expect(screen.getByLabelText(/clip start/i)).toHaveValue('55');
+    expect(screen.getByLabelText(/clip end/i)).toHaveValue('1:28');
+    expect(screen.getByLabelText(/^notes$/i)).toHaveValue('');
+  });
+
+  it('shows dedicated clip start/end inputs for a YouTube media url, pre-filled from the clip fields', async () => {
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
       title: 'Trivia Night',
@@ -220,9 +265,10 @@ describe('QuizEditorPanel', () => {
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,
-              notes:
-                'Play the chorus\nYouTube clip: {start: "1:22", end: "2:20"}',
+              notes: 'Play the chorus',
               mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              mediaStartSeconds: 82,
+              mediaEndSeconds: 140,
             },
           ],
         },
@@ -237,7 +283,91 @@ describe('QuizEditorPanel', () => {
     expect(screen.getByLabelText(/^notes$/i)).toHaveValue('Play the chorus');
   });
 
-  it('recomposes notes when a clip end time is edited', async () => {
+  describe('reveal clip inputs', () => {
+    const question = {
+      type: 'free_text',
+      prompt: 'Name this music video.',
+      answer: 'Never Gonna Give You Up',
+      points: 3,
+    };
+
+    function loadQuestion(fields: Record<string, unknown>) {
+      mockFetchQuizDraft.mockResolvedValue({
+        id: 5,
+        title: 'Trivia Night',
+        rounds: [
+          {
+            title: 'Music Videos',
+            breakAfter: true,
+            questions: [{ ...question, ...fields }],
+          },
+        ],
+      });
+      mockUpdateQuiz.mockResolvedValue({
+        quizId: 5,
+        roundCount: 1,
+        questionCount: 1,
+      });
+      return renderWithQuery(<QuizEditorPanel quizId="5" />);
+    }
+
+    it('labels them as the question video clip when only the question media is YouTube', async () => {
+      loadQuestion({
+        mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+        revealStartSeconds: 150,
+        revealEndSeconds: 165,
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByText('Reveal clip (question video)')).toBeVisible();
+      expect(screen.getByLabelText(/reveal start/i)).toHaveValue('2:30');
+      expect(screen.getByLabelText(/reveal end/i)).toHaveValue('2:45');
+    });
+
+    it('labels them as the answer video clip when the answer media is YouTube', async () => {
+      loadQuestion({
+        mediaUrl: 'https://example.com/a.jpg',
+        answerMediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.getByText('Answer video clip')).toBeVisible();
+      expect(screen.getByLabelText(/reveal start/i)).toHaveValue('');
+    });
+
+    it('is hidden when neither media is a YouTube link', async () => {
+      loadQuestion({ mediaUrl: 'https://example.com/a.jpg' });
+      await screen.findByDisplayValue('Trivia Night');
+
+      expect(screen.queryByLabelText(/reveal start/i)).not.toBeInTheDocument();
+    });
+
+    it('saves a typed reveal clip as seconds', async () => {
+      const user = userEvent.setup();
+      loadQuestion({ mediaUrl: 'https://youtu.be/dQw4w9WgXcQ' });
+      await screen.findByDisplayValue('Trivia Night');
+
+      await user.type(screen.getByLabelText(/reveal start/i), '2:30');
+      await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuiz).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({
+            rounds: [
+              expect.objectContaining({
+                questions: [
+                  expect.objectContaining({ revealStartSeconds: 150 }),
+                ],
+              }),
+            ],
+          }),
+        ),
+      );
+    });
+  });
+
+  it('saves an edited clip end as a field and leaves the notes alone', async () => {
     const user = userEvent.setup();
     mockFetchQuizDraft.mockResolvedValue({
       id: 5,
@@ -252,8 +382,10 @@ describe('QuizEditorPanel', () => {
               prompt: 'Name this music video.',
               answer: 'Never Gonna Give You Up',
               points: 3,
-              notes: 'YouTube clip: {start: "1:22", end: "2:20"}',
+              notes: 'Play the chorus',
               mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+              mediaStartSeconds: 82,
+              mediaEndSeconds: 140,
             },
           ],
         },
@@ -282,7 +414,9 @@ describe('QuizEditorPanel', () => {
             expect.objectContaining({
               questions: [
                 expect.objectContaining({
-                  notes: 'YouTube clip: {start: "1:22", end: "3:00"}',
+                  notes: 'Play the chorus',
+                  mediaStartSeconds: 82,
+                  mediaEndSeconds: 180,
                 }),
               ],
             }),
@@ -290,6 +424,60 @@ describe('QuizEditorPanel', () => {
         }),
       ),
     );
+  });
+
+  it('shows the hide-video checkbox only for YouTube media and saves it as a field', async () => {
+    const user = userEvent.setup();
+    mockFetchQuizDraft.mockResolvedValue({
+      id: 5,
+      title: 'Trivia Night',
+      rounds: [
+        {
+          title: 'Music Videos',
+          breakAfter: true,
+          questions: [
+            {
+              type: 'free_text',
+              prompt: 'Name this song.',
+              answer: 'Song',
+              points: 3,
+              mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+            },
+          ],
+        },
+      ],
+    });
+    mockUpdateQuiz.mockResolvedValue({
+      quizId: 5,
+      roundCount: 1,
+      questionCount: 1,
+    });
+
+    renderWithQuery(<QuizEditorPanel quizId="5" />);
+    await screen.findByDisplayValue('Trivia Night');
+
+    const checkbox = screen.getByLabelText(/hide video \(sound only\)/i);
+    expect(checkbox).not.toBeChecked();
+    await user.click(checkbox);
+    await user.click(screen.getByRole('button', { name: /save quiz/i }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuiz).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({
+          rounds: [
+            expect.objectContaining({
+              questions: [expect.objectContaining({ isVideoHidden: true })],
+            }),
+          ],
+        }),
+      ),
+    );
+
+    await user.clear(screen.getByLabelText(/^media url$/i));
+    expect(
+      screen.queryByLabelText(/hide video \(sound only\)/i),
+    ).not.toBeInTheDocument();
   });
 
   it('reorders questions within a round via the move up/down buttons', async () => {

@@ -175,7 +175,9 @@ export function QuestionBrowser({
           />
           {isHttpUrl(selectedQuestion.mediaUrl ?? '') && (
             <p className="text-center text-sm font-extrabold tracking-wide text-foreground/55">
-              👀 Look at the screen
+              {selectedQuestion.isVideoHidden
+                ? '🎧 Listen'
+                : '👀 Look at the screen'}
             </p>
           )}
           {myAnswer && (

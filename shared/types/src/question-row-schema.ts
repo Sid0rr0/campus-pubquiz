@@ -7,6 +7,13 @@ import type {
 import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
+import {
+  hasYoutubeMedia,
+  isYoutubeUrl,
+  parseClipNotes,
+  writeClipNotes,
+  type ClipNotesFields,
+} from './youtube';
 
 /**
  * Sheet-row half of the CSV format, both directions. The question's own
@@ -78,14 +85,34 @@ export function decodeSheetRow(
   question: { type: QuestionType } & Record<string, unknown>;
   /** Set when a match answer isn't written as `left+right` pairs — the question schema alone can't see that, as a bare right-hand list is a valid draft answer. */
   sheetAnswerIssue?: QuestionIssue;
+  /** One issue per clip time in the notes group that isn't a timecode — the question schema can't see it, as the bad value was never turned into a field. */
+  clipIssues: QuestionIssue[];
 } {
   const trimmedPoints = row.points.trim();
+  const mediaUrl = blankToUndefined(row.mediaUrl);
+  const answerMediaUrl = blankToUndefined(row.answerMediaUrl);
+  // The clip group is CSV-only syntax: pulled out of the notes into fields, when either video is a YouTube link.
+  const { freeNotes, clip, invalidKeys } = hasYoutubeMedia({
+    mediaUrl,
+    answerMediaUrl,
+  })
+    ? parseClipNotes(row.notes)
+    : {
+        freeNotes: row.notes,
+        clip: {} as ClipNotesFields,
+        invalidKeys: [] as string[],
+      };
   const { answerIssue, ...choices } = QUESTION_KINDS[type].csv.decode({
     options: row.options,
     answer: row.answer,
   });
   return {
     sheetAnswerIssue: answerIssue,
+    clipIssues: invalidKeys.map((key) => ({
+      path: ['notes'],
+      code: 'custom',
+      message: `Clip time "${key}" is not a timecode — use seconds, M:SS or H:MM:SS`,
+    })),
     meta: {
       round: row.round.trim(),
       break_after: row.breakAfter.trim(),
@@ -96,10 +123,11 @@ export function decodeSheetRow(
       type,
       prompt: row.question.trim(),
       ...choices,
-      notes: blankToUndefined(row.notes),
+      notes: blankToUndefined(freeNotes),
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
-      mediaUrl: blankToUndefined(row.mediaUrl),
-      answerMediaUrl: blankToUndefined(row.answerMediaUrl),
+      mediaUrl,
+      answerMediaUrl,
+      ...clipPreviewFieldsOf(clip, isYoutubeUrl(mediaUrl)),
     },
   };
 }
@@ -131,10 +159,54 @@ export function encodeSheetRow(
     points: String(question.points),
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    notes: question.notes ?? '',
+    notes: hasYoutubeMedia(question)
+      ? writeClipNotes(question.notes ?? '', clipNotesFieldsOf(question))
+      : (question.notes ?? ''),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
     category: isLastInRound ? (round.category ?? '') : '',
     author: isLastInRound ? (round.author ?? '') : '',
+  };
+}
+
+/** The notes-group fields a question carries: the clip and hidden flag only for a YouTube question video, the reveal clip for either YouTube video. */
+function clipNotesFieldsOf(question: ImportQuestionPreview): ClipNotesFields {
+  const { mediaStartSeconds, mediaEndSeconds } = question;
+  const isQuestionVideo = isYoutubeUrl(question.mediaUrl);
+  return {
+    ...(isQuestionVideo && question.isVideoHidden
+      ? { isVideoHidden: true as const }
+      : {}),
+    ...(isQuestionVideo && mediaStartSeconds !== undefined
+      ? { startSeconds: mediaStartSeconds }
+      : {}),
+    ...(isQuestionVideo && mediaEndSeconds !== undefined
+      ? { endSeconds: mediaEndSeconds }
+      : {}),
+    ...(question.revealStartSeconds !== undefined
+      ? { revealStartSeconds: question.revealStartSeconds }
+      : {}),
+    ...(question.revealEndSeconds !== undefined
+      ? { revealEndSeconds: question.revealEndSeconds }
+      : {}),
+  };
+}
+
+/** The preview fields a notes group fills; the clip and hidden flag only for a YouTube question video. */
+function clipPreviewFieldsOf(clip: ClipNotesFields, isQuestionVideo: boolean) {
+  return {
+    ...(isQuestionVideo && clip.isVideoHidden ? { isVideoHidden: true } : {}),
+    ...(isQuestionVideo && clip.startSeconds !== undefined
+      ? { mediaStartSeconds: clip.startSeconds }
+      : {}),
+    ...(isQuestionVideo && clip.endSeconds !== undefined
+      ? { mediaEndSeconds: clip.endSeconds }
+      : {}),
+    ...(clip.revealStartSeconds !== undefined
+      ? { revealStartSeconds: clip.revealStartSeconds }
+      : {}),
+    ...(clip.revealEndSeconds !== undefined
+      ? { revealEndSeconds: clip.revealEndSeconds }
+      : {}),
   };
 }
 

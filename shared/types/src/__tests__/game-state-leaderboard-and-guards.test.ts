@@ -315,6 +315,90 @@ describe('getNextGameState — media replay', () => {
   });
 });
 
+describe('getNextGameState — media pause', () => {
+  const open: GameProgress = {
+    status: 'question_open',
+    roundIndex: 0,
+    questionIndex: 0,
+    isLeaderboardVisible: false,
+    isJoinOverlayVisible: false,
+    revealIndex: 0,
+    furthestOpenIndex: 0,
+  };
+  const pausedOpen: GameProgress = { ...open, isMediaPaused: true };
+
+  it('pauses media without changing anything else', () => {
+    const next = getNextGameState(
+      open,
+      'TOGGLE_MEDIA_PAUSE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next).toEqual({ ...open, isMediaPaused: true });
+  });
+
+  it('resumes media when toggled again', () => {
+    const next = getNextGameState(
+      pausedOpen,
+      'TOGGLE_MEDIA_PAUSE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaPaused).toBe(false);
+  });
+
+  it('does not clear an active media fullscreen when pausing', () => {
+    const next = getNextGameState(
+      { ...open, isMediaFullscreen: true },
+      'TOGGLE_MEDIA_PAUSE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaFullscreen).toBe(true);
+    expect(next.isMediaPaused).toBe(true);
+  });
+
+  it('resumes when the media is replayed', () => {
+    const next = getNextGameState(
+      pausedOpen,
+      'REPLAY_MEDIA',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaPaused).toBe(false);
+    expect(next.mediaReplayToken).toBe(1);
+  });
+
+  it('resets the pause when the question changes', () => {
+    const next = getNextGameState(
+      pausedOpen,
+      'ADVANCE',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaPaused).toBe(false);
+  });
+
+  it('resets the pause when going back to the previous question', () => {
+    const next = getNextGameState(
+      { ...pausedOpen, questionIndex: 1, furthestOpenIndex: 1 },
+      'PREVIOUS',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(next.isMediaPaused).toBe(false);
+  });
+
+  it('keeps the pause when only an overlay is toggled', () => {
+    const board = getNextGameState(
+      pausedOpen,
+      'TOGGLE_LEADERBOARD',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(board.isMediaPaused).toBe(true);
+    const join = getNextGameState(
+      pausedOpen,
+      'TOGGLE_JOIN_OVERLAY',
+      twoRoundsWithBreakAfterSecond,
+    );
+    expect(join.isMediaPaused).toBe(true);
+  });
+});
+
 describe('getNextGameState — illegal transitions and config guards', () => {
   it('rejects advancing from the lobby', () => {
     expect(() =>

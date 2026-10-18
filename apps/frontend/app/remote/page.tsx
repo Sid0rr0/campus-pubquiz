@@ -9,6 +9,7 @@ import {
 import { useAdminSession } from '@/app/lib/use-admin-session';
 import { NavigationButtons } from '@/app/control/navigation-buttons';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
+import { MediaPauseButton } from '@/app/control/media-pause-button';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
 import { PhaseTimer } from '@/app/control/phase-timer';
 import { DisplayTextScaleControl } from '@/app/control/display-text-scale-control';
@@ -106,13 +107,20 @@ function RemotePageContent() {
   } = snapshot;
   const isMediaFullscreen = progress.isMediaFullscreen ?? false;
   const gameStatus = progress.status;
-  const { canReplayMedia, showAnswerStatus } = getAdminControls(snapshot);
+  const isMediaPaused = progress.isMediaPaused ?? false;
+  const { canReplayMedia, canPauseMedia, showAnswerStatus } =
+    getAdminControls(snapshot);
+  const hasMediaRow = canReplayMedia || canPauseMedia;
   // What Advance and Previous do is announced by the server (the admin view),
   // so the presenter's phone shows the buttons exactly as the admin console.
   const { advanceStep, previousState } = snapshot;
 
   return (
-    <main className="flex min-h-screen flex-col gap-2 bg-background p-2 pt-0 pb-28 text-foreground">
+    <main
+      className={`flex min-h-screen flex-col gap-2 bg-background p-2 pt-0 text-foreground ${
+        hasMediaRow ? 'pb-40' : 'pb-28'
+      }`}
+    >
       {connectionError && (
         <p role="alert" className="font-extrabold text-magenta">
           {connectionError}
@@ -187,7 +195,20 @@ function RemotePageContent() {
         onSetDisplayTextScale={setDisplayTextScale}
       />
 
-      <div className="fixed inset-x-0 bottom-0 border-t-2 border-foreground/10 bg-background p-3">
+      <div className="fixed inset-x-0 bottom-0 flex flex-col gap-2 border-t-2 border-foreground/10 bg-background p-3">
+        {hasMediaRow && (
+          <div className="flex gap-2">
+            <ReplayMediaButton
+              canReplay={canReplayMedia}
+              onAction={sendAction}
+            />
+            <MediaPauseButton
+              canPause={canPauseMedia}
+              isPaused={isMediaPaused}
+              onAction={sendAction}
+            />
+          </div>
+        )}
         <NavigationButtons
           progressStatus={gameStatus}
           advanceStep={advanceStep}
@@ -198,7 +219,6 @@ function RemotePageContent() {
             isMediaFullscreen={isMediaFullscreen}
             onAction={sendAction}
           />
-          <ReplayMediaButton canReplay={canReplayMedia} onAction={sendAction} />
         </NavigationButtons>
       </div>
     </main>

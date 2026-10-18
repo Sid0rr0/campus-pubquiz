@@ -64,6 +64,13 @@ describe('GuideContent', () => {
     expect(text).toContain('no margin column');
   });
 
+  it('describes the Hide video checkbox and the hideVideo CSV key', () => {
+    const text = renderGuideText();
+
+    expect(text).toContain('Hide video (sound only)');
+    expect(text).toContain('hideVideo: true');
+  });
+
   it('lists every keyboard shortcut the control page listens for', () => {
     const text = renderGuideText();
 

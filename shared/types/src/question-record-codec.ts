@@ -3,7 +3,12 @@ import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
-import { extractYoutubeVideoId, parseYoutubeClipFromNotes } from './youtube';
+import {
+  hasYoutubeMedia,
+  isYoutubeUrl,
+  parseClipNotes,
+  type ClipNotesFields,
+} from './youtube';
 
 /**
  * The question record codec: a question's stored row (columns plus a payload
@@ -60,19 +65,46 @@ function sharedFieldsFrom(source: QuestionPayload) {
   };
 }
 
+/** The reveal clip fields of the source, each present only when set. */
+function revealClipFrom(source: QuestionPayload) {
+  return {
+    ...(source.revealStartSeconds !== undefined
+      ? { revealStartSeconds: source.revealStartSeconds }
+      : {}),
+    ...(source.revealEndSeconds !== undefined
+      ? { revealEndSeconds: source.revealEndSeconds }
+      : {}),
+  };
+}
+
 /** A stored row and its parsed payload as the preview the editor and import work with. */
 export function rowToPreview(
   row: StoredQuestionRow,
   payload: QuestionPayload,
 ): ImportQuestionPreview {
+  // A clip group left in the notes by an older save is stripped; the payload
+  // fields stay the truth, the group only fills what the payload lacks.
+  const { freeNotes, clip } = hasYoutubeMedia(payload)
+    ? parseClipNotes(row.notes ?? undefined)
+    : { freeNotes: row.notes ?? '', clip: {} as ClipNotesFields };
+  const startSeconds = payload.mediaStartSeconds ?? clip.startSeconds;
+  const endSeconds = payload.mediaEndSeconds ?? clip.endSeconds;
+  const isVideoHidden = payload.isVideoHidden || clip.isVideoHidden;
+  const revealStartSeconds =
+    payload.revealStartSeconds ?? clip.revealStartSeconds;
+  const revealEndSeconds = payload.revealEndSeconds ?? clip.revealEndSeconds;
   return {
     questionId: row.id,
     type: row.type,
     prompt: row.prompt,
     answer: row.answer,
     points: row.points,
-    ...(row.notes ? { notes: row.notes } : {}),
+    ...(freeNotes ? { notes: freeNotes } : {}),
     ...sharedFieldsFrom(payload),
+    ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
+    ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
+    ...(isVideoHidden ? { isVideoHidden: true } : {}),
+    ...revealClipFrom({ revealStartSeconds, revealEndSeconds }),
     ...gradingSettingsFrom(row.type, payload),
   };
 }
@@ -102,17 +134,16 @@ export function rowToSeededQuestion(
     ...(payload.mediaEndSeconds !== undefined
       ? { mediaEndSeconds: payload.mediaEndSeconds }
       : {}),
+    ...(payload.isVideoHidden ? { isVideoHidden: true } : {}),
+    ...revealClipFrom(payload),
   };
 }
 
-/** A preview as the columns and payload a save writes; the YouTube clip bounds are read from the notes. */
+/** A preview as the columns and payload a save writes; the clip fields reach the payload only for a YouTube media link. */
 export function previewToStoredFields(
   preview: ImportQuestionPreview,
 ): StoredQuestionFields {
-  const clip =
-    preview.mediaUrl && extractYoutubeVideoId(preview.mediaUrl)
-      ? parseYoutubeClipFromNotes(preview.notes)
-      : undefined;
+  const clip = isYoutubeUrl(preview.mediaUrl) ? preview : undefined;
   return {
     type: preview.type,
     prompt: preview.prompt,
@@ -122,12 +153,14 @@ export function previewToStoredFields(
     payload: {
       ...sharedFieldsFrom(preview),
       ...gradingSettingsFrom(preview.type, preview),
-      ...(clip?.startSeconds !== undefined
-        ? { mediaStartSeconds: clip.startSeconds }
+      ...(clip?.mediaStartSeconds !== undefined
+        ? { mediaStartSeconds: clip.mediaStartSeconds }
         : {}),
-      ...(clip?.endSeconds !== undefined
-        ? { mediaEndSeconds: clip.endSeconds }
+      ...(clip?.mediaEndSeconds !== undefined
+        ? { mediaEndSeconds: clip.mediaEndSeconds }
         : {}),
+      ...(clip?.isVideoHidden ? { isVideoHidden: true } : {}),
+      ...(hasYoutubeMedia(preview) ? revealClipFrom(preview) : {}),
     },
   };
 }

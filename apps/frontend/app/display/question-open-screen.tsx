@@ -9,6 +9,7 @@ interface QuestionOpenScreenProps {
   autoplayMedia?: boolean;
   isFullscreen?: boolean;
   mediaReplayToken?: number;
+  isMediaPaused?: boolean;
   /** Epoch-ms deadline when a kahootMode question auto-locks, or null/undefined when no timer is armed. */
   kahootQuestionEndsAt?: number | null;
 }
@@ -20,6 +21,7 @@ export function QuestionOpenScreen({
   autoplayMedia,
   isFullscreen,
   mediaReplayToken,
+  isMediaPaused,
   kahootQuestionEndsAt,
 }: QuestionOpenScreenProps) {
   return (
@@ -37,6 +39,7 @@ export function QuestionOpenScreen({
           autoplayMedia={autoplayMedia}
           isFullscreen={isFullscreen}
           mediaReplayToken={mediaReplayToken}
+          isMediaPaused={isMediaPaused}
         />
       </div>
       {totalTeams > 0 && (

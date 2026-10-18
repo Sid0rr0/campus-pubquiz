@@ -9,6 +9,7 @@ import {
   QUESTION_BODIES,
   REVEAL_BODIES,
 } from '@/app/display/answer-kind-bodies';
+import { useMediaPause } from '@/app/display/use-media-pause';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 const HTTP_URL_PATTERN = /^https?:\/\//i;
@@ -38,6 +39,15 @@ export function isYoutubeMediaUrl(url: string | undefined): boolean {
   );
 }
 
+/** Whether `url` is media /display can pause and resume (YouTube or audio) — what the pause button gates on. Images and other media have no playback to pause. */
+export function isPausableMediaUrl(url: string | undefined): boolean {
+  return (
+    url !== undefined &&
+    isHttpUrl(url) &&
+    (extractYoutubeVideoId(url) !== undefined || isAudioUrl(url))
+  );
+}
+
 function buildYoutubeEmbedSrc(
   videoId: string,
   autoplay: boolean,
@@ -48,6 +58,8 @@ function buildYoutubeEmbedSrc(
     autoplay: autoplay ? '1' : '0',
     controls: '0',
     modestbranding: '1',
+    // Lets /display pause and resume the player with postMessage commands.
+    enablejsapi: '1',
   });
   if (startSeconds !== undefined) params.set('start', String(startSeconds));
   if (endSeconds !== undefined) params.set('end', String(endSeconds));
@@ -61,6 +73,9 @@ interface AnswerMediaProps {
   autoplayMedia?: boolean;
   /** Overrides the answer image's className — defaults to the original fixed size used by ClosestGuessRevealScreen's standalone reveal. */
   imageClassName?: string;
+  /** The reveal clip, applied when `url` is a YouTube link. */
+  startSeconds?: number;
+  endSeconds?: number;
 }
 
 // Shared by QuestionDisplay's reveal step and ClosestGuessRevealScreen's
@@ -72,6 +87,8 @@ export function AnswerMedia({
   mediaTestIdPrefix,
   autoplayMedia = true,
   imageClassName = 'max-h-64 rounded-xl',
+  startSeconds,
+  endSeconds,
 }: AnswerMediaProps) {
   const safeUrl = url && isHttpUrl(url) ? url : undefined;
   const youtubeId = safeUrl ? extractYoutubeVideoId(safeUrl) : undefined;
@@ -82,7 +99,12 @@ export function AnswerMedia({
       <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-xl">
         <iframe
           data-testid={`${mediaTestIdPrefix}-answer-youtube`}
-          src={buildYoutubeEmbedSrc(youtubeId, autoplayMedia)}
+          src={buildYoutubeEmbedSrc(
+            youtubeId,
+            autoplayMedia,
+            startSeconds,
+            endSeconds,
+          )}
           title="Answer video"
           className="absolute inset-x-0 top-[-12%] h-[112%] w-full"
           allow="autoplay; encrypted-media"
@@ -120,11 +142,17 @@ export type QuestionDisplayQuestion = Pick<
   | 'mediaUrl'
   | 'mediaStartSeconds'
   | 'mediaEndSeconds'
+  | 'isVideoHidden'
   | 'options'
   | 'matchTargets'
   | 'margin'
 > &
-  Partial<Pick<SeededQuestion, 'answer' | 'answerMediaUrl'>>;
+  Partial<
+    Pick<
+      SeededQuestion,
+      'answer' | 'answerMediaUrl' | 'revealStartSeconds' | 'revealEndSeconds'
+    >
+  >;
 
 interface QuestionDisplayProps {
   /** When `answer` is set (reveal only), highlights the matching option and shows an answer line. `answerMediaUrl` is shown alongside it, independent of the question's own media. `mediaStartSeconds`/`mediaEndSeconds` clip a YouTube `mediaUrl` — ignored for non-YouTube media and for `answerMediaUrl`. */
@@ -141,6 +169,8 @@ interface QuestionDisplayProps {
   isFullscreen?: boolean;
   /** GameProgress.mediaReplayToken — bumped by REPLAY_MEDIA. Folded into the YouTube iframe's `key` so incrementing it remounts the iframe and restarts playback; left out of the key the rest of the time so fullscreen toggling (which doesn't change this) keeps the same iframe per the comment below. */
   mediaReplayToken?: number;
+  /** GameProgress.isMediaPaused — pauses the question's YouTube/audio playback in place (no remount) and resumes it when cleared. */
+  isMediaPaused?: boolean;
   /** The big screen's reveal: the answer comes in with its own entrance. Left off on the phone. */
   hasRevealEntrance?: boolean;
 }
@@ -156,12 +186,14 @@ export function QuestionDisplay({
   promptClassName = 'text-balance font-display text-display-4xl leading-snug',
   isFullscreen = false,
   mediaReplayToken = 0,
+  isMediaPaused = false,
   hasRevealEntrance = false,
 }: QuestionDisplayProps) {
+  const { youtubeRef, onYoutubeLoad, audioRef } = useMediaPause(isMediaPaused);
   const {
     prompt,
-    mediaStartSeconds,
-    mediaEndSeconds,
+    revealStartSeconds,
+    revealEndSeconds,
     answer: correctAnswer,
   } = question;
   const mediaUrl = isMediaHidden ? undefined : question.mediaUrl;
@@ -172,6 +204,11 @@ export function QuestionDisplay({
   // together, question image smaller, answer image bigger, side by side — see
   // showSideBySideReveal below.
   const isRevealing = correctAnswer !== undefined;
+  // While asked the question video plays its clip; at reveal it plays the
+  // reveal clip instead (empty means the whole video).
+  const questionClip = isRevealing
+    ? { start: revealStartSeconds, end: revealEndSeconds }
+    : { start: question.mediaStartSeconds, end: question.mediaEndSeconds };
   // Presence of the prop (not its content) is what switches sort/match into
   // player-reveal mode — an empty string still means "don't show the answer
   // key", it just has nothing of the team's own to show either.
@@ -197,6 +234,8 @@ export function QuestionDisplay({
     !questionYoutubeId &&
     !isAudioUrl(rawQuestionMediaUrl);
   const showSideBySideReveal = isRevealingWithAnswerMedia && questionIsImage;
+  // Covered while the question is asked and in break review; uncovered at reveal.
+  const isVideoCovered = question.isVideoHidden === true && !isRevealing;
   const questionMediaUrl =
     isRevealingWithAnswerMedia && !showSideBySideReveal
       ? undefined
@@ -279,7 +318,10 @@ export function QuestionDisplay({
               : 'w-full max-w-2xl'
           }
         >
-          {/* Same nesting (and the same iframe element) in both states —
+          {/* A visible video is keyed on the reveal so it plays again even when
+              the reveal clip's src equals the question's; a hidden video is
+              not, so lifting its cover must not remount the player.
+              Same nesting (and the same iframe element) in both states —
               changing the tree shape between fullscreen and inline would
               remount the iframe and restart the YouTube player instead of
               continuing playback. */}
@@ -291,13 +333,19 @@ export function QuestionDisplay({
             }
           >
             <iframe
-              key={mediaReplayToken}
+              ref={youtubeRef}
+              onLoad={onYoutubeLoad}
+              key={
+                isRevealing && question.isVideoHidden !== true
+                  ? `${mediaReplayToken}-reveal`
+                  : mediaReplayToken
+              }
               data-testid={`${mediaTestIdPrefix}-youtube`}
               src={buildYoutubeEmbedSrc(
                 questionYoutubeId,
                 autoplayMedia,
-                mediaStartSeconds,
-                mediaEndSeconds,
+                questionClip.start,
+                questionClip.end,
               )}
               title="Question video"
               className="absolute inset-0 h-full w-full"
@@ -312,6 +360,18 @@ export function QuestionDisplay({
               aria-hidden
               className="pointer-events-none absolute inset-x-0 top-0 h-[13%] bg-black"
             />
+            {/* Hidden video: the player keeps playing at full size under an
+                opaque panel (a hidden or zero-size player may not autoplay).
+                Same tree as the iframe, so lifting it at reveal never
+                remounts the player. */}
+            {isVideoCovered && (
+              <div
+                data-testid={`${mediaTestIdPrefix}-video-cover`}
+                className="absolute inset-0 flex items-center justify-center bg-black text-display-4xl"
+              >
+                <span aria-label="Sound only">🎵</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -336,6 +396,8 @@ export function QuestionDisplay({
                 mediaTestIdPrefix={mediaTestIdPrefix}
                 autoplayMedia={autoplayMedia}
                 imageClassName="max-h-full max-w-full rounded-xl object-contain"
+                startSeconds={revealStartSeconds}
+                endSeconds={revealEndSeconds}
               />
             </div>
           </div>
@@ -361,6 +423,7 @@ export function QuestionDisplay({
         !questionYoutubeId &&
         isAudioUrl(questionMediaUrl) && (
           <audio
+            ref={audioRef}
             data-testid={`${mediaTestIdPrefix}-audio`}
             src={questionMediaUrl}
             controls
@@ -375,6 +438,8 @@ export function QuestionDisplay({
             mediaTestIdPrefix={mediaTestIdPrefix}
             autoplayMedia={autoplayMedia}
             imageClassName="max-h-full max-w-full rounded-xl object-contain"
+            startSeconds={revealStartSeconds}
+            endSeconds={revealEndSeconds}
           />
         </div>
       )}

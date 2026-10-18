@@ -604,6 +604,57 @@ describe('RemotePage — content', () => {
     expect(sendAction).toHaveBeenCalledWith('REPLAY_MEDIA');
   });
 
+  function mockOpenQuestionWithMedia(
+    mediaUrl: string,
+    sendAction = vi.fn(),
+    isMediaPaused?: boolean,
+  ) {
+    mockUseAdminGame.mockReturnValue({
+      session: {
+        progress: { status: 'question_open', isMediaPaused },
+        rounds: [
+          {
+            questions: [
+              { id: 55, type: 'free_text', prompt: 'Name it.', mediaUrl },
+            ],
+          },
+        ],
+      },
+      connectionError: null,
+      sendAction,
+      presenterContext: null,
+    });
+  }
+
+  it('shows a Pause button for audio and dispatches TOGGLE_MEDIA_PAUSE', () => {
+    const sendAction = vi.fn();
+    mockOpenQuestionWithMedia('https://example.com/song.mp3', sendAction);
+    renderWithQuery(<RemotePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+
+    expect(sendAction).toHaveBeenCalledWith('TOGGLE_MEDIA_PAUSE');
+    expect(
+      screen.queryByRole('button', { name: /play video again/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Resume while the media is paused', () => {
+    mockOpenQuestionWithMedia('https://youtu.be/dQw4w9WgXcQ', vi.fn(), true);
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+  });
+
+  it('hides the Pause button for an image question', () => {
+    mockOpenQuestionWithMedia('https://example.com/photo.jpg');
+    renderWithQuery(<RemotePage />);
+
+    expect(
+      screen.queryByRole('button', { name: /^(pause|resume)$/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it('hides the Play Again button for a non-YouTube question', () => {
     mockUseAdminGame.mockReturnValue({
       session: {

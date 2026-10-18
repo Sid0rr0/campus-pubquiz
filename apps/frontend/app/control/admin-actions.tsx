@@ -13,6 +13,7 @@ import { Button } from '@/app/components/button';
 import { ConfirmDialog } from '@/app/components/confirm-dialog';
 import { DisplaySoundMuteControl } from '@/app/control/display-sound-mute-control';
 import { MediaFullscreenToggle } from '@/app/control/media-fullscreen-toggle';
+import { MediaPauseButton } from '@/app/control/media-pause-button';
 import { ReplayMediaButton } from '@/app/control/replay-media-button';
 
 interface AdminActionsProps {
@@ -24,6 +25,8 @@ interface AdminActionsProps {
   isJoinOverlayVisible: boolean;
   isMediaFullscreen: boolean;
   canReplayMedia: boolean;
+  canPauseMedia: boolean;
+  isMediaPaused: boolean;
   isDisplaySoundMuted: boolean;
   onSetDisplaySoundMuted: (isMuted: boolean) => void;
   onAction: (action: GameAction) => void;
@@ -31,7 +34,7 @@ interface AdminActionsProps {
   className?: string;
 }
 
-/** Start Quiz, Leaderboard toggle (+ fullscreen/replay media controls), Display sound and Join overlay, End Quiz, Close Session — everything but Previous/Advance. */
+/** Start Quiz, Leaderboard toggle (+ fullscreen toggle), media replay/pause row, Display sound and Join overlay, End Quiz, Close Session — everything but Previous/Advance. */
 export function AdminActions({
   canStartQuiz,
   canEndQuiz,
@@ -41,6 +44,8 @@ export function AdminActions({
   isJoinOverlayVisible,
   isMediaFullscreen,
   canReplayMedia,
+  canPauseMedia,
+  isMediaPaused,
   isDisplaySoundMuted,
   onSetDisplaySoundMuted,
   onAction,
@@ -78,12 +83,17 @@ export function AdminActions({
           onAction={onAction}
           tone="dark"
         />
-        <ReplayMediaButton
-          canReplay={canReplayMedia}
-          onAction={onAction}
-          tone="dark"
-        />
       </div>
+      {(canReplayMedia || canPauseMedia) && (
+        <div className="flex gap-2">
+          <ReplayMediaButton canReplay={canReplayMedia} onAction={onAction} />
+          <MediaPauseButton
+            canPause={canPauseMedia}
+            isPaused={isMediaPaused}
+            onAction={onAction}
+          />
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <DisplaySoundMuteControl
           isMuted={isDisplaySoundMuted}

@@ -1,7 +1,10 @@
 import {
   DEFAULT_MARGIN,
   describeLiveEditRounds,
+  formatTimecode,
+  hasYoutubeMedia,
   parseFiniteNumber,
+  parseTimecode,
   hasMarginType,
   type MarginUnit,
   type ImportPreview,
@@ -60,6 +63,14 @@ export interface EditorQuestion {
   correctText: string;
   mediaUrl: string;
   answerMediaUrl: string;
+  /** YouTube clip start/end as typed ("55", "1:22"; '' when unset), parsed to seconds at save — see `mediaStartSeconds` on ImportQuestionPreview. */
+  clipStart: string;
+  clipEnd: string;
+  /** Sound only: the YouTube video is covered on the big screen until reveal — see `isVideoHidden` on ImportQuestionPreview. */
+  isVideoHidden: boolean;
+  /** Reveal clip start/end as typed, same shape as `clipStart` — see `revealStartSeconds` on ImportQuestionPreview. */
+  revealStart: string;
+  revealEnd: string;
   /** The sort `options` / match `matchTargets` display order as last saved — reused on save while the items are unchanged, so re-saving doesn't reshuffle what players already see (and doesn't trip the live-edit guard on an opened question). */
   savedDisplayOrder?: string[];
 }
@@ -102,6 +113,11 @@ export function makeQuestion(id: string, isKahoot = false): EditorQuestion {
     correctText: '',
     mediaUrl: '',
     answerMediaUrl: '',
+    clipStart: '',
+    clipEnd: '',
+    isVideoHidden: false,
+    revealStart: '',
+    revealEnd: '',
   };
 }
 
@@ -143,6 +159,42 @@ export function patchQuestion(
   return { ...retyped, ...patch };
 }
 
+function timecodeText(seconds: number | undefined): string {
+  return seconds === undefined ? '' : formatTimecode(seconds);
+}
+
+/**
+ * The seconds a typed time stands for: absent when blank, NaN when it doesn't
+ * read as a timecode. NaN is deliberate — it travels to the save as a value
+ * the preview schema rejects ("Clip times must be whole seconds"), so a typo
+ * is reported instead of silently playing the whole video.
+ */
+function typedSeconds(typed: string): number | undefined {
+  if (typed.trim() === '') return undefined;
+  return parseTimecode(typed) ?? Number.NaN;
+}
+
+/** The clip fields a preview carries: each present when something is typed. */
+function clipFieldsFrom(question: EditorQuestion) {
+  const startSeconds = typedSeconds(question.clipStart);
+  const endSeconds = typedSeconds(question.clipEnd);
+  return {
+    ...(startSeconds !== undefined ? { mediaStartSeconds: startSeconds } : {}),
+    ...(endSeconds !== undefined ? { mediaEndSeconds: endSeconds } : {}),
+    ...(question.isVideoHidden ? { isVideoHidden: true } : {}),
+  };
+}
+
+/** The reveal clip fields a preview carries: each present when something is typed. */
+function revealClipFieldsFrom(question: EditorQuestion) {
+  const startSeconds = typedSeconds(question.revealStart);
+  const endSeconds = typedSeconds(question.revealEnd);
+  return {
+    ...(startSeconds !== undefined ? { revealStartSeconds: startSeconds } : {}),
+    ...(endSeconds !== undefined ? { revealEndSeconds: endSeconds } : {}),
+  };
+}
+
 /** Converts a saved/imported question into editable state — marks whichever multiple-choice option matches `answer` as correct. */
 export function questionFromPreview(
   id: string,
@@ -164,6 +216,11 @@ export function questionFromPreview(
     correctText: '',
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
+    clipStart: timecodeText(question.mediaStartSeconds),
+    clipEnd: timecodeText(question.mediaEndSeconds),
+    isVideoHidden: question.isVideoHidden ?? false,
+    revealStart: timecodeText(question.revealStartSeconds),
+    revealEnd: timecodeText(question.revealEndSeconds),
     ...loadAnswerDraft(question),
     ...loadGradingDrafts(question),
   };
@@ -320,7 +377,11 @@ export function questionToPreview(
     ...saveAnswerDraft(question),
     ...saveGradingDrafts(question),
     ...(mediaUrl ? { mediaUrl } : {}),
+    ...(mediaUrl ? clipFieldsFrom(question) : {}),
     ...(answerMediaUrl ? { answerMediaUrl } : {}),
+    ...(hasYoutubeMedia({ mediaUrl, answerMediaUrl })
+      ? revealClipFieldsFrom(question)
+      : {}),
   };
 }
 

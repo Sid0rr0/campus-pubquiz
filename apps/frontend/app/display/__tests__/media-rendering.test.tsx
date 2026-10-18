@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DisplayPage from '@/app/display/page';
 import { SOCKET_ROOMS } from '@campus-pubquiz/types';
@@ -167,7 +167,7 @@ describe('DisplayPage — media rendering', () => {
     const iframe = screen.getByTestId('question-youtube');
     expect(iframe).toHaveAttribute(
       'src',
-      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&controls=0&modestbranding=1&start=82&end=140',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&controls=0&modestbranding=1&enablejsapi=1&start=82&end=140',
     );
     expect(screen.queryByTestId('question-image')).not.toBeInTheDocument();
   });
@@ -225,7 +225,7 @@ describe('DisplayPage — media rendering', () => {
 
     expect(screen.getByTestId('question-youtube')).toHaveAttribute(
       'src',
-      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0&controls=0&modestbranding=1',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0&controls=0&modestbranding=1&enablejsapi=1',
     );
   });
 
@@ -295,5 +295,124 @@ describe('DisplayPage — media rendering', () => {
     rerender(<DisplayPage />);
 
     expect(screen.getByTestId('question-youtube')).not.toBe(iframeBeforeReplay);
+  });
+
+  describe('media pause', () => {
+    const youtubeQuestion = {
+      type: 'free_text' as const,
+      prompt: 'Name this music video.',
+      mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+      points: 3,
+    };
+    const audioQuestion = {
+      type: 'audio' as const,
+      prompt: 'Name this song.',
+      mediaUrl: 'https://example.com/song.mp3',
+      points: 3,
+    };
+
+    function showQuestion(
+      question: typeof youtubeQuestion | typeof audioQuestion,
+      isMediaPaused?: boolean,
+    ) {
+      mockUseGame.mockReturnValue({
+        snapshot: roomView(SOCKET_ROOMS.DISPLAY, {
+          rounds: [{ questions: [question] }],
+          progress: { status: 'question_open', isMediaPaused },
+        }),
+        connectionError: null,
+        sendAction: vi.fn(),
+      });
+    }
+
+    function spyOnYoutubeCommands() {
+      const postMessage = vi.fn();
+      vi.spyOn(
+        HTMLIFrameElement.prototype,
+        'contentWindow',
+        'get',
+      ).mockReturnValue({ postMessage } as unknown as Window);
+      return postMessage;
+    }
+
+    function commandMessage(func: string): string {
+      return JSON.stringify({ event: 'command', func, args: [] });
+    }
+
+    it('enables the YouTube JS API on the question iframe so it can be paused', () => {
+      showQuestion(youtubeQuestion);
+      render(<DisplayPage />);
+
+      expect(
+        screen.getByTestId('question-youtube').getAttribute('src'),
+      ).toContain('enablejsapi=1');
+    });
+
+    it('pauses and resumes the YouTube player without remounting the iframe', () => {
+      const postMessage = spyOnYoutubeCommands();
+      showQuestion(youtubeQuestion, false);
+      const { rerender } = render(<DisplayPage />);
+      const iframe = screen.getByTestId('question-youtube');
+      expect(postMessage).not.toHaveBeenCalled();
+
+      showQuestion(youtubeQuestion, true);
+      rerender(<DisplayPage />);
+      expect(postMessage).toHaveBeenLastCalledWith(
+        commandMessage('pauseVideo'),
+        'https://www.youtube-nocookie.com',
+      );
+
+      showQuestion(youtubeQuestion, false);
+      rerender(<DisplayPage />);
+      expect(postMessage).toHaveBeenLastCalledWith(
+        commandMessage('playVideo'),
+        'https://www.youtube-nocookie.com',
+      );
+      expect(screen.getByTestId('question-youtube')).toBe(iframe);
+    });
+
+    it('pauses a YouTube player that loads while the game is already paused (reconnect)', () => {
+      const postMessage = spyOnYoutubeCommands();
+      showQuestion(youtubeQuestion, true);
+      render(<DisplayPage />);
+
+      fireEvent.load(screen.getByTestId('question-youtube'));
+
+      expect(postMessage).toHaveBeenCalledWith(
+        commandMessage('pauseVideo'),
+        'https://www.youtube-nocookie.com',
+      );
+    });
+
+    it('pauses and resumes an audio player', () => {
+      const pause = vi
+        .spyOn(HTMLMediaElement.prototype, 'pause')
+        .mockImplementation(() => undefined);
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, 'play')
+        .mockResolvedValue(undefined);
+      showQuestion(audioQuestion, false);
+      const { rerender } = render(<DisplayPage />);
+      expect(pause).not.toHaveBeenCalled();
+      expect(play).not.toHaveBeenCalled();
+
+      showQuestion(audioQuestion, true);
+      rerender(<DisplayPage />);
+      expect(pause).toHaveBeenCalledTimes(1);
+
+      showQuestion(audioQuestion, false);
+      rerender(<DisplayPage />);
+      expect(play).toHaveBeenCalledTimes(1);
+    });
+
+    it('pauses an audio player that mounts while the game is already paused (reconnect)', () => {
+      const pause = vi
+        .spyOn(HTMLMediaElement.prototype, 'pause')
+        .mockImplementation(() => undefined);
+      showQuestion(audioQuestion, true);
+      render(<DisplayPage />);
+
+      expect(pause).toHaveBeenCalled();
+    });
   });
 });

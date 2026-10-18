@@ -20,7 +20,8 @@ export type GameAction =
   | 'TOGGLE_LEADERBOARD'
   | 'TOGGLE_JOIN_OVERLAY'
   | 'TOGGLE_MEDIA_FULLSCREEN'
-  | 'REPLAY_MEDIA';
+  | 'REPLAY_MEDIA'
+  | 'TOGGLE_MEDIA_PAUSE';
 
 export interface RoundConfig {
   questionCount: number;
@@ -83,6 +84,14 @@ export interface GameProgress {
    * updating; undefined behaves as 0.
    */
   mediaReplayToken?: number;
+  /**
+   * Whether /display has the current question's playing media (YouTube or
+   * audio) paused — toggled by TOGGLE_MEDIA_PAUSE. Server-owned so a display
+   * that reconnects mid-pause comes back paused. Reset by every action that
+   * moves the quiz (and by REPLAY_MEDIA); only the leaderboard/join overlays
+   * leave it set. Optional, like isMediaFullscreen; undefined behaves as false.
+   */
+  isMediaPaused?: boolean;
   /**
    * Position within the just-finished block's flattened question list,
    * shown one at a time (same layout as question_open) during reveal, or
