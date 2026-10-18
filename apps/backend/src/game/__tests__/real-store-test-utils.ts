@@ -83,6 +83,8 @@ export interface QuizRoundSpec {
   title: string;
   breakAfter?: boolean;
   kahootMode?: boolean;
+  /** Host-only round note shown on /remote while the round's intro is on air. */
+  note?: string;
   questions: QuizQuestionSpec[];
 }
 
@@ -425,6 +427,7 @@ export function setupRealStoreGatewayTest(): RealStoreHarness {
         orderIndex,
         breakAfter: spec.breakAfter ?? false,
         kahootMode: spec.kahootMode ?? false,
+        note: spec.note,
       });
       const questions = spec.questions.map((question, questionIndex) =>
         em.create(Question, {

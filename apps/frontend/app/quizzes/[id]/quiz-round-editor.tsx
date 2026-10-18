@@ -9,6 +9,7 @@ import {
 import {
   isKahootAllowedType,
   ROUND_CATEGORIES,
+  ROUND_NOTE_MAX_LENGTH,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
 import { Button } from '@/app/components/button';
@@ -285,6 +286,21 @@ export function QuizRoundEditor({
           />
           <FieldErrors issues={fieldIssues(roundLevelIssues, 'author')} />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <textarea
+          value={round.note}
+          onChange={(event) => onChange({ note: event.target.value })}
+          aria-label="Round note — what you say before this round"
+          placeholder="Round note — what you say before this round (optional)"
+          rows={2}
+          className="w-full rounded-lg border-2 border-foreground/15 px-3 py-2 text-sm font-bold text-foreground"
+        />
+        <span className="self-end text-xs font-bold text-foreground/60">
+          {round.note.trim().length} / {ROUND_NOTE_MAX_LENGTH}
+        </span>
+        <FieldErrors issues={fieldIssues(roundLevelIssues, 'note')} />
       </div>
 
       {structureNote && (

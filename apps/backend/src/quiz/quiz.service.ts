@@ -142,6 +142,7 @@ export class QuizService {
         kahootMode: round.kahootMode,
         ...(round.category ? { category: round.category } : {}),
         ...(round.author ? { author: round.author } : {}),
+        ...(round.note ? { note: round.note } : {}),
         questions: round.questions
           .getItems()
           .map((question) =>
@@ -246,6 +247,7 @@ export class QuizService {
           kahootMode: round.kahootMode ?? false,
           category: round.category ?? null,
           author: round.author ?? null,
+          note: round.note?.trim() || null,
           createdAt: roundNow,
           updatedAt: roundNow,
         },
@@ -258,6 +260,7 @@ export class QuizService {
             'kahootMode',
             'category',
             'author',
+            'note',
             'updatedAt',
           ],
         },

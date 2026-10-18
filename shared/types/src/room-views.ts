@@ -340,6 +340,8 @@ export interface ScreenPreview {
 export interface PresenterContextPayload {
   /** Host-only notes for the currently open question, or null when none is open or none were authored. */
   currentQuestionNotes: string | null;
+  /** The note of the round whose intro or break round intro is on air, or null on any other screen (the reveal intro included) or when that round has no note. */
+  currentRoundNote: string | null;
   /** What /display is showing right now. */
   currentScreen: ScreenPreview;
   /** What /display will show after the remote's Advance button is pressed, or null when Advance has nowhere left to go. */

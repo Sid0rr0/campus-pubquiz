@@ -49,6 +49,7 @@ function presenterContext(
 ): PresenterContextPayload {
   return {
     currentQuestionNotes: null,
+    currentRoundNote: null,
     currentScreen: { heading: 'R1 Q1' },
     nextScreen: null,
     ...overrides,
@@ -208,6 +209,40 @@ describe('RemotePage — content', () => {
     renderWithQuery(<RemotePage />);
 
     expect(screen.getByText('No notes for this question.')).toBeInTheDocument();
+  });
+
+  it.each(['round_intro', 'break_round_intro'] as const)(
+    'shows the round note on a %s',
+    (status) => {
+      mockUseAdminGame.mockReturnValue({
+        session: { progress: { status } },
+        connectionError: null,
+        sendAction: vi.fn(),
+        presenterContext: presenterContext({
+          currentRoundNote: 'Answers must be in English.',
+        }),
+      });
+      renderWithQuery(<RemotePage />);
+
+      expect(
+        screen.getByText('Answers must be in English.'),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it('says there is no note for a round intro without one', () => {
+    mockUseAdminGame.mockReturnValue({
+      session: { progress: { status: 'round_intro' } },
+      connectionError: null,
+      sendAction: vi.fn(),
+      presenterContext: presenterContext({ currentRoundNote: null }),
+    });
+    renderWithQuery(<RemotePage />);
+
+    expect(screen.getByText('No note for this round.')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No notes for this question.'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows what the display is currently showing', () => {

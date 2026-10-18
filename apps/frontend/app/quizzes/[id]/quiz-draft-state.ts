@@ -85,6 +85,8 @@ export interface EditorRound {
   category: string;
   /** Who wrote this round's questions — optional, blank string means unset. */
   author: string;
+  /** What the quiz master says while this round's intro is on air — blank string means no note. */
+  note: string;
   questions: EditorQuestion[];
 }
 
@@ -129,6 +131,7 @@ export function makeRound(id: string, title = ''): EditorRound {
     kahootMode: false,
     category: '',
     author: '',
+    note: '',
     questions: [],
   };
 }
@@ -240,6 +243,7 @@ export function roundFromPreview(
     kahootMode: round.kahootMode ?? false,
     category: round.category ?? '',
     author: round.author ?? '',
+    note: round.note ?? '',
     questions: round.questions.map((question, index) =>
       questionFromPreview(makeQuestionId(index), question),
     ),
@@ -555,6 +559,7 @@ export function toSaveRequest(
       kahootMode: round.kahootMode,
       ...(round.category.trim() ? { category: round.category.trim() } : {}),
       ...(round.author.trim() ? { author: round.author.trim() } : {}),
+      ...(round.note.trim() ? { note: round.note.trim() } : {}),
       questions: round.questions.map(questionToPreview),
     })),
   };

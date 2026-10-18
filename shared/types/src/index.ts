@@ -33,6 +33,7 @@ export * from './youtube';
 export * from './sort-match';
 export * from './media';
 export * from './round-category';
+export * from './round-note';
 export * from './stats';
 export * from './scoring';
 export * from './on-air-screen';

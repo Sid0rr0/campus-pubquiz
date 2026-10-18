@@ -20,6 +20,11 @@ export interface SeededRound {
   category?: string;
   /** Who wrote this round's questions — see Round.author. Optional, like kahootMode above. */
   author?: string;
+  /**
+   * Host-only round note — see Round.note. Like questionNotesById, it must
+   * never go into a broadcast view on its own.
+   */
+  note?: string;
   // Carries the correct answer internally so reveal can show it; only
   // answer-free QuestionView projections leave the server.
   questions: SeededQuestion[];

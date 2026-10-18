@@ -499,7 +499,11 @@ connected as `players` receives `PlayersStatePayload` on them and nothing else.
 
 Server → client: `STATE_SYNC`, `STATE_UPDATED` (both per room), `JOIN_ACCEPTED`,
 `ANSWER_RECEIVED`, `ANSWERS_UPDATED` (admin only — contains answer values),
-`PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview),
+`PRESENTER_CONTEXT_UPDATED` (admin only — host notes and next-screen preview;
+`currentQuestionNotes` for the open question, and `currentRoundNote`, the
+**Round note** of the round whose intro or break round intro is on air, `null`
+on every other screen including the reveal intro, decided from the on-air
+screen in `screen-preview.util.ts`),
 `TEAM_ANSWERS_SYNCED`, `TEAM_PLAYER_COUNT_SYNCED` (`{ playerCount }`, to the
 team's own phone only), `BONUS_AWARDED`, `SESSION_CLOSED`, `TEAM_KICKED` (no
 payload), plus the connection's `exception` message.
@@ -936,6 +940,15 @@ The `/quizzes/[id]` page is a full quiz editor, not just an import target:
 - Edit the quiz title; per round, edit its title, toggle `breakAfter`, reorder
   with up/down buttons (no drag-and-drop), delete, or add questions; per
   question, edit type/prompt/options/answer/points/media.
+- Write a round's **Round note** in the round's textarea ("Round note — what
+  you say before this round", with a character count). Plain text, line breaks
+  kept, trimmed, at most `ROUND_NOTE_MAX_LENGTH` (500) characters, blank saved
+  as no note; a longer note is rejected like any other invalid draft. It is
+  stored on `Round.note`, seeded onto the session's round, and shown only on
+  `/remote`'s Notes panel while that round's intro (or the break round intro)
+  is on air ("No note for this round." when it has none). It can be edited for
+  any round while live — `findLiveEditViolations` ignores it, and the live edit
+  re-seeds running sessions.
 - Re-import a CSV or re-fetch a Google Sheets link mid-edit at any time — it
   overwrites the current draft.
 - Save via `POST /quizzes` or `PUT /quizzes/:id`, both Zod-validated
