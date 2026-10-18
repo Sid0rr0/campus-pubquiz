@@ -137,12 +137,5 @@ export function loadAnswerDraft(
 
 /** The answer fields to save for a draft, by the answer kind its type gives it. */
 export function saveAnswerDraft(question: EditorQuestion): SavedAnswer {
-  return ANSWER_KIND_DRAFTS[resolveDraftAnswerKind(question)].save(question);
-}
-
-/** The answer kind of a draft question: given by its type. */
-export function resolveDraftAnswerKind(
-  question: Pick<EditorQuestion, 'type'>,
-): AnswerKind {
-  return resolveAnswerKind({ type: question.type });
+  return ANSWER_KIND_DRAFTS[resolveAnswerKind(question)].save(question);
 }

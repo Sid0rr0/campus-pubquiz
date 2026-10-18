@@ -67,6 +67,24 @@ describe('RetypeMediaQuestions migration (Postgres integration)', () => {
     );
     await insertQuestion('numberQ', 'number', { margin: 2 }, 4);
     await insertQuestion('freeTextQ', 'free_text', {}, 5);
+    await insertQuestion(
+      'audioScalarOptions',
+      'audio',
+      { ...MEDIA_FIELDS, options: 'Queen' },
+      6,
+    );
+    await insertQuestion(
+      'youtubeObjectOptions',
+      'youtube',
+      { ...MEDIA_FIELDS, options: { a: 'Queen' } },
+      7,
+    );
+    await insertQuestion(
+      'audioWhitespaceOptions',
+      'audio',
+      { ...MEDIA_FIELDS, options: ['\t', '\n'] },
+      8,
+    );
 
     const [{ id: sessionId }] = await connection.execute(
       `insert into game_sessions (quiz_id, join_code, created_at, updated_at) values (${quizId}, 'ABCDEF', now(), now()) returning id`,
@@ -99,6 +117,14 @@ describe('RetypeMediaQuestions migration (Postgres integration)', () => {
       ...MEDIA_FIELDS,
       options: ['Queen', 'Abba'],
     });
+    for (const name of [
+      'audioScalarOptions',
+      'youtubeObjectOptions',
+      'audioWhitespaceOptions',
+    ]) {
+      expect(byName[name].type).toBe('free_text');
+      expect(byName[name].payload).toEqual(MEDIA_FIELDS);
+    }
     expect(byName.numberQ).toMatchObject({
       type: 'number',
       payload: { margin: 2 },
