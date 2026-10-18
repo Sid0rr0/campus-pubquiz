@@ -11,7 +11,7 @@ See the spec's "Data migration" decision.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A Postgres integration spec, modelled on `apps/backend/src/db/__tests__/answer-verdict-backfill.spec.ts`, migrates up to the previous migration, inserts raw rows, migrates up, and asserts:
   - audio with no options → `free_text`;
