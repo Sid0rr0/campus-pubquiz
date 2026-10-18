@@ -3,12 +3,8 @@ import { QUESTION_KINDS, type GradingSettingName } from './question-kind';
 import type { QuestionPayload } from './question-payload-schema';
 import type { QuestionType } from './question-types';
 import type { SeededQuestion } from './question-views';
-import {
-  hasYoutubeMedia,
-  isYoutubeUrl,
-  parseClipNotes,
-  type ClipNotesFields,
-} from './youtube';
+import { hasVideoMedia, isVideoUrl } from './media';
+import { parseClipNotes, type ClipNotesFields } from './youtube';
 
 /**
  * The question record codec: a question's stored row (columns plus a payload
@@ -84,7 +80,7 @@ export function rowToPreview(
 ): ImportQuestionPreview {
   // A clip group left in the notes by an older save is stripped; the payload
   // fields stay the truth, the group only fills what the payload lacks.
-  const { freeNotes, clip } = hasYoutubeMedia(payload)
+  const { freeNotes, clip } = hasVideoMedia(payload)
     ? parseClipNotes(row.notes ?? undefined)
     : { freeNotes: row.notes ?? '', clip: {} as ClipNotesFields };
   const startSeconds = payload.mediaStartSeconds ?? clip.startSeconds;
@@ -139,11 +135,11 @@ export function rowToSeededQuestion(
   };
 }
 
-/** A preview as the columns and payload a save writes; the clip fields reach the payload only for a YouTube media link. */
+/** A preview as the columns and payload a save writes; the clip fields reach the payload only for a video media link. */
 export function previewToStoredFields(
   preview: ImportQuestionPreview,
 ): StoredQuestionFields {
-  const clip = isYoutubeUrl(preview.mediaUrl) ? preview : undefined;
+  const clip = isVideoUrl(preview.mediaUrl) ? preview : undefined;
   return {
     type: preview.type,
     prompt: preview.prompt,
@@ -160,7 +156,7 @@ export function previewToStoredFields(
         ? { mediaEndSeconds: clip.mediaEndSeconds }
         : {}),
       ...(clip?.isVideoHidden ? { isVideoHidden: true } : {}),
-      ...(hasYoutubeMedia(preview) ? revealClipFrom(preview) : {}),
+      ...(hasVideoMedia(preview) ? revealClipFrom(preview) : {}),
     },
   };
 }

@@ -7,9 +7,8 @@ import type {
 import { QUESTION_KINDS, type QuestionIssue } from './question-kind';
 import type { QuestionType } from './question-types';
 import { ROUND_CATEGORIES } from './round-category';
+import { hasVideoMedia, isVideoUrl } from './media';
 import {
-  hasYoutubeMedia,
-  isYoutubeUrl,
   parseClipNotes,
   writeClipNotes,
   type ClipNotesFields,
@@ -91,8 +90,8 @@ export function decodeSheetRow(
   const trimmedPoints = row.points.trim();
   const mediaUrl = blankToUndefined(row.mediaUrl);
   const answerMediaUrl = blankToUndefined(row.answerMediaUrl);
-  // The clip group is CSV-only syntax: pulled out of the notes into fields, when either video is a YouTube link.
-  const { freeNotes, clip, invalidKeys } = hasYoutubeMedia({
+  // The clip group is CSV-only syntax: pulled out of the notes into fields, when either media is a video (YouTube or file).
+  const { freeNotes, clip, invalidKeys } = hasVideoMedia({
     mediaUrl,
     answerMediaUrl,
   })
@@ -127,7 +126,7 @@ export function decodeSheetRow(
       points: trimmedPoints === '' ? DEFAULT_POINTS : Number(trimmedPoints),
       mediaUrl,
       answerMediaUrl,
-      ...clipPreviewFieldsOf(clip, isYoutubeUrl(mediaUrl)),
+      ...clipPreviewFieldsOf(clip, isVideoUrl(mediaUrl)),
     },
   };
 }
@@ -159,7 +158,7 @@ export function encodeSheetRow(
     points: String(question.points),
     mediaUrl: question.mediaUrl ?? '',
     answerMediaUrl: question.answerMediaUrl ?? '',
-    notes: hasYoutubeMedia(question)
+    notes: hasVideoMedia(question)
       ? writeClipNotes(question.notes ?? '', clipNotesFieldsOf(question))
       : (question.notes ?? ''),
     breakAfter: isLastInRound && round.breakAfter ? '1' : '',
@@ -168,10 +167,10 @@ export function encodeSheetRow(
   };
 }
 
-/** The notes-group fields a question carries: the clip and hidden flag only for a YouTube question video, the reveal clip for either YouTube video. */
+/** The notes-group fields a question carries: the clip and hidden flag only for a video question media, the reveal clip for either video. */
 function clipNotesFieldsOf(question: ImportQuestionPreview): ClipNotesFields {
   const { mediaStartSeconds, mediaEndSeconds } = question;
-  const isQuestionVideo = isYoutubeUrl(question.mediaUrl);
+  const isQuestionVideo = isVideoUrl(question.mediaUrl);
   return {
     ...(isQuestionVideo && question.isVideoHidden
       ? { isVideoHidden: true as const }
@@ -191,7 +190,7 @@ function clipNotesFieldsOf(question: ImportQuestionPreview): ClipNotesFields {
   };
 }
 
-/** The preview fields a notes group fills; the clip and hidden flag only for a YouTube question video. */
+/** The preview fields a notes group fills; the clip and hidden flag only for a video question media. */
 function clipPreviewFieldsOf(clip: ClipNotesFields, isQuestionVideo: boolean) {
   return {
     ...(isQuestionVideo && clip.isVideoHidden ? { isVideoHidden: true } : {}),

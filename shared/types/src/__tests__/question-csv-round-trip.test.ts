@@ -184,6 +184,71 @@ describe('media on a multiple choice question', () => {
   });
 });
 
+describe('video file clip in the notes cell', () => {
+  const MP4 = 'https://example.com/clip.mp4';
+
+  it('decodes a full notes group on an .mp4 media_url and encodes it back identically', () => {
+    const notes =
+      'Play the chorus\n{start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45", hideVideo: true}';
+    const row = {
+      rowNumber: 2,
+      ...encodeSheetRow(
+        ROUND,
+        { ...YOUTUBE_QUESTION, mediaUrl: MP4, answerMediaUrl: undefined },
+        true,
+      ),
+      notes,
+    };
+
+    const { question } = decodeSheetRow(row, 'free_text');
+    const { checked } = roundTrip({
+      ...YOUTUBE_QUESTION,
+      mediaUrl: MP4,
+      answerMediaUrl: undefined,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+      isVideoHidden: true,
+    });
+
+    expect(question).toMatchObject({
+      mediaStartSeconds: 82,
+      mediaEndSeconds: 140,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+      isVideoHidden: true,
+      notes: 'Play the chorus',
+    });
+    expect(checked.success && checked.data).toMatchObject({
+      mediaUrl: MP4,
+      isVideoHidden: true,
+    });
+    expect(
+      encodeSheetRow(
+        ROUND,
+        checked.success ? checked.data : YOUTUBE_QUESTION,
+        true,
+      ).notes,
+    ).toBe(notes);
+  });
+
+  it('keeps only the reveal clip for an image media_url with an .mp4 answer_media_url', () => {
+    const { question } = decodeSheetRow(
+      {
+        rowNumber: 2,
+        ...encodeSheetRow(ROUND, YOUTUBE_QUESTION, true),
+        mediaUrl: IMAGE,
+        answerMediaUrl: MP4,
+        notes: '{start: "5", revealStart: "10", hideVideo: true}',
+      },
+      'free_text',
+    );
+
+    expect(question).toMatchObject({ revealStartSeconds: 10 });
+    expect(question).not.toHaveProperty('mediaStartSeconds');
+    expect(question).not.toHaveProperty('isVideoHidden');
+  });
+});
+
 describe('YouTube clip in the notes cell', () => {
   const YOUTUBE_ROW = {
     rowNumber: 2,

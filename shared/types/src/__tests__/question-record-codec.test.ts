@@ -200,6 +200,28 @@ describe('question record codec', () => {
     });
   });
 
+  it('writes the clip, hidden flag and reveal clip to the payload for a video file link', () => {
+    const stored = previewToStoredFields({
+      type: 'free_text',
+      prompt: 'Q?',
+      answer: 'A',
+      points: 1,
+      mediaUrl: 'https://example.com/clip.mp4',
+      mediaStartSeconds: 3,
+      mediaEndSeconds: 9,
+      isVideoHidden: true,
+      revealStartSeconds: 20,
+    });
+
+    expect(stored.payload).toEqual({
+      mediaUrl: 'https://example.com/clip.mp4',
+      mediaStartSeconds: 3,
+      mediaEndSeconds: 9,
+      isVideoHidden: true,
+      revealStartSeconds: 20,
+    });
+  });
+
   it('writes a hidden video to the payload for YouTube media only', () => {
     const base = {
       type: 'free_text' as const,

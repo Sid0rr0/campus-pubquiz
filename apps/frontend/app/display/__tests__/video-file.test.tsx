@@ -90,6 +90,125 @@ describe('video file on the big screen', () => {
     expect(screen.getByTestId('question-video')).toBe(video);
   });
 
+  describe('clips', () => {
+    const CLIPPED = {
+      mediaUrl: CLIP_URL,
+      mediaStartSeconds: 82,
+      mediaEndSeconds: 140,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+    };
+
+    it('carries the question clip as a media fragment while asked', () => {
+      render(
+        <QuestionDisplay
+          question={question(CLIPPED)}
+          mediaTestIdPrefix="question"
+        />,
+      );
+
+      expect(screen.getByTestId('question-video')).toHaveAttribute(
+        'src',
+        `${CLIP_URL}#t=82,140`,
+      );
+    });
+
+    it('carries the reveal clip at reveal', () => {
+      render(
+        <QuestionDisplay
+          question={question({ ...CLIPPED, answer: 'Alien' })}
+          mediaTestIdPrefix="reveal"
+        />,
+      );
+
+      expect(screen.getByTestId('reveal-video')).toHaveAttribute(
+        'src',
+        `${CLIP_URL}#t=150,165`,
+      );
+    });
+
+    it('accepts either bound alone, and no fragment when the clip is empty', () => {
+      const { rerender } = render(
+        <QuestionDisplay
+          question={question({ mediaUrl: CLIP_URL, mediaEndSeconds: 9 })}
+          mediaTestIdPrefix="question"
+        />,
+      );
+      expect(screen.getByTestId('question-video')).toHaveAttribute(
+        'src',
+        `${CLIP_URL}#t=,9`,
+      );
+
+      rerender(
+        <QuestionDisplay
+          question={question({ mediaUrl: CLIP_URL, mediaStartSeconds: 5 })}
+          mediaTestIdPrefix="question"
+        />,
+      );
+      expect(screen.getByTestId('question-video')).toHaveAttribute(
+        'src',
+        `${CLIP_URL}#t=5`,
+      );
+
+      rerender(
+        <QuestionDisplay
+          question={question({ mediaUrl: CLIP_URL })}
+          mediaTestIdPrefix="question"
+        />,
+      );
+      expect(screen.getByTestId('question-video')).toHaveAttribute(
+        'src',
+        CLIP_URL,
+      );
+    });
+
+    it('carries the reveal clip on a file answer video', () => {
+      render(
+        <QuestionDisplay
+          question={question({
+            mediaUrl: CLIP_URL,
+            answerMediaUrl: OTHER_CLIP_URL,
+            revealStartSeconds: 3,
+            revealEndSeconds: 8,
+            answer: 'Alien',
+          })}
+          mediaTestIdPrefix="reveal"
+        />,
+      );
+
+      expect(screen.getByTestId('reveal-answer-video')).toHaveAttribute(
+        'src',
+        `${OTHER_CLIP_URL}#t=3,8`,
+      );
+    });
+  });
+
+  describe('hidden video', () => {
+    it('covers the playing video while asked and lifts the cover at reveal without remounting', () => {
+      const hidden = { mediaUrl: CLIP_URL, isVideoHidden: true as const };
+      const { rerender } = render(
+        <QuestionDisplay
+          question={question(hidden)}
+          mediaTestIdPrefix="question"
+        />,
+      );
+      const video = screen.getByTestId('question-video');
+      expect(screen.getByTestId('question-video-cover')).toBeInTheDocument();
+
+      rerender(
+        <QuestionDisplay
+          question={question({ ...hidden, answer: 'Alien' })}
+          mediaTestIdPrefix="question"
+        />,
+      );
+
+      expect(
+        screen.queryByTestId('question-video-cover'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('question-video')).toBe(video);
+    });
+  });
+
   describe('at reveal', () => {
     it('plays the question video again when there is no answer media', () => {
       const { rerender } = render(

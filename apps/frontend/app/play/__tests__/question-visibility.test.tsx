@@ -167,11 +167,12 @@ describe('PlayPage — question visibility', () => {
   });
 
   it.each([
-    [true, /listen/i, /look at the screen/i],
-    [false, /look at the screen/i, /listen/i],
+    [true, /listen/i, /look at the screen/i, 'https://youtu.be/dQw4w9WgXcQ'],
+    [false, /look at the screen/i, /listen/i, 'https://youtu.be/dQw4w9WgXcQ'],
+    [true, /listen/i, /look at the screen/i, 'https://example.com/clip.mp4'],
   ])(
-    'for a YouTube video with isVideoHidden=%s shows the matching hint',
-    (isVideoHidden, shown, notShown) => {
+    'for a video with isVideoHidden=%s shows the matching hint (%#)',
+    (isVideoHidden, shown, notShown, mediaUrl) => {
       window.localStorage.setItem('campus-pubquiz-team-name', 'Returning Team');
       mockUseTeamLink.mockReturnValue(
         teamLinkResult({
@@ -182,7 +183,7 @@ describe('PlayPage — question visibility', () => {
                   {
                     type: 'free_text',
                     prompt: 'Name this song.',
-                    mediaUrl: 'https://youtu.be/dQw4w9WgXcQ',
+                    mediaUrl,
                     ...(isVideoHidden ? { isVideoHidden } : {}),
                     points: 3,
                   },

@@ -4,8 +4,8 @@ import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from '@radix-ui/react-icons';
 import {
   QUESTION_KINDS,
   QUESTION_TYPES,
-  extractYoutubeVideoId,
   isKahootAllowedType,
+  isVideoUrl,
   type QuestionType,
   type QuizDraftIssue,
 } from '@campus-pubquiz/types';
@@ -104,9 +104,8 @@ export function QuizQuestionEditor({
   const otherIssues = issues.filter(
     (issue) => !PLACED_ISSUE_FIELDS.has(issue.field),
   );
-  const isYoutubeMedia = extractYoutubeVideoId(question.mediaUrl) !== undefined;
-  const isYoutubeAnswerMedia =
-    extractYoutubeVideoId(question.answerMediaUrl) !== undefined;
+  const isVideoMedia = isVideoUrl(question.mediaUrl);
+  const isVideoAnswerMedia = isVideoUrl(question.answerMediaUrl);
 
   return (
     <div
@@ -242,7 +241,7 @@ export function QuizQuestionEditor({
         </div>
       </div>
 
-      {isYoutubeMedia && (
+      {isVideoMedia && (
         <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
           <label className="flex items-center gap-2 text-xs font-extrabold text-foreground/60">
             Clip start
@@ -275,10 +274,10 @@ export function QuizQuestionEditor({
         </div>
       )}
 
-      {isYoutubeMedia || isYoutubeAnswerMedia ? (
+      {isVideoMedia || isVideoAnswerMedia ? (
         <div className="flex flex-col gap-1">
           <span className="text-xs font-extrabold text-foreground/60">
-            {isYoutubeAnswerMedia
+            {isVideoAnswerMedia
               ? 'Answer video clip'
               : 'Reveal clip (question video)'}
           </span>

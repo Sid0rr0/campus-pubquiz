@@ -15,12 +15,12 @@ const stringList = z.array(z.string()).optional();
 const media = {
   mediaUrl: z.string().optional(),
   answerMediaUrl: z.string().optional(),
-  // Quiz save derives clip times from any YouTube mediaUrl, whatever the type.
+  // Quiz save derives clip times from any video mediaUrl, whatever the type.
   mediaStartSeconds: z.number().optional(),
   mediaEndSeconds: z.number().optional(),
   // Absent in payloads saved before hidden video existed: reads as not hidden.
   isVideoHidden: z.boolean().optional(),
-  // The reveal clip: any question whose media or answer media is YouTube.
+  // The reveal clip: any question whose media or answer media is a video.
   revealStartSeconds: z.number().optional(),
   revealEndSeconds: z.number().optional(),
 };
