@@ -37,18 +37,18 @@ What a question asks teams to do (free text, number, multiple choice, sort, matc
 _Avoid_: question kind, question format
 
 **Media**:
-An image, sound or YouTube video that any question can carry, shown on the big screen while the question is asked or when its answer is revealed. Which of the three it is follows from the link, not from the question type.
-_Avoid_: audio question, YouTube question, picture question (no such types)
+An image, sound or video that any question can carry, shown on the big screen while the question is asked or when its answer is revealed. A video is either a YouTube link or a link to a video file. Which of these it is follows from the link, not from the question type.
+_Avoid_: audio question, video question, YouTube question, picture question (no such types)
 
 **Clip**:
-The part of a question's YouTube video that plays while the question is asked, set by a start and end time.
+The part of a question's video that plays while the question is asked, set by a start and end time.
 
 **Reveal clip**:
-The part of a YouTube video that plays when a question's answer is revealed: either the question's own video or a separate answer video, each with its own start and end.
+The part of a video that plays when a question's answer is revealed: either the question's own video or a separate answer video, each with its own start and end.
 _Avoid_: answer clip (could be read as a team's answer)
 
 **Hidden video**:
-A YouTube video played as sound only, covered on the big screen until the question's answer is revealed.
+A video played as sound only, covered on the big screen until the question's answer is revealed.
 _Avoid_: audio-only (a question's media can itself be plain sound)
 
 **Answer kind**:
