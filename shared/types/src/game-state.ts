@@ -66,11 +66,32 @@ function applyTransition(
   // A monotonic counter rather than a boolean toggle so /display can react
   // to it with a `key` change — doesn't touch isMediaFullscreen, since
   // replaying the video shouldn't exit fullscreen if it's already on.
+  // A replay also resumes playback: the remounted player starts fresh.
   if (action === 'REPLAY_MEDIA') {
     return {
       ...progress,
       mediaReplayToken: (progress.mediaReplayToken ?? 0) + 1,
+      ...(progress.isMediaPaused ? { isMediaPaused: false } : {}),
     };
+  }
+
+  // Like the fullscreen toggle, pausing leaves everything else untouched.
+  if (action === 'TOGGLE_MEDIA_PAUSE') {
+    return {
+      ...progress,
+      isMediaPaused: !progress.isMediaPaused,
+    };
+  }
+
+  // Pause belongs to the question on screen: anything that moves the quiz on
+  // (or back) resumes it. Only the two overlays leave the media paused, since
+  // the quiz carries on underneath them.
+  if (
+    progress.isMediaPaused &&
+    action !== 'TOGGLE_LEADERBOARD' &&
+    action !== 'TOGGLE_JOIN_OVERLAY'
+  ) {
+    progress = { ...progress, isMediaPaused: false };
   }
 
   // The fullscreen view is tied to whatever's currently on screen, so any

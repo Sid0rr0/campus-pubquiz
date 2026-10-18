@@ -177,14 +177,29 @@ be refused); the press after that moves the quiz.
 
 ### Admin actions
 
-| Action                | Legal from                              | Effect                                                                                                                         |
-| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `START_QUIZ`          | `lobby`                                 | → `rules`                                                                                                                      |
-| `ADVANCE`             | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                     |
-| `PREVIOUS`            | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby` |
-| `END_QUIZ`            | any except `ended`                      | Force-end                                                                                                                      |
-| `TOGGLE_LEADERBOARD`  | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                 |
-| `TOGGLE_JOIN_OVERLAY` | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                     |
+| Action                    | Legal from                              | Effect                                                                                                                         |
+| ------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `START_QUIZ`              | `lobby`                                 | → `rules`                                                                                                                      |
+| `ADVANCE`                 | every status except `lobby` and `ended` | Steps forward per the table above, crossing block boundaries automatically                                                     |
+| `PREVIOUS`                | most non-terminal statuses              | Symmetric backward walk, including back across a block boundary into the prior block's `reveal`; from `rules`, back to `lobby` |
+| `END_QUIZ`                | any except `ended`                      | Force-end                                                                                                                      |
+| `TOGGLE_LEADERBOARD`      | any                                     | Flips `isLeaderboardVisible`, status untouched                                                                                 |
+| `TOGGLE_JOIN_OVERLAY`     | every status except `lobby` and `ended` | Flips `isJoinOverlayVisible`, status untouched; refused as an illegal transition elsewhere                                     |
+| `TOGGLE_MEDIA_FULLSCREEN` | any                                     | Flips `isMediaFullscreen`; any other action clears it                                                                          |
+| `REPLAY_MEDIA`            | any                                     | Bumps `mediaReplayToken` (the display remounts the YouTube iframe, restarting it) and clears `isMediaPaused`                   |
+| `TOGGLE_MEDIA_PAUSE`      | any                                     | Flips `isMediaPaused`; status untouched                                                                                        |
+
+**Pausing media.** `isMediaPaused` is server-owned game state in `progress`
+(so a display that reconnects mid-pause comes back paused). The big screen
+applies it in place, without remounting anything: a YouTube embed (loaded with
+`enablejsapi=1`) gets an IFrame API `pauseVideo`/`playVideo` `postMessage`
+command, and a question `<audio>` element is `pause()`d/`play()`ed. Every
+action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
+`REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
+alone. `/control` and `/remote` show Pause/Resume only for an open question
+whose media is YouTube or audio. Browsers may refuse the display's `play()` on
+resume if it has had no user interaction (autoplay policy); the audio element's
+own controls remain as the fallback.
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are

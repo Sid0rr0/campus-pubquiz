@@ -288,6 +288,7 @@ function DisplayPageContent() {
             autoplayMedia={settings.autoplayMedia}
             isFullscreen={progress.isMediaFullscreen}
             mediaReplayToken={progress.mediaReplayToken}
+            isMediaPaused={progress.isMediaPaused}
             kahootQuestionEndsAt={kahootQuestionEndsAt}
           />
         );

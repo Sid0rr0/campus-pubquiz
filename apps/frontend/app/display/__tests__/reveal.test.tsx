@@ -470,7 +470,7 @@ describe('DisplayPage — reveal', () => {
     const QUESTION_VIDEO = 'https://youtu.be/dQw4w9WgXcQ';
     const ANSWER_VIDEO = 'https://youtu.be/9bZkp7q19f0';
     const embed = (id: string, params: string) =>
-      `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&controls=0&modestbranding=1${params}`;
+      `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&controls=0&modestbranding=1&enablejsapi=1${params}`;
 
     // The vitest config turns iframe page loading off; happy-dom logs that on
     // every embed mount. Drop exactly that message, let other errors through.

@@ -9,6 +9,7 @@ import {
   QUESTION_BODIES,
   REVEAL_BODIES,
 } from '@/app/display/answer-kind-bodies';
+import { useMediaPause } from '@/app/display/use-media-pause';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 const HTTP_URL_PATTERN = /^https?:\/\//i;
@@ -38,6 +39,15 @@ export function isYoutubeMediaUrl(url: string | undefined): boolean {
   );
 }
 
+/** Whether `url` is media /display can pause and resume (YouTube or audio) — what the pause button gates on. Images and other media have no playback to pause. */
+export function isPausableMediaUrl(url: string | undefined): boolean {
+  return (
+    url !== undefined &&
+    isHttpUrl(url) &&
+    (extractYoutubeVideoId(url) !== undefined || isAudioUrl(url))
+  );
+}
+
 function buildYoutubeEmbedSrc(
   videoId: string,
   autoplay: boolean,
@@ -48,6 +58,8 @@ function buildYoutubeEmbedSrc(
     autoplay: autoplay ? '1' : '0',
     controls: '0',
     modestbranding: '1',
+    // Lets /display pause and resume the player with postMessage commands.
+    enablejsapi: '1',
   });
   if (startSeconds !== undefined) params.set('start', String(startSeconds));
   if (endSeconds !== undefined) params.set('end', String(endSeconds));
@@ -157,6 +169,8 @@ interface QuestionDisplayProps {
   isFullscreen?: boolean;
   /** GameProgress.mediaReplayToken — bumped by REPLAY_MEDIA. Folded into the YouTube iframe's `key` so incrementing it remounts the iframe and restarts playback; left out of the key the rest of the time so fullscreen toggling (which doesn't change this) keeps the same iframe per the comment below. */
   mediaReplayToken?: number;
+  /** GameProgress.isMediaPaused — pauses the question's YouTube/audio playback in place (no remount) and resumes it when cleared. */
+  isMediaPaused?: boolean;
   /** The big screen's reveal: the answer comes in with its own entrance. Left off on the phone. */
   hasRevealEntrance?: boolean;
 }
@@ -172,8 +186,10 @@ export function QuestionDisplay({
   promptClassName = 'text-balance font-display text-display-4xl leading-snug',
   isFullscreen = false,
   mediaReplayToken = 0,
+  isMediaPaused = false,
   hasRevealEntrance = false,
 }: QuestionDisplayProps) {
+  const { youtubeRef, onYoutubeLoad, audioRef } = useMediaPause(isMediaPaused);
   const {
     prompt,
     revealStartSeconds,
@@ -317,6 +333,8 @@ export function QuestionDisplay({
             }
           >
             <iframe
+              ref={youtubeRef}
+              onLoad={onYoutubeLoad}
               key={
                 isRevealing && question.isVideoHidden !== true
                   ? `${mediaReplayToken}-reveal`
@@ -405,6 +423,7 @@ export function QuestionDisplay({
         !questionYoutubeId &&
         isAudioUrl(questionMediaUrl) && (
           <audio
+            ref={audioRef}
             data-testid={`${mediaTestIdPrefix}-audio`}
             src={questionMediaUrl}
             controls

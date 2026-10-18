@@ -4,7 +4,10 @@ import {
   isQuestionOnAirStatus,
   type AdminStatePayload,
 } from '@campus-pubquiz/types';
-import { isYoutubeMediaUrl } from '@/app/display/question-display';
+import {
+  isPausableMediaUrl,
+  isYoutubeMediaUrl,
+} from '@/app/display/question-display';
 
 export interface AdminControls {
   canStartQuiz: boolean;
@@ -12,6 +15,7 @@ export interface AdminControls {
   canCloseSession: boolean;
   canToggleJoinOverlay: boolean;
   canReplayMedia: boolean;
+  canPauseMedia: boolean;
   showAnswerStatus: boolean;
   tiedTeamNames: string[];
 }
@@ -39,6 +43,9 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
     canReplayMedia:
       status === 'question_open' &&
       isYoutubeMediaUrl(view.currentQuestion?.mediaUrl),
+    canPauseMedia:
+      status === 'question_open' &&
+      isPausableMediaUrl(view.currentQuestion?.mediaUrl),
     showAnswerStatus: isQuestionOnAirStatus(status),
     tiedTeamNames: getTiedForFirst(leaderboard).map((entry) => entry.teamName),
   };
