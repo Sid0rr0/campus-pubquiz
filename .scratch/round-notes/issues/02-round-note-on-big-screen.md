@@ -12,7 +12,7 @@ See the spec's "Host-only by default", "Where it shows", "Big screen" and "Edito
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Backend spec: with the setting off, the display view has no note. With it on, the display view has it and the players view doesn't. On the reveal intro, no view has it. With the setting on and an empty note, no view has it.
 - [ ] Backend spec: turning the setting on live, while that round's intro is on air, updates the display view.

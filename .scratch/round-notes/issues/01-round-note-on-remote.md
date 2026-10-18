@@ -13,7 +13,7 @@ See the spec's "Data", "Format", "Draft shape", "Seeding", "Where it shows" and 
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Backend spec: on the round intro, `currentRoundNote` is the round's note. On the reveal intro and on an open question it's null. Break review across the round intro gives the note.
 - [ ] Backend spec: no display or players view carries the note.
