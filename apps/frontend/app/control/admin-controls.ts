@@ -2,12 +2,10 @@ import {
   getTiedForFirst,
   isJoinOverlayAllowedStatus,
   isQuestionOnAirStatus,
+  isVideoUrl,
   type AdminStatePayload,
 } from '@campus-pubquiz/types';
-import {
-  isPausableMediaUrl,
-  isVideoMediaUrl,
-} from '@/app/display/question-display';
+import { isPausableMediaUrl } from '@/app/display/question-display';
 
 export interface AdminControls {
   canStartQuiz: boolean;
@@ -41,8 +39,7 @@ export function getAdminControls(view: AdminControlsView): AdminControls {
     // currentQuestion (and with it its own media) is only populated while a
     // question is actually open on /display — see getCurrentQuestion.
     canReplayMedia:
-      status === 'question_open' &&
-      isVideoMediaUrl(view.currentQuestion?.mediaUrl),
+      status === 'question_open' && isVideoUrl(view.currentQuestion?.mediaUrl),
     canPauseMedia:
       status === 'question_open' &&
       isPausableMediaUrl(view.currentQuestion?.mediaUrl),

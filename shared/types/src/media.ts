@@ -1,11 +1,20 @@
+import { extractYoutubeVideoId } from './youtube';
+
 /** Largest image the quiz editor may upload — enforced by the backend, pre-checked by the frontend. */
 export const MAX_MEDIA_UPLOAD_BYTES = 5 * 1024 * 1024;
-
-import { extractYoutubeVideoId } from './youtube';
 
 const AUDIO_EXTENSION_PATTERN = /\.(mp3|wav|ogg|m4a)(\?.*)?$/i;
 const VIDEO_FILE_EXTENSION_PATTERN = /\.(mp4|webm|mov|m4v)(\?.*)?$/i;
 const HTTP_URL_PATTERN = /^https?:\/\//i;
+
+/**
+ * Whether `url` is an http(s) link. Media links come from an admin-imported
+ * spreadsheet, not a trusted author — anything else (data:/blob:) could bloat
+ * or hang the shared display, so every consumer checks this first.
+ */
+export function isHttpUrl(url: string): boolean {
+  return HTTP_URL_PATTERN.test(url);
+}
 
 /** What a media link is drawn as: a YouTube embed, a `<video>` file, an `<audio>` file, or (anything else over http(s)) an image. */
 export type MediaKind = 'image' | 'audio' | 'youtube' | 'video-file';
@@ -20,7 +29,7 @@ export type MediaKind = 'image' | 'audio' | 'youtube' | 'video-file';
 export function classifyMediaUrl(
   url: string | undefined,
 ): MediaKind | undefined {
-  if (url === undefined || !HTTP_URL_PATTERN.test(url)) return undefined;
+  if (url === undefined || !isHttpUrl(url)) return undefined;
   if (extractYoutubeVideoId(url) !== undefined) return 'youtube';
   if (VIDEO_FILE_EXTENSION_PATTERN.test(url)) return 'video-file';
   if (AUDIO_EXTENSION_PATTERN.test(url)) return 'audio';

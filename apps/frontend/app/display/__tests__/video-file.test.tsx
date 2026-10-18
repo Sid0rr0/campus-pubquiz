@@ -297,6 +297,115 @@ describe('video file on the big screen', () => {
     });
   });
 
+  describe('pause and play again', () => {
+    const REVEAL_CLIPPED = {
+      mediaUrl: CLIP_URL,
+      mediaStartSeconds: 82,
+      mediaEndSeconds: 140,
+      revealStartSeconds: 150,
+      revealEndSeconds: 165,
+      answer: 'Alien',
+    };
+    const ANSWER_VIDEO = {
+      mediaUrl: 'https://example.com/poster.jpg',
+      answerMediaUrl: OTHER_CLIP_URL,
+      revealStartSeconds: 3,
+      revealEndSeconds: 8,
+      answer: 'Alien',
+    };
+
+    function renderWith(
+      overrides: Partial<QuestionDisplayQuestion>,
+      props: { mediaReplayToken?: number; isMediaPaused?: boolean },
+    ) {
+      return (
+        <QuestionDisplay
+          question={question(overrides)}
+          mediaTestIdPrefix="reveal"
+          {...props}
+        />
+      );
+    }
+
+    it('seeks the question video to the reveal clip start on play again at reveal', () => {
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, 'play')
+        .mockResolvedValue(undefined);
+      const { rerender } = render(
+        renderWith(REVEAL_CLIPPED, { mediaReplayToken: 1 }),
+      );
+      const video = screen.getByTestId('reveal-video') as HTMLVideoElement;
+      video.currentTime = 160;
+
+      rerender(renderWith(REVEAL_CLIPPED, { mediaReplayToken: 2 }));
+
+      expect(video.currentTime).toBe(150);
+      expect(play).toHaveBeenCalledTimes(1);
+    });
+
+    it('seeks the question video to 0 on play again at reveal when no clip is set', () => {
+      vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      const plain = { mediaUrl: CLIP_URL, mediaStartSeconds: 82, answer: 'A' };
+      const { rerender } = render(renderWith(plain, { mediaReplayToken: 1 }));
+      const video = screen.getByTestId('reveal-video') as HTMLVideoElement;
+      video.currentTime = 30;
+
+      rerender(renderWith(plain, { mediaReplayToken: 2 }));
+
+      expect(video.currentTime).toBe(0);
+    });
+
+    it('seeks a file answer video to the reveal clip start on play again', () => {
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, 'play')
+        .mockResolvedValue(undefined);
+      const { rerender } = render(
+        renderWith(ANSWER_VIDEO, { mediaReplayToken: 1 }),
+      );
+      const video = screen.getByTestId(
+        'reveal-answer-video',
+      ) as HTMLVideoElement;
+      video.currentTime = 6;
+
+      rerender(renderWith(ANSWER_VIDEO, { mediaReplayToken: 2 }));
+
+      expect(video.currentTime).toBe(3);
+      expect(play).toHaveBeenCalledTimes(1);
+    });
+
+    it('pauses and resumes a file answer video without remounting it', () => {
+      const pause = vi
+        .spyOn(HTMLMediaElement.prototype, 'pause')
+        .mockImplementation(() => undefined);
+      const play = vi
+        .spyOn(HTMLMediaElement.prototype, 'play')
+        .mockResolvedValue(undefined);
+      const { rerender } = render(
+        renderWith(ANSWER_VIDEO, { isMediaPaused: false }),
+      );
+      const video = screen.getByTestId('reveal-answer-video');
+
+      rerender(renderWith(ANSWER_VIDEO, { isMediaPaused: true }));
+      expect(pause).toHaveBeenCalledTimes(1);
+
+      rerender(renderWith(ANSWER_VIDEO, { isMediaPaused: false }));
+      expect(play).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('reveal-answer-video')).toBe(video);
+    });
+
+    it('keeps a file answer video paused once it has loaded under a standing pause', () => {
+      const pause = vi
+        .spyOn(HTMLMediaElement.prototype, 'pause')
+        .mockImplementation(() => undefined);
+      render(renderWith(ANSWER_VIDEO, { isMediaPaused: true }));
+      pause.mockClear();
+
+      fireEvent.loadedMetadata(screen.getByTestId('reveal-answer-video'));
+
+      expect(pause).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('load failure', () => {
     it('removes a question video that errors, keeping the prompt', () => {
       render(

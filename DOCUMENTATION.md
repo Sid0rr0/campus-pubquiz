@@ -193,8 +193,8 @@ be refused); the press after that moves the quiz.
 (so a display that reconnects mid-pause comes back paused). The big screen
 applies it in place, without remounting anything: a YouTube embed (loaded with
 `enablejsapi=1`) gets an IFrame API `pauseVideo`/`playVideo` `postMessage`
-command, and a question `<audio>` or video-file `<video>` element is
-`pause()`d/`play()`ed. Every
+command, and a question `<audio>` or video-file `<video>` element (including a
+video-file answer at reveal) is `pause()`d/`play()`ed. Every
 action that moves the quiz (`ADVANCE`, `PREVIOUS`, `END_QUIZ`, …) and
 `REPLAY_MEDIA` resets it; the leaderboard and join overlay toggles leave it
 alone. `/control` and `/remote` show Pause/Resume only for an open question
@@ -203,7 +203,8 @@ display's `play()` on resume if it has had no user interaction (autoplay
 policy); a rejection is ignored and the moderator can press Resume again. A
 standing pause is re-applied to a video file once it has loaded. "Play again"
 (`REPLAY_MEDIA`) is offered for an open question with a video (YouTube or file),
-not for audio.
+not for audio; it seeks a video file to the start of the clip it is showing (the
+reveal clip at reveal, a video-file answer included).
 
 Grading (`GRADE_ANSWER`), kicking a team (`KICK_TEAM`), and awarding bonus
 points (`AWARD_BONUS`) are **not** part of this state machine — they are
