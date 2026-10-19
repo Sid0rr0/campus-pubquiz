@@ -11,7 +11,6 @@ Specs that still have open tickets, one row per spec under `.scratch/`. A spec i
 | league | [Leagues — ranking teams across a semester](league/spec.md) | 6 | team-page, feedback-trends |
 | e2e-journeys-2 | [E2E coverage of a whole quiz night](e2e-journeys-2/spec.md) | 15 | — |
 | guide-trim | [A shorter moderator guide](guide-trim/spec.md) | 1 | — |
-| display-portrait-margin | [Portrait question images that fit, and a margin that explains itself](display-portrait-margin/spec.md) | 4 | — |
 
 ## Won't do
 
