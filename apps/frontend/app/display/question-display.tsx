@@ -279,10 +279,10 @@ export function QuestionDisplay({
   // leaves out the replay token; it still remounts at reveal for the reveal clip.
   const videoFileKey =
     isRevealing && question.isVideoHidden !== true ? 'reveal' : 'question';
-  const isPlainQuestionImage =
-    questionMediaKind === 'image' && !showSideBySideReveal;
+  // A portrait image also wins over the side-by-side reveal: the answer image
+  // then takes the image column in place of the question image.
   const showTwoColumnLayout =
-    isPlainQuestionImage &&
+    questionMediaKind === 'image' &&
     !isFullscreen &&
     questionImageOrientation === 'portrait';
 
@@ -297,30 +297,46 @@ export function QuestionDisplay({
             : 'contents'
         }
       >
-        <h1
+        {/* The prompt and its text content (margin, options, lists, reveal answer line) travel together in both layouts. */}
+        <div
+          data-testid={`${mediaTestIdPrefix}-prompt-column`}
           className={
             showTwoColumnLayout
-              ? `${promptClassName} flex-1 self-center text-left`
-              : promptClassName
+              ? 'flex min-w-0 flex-1 flex-col items-start justify-center gap-4 self-center text-left'
+              : 'contents'
           }
         >
-          {prompt}
-        </h1>
+          <h1 className={promptClassName}>{prompt}</h1>
+          {reveal?.lead}
+          {reveal ? reveal.body : <QuestionBody question={question} />}
+        </div>
         {showTwoColumnLayout && (
           // Stretched (by the row's items-stretch) to a definite height, so the image's max-h-full caps against it.
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs */}
-            <img
-              data-testid={`${mediaTestIdPrefix}-image`}
-              src={questionMediaUrl}
-              alt="Question image"
-              onLoad={handleQuestionImageLoad}
-              className="max-h-full max-w-full rounded-xl object-contain"
-            />
+            {isRevealingWithAnswerMedia ? (
+              <AnswerMedia
+                url={answerMediaUrl}
+                mediaTestIdPrefix={mediaTestIdPrefix}
+                autoplayMedia={autoplayMedia}
+                imageClassName="max-h-full max-w-full rounded-xl object-contain"
+                startSeconds={revealStartSeconds}
+                endSeconds={revealEndSeconds}
+                isMediaPaused={isMediaPaused}
+                mediaReplayToken={mediaReplayToken}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- quiz media comes from arbitrary external URLs
+              <img
+                data-testid={`${mediaTestIdPrefix}-image`}
+                src={questionMediaUrl}
+                alt="Question image"
+                onLoad={handleQuestionImageLoad}
+                className="max-h-full max-w-full rounded-xl object-contain"
+              />
+            )}
           </div>
         )}
       </div>
-      {reveal?.lead}
       {questionMediaUrl &&
         isQuestionVideo &&
         !questionVideoFailure.isFailed && (
@@ -412,6 +428,7 @@ export function QuestionDisplay({
                 data-testid={`${mediaTestIdPrefix}-image`}
                 src={questionMediaUrl}
                 alt="Question image"
+                onLoad={handleQuestionImageLoad}
                 className="max-h-full max-w-full rounded-xl object-contain"
               />
             </div>
@@ -455,7 +472,6 @@ export function QuestionDisplay({
           autoPlay={autoplayMedia}
         />
       )}
-      {reveal ? reveal.body : <QuestionBody question={question} />}
       {isRevealing && !showSideBySideReveal && answerMediaUrl && (
         <div className="flex w-full min-h-0 flex-1 items-center justify-center">
           <AnswerMedia
