@@ -162,6 +162,22 @@ export interface SessionDetailPlayerCount {
   reportedTeams: number;
 }
 
+/** One ended session with feedback on, in the Feedback trends page's ratings-over-time table. */
+export interface FeedbackTrendsSession {
+  id: number;
+  /** The session's display name, as everywhere else. */
+  name: string;
+  date: string; // game_sessions.created_at, ISO
+  /** Average of every round rating the session got — null when nobody rated. */
+  rating: SessionDetailRoundRating | null;
+}
+
+/** Anonymous feedback across many ended sessions, behind `/stats/feedback`. Never carries a team. */
+export interface FeedbackTrends {
+  /** Oldest to newest. Sessions with feedback off are left out. */
+  sessions: FeedbackTrendsSession[];
+}
+
 /** Deep-dive stats for one ended session, behind `/stats/:id`. */
 export interface SessionDetailStats {
   gameSessionId: number;

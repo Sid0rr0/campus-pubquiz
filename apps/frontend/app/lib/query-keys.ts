@@ -63,6 +63,8 @@ export const queryKeys = {
       sortBy: string;
       sortOrder: string;
     }) => ['stats', 'sessions', params] as const,
+    feedbackTrends: (range: { from: string; to: string }) =>
+      ['stats', 'feedback-trends', range] as const,
     session: (gameSessionId: number) =>
       ['stats', 'sessions', gameSessionId] as const,
   },

@@ -1,4 +1,5 @@
 import type {
+  FeedbackTrends,
   PlayedSessionsListedPayload,
   PlayedSessionsSortColumn,
   PlayedSessionsSortOrder,
@@ -68,6 +69,29 @@ export async function fetchSessionDetail(
     return throwApiError(response, 'Could not load session detail');
   }
   return (await response.json()) as SessionDetailStats;
+}
+
+/** Both bounds are `YYYY-MM-DD` dates (UTC); an empty string means no bound. */
+export interface FeedbackTrendsRange {
+  from: string;
+  to: string;
+}
+
+export async function fetchFeedbackTrends(
+  range: FeedbackTrendsRange,
+  signal?: AbortSignal,
+): Promise<FeedbackTrends> {
+  const query = new URLSearchParams();
+  if (range.from) query.set('from', range.from);
+  if (range.to) query.set('to', range.to);
+  const response = await fetch(
+    `${getBackendUrl()}/stats/feedback-trends?${query}`,
+    { credentials: 'include', signal },
+  );
+  if (!response.ok) {
+    return throwApiError(response, 'Could not load feedback trends');
+  }
+  return (await response.json()) as FeedbackTrends;
 }
 
 export async function deleteSession(gameSessionId: number): Promise<void> {

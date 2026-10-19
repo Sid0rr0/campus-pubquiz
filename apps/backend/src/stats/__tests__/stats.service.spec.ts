@@ -656,6 +656,161 @@ describe('StatsService (Postgres integration)', () => {
     });
   });
 
+  describe('getFeedbackTrends sessions', () => {
+    async function playedSession(
+      joinCode: string,
+      playedAt: string,
+      options: {
+        name?: string;
+        feedbackOff?: boolean;
+        status?: GameStatus;
+      } = {},
+    ): Promise<{ session: GameSession; round: Round }> {
+      const { quiz, questions } = await createQuiz(`Quiz ${joinCode}`, [[1]]);
+      const session = await createSession(
+        quiz,
+        joinCode,
+        options.status ?? 'ended',
+        options.name,
+      );
+      session.createdAt = new Date(playedAt);
+      if (options.feedbackOff) {
+        session.settings = {
+          ...DEFAULT_SESSION_SETTINGS,
+          collectFeedback: false,
+        };
+      }
+      await em.flush();
+      return { session, round: questions[0][0].round };
+    }
+
+    async function rate(
+      session: GameSession,
+      round: Round,
+      teamName: string,
+      stars: number,
+    ): Promise<void> {
+      const team = await joinTeam(session, teamName);
+      em.create(RoundRating, { gameSession: session, round, team, stars });
+      await em.flush();
+    }
+
+    it('lists ended sessions oldest first with their average rating and rating count', async () => {
+      const newer = await playedSession('TR1', '2026-10-10T19:00:00Z', {
+        name: 'Autumn quiz',
+      });
+      const older = await playedSession('TR2', '2026-09-01T19:00:00Z');
+      await rate(newer.session, newer.round, 'A1', 5);
+      await rate(newer.session, newer.round, 'A2', 4);
+      await rate(older.session, older.round, 'B1', 3);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions).toEqual([
+        {
+          id: older.session.id,
+          name: 'Quiz TR2',
+          date: '2026-09-01T19:00:00.000Z',
+          rating: { average: 3, count: 1 },
+        },
+        {
+          id: newer.session.id,
+          name: 'Autumn quiz',
+          date: '2026-10-10T19:00:00.000Z',
+          rating: { average: 4.5, count: 2 },
+        },
+      ]);
+    });
+
+    it('averages across all of a session’s rounds, not per round', async () => {
+      const { quiz, questions } = await createQuiz('Two rounds', [[1], [1]]);
+      const session = await createSession(quiz, 'TR3', 'ended');
+      await rate(session, questions[0][0].round, 'A1', 5);
+      await rate(session, questions[0][0].round, 'A2', 5);
+      await rate(session, questions[1][0].round, 'A3', 2);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions[0].rating).toEqual({ average: 4, count: 3 });
+    });
+
+    it('shows null for an ended session nobody rated', async () => {
+      await playedSession('TR4', '2026-10-01T19:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0].rating).toBeNull();
+    });
+
+    it('leaves out sessions with feedback off and sessions that have not ended', async () => {
+      const off = await playedSession('TR5', '2026-10-01T19:00:00Z', {
+        feedbackOff: true,
+      });
+      await rate(off.session, off.round, 'A1', 1);
+      await playedSession('TR6', '2026-10-02T19:00:00Z', {
+        status: 'question_open',
+      });
+      const on = await playedSession('TR7', '2026-10-03T19:00:00Z');
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions.map((s) => s.id)).toEqual([on.session.id]);
+    });
+
+    it('counts a session stored without the setting as feedback on', async () => {
+      const { session } = await playedSession('TR8', '2026-10-01T19:00:00Z');
+      const withoutSetting: Partial<typeof DEFAULT_SESSION_SETTINGS> = {
+        ...DEFAULT_SESSION_SETTINGS,
+      };
+      delete withoutSetting.collectFeedback;
+      session.settings = withoutSetting as typeof session.settings;
+      await em.flush();
+
+      const result = await statsService.getFeedbackTrends({});
+
+      expect(result.sessions.map((s) => s.id)).toEqual([session.id]);
+    });
+
+    it('keeps only sessions played from the from date to the end of the to date, UTC', async () => {
+      await playedSession('TR9', '2026-09-30T23:59:59Z');
+      const first = await playedSession('TR10', '2026-10-01T00:00:00Z');
+      const last = await playedSession('TR11', '2026-10-31T23:59:59Z');
+      await playedSession('TR12', '2026-11-01T00:00:00Z');
+
+      const bounded = await statsService.getFeedbackTrends({
+        from: '2026-10-01',
+        to: '2026-10-31',
+      });
+      const fromOnly = await statsService.getFeedbackTrends({
+        from: '2026-10-31',
+      });
+      const toOnly = await statsService.getFeedbackTrends({ to: '2026-09-30' });
+
+      expect(bounded.sessions.map((s) => s.id)).toEqual([
+        first.session.id,
+        last.session.id,
+      ]);
+      expect(fromOnly.sessions.map((s) => s.id)).toContain(last.session.id);
+      expect(fromOnly.sessions).toHaveLength(2);
+      expect(toOnly.sessions).toHaveLength(1);
+    });
+
+    it('carries no team id or name', async () => {
+      const { session, round } = await playedSession(
+        'TR13',
+        '2026-10-01T19:00:00Z',
+      );
+      await rate(session, round, 'SecretSquad', 3);
+
+      const result = await statsService.getFeedbackTrends({});
+
+      const json = JSON.stringify(result);
+      expect(json).not.toContain('SecretSquad');
+      expect(json).not.toMatch(/team/i);
+    });
+  });
+
   describe('getSessionDetail feedback', () => {
     async function send(
       session: GameSession,
