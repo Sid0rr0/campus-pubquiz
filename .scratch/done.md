@@ -4,6 +4,7 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| guide-trim | [A shorter moderator guide](guide-trim/spec.md) | 1 |
 | round-notes | [Round notes on title cards](round-notes/spec.md) | 3 |
 | video-files | [Video files as media](video-files/spec.md) | 3 |
 | media-not-a-question-type | [Media is something any question carries, not a question type](media-not-a-question-type/spec.md) | 3 |
