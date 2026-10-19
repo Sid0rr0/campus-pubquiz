@@ -5,6 +5,8 @@ Specs whose tickets are all finished, newest first. Open work lives in [`overvie
 | Spec                        | Title                                                                                                                                                               | Tickets |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | e2e-journeys-2 | [E2E coverage of a whole quiz night](e2e-journeys-2/spec.md) | 15 |
+| display-portrait-margin | [Portrait question images that fit, and a margin that explains itself](display-portrait-margin/spec.md) | 4 |
+| guide-trim | [A shorter moderator guide](guide-trim/spec.md) | 1 |
 | round-notes | [Round notes on title cards](round-notes/spec.md) | 3 |
 | video-files | [Video files as media](video-files/spec.md) | 3 |
 | media-not-a-question-type | [Media is something any question carries, not a question type](media-not-a-question-type/spec.md) | 3 |

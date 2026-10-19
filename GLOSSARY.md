@@ -91,6 +91,10 @@ _Avoid_: partial points (a partial answer can earn any share, not just half)
 How far a Number question's answer may be from the key and still be correct, either as a percentage of the key or as an absolute amount; both ends count. A margin of 0 means only the exact key is correct.
 _Avoid_: tolerance, error margin, range
 
+**Accepted range**:
+The lowest to highest answer a Number question's margin counts as correct, for the current answer key. With a margin of 0 it is the key alone.
+_Avoid_: margin (the margin is the allowed distance; the accepted range is the answers it lets through)
+
 **Ungraded**:
 An answer still waiting for the quiz master to grade it, and a question with at least one such answer. closest*guess is never ungraded: it is graded in one batch at the lock.
 \_Avoid*: unmarked, pending

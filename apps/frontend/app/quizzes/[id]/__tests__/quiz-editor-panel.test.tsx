@@ -1975,6 +1975,52 @@ describe('QuizEditorPanel', () => {
       expect(screen.queryByText(/only an exact 0/i)).not.toBeInTheDocument();
     });
 
+    it('shows the accepted range live as the answer, margin value and unit change', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      expect(
+        screen.getByText('Enter the answer to see the accepted range'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/0 accepts only the exact answer/i),
+      ).not.toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), '200');
+      expect(screen.getByText('Accepts 180–220')).toBeInTheDocument();
+
+      await user.clear(screen.getByLabelText(/^margin$/i));
+      await user.type(screen.getByLabelText(/^margin$/i), '5');
+      expect(screen.getByText('Accepts 190–210')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /absolute/i }));
+      expect(screen.getByText('Accepts 195–205')).toBeInTheDocument();
+
+      await user.clear(screen.getByLabelText(/^margin$/i));
+      await user.type(screen.getByLabelText(/^margin$/i), '0');
+      expect(screen.getByText('Accepts only 200')).toBeInTheDocument();
+    });
+
+    it('asks for the answer, not a range, when the margin is blank and the answer is empty', async () => {
+      const user = userEvent.setup();
+      await startWithQuestion(user);
+      await user.click(screen.getByRole('button', { name: /^number$/i }));
+
+      await user.clear(screen.getByLabelText(/^margin$/i));
+
+      expect(
+        screen.getByText('Enter the answer to see the accepted range'),
+      ).toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText(/accepted answer/i), '200');
+
+      expect(
+        screen.queryByText('Enter the answer to see the accepted range'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Accepts/)).not.toBeInTheDocument();
+    });
+
     it('keeps the prompt and a numeric answer when a Free text question becomes Number', async () => {
       const user = userEvent.setup();
       await startWithQuestion(user);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatAcceptedRange,
+  formatMarginHint,
   formatMarginText,
   formatNumberReveal,
 } from '../margin';
@@ -9,20 +10,33 @@ import type { SeededQuestion } from '../question-views';
 
 describe('formatMarginText', () => {
   it('words a percent margin', () => {
-    expect(formatMarginText({ value: 10, unit: 'percent' })).toBe('within 10%');
+    expect(formatMarginText({ value: 5, unit: 'percent' })).toBe(
+      'Answers within 5% of the real number count as correct',
+    );
   });
 
   it('keeps up to two decimals', () => {
     expect(formatMarginText({ value: 2.5, unit: 'percent' })).toBe(
-      'within 2.5%',
+      'Answers within 2.5% of the real number count as correct',
     );
     expect(formatMarginText({ value: 2.456, unit: 'percent' })).toBe(
-      'within 2.46%',
+      'Answers within 2.46% of the real number count as correct',
     );
   });
 
   it('words an absolute margin without a unit sign', () => {
-    expect(formatMarginText({ value: 5, unit: 'absolute' })).toBe('within 5');
+    expect(formatMarginText({ value: 5, unit: 'absolute' })).toBe(
+      'Answers within 5 of the real number count as correct',
+    );
+  });
+
+  it('says only the exact answer counts for margin 0', () => {
+    expect(formatMarginText({ value: 0, unit: 'percent' })).toBe(
+      'Exact answer only',
+    );
+    expect(formatMarginText({ value: 0, unit: 'absolute' })).toBe(
+      'Exact answer only',
+    );
   });
 });
 
@@ -53,7 +67,7 @@ describe('formatAcceptedRange', () => {
 describe('formatNumberReveal', () => {
   it('shows the key and the accepted range', () => {
     expect(formatNumberReveal('200', { value: 10, unit: 'percent' })).toBe(
-      '200 · 180–220 accepted',
+      '200 (anything from 180 to 220 counts)',
     );
   });
 
@@ -63,9 +77,49 @@ describe('formatNumberReveal', () => {
     );
   });
 
+  it('still shows the range for a tiny margin that rounds to the key', () => {
+    expect(formatNumberReveal('1', { value: 0.001, unit: 'percent' })).toBe(
+      '1 (anything from 1 to 1 counts)',
+    );
+  });
+
   it('shows the key as typed when it is not a number', () => {
     expect(formatNumberReveal('lots', { value: 10, unit: 'percent' })).toBe(
       'lots',
+    );
+  });
+});
+
+describe('formatMarginHint', () => {
+  it('shows the accepted range for a percent margin', () => {
+    expect(formatMarginHint('200', { value: 10, unit: 'percent' })).toBe(
+      'Accepts 180–220',
+    );
+  });
+
+  it('shows the accepted range for an absolute margin', () => {
+    expect(formatMarginHint('200', { value: 5, unit: 'absolute' })).toBe(
+      'Accepts 195–205',
+    );
+  });
+
+  it('says only the key is accepted for margin 0', () => {
+    expect(formatMarginHint('200', { value: 0, unit: 'percent' })).toBe(
+      'Accepts only 200',
+    );
+  });
+
+  it('does not say only the key is accepted for a tiny nonzero margin', () => {
+    expect(formatMarginHint('1', { value: 0.001, unit: 'percent' })).toBe(
+      'Accepts 1',
+    );
+  });
+
+  it('asks for the answer while it is empty or not a number', () => {
+    const prompt = 'Enter the answer to see the accepted range';
+    expect(formatMarginHint('', { value: 10, unit: 'percent' })).toBe(prompt);
+    expect(formatMarginHint('lots', { value: 10, unit: 'percent' })).toBe(
+      prompt,
     );
   });
 });
