@@ -6,7 +6,7 @@ Parent spec: `.scratch/team-page/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Ended screen and menu show the link only with a stored code
-- [ ] The e2e quiz-night journey follows the link and sees the team's answers
+- [x] Ended screen and menu show the link only with a stored code
+- [x] The e2e quiz-night journey follows the link and sees the team's answers

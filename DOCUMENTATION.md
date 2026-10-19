@@ -1360,6 +1360,11 @@ feedback or the team code.
 - On a phone that stores a team code (`team-storage.ts`) the page opens directly;
   otherwise it shows a code form. A typed code is kept in memory only and is not
   saved.
+- **Links from the phone:** the `ended` phone screen shows an "Our team page"
+  link under the final placing, and the player menu (the hamburger drawer on
+  `/play`) shows one once the team has a team code. Both are plain `/team` links
+  with no code in the URL, and are hidden on a phone with no stored team code
+  (the ended screen reads `team-storage.ts`; the menu needs the joined team).
 
 The `/teams` directory (`GET /teams`) shows the same figure: each list item
 carries `averagePlacing: number | null`, computed by `averagePlacingOf` over
