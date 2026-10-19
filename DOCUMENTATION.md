@@ -800,7 +800,9 @@ grading behavior. Media is not a type: any question can carry a
   is no partial credit, a Number answer is never ungraded, and the admin can
   override any grade. **Editor:** a Number question shows a margin row next
   to the answer (a number field, decimals allowed, plus a `%` / `absolute`
-  toggle, 10% on a new question); a key of 0 with a percentage margin shows an
+  toggle, 10% on a new question) and a live hint of the accepted range
+  ("Accepts 180–220", "Accepts only 200" at margin 0, or a prompt to enter the
+  answer while it isn't a number); a key of 0 with a percentage margin shows an
   advisory hint, not an error. Switching Free text to Number keeps the prompt
   and keeps the answer only if it parses as a number. **CSV:** there is no
   margin column (like match's scoring mode): import fills in 10% and export

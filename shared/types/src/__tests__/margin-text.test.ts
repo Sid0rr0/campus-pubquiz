@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatAcceptedRange,
+  formatMarginHint,
   formatMarginText,
   formatNumberReveal,
 } from '../margin';
@@ -66,6 +67,34 @@ describe('formatNumberReveal', () => {
   it('shows the key as typed when it is not a number', () => {
     expect(formatNumberReveal('lots', { value: 10, unit: 'percent' })).toBe(
       'lots',
+    );
+  });
+});
+
+describe('formatMarginHint', () => {
+  it('shows the accepted range for a percent margin', () => {
+    expect(formatMarginHint('200', { value: 10, unit: 'percent' })).toBe(
+      'Accepts 180–220',
+    );
+  });
+
+  it('shows the accepted range for an absolute margin', () => {
+    expect(formatMarginHint('200', { value: 5, unit: 'absolute' })).toBe(
+      'Accepts 195–205',
+    );
+  });
+
+  it('says only the key is accepted for margin 0', () => {
+    expect(formatMarginHint('200', { value: 0, unit: 'percent' })).toBe(
+      'Accepts only 200',
+    );
+  });
+
+  it('asks for the answer while it is empty or not a number', () => {
+    const prompt = 'Enter the answer to see the accepted range';
+    expect(formatMarginHint('', { value: 10, unit: 'percent' })).toBe(prompt);
+    expect(formatMarginHint('lots', { value: 10, unit: 'percent' })).toBe(
+      prompt,
     );
   });
 });
