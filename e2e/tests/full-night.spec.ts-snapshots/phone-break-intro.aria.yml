@@ -1,0 +1,27 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - region "Rate these rounds":
+    - heading "Rate these rounds" [level=2]
+    - list:
+      - listitem:
+        - text: Warm-up
+        - button "Rate Warm-up 1 of 5"
+        - button "Rate Warm-up 5 of 5"
+      - listitem:
+        - text: Name that tune
+        - button "Rate Name that tune 1 of 5"
+        - button "Rate Name that tune 5 of 5"
+  - navigation "Round 1 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2 (answered)"
+  - navigation "Round 2 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2"
+  - heading "Put the planets in order from the Sun" [level=1]
+  - paragraph: Answering is locked for this question
+  - button "Answer history (4)"
+  - button /Bonus points \(\d+\)/

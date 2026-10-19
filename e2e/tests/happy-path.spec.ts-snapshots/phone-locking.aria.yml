@@ -1,0 +1,24 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - progressbar "Time left to answer"
+  - paragraph: Warm-up
+  - navigation "Round 1 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2 (answered)"
+  - paragraph: Name that tune
+  - navigation "Round 2 questions":
+    - button "Question 1"
+  - heading "Which band recorded the song you hear?" [level=1]
+  - paragraph: 👀 Look at the screen
+  - text: Your answer
+  - textbox "Your answer"
+  - button "Submit"
+  - button "I don't know"
+  - button "Answer history (3)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

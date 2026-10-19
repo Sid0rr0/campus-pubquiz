@@ -1,0 +1,11 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Name that tune
+  - paragraph: ROUND 2
+  - paragraph: QUESTION 1
+  - heading "Which band recorded the song you hear?" [level=1]
+  - paragraph: 0 OF 2 TEAMS ANSWERED
+- region "Notifications alt+T"
+- alert

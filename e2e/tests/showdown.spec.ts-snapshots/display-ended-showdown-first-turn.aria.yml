@@ -1,0 +1,8 @@
+- main:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: SHOWDOWN TIEBREAKER
+  - heading "How many seats does this room have?" [level=1]
+  - list:
+    - listitem: /Team [AB] [0-9a-f]{6} \d+/
+    - listitem: /Team [AB] [0-9a-f]{6} Answered/

@@ -15,9 +15,9 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** none
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Registry, snapshot helper and reporter exist; the reporter lists missing cells.
-- [ ] The happy path snapshots every status it visits on all three screens.
-- [ ] The audio question's player loads the intercepted fixture.
-- [ ] Existing journeys pass `--repeat-each=5`; frontend Vitest still passes.
+- [x] Registry, snapshot helper and reporter exist; the reporter lists missing cells.
+- [x] The happy path snapshots every status it visits on all three screens.
+- [x] The audio question's player loads the intercepted fixture.
+- [x] Existing journeys pass `--repeat-each=5`; frontend Vitest still passes.

@@ -1,0 +1,21 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - navigation "Round 1 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2 (answered)"
+    - button "Question 3"
+    - button "Question 4 (not open yet)" [disabled]
+  - heading "How many bones are in an adult human body?" [level=1]
+  - paragraph: /within \d+%/
+  - text: Your answer
+  - spinbutton "Your answer"
+  - button "Submit"
+  - button "I don't know"
+  - button "Answer history (3)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

@@ -6,13 +6,16 @@ import {
 } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import {
-  createSession,
-  importQuizNight,
   newAdminApi,
   type SeededSession,
   type SessionSettingsInput,
 } from '../support/api';
-import { ADMIN_STORAGE_STATE, E2E_LOCK_GRACE_SECONDS } from '../support/env';
+import { seedCsvSession } from '../support/csv-session';
+import {
+  ADMIN_STORAGE_STATE,
+  E2E_LOCK_GRACE_SECONDS,
+  PATHS,
+} from '../support/env';
 import { ControlScreen } from '../support/screens/control-screen';
 import { DisplayScreen } from '../support/screens/display-screen';
 import { PhoneScreen } from '../support/screens/phone-screen';
@@ -70,14 +73,14 @@ export const test = base.extend<TestFixtures>({
 
   session: async ({ adminApi, sessionSettings }, use) => {
     const quizTitle = `Quiz night ${newUniqueSuffix()}`;
-    const quizId = await importQuizNight(adminApi, quizTitle);
-    const joinCode = await createSession(
-      adminApi,
-      quizId,
-      quizTitle,
-      sessionSettings,
+    await use(
+      await seedCsvSession(
+        adminApi,
+        PATHS.csvFixture,
+        quizTitle,
+        sessionSettings,
+      ),
     );
-    await use({ joinCode, quizId, quizTitle });
   },
 
   control: async ({ newContext, session }, use) => {

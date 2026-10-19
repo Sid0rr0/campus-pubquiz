@@ -6,8 +6,10 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13, 14
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A full run has no unvisited cells or moves.
-- [ ] A full run takes under five minutes with `E2E_SKIP_BUILD=1`.
-- [ ] README updated.
+- [x] A full run has no unvisited cells or moves.
+- [x] A full run takes under five minutes with `E2E_SKIP_BUILD=1`.
+- [x] README updated.
+
+Measured: 22 of 22 passed in 2.7 min with `E2E_SKIP_BUILD=1` (ticket 15's run). After the review fixes (CSV import helper collapsed, frontend rebuilt): 22 of 22 passed in 3.1 min of test time, no coverage failures; the build before it is not counted. The full-night journey (2.3 min, with the 60 s fun-fact wait) sets the floor.

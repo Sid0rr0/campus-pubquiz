@@ -18,6 +18,8 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    // Fails a full run that left a status x screen cell or a move unvisited.
+    ['./support/coverage-reporter.ts'],
   ],
   outputDir: 'test-results',
   globalSetup: './global-setup.ts',

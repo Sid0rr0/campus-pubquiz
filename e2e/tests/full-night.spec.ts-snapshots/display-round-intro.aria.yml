@@ -1,0 +1,10 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: ROUND 1 — General knowledge
+  - heading "Warm-up" [level=1]
+  - paragraph: by Alex Author
+  - paragraph: Phones face down and pens up.
+- region "Notifications alt+T"
+- alert

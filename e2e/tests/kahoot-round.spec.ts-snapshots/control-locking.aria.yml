@@ -1,0 +1,46 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Kahoot [0-9a-z]+ [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: locking"
+    - paragraph: /Display:\s+R1Q1/
+    - link "Open display"
+    - button "Previous"
+    - button "Advance"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem /Team A [0-9a-f]{6} has answered/:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+      - listitem /Team B [0-9a-f]{6} has answered/:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+  - heading "Grade Questions" [level=2]
+  - img "Round 1"
+  - navigation "Quick fire questions":
+    - img "Quick fire title card": T
+    - button "Grade question 1 of Quick fire (live on display)" [pressed]
+    - button "Grade question 2 of Quick fire"
+  - paragraph: Round 1 (Quick fire) — Q1 of 2
+  - heading "Which planet is known as the Red Planet?" [level=2]
+  - paragraph: "Correct answer: Mars 2/2 answered 1 correct"
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 Bonus Total Actions"

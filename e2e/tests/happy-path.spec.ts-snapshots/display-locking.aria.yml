@@ -1,0 +1,9 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Name that tune
+  - paragraph: ROUND 2
+  - paragraph: QUESTION 1
+  - heading /You have the last minute to answer!|Time's almost up!/ [level=1]
+  - timer "Seconds until answers lock": /\d+/

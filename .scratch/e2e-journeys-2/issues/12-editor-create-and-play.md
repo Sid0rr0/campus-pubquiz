@@ -6,8 +6,8 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The quiz is built only through the editor UI.
-- [ ] The session plays the questions as authored.
-- [ ] Passes `--repeat-each=5`.
+- [x] The quiz is built only through the editor UI.
+- [x] The session plays the questions as authored.
+- [x] Passes `--repeat-each=5`.

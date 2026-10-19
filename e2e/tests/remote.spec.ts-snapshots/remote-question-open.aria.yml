@@ -1,0 +1,31 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: 1/1 teams answered
+  - paragraph: 0 correct
+  - text: /0:\d+/
+  - region "On display":
+    - heading "On display" [level=2]
+    - text: R1 Q1 free text — 1 pt
+    - paragraph: What is 2 + 2?
+    - paragraph: "Answer: 4"
+  - region "Notes":
+    - heading "Notes" [level=2]
+    - paragraph: Read it slowly.
+  - region "Up next":
+    - heading "Up next" [level=2]
+    - text: R1 Q2 free text — 1 pt
+    - paragraph: Which band recorded the song you hear?
+    - paragraph: "Media: https://example.invalid/e2e-clip.mp3"
+    - paragraph: "Answer: Queen"
+  - text: Display text size
+  - button "Decrease display text size": A−
+  - text: /\d+%/
+  - button "Increase display text size": A+
+  - button "Previous"
+  - button "Fullscreen media"
+  - button "Advance"
+- region "Notifications alt+T"
+- alert

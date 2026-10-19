@@ -1,0 +1,7 @@
+round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author
+Media,free_text,Which landmark is pictured?,,Tower,1,https://example.invalid/e2e-picture.png,,,,,
+Media,free_text,Which band recorded the song you hear?,,Queen,1,https://example.invalid/e2e-clip.mp3,,,,,
+Media,free_text,Which film is this scene from?,,Jaws,1,https://example.invalid/e2e-scene.webm,,"{start: 1, end: 5, revealStart: 2, revealEnd: 5}",,,
+Media,free_text,Who sings this song?,,Rick Astley,1,https://www.youtube.com/watch?v=dQw4w9WgXcQ,,"{start: 10, end: 20, revealStart: 12}",,,
+Media,free_text,Name the tune you hear,,Bohemian Rhapsody,1,https://example.invalid/e2e-hidden.webm,,{hideVideo: true},,,
+Media,free_text,Which team won the final?,,Reds,1,,https://example.invalid/e2e-answer.webm,"{revealStart: 1, revealEnd: 5}",1,,

@@ -122,7 +122,7 @@ installed yet.
 
 ```bash
 pnpm e2e                                   # build both apps, reset the DB, run every journey
-E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when only specs changed)
+E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when only specs changed; rebuild after pulling, the E2E frontend build bakes in a 1 s fun-fact delay)
 pnpm e2e tests/happy-path.spec.ts          # one file
 pnpm e2e --project=journeys                # one project
 pnpm e2e --repeat-each=5                   # flakiness check
@@ -155,6 +155,32 @@ is substituted in.
 **Report:** the HTML report is written to `e2e/playwright-report/`. Failed
 tests also keep a trace, screenshot and video in `e2e/test-results/`. Nothing is
 retried, and both folders are gitignored.
+
+**Coverage and snapshots:** every status × screen cell (big screen, phone,
+`/control`) and every move or overlay is listed in `e2e/support/coverage.ts`. A
+journey covers a cell with `await snap(screen, 'break_intro')`
+(`e2e/support/snapshots.ts`, API described at the top of that file), which
+compares the screen's ARIA structure with a snapshot file and records the cell;
+move helpers on the screen objects record their move. The check is on by
+default: a full run fails, listing every cell or move no passing test visited.
+Runs narrowed by file, `--project`, `--grep`, `--shard` or `--repeat-each` skip
+it, and `E2E_COVERAGE=off pnpm e2e` turns it off (for example while a new
+journey is still being written).
+
+To create or refresh snapshot files, run
+`pnpm e2e --update-snapshots=missing` (only absent files) or
+`--update-snapshots=all` (rewrite every one), together with a long
+`--timeout` (for example `--timeout=600000`), because a snapshot that doesn't
+match waits out the 10 s assertion timeout before it is rewritten. The files
+come out with this run's literal team names, codes and counters: hand-edit each
+into a regex before committing, or the next run fails.
+
+**Media:** URLs on `example.invalid` and `youtube.com/embed/*` are served from
+stand-ins in `e2e/support/media-stub.ts`, so no journey needs the network. The
+mp4 stand-in is only a box header that a `<video>` can't decode, so journeys
+that pause or replay a video use `e2e/support/decodable-video.ts`, which
+records a short WebM in the page itself (a few seconds of real time, once per
+worker) and serves it for every `.webm` URL on `example.invalid`.
 
 **Login throttle:** `POST /auth/login` allows 5 attempts per minute. Global
 setup logs the admin in once and every test reuses that saved login, and the one

@@ -1,0 +1,51 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Quiz night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: round_intro"
+    - paragraph: /Display:\s+R1Q1 \(T\)/
+    - link "Open display"
+    - button "Previous"
+    - button "Start Round"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+      - listitem:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+  - heading "Grade Questions" [level=2]
+  - img "Round 1"
+  - navigation "Warm-up questions":
+    - img "Warm-up title card (live on display)": T
+    - button "Grade question 1 of Warm-up"
+    - button "Grade question 2 of Warm-up"
+  - img "Round 2"
+  - navigation "Name that tune questions":
+    - img "Name that tune title card": T
+    - button "Grade question 1 of Name that tune"
+    - img "Name that tune break card": B
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 2 Bonus Total Actions"
+    - rowgroup:
+      - row /Team A [0-9a-f]{6} 0 0 0 0 Actions for Team A [0-9a-f]{6}/
+      - row /Team B [0-9a-f]{6} 0 0 0 0 Actions for Team B [0-9a-f]{6}/

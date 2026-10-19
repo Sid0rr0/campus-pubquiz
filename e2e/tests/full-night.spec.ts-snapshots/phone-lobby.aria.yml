@@ -1,0 +1,20 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - heading "You're in!" [level=1]
+  - paragraph: /Look for Team A [0-9a-f]{6} on the big screen/
+  - paragraph: Waiting for the quiz to start…
+  - region "How many players does your team have?":
+    - heading "How many players does your team have?" [level=2]
+    - button "Fewer players": −
+    - status "Number of players": "4"
+    - button "More players": +
+    - button "Send"
+  - link "Read the rules":
+    - /url: /\/rules\?code=[A-Z]+(-[A-Z]+){2}/
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

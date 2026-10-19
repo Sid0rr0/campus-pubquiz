@@ -55,7 +55,7 @@ export function SessionStatusPanel({
       )}
       <p className="text-sm font-bold">Status: {progressStatus}</p>
       <div className="flex flex-wrap items-center gap-3">
-        <span>
+        <p>
           Display: R{roundIndex + 1}Q{questionIndex + 1}
           {displayCardMarker && (
             <span
@@ -70,7 +70,7 @@ export function SessionStatusPanel({
               ({displayCardMarker})
             </span>
           )}
-        </span>
+        </p>
         <Link
           href={`/display?code=${joinCode}`}
           target="_blank"

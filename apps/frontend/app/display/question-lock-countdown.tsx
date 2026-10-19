@@ -62,6 +62,8 @@ export function QuestionLockCountdown({ lockAt }: QuestionLockCountdownProps) {
   return (
     <div
       data-testid="question-lock-countdown"
+      role="timer"
+      aria-label="Seconds until answers lock"
       className="relative flex h-24 w-24 items-center justify-center"
     >
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">

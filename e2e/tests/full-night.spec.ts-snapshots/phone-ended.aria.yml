@@ -1,0 +1,25 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - heading "Quiz complete!" [level=1]
+  - paragraph: You finished 1st of 2
+  - region "Rate the rounds":
+    - heading "Rate the rounds" [level=2]
+    - list:
+      - listitem:
+        - text: Warm-up
+        - button "Rate Warm-up 1 of 5"
+        - button "Rate Warm-up 5 of 5"
+      - listitem:
+        - text: Name that tune
+      - listitem:
+        - text: Look closer
+      - listitem:
+        - text: Quick fire
+    - textbox "Anything else?"
+    - button "Send"
+  - button /Answer history \(\d+\)/
+  - button "Bonus points (0)"

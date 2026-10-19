@@ -1,0 +1,16 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Warm-up
+  - paragraph: ROUND 1
+  - paragraph: QUESTION 2
+  - heading "Which planet is known as the Red Planet?" [level=1]
+  - list:
+    - listitem: A Venus
+    - listitem: B Mars
+    - listitem: C Jupiter
+  - img "Question image"
+  - paragraph: 0 OF 2 TEAMS ANSWERED
+- region "Notifications alt+T"
+- alert

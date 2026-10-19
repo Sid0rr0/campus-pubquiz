@@ -1,0 +1,23 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - paragraph: Warm-up
+  - navigation "Round 1 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2 (not open yet)" [disabled]
+  - paragraph: Name that tune
+  - navigation "Round 2 questions":
+    - button "Question 1 (not open yet)" [disabled]
+  - heading "What is the capital of France?" [level=1]
+  - paragraph: "Submitted: Paris"
+  - text: Your answer
+  - textbox "Your answer": Paris
+  - button "Submitted"
+  - button "I don't know"
+  - button "Answer history (1)"
+  - button "Bonus points (0)"
+- region "Notifications alt+T"
+- alert

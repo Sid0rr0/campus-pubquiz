@@ -56,7 +56,7 @@ How a question is answered: typed text, a number, picking a choice, putting item
 _Avoid_: input kind (the registry field that is its default)
 
 **Showdown**:
-A tiebreak played between teams tied on the leaderboard, with the teams taking turns in a fixed seat order.
+A tiebreak played between teams tied on the leaderboard, in which every tied team guesses at once and the guesses are then revealed one by one in a fixed seat order.
 _Avoid_: tiebreaker round, sudden death
 
 **Grading**:

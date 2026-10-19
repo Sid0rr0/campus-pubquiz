@@ -1,0 +1,11 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Warm-up
+  - paragraph: ROUND 1
+  - paragraph: QUESTION 1
+  - heading "What is the capital of France?" [level=1]
+  - paragraph: 2 OF 2 TEAMS ANSWERED
+- region "Notifications alt+T"
+- alert
