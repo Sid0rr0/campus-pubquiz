@@ -172,12 +172,31 @@ export interface FeedbackTrendsSession {
   rating: SessionDetailRoundRating | null;
 }
 
+/** A round needs at least this many ratings to appear in the best/worst lists. */
+export const MIN_RATINGS_FOR_RANKING = 3;
+/** How many rounds each of the best/worst lists holds. */
+export const TREND_ROUNDS_LIMIT = 5;
+
+/** One round of one session in the best/worst lists. */
+export interface FeedbackTrendsRound {
+  sessionId: number;
+  /** The session's display name, as everywhere else. */
+  sessionName: string;
+  roundTitle: string;
+  average: number;
+  count: number;
+}
+
 /** Anonymous feedback across many ended sessions, behind `/stats/feedback`. Never carries a team. */
 export interface FeedbackTrends {
   /** Oldest to newest. Sessions with feedback off are left out. */
   sessions: FeedbackTrendsSession[];
   /** Topic suggestions from those sessions, grouped like a single session's; sorted by count, then alphabetically. */
   topics: SessionDetailFeedbackTopic[];
+  /** Highest average first; ties by more ratings, then the newer session. */
+  bestRounds: FeedbackTrendsRound[];
+  /** Lowest average first; ties by more ratings, then the newer session. */
+  worstRounds: FeedbackTrendsRound[];
 }
 
 /** Deep-dive stats for one ended session, behind `/stats/:id`. */

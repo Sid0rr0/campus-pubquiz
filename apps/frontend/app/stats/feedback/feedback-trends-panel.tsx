@@ -6,6 +6,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchFeedbackTrends, StatsApiError } from '@/app/lib/stats-api';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
+import { BestAndWorstRounds } from '@/app/stats/feedback/best-and-worst-rounds';
 import { RatingsOverTimeTable } from '@/app/stats/feedback/ratings-over-time-table';
 import { TopicSuggestionsList } from '@/app/stats/feedback/topic-suggestions-list';
 
@@ -83,10 +84,16 @@ export function FeedbackTrendsPanel() {
       )}
 
       {data ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-display text-lg">Ratings over time</h2>
-          <RatingsOverTimeTable sessions={data.sessions} />
-        </section>
+        <>
+          <section className="flex flex-col gap-2">
+            <h2 className="font-display text-lg">Ratings over time</h2>
+            <RatingsOverTimeTable sessions={data.sessions} />
+          </section>
+          <BestAndWorstRounds
+            bestRounds={data.bestRounds}
+            worstRounds={data.worstRounds}
+          />
+        </>
       ) : (
         !error && <p className="font-display text-xl">Loading…</p>
       )}
