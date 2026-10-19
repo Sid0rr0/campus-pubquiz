@@ -6,7 +6,7 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Each page shows the played session's data.
-- [ ] Passes `--repeat-each=5`.
+- [x] Each page shows the played session's data.
+- [x] Passes `--repeat-each=5`.
