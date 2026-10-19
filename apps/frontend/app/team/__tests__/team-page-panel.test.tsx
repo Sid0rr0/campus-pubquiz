@@ -1,19 +1,24 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { TeamPageHistory } from '@campus-pubquiz/types';
+import type { TeamNightDetail, TeamPageHistory } from '@campus-pubquiz/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TEAM_CODE_STORAGE_KEY } from '@/app/lib/team-storage';
 import { TeamsApiError } from '@/app/lib/teams-api';
 import { TeamPagePanel } from '@/app/team/team-page-panel';
 import { renderWithQuery } from '@/test-utils/query';
 
-const { mockFetchTeamPage } = vi.hoisted(() => ({
+const { mockFetchTeamPage, mockFetchTeamNight } = vi.hoisted(() => ({
   mockFetchTeamPage: vi.fn(),
+  mockFetchTeamNight: vi.fn(),
 }));
 
 vi.mock('@/app/lib/teams-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/lib/teams-api')>();
-  return { ...actual, fetchTeamPage: mockFetchTeamPage };
+  return {
+    ...actual,
+    fetchTeamPage: mockFetchTeamPage,
+    fetchTeamNight: mockFetchTeamNight,
+  };
 });
 
 const HISTORY: TeamPageHistory = {

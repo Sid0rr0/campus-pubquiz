@@ -1366,6 +1366,26 @@ feedback or the team code.
   with no code in the URL, and are hidden on a phone with no stored team code
   (the ended screen reads `team-storage.ts`; the menu needs the joined team).
 
+**A night in detail.** Each listed session is a button; opening it calls
+`POST /team-page/sessions/:sessionId` with `{ teamCode }` and shows the night
+inside the same `/team` page (nothing in the URL). The response is
+`TeamNightDetail`: every question of the session's quiz in order (round by
+round) with the round title and number, the question number, text, type and
+answer kind, the question's points, the team's own answer (null when it gave
+none), its verdict and points earned, and the right answer.
+
+- **Answers are formatted on the server by answer kind** (`formatAnswer`: text,
+  number and choice as typed; order as an arrow chain; pairs as `left → right`),
+  for the team's answer and the key alike. A missing answer reads "No answer".
+  Media questions show their text and answer, not the media.
+- **Only the team's own answers are read.** Another team's answers never enter
+  the response.
+- **Only ended sessions the team took part in** (`StandingsService.hasTakenPart`:
+  on the roster, or kicked or left with answers or bonus awards). A session still
+  running, one the team never joined and an unknown session or code all get the
+  same generic 404, so a kicked team still sees its answers. Validation, the
+  throttler and the public route are the same as for `POST /team-page`.
+
 The `/teams` directory (`GET /teams`) shows the same figure: each list item
 carries `averagePlacing: number | null`, computed by `averagePlacingOf` over
 `TeamHistoryService.resultsForTeams`, so the directory and a team's page always
