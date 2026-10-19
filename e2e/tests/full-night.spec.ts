@@ -125,7 +125,7 @@ async function lockBlockOne(night: Night): Promise<void> {
 
 /** The first break: bonus, grading and the fun fact (which takes a minute to appear, so everything else happens while it counts down). */
 async function playFirstBreak(night: Night): Promise<void> {
-  const { control, display, phoneA, phoneB } = night;
+  const { control, display, phoneB } = night;
   await display.expectBreak(1);
   await snapAllScreens(night, 'break_intro');
   await phoneB.openQuestion(1, 1);
