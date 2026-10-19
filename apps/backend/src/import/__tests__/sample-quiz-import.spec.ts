@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { QUESTION_TYPES, type SheetRow } from '@campus-pubquiz/types';
 import { parseSheetCsv } from '@/import/sheet-csv.parser';
 import { assembleImportPreview } from '@/import/question-row.schema';
 
@@ -9,31 +10,31 @@ const SAMPLE_CSV_PATH = join(
 );
 
 describe('sample-quiz-import.csv', () => {
-  const preview = assembleImportPreview(
-    'Sample',
-    parseSheetCsv(readFileSync(SAMPLE_CSV_PATH, 'utf8')),
-  );
+  const rows = parseSheetCsv(readFileSync(SAMPLE_CSV_PATH, 'utf8'));
+  const preview = assembleImportPreview('Sample', rows);
 
   it('imports without issues', () => {
     expect(preview.issues).toEqual([]);
     expect(preview.isImportable).toBe(true);
   });
 
-  it('covers every question type once or more, including number', () => {
+  it('fills every import column in at least one row', () => {
+    const columns = Object.keys(rows[0]).filter(
+      (column): column is keyof SheetRow => column !== 'rowNumber',
+    );
+    const unusedColumns = columns.filter((column) =>
+      rows.every((row) => String(row[column]).trim() === ''),
+    );
+
+    expect(unusedColumns).toEqual([]);
+  });
+
+  it('covers every question type once or more', () => {
     const types = preview.rounds.flatMap((round) =>
       round.questions.map((question) => question.type),
     );
 
-    expect(new Set(types)).toEqual(
-      new Set([
-        'free_text',
-        'multiple_choice',
-        'closest_guess',
-        'number',
-        'sort',
-        'match',
-      ]),
-    );
+    expect(new Set(types)).toEqual(new Set(QUESTION_TYPES));
   });
 
   it('carries an audio file on an ordinary question', () => {
