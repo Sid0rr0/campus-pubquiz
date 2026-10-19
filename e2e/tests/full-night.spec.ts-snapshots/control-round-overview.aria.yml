@@ -1,0 +1,50 @@
+- banner:
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Full night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: round_overview"
+    - paragraph: /Display:\s+R\dQ\d/
+    - link "Open display"
+    - button "Previous"
+    - button "Continue"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+      - listitem:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+  - heading "Grade Questions" [level=2]
+  - navigation "Warm-up questions":
+    - button /Grade question 1 of Warm-up/
+    - button /Grade question 2 of Warm-up/
+  - navigation "Name that tune questions":
+    - button /Grade question 1 of Name that tune/
+    - button /Grade question 2 of Name that tune/
+  - navigation "Look closer questions":
+    - button /Grade question 1 of Look closer/
+    - button /Grade question 2 of Look closer/
+    - button /Grade question 3 of Look closer/
+    - button /Grade question 4 of Look closer/
+  - navigation "Quick fire questions":
+    - button /Grade question 1 of Quick fire/
+    - button /Grade question 2 of Quick fire/
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 2 3 4 Bonus Total Actions"

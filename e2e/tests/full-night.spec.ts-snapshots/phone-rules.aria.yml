@@ -1,0 +1,12 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - heading "Rules" [level=1]
+  - paragraph: There will be 4 topics, 2 to 4 questions each, with a break after round 2, 3 and 4.
+  - list:
+    - listitem: Max 6 players per team, every additional player costs the team −2 points.
+    - listitem: No cheating.
+  - button "Bonus points (0)"

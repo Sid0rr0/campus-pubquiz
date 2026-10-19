@@ -1,0 +1,11 @@
+round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author,round_note,show_round_note
+Warm-up,free_text,What is the capital of France?,,Paris,2,,,,,,,,
+Warm-up,multiple_choice,Which planet is known as the Red Planet?,Venus|Mars|Jupiter,Mars,3,https://example.invalid/e2e-planet.png,,,0,General knowledge,Alex Author,Phones face down and pens up.,1
+Name that tune,free_text,Which band recorded the song you hear?,,Queen,1,https://example.invalid/e2e-clip.mp3,,,,,,,
+Name that tune,sort,Put the planets in order from the Sun,Earth|Mercury|Mars|Venus,Mercury|Venus|Earth|Mars,2,,,,1,Music,Sam Spinner,Headphones off and ears open.,0
+Look closer,closest_guess,How many keys does a standard piano have?,,88,2,,,,,,,,
+Look closer,free_text,Which film is this clip from?,,Inception,1,https://example.invalid/e2e-clip.mp4,,,,,,,
+Look closer,match,Match each capital to its country,Paris|Tokyo+France|Japan,Paris+France|Tokyo+Japan,2,,,,,,,,
+Look closer,number,In which year did the Berlin Wall fall?,,1989,2,,,,1,Film & TV,Pat Projector,,
+Quick fire,multiple_choice,Which sport uses a shuttlecock?,Tennis|Badminton|Squash,Badminton,2,,,,,,,,
+Quick fire,number,How many players does a football team field?,,11,2,,,,1,Sports,Kay Kahoot,,

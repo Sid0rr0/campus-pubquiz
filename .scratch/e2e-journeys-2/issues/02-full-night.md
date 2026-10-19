@@ -10,9 +10,11 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Every status cell for the big screen and phone is visited.
-- [ ] `PREVIOUS` through break review, leaderboard and join overlay moves are recorded.
-- [ ] Final standings are asserted by hand.
-- [ ] Passes `--repeat-each=5`.
+- [x] Every status cell for the big screen and phone is visited.
+- [x] `PREVIOUS` through break review, leaderboard and join overlay moves are recorded.
+- [x] Final standings are asserted by hand.
+- [x] Passes `--repeat-each=5`.
+
+Notes: the break screen's first fun fact only appears 60 s after it is put on air (a client timer, `FUN_FACT_START_DELAY_MS`), so the journey waits it out in real time while it grades; the whole night takes about 2.3 minutes. The video clip stand-in is not decodable, so the journey asserts only the video question's prompt.

@@ -1,0 +1,12 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - heading "Rounds" [level=1]
+  - list:
+    - listitem: Warm-upGeneral knowledge by Alex Author
+    - listitem: Name that tuneMusic by Sam Spinner
+    - listitem: Look closerFilm & TV by Pat Projector
+    - listitem: Quick fireSports by Kay Kahoot
+- region "Notifications alt+T"
+- alert
