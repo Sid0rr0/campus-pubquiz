@@ -78,7 +78,9 @@ describe('PlayPage — break and reveal', () => {
       progress: { status: 'reveal', revealIndex: 0 },
     });
 
-    expect(screen.getByText('200 · 180–220 accepted')).toBeInTheDocument();
+    expect(
+      screen.getByText('200 (anything from 180 to 220 counts)'),
+    ).toBeInTheDocument();
   });
 
   it('tells the team answering is locked during the grading break', () => {
