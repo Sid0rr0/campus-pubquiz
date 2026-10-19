@@ -6,8 +6,8 @@ Parent spec: `.scratch/e2e-journeys-2/spec.md`
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The exported file re-imports without errors.
-- [ ] The re-imported quiz matches the original question by question.
-- [ ] Passes `--repeat-each=5`.
+- [x] The exported file re-imports without errors.
+- [x] The re-imported quiz matches the original question by question.
+- [x] Passes `--repeat-each=5`.

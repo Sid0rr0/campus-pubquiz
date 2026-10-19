@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
+import path from 'node:path';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { ADMIN_STORAGE_STATE, PATHS } from '../support/env';
@@ -42,6 +43,7 @@ const IDENTITY_KEYS = new Set([
   'id',
   'quizId',
   'roundId',
+  'questionId',
   'title',
   'createdAt',
   'updatedAt',
@@ -81,7 +83,7 @@ test('the full-night quiz exported as CSV re-imports as the same quiz', async ({
   const originalId = await importAndSave(
     page,
     originalTitle,
-    fs.readFileSync(PATHS.csvFixture),
+    fs.readFileSync(path.join(PATHS.e2eRoot, 'fixtures', 'full-night.csv')),
   );
   await page.reload();
   await expect(page.getByPlaceholder('Untitled quiz')).toHaveValue(
