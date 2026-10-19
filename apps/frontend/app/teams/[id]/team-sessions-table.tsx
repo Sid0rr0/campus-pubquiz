@@ -38,7 +38,10 @@ function sharePercent(row: TeamSessionRow): number {
 
 const staffSessionHref: SessionHref = (id) => `/stats/${id}`;
 
-const buildColumns = (sessionHref: SessionHref) =>
+const buildColumns = (
+  sessionHref: SessionHref,
+  onOpenSession: ((gameSessionId: number) => void) | undefined,
+) =>
   helper.columns([
     helper.accessor((row) => new Date(row.playedAt).getTime(), {
       id: 'playedAt',
@@ -50,6 +53,17 @@ const buildColumns = (sessionHref: SessionHref) =>
     helper.accessor('name', {
       header: 'Session',
       cell: (context) => {
+        if (onOpenSession) {
+          return (
+            <button
+              type="button"
+              onClick={() => onOpenSession(context.row.original.gameSessionId)}
+              className="text-left underline-offset-2 hover:underline"
+            >
+              {context.getValue()}
+            </button>
+          );
+        }
         const href = sessionHref(context.row.original.gameSessionId);
         return href === null ? (
           context.getValue()
@@ -99,16 +113,22 @@ const buildColumns = (sessionHref: SessionHref) =>
 
 interface TeamSessionsTableProps {
   sessions: TeamSessionRow[];
-  /** Defaults to the staff session stats page; the public team page passes none, as staff pages are closed to teams. */
+  /** Defaults to the staff session stats page. */
   sessionHref?: SessionHref;
+  /** Makes each session name a button instead of a link; the public team page uses it, as staff pages are closed to teams and its team code stays out of URLs. */
+  onOpenSession?: (gameSessionId: number) => void;
 }
 
 /** A team's ended sessions, sortable and paginated in the browser (the server sends the whole history). */
 export function TeamSessionsTable({
   sessions,
   sessionHref = staffSessionHref,
+  onOpenSession,
 }: TeamSessionsTableProps) {
-  const columns = useMemo(() => buildColumns(sessionHref), [sessionHref]);
+  const columns = useMemo(
+    () => buildColumns(sessionHref, onOpenSession),
+    [sessionHref, onOpenSession],
+  );
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'playedAt', desc: true },
   ]);

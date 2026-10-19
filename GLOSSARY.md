@@ -153,7 +153,7 @@ The mean of a team's placings across the ended sessions it played, leaving out t
 _Avoid_: average position, average rank
 
 **Team page**:
-A team's own public page at `/team`, opened with its team code instead of a login. It shows the team's history across ended sessions (the same figures staff see on the team stats page, minus anything staff-only). It never shows other teams' answers or feedback.
+A team's own public page at `/team`, opened with its team code instead of a login. It shows the team's history across ended sessions (the same figures staff see on the team stats page, minus anything staff-only), and for each ended session every question with the team's own answer, its verdict and the right answer. It never shows other teams' answers or feedback.
 _Avoid_: team profile, team stats page (that is the staff page at `/teams/[id]`)
 
 **Team link**:

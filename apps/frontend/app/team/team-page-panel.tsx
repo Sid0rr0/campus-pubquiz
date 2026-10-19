@@ -7,7 +7,12 @@ import { Button } from '@/app/components/button';
 import { apiErrorMessage } from '@/app/lib/api-error-message';
 import { queryKeys } from '@/app/lib/query-keys';
 import { readStoredIdentity } from '@/app/lib/team-storage';
-import { fetchTeamPage, TeamsApiError } from '@/app/lib/teams-api';
+import type { TeamNightQuestion, Verdict } from '@campus-pubquiz/types';
+import {
+  fetchTeamNight,
+  fetchTeamPage,
+  TeamsApiError,
+} from '@/app/lib/teams-api';
 import { SummaryTiles } from '@/app/teams/[id]/team-detail-panel';
 import { TeamSessionsTable } from '@/app/teams/[id]/team-sessions-table';
 
@@ -74,6 +79,97 @@ function CenteredMessage({ children }: { children: string }) {
   );
 }
 
+const VERDICT_LABEL: Record<Verdict, string> = {
+  correct: 'Correct',
+  partial: 'Partly right',
+  incorrect: 'Incorrect',
+};
+
+function NightQuestionItem({ question }: { question: TeamNightQuestion }) {
+  return (
+    <li className="flex flex-col gap-2 rounded-2xl border-2 border-foreground/15 bg-white p-4">
+      <p className="text-xs font-extrabold tracking-wide text-foreground/55">
+        <span>{question.roundTitle}</span> · Question {question.questionNumber}
+      </p>
+      <p className="font-bold">{question.prompt}</p>
+      <div data-answer-kind={question.answerKind} className="flex flex-col">
+        <span className="text-xs text-foreground/55">Your answer</span>
+        {question.teamAnswer === null ? (
+          <span className="italic text-foreground/60">No answer</span>
+        ) : (
+          <span className="font-bold">{question.teamAnswer}</span>
+        )}
+      </div>
+      <div className="flex flex-col">
+        <span className="text-xs text-foreground/55">Right answer</span>
+        <span className="font-bold">{question.correctAnswer}</span>
+      </div>
+      <p className="flex gap-3 text-sm">
+        {question.verdict !== null && (
+          <span className="font-extrabold">
+            {VERDICT_LABEL[question.verdict]}
+          </span>
+        )}
+        <span>
+          {question.pointsAwarded} / {question.points}
+        </span>
+      </p>
+    </li>
+  );
+}
+
+function NightDetail({
+  code,
+  gameSessionId,
+  onBack,
+}: {
+  code: string;
+  gameSessionId: number;
+  onBack: () => void;
+}) {
+  const nightQuery = useQuery({
+    queryKey: queryKeys.teams.night(code, gameSessionId),
+    queryFn: ({ signal }) => fetchTeamNight(code, gameSessionId, signal),
+    retry: false,
+  });
+  const error = apiErrorMessage(
+    nightQuery.error,
+    TeamsApiError,
+    'Could not load this night',
+  );
+
+  return (
+    <main className="flex min-h-screen flex-col gap-4 bg-background p-6 text-foreground">
+      <button
+        type="button"
+        onClick={onBack}
+        className="self-start text-sm text-foreground/60 underline-offset-2 hover:underline"
+      >
+        ← Back to history
+      </button>
+      {error && (
+        <p role="alert" className="font-extrabold text-magenta">
+          {error}
+        </p>
+      )}
+      {nightQuery.data && (
+        <>
+          <h1 className="font-display text-2xl">{nightQuery.data.name}</h1>
+          <ol className="flex flex-col gap-3">
+            {nightQuery.data.questions.map((question) => (
+              <NightQuestionItem
+                key={question.questionId}
+                question={question}
+              />
+            ))}
+          </ol>
+        </>
+      )}
+      {!error && !nightQuery.data && <p>Loading…</p>}
+    </main>
+  );
+}
+
 /**
  * A team's own history, opened with its team code: the phone's stored code
  * when it has one, otherwise a code typed here. A typed code is kept in
@@ -85,6 +181,7 @@ export function TeamPagePanel() {
     undefined,
   );
   const [enteredCode, setEnteredCode] = useState<string | null>(null);
+  const [openSessionId, setOpenSessionId] = useState<number | null>(null);
 
   useEffect(() => {
     // Reading localStorage is only possible in the browser, after mount.
@@ -116,6 +213,16 @@ export function TeamPagePanel() {
     return <CenteredMessage>Loading…</CenteredMessage>;
   }
 
+  if (openSessionId !== null && code !== null) {
+    return (
+      <NightDetail
+        code={code}
+        gameSessionId={openSessionId}
+        onBack={() => setOpenSessionId(null)}
+      />
+    );
+  }
+
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-background p-6 text-foreground">
       <div className="flex flex-col gap-1">
@@ -137,15 +244,13 @@ export function TeamPagePanel() {
           <SummaryTiles summary={data.summary} />
           <section className="flex flex-col gap-2">
             <h2 className="font-display text-lg">Sessions</h2>
-            <TeamSessionsTable sessions={data.sessions} sessionHref={noHref} />
+            <TeamSessionsTable
+              sessions={data.sessions}
+              onOpenSession={setOpenSessionId}
+            />
           </section>
         </>
       )}
     </main>
   );
-}
-
-/** Teams have no stats page per session, so session names are plain text. */
-function noHref(): null {
-  return null;
 }

@@ -1,6 +1,7 @@
 import type {
   TeamCodeView,
   TeamDetail,
+  TeamNightDetail,
   TeamPageHistory,
   TeamsListedPayload,
   TeamsSortColumn,
@@ -80,6 +81,25 @@ export async function fetchTeamPage(
   });
   if (!response.ok) return throwApiError(response, 'Could not load team page');
   return (await response.json()) as TeamPageHistory;
+}
+
+/** One ended night of the public team page. The code goes in the POST body, never a URL, and no cookie is sent. */
+export async function fetchTeamNight(
+  teamCode: string,
+  gameSessionId: number,
+  signal?: AbortSignal,
+): Promise<TeamNightDetail> {
+  const response = await fetch(
+    `${getBackendUrl()}/team-page/sessions/${gameSessionId}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamCode }),
+      signal,
+    },
+  );
+  if (!response.ok) return throwApiError(response, 'Could not load this night');
+  return (await response.json()) as TeamNightDetail;
 }
 
 export async function fetchTeamCode(
