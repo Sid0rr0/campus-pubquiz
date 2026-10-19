@@ -1,0 +1,6 @@
+- main:
+  - paragraph: Quick fire
+  - paragraph: ROUND 1
+  - paragraph: QUESTION 1
+  - heading /You have the last minute to answer!|Time's almost up!/ [level=1]
+  - timer "Seconds until answers lock": /\d+/
