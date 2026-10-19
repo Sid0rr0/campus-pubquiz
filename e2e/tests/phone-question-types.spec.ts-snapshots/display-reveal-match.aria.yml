@@ -1,0 +1,15 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Phone types
+  - paragraph: ROUND 1
+  - paragraph: REVEALING ANSWERS · QUESTION 2
+  - heading "Match each country to its capital" [level=1]
+  - list:
+    - listitem: 1 France b Paris
+    - listitem: 2 Spain a Madrid
+    - listitem: 3 Italy c Rome
+  - paragraph: 1 of 2 teams +1 close
+- region "Notifications alt+T"
+- alert

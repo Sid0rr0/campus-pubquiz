@@ -1,0 +1,5 @@
+round,type,question,options,answer,points,media_url,answer_media_url,notes,break_after,category,author
+Phone types,sort,Put these planets in order from the Sun,Venus|Mercury|Earth|Mars,Mercury|Venus|Earth|Mars,2,,,,,,
+Phone types,match,Match each country to its capital,France|Spain|Italy+Madrid|Paris|Rome,France+Paris|Spain+Madrid|Italy+Rome,3,,,,,,
+Phone types,number,How many bones are in an adult human body?,,206,2,,,,,,
+Phone types,closest_guess,How many metres tall is the Eiffel Tower?,,330,4,,,,1,,

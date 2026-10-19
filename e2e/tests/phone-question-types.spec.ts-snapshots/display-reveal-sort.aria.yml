@@ -1,0 +1,16 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: Phone types
+  - paragraph: ROUND 1
+  - paragraph: REVEALING ANSWERS · QUESTION 1
+  - heading "Put these planets in order from the Sun" [level=1]
+  - list:
+    - listitem: 1 Mercury
+    - listitem: 2 Venus
+    - listitem: 3 Earth
+    - listitem: 4 Mars
+  - paragraph: 1 of 2 teams
+- region "Notifications alt+T"
+- alert
