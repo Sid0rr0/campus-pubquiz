@@ -44,3 +44,5 @@ Worktree setup is `pnpm bootstrap` (root `package.json`): `pnpm install` plus th
   _Why:_ the orchestrator pasted a hand-rolled `mkdir` lock into every brief, and while waiting, six implementers called `Monitor` with ToolSearch's arguments or tried a blocked `sleep`.
 - **Step 10 (2026-10-20 retro)**: remove every worktree holding the integration branch or a `ticket/*` branch, done when `git worktree list` shows none, and repeat after later conflict/review fixes; delete branches only after `git checkout main && git pull --ff-only`.
   _Why:_ twice the user's `git checkout integration/…` failed with "already used by worktree" (a merger's and a conflict-fixer's worktree), and `git branch -d` refused merged ticket branches because local `main` hadn't caught up.
+- **implement-spec steps 4 and 11 (2026-10-20)**: implementers no longer run `pnpm e2e`; the orchestrator runs it once on the integration tip in step 11, before pushing and opening the PR.
+  _Why:_ every implementer queued on the shared e2e run lock, serialising the run; the journeys only need to pass on the final tip.
