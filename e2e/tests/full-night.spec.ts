@@ -2,6 +2,7 @@ import type { Status } from '../support/coverage';
 import { expect, FULL_NIGHT, test } from '../support/full-night';
 import {
   awardBonus,
+  expectPodiumStep,
   expectStandingsRow,
   previousAcrossBlock,
   previousInBreakReview,
@@ -368,9 +369,14 @@ async function playKahootRound(night: Night): Promise<void> {
 }
 
 async function endTheNight(night: Night): Promise<void> {
-  const { control, phoneA, phoneB } = night;
+  const { control, display, phoneA, phoneB } = night;
   await control.advance('ended');
-  await revealStandings(night, { a: TEAM_A_FINAL, b: TEAM_B_FINAL });
+  await control.revealNextLeaderboardTeam();
+  await expectPodiumStep(display, phoneB.teamName, TEAM_B_FINAL);
+  await phoneB.expectOwnStanding(TEAM_B_FINAL);
+  await control.revealNextLeaderboardTeam();
+  await expectPodiumStep(display, phoneA.teamName, TEAM_A_FINAL);
+  await phoneA.expectOwnStanding(TEAM_A_FINAL);
   await control.toggleLeaderboard();
   await phoneA.expectText('You finished 1st of 2');
   await phoneB.expectText('You finished 2nd of 2');

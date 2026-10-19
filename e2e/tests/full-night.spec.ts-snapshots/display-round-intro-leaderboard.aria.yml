@@ -1,0 +1,8 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - heading "Leaderboard" [level=1]
+  - list:
+    - listitem: /1\. Team A [0-9a-f]{6} \S*\s*6/
+    - listitem: /2\. Team B [0-9a-f]{6} \S*\s*2/

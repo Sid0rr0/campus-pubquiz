@@ -1,0 +1,9 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - list "Podium":
+    - listitem: /Team B [0-9a-f]{6} 4 pts 2\./
+    - listitem: /Team A [0-9a-f]{6} 11 pts 1\./
+  - heading "Quiz complete!" [level=1]
+  - paragraph: Thank you for playing today's pub quiz! Rate the rounds and help us make the quiz better - on your phones or talk to us. See you next week!

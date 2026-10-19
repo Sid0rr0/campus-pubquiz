@@ -34,7 +34,7 @@
     - button /Grade question 1 of Warm-up \(live on display\)/
     - button /Grade question 2 of Warm-up/
   - heading "What is the capital of France?" [level=2]
-  - paragraph: /Correct answer: Paris/
+  - paragraph: /Correct answer:\s+Paris/
   - list:
     - listitem:
       - text: /Team A [0-9a-f]{6} Paris/

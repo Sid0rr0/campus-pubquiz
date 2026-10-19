@@ -44,7 +44,7 @@ export async function toggleJoinOverlay(
 ): Promise<void> {
   const button = control.page
     .locator('aside')
-    .getByRole('button', { name: 'Join overlay' });
+    .getByRole('button', { name: 'Join overlay', exact: true });
   await button.click();
   await expect(button).toHaveAttribute('aria-pressed', String(isShownAfter));
   recordMove('join_overlay');
@@ -61,6 +61,19 @@ export async function expectStandingsRow(
     .getByRole('listitem')
     .filter({ hasText: teamName });
   await expect(row).toHaveText(new RegExp(`${teamName}\\D*${points}$`));
+}
+
+/** The final board puts every top-three team on a podium step instead of in the list. */
+export async function expectPodiumStep(
+  display: DisplayScreen,
+  teamName: string,
+  points: number,
+): Promise<void> {
+  const step = display.page
+    .getByTestId('podium')
+    .getByRole('listitem')
+    .filter({ hasText: teamName });
+  await expect(step).toContainText(`${points} pts`);
 }
 
 /** Awards the team the default one-point bonus of `categoryLabel` ("Shot" or "Selfie") from the Teams table. */
