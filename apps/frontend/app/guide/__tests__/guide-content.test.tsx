@@ -92,6 +92,17 @@ describe('GuideContent', () => {
     }
   });
 
+  it('stays short: about 1,200 words and no paragraph over 300 characters', () => {
+    const { container } = render(<GuideContent />);
+    const words = (container.textContent ?? '').split(/\s+/).filter(Boolean);
+    const paragraphs = Array.from(container.querySelectorAll('p'));
+
+    expect(words.length).toBeLessThanOrEqual(1200);
+    for (const paragraph of paragraphs) {
+      expect(paragraph.textContent?.length ?? 0).toBeLessThanOrEqual(300);
+    }
+  });
+
   it('says grading can start before the break and must finish in it', () => {
     const text = renderGuideText();
 
