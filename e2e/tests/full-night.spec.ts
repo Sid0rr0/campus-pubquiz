@@ -25,8 +25,8 @@ const TEAM_B_AFTER_BLOCK_TWO = TEAM_B_AFTER_BLOCK_ONE;
 const TEAM_A_FINAL = TEAM_A_AFTER_BLOCK_TWO + quickFire.badminton.points;
 const TEAM_B_FINAL = TEAM_B_AFTER_BLOCK_TWO + quickFire.football.points;
 
-/** The break screen shows its first fun fact a minute after it is put on air (a client timer; clocks are never faked). */
-const FUN_FACT_WAIT_MS = 75_000;
+/** The E2E build shortens the break screen's wait for its first fun fact (see `FUN_FACT_START_DELAY_MS` in `support/env.ts`); clocks are never faked. A reused build from before that change still waits a minute and fails here: rebuild. */
+const FUN_FACT_WAIT_MS = 15_000;
 const NIGHT_TIMEOUT_MS = 360_000;
 
 interface Night {
@@ -123,7 +123,7 @@ async function lockBlockOne(night: Night): Promise<void> {
   await control.expectStatus('break_intro');
 }
 
-/** The first break: bonus, grading and the fun fact (which takes a minute to appear, so everything else happens while it counts down). */
+/** The first break: bonus, grading and the fun fact (which appears a second after the break goes on air). */
 async function playFirstBreak(night: Night): Promise<void> {
   const { control, display, phoneB } = night;
   await display.expectBreak(1);

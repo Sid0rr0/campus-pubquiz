@@ -7,8 +7,18 @@ import { describeFunFactLine } from '@/app/display/fun-fact-wording';
 /** How long each fun fact stays on the break screen before the next one fades in. */
 export const FUN_FACT_ROTATE_MS = 8000;
 
+const DEFAULT_FUN_FACT_START_DELAY_MS = 60_000;
+
+/** A build-time override (the E2E build sets it so a journey doesn't wait a minute); anything but a positive whole number keeps the default. */
+function readStartDelayMs(): number {
+  const override = Number(process.env.NEXT_PUBLIC_FUN_FACT_START_DELAY_MS);
+  return Number.isInteger(override) && override > 0
+    ? override
+    : DEFAULT_FUN_FACT_START_DELAY_MS;
+}
+
 /** How long the break screen is on air, from when the rotator mounts, before the first fun fact appears. A display reload restarts the wait. */
-export const FUN_FACT_START_DELAY_MS = 60_000;
+export const FUN_FACT_START_DELAY_MS = readStartDelayMs();
 
 interface FunFactRotatorProps {
   funFacts: FunFact[];

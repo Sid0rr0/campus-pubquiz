@@ -122,7 +122,7 @@ installed yet.
 
 ```bash
 pnpm e2e                                   # build both apps, reset the DB, run every journey
-E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when only specs changed)
+E2E_SKIP_BUILD=1 pnpm e2e                  # reuse the last builds (faster when only specs changed; rebuild after pulling, the E2E frontend build bakes in a 1 s fun-fact delay)
 pnpm e2e tests/happy-path.spec.ts          # one file
 pnpm e2e --project=journeys                # one project
 pnpm e2e --repeat-each=5                   # flakiness check

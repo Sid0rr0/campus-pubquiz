@@ -7,6 +7,7 @@ import { recreateE2eDatabase } from './support/database';
 import {
   BACKEND_URL,
   DATABASE_URL,
+  FUN_FACT_START_DELAY_MS,
   NEXT_DIST_DIR,
   PATHS,
   SHOULD_SKIP_BUILD,
@@ -81,7 +82,11 @@ function buildApps(): void {
   run('pnpm', ['--filter', 'backend', 'build'], { cwd: PATHS.repoRoot });
   run('pnpm', ['--filter', 'frontend', 'build'], {
     cwd: PATHS.repoRoot,
-    env: { NEXT_DIST_DIR, NEXT_PUBLIC_BACKEND_URL: BACKEND_URL },
+    env: {
+      NEXT_DIST_DIR,
+      NEXT_PUBLIC_BACKEND_URL: BACKEND_URL,
+      NEXT_PUBLIC_FUN_FACT_START_DELAY_MS: String(FUN_FACT_START_DELAY_MS),
+    },
   });
 }
 

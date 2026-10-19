@@ -25,6 +25,8 @@ export const PATHS = {
 export const FRONTEND_PORT = 8889;
 export const BACKEND_PORT = 3001;
 export const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`;
+/** The break screen's wait before its first fun fact, baked into the E2E frontend build (production waits 60 s). */
+export const FUN_FACT_START_DELAY_MS = 1_000;
 export const BACKEND_URL = `http://localhost:${BACKEND_PORT}`;
 
 /** The frontend's production build folder for E2E (read by next.config.ts). */
