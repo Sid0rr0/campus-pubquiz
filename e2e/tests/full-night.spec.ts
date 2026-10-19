@@ -396,7 +396,10 @@ async function openTeamPageFromPhone(phone: PhoneScreen): Promise<void> {
   ).toBeVisible();
 
   // Team A is the only team that played here, so the table has one night.
-  await phone.page.getByRole('table').getByRole('button').first().click();
+  await phone.page
+    .getByRole('table')
+    .getByRole('button', { name: /^Full night/ })
+    .click();
   const capital = phone.page
     .getByRole('listitem')
     .filter({ hasText: warmUp.capital.prompt });
