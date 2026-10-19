@@ -6,6 +6,8 @@
   - paragraph: /Playing as Team A [0-9a-f]{6}/
   - heading "Quiz complete!" [level=1]
   - paragraph: You finished Joint 1st of 2
+  - link "Our team page":
+    - /url: /team
   - region "Rate the rounds":
     - heading "Rate the rounds" [level=2]
     - list:
