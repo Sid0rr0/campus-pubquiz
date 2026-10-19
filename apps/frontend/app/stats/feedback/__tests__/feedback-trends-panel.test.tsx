@@ -108,6 +108,30 @@ describe('FeedbackTrendsPanel', () => {
     expect(worst).toHaveTextContent('★ 2.1 · 4 ratings');
   });
 
+  it('lists two same-titled rounds of one session separately, without a duplicate key', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    const round = {
+      sessionId: 1,
+      sessionName: 'Spring quiz',
+      roundTitle: 'Picture round',
+      count: 5,
+    };
+    mockFetchFeedbackTrends.mockResolvedValue({
+      ...TRENDS,
+      bestRounds: [
+        { ...round, average: 4.5 },
+        { ...round, average: 4.2 },
+      ],
+    });
+    renderWithQuery(<FeedbackTrendsPanel />);
+
+    expect(await screen.findAllByText('Picture round')).toHaveLength(2);
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it('writes out "Not enough ratings yet" for empty round lists', async () => {
     mockFetchFeedbackTrends.mockResolvedValue({
       ...TRENDS,

@@ -23,9 +23,9 @@ function RoundList({
         <p className="text-foreground/50">Not enough ratings yet</p>
       ) : (
         <ol className="flex flex-col gap-2">
-          {rounds.map((round) => (
+          {rounds.map((round, index) => (
             <li
-              key={`${round.sessionId}-${round.roundTitle}`}
+              key={`${round.sessionId}-${round.roundTitle}-${index}`}
               className="flex items-baseline justify-between gap-3 rounded-xl border border-foreground/15 px-4 py-2"
             >
               <span className="flex flex-col">
