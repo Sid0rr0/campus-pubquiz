@@ -1,0 +1,11 @@
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: "Status: ended"
+    - button "Advance"
+    - button "Leaderboard"
+    - heading "Showdown tiebreaker" [level=2]
+    - list:
+      - listitem: /Team [AB] [0-9a-f]{6} guessed/
+      - listitem: /Team [AB] [0-9a-f]{6} guessed/
+    - heading "Teams (2)" [level=2]
