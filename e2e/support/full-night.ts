@@ -6,10 +6,10 @@
  * that isn't.
  */
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs';
 import path from 'node:path';
-import { expect, type APIRequestContext } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { test as base } from '../fixtures';
+import { seedCsvSession } from './csv-session';
 import { PATHS } from './env';
 
 const CSV_PATH = path.join(PATHS.e2eRoot, 'fixtures', 'full-night.csv');
@@ -97,58 +97,20 @@ export const FULL_NIGHT = {
   bonusPoints: 1,
 } as const;
 
-interface ImportPreviewResponse {
-  isImportable: boolean;
-  issues: unknown[];
-  rounds: Array<Record<string, unknown>>;
-}
-
-/** Previews the CSV, turns its last round into a kahoot round (the CSV has no column for it) and saves the quiz. */
-async function importFullNight(
-  api: APIRequestContext,
-  quizTitle: string,
-): Promise<number> {
-  const csvText = fs.readFileSync(CSV_PATH, 'utf8');
-  const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
-  });
-  expect(previewResponse.ok(), 'import preview').toBe(true);
-  const preview = (await previewResponse.json()) as ImportPreviewResponse;
-  expect(preview.issues, 'import issues').toEqual([]);
-  expect(preview.isImportable).toBe(true);
-
-  const rounds = preview.rounds.map((round, index) =>
-    index === KAHOOT_ROUND_INDEX ? { ...round, kahootMode: true } : round,
-  );
-  const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds },
-  });
-  expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
-    true,
-  );
-  return ((await saveResponse.json()) as { quizId: number }).quizId;
-}
-
-/** `test` with a session on the full-night quiz: round overview on, a 5 s lock countdown. */
+/** `test` with a session on the full-night quiz: round overview on, a 5 s lock countdown. The last round becomes a kahoot round (the CSV has no column for it). */
 export const test = base.extend({
   session: async ({ adminApi }, use) => {
     const quizTitle = `Full night ${randomUUID().slice(0, 6)}`;
-    const quizId = await importFullNight(adminApi, quizTitle);
-    const response = await adminApi.post('/sessions', {
-      data: {
-        quizId,
-        name: quizTitle,
-        settings: {
-          lockGraceSeconds: LOCK_GRACE_SECONDS,
-          showRoundOverview: true,
-        },
-      },
-    });
-    expect(response.ok(), `create session: ${await response.text()}`).toBe(
-      true,
+    await use(
+      await seedCsvSession(
+        adminApi,
+        CSV_PATH,
+        quizTitle,
+        { lockGraceSeconds: LOCK_GRACE_SECONDS, showRoundOverview: true },
+        (round, index) =>
+          index === KAHOOT_ROUND_INDEX ? { ...round, kahootMode: true } : round,
+      ),
     );
-    const { joinCode } = (await response.json()) as { joinCode: string };
-    await use({ joinCode, quizId, quizTitle });
   },
 });
 

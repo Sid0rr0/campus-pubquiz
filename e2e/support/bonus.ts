@@ -37,13 +37,31 @@ export async function expectTeamsTablePoints(
   bonusPoints: number,
   totalPoints: number,
 ): Promise<void> {
-  const cells = control.page
+  const { page } = control;
+  const table = page.getByRole('table').filter({
+    has: page.getByRole('columnheader', { name: 'Bonus', exact: true }),
+  });
+  const headers = await table.getByRole('columnheader').allTextContents();
+  const cells = table
     .getByRole('row')
     .filter({ hasText: teamName })
     .getByRole('cell');
-  // Columns: position, team, one per round, bonus, total, actions.
-  await expect(cells.nth(-3)).toHaveText(String(bonusPoints));
-  await expect(cells.nth(-2)).toHaveText(String(totalPoints));
+  await expect(cells.nth(columnIndex(headers, 'Bonus'))).toHaveText(
+    String(bonusPoints),
+  );
+  await expect(cells.nth(columnIndex(headers, 'Total'))).toHaveText(
+    String(totalPoints),
+  );
+}
+
+/** Where the column titled `title` sits in the table; fails the test if there is none. */
+function columnIndex(headers: string[], title: string): number {
+  const index = headers.findIndex((header) => header.trim() === title);
+  expect(
+    index,
+    `Teams table column "${title}" in [${headers}]`,
+  ).toBeGreaterThanOrEqual(0);
+  return index;
 }
 
 /** The big screen's final leaderboard (this quiz has one break, which is its last) shows the team on the podium at `rank` with `points`. */

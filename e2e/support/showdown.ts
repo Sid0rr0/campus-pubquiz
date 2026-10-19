@@ -2,10 +2,10 @@
  * Helpers for the showdown journey: the small quiz it plays, a session on that
  * quiz, and the showdown moves on /control and the phones.
  */
-import fs from 'node:fs';
 import path from 'node:path';
 import { expect, type APIRequestContext } from '@playwright/test';
 import { recordMove } from './coverage';
+import { importCsvQuiz } from './csv-session';
 import { PATHS } from './env';
 import type { ControlScreen } from './screens/control-screen';
 import type { DisplayScreen } from './screens/display-screen';
@@ -30,31 +30,12 @@ export const TIEBREAKER = {
 
 const SHOWDOWN_CSV = path.join(PATHS.e2eRoot, 'fixtures', 'showdown.csv');
 
-interface ImportPreview {
-  isImportable: boolean;
-  issues: unknown[];
-  rounds: unknown[];
-}
-
 /** Imports `fixtures/showdown.csv` as a quiz titled `quizTitle` and returns its id. */
-export async function importShowdownNight(
+export function importShowdownNight(
   api: APIRequestContext,
   quizTitle: string,
 ): Promise<number> {
-  const csvText = fs.readFileSync(SHOWDOWN_CSV, 'utf8');
-  const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
-  });
-  expect(previewResponse.ok(), 'import preview').toBe(true);
-  const preview = (await previewResponse.json()) as ImportPreview;
-  expect(preview.issues, 'import issues').toEqual([]);
-  const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds },
-  });
-  expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
-    true,
-  );
-  return ((await saveResponse.json()) as { quizId: number }).quizId;
+  return importCsvQuiz(api, SHOWDOWN_CSV, quizTitle);
 }
 
 /** The quiz master types up the tiebreaker in the Showdown panel and saves it. */

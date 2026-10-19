@@ -3,9 +3,9 @@
  * and the quiz master's save that corrects one question's answer key while a
  * session is running (the same `PUT /quizzes/:id` the quiz editor sends).
  */
-import fs from 'node:fs';
 import path from 'node:path';
 import { expect, type APIRequestContext } from '@playwright/test';
+import { importCsvQuiz } from './csv-session';
 import { PATHS } from './env';
 
 /** The part of `GET /quizzes/:id` this journey reads; the rest of each round and question is passed through untouched. */
@@ -36,33 +36,12 @@ export const ANSWER_KEY_FIX = {
 
 const CSV_PATH = path.join(PATHS.e2eRoot, 'fixtures', 'answer-key-fix.csv');
 
-interface ImportPreviewResponse {
-  isImportable: boolean;
-  issues: unknown[];
-  rounds: unknown[];
-}
-
 /** Imports `fixtures/answer-key-fix.csv` as a new quiz titled `quizTitle` and returns its id. */
-export async function importAnswerKeyFixQuiz(
+export function importAnswerKeyFixQuiz(
   api: APIRequestContext,
   quizTitle: string,
 ): Promise<number> {
-  const csvText = fs.readFileSync(CSV_PATH, 'utf8');
-  const previewResponse = await api.post('/import/preview', {
-    data: { csvText, quizTitle },
-  });
-  expect(previewResponse.ok(), 'import preview').toBe(true);
-  const preview = (await previewResponse.json()) as ImportPreviewResponse;
-  expect(preview.issues, 'import issues').toEqual([]);
-  expect(preview.isImportable).toBe(true);
-
-  const saveResponse = await api.post('/quizzes', {
-    data: { title: quizTitle, rounds: preview.rounds },
-  });
-  expect(saveResponse.ok(), `save quiz: ${await saveResponse.text()}`).toBe(
-    true,
-  );
-  return ((await saveResponse.json()) as { quizId: number }).quizId;
+  return importCsvQuiz(api, CSV_PATH, quizTitle);
 }
 
 /** Saves the quiz with the answer of the question named by `prompt` replaced; everything else is sent back as it was. */
