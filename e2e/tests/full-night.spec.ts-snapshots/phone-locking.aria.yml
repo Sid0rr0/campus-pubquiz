@@ -1,0 +1,16 @@
+- banner:
+  - link "Campus Pub Quiz":
+    - /url: /
+  - button "Open menu"
+- main:
+  - paragraph: /Playing as Team A [0-9a-f]{6}/
+  - progressbar "Time left to answer"
+  - navigation "Round 1 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2 (answered)"
+  - navigation "Round 2 questions":
+    - button "Question 1 (answered)"
+    - button "Question 2"
+  - heading "Put the planets in order from the Sun" [level=1]
+  - button "Answer history (4)"
+  - button "Bonus points (0)"

@@ -1,0 +1,9 @@
+- main:
+  - button "Enable sound"
+  - link "Campus Pub Quiz":
+    - /url: /
+  - paragraph: ROUND 1
+  - heading "Warm-up" [level=1]
+  - paragraph: Phones face down and pens up.
+- region "Notifications alt+T"
+- alert

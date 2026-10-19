@@ -1,0 +1,48 @@
+- banner:
+  - navigation:
+    - link "Guide"
+    - link "Sessions"
+    - link "Teams"
+    - link "Stats"
+    - link "Users"
+    - button "Log out"
+- main:
+  - complementary:
+    - heading "Quiz Master" [level=1]
+    - paragraph: /Quiz:\s+Full night [0-9a-f]{6} [A-Z]+(-[A-Z]+){2}/
+    - paragraph: "Status: reveal"
+    - paragraph: /Display:\s+R\dQ\d/
+    - link "Open display"
+    - button "Previous"
+    - button "Advance"
+    - button "Leaderboard"
+    - button "Fullscreen media"
+    - switch "Display sound" [checked]: "On"
+    - button "Join overlay"
+    - button "End Quiz"
+    - link "Edit quiz"
+    - heading "Teams (2)" [level=2]
+    - list:
+      - listitem:
+        - text: /Connected Team A [0-9a-f]{6}/
+        - button "Kick"
+      - listitem:
+        - text: /Connected Team B [0-9a-f]{6}/
+        - button "Kick"
+  - heading "Grade Questions" [level=2]
+  - navigation "Warm-up questions":
+    - button /Grade question 1 of Warm-up \(live on display\)/
+    - button /Grade question 2 of Warm-up/
+  - heading "What is the capital of France?" [level=2]
+  - paragraph: /Correct answer: Paris/
+  - list:
+    - listitem:
+      - text: /Team A [0-9a-f]{6} Paris/
+      - button /Grade Team A [0-9a-f]{6} full points/
+    - listitem:
+      - text: /Team B [0-9a-f]{6} Marseille/
+      - button /Grade Team B [0-9a-f]{6} half points/
+  - heading "Teams" [level=2]
+  - table:
+    - rowgroup:
+      - row "Position Team 1 2 3 4 Bonus Total Actions"
