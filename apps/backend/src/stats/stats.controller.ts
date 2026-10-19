@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type {
+  FeedbackTrends,
   PlayedSessionsListedPayload,
   SessionDetailStats,
 } from '@campus-pubquiz/types';
@@ -20,6 +21,7 @@ import { RolesGuard } from '@/auth/roles.guard';
 import { SessionGuard } from '@/auth/session.guard';
 import { StatsService } from '@/stats/stats.service';
 import {
+  feedbackTrendsQuerySchema,
   playedSessionsQuerySchema,
   renameSessionSchema,
 } from '@/stats/stats-query.schema';
@@ -41,6 +43,19 @@ export class StatsController {
       );
     }
     return this.statsService.listPlayedSessions(parsed.data);
+  }
+
+  @Get('feedback-trends')
+  async getFeedbackTrends(
+    @Query() query: Record<string, unknown>,
+  ): Promise<FeedbackTrends> {
+    const parsed = feedbackTrendsQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException(
+        parsed.error.issues[0]?.message ?? 'Invalid query',
+      );
+    }
+    return this.statsService.getFeedbackTrends(parsed.data);
   }
 
   @Get('sessions/:id')

@@ -12,6 +12,7 @@ function makeController() {
   const statsService = {
     listPlayedSessions: jest.fn(),
     getSessionDetail: jest.fn(),
+    getFeedbackTrends: jest.fn(),
     deleteSession: jest.fn(),
     renameSession: jest.fn(),
   };
@@ -106,6 +107,44 @@ describe('StatsController', () => {
       await expect(
         controller.listPlayedSessions({ sortBy: 'notAColumn' }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getFeedbackTrends', () => {
+    it('delegates to statsService.getFeedbackTrends with the parsed range', async () => {
+      const { controller, statsService } = makeController();
+      const payload = { sessions: [] };
+      statsService.getFeedbackTrends.mockResolvedValue(payload);
+
+      await expect(
+        controller.getFeedbackTrends({ from: '2026-09-01', to: '2026-12-31' }),
+      ).resolves.toBe(payload);
+      expect(statsService.getFeedbackTrends).toHaveBeenCalledWith({
+        from: '2026-09-01',
+        to: '2026-12-31',
+      });
+    });
+
+    it('accepts no range at all', async () => {
+      const { controller, statsService } = makeController();
+      statsService.getFeedbackTrends.mockResolvedValue({ sessions: [] });
+
+      await controller.getFeedbackTrends({});
+
+      expect(statsService.getFeedbackTrends).toHaveBeenCalledWith({});
+    });
+
+    it.each([
+      [{ from: 'yesterday' }],
+      [{ to: '2026-13-40' }],
+      [{ from: '2026-10-02', to: '2026-10-01' }],
+    ])('rejects a bad range %j with a 400', async (query) => {
+      const { controller, statsService } = makeController();
+
+      await expect(controller.getFeedbackTrends(query)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(statsService.getFeedbackTrends).not.toHaveBeenCalled();
     });
   });
 

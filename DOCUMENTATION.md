@@ -1313,6 +1313,26 @@ The session detail also carries a `feedback` section, shown on the page as
 - The team is never selected: no team id or name reaches the response or the page.
   Comment and topic order uses when the team last sent its feedback.
 
+### Feedback trends
+
+`/stats/feedback` (linked from `/stats`) reads feedback across many ended sessions
+at once: `GET /stats/feedback-trends?from=&to=` (`StatsService.getFeedbackTrends`,
+same guards as the other stats endpoints, open to admin and moderator).
+
+- `from` and `to` are optional `YYYY-MM-DD` dates, both inclusive, read as UTC days;
+  no range means all time. Anything else, or `from` after `to`, is a 400. The range
+  applies to the session's date (when it was created), and it is parsed once by
+  `feedbackTrendsQuerySchema` so every section of the page shares it.
+- The response is `{ sessions: [{ id, name, date, rating: { average, count } | null }] }`,
+  oldest to newest. `rating` is the average of every round rating the session got
+  and how many ratings that was; `null` when nobody rated (the page shows "—", never
+  zero).
+- Only **ended** sessions appear, and a session with `collectFeedback` off is left
+  out (one stored without the setting counts as on), so it does not drag the trend
+  down. The page writes out its empty state when no session is in range.
+- Everything is aggregated in SQL and no team column is selected: no team id or name
+  reaches the response or the page.
+
 ### Team stats
 
 `/teams/:id` shows one team's history across its **ended** sessions, from

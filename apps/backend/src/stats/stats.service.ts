@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { z } from 'zod';
 import type {
   BonusCategory,
+  FeedbackTrends,
   PlayedSessionsListedPayload,
   QuestionType,
   SessionDetailStats,
@@ -15,7 +16,10 @@ import { PlayerCountService } from '@/player-count/player-count.service';
 import { StandingsService } from '@/standings/standings.service';
 import { summarisePlayerCounts } from '@/stats/player-count.calc';
 import { computeSessionDetail } from '@/stats/session-detail.calc';
-import type { PlayedSessionsQuery } from '@/stats/stats-query.schema';
+import type {
+  FeedbackTrendsQuery,
+  PlayedSessionsQuery,
+} from '@/stats/stats-query.schema';
 
 interface PlayedSessionRow {
   gameSessionId: number;
@@ -34,6 +38,15 @@ interface SessionHeaderRow {
   name: string | null;
   playedAt: string | Date;
   settings: Partial<SessionSettings>;
+}
+
+interface FeedbackTrendsRow {
+  id: number;
+  name: string | null;
+  quizTitle: string;
+  date: string | Date;
+  average: string | number | null;
+  count: string | number;
 }
 
 interface SessionFeedbackRow {
@@ -325,6 +338,63 @@ export class StatsService {
         points: Number(b.points),
       })),
     });
+  }
+
+  /**
+   * Anonymous feedback across ended sessions played in the range. Aggregated in
+   * SQL so no row ever carries a team id. Sessions with "Collect feedback" off
+   * are left out (stored-before-the-setting sessions count as on).
+   */
+  async getFeedbackTrends({
+    from,
+    to,
+  }: FeedbackTrendsQuery): Promise<FeedbackTrends> {
+    const knex = this.gameSessions.getKnex();
+
+    const sessionsInRange = () => {
+      const query = knex('game_sessions as gs')
+        .where('gs.status', 'ended')
+        .whereRaw(
+          `coalesce((gs.settings ->> 'collectFeedback')::boolean, true) = true`,
+        );
+      if (from) query.where('gs.created_at', '>=', `${from}T00:00:00Z`);
+      if (to) {
+        query.whereRaw(
+          `gs.created_at < (?::date + 1)::timestamp at time zone 'UTC'`,
+          [to],
+        );
+      }
+      return query;
+    };
+
+    const rows = (await sessionsInRange()
+      .join('quizzes as qz', 'qz.id', 'gs.quiz_id')
+      .leftJoin('round_ratings as rr', 'rr.game_session_id', 'gs.id')
+      .groupBy('gs.id', 'qz.title')
+      .orderBy([
+        { column: 'gs.created_at', order: 'asc' },
+        { column: 'gs.id', order: 'asc' },
+      ])
+      .select(
+        'gs.id as id',
+        'gs.name as name',
+        'qz.title as quizTitle',
+        'gs.created_at as date',
+      )
+      .select(knex.raw('avg(rr.stars) as average'))
+      .select(knex.raw('count(rr.id) as count'))) as FeedbackTrendsRow[];
+
+    return {
+      sessions: rows.map((row) => ({
+        id: row.id,
+        name: row.name ?? row.quizTitle,
+        date: new Date(row.date).toISOString(),
+        rating:
+          Number(row.count) === 0
+            ? null
+            : { average: Number(row.average), count: Number(row.count) },
+      })),
+    };
   }
 
   /** Deletes an ended session and, via DB cascade rules, every answer, bonus award, and roster row tied to it. */
