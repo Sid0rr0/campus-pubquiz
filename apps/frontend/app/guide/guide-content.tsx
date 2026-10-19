@@ -16,11 +16,6 @@ interface GuideSection {
 
 const QUESTION_TYPE_BULLETS = QUESTION_TYPES.map(
   (type) =>
-    `${QUESTION_KINDS[type].label} — ${QUESTION_KINDS[type].moderatorNote}`,
-);
-
-const CSV_TYPE_BULLETS = QUESTION_TYPES.map(
-  (type) =>
     `${type} (${QUESTION_KINDS[type].label}) — ${QUESTION_KINDS[type].moderatorNote}`,
 );
 
@@ -32,123 +27,107 @@ const GUIDE_SECTIONS: GuideSection[] = [
   {
     title: 'Before the night',
     paragraphs: [
-      'Build the quiz ahead of time (see "Creating a quiz" below) and open it once from the Sessions page to check every round and question. Have the big screen open on /display and your own laptop on /control; teams join from their phones with the join code.',
-      "The Display sound toggle in the Control panel, next to the display text size, mutes or unmutes the big screen's sounds for everyone at once, for example during a speech. It starts unmuted. Phones never play sound.",
-      'The quiz is split into blocks: a run of rounds that is graded and revealed together, ending at a round you marked to break after it. The last round always ends a block.',
+      'Build the quiz (see "Creating a quiz") and open it once from the Sessions page to check every round.',
+      'Put /display on the big screen and /control on your laptop. Teams join from their phones with the join code.',
+      'A block is a run of rounds graded and revealed together. It ends at a round marked to break after it; the last round always ends a block.',
     ],
   },
   {
     title: 'Starting a session',
     paragraphs: [
-      'While teams are joining, the Session Settings panel lets you pick the quiz, edit the rules text, and enable bonus categories before pressing Start Quiz. The big screen shows the join code and QR code until you start.',
-      'Starting shows the rules, then an overview of every round, then the first round title card. Each press of Advance moves on.',
-      'Pressed Start Quiz too early? While the rules are showing, Previous takes the session back to the lobby: the big screen shows the join code and QR code again, phones go back to "Waiting for the quiz to start…", and the session settings, quiz import and closing the session work again. There is no confirm dialog, and Start Quiz moves forward again as before. This only works from the rules: from the round overview Previous goes to the rules first, and once the first round title card is up the quiz can no longer go back to the lobby.',
+      'While teams join, Session Settings lets you pick the quiz, edit the rules text and enable bonus categories. Then press Start Quiz.',
+      'Advance shows the rules, the round overview, then the first round title card. While the rules show, Previous returns to the lobby.',
     ],
   },
   {
     title: 'Running questions',
     paragraphs: [
-      'Each round opens with a round title card, then Advance opens its questions one at a time. Teams can answer or change their answer on any question already opened in the current block, so earlier questions stay answerable until the block ends.',
-      'On the last question of a block, Advance starts the final countdown (with a sound near the end). Teams can still answer until it runs out and the break starts. Previous is only available while it would not undo grading already done.',
-      'In a kahoot round every question is its own block, so each one is scored and revealed before the next opens.',
+      'Each round opens with a round title card. Advance then opens its questions one at a time. Teams can change answers on any question opened in the current block.',
+      "Advance on a block's last question starts the final countdown, then the break. In a kahoot round every question is its own block.",
+    ],
+  },
+  {
+    title: 'Media and sound',
+    paragraphs: [
+      'While a video or audio question is open, Pause and "Play again" sit below the Leaderboard row on Control. Moving to another question restarts its media.',
+      'The Display sound toggle mutes the big screen for everyone. Phones never play sound.',
     ],
   },
   {
     title: 'Grading',
     paragraphs: [
-      'You can grade an answer as soon as it arrives, in the teams/answers table. Free text answers that match the answer text are graded correct automatically; any other free text answer waits for you. If a team changes an answer you already graded so that it no longer matches, the mark is cleared and you need to grade it again. Whatever is still ungraded must be finished during the break: the quiz will not leave the break while an answer is ungraded. While one is, the preview on the Remote page says Advance is waiting for grading; once the last answer is graded it names the reveal.',
-      'How each question type is graded:',
+      'Grade an answer as soon as it arrives, in the teams/answers table. Anything still ungraded must be finished during the break: the quiz will not leave the break while an answer is ungraded.',
+      'If a team changes a graded answer so it no longer matches, the mark clears and you grade it again. How each question type is graded:',
     ],
     bullets: QUESTION_TYPE_BULLETS,
   },
   {
     title: 'The break and break review',
     paragraphs: [
-      'When a block ends, the questions stop accepting answers and the break starts. The big screen shows a break card with the break timer and the bonus categories; use this time to finish grading. Under the BREAK heading the card also rotates through fun facts about the quiz so far (the fastest correct answer, the toughest question, a clean sweep, how many bonuses have been awarded; closest-guess questions are left out of the question-based ones); they only use blocks that have already been revealed or counts that give nothing away, so they never spoil the block you are grading, and the card shows none when there is nothing worth saying. The first fact appears about a minute after the break card comes on air. Turn them off with the "Fun facts on the break screen" switch in the Session Settings panel (on by default, lobby only). The Break End Time control sets or extends how long the break countdown runs.',
-      "To show a question to the room again during the break, press Previous to step back through the block's questions. Answers stay hidden while you do this (break review). Stepping back across the start of a round shows that round's title card again.",
+      'When a block ends, answers close and the big screen shows the break card with a timer. Use the time to finish grading. Break End Time sets or extends the countdown.',
+      'Fun facts rotate on the card; switch them off with "Fun facts on the break screen" in Session Settings (lobby only).',
+      "Press Previous to step back through the block's questions with answers hidden: this is the break review.",
     ],
   },
   {
     title: 'The reveal',
     paragraphs: [
-      'Once grading is finished, Advance leaves the break and reveals the block: each round shows a title card announcing its answers, then each question appears with its correct answer. Teams see their own answer, the correct answer and their points on their phones.',
-      'After the last reveal of the last block, Advance ends the quiz.',
+      'Once grading is finished, Advance reveals the block: each round title card, then each question with its correct answer. After the last block, Advance ends the quiz.',
     ],
   },
   {
-    title: 'Feedback from teams',
+    title: 'Leaderboard, late joiners and ties',
     paragraphs: [
-      'The "Collect feedback" switch in the Session Settings panel is on by default and can only be changed in the lobby, like every other setting. While it is on, teams can rate the rounds from their phones, and it is always optional.',
-      'In each break, a "Rate these rounds" card sits above the block browser on the phone, with 1–5 stars (half stars allowed: tap the left half of a star) for each round of the block that just ended; it stays open for the whole break, so a team can change a rating at any time. When the quiz ends, and any showdown is decided, the phone shows "Quiz complete!" and the team\'s final placing ("You finished 4th of 12", or "Joint 2nd" for a tie) followed by a final form: every round with its stars (kahoot rounds are only rated here), an "Anything else?" box and topic suggestions for future rounds.',
-      'With the switch off, phones show no rating card and no final form — the end screen is just "Quiz complete!" — and ratings and comments are refused. Results are anonymous and appear only on the session stats page, never on Control: each round\'s average rating in the rounds table, then a Comments section (newest first) and a Topic suggestions section (grouped and sorted by how many teams gave them). A session run with the switch off shows "Feedback was off for this session" there instead.',
-    ],
-  },
-  {
-    title: 'The leaderboard',
-    paragraphs: [
-      'The leaderboard can be shown or hidden at any point without disrupting grading or the flow of the quiz; hiding it resumes exactly where you were. While it is showing, Advance and Previous only work the leaderboard and never move the quiz underneath.',
-      'Each Advance reveals one more rank on the big screen, from last place up. The top three come in slower, with a drumroll if sound is enabled, and first place is spotlit. Pressing Advance during that entrance cuts straight to the next rank. Each phone shows its own team\'s placing ("You\'re 4th", or "Joint 2nd" for a tie) once the big screen has revealed it, and buzzes if the team moved up.',
-    ],
-  },
-  {
-    title: 'Pausing and replaying question media',
-    paragraphs: [
-      'While a question with a YouTube video, a video file or an audio clip is open, a row of media buttons sits directly below the Leaderboard row on Control (and just above Previous/Advance on Remote). Pause stops the video or audio on the big screen where it is, and the same button then reads Resume. "Play again" (YouTube videos and video files) restarts the video from the beginning of its clip, and also resumes it if it was paused.',
-      "Moving on to another question, or back, always starts that question's media fresh and un-paused. Showing the leaderboard or the join overlay does not touch a pause. If the big screen reconnects while paused, it comes back paused. If the browser blocks the big screen from restarting audio on Resume, use the player's own controls on the big screen.",
-    ],
-  },
-  {
-    title: 'The join overlay',
-    paragraphs: [
-      'A team arriving after the quiz has started can still join. Press Join overlay on Control to cover the big screen with the QR code, the join code and the team-size rule, without the team list. The quiz stays exactly where it was: timers keep running and phones are untouched. Press the button again to hide it and the big screen is back where the quiz is. Advance or Previous also hides the overlay first, without moving the quiz; the press after that moves the quiz as normal. Showing the overlay hides the leaderboard, and showing the leaderboard hides the overlay.',
-      "The button isn't offered in the lobby, which already shows the QR code, or once the quiz has ended. Ending the quiz while the overlay is up clears it, and it stays up if the backend restarts.",
-    ],
-  },
-  {
-    title: 'Ties and showdowns',
-    paragraphs: [
-      'When teams are tied for first place at a point where answers have been revealed, the Showdown panel becomes available. A showdown is a tiebreak between just the tied teams, who take turns in a fixed seat order.',
+      'Show or hide the leaderboard at any time. While it shows, Advance reveals one more rank, from last place up.',
+      'Join overlay on Control covers the big screen with the QR code and join code for late teams; the quiz carries on underneath. Press it again to hide it.',
+      'When teams tie for first place after a reveal, the Showdown panel appears: a tiebreak between only the tied teams.',
     ],
   },
   {
     title: 'Teams',
     paragraphs: [
-      'The Teams panel shows which teams are connected and, while a question is open, which of them have answered yet. Kick a team here if it needs to be removed from the session. A phone that drops its connection picks up exactly where the quiz is when it reconnects. While it is offline the team sees a bar across the top of its phone; if that lasts more than 10 seconds the bar offers a "Tap to reconnect" button, so you can tell a team with a stuck bar to tap it. The big screen does the same on its own: if the network drops it keeps showing the current screen with a small "Reconnecting…" badge in the corner and catches up when the connection returns, so you never need to walk over and pick the session again. Reloading the big screen, or opening /display on it again, resumes the game it last showed; the lobby has a small "Pick another game" link if you want a different one.',
-      'Each team in the Teams panel also shows its player count: the number of players the team says it has, which the team enters on its phone after joining. A dash means the team has not given one. If a count is above the "max players per team" setting, the panel flags it as over the player cap; no points are taken off automatically, so if the house rules call for a penalty, give it as a bonus award with negative points. To set or correct a count, press Edit next to it, type a whole number from 1 to 20 and press Save. This works at any point in the session, even for a team that skipped the question, and the new number appears on that team\'s phones straight away.',
-      'To give a team bonus points, open its actions menu in the Teams panel and choose Award bonus. Pick a category, check the points (a negative number is a penalty; a custom award needs a reason) and press Award. When the server accepts it, a green toast confirms the signed points, the category and the team — for example "+1 Selfie → The Quizzly Bears" — even if that team\'s phone is offline. If the award is refused, you get an error toast instead and the dialog stays open with what you typed, so you can fix it and press Award again.',
+      'The Teams panel shows who is connected and who has answered. Kick a team here to remove it. A phone that reconnects picks up where the quiz is; the big screen does too.',
+      'Each team shows its player count, entered by the team. A count above the "max players per team" setting is flagged as over the player cap; no points are taken off automatically.',
+      'To correct a count, press Edit, type a whole number from 1 to 20 and press Save.',
+      "For bonus points, open the team's actions menu, choose Award bonus, pick a category, check the points (negative is a penalty) and press Award.",
+    ],
+  },
+  {
+    title: 'Feedback from teams',
+    paragraphs: [
+      'The "Collect feedback" switch in Session Settings is on by default and can only change in the lobby.',
+      'While on, each break shows a "Rate these rounds" card on phones, and "Quiz complete!" is followed by a final form. Results are anonymous and appear only on the session stats page.',
     ],
   },
   {
     title: 'Remote and keyboard shortcuts',
     paragraphs: [
-      "From the Sessions page, the Remote link opens a phone-friendly companion page for a session — the current question's notes (or, while a round's intro is on the big screen, that round's note), a preview of what's up next, and Previous/Advance/leaderboard controls, so you can walk the room instead of staying at the laptop. It shares the same admin connection as Control, so actions taken from either one stay in sync.",
-      'On the Control page these keyboard shortcuts work anywhere except while typing in a form field (so grading a text answer never gets hijacked by a stray arrow key):',
+      'Remote, from the Sessions page, is a phone-friendly page with notes, a preview of what is next and the Previous, Advance and leaderboard controls.',
+      'These shortcuts work on Control except while typing in a form field:',
     ],
     bullets: SHORTCUT_BULLETS,
   },
   {
     title: 'Ending',
     paragraphs: [
-      'The quiz ends after the last reveal, or earlier with End Quiz. Close Session shuts the session down entirely — use it once the event is over.',
+      'The quiz ends after the last reveal, or earlier with End Quiz. Close Session shuts the session down once the event is over.',
     ],
   },
   {
     title: 'Creating a quiz',
     paragraphs: [
-      'From the Sessions page, "New Quiz" opens the quiz editor. Start from a blank round and fill it in by hand, or import a CSV export of a spreadsheet to populate rounds and questions automatically — either way, everything stays editable before you press Save quiz. Reopening a saved quiz from the Sessions page lets you keep editing it, including importing another CSV: by default a fresh import replaces the rounds currently in the editor (save first if you want to keep both versions), but checking "Add to quiz instead of replacing" first appends the import instead — questions land in an existing round when its title matches, otherwise the CSV\'s round is added as a new one, so you can top up a quiz with just a round or a handful of questions at a time.',
-      'You can keep editing a quiz while a session is playing it, as long as you leave alone what the game has already reached. A save made just as the quiz moves on may be refused, because a question you changed has just opened. Reload the quiz and save again.',
-      'Each round has a "Round note" box in the editor: what you want to say before the round, up to 500 characters. It shows on the Remote page, in the Notes panel, while that round\'s intro is on the big screen (and again if you step back across it in the break review). A round without a note says "No note for this round." The note is for you only unless you tick "Show on screen" beside it (off by default, greyed out while the note is blank): then the big screen also shows it under the round title, category and author on that round\'s intro (and again if you step back across it in the break review). The note never appears on teams\' phones, and never at the reveal. You can fix it while the quiz is running, even for a round already played.',
-      'Any question can carry media: paste a picture, audio, YouTube or video file link (.mp4, .webm, .mov or .m4v) into its Media URL (and, optionally, Answer media URL). A video file plays on the big screen without browser controls, so you run it from Control; link short, compressed clips, because the venue internet carries them. If a video file will not load, the big screen simply leaves it out and shows the prompt and answers. The type only decides how teams answer and how it is graded, so a music question is a free text or multiple choice question with an audio or YouTube link. A CSV row typed audio or youtube from an older export is rejected with a message telling you to use free_text or multiple_choice instead.',
-      'For a Number question the editor shows a margin row next to the answer: a number field and a % / absolute switch, starting at 10%. Decimals are fine, and 0 means only the exact answer is correct. A percentage can be at most 100 and no margin can be negative. With an answer of 0 and a percentage margin only an exact 0 is accepted, so the editor suggests an absolute margin. The margin is set in the editor only: a CSV has no margin column, so an imported Number question gets 10%, and a custom margin is lost when you export and re-import. Changing the margin of a question that is already open re-scores its answers and discards any grade you changed by hand.',
-      'For a question whose media URL is a video (a YouTube link or a video file), the editor shows a "Hide video (sound only)" checkbox. A hidden video keeps playing, but the big screen covers it with a 🎵 panel while the question is asked and in the break review, and shows it again at the reveal. Teams\' phones say "🎧 Listen" instead of "👀 Look at the screen". In a CSV, write hideVideo: true inside the {…} group in the notes cell, for example {start: "55", end: "1:28", hideVideo: true}.',
-      'When a question\'s media URL is a video (a YouTube link or a video file), the editor shows "Clip start" and "Clip end": the part of the video that plays while the question is asked. A second pair, "Reveal start" and "Reveal end", sets what plays when the answer is revealed. It is labelled "Answer video clip" when the answer media URL is a video (that video replaces the question video at reveal), otherwise "Reveal clip (question video)" (the question video plays again). Times are seconds, M:SS or H:MM:SS; leave a pair empty to play the whole video. Only one video ever plays at reveal. In a CSV these go in the notes cell as {start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45"}.',
-      "CSV columns: round, type, question, options, answer, points, media_url, answer_media_url, notes, break_after, category, author, round_note, show_round_note. One row per question; a round ends a block once any of its rows has break_after = 1 — the last round always does, since the game can't reveal answers otherwise. category (from a fixed list) and author are optional round-level details shown on the big screen; the first non-blank cell in a round wins, so put them on its last row. round_note (up to 500 characters) and show_round_note (1 to also show the note on the big screen, otherwise blank or 0) are optional round-level too, and work the same way as the editor's Round note box and Show on screen checkbox. The type column takes one of the identifiers below; what each type needs:",
+      'From the Sessions page, "New Quiz" opens the editor. Fill rounds in by hand or import a CSV; everything stays editable until you press Save quiz.',
+      'To add to a saved quiz, tick "Add to quiz instead of replacing" before importing. If a save during a live session is refused, reload the quiz and save again.',
+      'Round note: up to 500 characters, for you on Remote. Tick "Show on screen" to put it on the big screen too; it never reaches phones.',
+      'Media: paste a picture, audio, YouTube or video file link into Media URL (or Answer media URL). Video files have no controls, so run them from Control. Use short clips.',
+      'Number question: the margin row has a number field and a % / absolute switch, starting at 10%. A CSV has no margin column, so imports get 10%.',
+      'Video question: tick "Hide video (sound only)" to cover the video until the reveal. In a CSV, write hideVideo: true inside the {…} group in the notes cell.',
+      'Clip start and end, and Reveal start and end, take seconds, M:SS or H:MM:SS. In a CSV: {start: "1:22", end: "2:20", revealStart: "2:30", revealEnd: "2:45"}.',
+      'CSV: one row per question; a round ends a block once any row has break_after = 1. The template shows every column.',
     ],
-    bullets: CSV_TYPE_BULLETS,
     link: {
       href: '/sample-quiz-import.csv',
-      label:
-        'Download sample CSV (one row per question type, with category, author and round notes)',
+      label: 'Download sample CSV (one row per question type)',
       download: true,
     },
   },
