@@ -94,8 +94,12 @@ export class TeamHistoryService {
 
   /** The history of the team that owns a team code (any case); null when no team does. */
   async detailByCode(teamCode: string): Promise<TeamDetail | null> {
-    const team = await this.teams.findOne({ code: teamCode.toUpperCase() });
+    const team = await this.teamByCode(teamCode);
     return team ? this.detail(team.id) : null;
+  }
+
+  private teamByCode(teamCode: string): Promise<Team | null> {
+    return this.teams.findOne({ code: teamCode.toUpperCase() });
   }
 
   /**
@@ -108,7 +112,7 @@ export class TeamHistoryService {
     teamCode: string,
     gameSessionId: number,
   ): Promise<TeamNightDetail | null> {
-    const team = await this.teams.findOne({ code: teamCode.toUpperCase() });
+    const team = await this.teamByCode(teamCode);
     if (!team) return null;
     const knex = this.teams.getKnex();
 

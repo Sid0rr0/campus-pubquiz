@@ -1356,7 +1356,9 @@ feedback or the team code.
 - **An unknown code is a generic 404**, "No team with that code", which doesn't
   reveal whether a team name exists.
 - **The route is public** (no session cookie, no CSRF header) and uses the
-  `ThrottlerGuard` (5 requests per minute per client) so team codes can't be guessed.
+  `ThrottlerGuard` (5 requests per minute per client IP) so team codes can't be
+  guessed. The limit is per IP only, with no per-code or per-team counter, so
+  phones behind one venue NAT share it; that is accepted at this scale.
 - On a phone that stores a team code (`team-storage.ts`) the page opens directly;
   otherwise it shows a code form. A typed code is kept in memory only and is not
   saved.
@@ -1383,8 +1385,10 @@ none), its verdict and points earned, and the right answer.
 - **Only ended sessions the team took part in** (`StandingsService.hasTakenPart`:
   on the roster, or kicked or left with answers or bonus awards). A session still
   running, one the team never joined and an unknown session or code all get the
-  same generic 404, so a kicked team still sees its answers. Validation, the
-  throttler and the public route are the same as for `POST /team-page`.
+  same generic 404, so a kicked team still sees its answers. Validation and the
+  public route are the same as for `POST /team-page`. The throttle is looser
+  (30 requests per minute per client IP, counted separately from the history
+  call) because a team opens several nights and phones share a venue NAT.
 
 The `/teams` directory (`GET /teams`) shows the same figure: each list item
 carries `averagePlacing: number | null`, computed by `averagePlacingOf` over
